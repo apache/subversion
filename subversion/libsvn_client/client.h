@@ -185,19 +185,30 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                     apr_pool_t *pool);
 
 
-/* Set *ANCESTOR_PATH and *ANCESTOR_REVISION to the youngest common
-   ancestor path (a path relative to the root of the repository) and
-   revision, respectively, of the two locations identified as
-   PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1.  Use the authentication
-   baton cached in CTX to authenticate against the repository.
-   This function assumes that PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1
-   both refer to the same repository.  Use POOL for all allocations. */
+/* Find the common ancestor of two locations in a repository.
+   Ancestry is determined by the 'copy-from' relationship and the normal
+   successor relationship.
+
+   Set *ANCESTOR_RELPATH, *ANCESTOR_URL, and *ANCESTOR_REVISION to the
+   path (relative to the root of the repository, with no leading '/'),
+   URL, and revision, respectively, of the youngest common ancestor of
+   the two locations URL1@REV1 and URL2@REV2.  Set *ANCESTOR_RELPATH and
+   *ANCESTOR_URL to NULL and *ANCESTOR_REVISION to SVN_INVALID_REVNUM if
+   they have no common ancestor.  This function assumes that URL1@REV1
+   and URL2@REV2 both refer to the same repository.
+
+   Use the authentication baton cached in CTX to authenticate against
+   the repository.  Use POOL for all allocations.
+
+   See also svn_client__youngest_common_ancestor().
+*/
 svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_path,
+svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
+                                         const char **ancestor_url,
                                          svn_revnum_t *ancestor_revision,
-                                         const char *path_or_url1,
+                                         const char *url1,
                                          svn_revnum_t rev1,
-                                         const char *path_or_url2,
+                                         const char *url2,
                                          svn_revnum_t rev2,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *pool);

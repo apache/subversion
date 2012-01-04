@@ -46,6 +46,85 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
+def check_hotcopy_bdb(src, dst):
+  "Verify that the SRC BDB repository has been correctly copied to DST."
+  ### TODO: This function should be extended to verify all hotcopied files,
+  ### not just compare the output of 'svnadmin dump'. See check_hotcopy_fsfs().
+  exit_code, origout, origerr = svntest.main.run_svnadmin("dump", src,
+                                                          '--quiet')
+  exit_code, backout, backerr = svntest.main.run_svnadmin("dump", dst,
+                                                          '--quiet')
+  if origerr or backerr or origout != backout:
+    raise svntest.Failure
+
+def check_hotcopy_fsfs(src, dst):
+    "Verify that the SRC FSFS repository has been correctly copied to DST."
+    # Walk the source and compare all files to the destination
+    for src_dirpath, src_dirs, src_files in os.walk(src):
+      # Verify that the current directory exists in the destination
+      dst_dirpath = src_dirpath.replace(src, dst)
+      if not os.path.isdir(dst_dirpath):
+        raise svntest.Failure("%s does not exist in hotcopy "
+                              "destination" % dst_dirpath)
+      # Verify that all dirents in the current directory also exist in source
+      for dst_dirent in os.listdir(dst_dirpath):
+        src_dirent = os.path.join(src_dirpath, dst_dirent)
+        if not os.path.exists(src_dirent):
+          raise svntest.Failure("%s does not exist in hotcopy "
+                                "source" % src_dirent)
+      # Compare all files in this directory
+      for src_file in src_files:
+        src_path = os.path.join(src_dirpath, src_file)
+        dst_path = os.path.join(dst_dirpath, src_file)
+        if not os.path.isfile(dst_path):
+          raise svntest.Failure("%s does not exist in hotcopy "
+                                "destination" % dst_path)
+
+        # Special case for rep-cache: It will always differ in a byte-by-byte
+        # comparison, so compare db tables instead.
+        if src_file == 'rep-cache.db':
+          db1 = svntest.sqlite3.connect(src_path)
+          db2 = svntest.sqlite3.connect(dst_path)
+          rows1 = []
+          rows2 = []
+          for row in db1.execute("select * from rep_cache order by hash"):
+            rows1.append(row)
+          for row in db2.execute("select * from rep_cache order by hash"):
+            rows2.append(row)
+          if len(rows1) != len(rows2):
+            raise svntest.Failure("number of rows in rep-cache differs")
+          for i in range(len(rows1)):
+            if rows1[i] != rows2[i]:
+              raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
+                                    % (row, rows1[i]))
+          continue
+
+        f1 = open(src_path, 'r')
+        f2 = open(dst_path, 'r')
+        while True:
+          offset = 0
+          BUFSIZE = 1024
+          buf1 = f1.read(BUFSIZE)
+          buf2 = f2.read(BUFSIZE)
+          if not buf1 or not buf2:
+            if not buf1 and not buf2:
+              # both at EOF
+              break
+            elif buf1:
+              raise svntest.Failure("%s differs at offset %i" % 
+                                    (dst_path, offset))
+            elif buf2:
+              raise svntest.Failure("%s differs at offset %i" % 
+                                    (dst_path, offset))
+          if len(buf1) != len(buf2):
+            raise svntest.Failure("%s differs in length" % dst_path)
+          for i in range(len(buf1)):
+            if buf1[i] != buf2[i]:
+              raise svntest.Failure("%s differs at offset %i"
+                                    % (dst_path, offset))
+            offset += 1
+        f1.close()
+        f2.close()
 
 #----------------------------------------------------------------------
 
@@ -359,17 +438,16 @@ def hotcopy_dot(sbox):
 
   os.chdir(cwd)
 
-  exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
-                                                          sbox.repo_dir,
-                                                          '--quiet')
-  exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
-                                                          backup_dir,
-                                                          '--quiet')
-  if origerr or backerr or origout != backout:
-    raise svntest.Failure
+  if svntest.main.is_fs_type_fsfs():
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  else:
+    check_hotcopy_bdb(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
+# This test is redundant for FSFS. The hotcopy_dot and hotcopy_incremental
+# tests cover this check for FSFS already.
+@SkipUnless(svntest.main.is_fs_type_bdb)
 def hotcopy_format(sbox):
   "'svnadmin hotcopy' checking db/format file"
   sbox.build()
@@ -1510,6 +1588,64 @@ def load_ranges(sbox):
   svntest.verify.compare_and_display_lines("Dump files", "DUMP",
                                            expected_dump, new_dumpdata)
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental(sbox):
+  "'svnadmin hotcopy --incremental PATH .'"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+
+  for i in [1, 2, 3]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+    if i < 3:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental_packed(sbox):
+  "'svnadmin hotcopy --incremental' with packing"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+  # Configure two files per shard to trigger packing
+  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
+  format_file.write("4\nlayout sharded 2\n")
+  format_file.close()
+
+  # Pack revisions 0 and 1.
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+
+  # Commit 5 more revs, hotcopy and pack after each commit.
+  for i in [1, 2, 3, 4, 5]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+    if i < 5:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+      svntest.actions.run_and_verify_svnadmin(
+        None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+
+
 ########################################################################
 # Run the tests
 
@@ -1541,6 +1677,8 @@ test_list = [ None,
               verify_non_utf8_paths,
               test_lslocks_and_rmlocks,
               load_ranges,
+              hotcopy_incremental,
+              hotcopy_incremental_packed,
              ]
 
 if __name__ == '__main__':

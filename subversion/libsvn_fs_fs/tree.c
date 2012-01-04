@@ -2144,7 +2144,7 @@ fs_copied_from(svn_revnum_t *rev_p,
   dag_node_t *node;
   const char *copyfrom_path, *copyfrom_str = NULL;
   svn_revnum_t copyfrom_rev;
-  char *str, *last_str, *buf;
+  char *str, *buf;
 
   /* Check to see if there is a cached version of this copyfrom
      entry. */
@@ -2166,9 +2166,9 @@ fs_copied_from(svn_revnum_t *rev_p,
         {
           /* Parse the copyfrom string for our cached entry. */
           buf = apr_pstrdup(pool, copyfrom_str);
-          str = apr_strtok(buf, " ", &last_str);
+          str = svn_cstring_tokenize(" ", &buf);
           copyfrom_rev = SVN_STR_TO_REV(str);
-          copyfrom_path = last_str;
+          copyfrom_path = buf;
         }
     }
   else

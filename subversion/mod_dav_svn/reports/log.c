@@ -30,6 +30,7 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_types.h"
+#include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
@@ -61,6 +62,9 @@ struct log_receiver_baton
 
   /* whether the client requested any custom revprops */
   svn_boolean_t requested_custom_revprops;
+
+  /* whether the client can handle encoded binary property values */
+  svn_boolean_t encode_binary_props;
 };
 
 
@@ -119,35 +123,50 @@ log_receiver(void *baton,
            hi = apr_hash_next(hi))
         {
           char *name;
-          svn_string_t *value;
+          void *val;
+          const svn_string_t *value;
+          const char *encoding_str = "";
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, (void *)&name, NULL, (void *)&value);
+          apr_hash_this(hi, (void *)&name, NULL, &val);
+          value = val;
+
+          /* If the client is okay with us encoding binary (or really,
+             any non-XML-safe) property values, do so as necessary. */
+          if (lrb->encode_binary_props)
+            {
+              if (! svn_xml_is_xml_safe(value->data, value->len))
+                {
+                  value = svn_base64_encode_string2(value, TRUE, iterpool);
+                  encoding_str = " encoding=\"base64\"";
+                }
+            }
+
           if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<D:creator-displayname>%s</D:creator-displayname>"
-                     DEBUG_CR,
+                     "<D:creator-displayname%s>%s</D:creator-displayname>"
+                     DEBUG_CR, encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
           else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
             /* ### this should be DAV:creation-date, but we need to format
                ### that date a bit differently */
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<S:date>%s</S:date>" DEBUG_CR,
+                     "<S:date%s>%s</S:date>" DEBUG_CR, encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
           else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<D:comment>%s</D:comment>" DEBUG_CR,
+                     "<D:comment%s>%s</D:comment>" DEBUG_CR, encoding_str,
                      apr_xml_quote_string(pool,
                                           svn_xml_fuzzy_escape(value->data,
                                                                iterpool), 0)));
           else
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<S:revprop name=\"%s\">%s</S:revprop>" DEBUG_CR,
-                     apr_xml_quote_string(iterpool, name, 0),
+                     "<S:revprop name=\"%s\"%s>%s</S:revprop>" DEBUG_CR,
+                     apr_xml_quote_string(iterpool, name, 0), encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
         }
     }
@@ -305,6 +324,7 @@ dav_svn__log_report(const dav_resource *resource,
   seen_revprop_element = FALSE;
 
   lrb.requested_custom_revprops = FALSE;
+  lrb.encode_binary_props = FALSE;
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
       /* if this element isn't one of ours, then skip it */
@@ -333,6 +353,8 @@ dav_svn__log_report(const dav_resource *resource,
         strict_node_history = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "include-merged-revisions") == 0)
         include_merged_revisions = TRUE; /* presence indicates positivity */
+      else if (strcmp(child->name, "encode-binary-props") == 0)
+        lrb.encode_binary_props = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "all-revprops") == 0)
         {
           revprops = NULL; /* presence indicates fetch all revprops */

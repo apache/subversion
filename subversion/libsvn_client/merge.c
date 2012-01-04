@@ -274,18 +274,21 @@ typedef struct merge_cmd_baton_t {
 } merge_cmd_baton_t;
 
 
-/* If the merge source server is is capable of merge tracking, the left-side
+/* Return TRUE iff we should be taking account of mergeinfo in deciding what
+   changes to merge, for the merge described by MERGE_B.  Specifically, that
+   is if the merge source server is capable of merge tracking, the left-side
    merge source is an ancestor of the right-side (or vice-versa), the merge
    source repository is the same repository as the MERGE_B->TARGET_ABSPATH, and
-   ancestry is being considered then return TRUE.  */
+   ancestry is being considered.  */
 #define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
                                   && (merge_b)->sources_ancestral   \
                                   && (merge_b)->same_repos          \
                                   && (! (merge_b)->ignore_ancestry))
 
 
-/* If HONOR_MERGEINFO is TRUE and the merge is not a dry run
-   then return TRUE.  */
+/* Return TRUE iff we should be recording mergeinfo for the merge described
+   by MERGE_B.  Specifically, that is if we are honoring mergeinfo and the
+   merge is not a dry run.  */
 #define RECORD_MERGEINFO(merge_b) (HONOR_MERGEINFO(merge_b) \
                                    && !(merge_b)->dry_run)
 
@@ -794,7 +797,7 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 /* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
-   to be added to the working copy LOCAL_ABSPATH.
+   to be added to the working copy TARGET_ABSPATH.
 
    HONOR_MERGEINFO determines whether mergeinfo will be honored by this
    function (when applicable).
@@ -803,14 +806,14 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
    REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
    SAME_REPOS is false, then filter out all mergeinfo
    property additions (Issue #3383) from *PROPS.  If SAME_REPOS is
-   true then filter out mergeinfo property additions to LOCAL_ABSPATH when
-   those additions refer to the same line of history as LOCAL_ABSPATH as
+   true then filter out mergeinfo property additions to TARGET_ABSPATH when
+   those additions refer to the same line of history as TARGET_ABSPATH as
    described below.
 
    If mergeinfo is being honored and SAME_REPOS is true
    then examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
-   history as LOCAL_ABSPATH (pegged at its base revision), then filter out
+   history as TARGET_ABSPATH (pegged at its base revision), then filter out
    that range.  If the entire rangelist for a given path is filtered then
    filter out the path as well.
 
@@ -819,9 +822,9 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 
    If any filtering occurs, set outgoing *PROPS to a shallow copy (allocated
    in POOL) of incoming *PROPS minus the filtered mergeinfo. */
-static svn_error_t*
+static svn_error_t *
 filter_self_referential_mergeinfo(apr_array_header_t **props,
-                                  const char *local_abspath,
+                                  const char *target_abspath,
                                   svn_boolean_t honor_mergeinfo,
                                   svn_boolean_t same_repos,
                                   svn_boolean_t reintegrate_merge,
@@ -833,7 +836,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   int i;
   apr_pool_t *iterpool;
   svn_boolean_t is_added;
-  svn_revnum_t base_revision;
+  const char *target_base_url;
+  svn_revnum_t target_base_rev;
 
   /* Issue #3383: We don't want mergeinfo from a foreign repos.
 
@@ -857,12 +861,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   /* If this is a merge from the same repository and PATH itself has been
      added there is no need to filter. */
-  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath, pool));
+  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath, pool));
   if (is_added)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__node_get_base_rev(&base_revision, ctx->wc_ctx,
-                                    local_abspath, pool));
+  SVN_ERR(svn_client_url_from_path2(&target_base_url, target_abspath,
+                                    ctx, pool, pool));
+  SVN_ERR(svn_wc__node_get_base_rev(&target_base_rev, ctx->wc_ctx,
+                                    target_abspath, pool));
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
   iterpool = svn_pool_create(pool);
@@ -873,7 +879,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       svn_mergeinfo_t mergeinfo, younger_mergeinfo;
       svn_mergeinfo_t filtered_mergeinfo = NULL;
       svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
-      const char *target_url;
       const char *old_url = NULL;
       svn_error_t *err;
 
@@ -890,11 +895,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
       /* Temporarily reparent our RA session to the merge
          target's URL. */
-      SVN_ERR(svn_client_url_from_path2(&target_url, local_abspath,
-                                        ctx, iterpool, iterpool));
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url,
                                                 ra_session,
-                                                target_url, iterpool));
+                                                target_base_url, iterpool));
 
       /* Parse the incoming mergeinfo to allow easier manipulation. */
       err = svn_mergeinfo_parse(&mergeinfo, prop->value->data, iterpool);
@@ -947,7 +950,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
          the cost of a roundtrip communication with the repository. */
       SVN_ERR(split_mergeinfo_on_revision(&younger_mergeinfo,
                                           &mergeinfo,
-                                          base_revision,
+                                          target_base_rev,
                                           iterpool));
 
       /* Filter self-referential mergeinfo from younger_mergeinfo. */
@@ -989,7 +992,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                      RANGE->START on the same line of history.
                      (start+1 because RANGE->start is not inclusive.) */
                   err2 = svn_client__repos_location(&start_url, ra_session,
-                                                    target_url, base_revision,
+                                                    target_base_url, target_base_rev,
                                                     range->start + 1,
                                                     ctx, iterpool, iterpool);
                   if (err2)
@@ -1066,7 +1069,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
           SVN_ERR(svn_client__get_history_as_mergeinfo(
             &implicit_mergeinfo, NULL,
-            base_revision, base_revision, SVN_INVALID_REVNUM,
+            target_base_rev, target_base_rev, SVN_INVALID_REVNUM,
             ra_session,
             ctx,
             iterpool));
@@ -2670,6 +2673,8 @@ typedef struct notification_receiver_baton_t
   svn_boolean_t is_single_file_merge;
 
   /* Depth first ordered list of paths that needs special care while merging.
+     ### And ...? This is not just a list of paths. See the global comment
+         'THE CHILDREN_WITH_MERGEINFO ARRAY'.
      This defaults to NULL. For 'same_url' merge alone we set it to
      proper array. This is used by notification_receiver to put a
      merge notification begin lines. */
@@ -3058,8 +3063,7 @@ rangelist_intersect_range(apr_array_header_t **out_rangelist,
    rangelist but cannot be NULL.
 
    PRIMARY_URL is the merge source url of CHILD at the younger of REVISION1
-   and REVISION2.  MERGEINFO_PATH is the absolute repository path of
-   PRIMARY_URL (i.e. the path value of mergeinfo from PRIMARY_URL).
+   and REVISION2.
 
    Since this function is only invoked for subtrees of the merge target, the
    guarantees afforded by normalize_merge_sources() don't apply - see the
@@ -3130,7 +3134,6 @@ rangelist_intersect_range(apr_array_header_t **out_rangelist,
 static svn_error_t *
 adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                               svn_client__merge_path_t *parent,
-                              const char *mergeinfo_path,
                               svn_revnum_t revision1,
                               svn_revnum_t revision2,
                               const char *primary_url,
@@ -3410,7 +3413,6 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
          case, see the 'Note' in drive_merge_report_editor's docstring. */
       if (deleted_rangelist->nelts || added_rangelist->nelts)
         {
-          const char *child_mergeinfo_path;
           const char *child_primary_source_url;
           const char *child_repos_src_path =
             svn_dirent_is_child(merge_b->target_abspath, child->abspath,
@@ -3425,12 +3427,7 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
                                         ? source->url2 : source->url1,
                                         child_repos_src_path, iterpool);
 
-          SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session,
-                                                      &child_mergeinfo_path,
-                                                      child_primary_source_url,
-                                                      iterpool));
           SVN_ERR(adjust_deleted_subtree_ranges(child, parent,
-                                                child_mergeinfo_path,
                                                 source->rev1, source->rev2,
                                                 child_primary_source_url,
                                                 ra_session,
@@ -4110,10 +4107,9 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 
 /* Helper for populate_remaining_ranges().
 
-   SOURCE, RA_SESSION, MERGE_SRC_CANON_PATH,
+   SOURCE, RA_SESSION,
    and MERGE_B are all cascaded from the arguments of the same name in
-   populate_remaining_ranges().  MERGE_SRC_CANON_PATH is the absolute
-   repository path of SOURCE->url2.
+   populate_remaining_ranges().
 
    Note: The following comments assume a forward merge, i.e. SOURCE->rev1
    < SOURCE->rev2.  If this is a reverse merge then all the following
@@ -4136,7 +4132,6 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 static svn_error_t *
 find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                   svn_revnum_t *gap_end,
-                                  const char *merge_src_canon_path,
                                   const merge_source_t *source,
                                   svn_ra_session_t *ra_session,
                                   merge_cmd_baton_t *merge_b,
@@ -4145,6 +4140,9 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   svn_mergeinfo_t implicit_src_mergeinfo;
   svn_revnum_t young_rev = MAX(source->rev1, source->rev2);
   svn_revnum_t old_rev = MIN(source->rev1, source->rev2);
+  const char *primary_url = (source->rev1 < source->rev2)
+                            ? source->url2 : source->url1;
+  const char *merge_src_fspath;
   apr_array_header_t *rangelist;
 
   /* Start by assuming there is no gap. */
@@ -4156,8 +4154,10 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                                old_rev, ra_session,
                                                merge_b->ctx, scratch_pool));
 
+  SVN_ERR(svn_ra__get_fspath_relative_to_root(
+            ra_session, &merge_src_fspath, primary_url, scratch_pool));
   rangelist = apr_hash_get(implicit_src_mergeinfo,
-                           merge_src_canon_path,
+                           merge_src_fspath,
                            APR_HASH_KEY_STRING);
 
   if (!rangelist) /* ### Can we ever not find a rangelist? */
@@ -4228,15 +4228,19 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
 
 /* Helper for do_directory_merge().
 
-   For each child in CHILDREN_WITH_MERGEINFO, populate that
-   child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
+   For each (svn_client__merge_path_t *) child in CHILDREN_WITH_MERGEINFO,
+   populate that child's 'remaining_ranges' list with (### ... what?),
+   and populate that child's 'implicit_mergeinfo' with its implicit
+   mergeinfo (natural history).  CHILDREN_WITH_MERGEINFO is expected
    to be sorted in depth first order and each child must be processed in
    that order.  The inheritability of all calculated ranges is TRUE.
 
-   If HONOR_MERGEINFO is set, this function will actually try to be
+   If mergeinfo is being honored (based on MERGE_B -- see HONOR_MERGEINFO()
+   for how this is determined), this function will actually try to be
    intelligent about populating remaining_ranges list.  Otherwise, it
    will claim that each child has a single remaining range, from
    SOURCE->rev1, to SOURCE->rev2.
+   ### We also take the short-cut if doing record-only.  Why?
 
    SCRATCH_POOL is used for all temporary allocations.  Changes to
    CHILDREN_WITH_MERGEINFO are made in RESULT_POOL.
@@ -4251,9 +4255,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
 static svn_error_t *
 populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           const merge_source_t *source,
-                          svn_boolean_t honor_mergeinfo,
                           svn_ra_session_t *ra_session,
-                          const char *parent_merge_src_canon_path,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -4265,7 +4267,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
   /* If we aren't honoring mergeinfo or this is a --record-only merge,
      we'll make quick work of this by simply adding dummy SOURCE->rev1:rev2
      ranges for all children. */
-  if (! honor_mergeinfo || merge_b->record_only)
+  if (! HONOR_MERGEINFO(merge_b) || merge_b->record_only)
     {
       for (i = 0; i < children_with_mergeinfo->nelts; i++)
         {
@@ -4335,7 +4337,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
      we will adjust CHILD->REMAINING_RANGES such that we don't describe
      non-existent paths to the editor. */
   SVN_ERR(find_gaps_in_merge_source_history(&gap_start, &gap_end,
-                                            parent_merge_src_canon_path,
                                             source,
                                             ra_session, merge_b,
                                             iterpool));
@@ -4800,8 +4801,8 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    Set up the diff editor report to merge the SOURCE diff
    into TARGET_ABSPATH and drive it.
 
-   If mergeinfo is not being honored based on MERGE_B, see the doc string for
-   HONOR_MERGEINFO() for how this is determined, then ignore
+   If mergeinfo is not being honored (based on MERGE_B -- see the doc
+   string for HONOR_MERGEINFO() for how this is determined), then ignore
    CHILDREN_WITH_MERGEINFO and merge the SOURCE diff to TARGET_ABSPATH.
 
    If mergeinfo is being honored then perform a history-aware merge,
@@ -4872,11 +4873,9 @@ drive_merge_report_editor(const char *target_abspath,
   void *diff_edit_baton;
   void *report_baton;
   svn_revnum_t target_start;
-  svn_boolean_t honor_mergeinfo;
+  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   const char *old_sess2_url;
   svn_boolean_t is_rollback = source->rev1 > source->rev2;
-
-  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
 
   /* Start with a safe default starting revision for the editor and the
      merge target. */
@@ -5199,7 +5198,8 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
    Set *FILENAME to the local path to a new temporary file holding its text,
    and set *PROPS to a new hash of its properties.
 
-   RA_SESSION is a session whose current root is the URL of the file itself,
+   RA_SESSION is a session open to the correct repository, which will be
+   temporarily reparented to URL which is the URL of the file itself,
    and REV is the revision to get.
 
    The new temporary file will be created as a sibling of WC_TARGET.
@@ -5214,19 +5214,27 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
 */
 static svn_error_t *
 single_file_merge_get_file(const char **filename,
-                           svn_ra_session_t *ra_session,
                            apr_hash_t **props,
+                           svn_ra_session_t *ra_session,
+                           const char *url,
                            svn_revnum_t rev,
                            const char *wc_target,
                            apr_pool_t *pool)
 {
   svn_stream_t *stream;
+  const char *old_sess_url;
 
   SVN_ERR(svn_stream_open_unique(&stream, filename,
                                  svn_dirent_dirname(wc_target, pool),
                                  svn_io_file_del_none, pool, pool));
+
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, ra_session, url,
+                                            pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
+  if (old_sess_url)
+    SVN_ERR(svn_ra_reparent(ra_session, old_sess_url, pool));
+
   return svn_stream_close(stream);
 }
 
@@ -6460,14 +6468,10 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
    requested merges; order the objects from oldest to youngest.
 
    Determine the requested merges by examining SOURCE_PATH_OR_URL (and its
-   associated URL, SOURCE_URL) and SOURCE_PEG_REVISION (which specifies the
-   line of history from which merges will be pulled) and
+   associated URL and revision, SOURCE_URL and SOURCE_PEG_REVNUM) (which
+   specifies the line of history from which merges will be pulled) and
    RANGES_TO_MERGE (a list of svn_opt_revision_range_t's which provide
-   revision ranges).  Note that SOURCE_PATH_OR_URL may itself be either a
-   working copy path or a URL; in the latter case, SOURCE_URL is probably
-   identical to SOURCE_PATH_OR_URL.
-
-   If SOURCE_PEG_REVISION is unspecified, treat that it as HEAD.
+   revision ranges).
 
    Use RA_SESSION -- whose session URL matches SOURCE_URL -- to answer
    historical questions.
@@ -6484,7 +6488,7 @@ static svn_error_t *
 normalize_merge_sources(apr_array_header_t **merge_sources_p,
                         const char *source_path_or_url,
                         const char *source_url,
-                        const svn_opt_revision_t *source_peg_revision,
+                        svn_revnum_t source_peg_revnum,
                         const apr_array_header_t *ranges_to_merge,
                         svn_ra_session_t *ra_session,
                         svn_client_ctx_t *ctx,
@@ -6492,7 +6496,6 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
                         apr_pool_t *scratch_pool)
 {
   const char *source_abspath_or_url;
-  svn_revnum_t source_peg_revnum;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *merge_range_ts;
   int i;
@@ -6503,15 +6506,6 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
                                     scratch_pool));
   else
     source_abspath_or_url = source_path_or_url;
-
-  /* Resolve our SOURCE_PEG_REVISION to a real number. */
-  SVN_ERR(svn_client__get_revision_number(&source_peg_revnum, &youngest_rev,
-                                          ctx->wc_ctx,
-                                          source_abspath_or_url,
-                                          ra_session, source_peg_revision,
-                                          iterpool));
-  if (! SVN_IS_VALID_REVNUM(source_peg_revnum))
-    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Create a list to hold svn_merge_range_t's. */
   merge_range_ts = apr_array_make(scratch_pool, ranges_to_merge->nelts,
@@ -6619,6 +6613,43 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
   return SVN_NO_ERROR;
 }
 
+/* Return a merge source representing the sub-range from START_REV to
+   END_REV of SOURCE.  SOURCE obeys the rules described in the
+   'MERGEINFO MERGE SOURCE NORMALIZATION' comment at the top of this file.
+   The younger of START_REV and END_REV is inclusive while the older is
+   exclusive.
+
+   Allocate the result structure in POOL but leave the URLs in it as shallow
+   copies of the URLs in SOURCE.
+*/
+static merge_source_t *
+subrange_source(const merge_source_t *source,
+                svn_revnum_t start_rev,
+                svn_revnum_t end_rev,
+                apr_pool_t *pool)
+{
+  svn_boolean_t is_rollback = (source->rev1 > source->rev2);
+  svn_boolean_t same_urls = (strcmp(source->url1, source->url2) == 0);
+  merge_source_t *real_source = apr_palloc(pool, sizeof(*source));
+
+  real_source->url1 = source->url1;
+  real_source->rev1 = start_rev;
+  real_source->url2 = source->url2;
+  real_source->rev2 = end_rev;
+  if (! same_urls)
+    {
+      if (is_rollback && (end_rev != source->rev2))
+        {
+          real_source->url2 = source->url1;
+        }
+      if ((! is_rollback) && (start_rev != source->rev1))
+        {
+          real_source->url1 = source->url2;
+        }
+    }
+  return real_source;
+}
+
 /* The single-file, simplified version of do_directory_merge(), which see for
    parameter descriptions.
 
@@ -6650,29 +6681,20 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 {
   apr_array_header_t *remaining_ranges;
   svn_client_ctx_t *ctx = merge_b->ctx;
-  const char *mergeinfo_path;
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
   svn_merge_range_t *conflicted_range = NULL;
   svn_boolean_t inherited = FALSE;
   svn_boolean_t is_rollback = (source->rev1 > source->rev2);
   const char *primary_url = is_rollback ? source->url1 : source->url2;
-  const char *target_url;
-  svn_boolean_t honor_mergeinfo, record_mergeinfo;
+  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   svn_client__merge_path_t *merge_target = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
-  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
-  record_mergeinfo = RECORD_MERGEINFO(merge_b);
-
   /* Note that this is a single-file merge. */
   notify_b->is_single_file_merge = TRUE;
-
-  SVN_ERR(svn_wc__node_get_url(&target_url, merge_b->ctx->wc_ctx,
-                               target_abspath,
-                               iterpool, iterpool));
 
   range.start = source->rev1;
   range.end = source->rev2;
@@ -6683,15 +6705,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
       merge_target = svn_client__merge_path_create(target_abspath,
                                                    scratch_pool);
 
-      SVN_ERR(svn_ra__get_fspath_relative_to_root(merge_b->ra_session1,
-                                                  &mergeinfo_path,
-                                                  primary_url,
-                                                  scratch_pool));
-
-      /* Fetch mergeinfo (temporarily reparenting ra_session1 to
-         working copy target URL). */
-      SVN_ERR(svn_ra_reparent(merge_b->ra_session1, target_url,
-                              iterpool));
+      /* Fetch mergeinfo. */
       err = get_full_mergeinfo(&target_mergeinfo,
                                &(merge_target->implicit_mergeinfo),
                                &inherited, svn_mergeinfo_inherited,
@@ -6712,8 +6726,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
             }
           return svn_error_trace(err);
         }
-
-      SVN_ERR(svn_ra_reparent(merge_b->ra_session1, source->url1, iterpool));
 
       /* Calculate remaining merges unless this is a record only merge.
          In that case the remaining range is the whole range described
@@ -6750,7 +6762,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
          required to do these merges (two copies per range). */
       if (merge_b->sources_ancestral && (remaining_ranges->nelts > 1))
         {
-          const char *old_sess_url = NULL;
+          const char *old_sess_url;
           SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url,
                                                     merge_b->ra_session1,
                                                     primary_url,
@@ -6767,8 +6779,8 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         {
           svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
                                                svn_merge_range_t *);
+          merge_source_t *real_source;
           svn_boolean_t header_sent = FALSE;
-          svn_ra_session_t *ra_session1, *ra_session2;
           const char *tmpfile1, *tmpfile2;
           apr_hash_t *props1, *props2;
           svn_string_t *pval;
@@ -6779,32 +6791,17 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
           svn_pool_clear(iterpool);
 
-          /* Issue #3174: If we are honoring mergeinfo, then SOURCE meets the
-             conditions described in 'MERGEINFO MERGE SOURCE NORMALIZATION'.
-             This means that @SOURCE->url1@rev1 may be the copy source of
-             SOURCE->url2@rev2. If this is the case, then ->url1 != ->url2.
-             Since MERGE_B->RA_SESSION1 is always opened with ->url1, the
-             only time we can safely call single_file_merge_get_file() with
-             that RA session is for SOURCE->rev1 (or ->rev2 if this is a
-             reverse merge). */
-          ra_session1 = merge_b->ra_session1;
-          ra_session2 = merge_b->ra_session2;
-          if (honor_mergeinfo && strcmp(source->url1, source->url2) != 0)
-            {
-              if (!is_rollback && r->start != source->rev1)
-                ra_session1 = ra_session2; /* Use SOURCE->url2's RA session. */
-              else if (is_rollback && r->end != source->rev2)
-                ra_session2 = ra_session1; /* Use SOURCE->url1's RA session. */
-            }
-
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
-          SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1,
-                                             &props1, r->start,
+          real_source = subrange_source(source, r->start, r->end, iterpool);
+          SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1,
+                                             merge_b->ra_session1,
+                                             real_source->url1, real_source->rev1,
                                              target_abspath, iterpool));
-          SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2,
-                                             &props2, r->end, target_abspath,
-                                             iterpool));
+          SVN_ERR(single_file_merge_get_file(&tmpfile2, &props2,
+                                             merge_b->ra_session2,
+                                             real_source->url2, real_source->rev2,
+                                             target_abspath, iterpool));
 
           /* Discover any svn:mime-type values in the proplists */
           pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
@@ -6896,9 +6893,14 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
      REMAINING_RANGES here instead of the possibly-pared-down
      RANGES_TO_MERGE because we want to record all the requested
      merge ranges, include the noop ones.  */
-  if (record_mergeinfo && remaining_ranges->nelts)
+  if (RECORD_MERGEINFO(merge_b) && remaining_ranges->nelts)
     {
+      const char *mergeinfo_path;
       apr_array_header_t *filtered_rangelist;
+
+      SVN_ERR(svn_ra__get_fspath_relative_to_root(
+                merge_b->ra_session1, &mergeinfo_path, primary_url,
+                scratch_pool));
 
       /* Filter any ranges from TARGET_WCPATH's own history, there is no
          need to record this explicitly in mergeinfo, it is already part
@@ -8449,12 +8451,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (source->rev1 > source->rev2);
   const char *primary_url = is_rollback ? source->url1 : source->url2;
-  const char *mergeinfo_path;
-  svn_boolean_t honor_mergeinfo, record_mergeinfo;
-  svn_boolean_t same_urls = (strcmp(source->url1, source->url2) == 0);
-
-  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
-  record_mergeinfo = RECORD_MERGEINFO(merge_b);
+  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
 
   /* Note that this is not a single-file merge. */
   notify_b->is_single_file_merge = FALSE;
@@ -8483,9 +8480,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
      because they meet one or more of the criteria described in
      get_mergeinfo_paths(). Here the paths are arranged in a depth
      first order. */
-  SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
-                                              primary_url, scratch_pool));
-
   SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
                               depth, scratch_pool, scratch_pool));
 
@@ -8501,9 +8495,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
      merged, and then merge it.  Otherwise, we just merge what we were asked
      to merge across the whole tree.  */
   SVN_ERR(populate_remaining_ranges(notify_b->children_with_mergeinfo,
-                                    source,
-                                    honor_mergeinfo,
-                                    ra_session, mergeinfo_path,
+                                    source, ra_session,
                                     merge_b, scratch_pool, scratch_pool));
 
   /* Always start with a range which describes the most inclusive merge
@@ -8539,7 +8531,9 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                            notify_b->children_with_mergeinfo,
                                            merge_b, scratch_pool, iterpool));
 
-      /* Adjust subtrees' remaining_ranges to deal with issue #3067 */
+      /* Adjust subtrees' remaining_ranges to deal with issue #3067:
+       * "subtrees that don't exist at the start or end of a merge range
+       * shouldn't break the merge". */
       SVN_ERR(fix_deleted_subtree_ranges(source,
                                          ra_session,
                                          notify_b->children_with_mergeinfo,
@@ -8592,7 +8586,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
           while (end_rev != SVN_INVALID_REVNUM)
             {
               svn_revnum_t next_end_rev;
-              merge_source_t real_source;
+              merge_source_t *real_source;
               const char *old_sess1_url = NULL, *old_sess2_url = NULL;
               svn_merge_range_t *first_target_range
                 = (target_merge_path->remaining_ranges->nelts == 0 ? NULL
@@ -8630,51 +8624,16 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                      is_rollback, end_rev, scratch_pool);
               notify_b->cur_ancestor_abspath = NULL;
 
-              /* In SOURCE: URL1@REV1 is a real location; URL2@REV2 is a
-                 real location -- that much we know (thanks to the merge
-                 source normalization code).  But for revisions between
-                 them, the URLs might differ.  Here are the rules:
-
-                   * If URL1 == URL2, then all URLs between REV1 and
-                     REV2 also match URL1/URL2.
-
-                   * If URL1 != URL2, then:
-
-                       * If REV1 < REV2, only REV1 maps to
-                         URL1.  The revisions between REV1+1 and
-                         REV2 (inclusive) map to URL2.
-
-                       * If REV1 > REV2, Only REV2 maps to
-                         URL2.  The revisions between REV1 and
-                         REV2+1 (inclusive) map to URL1.
-
-                 We need to adjust our URLs accordingly, here.
-              */
-              real_source.url1 = source->url1;
-              real_source.rev1 = start_rev;
-              real_source.url2 = source->url2;
-              real_source.rev2 = end_rev;
-              if (! same_urls)
-                {
-                  if (is_rollback && (end_rev != source->rev2))
-                    {
-                      real_source.url2 = source->url1;
-                      SVN_ERR(svn_client__ensure_ra_session_url
-                              (&old_sess2_url, merge_b->ra_session2,
-                               real_source.url2, iterpool));
-                    }
-                  if ((! is_rollback) && (start_rev != source->rev1))
-                    {
-                      real_source.url1 = source->url2;
-                      SVN_ERR(svn_client__ensure_ra_session_url
-                              (&old_sess1_url, merge_b->ra_session1,
-                               real_source.url1, iterpool));
-                    }
-                }
-
+              real_source = subrange_source(source, start_rev, end_rev, iterpool);
+              SVN_ERR(svn_client__ensure_ra_session_url(
+                        &old_sess1_url, merge_b->ra_session1,
+                        real_source->url1, iterpool));
+              SVN_ERR(svn_client__ensure_ra_session_url(
+                        &old_sess2_url, merge_b->ra_session2,
+                        real_source->url2, iterpool));
               SVN_ERR(drive_merge_report_editor(
                 merge_b->target_abspath,
-                &real_source,
+                real_source,
                 notify_b->children_with_mergeinfo,
                 depth, notify_b,
                 merge_b,
@@ -8749,8 +8708,12 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
     }
 
   /* Record mergeinfo where appropriate.*/
-  if (record_mergeinfo)
+  if (RECORD_MERGEINFO(merge_b))
     {
+      const char *mergeinfo_path;
+
+      SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
+                                                  primary_url, scratch_pool));
       err = record_mergeinfo_for_dir_merge(result_catalog,
                                            &range,
                                            mergeinfo_path,
@@ -9225,7 +9188,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Perform checks to determine whether of the working copy at TARGET_ABSPATH
+/* Perform checks to determine whether the working copy at TARGET_ABSPATH
  * can safely be used as a merge target. Checks are performed according to
  * the ALLOW_MIXED_REV, ALLOW_LOCAL_MODS, and ALLOW_SWITCHED_SUBTREES
  * parameters. If any checks fail, raise SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
@@ -9242,9 +9205,21 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
                                    svn_boolean_t allow_switched_subtrees,
                                    apr_pool_t *scratch_pool)
 {
-  /* Avoid the following checks if we don't need them. */
-  if (allow_mixed_rev && allow_local_mods && allow_switched_subtrees)
-    return SVN_NO_ERROR;
+  svn_node_kind_t target_kind;
+
+  /* Check the target exists. */
+  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
+  if (target_kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Path '%s' does not exist"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
+                           scratch_pool));
+  if (target_kind != svn_node_dir && target_kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Merge target '%s' does not exist in the "
+                               "working copy"), target_abspath);
 
   /* Perform the mixed-revision check first because it's the cheapest one. */
   if (! allow_mixed_rev)
@@ -9310,11 +9285,31 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Throw an error if PATH_OR_URL is a path and REVISION isn't a repository
+ * revision. */
+static svn_error_t *
+ensure_wc_path_has_repo_revision(const char *path_or_url,
+                                 const svn_opt_revision_t *revision,
+                                 apr_pool_t *scratch_pool)
+{
+  if (revision->kind != svn_opt_revision_number
+      && revision->kind != svn_opt_revision_date
+      && revision->kind != svn_opt_revision_head
+      && ! svn_path_is_url(path_or_url))
+    return svn_error_createf(
+      SVN_ERR_CLIENT_BAD_REVISION, NULL,
+      _("Invalid merge source '%s'; a working copy path can only be "
+        "used with a repository revision (a number, a date, or head)"),
+      svn_dirent_local_style(path_or_url, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 
 /*-----------------------------------------------------------------------*/
 
 /*** Public APIs ***/
 
+/* The body of svn_client_merge4(), which see for details. */
 static svn_error_t *
 merge_locked(const char *source1,
              const svn_opt_revision_t *revision1,
@@ -9334,70 +9329,19 @@ merge_locked(const char *source1,
   merge_source_t source;
   svn_boolean_t related = FALSE, ancestral = FALSE;
   url_uuid_t wc_repos_root, source_repos_root, source_repos_root2;
-  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
   svn_error_t *err;
   svn_boolean_t use_sleep = FALSE;
-  const char *yc_path = NULL;
+  const char *yc_url = NULL;
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
-  svn_node_kind_t target_kind;
-
-  /* Make sure the target is really there. */
-  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
-  if (target_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
-
-  /* Sanity check our input -- we require specified revisions,
-   * and either 2 paths or 2 URLs. */
-  if ((revision1->kind == svn_opt_revision_unspecified)
-      || (revision2->kind == svn_opt_revision_unspecified))
-    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                            _("Not all required revisions are specified"));
-
-  if (svn_path_is_url(source1) != svn_path_is_url(source2))
-    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                            _("Merge sources must both be "
-                              "either paths or URLs"));
 
   /* ### FIXME: This function really ought to do a history check on
      the left and right sides of the merge source, and -- if one is an
      ancestor of the other -- just call svn_client_merge_peg3() with
      the appropriate args. */
-
-  /* If source1 or source2 are paths, we need to get the underlying
-     URL from the wc and save the initial path we were passed so we
-     can use it as a path parameter (either in the baton or not).
-     otherwise, the path will just be NULL, which means we won't be
-     able to figure out some kind of revision specifications, but in
-     that case it won't matter, because those ways of specifying a
-     revision are meaningless for a url. */
-  SVN_ERR(svn_client_url_from_path2(&source.url1, source1, ctx,
-                                    scratch_pool, scratch_pool));
-  if (! source.url1)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(source1, scratch_pool));
-
-  SVN_ERR(svn_client_url_from_path2(&source.url2, source2, ctx,
-                                    scratch_pool, scratch_pool));
-  if (! source.url2)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(source2, scratch_pool));
-
-  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
-
-  if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Merge target '%s' does not exist in the "
-                               "working copy"), target_abspath);
 
   /* Do not allow merges into mixed-revision working copies. */
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
@@ -9409,22 +9353,17 @@ merge_locked(const char *source1,
                                     target_abspath,
                                     ctx, scratch_pool, scratch_pool));
 
-  /* Open some RA sessions to our merge source sides. */
+  /* Open RA sessions to both sides of our merge source, and resolve URLs
+   * and revisions. */
   sesspool = svn_pool_create(scratch_pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, NULL, source.url1,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, sesspool));
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, NULL, source.url2,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, sesspool));
-
-  /* Resolve revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number(&source.rev1, &youngest_rev, ctx->wc_ctx,
-                                          NULL, ra_session1, revision1,
-                                          sesspool));
-  SVN_ERR(svn_client__get_revision_number(&source.rev2, &youngest_rev, ctx->wc_ctx,
-                                          NULL, ra_session2, revision2,
-                                          sesspool));
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session1,
+                                           &source.rev1, &source.url1,
+                                           source1, NULL, revision1, revision1,
+                                           ctx, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session2,
+                                           &source.rev2, &source.url2,
+                                           source2, NULL, revision2, revision2,
+                                           ctx, sesspool));
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root.url,
                                  sesspool));
@@ -9450,7 +9389,7 @@ merge_locked(const char *source1,
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
-    SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
+    SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_url, &yc_rev,
                                                      source.url1, source.rev1,
                                                      source.url2, source.rev2,
                                                      ctx, scratch_pool));
@@ -9472,18 +9411,14 @@ merge_locked(const char *source1,
                       merge recording, then record-only two merges:
                       from A to C, and from C to B
   */
-  if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
+  if (yc_url && SVN_IS_VALID_REVNUM(yc_rev))
     {
       /* Note that our merge sources are related. */
       related = TRUE;
 
-      /* Make YC_PATH into a full URL. */
-      yc_path = svn_path_url_add_component2(source_repos_root.url, yc_path,
-                                            scratch_pool);
-
       /* If the common ancestor matches the right side of our merge,
          then we only need to reverse-merge the left side. */
-      if ((strcmp(yc_path, source.url2) == 0) && (yc_rev == source.rev2))
+      if ((strcmp(yc_url, source.url2) == 0) && (yc_rev == source.rev2))
         {
           ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
@@ -9493,7 +9428,7 @@ merge_locked(const char *source1,
         }
       /* If the common ancestor matches the left side of our merge,
          then we only need to merge the right side. */
-      else if ((strcmp(yc_path, source.url1) == 0) && (yc_rev == source.rev1))
+      else if ((strcmp(yc_url, source.url1) == 0) && (yc_rev == source.rev1))
         {
           ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
@@ -9540,14 +9475,14 @@ merge_locked(const char *source1,
       APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &source;
     }
 
-  /* Close our temporary RA sessions. */
-  svn_pool_destroy(sesspool);
-
   err = do_merge(NULL, NULL, merge_sources, target_abspath,
                  ancestral, related, same_repos,
                  ignore_ancestry, force, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
+
+  /* Close our temporary RA sessions. */
+  svn_pool_destroy(sesspool);
 
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
@@ -9565,17 +9500,17 @@ get_target_and_lock_abspath(const char **target_abspath,
                             const char **lock_abspath,
                             const char *target_wcpath,
                             svn_client_ctx_t *ctx,
-                            apr_pool_t *scratch_pool)
+                            apr_pool_t *result_pool)
 {
   svn_node_kind_t kind;
   SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath,
-                                  scratch_pool));
+                                  result_pool));
   SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
-                           scratch_pool));
+                           result_pool));
   if (kind == svn_node_dir)
     *lock_abspath = *target_abspath;
   else
-    *lock_abspath = svn_dirent_dirname(*target_abspath, scratch_pool);
+    *lock_abspath = svn_dirent_dirname(*target_abspath, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -9597,6 +9532,22 @@ svn_client_merge4(const char *source1,
                   apr_pool_t *pool)
 {
   const char *target_abspath, *lock_abspath;
+
+  /* Sanity check our input -- we require specified revisions,
+   * and either 2 paths or 2 URLs. */
+  if ((revision1->kind == svn_opt_revision_unspecified)
+      || (revision2->kind == svn_opt_revision_unspecified))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Not all required revisions are specified"));
+  if (svn_path_is_url(source1) != svn_path_is_url(source2))
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Merge sources must both be "
+                              "either paths or URLs"));
+  /* A WC path must be used with a repository revision, as we can't
+   * (currently) use the WC itself as a source, we can only read the URL
+   * from it and use that. */
+  SVN_ERR(ensure_wc_path_has_repo_revision(source1, revision1, pool));
+  SVN_ERR(ensure_wc_path_has_repo_revision(source2, revision2, pool));
 
   SVN_ERR(get_target_and_lock_abspath(&target_abspath, &lock_abspath,
                                       target_wcpath, ctx, pool));
@@ -10325,7 +10276,7 @@ calculate_left_hand_side(const char **url_left,
   apr_hash_t *segments_hash = apr_hash_make(scratch_pool);
   svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
-  const char *yc_ancestor_path;
+  const char *yc_ancestor_url;
   svn_revnum_t yc_ancestor_rev;
   const char *source_url;
   const char *target_url;
@@ -10384,12 +10335,12 @@ calculate_left_hand_side(const char **url_left,
   target_url = svn_path_url_add_component2(source_repos_root,
                                            target_repos_rel_path,
                                            iterpool);
-  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+  SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_ancestor_url,
                                                    &yc_ancestor_rev,
                                                    source_url, source_rev,
                                                    target_url, target_rev,
                                                    ctx, iterpool));
-  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
+  if (!(yc_ancestor_url && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), source_url, source_rev,
@@ -10451,8 +10402,7 @@ calculate_left_hand_side(const char **url_left,
   if (never_synced)
     {
       /* We never merged to the source.  Just return the branch point. */
-      *url_left = svn_path_url_add_component2(source_repos_root,
-                                              yc_ancestor_path, result_pool);
+      *url_left = apr_pstrdup(result_pool, yc_ancestor_url);
       *rev_left = yc_ancestor_rev;
     }
   else
@@ -10471,38 +10421,32 @@ calculate_left_hand_side(const char **url_left,
   return SVN_NO_ERROR;
 }
 
+/* The body of svn_client_find_reintegrate_merge(), which see for details. */
 static svn_error_t *
-merge_reintegrate_locked(const char *source_path_or_url,
-                         const svn_opt_revision_t *source_peg_revision,
-                         const char *target_abspath,
-                         svn_boolean_t dry_run,
-                         const apr_array_header_t *merge_options,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *scratch_pool)
+find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
+                       svn_ra_session_t **source_ra_session_p,
+                       merge_source_t **source_p,
+                       svn_revnum_t *yc_ancestor_rev_p,
+                       const char *source_path_or_url,
+                       const svn_opt_revision_t *source_peg_revision,
+                       const char *target_abspath,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   url_uuid_t wc_repos_root, source_repos_root;
   svn_ra_session_t *target_ra_session;
   svn_ra_session_t *source_ra_session;
   const char *source_repos_rel_path, *target_repos_rel_path;
-  const char *yc_ancestor_path;
+  const char *yc_ancestor_relpath;
   svn_revnum_t yc_ancestor_rev;
   merge_source_t source;
   svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
   svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
-  svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   apr_hash_t *subtrees_with_mergeinfo;
   const char *target_url;
   svn_revnum_t target_base_rev;
-  svn_node_kind_t kind;
-
-  /* Make sure the target is really there. */
-  SVN_ERR(svn_io_check_path(target_abspath, &kind, scratch_pool));
-  if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
 
   /* Make sure we're dealing with a real URL. */
   SVN_ERR(svn_client_url_from_path2(&source.url2, source_path_or_url, ctx,
@@ -10574,7 +10518,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
   SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &source.rev2, &source.url2,
                                            source.url2, NULL, source_peg_revision,
                                            source_peg_revision,
-                                           ctx, scratch_pool));
+                                           ctx, result_pool));
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
                                scratch_pool, scratch_pool));
   SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, NULL,
@@ -10595,12 +10539,22 @@ merge_reintegrate_locked(const char *source_path_or_url,
                                    source_ra_session,
                                    target_ra_session,
                                    ctx,
-                                   scratch_pool, scratch_pool));
+                                   result_pool, scratch_pool));
 
   /* Did calculate_left_hand_side() decide that there was no merge to
      be performed here?  */
   if (! source.url1)
-    return SVN_NO_ERROR;
+    {
+      if (target_ra_session_p)
+        *target_ra_session_p = NULL;
+      if (source_ra_session_p)
+        *source_ra_session_p = NULL;
+      if (source_p)
+        *source_p = NULL;
+      if (yc_ancestor_rev_p)
+        *yc_ancestor_rev_p = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
 
   /* If the target was moved after the source was branched from it,
      it is possible that the left URL differs from the target's current
@@ -10608,13 +10562,13 @@ merge_reintegrate_locked(const char *source_path_or_url,
   if (strcmp(source.url1, target_url))
     SVN_ERR(svn_ra_reparent(target_ra_session, source.url1, scratch_pool));
 
-  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_relpath, NULL,
                                                    &yc_ancestor_rev,
                                                    source.url2, source.rev2,
                                                    source.url1, source.rev1,
                                                    ctx, scratch_pool));
 
-  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
+  if (!(yc_ancestor_relpath && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"),
@@ -10629,7 +10583,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
       svn_mergeinfo_t final_unmerged_catalog = apr_hash_make(scratch_pool);
 
       SVN_ERR(find_unsynced_ranges(source_repos_rel_path,
-                                   yc_ancestor_path,
+                                   yc_ancestor_relpath,
                                    unmerged_to_source_mergeinfo_catalog,
                                    merged_to_source_mergeinfo_catalog,
                                    final_unmerged_catalog,
@@ -10659,6 +10613,81 @@ merge_reintegrate_locked(const char *source_path_or_url,
 
   /* Left side: trunk@youngest-trunk-rev-merged-to-branch-at-specified-peg-rev
    * Right side: branch@specified-peg-revision */
+  if (target_ra_session_p)
+    *target_ra_session_p = target_ra_session;
+  if (source_ra_session_p)
+    *source_ra_session_p = source_ra_session;
+  if (source_p)
+    *source_p = apr_pmemdup(result_pool, &source, sizeof(source));
+  if (yc_ancestor_rev_p)
+    *yc_ancestor_rev_p = yc_ancestor_rev;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_find_reintegrate_merge(const char **url1_p,
+                                  svn_revnum_t *rev1_p,
+                                  const char **url2_p,
+                                  svn_revnum_t *rev2_p,
+                                  const char *source_path_or_url,
+                                  const svn_opt_revision_t *source_peg_revision,
+                                  const char *target_wcpath,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  const char *target_abspath;
+  merge_source_t *source;
+
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath,
+                                  scratch_pool));
+  SVN_ERR(find_reintegrate_merge(NULL, NULL, &source, NULL,
+                                 source_path_or_url, source_peg_revision,
+                                 target_abspath,
+                                 ctx, result_pool, scratch_pool));
+  if (source)
+    {
+      *url1_p = source->url1;
+      *rev1_p = source->rev1;
+      *url2_p = source->url2;
+      *rev2_p = source->rev2;
+    }
+  else
+    {
+      *url1_p = NULL;
+      *rev1_p = SVN_INVALID_REVNUM;
+      *url2_p = NULL;
+      *rev2_p = SVN_INVALID_REVNUM;
+    }
+  return SVN_NO_ERROR;
+}
+
+/* The body of svn_client_merge_reintegrate(), which see for details. */
+static svn_error_t *
+merge_reintegrate_locked(const char *source_path_or_url,
+                         const svn_opt_revision_t *source_peg_revision,
+                         const char *target_abspath,
+                         svn_boolean_t dry_run,
+                         const apr_array_header_t *merge_options,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *target_ra_session, *source_ra_session;
+  merge_source_t *source;
+  svn_revnum_t yc_ancestor_rev;
+  svn_boolean_t use_sleep;
+  svn_error_t *err;
+
+  SVN_ERR(find_reintegrate_merge(&target_ra_session, &source_ra_session,
+                                 &source, &yc_ancestor_rev,
+                                 source_path_or_url, source_peg_revision,
+                                 target_abspath,
+                                 ctx, scratch_pool, scratch_pool));
+
+  if (! source)
+    {
+      return SVN_NO_ERROR;
+    }
 
   /* Do the real merge! */
   /* ### TODO(reint): Make sure that one isn't the same line ancestor
@@ -10668,7 +10697,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
   err = merge_cousins_and_supplement_mergeinfo(target_abspath,
                                                target_ra_session,
                                                source_ra_session,
-                                               &source, yc_ancestor_rev,
+                                               source, yc_ancestor_rev,
                                                TRUE /* same_repos */,
                                                svn_depth_infinity,
                                                FALSE /* ignore_ancestry */,
@@ -10731,7 +10760,8 @@ merge_peg_locked(const char *source_path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
-  const char *URL;
+  const char *source_url;
+  svn_revnum_t source_peg_revnum;
   apr_array_header_t *merge_sources;
   url_uuid_t wc_repos_root, source_repos_root;
   svn_ra_session_t *ra_session;
@@ -10739,33 +10769,8 @@ merge_peg_locked(const char *source_path_or_url,
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
-  svn_node_kind_t target_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-
-  /* Make sure the target is really there. */
-  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
-  if (target_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_dirent_local_style(target_abspath,
-                                                    scratch_pool));
-
-  /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path2(&URL, source_path_or_url, ctx,
-                                    scratch_pool, scratch_pool));
-  if (! URL)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(source_path_or_url,
-                                                    scratch_pool));
-
-  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
-                           scratch_pool));
-  if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Merge target '%s' does not exist in the "
-                               "working copy"), target_abspath);
 
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
                                              allow_mixed_rev, TRUE, TRUE,
@@ -10778,16 +10783,17 @@ merge_peg_locked(const char *source_path_or_url,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(scratch_pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE,
-                                               ctx, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path(
+            &ra_session, &source_peg_revnum, &source_url,
+            source_path_or_url, NULL, source_peg_revision, source_peg_revision,
+            ctx, sesspool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root.url,
                                  scratch_pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_root.uuid, scratch_pool));
 
   /* Normalize our merge sources. */
-  SVN_ERR(normalize_merge_sources(&merge_sources,
-                                  source_path_or_url, URL, source_peg_revision,
+  SVN_ERR(normalize_merge_sources(&merge_sources, source_path_or_url,
+                                  source_url, source_peg_revnum,
                                   ranges_to_merge, ra_session, ctx,
                                   scratch_pool, scratch_pool));
 

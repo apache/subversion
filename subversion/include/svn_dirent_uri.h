@@ -28,7 +28,7 @@
  *  - a dirent is a path on (local) disc or a UNC path (Windows) in
  *    either relative or absolute format.
  *    Examples:
- *       "/foo/bar", "X:/temp", "//server/share", "A:/" (Windows only)
+ *       "/foo/bar", "X:/temp", "//server/share", "A:/" (Windows only), ""
  *    But not:
  *       "http://server"
  *
@@ -39,13 +39,13 @@
  *       "http://server", "file:///path/to/repos",
  *       "svn+ssh://user@host:123/My%20Stuff/file.doc"
  *    But not:
- *       "file", "dir/file", "A:/dir", "/My%20Stuff/file.doc"
+ *       "file", "dir/file", "A:/dir", "/My%20Stuff/file.doc", ""
  *
  *  - a relative path (relpath) is an unrooted path that can be joined
  *    to any other relative path, uri or dirent. A relative path is
  *    never rooted/prefixed by a '/'.
  *    Examples:
- *       "file", "dir/file", "dir/subdir/../file"
+ *       "file", "dir/file", "dir/subdir/../file", ""
  *    But not:
  *       "/file", "http://server/file"
  *
@@ -53,6 +53,8 @@
  * dirents and URIs differently. Since it's not possible to determine from
  * the path string if it's a dirent or a URI, it's up to the API user to
  * make this choice. See also issue #2028.
+ *
+ * All incoming and outgoing paths are non-NULL unless otherwise documented.
  *
  * All of these functions expect paths passed into them to be in canonical
  * form, except:

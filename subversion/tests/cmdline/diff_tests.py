@@ -57,6 +57,16 @@ def make_diff_header(path, old_tag, new_tag):
     "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
     ]
 
+def make_no_diff_deleted_header(path, old_tag, new_tag):
+  """Generate the expected diff header for a deleted file PATH when in
+  'no-diff-deleted' mode. (In that mode, no further details appear after the
+  header.) Return the header as an array of newline-terminated strings."""
+  path_as_shown = path.replace('\\', '/')
+  return [
+    "Index: " + path_as_shown + " (deleted)\n",
+    "===================================================================\n",
+    ]
+
 def make_git_diff_header(target_path, repos_relpath,
                          old_tag, new_tag, add=False, src_label=None,
                          dst_label=None, delete=False, text_changes=True,

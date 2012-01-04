@@ -787,6 +787,10 @@ delete_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
 
+  /* If we're skipping this revision, we're done here. */
+  if (rb->skipped)
+    return SVN_NO_ERROR;
+
   return change_node_prop(rb->txn_root, nb->path, name, NULL,
                           rb->pb->validate_props, nb->pool);
 }
@@ -830,7 +834,10 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
 
   /* If we're skipping this revision, we're done here. */
   if (rb->skipped)
-    return SVN_NO_ERROR;
+    {
+      *handler = NULL;
+      return SVN_NO_ERROR;
+    }
 
   return svn_fs_apply_textdelta(handler, handler_baton,
                                 rb->txn_root, nb->path,
@@ -851,7 +858,10 @@ set_fulltext(svn_stream_t **stream,
 
   /* If we're skipping this revision, we're done here. */
   if (rb->skipped)
-    return SVN_NO_ERROR;
+    {
+      *stream = NULL;
+      return SVN_NO_ERROR;
+    }
 
   return svn_fs_apply_text(stream,
                            rb->txn_root, nb->path,

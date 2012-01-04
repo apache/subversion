@@ -208,7 +208,7 @@ static const apr_getopt_option_t options_table[] =
      N_("specify revision number ARG (or X:Y range)")},
 
     {"incremental",   svnadmin__incremental, 0,
-     N_("dump incrementally")},
+     N_("dump or hotcopy incrementally")},
 
     {"deltas",        svnadmin__deltas, 0,
      N_("use deltas in dump output")},
@@ -332,8 +332,10 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"hotcopy", subcommand_hotcopy, {0}, N_
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
-    "Makes a hot copy of a repository.\n"),
-   {svnadmin__clean_logs} },
+    "Makes a hot copy of a repository.\n"
+    "If --incremental is passed, data which already exists at the destination\n"
+    "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
+   {svnadmin__clean_logs, svnadmin__incremental} },
 
   {"list-dblogs", subcommand_list_dblogs, {0}, N_
    ("usage: svnadmin list-dblogs REPOS_PATH\n\n"
@@ -1431,8 +1433,9 @@ subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   new_repos_path = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(target_arg_to_dirent(&new_repos_path, new_repos_path, pool));
 
-  return svn_repos_hotcopy(opt_state->repository_path, new_repos_path,
-                           opt_state->clean_logs, pool);
+  return svn_repos_hotcopy2(opt_state->repository_path, new_repos_path,
+                            opt_state->clean_logs, opt_state->incremental,
+                            check_cancel, NULL, pool);
 }
 
 

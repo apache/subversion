@@ -1567,6 +1567,9 @@ typedef struct svn_membuffer_cache_t
    */
   int alloc_counter;
 
+  /* if enabled, this will serialize the access to this instance.
+   */
+  svn_mutex__t *mutex;
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
   /* Invariant tag info for all items stored by this cache instance.
@@ -1604,7 +1607,7 @@ combine_key(const void *prefix,
   memcpy((char *)*full_key + prefix_len, key, key_len);
 }
 
-/* Implement svn_cache__vtable_t.get
+/* Implement svn_cache__vtable_t.get (not thread-safe)
  */
 static svn_error_t *
 svn_membuffer_cache_get(void **value_p,
@@ -1655,7 +1658,7 @@ svn_membuffer_cache_get(void **value_p,
   return SVN_NO_ERROR;
 }
 
-/* Implement svn_cache__vtable_t.set
+/* Implement svn_cache__vtable_t.set (not thread-safe)
  */
 static svn_error_t *
 svn_membuffer_cache_set(void *cache_void,
@@ -1716,7 +1719,7 @@ svn_membuffer_cache_iter(svn_boolean_t *completed,
                           _("Can't iterate a membuffer-based cache"));
 }
 
-/* Implement svn_cache__vtable_t.get_partial
+/* Implement svn_cache__vtable_t.get_partial (not thread-safe)
  */
 static svn_error_t *
 svn_membuffer_cache_get_partial(void **value_p,
@@ -1761,7 +1764,7 @@ svn_membuffer_cache_get_partial(void **value_p,
   return SVN_NO_ERROR;
 }
 
-/* Implement svn_cache__vtable_t.set_partial
+/* Implement svn_cache__vtable_t.set_partial (not thread-safe)
  */
 static svn_error_t *
 svn_membuffer_cache_set_partial(void *cache_void,
@@ -1797,6 +1800,7 @@ svn_membuffer_cache_set_partial(void *cache_void,
 }
 
 /* Implement svn_cache__vtable_t.is_cachable
+ * (thread-safe even without mutex)
  */
 static svn_boolean_t
 svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
@@ -1828,6 +1832,7 @@ svn_membuffer_get_segment_info(svn_membuffer_t *segment,
 }
 
 /* Implement svn_cache__vtable_t.get_info
+ * (thread-safe even without mutex)
  */
 static svn_error_t *
 svn_membuffer_cache_get_info(void *cache_void,
@@ -1862,7 +1867,7 @@ svn_membuffer_cache_get_info(void *cache_void,
 }
 
 
-/* the v-table for membuffer-based caches
+/* the v-table for membuffer-based caches (single-threaded access)
  */
 static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
@@ -1872,6 +1877,100 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get_partial,
   svn_membuffer_cache_set_partial,
   svn_membuffer_cache_get_info
+};
+
+/* Implement svn_cache__vtable_t.get and serialize all cache access.
+ */
+static svn_error_t *
+svn_membuffer_cache_get_synced(void **value_p,
+                               svn_boolean_t *found,
+                               void *cache_void,
+                               const void *key,
+                               apr_pool_t *result_pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+                       svn_membuffer_cache_get(value_p,
+                                               found,
+                                               cache_void,
+                                               key,
+                                               result_pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_cache__vtable_t.set and serialize all cache access.
+ */
+static svn_error_t *
+svn_membuffer_cache_set_synced(void *cache_void,
+                               const void *key,
+                               void *value,
+                               apr_pool_t *scratch_pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+                       svn_membuffer_cache_set(cache_void,
+                                               key,
+                                               value,
+                                               scratch_pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_cache__vtable_t.get_partial and serialize all cache access.
+ */
+static svn_error_t *
+svn_membuffer_cache_get_partial_synced(void **value_p,
+                                       svn_boolean_t *found,
+                                       void *cache_void,
+                                       const void *key,
+                                       svn_cache__partial_getter_func_t func,
+                                       void *baton,
+                                       apr_pool_t *result_pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+                       svn_membuffer_cache_get_partial(value_p,
+                                                       found,
+                                                       cache_void,
+                                                       key,
+                                                       func,
+                                                       baton,
+                                                       result_pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_cache__vtable_t.set_partial and serialize all cache access.
+ */
+static svn_error_t *
+svn_membuffer_cache_set_partial_synced(void *cache_void,
+                                       const void *key,
+                                       svn_cache__partial_setter_func_t func,
+                                       void *baton,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+                       svn_membuffer_cache_set_partial(cache_void,
+                                                       key,
+                                                       func,
+                                                       baton,
+                                                       scratch_pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* the v-table for membuffer-based caches with multi-threading support)
+ */
+static svn_cache__vtable_t membuffer_cache_synced_vtable = {
+  svn_membuffer_cache_get_synced,
+  svn_membuffer_cache_set_synced,
+  svn_membuffer_cache_iter,               /* no sync required */
+  svn_membuffer_cache_is_cachable,        /* no sync required */
+  svn_membuffer_cache_get_partial_synced,
+  svn_membuffer_cache_set_partial_synced,
+  svn_membuffer_cache_get_info            /* no sync required */
 };
 
 /* standard serialization function for svn_stringbuf_t items.
@@ -1918,6 +2017,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   svn_cache__deserialize_func_t deserializer,
                                   apr_ssize_t klen,
                                   const char *prefix,
+                                  svn_boolean_t thread_safe,
                                   apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
@@ -1941,6 +2041,8 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->pool = svn_pool_create(pool);
   cache->alloc_counter = 0;
 
+  SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
+  
   /* for performance reasons, we don't actually store the full prefix but a
    * hash value of it
    */
@@ -1961,7 +2063,8 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
 
   /* initialize the generic cache wrapper
    */
-  wrapper->vtable = &membuffer_cache_vtable;
+  wrapper->vtable = thread_safe ? &membuffer_cache_synced_vtable 
+                                : &membuffer_cache_vtable;
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;
   wrapper->error_baton = 0;

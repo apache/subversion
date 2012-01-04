@@ -44,6 +44,10 @@
  */
 #define MATCH_BLOCKSIZE 64
 
+/* "no" / "invalid" / "unused" value for positions within the detla windows
+ */
+#define NO_POSITION ((apr_uint32_t)-1)
+
 /* Feed C_IN into the adler32 checksum and remove C_OUT at the same time.
  * This function may (and will) only be called for characters that are
  * MATCH_BLOCKSIZE positions apart.
@@ -96,17 +100,22 @@ init_adler32(const char *data)
 struct block
 {
   apr_uint32_t adlersum;
-  apr_size_t pos;
+
+/* Even in 64 bit systems, store only 32 bit offsets in our hash table
+   (our delta window size much much smaller then 4GB).
+   That reduces the hash table size by 50% from 32to 16KB
+   and makes it easier to fit into the CPU's L1 cache. */
+  apr_uint32_t pos;			/* NO_POSITION -> block is not used */
 };
 
 /* A hash table, using open addressing, of the blocks of the source. */
 struct blocks
 {
   /* The largest valid index of slots. */
-  apr_size_t max;
+  apr_uint32_t max;
   /* Source buffer that the positions in SLOTS refer to. */
   const char* data;
-  /* The vector of blocks.  A pos value of (apr_size_t)-1 represents an unused
+  /* The vector of blocks.  A pos value of NO_POSITION represents an unused
      slot. */
   struct block *slots;
 };
@@ -114,7 +123,7 @@ struct blocks
 
 /* Return a hash value calculated from the adler32 SUM, suitable for use with
    our hash table. */
-static apr_size_t hash_func(apr_uint32_t sum)
+static apr_uint32_t hash_func(apr_uint32_t sum)
 {
   /* Since the adl32 checksum have a bad distribution for the 11th to 16th
      bits when used for our small block size, we add some bits from the
@@ -126,12 +135,12 @@ static apr_size_t hash_func(apr_uint32_t sum)
    data into the table BLOCKS.  Ignore true duplicates, i.e. blocks with
    actually the same content. */
 static void
-add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
+add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_uint32_t pos)
 {
-  apr_size_t h = hash_func(adlersum) & blocks->max;
+  apr_uint32_t h = hash_func(adlersum) & blocks->max;
 
   /* This will terminate, since we know that we will not fill the table. */
-  for (; blocks->slots[h].pos != (apr_size_t)-1; h = (h + 1) & blocks->max)
+  for (; blocks->slots[h].pos != NO_POSITION; h = (h + 1) & blocks->max)
     if (blocks->slots[h].adlersum == adlersum)
       if (memcmp(blocks->data + blocks->slots[h].pos, blocks->data + pos,
                  MATCH_BLOCKSIZE) == 0)
@@ -143,21 +152,21 @@ add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
 
 /* Find a block in BLOCKS with the checksum ADLERSUM and matching the content
    at DATA, returning its position in the source data.  If there is no such
-   block, return (apr_size_t)-1. */
-static apr_size_t
+   block, return NO_POSITION. */
+static apr_uint32_t
 find_block(const struct blocks *blocks,
            apr_uint32_t adlersum,
            const char* data)
 {
-  apr_size_t h = hash_func(adlersum) & blocks->max;
+  apr_uint32_t h = hash_func(adlersum) & blocks->max;
 
-  for (; blocks->slots[h].pos != (apr_size_t)-1; h = (h + 1) & blocks->max)
+  for (; blocks->slots[h].pos != NO_POSITION; h = (h + 1) & blocks->max)
     if (blocks->slots[h].adlersum == adlersum)
       if (memcmp(blocks->data + blocks->slots[h].pos, data,
                  MATCH_BLOCKSIZE) == 0)
         return blocks->slots[h].pos;
 
-  return (apr_size_t)-1;
+  return NO_POSITION;
 }
 
 /* Initialize the matches table from DATA of size DATALEN.  This goes
@@ -187,7 +196,7 @@ init_blocks_table(const char *data,
     {
       /* Avoid using an indeterminate value in the lookup. */
       blocks->slots[i].adlersum = 0;
-      blocks->slots[i].pos = (apr_size_t)-1;
+      blocks->slots[i].pos = NO_POSITION;
     }
 
   /* If there is an odd block at the end of the buffer, we will
@@ -226,6 +235,39 @@ match_length(const char *a, const char *b, apr_size_t max_len)
   return pos;
 }
 
+/* Return the smallest byte index at which positions left of A and B differ
+ * (A[-result] != B[-result]).  If no difference can be found in the first
+ * MAX_LEN characters, MAX_LEN will be returned.
+ */
+static apr_size_t
+reverse_match_length(const char *a, const char *b, apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky processing is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (pos = sizeof(apr_size_t); pos <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a - pos) != *(const apr_size_t*)(b - pos))
+      break;
+
+  pos -= sizeof(apr_size_t);
+    
+#endif
+
+  while (++pos <= max_len)
+    if (a[-pos] != b[-pos])
+      break;
+    
+  return pos-1;
+}
+
+
 /* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in A we ended up in (in
@@ -252,7 +294,7 @@ find_match(const struct blocks *blocks,
   apos = find_block(blocks, rolling, b + bpos);
 
   /* See if we have a match.  */
-  if (apos == (apr_size_t)-1)
+  if (apos == NO_POSITION)
     return 0;
 
   /* Extend the match forward as far as possible */
@@ -276,6 +318,38 @@ find_match(const struct blocks *blocks,
   *bposp = bpos;
 
   return MATCH_BLOCKSIZE + delta;
+}
+
+/* Utility for compute_delta() that compares the range B[START,BSIZE) with
+ * the range of similar size before A[ASIZE]. Create corresponding copy and
+ * insert operations.
+ *
+ * BUILD_BATON and POOL will be passed through from compute_delta().
+ */
+static void
+store_delta_trailer(svn_txdelta__ops_baton_t *build_baton,
+                    const char *a,
+                    apr_size_t asize,
+                    const char *b,
+                    apr_size_t bsize,
+                    apr_size_t start,
+                    apr_pool_t *pool)
+{
+  apr_size_t end_match;
+  apr_size_t max_len = asize > (bsize - start) ? bsize - start : asize;
+  if (max_len == 0)
+    return;
+
+  end_match = reverse_match_length(a + asize, b + bsize, max_len);
+  if (end_match <= 4)
+    end_match = 0;
+
+  if (bsize - start > end_match)
+    svn_txdelta__insert_op(build_baton, svn_txdelta_new,
+                           start, bsize - start - end_match, b + start, pool);
+  if (end_match)
+    svn_txdelta__insert_op(build_baton, svn_txdelta_source,
+                           asize - end_match, end_match, NULL, pool);
 }
 
 
@@ -315,12 +389,24 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   apr_uint32_t rolling;
   apr_size_t lo = 0, pending_insert_start = 0;
 
+  /* Optimization: directly compare window starts. If more than 4
+   * bytes match, we can immediately create a matching windows. 
+   * Shorter sequences result in a net data increase. */
+  lo = match_length(a, b, asize > bsize ? bsize : asize);
+  if ((lo > 4) || (lo == bsize))
+    {
+      svn_txdelta__insert_op(build_baton, svn_txdelta_source,
+                             0, lo, NULL, pool);
+      pending_insert_start = lo;
+    }
+  else
+    lo = 0;
+
   /* If the size of the target is smaller than the match blocksize, just
      insert the entire target.  */
-  if (bsize < MATCH_BLOCKSIZE)
+  if ((bsize - lo < MATCH_BLOCKSIZE) || (asize < MATCH_BLOCKSIZE))
     {
-      svn_txdelta__insert_op(build_baton, svn_txdelta_new,
-                             0, bsize, b, pool);
+      store_delta_trailer(build_baton, a, asize, b, bsize, lo, pool);
       return;
     }
 
@@ -328,7 +414,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   init_blocks_table(a, asize, &blocks, pool);
 
   /* Initialize our rolling checksum.  */
-  rolling = init_adler32(b);
+  rolling = init_adler32(b + lo);
   while (lo < bsize)
     {
       apr_size_t matchlen = 0;
@@ -356,6 +442,19 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
             svn_txdelta__insert_op(build_baton, svn_txdelta_new,
                                    0, lo - pending_insert_start,
                                    b + pending_insert_start, pool);
+          else 
+            {
+              /* the match borders on the previous op. Maybe, we found a
+               * match that is better than / overlapping the previous one. */
+              apr_size_t len = reverse_match_length(a + apos, b + lo, apos < lo ? apos : lo);
+              if (len > 0)
+                {
+                  len = svn_txdelta__remove_copy(build_baton, len);
+                  apos -= len;
+                  matchlen += len;
+                  lo -= len;
+                }
+            }
 
           /* Reset the pending insert start to immediately after the
              match. */
@@ -373,12 +472,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
     }
 
   /* If we still have an insert pending at the end, throw it in.  */
-  if (lo - pending_insert_start > 0)
-    {
-      svn_txdelta__insert_op(build_baton, svn_txdelta_new,
-                             0, lo - pending_insert_start,
-                             b + pending_insert_start, pool);
-    }
+  store_delta_trailer(build_baton, a, asize, b, bsize, pending_insert_start, pool);
 }
 
 void

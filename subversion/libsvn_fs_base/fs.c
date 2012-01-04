@@ -1165,15 +1165,25 @@ copy_db_file_safely(const char *src_dir,
 
 
 static svn_error_t *
-base_hotcopy(const char *src_path,
+base_hotcopy(svn_fs_t *src_fs,
+             svn_fs_t *dst_fs,
+             const char *src_path,
              const char *dest_path,
              svn_boolean_t clean_logs,
+             svn_boolean_t incremental,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              apr_pool_t *pool)
 {
   svn_error_t *err;
   u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
   int format;
+
+  if (incremental)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("BDB repositories do not support incremental "
+                               "hotcopy"));
 
   /* Check the FS format number to be certain that we know how to
      hotcopy this FS.  Pre-1.2 filesystems did not have a format file (you
