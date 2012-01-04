@@ -213,7 +213,7 @@ sub main {
     print "\n\n=== $lines[0]" and next if $lines[0] =~ /^[A-Z].*:$/i;
 
     # Backport entry?
-    handle_entry @lines and next if $lines[0] =~ /^ \*/;
+    handle_entry @lines and next if $lines[0] =~ /^ \*/ and $sawapproved;
 
     warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
   }
