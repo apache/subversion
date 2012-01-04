@@ -187,10 +187,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1220742, r1220750
-   Fix spurious testsuite FAIL
-   Justification:
-     We don't expect users to ignore tests that FAIL.
-   Votes:
-     +1: philip, rhuijben, danielsh
-
