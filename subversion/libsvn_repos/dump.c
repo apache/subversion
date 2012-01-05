@@ -884,7 +884,7 @@ fetch_base_func(const char **filename,
 
 static svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
-                void **edit_baton,
+                struct edit_baton **edit_baton,
                 svn_fs_t *fs,
                 svn_revnum_t to_rev,
                 const char *root_path,
@@ -1024,7 +1024,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
-  void *dump_edit_baton = NULL;
+  struct edit_baton *dump_edit_baton = NULL;
   svn_revnum_t i;
   svn_fs_t *fs = svn_repos_fs(repos);
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1176,9 +1176,9 @@ svn_repos_dump_fs3(svn_repos_t *repos,
 
       if (dump_edit_baton) /* We never get an edit baton for r0. */
         {
-          if (((struct edit_baton *)dump_edit_baton)->found_old_reference)
+          if (dump_edit_baton->found_old_reference)
             found_old_reference = TRUE;
-          if (((struct edit_baton *)dump_edit_baton)->found_old_mergeinfo)
+          if (dump_edit_baton->found_old_mergeinfo)
             found_old_mergeinfo = TRUE;
         }
     }
@@ -1338,7 +1338,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   for (rev = start_rev; rev <= end_rev; rev++)
     {
       svn_delta_editor_t *dump_editor;
-      void *dump_edit_baton;
+      struct edit_baton *dump_edit_baton;
       const svn_delta_editor_t *cancel_editor;
       void *cancel_edit_baton;
       svn_fs_root_t *to_root;
