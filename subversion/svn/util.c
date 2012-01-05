@@ -947,7 +947,7 @@ svn_cl__try(svn_error_t *err,
       va_list ap;
 
       va_start(ap, quiet);
-      while ((apr_err = va_arg(ap, apr_status_t)) != SVN_NO_ERROR)
+      while ((apr_err = va_arg(ap, apr_status_t)) != APR_SUCCESS)
         {
           if (errors_seen)
             {
