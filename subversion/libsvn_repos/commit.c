@@ -793,6 +793,10 @@ prop_fetch_func(apr_hash_t **props,
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
+  if (path[0] != '/')
+    /* Get an absolute path for use in the FS. */
+    path = svn_fspath__join(eb->base_path, path, scratch_pool);
+
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),
                                scratch_pool));
@@ -818,6 +822,10 @@ kind_fetch_func(svn_kind_t *kind,
   struct edit_baton *eb = baton;
   svn_node_kind_t node_kind;
 
+  if (path[0] != '/')
+    /* Get an absolute path for use in the FS. */
+    path = svn_fspath__join(eb->base_path, path, scratch_pool);
+
   SVN_ERR(svn_fs_check_path(&node_kind, eb->txn_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
@@ -837,6 +845,10 @@ fetch_base_func(const char **filename,
   const char *tmp_filename;
   svn_fs_root_t *fs_root;
   svn_error_t *err;
+
+  if (path[0] != '/')
+    /* Get an absolute path for use in the FS. */
+    path = svn_fspath__join(eb->base_path, path, scratch_pool);
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),
