@@ -249,11 +249,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
-   reparenting that session if necessary.  If reparenting occurs,
-   store the previous session URL in *OLD_SESSION_URL (so that if the
+   reparenting that session if necessary.
+   Store the previous session URL in *OLD_SESSION_URL (so that if the
    reparenting is meant to be temporary, the caller can reparent the
-   session back to where it was); otherwise set *OLD_SESSION_URL to
-   NULL.
+   session back to where it was).
 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
    the RA session to the root of the repository".
@@ -268,8 +267,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
        [...]
 
-       if (old_session_url)
-         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+       SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
 */
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
