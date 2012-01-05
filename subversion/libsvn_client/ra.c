@@ -501,7 +501,6 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   const char *session_url,
                                   apr_pool_t *pool)
 {
-  *old_session_url = NULL;
   SVN_ERR(svn_ra_get_session_url(ra_session, old_session_url, pool));
   if (! session_url)
     SVN_ERR(svn_ra_get_repos_root2(ra_session, &session_url, pool));
