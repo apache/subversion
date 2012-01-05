@@ -3490,11 +3490,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   /* First, we get the real mergeinfo. */
   if (recorded_mergeinfo)
     {
-      svn_boolean_t inherited_from_repos;
-
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo,
                                                     inherited,
-                                                    &inherited_from_repos,
+                                                    NULL /* from_repos */,
                                                     FALSE,
                                                     inherit, ra_session,
                                                     target_abspath,
@@ -3509,9 +3507,8 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       svn_revnum_t target_rev;
 
       /* Assert that we have sane input. */
-      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start)
-                 && SVN_IS_VALID_REVNUM(end)
-                 && (start > end));
+      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start) && SVN_IS_VALID_REVNUM(end)
+                     && (start > end));
 
       /* Retrieve the origin (original_*) of the node, or just the
          url if the node was not copied. */
