@@ -368,7 +368,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
     "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
     "If provided, use TOKEN as lock token.  Use --bypass-hooks to avoid\n"
-    "triggering the pre- and post-lock hook scripts.\n"),
+    "triggering the pre-lock and post-lock hook scripts.\n"),
   {svnadmin__bypass_hooks} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
