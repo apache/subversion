@@ -1646,6 +1646,79 @@ def hotcopy_incremental_packed(sbox):
         None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
 
 
+def lock(sbox):
+  "svnadmin lock tests"
+  sbox.build(create_wc=False)
+  
+  comment_path = os.path.join(svntest.main.temp_dir, "comment")
+  svntest.main.file_write(comment_path, "dummy comment")
+
+  invalid_comment_path = os.path.join(svntest.main.temp_dir, "invalid_comment")
+  svntest.main.file_write(invalid_comment_path, "character  is invalid")
+
+  # Test illegal character in comment file.
+  expected_error = "svnadmin: E130004: Lock comment contains " + \
+                   "illegal characters"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          invalid_comment_path)
+  
+  # Test locking path with --bypass-hooks
+  expected_output = "iota locked by user 'jrandom'."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path,
+                                          "--bypass-hooks")
+
+  # Remove lock
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          None, "rmlocks", 
+                                          sbox.repo_dir, "iota")
+  
+  # Test locking path without --bypass-hooks
+  expected_output = "iota locked by user 'jrandom'."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Test locking already locked path.
+  expected_error = "svnadmin: E160035: Path '/iota' is already " + \
+                   "locked by user 'jrandom' in filesystem"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Test locking non-existent path.
+  expected_error = "svnadmin: E160013: Path '/non-existent' " + \
+                   "doesn't exist in HEAD revision"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "non-existent", "jrandom",
+                                          comment_path)
+  
+  # Test locking path without --bypass-hooks to see that hook script
+  # is really getting executed.
+  expected_error = "svnadmin: E165001: Lock blocked by pre-lock hook " + \
+                   "\(exit code 1\) with no output."
+
+  hook_path = svntest.main.get_pre_lock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
 ########################################################################
 # Run the tests
 
