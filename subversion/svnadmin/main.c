@@ -40,6 +40,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_user.h"
+#include "svn_xml.h"
 
 #include "private/svn_opt_private.h"
 
@@ -152,6 +153,7 @@ static svn_opt_subcommand_t
   subcommand_load,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
+  subcommand_lock,
   subcommand_lslocks,
   subcommand_lstxns,
   subcommand_pack,
@@ -360,6 +362,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
+  
+  {"lock", subcommand_lock, {0}, N_
+   ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
+    "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
+    "If provided, use TOKEN as lock token.\n"),
+  {svnadmin__bypass_hooks} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
    ("usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
@@ -1438,6 +1446,74 @@ subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                             check_cancel, NULL, pool);
 }
 
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_access_t *access;
+  apr_array_header_t *args;
+  const char *username;
+  const char *lock_path;
+  const char *comment_file_name;
+  svn_stringbuf_t *file_contents;
+  const char *lock_path_utf8;
+  svn_lock_t *lock;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  const char *lock_token = NULL;
+
+  /* Expect three more arguments: PATH USERNAME COMMENT-FILE */
+  SVN_ERR(parse_args(&args, os, 3, 4, pool));
+  lock_path = APR_ARRAY_IDX(args, 0, const char *);
+  username = APR_ARRAY_IDX(args, 1, const char *);
+  comment_file_name = APR_ARRAY_IDX(args, 2, const char *);
+
+  /* Expect one more optional argument: TOKEN */
+  if (args->nelts == 4)
+    lock_token = APR_ARRAY_IDX(args, 3, const char *);
+
+  SVN_ERR(target_arg_to_dirent(&comment_file_name, comment_file_name, pool));
+  
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Create an access context describing the user. */
+  SVN_ERR(svn_fs_create_access(&access, username, pool));
+
+  /* Attach the access context to the filesystem. */
+  SVN_ERR(svn_fs_set_access(fs, access));
+
+  SVN_ERR(svn_stringbuf_from_file2(&file_contents, comment_file_name, pool));
+
+  SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, subpool));
+  
+  if (opt_state->bypass_hooks)
+    SVN_ERR(svn_fs_lock(&lock, fs, lock_path_utf8,
+                        lock_token,          
+                        file_contents->data, /* comment */
+                        0,                   /* is_dav_comment */
+                        0,                   /* no expiration time. */
+                        SVN_INVALID_REVNUM,
+                        FALSE, subpool));
+  else
+    SVN_ERR(svn_repos_fs_lock(&lock, repos, lock_path_utf8,
+                              lock_token,          
+                              file_contents->data, /* comment */
+                              0,                   /* is_dav_comment */
+                              0,                   /* no expiration time. */
+                              SVN_INVALID_REVNUM,
+                              FALSE, subpool));
+
+  SVN_ERR(svn_cmdline_printf(subpool,
+                             _("%s locked by user '%s'.\n"),
+                             lock_path, username));
+
+  svn_pool_destroy(subpool);
+  
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
