@@ -126,8 +126,8 @@ Candidate changes:
      r1215379 - followup to r1215375
      r1227146 - fix unitialised variable
    Votes:
-     +1: cmpilato, rhuijben (without r1227146)
-     +1: philip
+     +1: rhuijben (without r1227146)
+     +1: philip, cmpilato
 
  * r1221178, r1221303
    Fix issue 4086, mod_dav_svn's handling of POST errors.
