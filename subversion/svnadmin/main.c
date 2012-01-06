@@ -366,7 +366,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"lock", subcommand_lock, {0}, N_
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
     "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
-    "If provided, use TOKEN as lock token.\n"),
+    "If provided, use TOKEN as lock token.  Use --bypass-hooks to avoid\n"
+    "triggering the pre- and post-lock hook scripts.\n"),
   {svnadmin__bypass_hooks} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
@@ -1507,7 +1508,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                               FALSE, subpool));
 
   SVN_ERR(svn_cmdline_printf(subpool,
-                             _("%s locked by user '%s'.\n"),
+                             _("'%s' locked by user '%s'.\n"),
                              lock_path, username));
 
   svn_pool_destroy(subpool);

@@ -1657,8 +1657,7 @@ def locking(sbox):
   svntest.main.file_write(invalid_comment_path, "character  is invalid")
 
   # Test illegal character in comment file.
-  expected_error = "svnadmin: E130004: Lock comment contains " + \
-                   "illegal characters"
+  expected_error = ".*svnadmin: E130004:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
                                           expected_error, "lock", 
                                           sbox.repo_dir,
@@ -1666,7 +1665,7 @@ def locking(sbox):
                                           invalid_comment_path)
   
   # Test locking path with --bypass-hooks
-  expected_output = "iota locked by user 'jrandom'."
+  expected_output = "'iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
                                           None, "lock", 
                                           sbox.repo_dir,
@@ -1680,7 +1679,7 @@ def locking(sbox):
                                           sbox.repo_dir, "iota")
   
   # Test locking path without --bypass-hooks
-  expected_output = "iota locked by user 'jrandom'."
+  expected_output = "'iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
                                           None, "lock", 
                                           sbox.repo_dir,
@@ -1704,7 +1703,7 @@ def locking(sbox):
                                           comment_path)
 
   # Test locking a path with a specified token.
-  expected_output = "A/D/G/rho locked by user 'jrandom'."
+  expected_output = "'A/D/G/rho' locked by user 'jrandom'."
   lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
                                           None, "lock", 
@@ -1714,9 +1713,7 @@ def locking(sbox):
 
   # Test locking path without --bypass-hooks to see that hook script
   # is really getting executed.
-  expected_error = "svnadmin: E165001: Lock blocked by pre-lock hook " + \
-                   "\(exit code 1\) with no output."
-
+  expected_error = ".*svnadmin: E165001:.*"
   hook_path = svntest.main.get_pre_lock_hook_path(sbox.repo_dir)
   svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
 
