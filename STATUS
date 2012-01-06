@@ -98,7 +98,7 @@ Candidate changes:
      +1: stsp (without r1220740)
      +1: julianfoad
 
- * r1215260, r1215288, r1215374, r1215375, r1215379
+ * r1215260, r1215288, r1215374, r1215375, r1215379, r1227146
    Fix issue #4082 ("'svn log --with-all-revprops' over ra-dav
    intolerant of XML-unsafe property values").
    Justification:
@@ -124,8 +124,10 @@ Candidate changes:
      r1215374 - followup to r1215288
      r1215375 - libsvn_ra_serf support for this issue
      r1215379 - followup to r1215375
+     r1227146 - fix unitialised variable
    Votes:
-     +1: cmpilato, rhuijben
+     +1: cmpilato, rhuijben (without r1227146)
+     +1: philip
 
  * r1221178, r1221303
    Fix issue 4086, mod_dav_svn's handling of POST errors.
