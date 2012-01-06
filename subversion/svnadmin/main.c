@@ -1462,7 +1462,6 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_stringbuf_t *file_contents;
   const char *lock_path_utf8;
   svn_lock_t *lock;
-  apr_pool_t *subpool = svn_pool_create(pool);
   const char *lock_token = NULL;
 
   /* Expect three more arguments: PATH USERNAME COMMENT-FILE */
@@ -1488,7 +1487,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, comment_file_name, pool));
 
-  SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, subpool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, pool));
   
   if (opt_state->bypass_hooks)
     SVN_ERR(svn_fs_lock(&lock, fs, lock_path_utf8,
@@ -1497,7 +1496,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         0,                   /* is_dav_comment */
                         0,                   /* no expiration time. */
                         SVN_INVALID_REVNUM,
-                        FALSE, subpool));
+                        FALSE, pool));
   else
     SVN_ERR(svn_repos_fs_lock(&lock, repos, lock_path_utf8,
                               lock_token,          
@@ -1505,14 +1504,10 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                               0,                   /* is_dav_comment */
                               0,                   /* no expiration time. */
                               SVN_INVALID_REVNUM,
-                              FALSE, subpool));
+                              FALSE, pool));
 
-  SVN_ERR(svn_cmdline_printf(subpool,
-                             _("'%s' locked by user '%s'.\n"),
+  SVN_ERR(svn_cmdline_printf(pool, _("'%s' locked by user '%s'.\n"),
                              lock_path, username));
-
-  svn_pool_destroy(subpool);
-  
   return SVN_NO_ERROR;
 }
 
