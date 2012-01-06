@@ -1752,6 +1752,7 @@ test_list = [ None,
               load_ranges,
               hotcopy_incremental,
               hotcopy_incremental_packed,
+              lock,
              ]
 
 if __name__ == '__main__':
