@@ -213,9 +213,11 @@ process_actions(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
   apr_hash_t *props = NULL;
   svn_boolean_t need_add = FALSE;
+  svn_boolean_t need_delete = FALSE;
   apr_array_header_t *children;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
+  svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
   svn_kind_t kind;
   int i;
 
@@ -256,12 +258,8 @@ process_actions(void *edit_baton,
 
           case ACTION_DELETE:
             {
-              svn_revnum_t *revnum = action->args;
-
-              /* If we get a delete, we'd better not have gotten any
-                 other actions for this path later, so we can go ahead
-                 and call our handler. */
-              SVN_ERR(svn_editor_delete(eb->editor, path, *revnum));
+              delete_revnum = *((svn_revnum_t *) action->args);
+              need_delete = TRUE;
               break;
             }
 
@@ -321,17 +319,23 @@ process_actions(void *edit_baton,
   /* We've now got a wholistic view of what has happened to this node,
    * so we can call our own editor APIs on it. */
 
+  if (need_delete && !need_add)
+    {
+      /* If we're only doing a delete, do it here. */
+      SVN_ERR(svn_editor_delete(eb->editor, path, delete_revnum));
+    }
+
   if (need_add)
     {
       if (kind == svn_kind_dir)
         {
           SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
-                                           props, SVN_INVALID_REVNUM));
+                                           props, delete_revnum));
         }
       else
         {
           SVN_ERR(svn_editor_add_file(eb->editor, path, checksum, contents,
-                                      props, SVN_INVALID_REVNUM));
+                                      props, delete_revnum));
         }
     }
   else
@@ -1016,6 +1020,15 @@ add_directory_cb(void *baton,
 
   SVN_ERR(ensure_root_opened(eb));
 
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      /* We need to add the delete action. */
+
+      SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+    }
+
   SVN_ERR(build(eb, ACTION_MKDIR, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
                 NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
@@ -1043,6 +1056,15 @@ add_file_cb(void *baton,
   svn_stream_t *tmp_stream;
 
   SVN_ERR(ensure_root_opened(eb));
+
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      /* We need to add the delete action. */
+
+      SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+    }
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
@@ -1075,6 +1097,15 @@ add_symlink_cb(void *baton,
   struct editor_baton *eb = baton;
 
   SVN_ERR(ensure_root_opened(eb));
+
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      /* We need to add the delete action. */
+
+      SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
