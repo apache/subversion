@@ -1646,7 +1646,7 @@ def hotcopy_incremental_packed(sbox):
         None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
 
 
-def lock(sbox):
+def locking(sbox):
   "svnadmin lock tests"
   sbox.build(create_wc=False)
   
@@ -1688,8 +1688,7 @@ def lock(sbox):
                                           comment_path)
 
   # Test locking already locked path.
-  expected_error = "svnadmin: E160035: Path '/iota' is already " + \
-                   "locked by user 'jrandom' in filesystem"
+  expected_error = ".*svnadmin: E160035:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
                                           expected_error, "lock", 
                                           sbox.repo_dir,
@@ -1697,14 +1696,22 @@ def lock(sbox):
                                           comment_path)
 
   # Test locking non-existent path.
-  expected_error = "svnadmin: E160013: Path '/non-existent' " + \
-                   "doesn't exist in HEAD revision"
+  expected_error = ".*svnadmin: E160013:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
                                           expected_error, "lock", 
                                           sbox.repo_dir,
                                           "non-existent", "jrandom",
                                           comment_path)
-  
+
+  # Test locking a path with a specified token.
+  expected_output = "A/D/G/rho locked by user 'jrandom'."
+  lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock", 
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          comment_path, lock_token)
+
   # Test locking path without --bypass-hooks to see that hook script
   # is really getting executed.
   expected_error = "svnadmin: E165001: Lock blocked by pre-lock hook " + \
@@ -1752,7 +1759,7 @@ test_list = [ None,
               load_ranges,
               hotcopy_incremental,
               hotcopy_incremental_packed,
-              lock,
+              locking,
              ]
 
 if __name__ == '__main__':
