@@ -15,7 +15,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new 'svnadmin hotcopy --incremental' support for FSFS (issue #3815)
     * reject some attempts to merge between unrelated branches (r1215273)
     * support GPG agent for password storage on UNIX-like platforms (r1150783)
-    * new 'svnadmin lock' subcommand (issue #3942)
+    * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
 
   - Client-side bugfixes:
     *
