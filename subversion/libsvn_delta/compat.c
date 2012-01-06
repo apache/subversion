@@ -380,6 +380,9 @@ run_ev2_actions(void *edit_baton,
 
       svn_pool_clear(iterpool);
       SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
+
+      /* Remove this item from the hash. */
+      apr_hash_set(eb->paths, path, APR_HASH_KEY_STRING, NULL);
     }
   svn_pool_destroy(iterpool);
 
