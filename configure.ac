@@ -584,7 +584,7 @@ dnl GPG Agent -------------------
 AC_ARG_WITH(gpg_agent,
 AS_HELP_STRING([--without-gpg-agent], 
                [Disable support for GPG-Agent]),
-               [with_gpg_agent=no], [with_gpg_agent=yes])
+               [], [with_gpg_agent=yes])
 AC_MSG_CHECKING([whether to support GPG-Agent])
 if test "$svn_enable_shared" != "yes"; then
   AC_MSG_RESULT([no (shared library support is disabled)])
