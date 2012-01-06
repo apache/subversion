@@ -5632,6 +5632,7 @@ write_hash_rep(svn_filesize_t *size,
 /* Write out the hash HASH pertaining to the NODEREV in FS as a deltified
    text representation to file FILE.  In the process, record the total size
    and the md5 digest in REP.  Perform temporary allocations in POOL. */
+#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
                      apr_file_t *file,
@@ -5713,6 +5714,7 @@ write_hash_delta_rep(representation_t *rep,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
    of (not yet committed) revision REV in FS.  Use POOL for temporary
