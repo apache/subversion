@@ -1711,17 +1711,68 @@ def locking(sbox):
                                           "A/D/G/rho", "jrandom",
                                           comment_path, lock_token)
 
+  # Test unlocking a patch with the wrong token.
+  expected_error = ".*svnadmin: E160040:.*"
+  wrong_lock_token = "opaquelocktoken:12345670-9ab8-defc-9ab8-def01234567c"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "unlock", 
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          wrong_lock_token)
+  
+  # Test unlocking a patch with the wrong token.
+  expected_output = "'A/D/G/rho' unlocked."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "unlock",
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          lock_token)
+
+  # Install lock/unlock prevention hooks.
+  hook_path = svntest.main.get_pre_lock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+  hook_path = svntest.main.get_pre_unlock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+  
   # Test locking path without --bypass-hooks to see that hook script
   # is really getting executed.
   expected_error = ".*svnadmin: E165001:.*"
-  hook_path = svntest.main.get_pre_lock_hook_path(sbox.repo_dir)
-  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
-
   svntest.actions.run_and_verify_svnadmin(None, None,
                                           expected_error, "lock", 
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
+
+  # Fetch the lock token for our remaining locked path.
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir,
+                                                        "iota")
+  iota_token = None
+  for line in output:
+    if line.startswith("UUID Token: opaquelocktoken:"):
+      iota_token = line[12:].rstrip()
+      break
+  if iota_token is None:
+    raise svntest.Failure("Unable to lookup lock token for 'iota'")
+
+  # Try to unlock a path with the correct token but with a
+  # preventative hook in place.
+  expected_error = ".*svnadmin: E165001:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "unlock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          iota_token)
+
+  # Finally, unlock the path with --bypass-hooks.
+  expected_output = "'iota' unlocked."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "unlock",
+                                          "--bypass-hooks",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          iota_token)
+
 
 ########################################################################
 # Run the tests

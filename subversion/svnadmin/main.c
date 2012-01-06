@@ -163,6 +163,7 @@ static svn_opt_subcommand_t
   subcommand_setlog,
   subcommand_setrevprop,
   subcommand_setuuid,
+  subcommand_unlock,
   subcommand_upgrade,
   subcommand_verify;
 
@@ -434,6 +435,13 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "NEW_UUID is provided, use that as the new repository UUID; otherwise,\n"
     "generate a brand new UUID for the repository.\n"),
    {0} },
+
+  {"unlock", subcommand_unlock, {0}, N_
+   ("usage: svnadmin unlock REPOS_PATH LOCKED_PATH USERNAME TOKEN\n\n"
+    "Unlocked LOCKED_PATH (as USERNAME) after verifying that the token\n"
+    "associated with the lock matches TOKEN.  Use --bypass-hooks to avoid\n"
+    "triggering the pre- and post-unlock hook scripts.\n"),
+   {svnadmin__bypass_hooks} },
 
   {"upgrade", subcommand_upgrade, {0}, N_
    ("usage: svnadmin upgrade REPOS_PATH\n\n"
@@ -1648,6 +1656,47 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
 
   svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_access_t *access;
+  apr_array_header_t *args;
+  const char *username;
+  const char *lock_path;
+  const char *lock_path_utf8;
+  const char *lock_token = NULL;
+
+  /* Expect three more arguments: PATH USERNAME TOKEN */
+  SVN_ERR(parse_args(&args, os, 3, 3, pool));
+  lock_path = APR_ARRAY_IDX(args, 0, const char *);
+  username = APR_ARRAY_IDX(args, 1, const char *);
+  lock_token = APR_ARRAY_IDX(args, 2, const char *);
+
+  /* Open the repos/FS, and associate an access context containing
+     USERNAME. */
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_create_access(&access, username, pool));
+  SVN_ERR(svn_fs_set_access(fs, access));
+
+  SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, pool));
+  if (opt_state->bypass_hooks)
+    SVN_ERR(svn_fs_unlock(fs, lock_path_utf8, lock_token,
+                          FALSE, pool));
+  else
+    SVN_ERR(svn_repos_fs_unlock(repos, lock_path_utf8, lock_token,
+                                FALSE, pool));
+
+  SVN_ERR(svn_cmdline_printf(pool, _("'%s' unlocked by user '%s'.\n"),
+                             lock_path, username));
   return SVN_NO_ERROR;
 }
 
