@@ -1211,11 +1211,11 @@ svn_repos_dump_fs3(svn_repos_t *repos,
           SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                     dump_editor, dump_edit_baton,
                                     NULL, NULL, subpool));
-        }
 
-      /* While our editor close_edit implementation is a no-op, we still
-         do this for completeness. */
-      SVN_ERR(dump_editor->close_edit(dump_edit_baton, subpool));
+          /* While our editor close_edit implementation is a no-op, we still
+             do this for completeness. */
+          SVN_ERR(dump_editor->close_edit(dump_edit_baton, subpool));
+        }
 
     loop_end:
       if (notify_func)
