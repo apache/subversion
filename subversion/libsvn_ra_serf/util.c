@@ -400,7 +400,6 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
              _("Invalid config: unable to load certificate file '%s'"),
              svn_dirent_local_style(file, pool));
         }
-      files = NULL;
     }
 
   return SVN_NO_ERROR;
