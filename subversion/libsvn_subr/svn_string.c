@@ -724,6 +724,10 @@ svn_cstring_tokenize(const char *sep, char **str)
     const char * next;
     char csep;
 
+    /* check parameters */
+    if ((sep == NULL) || (str == NULL) || (*str == NULL))
+        return NULL;
+
     /* let APR handle edge cases and multiple separators */
     csep = *sep;
     if (csep == '\0' || sep[1] != '\0')
