@@ -185,11 +185,13 @@ typedef struct merge_target_t
   /* Node kind of the WC node (at the start of the merge) */
   svn_node_kind_t kind;
 
-  /* URL and revision of the node */
+  /* URL of the node, or NULL if node is locally added */
   const char *url;
+
+  /* Revision of the node, or NULL if node is locally added */
   svn_revnum_t rev;
 
-  /* Repository root URL and UUID */
+  /* Repository root URL and UUID, even if node is locally added */
   url_uuid_t repos_root;
 
 } merge_target_t;
@@ -301,8 +303,8 @@ typedef struct merge_cmd_baton_t {
    changes to merge, for the merge described by MERGE_B.  Specifically, that
    is if the merge source server is capable of merge tracking, the left-side
    merge source is an ancestor of the right-side (or vice-versa), the merge
-   source repository is the same repository as the MERGE_B->TARGET_ABSPATH, and
-   ancestry is being considered.  */
+   source is in the same repository as the merge target, and ancestry is
+   being considered. */
 #define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
                                   && (merge_b)->sources_ancestral   \
                                   && (merge_b)->same_repos          \
