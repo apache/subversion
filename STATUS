@@ -171,6 +171,13 @@ Candidate changes:
    Votes:
      +1: philip, hwright
 
+ * r1229303
+   Fix an 'svn revert' assert caused by accessing the wrong memory.
+   Justification:
+     Client can assert or SEGV.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
