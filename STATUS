@@ -164,6 +164,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1229252
+   Copy permissions in the correct direction when creating FSFS directories.
+   Justification:
+     Could change permissions of existing directories.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
