@@ -161,13 +161,13 @@ def invalid_merge_args(sbox):
                ('A@HEAD', '^/A')]:
     run_and_verify_svn_in_wc(sbox, "svn: E205000: Merge sources must both "
                              "be either paths or URLs", 'merge', *args)
-  run_and_verify_svn_in_wc(sbox, "svn: E155010: Path '.*' does not exist",
+  run_and_verify_svn_in_wc(sbox, "svn: E155010: .* was not found",
                            'merge', '^/@0', '^/@1', 'nonexistent')
   run_and_verify_svn_in_wc(sbox, "svn: E205000: Too many arguments given",
                           'merge', '-c42', '^/A/B', '^/A/C', 'iota')
   run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot specify a revision range with" +
                            " two URLs", 'merge', '-c42', '^/mu', '^/')
-  run_and_verify_svn_in_wc(sbox, "svn: E155010: Path '.*' does not exist",
+  run_and_verify_svn_in_wc(sbox, "svn: E155010: .* was not found",
                            'merge', '-c42', '^/mu', 'nonexistent')
 
 def invalid_wcpath_upgrade(sbox):
