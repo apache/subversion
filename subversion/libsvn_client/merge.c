@@ -9324,7 +9324,6 @@ target_node_location(merge_target_t **target_p,
     {
       target->url = svn_path_url_add_component2(target->repos_root.url,
                                                 relpath, result_pool);
-      SVN_DBG(("tgt node location: r%ld %s\n", target->rev, target->url));
     }
   else
     {
@@ -9333,7 +9332,6 @@ target_node_location(merge_target_t **target_p,
                                         &target->repos_root.uuid,
                                         wc_abspath,
                                         ctx, result_pool, scratch_pool));
-      SVN_DBG(("tgt node location: none (local add?)\n"));
     }
 
   *target_p = target;
