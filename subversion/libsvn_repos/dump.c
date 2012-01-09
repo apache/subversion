@@ -931,6 +931,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_stream_t *stream,
                 svn_boolean_t *found_old_reference,
                 svn_boolean_t *found_old_mergeinfo,
+                svn_error_t *(*custom_close_directory)(void *dir_baton,
+                                  apr_pool_t *scratch_pool),
                 svn_repos_notify_func_t notify_func,
                 void *notify_baton,
                 svn_revnum_t oldest_dumped_rev,
@@ -965,7 +967,10 @@ get_dump_editor(const svn_delta_editor_t **editor,
   dump_editor->delete_entry = delete_entry;
   dump_editor->add_directory = add_directory;
   dump_editor->open_directory = open_directory;
-  dump_editor->close_directory = close_directory;
+  if (custom_close_directory)
+    dump_editor->close_directory = custom_close_directory;
+  else
+    dump_editor->close_directory = close_directory;
   dump_editor->change_dir_prop = change_dir_prop;
   dump_editor->add_file = add_file;
   dump_editor->open_file = open_file;
@@ -1181,7 +1186,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
                               "", stream, &found_old_reference,
-                              &found_old_mergeinfo,
+                              &found_old_mergeinfo, NULL,
                               notify_func, notify_baton,
                               start_rev, use_deltas_for_rev, FALSE, subpool));
 
@@ -1393,11 +1398,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                               &dump_edit_baton, fs, rev, "",
                               svn_stream_empty(pool),
                               NULL, NULL,
+                              verify_close_directory,
                               notify_func, notify_baton,
                               start_rev,
                               FALSE, TRUE, /* use_deltas, verify */
                               iterpool));
-      dump_editor->close_directory = verify_close_directory;
       SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                                 dump_editor, dump_edit_baton,
                                                 &cancel_editor,
