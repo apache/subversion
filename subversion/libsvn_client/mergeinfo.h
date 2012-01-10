@@ -286,7 +286,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   apr_pool_t *scratch_pool);
 
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
-   natural history of RA_SESSION's session URL at PEG_REVNUM.
+   natural history of URL at PEG_REVNUM.
 
    If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
    revision ranges of returned mergeinfo.  They are governed by the same
@@ -294,10 +294,15 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
    svn_ra_get_location_segments().
 
    If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
-   TRUE if the natural history includes revision 0, else to FALSE. */
+   TRUE if the natural history includes revision 0, else to FALSE.
+
+   RA_SESSION is an open RA session to the repository in which URL lives;
+   it may be temporarily reparented by this function.
+*/
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_boolean_t *has_rev_zero_history,
+                                     const char *url,
                                      svn_revnum_t peg_revnum,
                                      svn_revnum_t range_youngest,
                                      svn_revnum_t range_oldest,
