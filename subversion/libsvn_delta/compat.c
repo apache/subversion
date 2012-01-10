@@ -131,12 +131,14 @@ struct ev2_dir_baton
 {
   struct ev2_edit_baton *eb;
   const char *path;
+  svn_revnum_t base_revision;
 };
 
 struct ev2_file_baton
 {
   struct ev2_edit_baton *eb;
   const char *path;
+  svn_revnum_t base_revision;
   const char *delta_base;
 };
 
@@ -162,6 +164,7 @@ struct path_action
 struct prop_args
 {
   const char *name;
+  svn_revnum_t base_revision;
   const svn_string_t *value;
 };
 
@@ -174,6 +177,7 @@ struct copy_args
 struct path_checksum_args
 {
   const char *path;
+  svn_revnum_t base_revision;
   svn_checksum_t *checksum;
 };
 
@@ -218,6 +222,8 @@ process_actions(void *edit_baton,
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
   svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
+  svn_revnum_t props_base_revision = SVN_INVALID_REVNUM;
+  svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
   svn_kind_t kind;
   int i;
 
@@ -249,6 +255,11 @@ process_actions(void *edit_baton,
                                                path,
                                                scratch_pool, scratch_pool));
                 }
+
+              if (!SVN_IS_VALID_REVNUM(props_base_revision))
+                props_base_revision = p_args->base_revision;
+              else
+                SVN_ERR_ASSERT(p_args->base_revision == props_base_revision);
 
               /* Note that p_args->value may be NULL.  */
               apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
@@ -290,6 +301,12 @@ process_actions(void *edit_baton,
               SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
               checksum = pca->checksum;
+
+              if (!SVN_IS_VALID_REVNUM(text_base_revision))
+                text_base_revision = pca->base_revision;
+              else
+                SVN_ERR_ASSERT(pca->base_revision == text_base_revision);
+
               break;
             }
 
@@ -344,14 +361,14 @@ process_actions(void *edit_baton,
         {
           /* We fetched and modified the props in some way. Apply 'em now that
              we have the new set.  */
-          SVN_ERR(svn_editor_set_props(eb->editor, path, SVN_INVALID_REVNUM,
+          SVN_ERR(svn_editor_set_props(eb->editor, path, props_base_revision,
                                        props, contents == NULL));
         }
 
       if (contents)
         {
           /* If we have an content for this node, set it now. */
-          SVN_ERR(svn_editor_set_text(eb->editor, path, SVN_INVALID_REVNUM,
+          SVN_ERR(svn_editor_set_text(eb->editor, path, text_base_revision,
                                       checksum, contents));
         }
     }
@@ -418,6 +435,7 @@ ev2_open_root(void *edit_baton,
 
   db->eb = eb;
   db->path = "";
+  db->base_revision = base_revision;
 
   *root_baton = db;
 
@@ -455,6 +473,7 @@ ev2_add_directory(const char *path,
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, path);
+  cb->base_revision = pb->base_revision;
   *child_baton = cb;
 
   if (!copyfrom_path)
@@ -490,6 +509,7 @@ ev2_open_directory(const char *path,
 
   db->eb = pb->eb;
   db->path = apr_pstrdup(result_pool, path);
+  db->base_revision = base_revision;
 
   *child_baton = db;
   return SVN_NO_ERROR;
@@ -506,6 +526,7 @@ ev2_change_dir_prop(void *dir_baton,
 
   p_args->name = apr_pstrdup(db->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
+  p_args->base_revision = db->base_revision;
 
   SVN_ERR(add_action(db->eb, db->path, ACTION_PROPSET, p_args));
 
@@ -546,6 +567,7 @@ ev2_add_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
+  fb->base_revision = pb->base_revision;
   *file_baton = fb;
 
   SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
@@ -585,6 +607,7 @@ ev2_open_file(const char *path,
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
+  fb->base_revision = base_revision;
 
   SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                   fb->eb->fetch_base_baton,
@@ -633,6 +656,8 @@ ev2_apply_textdelta(void *file_baton,
   struct path_checksum_args *pca = apr_pcalloc(fb->eb->edit_pool,
                                                sizeof(*pca));
 
+  pca->base_revision = fb->base_revision;
+
   if (! fb->delta_base)
     source = svn_stream_empty(handler_pool);
   else
@@ -674,6 +699,7 @@ ev2_change_file_prop(void *file_baton,
 
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
+  p_args->base_revision = fb->base_revision;
 
   SVN_ERR(add_action(fb->eb, fb->path, ACTION_PROPSET, p_args));
 
@@ -790,6 +816,7 @@ struct operation {
                             props */
   } operation;
   svn_kind_t kind;  /* to copy, mkdir, put or set revprops */
+  svn_revnum_t base_revision;       /* When committing, the base revision */
   svn_revnum_t copyfrom_revision;      /* to copy, valid for add and replace */
   const char *copyfrom_url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
@@ -827,6 +854,7 @@ struct editor_baton
 static struct operation *
 get_operation(const char *path,
               struct operation *operation,
+              svn_revnum_t base_revision,
               apr_pool_t *result_pool)
 {
   struct operation *child = apr_hash_get(operation->children, path,
@@ -838,6 +866,7 @@ get_operation(const char *path,
       child->operation = OP_OPEN;
       child->copyfrom_revision = SVN_INVALID_REVNUM;
       child->kind = svn_kind_dir;
+      child->base_revision = base_revision;
       child->prop_mods = apr_hash_make(result_pool);
       child->prop_dels = apr_array_make(result_pool, 1, sizeof(const char *));
       apr_hash_set(operation->children, apr_pstrdup(result_pool, path),
@@ -891,7 +920,7 @@ build(struct editor_baton *eb,
     {
       const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
       path_so_far = svn_relpath_join(path_so_far, path_bit, scratch_pool);
-      operation = get_operation(path_so_far, operation, eb->edit_pool);
+      operation = get_operation(path_so_far, operation, head, eb->edit_pool);
     }
 
   /* Handle property changes. */
@@ -999,7 +1028,7 @@ ensure_root_opened(struct editor_baton *eb)
 {
   if (!eb->root_opened)
     {
-      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, SVN_INVALID_REVNUM,
+      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, eb->root.base_revision,
                                      eb->edit_pool, &eb->root.baton));
       eb->root_opened = TRUE;
     }
@@ -1144,7 +1173,7 @@ set_props_cb(void *baton,
 
   SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_unknown,
                 NULL, SVN_INVALID_REVNUM,
-                props, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                props, NULL, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1173,7 +1202,7 @@ set_text_cb(void *baton,
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, tmp_filename, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1328,11 +1357,11 @@ drive_tree(const struct operation *operation,
         {
           if (child->kind == svn_kind_dir)
             SVN_ERR(editor->open_directory(path, operation->baton,
-                                           SVN_INVALID_REVNUM,
+                                           operation->base_revision,
                                            iterpool, &child->baton));
           else
             SVN_ERR(editor->open_file(path, operation->baton,
-                                      SVN_INVALID_REVNUM,
+                                      operation->base_revision,
                                       iterpool, &file_baton));
         }
 
@@ -1471,6 +1500,7 @@ start_edit_func(void *baton,
 {
   struct editor_baton *eb = baton;
 
+  eb->root.base_revision = base_revision;
   SVN_ERR(ensure_root_opened(eb));
 
   return SVN_NO_ERROR;
