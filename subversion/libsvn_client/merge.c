@@ -7317,10 +7317,6 @@ log_find_operative_subtree_revs(void *baton,
    DEPTH == svn_depth_infinity then this function does nothing beyond
    setting *OPERATIVE_CHILDREN to an empty hash).
 
-   CHILDREN_WITH_MERGEINFO is the standard array of subtrees that are
-   interesting from a merge tracking perspective, see the global comment
-   'THE CHILDREN_WITH_MERGEINFO ARRAY'.
-
    MERGE_SOURCE_FSPATH is the absolute repository path of the merge
    source.  OLDEST_REV and YOUNGEST_REV are the revisions merged from
    MERGE_SOURCE_FSPATH to MERGE_TARGET_ABSPATH.
@@ -7338,7 +7334,6 @@ log_find_operative_subtree_revs(void *baton,
    SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 get_operative_immediate_children(apr_hash_t **operative_children,
-                                 apr_array_header_t *children_with_mergeinfo,
                                  const char *merge_source_fspath,
                                  svn_revnum_t oldest_rev,
                                  svn_revnum_t youngest_rev,
@@ -7361,7 +7356,7 @@ get_operative_immediate_children(apr_hash_t **operative_children,
   if (depth == svn_depth_infinity)
     return SVN_NO_ERROR;
 
-  /* Now remove any paths from *IMMEDIATE_CHILDREN that are inoperative when
+  /* Now remove any paths from *OPERATIVE_CHILDREN that are inoperative when
      merging MERGE_SOURCE_REPOS_PATH -r(OLDEST_REV - 1):YOUNGEST_REV to
      MERGE_TARGET_ABSPATH at --depth infinity. */
   log_baton.operative_children = *operative_children;
@@ -7418,10 +7413,9 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
       && (depth < svn_depth_infinity))
     SVN_ERR(get_operative_immediate_children(
       &operative_immediate_children,
-      notify_b->children_with_mergeinfo,
       mergeinfo_fspath, merged_range->start + 1, merged_range->end,
-      merge_b->target->abspath, depth, merge_b->ctx->wc_ctx, merge_b->ra_session1,
-      scratch_pool, iterpool));
+      merge_b->target->abspath, depth, merge_b->ctx->wc_ctx,
+      merge_b->ra_session1, scratch_pool, iterpool));
 
   /* Issue #4056: Walk NOTIFY_B->CHILDREN_WITH_MERGEINFO reverse depth-first
      order.  This way each child knows if it has operative missing/switched
