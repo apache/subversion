@@ -148,7 +148,9 @@ svn_client__repos_locations(const char **start_url,
  *
  * Set *OP_URL to the URL that the object PEG_URL@PEG_REVNUM had in
  * revision OP_REVNUM.
- * RA_SESSION is required. */
+ *
+ * RA_SESSION is an open RA session to the correct repository; it may be
+ * temporarily reparented inside this function. */
 svn_error_t *
 svn_client__repos_location(const char **start_url,
                            svn_ra_session_t *ra_session,

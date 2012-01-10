@@ -578,7 +578,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
  *
  * START_URL and/or END_URL may be NULL if not wanted.  START_REVNUM and
  * END_REVNUM must be valid revision numbers except that END_REVNUM may
- * be SVN_INVALID_REVNUM if END_URL is NULL.  RA_SESSION is required.
+ * be SVN_INVALID_REVNUM if END_URL is NULL.
+ *
+ * RA_SESSION is an open RA session parented at URL.
  */
 static svn_error_t *
 repos_locations(const char **start_url,
@@ -660,10 +662,15 @@ svn_client__repos_location(const char **op_url,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
+  const char *old_session_url;
+
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                            peg_url, scratch_pool));
   SVN_ERR(repos_locations(op_url, NULL,
                           ra_session, peg_url, peg_revnum,
                           op_revnum, SVN_INVALID_REVNUM,
                           result_pool, scratch_pool));
+  SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -833,14 +840,13 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
      saves us a bunch of annoying custom data comparisons and such. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
                                                &has_rev_zero_history1,
-                                               rev1,
+                                               url1, rev1,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session, ctx, pool));
-  SVN_ERR(svn_ra_reparent(session, url2, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history2,
                                                &has_rev_zero_history2,
-                                               rev2,
+                                               url2, rev2,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session, ctx, pool));
