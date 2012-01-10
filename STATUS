@@ -178,6 +178,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1229677
+   Fix a status SEGV caused by an "obstructing" unversioned directory.
+   Justification:
+     Client SEGV reported by user.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
