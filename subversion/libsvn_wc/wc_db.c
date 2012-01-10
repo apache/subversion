@@ -7293,7 +7293,6 @@ read_children_info(void *baton,
           else
             {
               const char *last_repos_root_url = NULL;
-              const char *last_repos_uuid = NULL;
 
               apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
               if (!repos_root_url ||
@@ -7301,7 +7300,6 @@ read_children_info(void *baton,
                    repos_id != last_repos_id))
                 {
                   last_repos_root_url = repos_root_url;
-                  last_repos_uuid = repos_uuid;
                   err = fetch_repos_info(&repos_root_url, &repos_uuid,
                                          wcroot->sdb, repos_id, result_pool);
                   if (err)
