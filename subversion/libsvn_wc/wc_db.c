@@ -6360,11 +6360,8 @@ delete_node(void *baton,
           /* The node has already been moved, possibly along with a parent,
            * and is being moved again. Update the existing moved_to path
            * in the BASE node. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                            STMT_UPDATE_MOVED_TO_RELPATH));
-          SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                                    moved_from_relpath, b->moved_to_relpath));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(delete_update_movedto(wcroot, moved_from_relpath,
+                                        b->moved_to_relpath, scratch_pool));
         }
 
       /* If a subtree is being moved-away, we need to update moved-to
@@ -6553,12 +6550,8 @@ delete_node(void *baton,
       if (b->moved_to_relpath)
         {
           /* Record moved-to relpath in BASE. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                            STMT_UPDATE_MOVED_TO_RELPATH));
-          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
-                                    wcroot->wc_id, local_relpath,
-                                    b->moved_to_relpath));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(delete_update_movedto(wcroot, local_relpath,
+                                        b->moved_to_relpath, scratch_pool));
         }
 
       /* Delete the node and possible descendants. */
