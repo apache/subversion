@@ -117,6 +117,12 @@ def status_update_with_nested_adds(sbox):
   svntest.actions.run_and_verify_unquiet_status(wc_backup,
                                                 expected_status)
 
+  # At one time an obstructing 'newdir' caused a SEGV on 'newdir/newfile'
+  os.makedirs(os.path.join(wc_backup, 'newdir'))
+  expected_status.tweak('newdir', status='? ')
+  svntest.actions.run_and_verify_unquiet_status(wc_backup,
+                                                expected_status)
+
 #----------------------------------------------------------------------
 
 # svn status -vN should include all entries in a directory
