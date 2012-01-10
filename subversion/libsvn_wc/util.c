@@ -612,6 +612,13 @@ svn_wc__fetch_base_func(const char **filename,
     }
   else if (err)
     return svn_error_trace(err);
+
+  if (checksum == NULL)
+    {
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, sfb->db, local_abspath,
                                    checksum, scratch_pool, scratch_pool));
 
