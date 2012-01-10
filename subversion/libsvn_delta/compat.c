@@ -1432,7 +1432,8 @@ drive_tree(const struct operation *operation,
   if (operation->kind == svn_kind_dir
                    && (operation->operation == OP_OPEN
                     || operation->operation == OP_PROPSET
-                    || operation->operation == OP_ADD))
+                    || operation->operation == OP_ADD
+                    || operation->operation == OP_REPLACE))
     {
       SVN_ERR(change_props(editor, operation->baton, operation, scratch_pool));
     }
