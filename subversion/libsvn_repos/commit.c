@@ -247,7 +247,7 @@ add_file_or_directory(const char *path,
          out-of-dateness error. */
       SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, kind);
+        return svn_error_trace(out_of_date(full_path, kind));
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
@@ -396,13 +396,13 @@ delete_entry(const char *path,
 
   /* If PATH doesn't exist in the txn, the working copy is out of date. */
   if (kind == svn_node_none)
-    return out_of_date(full_path, kind);
+    return svn_error_trace(out_of_date(full_path, kind));
 
   /* Now, make sure we're deleting the node we *think* we're
      deleting, else return an out-of-dateness error. */
   SVN_ERR(svn_fs_node_created_rev(&cr_rev, eb->txn_root, full_path, pool));
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
-    return out_of_date(full_path, kind);
+    return svn_error_trace(out_of_date(full_path, kind));
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
@@ -518,7 +518,7 @@ open_file(const char *path,
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
   if (SVN_IS_VALID_REVNUM(base_revision) && (base_revision < cr_rev))
-    return out_of_date(full_path, svn_node_file);
+    return svn_error_trace(out_of_date(full_path, svn_node_file));
 
   /* Build a new file baton */
   new_fb = apr_pcalloc(pool, sizeof(*new_fb));
@@ -602,7 +602,7 @@ change_dir_prop(void *dir_baton,
                                       eb->txn_root, db->path, pool));
 
       if (db->base_rev < created_rev)
-        return out_of_date(db->path, svn_node_dir);
+        return svn_error_trace(out_of_date(db->path, svn_node_dir));
     }
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
