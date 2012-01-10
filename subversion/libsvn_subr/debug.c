@@ -105,6 +105,12 @@ svn_dbg__print_props(apr_hash_t *props,
   print_line(header_fmt, ap);
   va_end(ap);
 
+  if (props == NULL)
+    {
+      SVN_DBG(("    (null)\n"));
+      return;
+    }
+
   for (hi = apr_hash_first(apr_hash_pool_get(props), props); hi;
         hi = apr_hash_next(hi))
     {
