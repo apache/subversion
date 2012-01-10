@@ -1604,16 +1604,16 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   SVN_ERR(editor_from_delta(&editor, &exb, deditor_in, dedit_baton_in,
                             found_abs_paths, NULL, NULL,
                             shim_callbacks->fetch_kind_func,
-                            shim_callbacks->fetch_kind_baton,
+                            shim_callbacks->fetch_baton,
                             shim_callbacks->fetch_props_func,
-                            shim_callbacks->fetch_props_baton,
+                            shim_callbacks->fetch_baton,
                             result_pool, scratch_pool));
   SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
                             found_abs_paths,
                             shim_callbacks->fetch_props_func,
-                            shim_callbacks->fetch_props_baton,
+                            shim_callbacks->fetch_baton,
                             shim_callbacks->fetch_base_func,
-                            shim_callbacks->fetch_base_baton,
+                            shim_callbacks->fetch_baton,
                             exb, result_pool));
 
 #endif

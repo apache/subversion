@@ -905,7 +905,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                                             de, eb, editor, edit_baton, pool));
 
   shim_callbacks->fetch_base_func = fetch_base_func;
-  shim_callbacks->fetch_base_baton = eb;
+  shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));

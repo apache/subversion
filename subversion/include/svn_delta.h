@@ -1134,11 +1134,9 @@ typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
 typedef struct svn_delta_shim_callbacks_t
 {
   svn_delta_fetch_props_func_t fetch_props_func;
-  void *fetch_props_baton;
   svn_delta_fetch_kind_func_t fetch_kind_func;
-  void *fetch_kind_baton;
   svn_delta_fetch_base_func_t fetch_base_func;
-  void *fetch_base_baton;
+  void *fetch_baton;
 } svn_delta_shim_callbacks_t;
 
 /** Return a collection of default shim functions in @a result_pool.

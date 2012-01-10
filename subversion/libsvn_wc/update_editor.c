@@ -4992,11 +4992,9 @@ make_editor(svn_revnum_t *target_revision,
   sfb->fetch_base = TRUE;
 
   shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
-  shim_callbacks->fetch_kind_baton = sfb;
   shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
-  shim_callbacks->fetch_props_baton = sfb;
   shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
-  shim_callbacks->fetch_base_baton = sfb;
+  shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, result_pool, scratch_pool));
