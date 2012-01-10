@@ -979,11 +979,9 @@ get_dump_editor(const svn_delta_editor_t **editor,
   *editor = dump_editor;
 
   shim_callbacks->fetch_kind_func = fetch_kind_func;
-  shim_callbacks->fetch_kind_baton = eb;
   shim_callbacks->fetch_props_func = fetch_props_func;
-  shim_callbacks->fetch_props_baton = eb;
   shim_callbacks->fetch_base_func = fetch_base_func;
-  shim_callbacks->fetch_base_baton = eb;
+  shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));

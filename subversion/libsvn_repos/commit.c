@@ -948,11 +948,9 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *editor = e;
 
   shim_callbacks->fetch_props_func = prop_fetch_func;
-  shim_callbacks->fetch_props_baton = eb;
   shim_callbacks->fetch_kind_func = kind_fetch_func;
-  shim_callbacks->fetch_kind_baton = eb;
   shim_callbacks->fetch_base_func = fetch_base_func;
-  shim_callbacks->fetch_base_baton = eb;
+  shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));
