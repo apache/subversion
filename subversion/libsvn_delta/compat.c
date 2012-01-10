@@ -1317,8 +1317,8 @@ drive_tree(const struct operation *operation,
       if (path[0] != '/' && *make_abs_paths)
         path = apr_pstrcat(iterpool, "/", path, NULL);
 
-      /* Deletes are simple -- just delete the thing. */
-      if (child->operation == OP_DELETE)
+      /* Deletes and replacements are simple -- just delete the thing. */
+      if (child->operation == OP_DELETE || child->operation == OP_REPLACE)
         {
           SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
                                        operation->baton, iterpool));
@@ -1336,7 +1336,7 @@ drive_tree(const struct operation *operation,
                                       iterpool, &file_baton));
         }
 
-      if (child->operation == OP_ADD)
+      if (child->operation == OP_ADD || child->operation == OP_REPLACE)
         {
           if (child->kind == svn_kind_dir)
             SVN_ERR(editor->add_directory(path, operation->baton,
@@ -1389,7 +1389,8 @@ drive_tree(const struct operation *operation,
       if (child->kind == svn_kind_dir
                    && (child->operation == OP_OPEN
                     || child->operation == OP_PROPSET
-                    || child->operation == OP_ADD))
+                    || child->operation == OP_ADD
+                    || child->operation == OP_REPLACE))
         {
           SVN_ERR(drive_tree(child, editor, make_abs_paths, iterpool));
           SVN_ERR(editor->close_directory(child->baton, iterpool));
