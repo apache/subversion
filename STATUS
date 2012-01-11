@@ -98,37 +98,6 @@ Candidate changes:
      +1: stsp (without r1220740)
      +1: julianfoad
 
- * r1215260, r1215288, r1215374, r1215375, r1215379, r1227146
-   Fix issue #4082 ("'svn log --with-all-revprops' over ra-dav
-   intolerant of XML-unsafe property values").
-   Justification:
-     'Tis better to succeed than to fail.  Unless of course you're
-     talking about successfully doing evil, in which case 'tis better
-     to fail.  But we're not talking about doing evil here.  Unless
-     you think XML is evil.  But seriously, these commits introduce a
-     protocol change for WebDAV.  I suspect that might disqualify it
-     in some folks' eyes from backport to a patch release rather
-     automatically.  But the protocol change is (as all our other
-     protocol changes are) designed to maintain compatibility across
-     client and server versions.  If the client advertises support for
-     the new behavior, and the server has such support, the bugfix
-     logic is activitated.  A patched client will not trouble an
-     unpatched server; nor vice-versa.  Further, the effects of the
-     corrected behavior do not persist, so there's no dataset damage
-     imposed for users who would roll this change back out of their
-     systems (by reverting to a prior release).  Therefore, cmpilato
-     can't think of a good reason not to backport the change.
-   Notes:
-     r1215260 - mod_dav_svn support for this issue
-     r1215288 - libsvn_ra_neon support for this issue
-     r1215374 - followup to r1215288
-     r1215375 - libsvn_ra_serf support for this issue
-     r1215379 - followup to r1215375
-     r1227146 - fix unitialised variable
-   Votes:
-     +1: rhuijben (without r1227146)
-     +1: philip, cmpilato
-
  * r1221178, r1221303
    Fix issue 4086, mod_dav_svn's handling of POST errors.
    Justification:
@@ -218,6 +187,36 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1215260, r1215288, r1215374, r1215375, r1215379, r1227146
+   Fix issue #4082 ("'svn log --with-all-revprops' over ra-dav
+   intolerant of XML-unsafe property values").
+   Justification:
+     'Tis better to succeed than to fail.  Unless of course you're
+     talking about successfully doing evil, in which case 'tis better
+     to fail.  But we're not talking about doing evil here.  Unless
+     you think XML is evil.  But seriously, these commits introduce a
+     protocol change for WebDAV.  I suspect that might disqualify it
+     in some folks' eyes from backport to a patch release rather
+     automatically.  But the protocol change is (as all our other
+     protocol changes are) designed to maintain compatibility across
+     client and server versions.  If the client advertises support for
+     the new behavior, and the server has such support, the bugfix
+     logic is activitated.  A patched client will not trouble an
+     unpatched server; nor vice-versa.  Further, the effects of the
+     corrected behavior do not persist, so there's no dataset damage
+     imposed for users who would roll this change back out of their
+     systems (by reverting to a prior release).  Therefore, cmpilato
+     can't think of a good reason not to backport the change.
+   Notes:
+     r1215260 - mod_dav_svn support for this issue
+     r1215288 - libsvn_ra_neon support for this issue
+     r1215374 - followup to r1215288
+     r1215375 - libsvn_ra_serf support for this issue
+     r1215379 - followup to r1215375
+     r1227146 - fix unitialised variable
+   Votes:
+     +1: philip, cmpilato, rhuijben
 
  * r1229252
    Copy permissions in the correct direction when creating FSFS directories.
