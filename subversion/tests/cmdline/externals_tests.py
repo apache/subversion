@@ -2673,7 +2673,6 @@ def shadowing(sbox):
 # Test for issue #4093 'remapping a file external can segfault due to
 # "deleted" props'.
 @Issue(4093)
-@XFail()
 def remap_file_external_with_prop_del(sbox):
   "file external remap segfaults due to deleted props"
 
@@ -2701,7 +2700,7 @@ def remap_file_external_with_prop_del(sbox):
   change_external(A_path, externals_prop)
 
   # Now update to bring the new external down.
-  # This currently segfaults as described in
+  # This previously segfaulted as described in
   # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 

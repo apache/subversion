@@ -623,6 +623,9 @@ close_file(void *file_baton,
 
         SVN_ERR(svn_wc__db_base_get_props(&actual_props, eb->db,
                                           eb->local_abspath, pool, pool));
+        SVN_ERR(svn_wc__db_read_pristine_props(&base_props, eb->db,
+                                               eb->local_abspath,
+                                               pool, pool));
       }
 
     if (!base_props)
