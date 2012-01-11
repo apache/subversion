@@ -916,8 +916,9 @@ typedef struct svn_delta_editor_t
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a subdirectory in the edit source, but
-   * cannot be conveyed to the edit consumer (perhaps because of
-   * authorization restrictions).
+   * cannot be conveyed to the edit consumer.  Currently, this would
+   * only occur because of authorization restrictions, but may change
+   * in the future.
    *
    * Any temporary allocations may be performed in @a scratch_pool.
    */
@@ -1040,8 +1041,9 @@ typedef struct svn_delta_editor_t
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a file in the edit source, but cannot be
-   * conveyed to the edit consumer (perhaps because of authorization
-   * restrictions).
+   * cannot be conveyed to the edit consumer.  Currently, this would
+   * only occur because of authorization restrictions, but may change
+   * in the future.
    *
    * Any temporary allocations may be performed in @a scratch_pool.
    */
