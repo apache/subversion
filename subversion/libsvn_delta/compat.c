@@ -1004,7 +1004,7 @@ build(struct editor_baton *eb,
         {
           operation->operation = OP_REPLACE;
         }
-      else
+      else if (operation->operation == OP_OPEN)
         {
           if (kind == svn_kind_file)
             operation->operation = OP_OPEN;
