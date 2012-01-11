@@ -246,20 +246,20 @@ process_actions(void *edit_baton,
             {
               const struct prop_args *p_args = action->args;
 
+              if (!SVN_IS_VALID_REVNUM(props_base_revision))
+                props_base_revision = p_args->base_revision;
+              else
+                SVN_ERR_ASSERT(p_args->base_revision == props_base_revision);
+
               if (!props)
                 {
                   /* Fetch the original props. We can then apply each of
                      the modifications to it.  */
                   SVN_ERR(eb->fetch_props_func(&props,
                                                eb->fetch_props_baton,
-                                               path,
+                                               path, props_base_revision,
                                                scratch_pool, scratch_pool));
                 }
-
-              if (!SVN_IS_VALID_REVNUM(props_base_revision))
-                props_base_revision = p_args->base_revision;
-              else
-                SVN_ERR_ASSERT(p_args->base_revision == props_base_revision);
 
               /* Note that p_args->value may be NULL.  */
               apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
@@ -572,7 +572,8 @@ ev2_add_file(const char *path,
 
   SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                   fb->eb->fetch_base_baton,
-                                  path, result_pool, result_pool));
+                                  path, fb->base_revision,
+                                  result_pool, result_pool));
 
   if (!copyfrom_path)
     {
@@ -611,7 +612,8 @@ ev2_open_file(const char *path,
 
   SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                   fb->eb->fetch_base_baton,
-                                  path, result_pool, result_pool));
+                                  path, base_revision,
+                                  result_pool, result_pool));
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -939,7 +941,7 @@ build(struct editor_baton *eb,
         operation->kind = kind;
 
       SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
-                                   relpath, scratch_pool, scratch_pool));
+                                   relpath, rev, scratch_pool, scratch_pool));
 
       SVN_ERR(svn_prop_diffs(&propdiffs, props, current_props, scratch_pool));
 
