@@ -1026,7 +1026,16 @@ fetch_kind_func(svn_kind_t *kind,
                 const char *path,
                 apr_pool_t *scratch_pool)
 {
-  *kind = svn_kind_unknown;
+  /* We know the root of the edit is a directory. */
+  if (path[0] == '\0')
+    *kind = svn_kind_dir;
+
+  /* ### TODO: We could possibly fetch the kind of the object in question
+         from the server with a second ra_session, but right now this
+         seems to work. */
+  else
+    *kind = svn_kind_unknown;
+
   return SVN_NO_ERROR;
 }
 
