@@ -185,6 +185,18 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1228340, r1229833
+   Fix issue #4093 'remapping a file external can segfault due to "deleted"
+   props'.
+   Justification:
+     Prevents a segfault.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4093
+   Notes:
+     r1228340 is a regression test for this issue and r1229833 is the fix.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
