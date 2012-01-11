@@ -815,6 +815,8 @@ struct operation {
                             occuring; directories are OP_OPEN with non-empty
                             props */
   } operation;
+
+  const char *path;
   svn_kind_t kind;  /* to copy, mkdir, put or set revprops */
   svn_revnum_t base_revision;       /* When committing, the base revision */
   svn_revnum_t copyfrom_revision;      /* to copy, valid for add and replace */
@@ -863,6 +865,7 @@ get_operation(const char *path,
     {
       child = apr_pcalloc(result_pool, sizeof(*child));
       child->children = apr_hash_make(result_pool);
+      child->path = apr_pstrdup(result_pool, path);
       child->operation = OP_OPEN;
       child->copyfrom_revision = SVN_INVALID_REVNUM;
       child->kind = svn_kind_dir;
@@ -1324,119 +1327,146 @@ change_props(const svn_delta_editor_t *editor,
 }
 
 static svn_error_t *
-drive_tree(const struct operation *operation,
+drive_tree(struct operation *op,
+           const struct operation *parent_op,
            const svn_delta_editor_t *editor,
-           svn_boolean_t *make_abs_paths,
+           svn_boolean_t make_abs_paths,
            apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_index_t *hi;
+  const char *path = op->path;
 
-  for (hi = apr_hash_first(scratch_pool, operation->children);
-       hi; hi = apr_hash_next(hi))
+  if (path[0] != '/' && make_abs_paths)
+    path = apr_pstrcat(scratch_pool, "/", path, NULL);
+
+  /* Deletes and replacements are simple -- just delete the thing. */
+  if (op->operation == OP_DELETE || op->operation == OP_REPLACE)
     {
-      struct operation *child;
-      const char *path;
+      SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
+                                   parent_op->baton, scratch_pool));
+    }
+
+  if (op->kind == svn_kind_dir)
+    {
+      /* Open or create our baton. */
+      if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
+        SVN_ERR(editor->open_directory(path, parent_op->baton,
+                                       parent_op->base_revision,
+                                       scratch_pool, &op->baton));
+
+      else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
+        SVN_ERR(editor->add_directory(path, parent_op->baton,
+                                      op->copyfrom_url, op->copyfrom_revision,
+                                      scratch_pool, &op->baton));
+
+      else if (op->operation == OP_ADD_ABSENT)
+        SVN_ERR(editor->absent_directory(path, parent_op->baton,
+                                         scratch_pool));
+
+      if (op->baton)
+        {
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+          apr_hash_index_t *hi;
+
+          /* Do any prop mods we may have. */
+          SVN_ERR(change_props(editor, op->baton, op, scratch_pool));
+
+          for (hi = apr_hash_first(scratch_pool, op->children);
+               hi; hi = apr_hash_next(hi))
+            {
+              struct operation *child = svn__apr_hash_index_val(hi);
+
+              svn_pool_clear(iterpool);
+              SVN_ERR(drive_tree(child, op, editor, make_abs_paths, iterpool));
+            }
+          svn_pool_destroy(iterpool);
+
+          /* We're done, close the directory. */
+          SVN_ERR(editor->close_directory(op->baton, scratch_pool));
+        }
+    }
+  else
+    {
+      /* This currently treats anything that isn't a directory as a file.
+         I don't know that that's a valid assumption... */
+
       void *file_baton = NULL;
+      
+      /* Open or create our baton. */
+      if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
+        SVN_ERR(editor->open_file(path, parent_op->baton,
+                                  parent_op->base_revision,
+                                  scratch_pool, &file_baton));
 
-      svn_pool_clear(iterpool);
-      child = svn__apr_hash_index_val(hi);
-      path = svn__apr_hash_index_key(hi);
+      else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
+        SVN_ERR(editor->add_file(path, parent_op->baton, op->copyfrom_url,
+                                 op->copyfrom_revision, scratch_pool,
+                                 &file_baton));
 
-      if (path[0] != '/' && *make_abs_paths)
-        path = apr_pstrcat(iterpool, "/", path, NULL);
+      else if (op->operation == OP_ADD_ABSENT)
+        SVN_ERR(editor->absent_file(path, parent_op->baton, scratch_pool));
 
-      /* Deletes and replacements are simple -- just delete the thing. */
-      if (child->operation == OP_DELETE || child->operation == OP_REPLACE)
-        {
-          SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
-                                       operation->baton, iterpool));
-        }
-
-      if (child->operation == OP_OPEN || child->operation == OP_PROPSET)
-        {
-          if (child->kind == svn_kind_dir)
-            SVN_ERR(editor->open_directory(path, operation->baton,
-                                           operation->base_revision,
-                                           iterpool, &child->baton));
-          else
-            SVN_ERR(editor->open_file(path, operation->baton,
-                                      operation->base_revision,
-                                      iterpool, &file_baton));
-        }
-
-      if (child->operation == OP_ADD || child->operation == OP_REPLACE)
-        {
-          if (child->kind == svn_kind_dir)
-            SVN_ERR(editor->add_directory(path, operation->baton,
-                                          child->copyfrom_url,
-                                          child->copyfrom_revision,
-                                          iterpool, &child->baton));
-          else
-            SVN_ERR(editor->add_file(path, operation->baton,
-                                     child->copyfrom_url,
-                                     child->copyfrom_revision, iterpool,
-                                     &file_baton));
-        }
-
-      if (child->operation == OP_ADD_ABSENT)
-        {
-          if (child->kind == svn_kind_dir)
-            SVN_ERR(editor->absent_directory(path, operation->baton,
-                                             iterpool));
-          else
-            SVN_ERR(editor->absent_file(path, operation->baton, iterpool));
-        }
-
-      if (child->src_file && file_baton)
-        {
-          /* We need to change textual contents. */
-          svn_txdelta_window_handler_t handler;
-          void *handler_baton;
-          svn_stream_t *contents;
-
-          SVN_ERR(editor->apply_textdelta(file_baton, NULL, iterpool,
-                                          &handler, &handler_baton));
-          SVN_ERR(svn_stream_open_readonly(&contents, child->src_file,
-                                           iterpool, iterpool));
-          SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
-                                          NULL, iterpool));
-          SVN_ERR(svn_stream_close(contents));
-        }
-
-      /* Only worry about properties and closing the file baton if we've
-         previously opened it. */
       if (file_baton)
         {
-          if (child->kind == svn_kind_file)
-            SVN_ERR(change_props(editor, file_baton, child, iterpool));
-          SVN_ERR(editor->close_file(file_baton, NULL, iterpool));
+          /* Do we need to change text contents? */
+          if (op->src_file)
+            {
+              svn_txdelta_window_handler_t handler;
+              void *handler_baton;
+              svn_stream_t *contents;
+
+              SVN_ERR(editor->apply_textdelta(file_baton, NULL, scratch_pool,
+                                              &handler, &handler_baton));
+              SVN_ERR(svn_stream_open_readonly(&contents, op->src_file,
+                                               scratch_pool, scratch_pool));
+              SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
+                                              NULL, scratch_pool));
+              SVN_ERR(svn_stream_close(contents));
+            }
+
+          /* Do any prop mods we may have. */
+          SVN_ERR(change_props(editor, file_baton, op, scratch_pool));
+
+          /* Close the file. */
+          SVN_ERR(editor->close_file(file_baton, NULL, scratch_pool));
         }
 
-      /* We *always* open the child directory, so drive the child, change any
-         props, and then close the directory. */
-      if (child->kind == svn_kind_dir
-                   && (child->operation == OP_OPEN
-                    || child->operation == OP_PROPSET
-                    || child->operation == OP_ADD
-                    || child->operation == OP_REPLACE))
-        {
-          SVN_ERR(drive_tree(child, editor, make_abs_paths, iterpool));
-          SVN_ERR(editor->close_directory(child->baton, iterpool));
-        }
     }
-  svn_pool_destroy(iterpool);
 
-  /* Finally, for this node, if it's a directory, change any props before
-     returning (our caller will close the directory. */
-  if (operation->kind == svn_kind_dir
-                   && (operation->operation == OP_OPEN
-                    || operation->operation == OP_PROPSET
-                    || operation->operation == OP_ADD
-                    || operation->operation == OP_REPLACE))
+  return SVN_NO_ERROR;
+}
+
+/* This is a special case of drive_tree(), meant to handle the root, which
+   doesn't have a parent and should already be open. */
+static svn_error_t *
+drive_root(struct operation *root,
+           const svn_delta_editor_t *editor,
+           svn_boolean_t make_abs_paths,
+           apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Early out: if we haven't opened the root yet (which would usually only
+     be the case in an abort), there isn't much we can do here. */
+  if (!root->baton)
+    return SVN_NO_ERROR;
+
+  /* Do any prop mods we may have. */
+  SVN_ERR(change_props(editor, root->baton, root, scratch_pool));
+
+  /* Now iterate over our children. */
+  for (hi = apr_hash_first(scratch_pool, root->children);
+       hi; hi = apr_hash_next(hi))
     {
-      SVN_ERR(change_props(editor, operation->baton, operation, scratch_pool));
+      struct operation *child = svn__apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(drive_tree(child, root, editor, make_abs_paths, iterpool));
     }
+  
+  /* We need to close the root directory, but leave it to our caller to call
+     close_ or abort_edit(). */
+  SVN_ERR(editor->close_directory(root->baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1452,10 +1482,9 @@ complete_cb(void *baton,
   SVN_ERR(ensure_root_opened(eb));
 
   /* Drive the tree we've created. */
-  err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
+  err = drive_root(&eb->root, eb->deditor, *eb->make_abs_paths, scratch_pool);
   if (!err)
      {
-       err = eb->deditor->close_directory(eb->root.baton, scratch_pool);
        err = svn_error_compose_create(err, eb->deditor->close_edit(
                                                             eb->dedit_baton,
                                                             scratch_pool));
@@ -1480,7 +1509,7 @@ abort_cb(void *baton,
      point. */
 
   /* Drive the tree we've created. */
-  err = drive_tree(&eb->root, eb->deditor, eb->make_abs_paths, scratch_pool);
+  err = drive_root(&eb->root, eb->deditor, *eb->make_abs_paths, scratch_pool);
 
   err2 = eb->deditor->abort_edit(eb->dedit_baton, scratch_pool);
 
@@ -1564,6 +1593,7 @@ editor_from_delta(svn_editor_t **editor_p,
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
 
+  eb->root.path = NULL;
   eb->root.children = apr_hash_make(result_pool);
   eb->root.kind = svn_kind_dir;
   eb->root.operation = OP_OPEN;
