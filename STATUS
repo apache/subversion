@@ -217,10 +217,3 @@ Approved changes:
      r1227146 - fix unitialised variable
    Votes:
      +1: philip, cmpilato, rhuijben
-
- * r1229252
-   Copy permissions in the correct direction when creating FSFS directories.
-   Justification:
-     Could change permissions of existing directories.
-   Votes:
-     +1: philip, hwright, rhuijben
