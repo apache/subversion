@@ -1097,6 +1097,7 @@ typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
   apr_hash_t **props,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
@@ -1123,6 +1124,7 @@ typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
   const char **filename,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );

@@ -850,6 +850,7 @@ static svn_error_t *
 fetch_base_func(const char **filename,
                 void *baton,
                 const char *path,
+                svn_revnum_t base_revision,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
