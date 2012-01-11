@@ -148,20 +148,12 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1228340, r1229833, r1229980
-   Fix issue #4093 'remapping a file external can segfault due to "deleted"
-   props'.
+ * r1230212
+   Fix for large files on 32-bit systems
    Justification:
-     Prevents a segfault by retrieving the right properties when a file
-     external changes.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4093
-   Notes:
-     r1228340 is a regression test for this issue and r1229833 is a segfault
-     fix. r1229980 fixes some variable usages - see
-     http://svn.haxx.se/dev/archive-2012-01/0167.shtml.
+     Can corrupt FSFS repository.
    Votes:
-     +1: pburba, rhuijben
+     +1: philip
 
 Veto-blocked changes:
 =====================
@@ -187,3 +179,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1228340, r1229833, r1229980
+   Fix issue #4093 'remapping a file external can segfault due to "deleted"
+   props'.
+   Justification:
+     Prevents a segfault by retrieving the right properties when a file
+     external changes.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4093
+   Notes:
+     r1228340 is a regression test for this issue and r1229833 is a segfault
+     fix. r1229980 fixes some variable usages - see
+     http://svn.haxx.se/dev/archive-2012-01/0167.shtml.
+   Votes:
+     +1: pburba, rhuijben, philip
