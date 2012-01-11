@@ -158,10 +158,10 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4093
    Notes:
      r1228340 is a regression test for this issue and r1229833 is a segfault
-     fix. r1229980 fixes some variable usages.
+     fix. r1229980 fixes some variable usages - see
+     http://svn.haxx.se/dev/archive-2012-01/0167.shtml.
    Votes:
-     +1: pburba (without r1229980)
-     +1: rhuijben
+     +1: pburba, rhuijben
 
 Veto-blocked changes:
 =====================
