@@ -2060,6 +2060,39 @@ def copy_file_externals(sbox):
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, True, wc_dir)
 
+# Test for issue #4093 'remapping a file external can segfault due to
+# "deleted" props'.
+@Issue(4093)
+def remap_file_external_with_prop_del(sbox):
+  "file external remap segfaults due to deleted props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path  = os.path.join(wc_dir, "A")
+  mu_path = os.path.join(wc_dir, "A", "mu")
+
+  # Add a property to A/mu
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'propname', 'propval', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'New property on a file',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Add a new file external A/external pointing to ^/A/mu
+  externals_prop = "^/A/mu external\n"
+  change_external(A_path, externals_prop)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Change A/external to point to ^/iota
+  externals_prop = "^/iota external\n"
+  change_external(A_path, externals_prop)
+
+  # Now update to bring the new external down.
+  # This previously segfaulted as described in
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -2101,6 +2134,7 @@ test_list = [ None,
               exclude_externals,
               file_external_in_unversioned,
               copy_file_externals,
+              remap_file_external_with_prop_del,
              ]
 
 if __name__ == '__main__':
