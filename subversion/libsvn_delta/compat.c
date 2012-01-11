@@ -941,9 +941,7 @@ build(struct editor_baton *eb,
       SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
                                    relpath, scratch_pool, scratch_pool));
 
-      /* Use the edit pool, since most of the results will need to be
-         persisted. */
-      SVN_ERR(svn_prop_diffs(&propdiffs, props, current_props, eb->edit_pool));
+      SVN_ERR(svn_prop_diffs(&propdiffs, props, current_props, scratch_pool));
 
       for (i = 0; i < propdiffs->nelts; i++)
         {
@@ -951,10 +949,11 @@ build(struct editor_baton *eb,
              actual structures, not pointers to them. */
           svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
           if (!prop->value)
-            APR_ARRAY_PUSH(operation->prop_dels, const char *) = prop->name;
+            APR_ARRAY_PUSH(operation->prop_dels, const char *) = 
+                                        apr_pstrdup(eb->edit_pool, prop->name);
           else
             apr_hash_set(operation->prop_mods, prop->name, APR_HASH_KEY_STRING,
-                         prop->value);
+                         svn_string_dup(prop->value, eb->edit_pool));
         }
 
       /* If we're not adding this thing ourselves, check for existence.  */
