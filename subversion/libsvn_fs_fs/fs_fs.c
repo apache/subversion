@@ -7025,7 +7025,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 /** Node origin lazy cache. */
 
 /* If directory PATH does not exist, create it and give it the same
-   permissions as FS->path.*/
+   permissions as FS_path.*/
 svn_error_t *
 svn_fs_fs__ensure_dir_exists(const char *path,
                              const char *fs_path,
