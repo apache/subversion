@@ -141,6 +141,7 @@ Candidate changes:
    Justification:
      Same as for allowing '-r r42' in svn(1).
    Votes:
+     -0: rhuijben (Behavior change without positive votes? 1.8?)
 
  * r1221780
    Fix SVNParentPath listings for parent paths which contain symlinks.
@@ -164,38 +165,34 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1229252
-   Copy permissions in the correct direction when creating FSFS directories.
-   Justification:
-     Could change permissions of existing directories.
-   Votes:
-     +1: philip, hwright
-
  * r1229303
    Fix an 'svn revert' assert caused by accessing the wrong memory.
    Justification:
      Client can assert or SEGV.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1229677
    Fix a status SEGV caused by an "obstructing" unversioned directory.
    Justification:
      Client SEGV reported by user.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
- * r1228340, r1229833
+ * r1228340, r1229833, r1229980
    Fix issue #4093 'remapping a file external can segfault due to "deleted"
    props'.
    Justification:
-     Prevents a segfault.
+     Prevents a segfault by retrieving the right properties when a file
+     external changes.
    Branch:
      ^/subversion/branches/1.7.x-issue4093
    Notes:
-     r1228340 is a regression test for this issue and r1229833 is the fix.
+     r1228340 is a regression test for this issue and r1229833 is a segfault
+     fix. r1229980 fixes some variable usages.
    Votes:
-     +1: pburba
+     +1: pburba (without r1229980)
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -222,3 +219,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1229252
+   Copy permissions in the correct direction when creating FSFS directories.
+   Justification:
+     Could change permissions of existing directories.
+   Votes:
+     +1: philip, hwright, rhuijben
