@@ -9853,11 +9853,11 @@ find_unsynced_ranges(const char *source_repos_rel_path,
    SOURCE_REPOS_REL_PATH@SOURCE_REV and all its children, i.e. the mergeinfo
    catalog for the reintegrate source.
 
-   TARGET_SEGMENTS_HASH is a hash of (const char *) paths mapped to
-   (apr_array_header_t *) arrays of svn_location_segment_t *.  Each of these
+   TARGET_HISTORY_HASH is a hash of (const char *) paths mapped to
+   svn_mergeinfo_t representing the location history.  Each of these
    path keys represent a path in the reintegrate target, relative to the
    repository root, which has explicit mergeinfo and/or is the reintegrate
-   target itself.  The segment arrays contain the natural history of each
+   target itself.  The svn_mergeinfo_t's contain the natural history of each
    path@TARGET_REV.  Effectively this is the mergeinfo catalog on the
    reintegrate target.
 
@@ -9875,18 +9875,18 @@ find_unsynced_ranges(const char *source_repos_rel_path,
    SOURCE_RA_SESSION is a session opened to the SOURCE_REPOS_REL_PATH
    and TARGET_RA_SESSION is open to TARGET_REPOS_REL_PATH.
 
-   For each path/segment in TARGET_SEGMENTS_HASH check that the history that
-   segment represents is contained in either the explicit mergeinfo for the
+   For each entry in TARGET_HISTORY_HASH check that the history it
+   represents is contained in either the explicit mergeinfo for the
    corresponding path in SOURCE_CATALOG, the corresponding path's inherited
    mergeinfo (if no explicit mergeinfo for the path is found in
    SOURCE_CATALOG), or the corresponding path's natural history.  Populate
    *UNMERGED_TO_SOURCE_CATALOG with the corresponding source paths mapped to
    the mergeinfo from the target's natural history which is *not* found.  Also
    include any mergeinfo from SOURCE_CATALOG which explicitly describes the
-   target's history but for which *no* path/segment was found in
-   TARGET_SEGMENTS_HASH.
+   target's history but for which *no* entry was found in
+   TARGET_HISTORY_HASH.
 
-   If no part of TARGET_SEGMENTS_HASH is found in SOURCE_CATALOG set
+   If no part of TARGET_HISTORY_HASH is found in SOURCE_CATALOG set
    *NEVER_SYNCHED to TRUE and set *YOUNGEST_MERGED_REV to SVN_INVALID_REVNUM.
    Otherwise set *NEVER_SYNCHED to FALSE, *YOUNGEST_MERGED_REV to the youngest
    revision previously merged from the target to the source, and filter
@@ -9934,8 +9934,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
        hi = apr_hash_next(hi))
     {
       const char *target_path = svn__apr_hash_index_key(hi);
-      apr_array_header_t *segments = svn__apr_hash_index_val(hi);
-      svn_mergeinfo_t target_history_as_mergeinfo, source_history_as_mergeinfo;
+      svn_mergeinfo_t target_history_as_mergeinfo = svn__apr_hash_index_val(hi);
+      svn_mergeinfo_t source_history_as_mergeinfo;
       const char *path_rel_to_session
         = svn_relpath_skip_ancestor(target_repos_rel_path, target_path);
       const char *source_path;
@@ -9949,10 +9949,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       source_url = svn_path_url_add_component2(source_session_url,
                                                path_rel_to_session, iterpool);
 
-      /* Convert this target path's natural history into mergeinfo. */
-      SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
-        &target_history_as_mergeinfo, segments, iterpool));
-
       /* Remove any target history that is also part of the source's history,
          i.e. their common ancestry.  By definition this has already been
          "merged" from the target to the source.  If the source has explicit
@@ -9965,7 +9961,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
       /* Look for any explicit mergeinfo on the source path corresponding to
          the target path.  If we find any remove that from SOURCE_CATALOG.
-         When this iteration over TARGET_SEGMENTS_HASH is complete all that
+         When this iteration over TARGET_HISTORY_HASH is complete all that
          should be left in SOURCE_CATALOG are subtrees that have explicit
          mergeinfo on the reintegrate source where there is no corresponding
          explicit mergeinfo on the reintegrate target. */
@@ -10037,14 +10033,13 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       /* Get the source path's natural history and convert it to mergeinfo.
          Then merge that natural history into source path's explicit
          or inherited mergeinfo. */
-      SVN_ERR(svn_client__repos_location_segments(&segments,
-                                                  source_ra_session,
-                                                  source_url,
-                                                  source_rev, source_rev,
-                                                  SVN_INVALID_REVNUM,
-                                                  ctx, iterpool));
-      SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
-        &source_history_as_mergeinfo, segments, iterpool));
+      SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history_as_mergeinfo,
+                                                   NULL /* has_rev_zero_history */,
+                                                   source_url,
+                                                   source_rev, source_rev,
+                                                   SVN_INVALID_REVNUM,
+                                                   source_ra_session,
+                                                   ctx, iterpool));
       SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
                                    source_history_as_mergeinfo, iterpool,
                                    iterpool));
@@ -10091,7 +10086,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       svn_mergeinfo_t source_mergeinfo = svn__apr_hash_index_val(hi);
       svn_mergeinfo_t filtered_mergeinfo, common_mergeinfo;
       const char *target_url;
-      apr_array_header_t *segments;
       svn_mergeinfo_t target_history_as_mergeinfo, source_history_as_mergeinfo;
       svn_error_t *err;
 
@@ -10101,12 +10095,13 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                                                path_rel_to_session, iterpool);
       target_url = svn_path_url_add_component2(target_session_url,
                                                path_rel_to_session, iterpool);
-      err = svn_client__repos_location_segments(&segments,
-                                                target_ra_session,
-                                                target_url,
-                                                target_rev, target_rev,
-                                                SVN_INVALID_REVNUM,
-                                                ctx, iterpool);
+      err = svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
+                                                 NULL /* has_rev_zero_history */,
+                                                 target_url,
+                                                 target_rev, target_rev,
+                                                 SVN_INVALID_REVNUM,
+                                                 target_ra_session,
+                                                 ctx, iterpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_FS_NOT_FOUND
@@ -10125,9 +10120,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       else
         {
           svn_mergeinfo_t explicit_source_target_history_intersection;
-
-          SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
-            &target_history_as_mergeinfo, segments, iterpool));
 
           /* If there is an intersection between the *explicit* mergeinfo
              on this source path and the corresponding target's history
@@ -10154,16 +10146,15 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           /* Get the source path's natural history and convert it to
              mergeinfo.  Then merge that natural history into source
              path's explicit or inherited mergeinfo. */
-          SVN_ERR(svn_client__repos_location_segments(
-            &segments,
-            source_ra_session,
+          SVN_ERR(svn_client__get_history_as_mergeinfo(
+            &source_history_as_mergeinfo,
+            NULL /* has_rev_zero_history */,
             source_url,
             target_rev,
             target_rev,
             SVN_INVALID_REVNUM,
+            source_ra_session,
             ctx, iterpool));
-          SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
-            &source_history_as_mergeinfo, segments, iterpool));
           SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
                                        source_history_as_mergeinfo,
                                        iterpool, iterpool));
@@ -10256,14 +10247,13 @@ calculate_left_hand_side(const char **url_left,
                          apr_pool_t *scratch_pool)
 {
   const char *target_repos_root_url = source_repos_root;  /* necessarily */
-  apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
   svn_mergeinfo_catalog_t mergeinfo_catalog, unmerged_catalog;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(scratch_pool, 1, sizeof(const char *));
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
-  /* hash of paths mapped to arrays of svn_location_segment_t *. */
-  apr_hash_t *segments_hash = apr_hash_make(scratch_pool);
+  /* hash of paths mapped to arrays of svn_mergeinfo_t. */
+  apr_hash_t *target_history_hash = apr_hash_make(scratch_pool);
   svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_url;
@@ -10284,8 +10274,8 @@ calculate_left_hand_side(const char **url_left,
     apr_hash_set(subtrees_with_mergeinfo, target_abspath,
                  APR_HASH_KEY_STRING, apr_hash_make(result_pool));
 
-  /* Get the history (segments) for TARGET_ABSPATH and any of its subtrees
-     with explicit mergeinfo. */
+  /* Get the history segments (as mergeinfo) for TARGET_ABSPATH and any of
+     its subtrees with explicit mergeinfo. */
   for (hi = apr_hash_first(scratch_pool, subtrees_with_mergeinfo);
        hi;
        hi = apr_hash_next(hi))
@@ -10293,6 +10283,7 @@ calculate_left_hand_side(const char **url_left,
       const char *absolute_path = svn__apr_hash_index_key(hi);
       const char *url;
       const char *path_rel_to_root;
+      svn_mergeinfo_t target_history_as_mergeinfo;
 
       svn_pool_clear(iterpool);
 
@@ -10305,15 +10296,17 @@ calculate_left_hand_side(const char **url_left,
                                                 iterpool));
       url = svn_path_url_add_component2(target_repos_root_url,
                                         path_rel_to_root, iterpool);
-      SVN_ERR(svn_client__repos_location_segments(&segments,
-                                                  target_ra_session,
-                                                  url,
-                                                  target_rev, target_rev,
-                                                  SVN_INVALID_REVNUM,
-                                                  ctx, scratch_pool));
-      apr_hash_set(segments_hash,
+      SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
+                                                   NULL /* has_rev_zero_hist */,
+                                                   url,
+                                                   target_rev, target_rev,
+                                                   SVN_INVALID_REVNUM,
+                                                   target_ra_session,
+                                                   ctx, scratch_pool));
+
+      apr_hash_set(target_history_hash,
                    apr_pstrdup(scratch_pool, path_rel_to_root),
-                   APR_HASH_KEY_STRING, segments);
+                   APR_HASH_KEY_STRING, target_history_as_mergeinfo);
     }
 
   /* Check that SOURCE_URL@SOURCE_REV and TARGET_URL@TARGET_REV are
@@ -10373,7 +10366,7 @@ calculate_left_hand_side(const char **url_left,
                                   &youngest_merged_rev,
                                   yc_ancestor_rev,
                                   mergeinfo_catalog,
-                                  segments_hash,
+                                  target_history_hash,
                                   source_repos_rel_path,
                                   target_repos_rel_path,
                                   target_rev,
