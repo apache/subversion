@@ -170,37 +170,40 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Obtain any mergeinfo for repository filesystem path REL_PATH
-   (relative to RA_SESSION's session URL) from the repository, and set
+/* Obtain any mergeinfo for URL from the repository, and set
    it in *TARGET_MERGEINFO.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
-   inherited mergeinfo for REL_PATH is obtained.
+   inherited mergeinfo for URL is obtained.
 
-   If REL_PATH does not exist at REV, SVN_ERR_FS_NOT_FOUND or
+   If URL does not exist at REV, SVN_ERR_FS_NOT_FOUND or
    SVN_ERR_RA_DAV_REQUEST_FAILED is returned and *TARGET_MERGEINFO
    is untouched.
 
-   If there is no mergeinfo available for REL_PATH, or if the server
+   If there is no mergeinfo available for URL, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
    TRUE, set *TARGET_MERGEINFO to NULL. If the server doesn't support
    a mergeinfo capability and SQUELCH_INCAPABLE is FALSE, return an
-   SVN_ERR_UNSUPPORTED_FEATURE error. */
+   SVN_ERR_UNSUPPORTED_FEATURE error.
+
+   RA_SESSION is an open RA session to the repository in which URL lives;
+   it may be temporarily reparented by this function.
+*/
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                 svn_ra_session_t *ra_session,
-                                const char *rel_path,
+                                const char *url,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
                                 apr_pool_t *pool);
 
 /* If INCLUDE_DESCENDANTS is FALSE, behave exactly like
-   svn_client__get_repos_mergeinfo() except the mergeinfo for REL_PATH
+   svn_client__get_repos_mergeinfo() except the mergeinfo for URL
    is put in the mergeinfo catalog MERGEINFO_CAT, with the key being
-   the repository root-relative path of REL_PATH.
+   the repository root-relative path of URL.
 
-   If INCLUDE_DESCENDANTS is true, then any subtrees under REL_PATH
+   If INCLUDE_DESCENDANTS is true, then any subtrees under URL
    with explicit mergeinfo are also included in MERGEINFO_CAT.  The
    keys for the subtree mergeinfo are the repository root-relative
    paths of the subtrees.  If no mergeinfo is found, then
@@ -208,7 +211,7 @@ svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 svn_error_t *
 svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                         svn_ra_session_t *ra_session,
-                                        const char *rel_path,
+                                        const char *url,
                                         svn_revnum_t rev,
                                         svn_mergeinfo_inheritance_t inherit,
                                         svn_boolean_t squelch_incapable,
