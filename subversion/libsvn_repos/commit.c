@@ -849,10 +849,7 @@ fetch_base_func(const char **filename,
   svn_error_t *err;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
-    {
-      *filename = NULL;
-      return SVN_NO_ERROR;
-    }
+    base_revision = svn_fs_txn_base_revision(eb->txn);
 
   if (svn_path_is_url(path))
     {
