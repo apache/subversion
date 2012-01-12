@@ -71,7 +71,7 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
                                  void *handler_baton,
                                  apr_pool_t *pool)
 {
-  struct file_rev_handler_wrapper_baton *fwb = apr_palloc(pool, sizeof(*fwb));
+  struct file_rev_handler_wrapper_baton *fwb = apr_pcalloc(pool, sizeof(*fwb));
 
   /* Set the user provided old format callback in the baton. */
   fwb->baton = handler_baton;
@@ -430,7 +430,7 @@ ev2_open_root(void *edit_baton,
               apr_pool_t *result_pool,
               void **root_baton)
 {
-  struct ev2_dir_baton *db = apr_palloc(result_pool, sizeof(*db));
+  struct ev2_dir_baton *db = apr_pcalloc(result_pool, sizeof(*db));
   struct ev2_edit_baton *eb = edit_baton;
 
   db->eb = eb;
@@ -469,7 +469,7 @@ ev2_add_directory(const char *path,
                   void **child_baton)
 {
   struct ev2_dir_baton *pb = parent_baton;
-  struct ev2_dir_baton *cb = apr_palloc(result_pool, sizeof(*cb));
+  struct ev2_dir_baton *cb = apr_pcalloc(result_pool, sizeof(*cb));
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, path);
@@ -505,7 +505,7 @@ ev2_open_directory(const char *path,
                    void **child_baton)
 {
   struct ev2_dir_baton *pb = parent_baton;
-  struct ev2_dir_baton *db = apr_palloc(result_pool, sizeof(*db));
+  struct ev2_dir_baton *db = apr_pcalloc(result_pool, sizeof(*db));
 
   db->eb = pb->eb;
   db->path = apr_pstrdup(result_pool, path);
@@ -562,7 +562,7 @@ ev2_add_file(const char *path,
              apr_pool_t *result_pool,
              void **file_baton)
 {
-  struct ev2_file_baton *fb = apr_palloc(result_pool, sizeof(*fb));
+  struct ev2_file_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
 
   fb->eb = pb->eb;
@@ -606,7 +606,7 @@ ev2_open_file(const char *path,
               apr_pool_t *result_pool,
               void **file_baton)
 {
-  struct ev2_file_baton *fb = apr_palloc(result_pool, sizeof(*fb));
+  struct ev2_file_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
 
   fb->eb = pb->eb;
@@ -1583,9 +1583,9 @@ editor_from_delta(svn_editor_t **editor_p,
       complete_cb,
       abort_cb
     };
-  struct editor_baton *eb = apr_palloc(result_pool, sizeof(*eb));
-  struct extra_baton *extra_baton = apr_palloc(result_pool,
-                                               sizeof(*extra_baton));
+  struct editor_baton *eb = apr_pcalloc(result_pool, sizeof(*eb));
+  struct extra_baton *extra_baton = apr_pcalloc(result_pool,
+                                                sizeof(*extra_baton));
 
   eb->deditor = deditor;
   eb->dedit_baton = dedit_baton;
