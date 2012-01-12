@@ -570,15 +570,13 @@ ev2_add_file(const char *path,
   fb->base_revision = pb->base_revision;
   *file_baton = fb;
 
-  SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
-                                  fb->eb->fetch_base_baton,
-                                  path, fb->base_revision,
-                                  result_pool, result_pool));
-
   if (!copyfrom_path)
     {
       /* A simple add. */
       svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+
+      /* Don't bother fetching the base, as in an add we don't have a base. */
+      fb->delta_base = NULL;
 
       *kind = svn_kind_file;
       SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
@@ -587,6 +585,11 @@ ev2_add_file(const char *path,
     {
       /* A copy */
       struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
+
+      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                      fb->eb->fetch_base_baton,
+                                      copyfrom_path, copyfrom_revision,
+                                      result_pool, result_pool));
 
       args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
       args->copyfrom_rev = copyfrom_revision;

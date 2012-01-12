@@ -848,13 +848,26 @@ fetch_base_func(const char **filename,
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (path[0] != '/')
-    /* Get an absolute path for use in the FS. */
-    path = svn_fspath__join(eb->base_path, path, scratch_pool);
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    {
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
 
-  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
-                               svn_fs_txn_base_revision(eb->txn),
-                               scratch_pool));
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(eb->base_path, path, scratch_pool);
+    }
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
   err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
