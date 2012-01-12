@@ -551,7 +551,7 @@ compare_segments(const void *a, const void *b)
 svn_error_t *
 svn_client__repos_location_segments(apr_array_header_t **segments,
                                     svn_ra_session_t *ra_session,
-                                    const char *path,
+                                    const char *url,
                                     svn_revnum_t peg_revision,
                                     svn_revnum_t start_revision,
                                     svn_revnum_t end_revision,
@@ -559,14 +559,19 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                     apr_pool_t *pool)
 {
   struct gls_receiver_baton_t gls_receiver_baton;
+  const char *old_session_url;
+
   *segments = apr_array_make(pool, 8, sizeof(svn_location_segment_t *));
   gls_receiver_baton.segments = *segments;
   gls_receiver_baton.ctx = ctx;
   gls_receiver_baton.pool = pool;
-  SVN_ERR(svn_ra_get_location_segments(ra_session, path, peg_revision,
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                            url, pool));
+  SVN_ERR(svn_ra_get_location_segments(ra_session, "", peg_revision,
                                        start_revision, end_revision,
                                        gls_receiver, &gls_receiver_baton,
                                        pool));
+  SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
   qsort((*segments)->elts, (*segments)->nelts,
         (*segments)->elt_size, compare_segments);
   return SVN_NO_ERROR;

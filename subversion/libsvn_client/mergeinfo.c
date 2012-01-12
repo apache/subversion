@@ -756,7 +756,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool)
 {
-  const char *old_session_url;
   apr_array_header_t *segments;
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
@@ -765,12 +764,9 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
   if (! SVN_IS_VALID_REVNUM(range_oldest))
     range_oldest = 0;
 
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
-                                            url, pool));
-  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session, "",
+  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session, url,
                                               peg_revnum, range_youngest,
                                               range_oldest, ctx, pool));
-  SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
 
   if (has_rev_zero_history)
     {
