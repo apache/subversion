@@ -145,7 +145,7 @@
  * During mergeinfo aware merges CHILDREN_WITH_MERGEINFO is created
  * by get_mergeinfo_paths() and outside of that function and its helpers
  * should always meet the criteria dictated in get_mergeinfo_paths()'s doc
- * string.  The elements of CHILDREN_WITH_MERGINFO should never be NULL.
+ * string.  The elements of CHILDREN_WITH_MERGEINFO should never be NULL.
  *
  * For clarification on mergeinfo aware vs. mergeinfo unaware merges, see
  * the doc string for HONOR_MERGEINFO().
@@ -3096,7 +3096,7 @@ rangelist_intersect_range(apr_array_header_t **out_rangelist,
    drive_merge_report_editor() won't attempt to describe these non-existent
    subtree path/ranges to the reporter (which would break the merge).
 
-   If the preceeding paragraph wasn't terribly clear then what follows spells
+   If the preceding paragraph wasn't terribly clear then what follows spells
    out this function's behavior a bit more explicitly:
 
    For forward merges (REVISION1 < REVISION2)
@@ -3232,7 +3232,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                                 FALSE,
                                                 scratch_pool, scratch_pool));
 
-              /* Merge into CHILD->REMANING_RANGES the intersection of
+              /* Merge into CHILD->REMAINING_RANGES the intersection of
                  PARENT->REMAINING_RANGES with the range beginning when
                  PRIMARY_URL@older_rev was deleted until younger_rev. */
               SVN_ERR(rangelist_intersect_range(&deleted_rangelist,
@@ -3299,7 +3299,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                         segment->range_start, peg_rev,
                                         FALSE, scratch_pool, scratch_pool));
 
-      /* Merge into CHILD->REMANING_RANGES the intersection of
+      /* Merge into CHILD->REMAINING_RANGES the intersection of
          PARENT->REMAINING_RANGES with the range before PRIMARY_URL@peg_rev
          came into existence. */
       SVN_ERR(rangelist_intersect_range(&non_existent_rangelist,
@@ -3465,7 +3465,7 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
    INHERITED is ignored.
 
 
-   If IMPLICIT_MERGEINFO is not NULL then START and END are limits on the
+   If IMPLICIT_MERGEINFO is not NULL then START and END are limits on
    the natural history sought, must both be valid revision numbers, and
    START must be greater than END.  If TARGET_ABSPATH's base revision
    is older than START, then the base revision is used as the younger
@@ -3622,7 +3622,7 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
    If we have deferred obtaining CHILD->IMPLICIT_MERGEINFO, then get
    it now, allocating it in RESULT_POOL.  If CHILD_INHERITS_PARENT is true
    then set CHILD->IMPLICIT_MERGEINFO to the mergeinfo inherited from
-   PARNET->IMPLICIT_MERGEINFO, otherwise contact the repository.  Use
+   PARENT->IMPLICIT_MERGEINFO, otherwise contact the repository.  Use
    SCRATCH_POOL for all temporary allocations.
 
    PARENT, CHILD, REVISION1, REVISION2, RA_SESSION, and
@@ -3846,7 +3846,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
       else
         target_rangelist = NULL;
 
-      /* See earlier comment preceeding svn_rangelist_intersect() for
+      /* See earlier comment preceding svn_rangelist_intersect() for
          why we don't consider inheritance here. */
       if (target_rangelist)
         {
@@ -4457,7 +4457,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
           if (!proper_subset)
             {
-              /* We need to make adjustements.  Remove from, or add the gap
+              /* We need to make adjustments.  Remove from, or add the gap
                  to, CHILD->REMAINING_RANGES as appropriate. */
 
               if (overlaps_or_adjoins)
@@ -4844,7 +4844,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    nearest path-wise ancestor, then the subtree child *will not* be described
    to the reporter.
 
-   DEPTH, NOTIFY_B, and MERGE_B are cascasded from do_directory_merge(), see
+   DEPTH, NOTIFY_B, and MERGE_B are cascaded from do_directory_merge(), see
    that function for more info.
 
    If MERGE_B->sources_ancestral is set, then SOURCE->url1@rev1 must be a
@@ -6326,7 +6326,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
   /* ### FIXME:  Our underlying APIs can't yet handle the case where
      the peg revision isn't the youngest of the three revisions.  So
      we'll just verify that the source in the peg revision is related
-     to the the source in the youngest requested revision (which is
+     to the source in the youngest requested revision (which is
      all the underlying APIs would do in this case right now anyway). */
   if (source_peg_revnum < youngest_requested)
     {
@@ -6953,7 +6953,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   return SVN_NO_ERROR;
 }
 
-/* Helper for do_directory_merge() to handle the case were a merge editor
+/* Helper for do_directory_merge() to handle the case where a merge editor
    drive adds explicit mergeinfo to a path which didn't have any explicit
    mergeinfo previously.
 
@@ -7074,7 +7074,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Return true if any path in SUBTRESS is equal to, or is a subtree of,
+/* Return true if any path in SUBTREES is equal to, or is a subtree of,
    LOCAL_ABSPATH.  Return false otherwise.  The keys of SUBTREES are
    (const char *) absolute paths and its values are irrelevant.
    If SUBTREES is NULL return false. */
@@ -7199,7 +7199,7 @@ log_find_operative_subtree_revs(void *baton,
             svn_fspath__skip_ancestor(log_baton->merge_source_fspath, path);
 
           /* Some affected paths might be the root of the merge source or
-             entirely otuside our subtree of interest. In either case they
+             entirely outside our subtree of interest. In either case they
              are not operative *immediate* children. */
           if (rel_path == NULL
               || rel_path[0] == '\0')
@@ -7228,7 +7228,7 @@ log_find_operative_subtree_revs(void *baton,
                      ### it about unversioned, non-existent, and missing WC
                      ### paths, simply setting *NODE_KIND svn_kind_none in
                      ### those cases.  Is there any legitimate error we
-                     ### might enocunter during a merge where we'd want
+                     ### might encounter during a merge where we'd want
                      ### to clear the error and continue? */
                   SVN_ERR(svn_wc_read_kind(&node_kind, log_baton->wc_ctx,
                                            wc_child_abspath, FALSE,
@@ -7458,7 +7458,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                  none of these were touched by the merge, then we don't need
                  need to do any special handling of those switched subtrees
                  (e.g. record non-inheritable mergeinfo) when recording
-                 mergeinfo desribing the merge. */
+                 mergeinfo describing the merge. */
               if (child->switched_child)
                 {
                   int j;
@@ -7965,7 +7965,7 @@ record_mergeinfo_for_added_subtrees(
                                            adds_history_as_mergeinfo,
                                            FALSE, iterpool, iterpool));
 
-          /* Combine the explict mergeinfo on the added path (if any)
+          /* Combine the explicit mergeinfo on the added path (if any)
              with the mergeinfo describing this merge. */
           if (added_path_mergeinfo)
             SVN_ERR(svn_mergeinfo_merge2(merge_mergeinfo,
@@ -9044,7 +9044,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
   apr_array_header_t *remove_sources, *add_sources;
   apr_hash_t *modified_subtrees = NULL;
 
-  /* Sure we could use SCRATCH_POOL througout this function, but since this
+  /* Sure we could use SCRATCH_POOL throughout this function, but since this
      is a wrapper around three separate merges we'll create a subpool we can
      clear between each of the three.  If the merge target has a lot of
      subtree mergeinfo, then this will help keep memory use in check. */
@@ -9135,7 +9135,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
  *
  * E.g. if all the ALLOW_* parameters are FALSE, TARGET_ABSPATH must
  * be a single-revision, pristine, unswitched working copy.
- * In other words, it must reflect a subtree of the repostiory as found
+ * In other words, it must reflect a subtree of the repository as found
  * at single revision -- although sparse checkouts are permitted. */
 static svn_error_t *
 ensure_wc_is_suitable_merge_target(const char *target_abspath,
@@ -9944,7 +9944,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
       /* Remove any target history that is also part of the source's history,
          i.e. their common ancestry.  By definition this has already been
-         "merged" from the target to the source.  If the source has explict
+         "merged" from the target to the source.  If the source has explicit
          self referential mergeinfo it would intersect with the target's
          history below, making it appear that some merges had been done from
          the target to the source, when this might not actually be the case. */
