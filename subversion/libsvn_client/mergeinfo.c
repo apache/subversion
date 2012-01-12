@@ -293,7 +293,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                 scratch_pool));
 
           /* Look in LOCAL_ABSPATH's parent for inherited mergeinfo if
-             LOCAL_ABSPATH's has no base revision because it is an uncommitted
+             LOCAL_ABSPATH has no base revision because it is an uncommitted
              addition, or if its base revision falls within the inclusive
              range of its parent's last changed revision to the parent's base
              revision; otherwise stop looking for inherited mergeinfo. */
@@ -1095,7 +1095,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
           || strcmp(origin_url, url) != 0
           || peg_rev != rev)
       {
-        use_url = TRUE; /* Don't rely on local merginfo */
+        use_url = TRUE; /* Don't rely on local mergeinfo */
       }
     }
 
@@ -1480,7 +1480,7 @@ filter_log_entry_with_rangelist(void *baton,
                           else
                             {
                               /* TARGET_PATH_AFFECTED inherited its mergeinfo,
-                                 se we have to ignore non-inheritable
+                                 so we have to ignore non-inheritable
                                  ranges. */
                               SVN_ERR(svn_rangelist_intersect(
                                 &intersection,
@@ -1888,7 +1888,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
       else
         {
           /* Map SUBTREE_PATH to an empty rangelist if there was nothing
-             fully merged. e.g. Only empty or non-inheritable mergienfo
+             fully merged. e.g. Only empty or non-inheritable mergeinfo
              on the subtree or mergeinfo unrelated to the source. */
           apr_hash_set(inheritable_subtree_merges, subtree_path,
                        APR_HASH_KEY_STRING,
