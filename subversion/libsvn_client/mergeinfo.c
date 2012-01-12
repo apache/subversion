@@ -464,7 +464,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                 svn_ra_session_t *ra_session,
-                                const char *rel_path,
+                                const char *url,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
@@ -476,7 +476,7 @@ svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 
   SVN_ERR(svn_client__get_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
                                                   ra_session,
-                                                  rel_path, rev, inherit,
+                                                  url, rev, inherit,
                                                   squelch_incapable, FALSE,
                                                   pool, pool));
 
@@ -496,7 +496,7 @@ svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 svn_error_t *
 svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                         svn_ra_session_t *ra_session,
-                                        const char *rel_path,
+                                        const char *url,
                                         svn_revnum_t rev,
                                         svn_mergeinfo_inheritance_t inherit,
                                         svn_boolean_t squelch_incapable,
@@ -507,13 +507,18 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   svn_error_t *err;
   svn_mergeinfo_t repos_mergeinfo_cat;
   apr_array_header_t *rel_paths = apr_array_make(scratch_pool, 1,
-                                                 sizeof(rel_path));
+                                                 sizeof(const char *));
+  const char *old_session_url;
 
-  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+  APR_ARRAY_PUSH(rel_paths, const char *) = "";
 
   /* Fetch the mergeinfo. */
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                            ra_session, url, scratch_pool));
   err = svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo_cat, rel_paths,
                              rev, inherit, include_descendants, result_pool);
+  err = svn_error_compose_create(
+          err, svn_ra_reparent(ra_session, old_session_url, scratch_pool));
   if (err)
     {
       if (squelch_incapable && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
@@ -533,11 +538,9 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   else
     {
       const char *session_relpath;
-      const char *session_url;
 
-      SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, scratch_pool));
       SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &session_relpath,
-                                               session_url, scratch_pool));
+                                               url, scratch_pool));
 
       if (session_relpath[0] == '\0')
         *mergeinfo_cat = repos_mergeinfo_cat;
@@ -682,16 +685,9 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
           if (!apr_hash_get(original_props, SVN_PROP_MERGEINFO,
                             APR_HASH_KEY_STRING))
             {
-              const char *session_url = NULL;
               apr_pool_t *sesspool = NULL;
 
-              if (ra_session)
-                {
-                  SVN_ERR(svn_client__ensure_ra_session_url(&session_url,
-                                                            ra_session,
-                                                            url, result_pool));
-                }
-              else
+              if (! ra_session)
                 {
                   sesspool = svn_pool_create(scratch_pool);
                   SVN_ERR(svn_client__open_ra_session_internal(
@@ -701,7 +697,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
                         &target_mergeinfo_cat_repos, ra_session,
-                        "", target_rev, inherit,
+                        url, target_rev, inherit,
                         TRUE, include_descendants,
                         result_pool, scratch_pool));
 
@@ -722,11 +718,6 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               if (sesspool)
                 {
                   svn_pool_destroy(sesspool);
-                }
-              else if (session_url)
-                {
-                  SVN_ERR(svn_ra_reparent(ra_session, session_url,
-                                          result_pool));
                 }
             }
         }
@@ -1109,7 +1100,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
     {
       rev = peg_rev;
       SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
-        mergeinfo_catalog, ra_session, "", rev, svn_mergeinfo_inherited,
+        mergeinfo_catalog, ra_session, url, rev, svn_mergeinfo_inherited,
         FALSE, include_descendants,
         result_pool, scratch_pool));
     }
