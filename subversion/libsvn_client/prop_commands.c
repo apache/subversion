@@ -134,10 +134,10 @@ do_url_propset(const char *url,
   if (kind == svn_node_file)
     {
       void *file_baton;
-      const char *basename = svn_uri_basename(url, pool);
+      const char *uri_basename = svn_uri_basename(url, pool);
 
-      SVN_ERR(editor->open_file(basename, root_baton, base_revision_for_url,
-                                pool, &file_baton));
+      SVN_ERR(editor->open_file(uri_basename, root_baton,
+                                base_revision_for_url, pool, &file_baton));
       SVN_ERR(editor->change_file_prop(file_baton, propname, propval, pool));
       SVN_ERR(editor->close_file(file_baton, NULL, pool));
     }
