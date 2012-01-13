@@ -988,7 +988,7 @@ build(struct editor_baton *eb,
 
       if (kind == svn_kind_unknown)
         SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                    relpath, scratch_pool));
+                                    relpath, rev, scratch_pool));
       else
         operation->kind = kind;
 
@@ -1035,9 +1035,9 @@ build(struct editor_baton *eb,
       operation->operation =
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
 
-      if (kind == svn_kind_none)
+      if (kind == svn_kind_none || kind == svn_kind_unknown)
         SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                    relpath, scratch_pool));
+                                    url, rev, scratch_pool));
       else
         operation->kind = kind;
       operation->copyfrom_url = url;

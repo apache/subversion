@@ -1311,6 +1311,7 @@ static svn_error_t *
 fetch_kind_func(svn_kind_t *kind,
                 void *baton,
                 const char *path,
+                svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;

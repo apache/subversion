@@ -105,6 +105,9 @@ struct edit_baton
   svn_fs_root_t *fs_root;
   svn_revnum_t current_rev;
 
+  /* The fs, so we can grab historic information if needed. */
+  svn_fs_t *fs;
+
   /* True if dumped nodes should output deltas instead of full text. */
   svn_boolean_t use_deltas;
 
@@ -879,12 +882,20 @@ static svn_error_t *
 fetch_kind_func(svn_kind_t *kind,
                 void *baton,
                 const char *path,
+                svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_node_kind_t node_kind;
+  svn_fs_root_t *fs_root;
 
-  SVN_ERR(svn_fs_check_path(&node_kind, eb->fs_root, path, scratch_pool));
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    fs_root = eb->fs_root;
+  else
+    SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision,
+                                 scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
@@ -903,8 +914,15 @@ fetch_base_func(const char **filename,
   svn_stream_t *file_stream;
   const char *tmp_filename;
   svn_error_t *err;
+  svn_fs_root_t *fs_root;
 
-  err = svn_fs_file_contents(&contents, eb->fs_root, path, scratch_pool);
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    fs_root = eb->fs_root;
+  else
+    SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision,
+                                 scratch_pool));
+
+  err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -958,6 +976,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup(pool, root_path);
   SVN_ERR(svn_fs_revision_root(&(eb->fs_root), fs, to_rev, pool));
+  eb->fs = fs;
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
   eb->verify = verify;

@@ -1111,6 +1111,7 @@ typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
   svn_kind_t *kind,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *scratch_pool
   );
 
