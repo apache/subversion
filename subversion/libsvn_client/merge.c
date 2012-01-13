@@ -4847,6 +4847,10 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    DEPTH, NOTIFY_B, and MERGE_B are cascaded from do_directory_merge(), see
    that function for more info.
 
+   MERGE_B->ra_session1 and MERGE_B->ra_session2 are RA sessions open to any
+   URL in the repository of SOURCE; they may be temporarily reparented within
+   this function.
+
    If MERGE_B->sources_ancestral is set, then SOURCE->url1@rev1 must be a
    historical ancestor of SOURCE->url2@rev2, or vice-versa (see
    `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements around
@@ -4867,7 +4871,7 @@ drive_merge_report_editor(const char *target_abspath,
   void *report_baton;
   svn_revnum_t target_start;
   svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
-  const char *old_sess2_url;
+  const char *old_sess1_url, *old_sess2_url;
   svn_boolean_t is_rollback = source->rev1 > source->rev2;
 
   /* Start with a safe default starting revision for the editor and the
@@ -4924,6 +4928,9 @@ drive_merge_report_editor(const char *target_abspath,
         }
     }
 
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess1_url,
+                                            merge_b->ra_session1,
+                                            source->url1, scratch_pool));
   /* Temporarily point our second RA session to SOURCE->url1, too.  We use
      this to request individual file contents. */
   SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
@@ -5051,7 +5058,8 @@ drive_merge_report_editor(const char *target_abspath,
     }
   SVN_ERR(reporter->finish_report(report_baton, scratch_pool));
 
-  /* Point the merge baton's second session back where it was. */
+  /* Point the merge baton's RA sessions back where they were. */
+  SVN_ERR(svn_ra_reparent(merge_b->ra_session1, old_sess1_url, scratch_pool));
   SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, scratch_pool));
 
   /* Caller must call svn_sleep_for_timestamps() */
@@ -8542,7 +8550,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
             {
               svn_revnum_t next_end_rev;
               merge_source_t *real_source;
-              const char *old_sess1_url, *old_sess2_url;
               svn_merge_range_t *first_target_range
                 = (target_merge_path->remaining_ranges->nelts == 0 ? NULL
                    : APR_ARRAY_IDX(target_merge_path->remaining_ranges, 0,
@@ -8580,12 +8587,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
               notify_b->cur_ancestor_abspath = NULL;
 
               real_source = subrange_source(source, start_rev, end_rev, iterpool);
-              SVN_ERR(svn_client__ensure_ra_session_url(
-                        &old_sess1_url, merge_b->ra_session1,
-                        real_source->url1, iterpool));
-              SVN_ERR(svn_client__ensure_ra_session_url(
-                        &old_sess2_url, merge_b->ra_session2,
-                        real_source->url2, iterpool));
               SVN_ERR(drive_merge_report_editor(
                 merge_b->target->abspath,
                 real_source,
@@ -8593,10 +8594,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                 depth, notify_b,
                 merge_b,
                 iterpool));
-              SVN_ERR(svn_ra_reparent(merge_b->ra_session1,
-                                      old_sess1_url, iterpool));
-              SVN_ERR(svn_ra_reparent(merge_b->ra_session2,
-                                      old_sess2_url, iterpool));
 
               /* If any paths picked up explicit mergeinfo as a result of
                  the merge we need to make sure any mergeinfo those paths
