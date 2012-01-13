@@ -1080,6 +1080,10 @@ get_editor(const svn_delta_editor_t **export_editor,
   svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
   svn_delta_shim_callbacks_t *shim_callbacks =
                                 svn_delta_shim_callbacks_default(result_pool);
+  svn_editor_t *editorv2;
+  struct svn_delta__extra_baton *exb;
+  svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
+                                              sizeof(*found_abs_paths));
 
   editor->set_target_revision = set_target_revision;
   editor->open_root = open_root;
@@ -1103,9 +1107,20 @@ get_editor(const svn_delta_editor_t **export_editor,
   shim_callbacks->fetch_base_func = fetch_base_func;
   shim_callbacks->fetch_baton = eb;
 
-  SVN_ERR(svn_editor__insert_shims(export_editor, edit_baton,
-                                   *export_editor, *edit_baton,
-                                   shim_callbacks, result_pool, scratch_pool));
+  SVN_ERR(svn_delta__editor_from_delta(&editorv2, &exb, *export_editor,
+                            *edit_baton, found_abs_paths, NULL, NULL,
+                            shim_callbacks->fetch_kind_func,
+                            shim_callbacks->fetch_baton,
+                            shim_callbacks->fetch_props_func,
+                            shim_callbacks->fetch_baton,
+                            result_pool, scratch_pool));
+  SVN_ERR(svn_delta__delta_from_editor(export_editor, edit_baton,
+                            editorv2, found_abs_paths,
+                            shim_callbacks->fetch_props_func,
+                            shim_callbacks->fetch_baton,
+                            shim_callbacks->fetch_base_func,
+                            shim_callbacks->fetch_baton,
+                            exb, result_pool));
 
   return SVN_NO_ERROR;
 }
