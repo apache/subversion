@@ -399,9 +399,12 @@ def roll_tarballs(args):
         # Make sure CHANGES is sync'd.    
         compare_changes(repos, branch, args.revnum)
     
-    # Create the output directory
-    if not os.path.exists(get_deploydir(args.base_dir)):
-        os.mkdir(get_deploydir(args.base_dir))
+    # Ensure the output directory doesn't already exist
+    if os.path.exists(get_deploydir(args.base_dir)):
+        raise RuntimeError('output directory \'%s\' already exists'
+                                            % get_deploydir(args.base_dir))
+
+    os.mkdir(get_deploydir(args.base_dir))
 
     # For now, just delegate to dist.sh to create the actual artifacts
     extra_args = ''
@@ -449,17 +452,13 @@ def post_candidates(args):
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
                               str(args.version))
 
-    if args.code_name:
-        dirname = args.code_name
-    else:
-        dirname = 'deploy'
-
-    if not os.path.exists(target):
-        os.makedirs(target)
+    logging.info('Moving tarballs to %s' % target)
+    if os.path.exists(target):
+        shutil.rmtree(target)
+    shutil.copytree(get_deploydir(args.base_dir), target)
 
     data = { 'version'      : str(args.version),
              'revnum'       : args.revnum,
-             'dirname'      : dirname,
            }
 
     # Choose the right template text
@@ -473,12 +472,11 @@ def post_candidates(args):
 
     template = ezt.Template()
     template.parse(get_tmplfile(template_filename).read())
-    template.generate(open(os.path.join(target, 'index.html'), 'w'), data)
+    template.generate(open(os.path.join(target, 'HEADER.html'), 'w'), data)
 
-    logging.info('Moving tarballs to %s' % os.path.join(target, dirname))
-    if os.path.exists(os.path.join(target, dirname)):
-        shutil.rmtree(os.path.join(target, dirname))
-    shutil.copytree(get_deploydir(args.base_dir), os.path.join(target, dirname))
+    template = ezt.Template()
+    template.parse(get_tmplfile('htaccess.ezt').read())
+    template.generate(open(os.path.join(target, '.htaccess'), 'w'), data)
 
 
 #----------------------------------------------------------------------
@@ -526,12 +524,7 @@ def move_to_dist(args):
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version), 'deploy')
-
-    if args.code_name:
-        dirname = args.code_name
-    else:
-        dirname = 'deploy'
+                              str(args.version))
 
     logging.info('Moving %s to dist dir \'%s\'' % (str(args.version),
                                                    args.dist_dir) )
@@ -601,6 +594,19 @@ def write_announcement(args):
     template.generate(sys.stdout, data)
 
 
+def write_downloads(args):
+    'Output the download section of the website.'
+    sha1info = get_sha1info(args)
+
+    data = { 'version'              : str(args.version),
+             'fileinfo'             : sha1info,
+           }
+
+    template = ezt.Template(compress_whitespace = False)
+    template.parse(get_tmplfile('download.ezt').read())
+    template.generate(sys.stdout, data)
+
+
 #----------------------------------------------------------------------
 # Validate the signatures for a release
 
@@ -610,14 +616,17 @@ fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0
 def check_sigs(args):
     'Check the signatures for the release.'
 
-    import gnupg
+    try:
+        import gnupg
+    except ImportError:
+        import _gnupg as gnupg
     gpg = gnupg.GPG()
 
     if args.target:
         target = args.target
     else:
         target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version), 'deploy')
+                              str(args.version))
 
     good_sigs = {}
 
@@ -711,9 +720,6 @@ def main():
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--target',
                     help='''The full path to the destination.''')
-    subparser.add_argument('--code-name',
-                    help='''A whimsical name for the release, used only for
-                            naming the download directory.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -736,9 +742,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
-    subparser.add_argument('--code-name',
-                    help='''A whimsical name for the release, used only for
-                            naming the download directory.''')
     subparser.add_argument('--target',
                     help='''The full path to the destination used in
                             'post-candiates'..''')
@@ -755,6 +758,13 @@ def main():
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
     subparser.set_defaults(func=write_announcement)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+
+    subparser = subparsers.add_parser('write-downloads',
+                    help='''Output to stdout template text for the download
+                            table for subversion.apache.org''')
+    subparser.set_defaults(func=write_downloads)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 

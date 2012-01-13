@@ -1,3 +1,8 @@
+[ At the time of writing (1.7-dev), FSFS format 5 was current.  Since then
+format 5 has been retracted; it was never released.  1.7 shipped with f4 and
+1.8 will most likely ship with f6.  Format 5 was current during 1.7-dev and
+packed revprops into an authoritative SQLite database. ]
+
 Introduction
 ------------
 

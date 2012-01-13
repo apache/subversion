@@ -314,15 +314,9 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
                  APR_HASH_KEY_STRING) != NULL;
-  const char *store_plaintext_passwords =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
-                 APR_HASH_KEY_STRING);
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
-  simple_provider_baton_t *b = (simple_provider_baton_t *)provider_baton;
-
   svn_boolean_t no_auth_cache =
     (! creds->may_save) || (apr_hash_get(parameters,
                                          SVN_AUTH_PARAM_NO_AUTH_CACHE,
@@ -365,6 +359,16 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
         }
       else
         {
+#ifdef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+          may_save_password = FALSE;
+#else
+          const char *store_plaintext_passwords =
+            apr_hash_get(parameters,
+                         SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         APR_HASH_KEY_STRING);
+          simple_provider_baton_t *b =
+            (simple_provider_baton_t *)provider_baton;
+
           if (svn_cstring_casecmp(store_plaintext_passwords,
                                   SVN_CONFIG_ASK) == 0)
             {
@@ -449,6 +453,7 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                 store_plaintext_passwords,
                 SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS);
             }
+#endif
         }
 
       if (may_save_password)

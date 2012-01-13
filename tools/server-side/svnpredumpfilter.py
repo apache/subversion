@@ -33,6 +33,7 @@ log -vq' when run against the root of the repository whose history
 will be filtered by a user with universal read access to the
 repository's data.  Do not use the --use-merge-history (-g) or
 --stop-on-copy when generating this revision log stream.
+Use the default ordering of revisions (that is, '-r HEAD:0').
 
 Return errorcode 0 if there are no additional dependencies found, 1 if
 there were; any other errorcode indicates a fatal error.

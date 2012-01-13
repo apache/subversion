@@ -408,6 +408,8 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 {
   svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor(pool);
   ra_svn_edit_baton_t *eb;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
   eb = apr_palloc(pool, sizeof(*eb));
   eb->conn = conn;
@@ -435,6 +437,10 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
   *editor = ra_svn_editor;
   *edit_baton = eb;
+
+  svn_error_clear(svn_editor__insert_shims(editor, edit_baton, *editor,
+                                           *edit_baton, shim_callbacks,
+                                           pool, pool));
 }
 
 /* --- DRIVING AN EDITOR --- */

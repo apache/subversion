@@ -402,7 +402,7 @@ copy_versioned_files(const char *from_abspath,
       const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_origin(&is_added, NULL, &repos_relpath,
-                                      NULL, NULL,
+                                      NULL, NULL, NULL,
                                       ctx->wc_ctx, from_abspath, FALSE,
                                       pool, pool));
 
@@ -1020,6 +1020,55 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  /* We know the root of the edit is a directory. */
+  if (path[0] == '\0')
+    *kind = svn_kind_dir;
+
+  /* ### TODO: We could possibly fetch the kind of the object in question
+         from the server with a second ra_session, but right now this
+         seems to work. */
+  else
+    *kind = svn_kind_unknown;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  /* Always use empty props, since the node won't have pre-existing props
+     (This is an export, remember?) */
+  *props = apr_hash_make(result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  /* An export always gets text against the empty stream (i.e, full texts). */
+  *filename = NULL;
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Public Interfaces ***/
@@ -1039,7 +1088,6 @@ svn_client_export5(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  const char *url;
   svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
 
   SVN_ERR_ASSERT(peg_revision != NULL);
@@ -1056,19 +1104,16 @@ svn_client_export5(svn_revnum_t *result_rev,
   if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
+      const char *url;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
-      const char *repos_root_url;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                                &url, from_path_or_url, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
-
-      /* Get the repository root. */
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
       eb->root_path = to_path;
       eb->root_url = url;
@@ -1164,6 +1209,8 @@ svn_client_export5(svn_revnum_t *result_rev,
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor(pool);
           svn_boolean_t use_sleep = FALSE;
+          svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
           editor->set_target_revision = set_target_revision;
           editor->open_root = open_root;
@@ -1182,6 +1229,14 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                     &edit_baton,
                                                     pool));
 
+          shim_callbacks->fetch_kind_func = fetch_kind_func;
+          shim_callbacks->fetch_props_func = fetch_props_func;
+          shim_callbacks->fetch_base_func = fetch_base_func;
+          shim_callbacks->fetch_baton = eb;
+
+          SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
+                                           export_editor, edit_baton,
+                                           shim_callbacks, pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,
@@ -1219,8 +1274,10 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           if (! ignore_externals && depth == svn_depth_infinity)
             {
+              const char *repos_root_url;
               const char *to_abspath;
 
+              SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
               SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
               SVN_ERR(svn_client__export_externals(eb->externals,
                                                    from_path_or_url,

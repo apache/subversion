@@ -109,7 +109,7 @@ remove_base_node(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t base_status, wrk_status;
-  svn_wc__db_kind_t base_kind, wrk_kind;
+  svn_kind_t base_kind, wrk_kind;
   svn_boolean_t have_base, have_work;
   svn_error_t *err;
 
@@ -148,8 +148,9 @@ remove_base_node(svn_wc__db_t *db,
                                      scratch_pool, scratch_pool));
 
   /* Children first */
-  if (base_kind == svn_wc__db_kind_dir
-      && base_status == svn_wc__db_status_normal)
+  if (base_kind == svn_kind_dir
+      && (base_status == svn_wc__db_status_normal
+          || base_status == svn_wc__db_status_incomplete))
     {
       const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -179,12 +180,12 @@ remove_base_node(svn_wc__db_t *db,
       && wrk_status != svn_wc__db_status_excluded)
     {
       if (wrk_status != svn_wc__db_status_deleted
-          && (base_kind == svn_wc__db_kind_file
-              || base_kind == svn_wc__db_kind_symlink))
+          && (base_kind == svn_kind_file
+              || base_kind == svn_kind_symlink))
         {
           SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
         }
-      else if (base_kind == svn_wc__db_kind_dir
+      else if (base_kind == svn_kind_dir
                && wrk_status != svn_wc__db_status_deleted)
         {
           err = svn_io_dir_remove_nonrecursive(local_abspath, scratch_pool);
@@ -218,7 +219,7 @@ run_base_remove(svn_wc__db_t *db,
   const char *local_relpath;
   const char *local_abspath;
   svn_revnum_t not_present_rev = SVN_INVALID_REVNUM;
-  svn_wc__db_kind_t not_present_kind;
+  svn_kind_t not_present_kind;
   const char *repos_relpath, *repos_root_url, *repos_uuid;
   apr_int64_t val;
 
@@ -232,7 +233,7 @@ run_base_remove(svn_wc__db_t *db,
       not_present_rev = (svn_revnum_t)val;
 
       SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-      not_present_kind = (svn_wc__db_kind_t)val;
+      not_present_kind = (svn_kind_t)val;
 
       if (SVN_IS_VALID_REVNUM(not_present_rev))
         {
@@ -295,7 +296,7 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
                              svn_revnum_t not_present_revision,
-                             svn_wc__db_kind_t not_present_kind,
+                             svn_kind_t not_present_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -667,9 +668,24 @@ run_file_install(svn_wc__db_t *db,
                                       local_relpath,
                                       scratch_pool, scratch_pool));
     }
+  else if (! checksum)
+    {
+      /* This error replaces a previous assertion. Reporting an error from here
+         leaves the workingqueue operation in place, so the working copy is
+         still broken!
+
+         But when we report this error the user at least knows what node has
+         this specific problem, so maybe we can find out why users see this
+         error */
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                               _("Can't install '%s' from pristine store, "
+                                 "because no checksum is recorded for this "
+                                 "file"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
   else
     {
-      SVN_ERR_ASSERT(checksum != NULL);
       SVN_ERR(svn_wc__db_pristine_get_future_path(&source_abspath,
                                                   wcroot_abspath,
                                                   checksum,

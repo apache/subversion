@@ -35,5 +35,5 @@ attlist.path &=
   ## The kind of the entry.
   attribute kind { "dir" | "file" },
   ## The action performed against this path.  This terminology
-  ## was chosen for consistencey from 'svn list'.
+  ## was chosen for consistency with 'svn status'.
   attribute item { "none" | "added" | "modified" | "deleted" }

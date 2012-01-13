@@ -48,7 +48,7 @@
  */
 typedef enum date_state_e {
   NONE = 0,
-  VERSION_NAME,
+  VERSION_NAME
 } date_state_e;
 
 typedef struct date_info_t {

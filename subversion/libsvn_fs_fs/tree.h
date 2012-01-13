@@ -61,6 +61,13 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
                       const char *path,
                       apr_pool_t *pool);
 
+/* Implement root_vtable_t.node_id(). */
+svn_error_t *
+svn_fs_fs__node_id(const svn_fs_id_t **id_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool);
+
 /* Set *REVISION to the revision in which PATH under ROOT was created.
    Use POOL for any temporary allocations.  If PATH is in an
    uncommitted transaction, *REVISION will be set to
@@ -70,14 +77,6 @@ svn_fs_fs__node_created_rev(svn_revnum_t *revision,
                             svn_fs_root_t *root,
                             const char *path,
                             apr_pool_t *pool);
-
-/* Implements svn_fs_validate_mergeinfo. */
-svn_error_t *
-svn_fs_fs__validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
-                              svn_fs_t *fs,
-                              svn_mergeinfo_t mergeinfo,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

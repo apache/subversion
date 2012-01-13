@@ -40,7 +40,9 @@ typedef struct svn_client__merge_path_t
 {
   const char *abspath;               /* Absolute working copy path. */
   svn_boolean_t missing_child;       /* ABSPATH has an immediate child which
-                                        is missing. */
+                                        is missing, but is not switched. */
+  svn_boolean_t switched_child;      /* ABSPATH has an immediate child which
+                                        is switched. */
   svn_boolean_t switched;            /* ABSPATH is switched. */
   svn_boolean_t has_noninheritable;  /* ABSPATH has svn:mergeinfo set on it
                                         which includes non-inheritable
@@ -79,6 +81,13 @@ typedef struct svn_client__merge_path_t
                                            to the merge, and the operational
                                            depth of the merge is
                                            svn_depth_immediates. */
+  svn_boolean_t record_mergeinfo;       /* Mergeinfo needs to be recorded
+                                           on ABSPATH to describe the
+                                           merge. */
+  svn_boolean_t record_noninheritable;  /* Non-inheritable mergeinfo needs to
+                                           be recorded on ABSPATH to describe
+                                           the merge. Implies RECORD_MERGEINFO
+                                           is true. */
 } svn_client__merge_path_t;
 
 /* Return a deep copy of the merge-path structure OLD, allocated in POOL. */
@@ -86,13 +95,21 @@ svn_client__merge_path_t *
 svn_client__merge_path_dup(const svn_client__merge_path_t *old,
                            apr_pool_t *pool);
 
+/* Create a new merge path structure, allocated in POOL.  Initialize the
+ * 'abspath' member to a deep copy of ABSPATH and all other fields to zero
+ * bytes. */
+svn_client__merge_path_t *
+svn_client__merge_path_create(const char *abspath,
+                              apr_pool_t *pool);
+
 
 
 /*** Functions ***/
 
 /* Find explicit or inherited WC mergeinfo for LOCAL_ABSPATH, and return it
    in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
-   whether the mergeinfo was inherited (TRUE or FALSE).
+   whether the mergeinfo was inherited (TRUE or FALSE), if INHERITED is
+   non-null.
 
    This function will search for inherited mergeinfo in the parents of
    LOCAL_ABSPATH only if the base revision of LOCAL_ABSPATH falls within
@@ -153,58 +170,54 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Obtain any mergeinfo for repository filesystem path REL_PATH
-   (relative to RA_SESSION's session URL) from the repository, and set
+/* Obtain any mergeinfo for URL from the repository, and set
    it in *TARGET_MERGEINFO.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
-   inherited mergeinfo for REL_PATH is obtained.
+   inherited mergeinfo for URL is obtained.
 
-   If REL_PATH does not exist at REV, SVN_ERR_FS_NOT_FOUND or
+   If URL does not exist at REV, SVN_ERR_FS_NOT_FOUND or
    SVN_ERR_RA_DAV_REQUEST_FAILED is returned and *TARGET_MERGEINFO
    is untouched.
 
-   If there is no mergeinfo available for REL_PATH, or if the server
+   If there is no mergeinfo available for URL, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
-   TRUE, set *TARGET_MERGEINFO to NULL.
+   TRUE, set *TARGET_MERGEINFO to NULL. If the server doesn't support
+   a mergeinfo capability and SQUELCH_INCAPABLE is FALSE, return an
+   SVN_ERR_UNSUPPORTED_FEATURE error.
 
-   If the mergeinfo for REL_PATH path is inherited,
-   VALIDATE_INHERITED_MERGEINFO is TRUE, and the server supports
-   the #SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability,
-   then *TARGET_MERGEINFO will only contain merge source path-revisions
-   that actually exist in the repository. */
+   RA_SESSION is an open RA session to the repository in which URL lives;
+   it may be temporarily reparented by this function.
+*/
 svn_error_t *
-svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
-                                svn_mergeinfo_t *target_mergeinfo,
-                                const char *rel_path,
+svn_client__get_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
+                                svn_ra_session_t *ra_session,
+                                const char *url,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
-                                svn_boolean_t validate_inherited_mergeinfo,
                                 apr_pool_t *pool);
 
 /* If INCLUDE_DESCENDANTS is FALSE, behave exactly like
-   svn_client__get_repos_mergeinfo() except the mergeinfo for REL_PATH
+   svn_client__get_repos_mergeinfo() except the mergeinfo for URL
    is put in the mergeinfo catalog MERGEINFO_CAT, with the key being
-   the repository root-relative path of REL_PATH.
+   the repository root-relative path of URL.
 
-   If INCLUDE_DESCENDANTS is true, then any subtrees under REL_PATH
+   If INCLUDE_DESCENDANTS is true, then any subtrees under URL
    with explicit mergeinfo are also included in MERGEINFO_CAT.  The
    keys for the subtree mergeinfo are the repository root-relative
    paths of the subtrees.  If no mergeinfo is found, then
    *TARGET_MERGEINFO_CAT is set to NULL. */
 svn_error_t *
-svn_client__get_repos_mergeinfo_catalog(
-  svn_mergeinfo_catalog_t *mergeinfo_cat,
-  svn_ra_session_t *ra_session,
-  const char *rel_path,
-  svn_revnum_t rev,
-  svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t squelch_incapable,
-  svn_boolean_t include_descendants,
-  svn_boolean_t validate_inherited_mergeinfo,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
+svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
+                                        svn_ra_session_t *ra_session,
+                                        const char *url,
+                                        svn_revnum_t rev,
+                                        svn_mergeinfo_inheritance_t inherit,
+                                        svn_boolean_t squelch_incapable,
+                                        svn_boolean_t include_descendants,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
 
 /* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
    mergeinfo prop, or that inherited from its nearest ancestor if the
@@ -233,14 +246,7 @@ svn_client__get_repos_mergeinfo_catalog(
 
    If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
    or if it was obtained from the repository, set *INHERITED to TRUE, set it
-   to FALSE otherwise.
-
-   Note: If the repository is contacted to find inherited mergeinfo, then
-   inherited mergeinfo validation is requested by default (see the
-   VALIDATE_INHERITED_MERGEINFO parameter to svn_client__get_repos_mergeinfo).
-   If the caller needs to know if validation actually occurred then it should
-   check if the server supports the
-   SVN_RA_CAPABILITY_VALIDATE_INHERITED_MERGEINFO capability. */
+   to FALSE otherwise, if INHERITED is non-null. */
 svn_error_t *
 svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       svn_boolean_t *inherited,
@@ -283,20 +289,24 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   apr_pool_t *scratch_pool);
 
 /* Set *MERGEINFO_P to a mergeinfo constructed solely from the
-   natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
-   session whose session URL maps to PATH_OR_URL's URL, or NULL.
+   natural history of URL at PEG_REVNUM.
+
    If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
-   revision ranges of returned mergeinfo.  See svn_ra_get_location_segments()
-   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.
+   revision ranges of returned mergeinfo.  They are governed by the same
+   rules as the PEG_REVISION, START_REV, and END_REV parameters of
+   svn_ra_get_location_segments().
 
    If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
-   TRUE if the natural history of PATH_OR_URL@PEG_REVISION includes
-   revision 0.  Set *HAS_REV_ZERO_HISTORY to FALSE otherwise. */
+   TRUE if the natural history includes revision 0, else to FALSE.
+
+   RA_SESSION is an open RA session to the repository in which URL lives;
+   it may be temporarily reparented by this function.
+*/
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_boolean_t *has_rev_zero_history,
-                                     const char *path_or_url,
-                                     const svn_opt_revision_t *peg_revision,
+                                     const char *url,
+                                     svn_revnum_t peg_revnum,
                                      svn_revnum_t range_youngest,
                                      svn_revnum_t range_oldest,
                                      svn_ra_session_t *ra_session,
@@ -304,7 +314,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      apr_pool_t *pool);
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
-   MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
+   *MERGEINFO.  If no record of any mergeinfo exists, set *MERGEINFO to NULL.
    Does not acount for inherited mergeinfo. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
@@ -327,6 +337,13 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_boolean_t do_notification,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
+
+/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+ * to (svn_mergeinfo_t) mergeinfo. */
+svn_error_t *
+svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *scratch_pool);
 
 /* Elide any svn:mergeinfo set on TARGET_WCPATH to its nearest working
    copy (or possibly repository) ancestor with equivalent mergeinfo.
@@ -367,21 +384,18 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
-/* TODO(reint): Document. */
-svn_error_t *
-svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
-                                    apr_pool_t *pool);
+/* Simplify a mergeinfo catalog, if possible, via elision.
 
-/* For each source path : rangelist pair in MERGEINFO, append REL_PATH to
-   the source path and add the new source path : rangelist pair to
-   ADJUSTED_MERGEINFO.  The new source path and rangelist are both deep
-   copies allocated in POOL.  Neither ADJUSTED_MERGEINFO
-   nor MERGEINFO should be NULL. */
+   For each path in MERGEINFO_CATALOG, check if the path's mergeinfo can
+   elide to the path's nearest path-wise parent in MERGEINFO_CATALOG.  If
+   so, remove that path from MERGEINFO_CATALOG.  Elidability is determined
+   as per svn_client__elide_mergeinfo except that elision to the repository
+   is not considered.
+
+   SCRATCH_POOL is used for temporary allocations. */
 svn_error_t *
-svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
-                                          const char *rel_path,
-                                          svn_mergeinfo_t mergeinfo,
-                                          apr_pool_t *pool);
+svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
+                                    apr_pool_t *scratch_pool);
 
 /* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
    mergeinfo, set *MERGEINFO_CHANGES to FALSE otherwise. */

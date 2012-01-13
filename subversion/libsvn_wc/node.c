@@ -214,6 +214,8 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
 
+  SVN_ERR_ASSERT(repos_root_url == NULL || *repos_root_url != NULL);
+  SVN_ERR_ASSERT(repos_uuid == NULL || *repos_uuid != NULL);
   return SVN_NO_ERROR;
 }
 
@@ -235,28 +237,28 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
  * even if DB_STATUS indicates that the node is hidden.
  * Else, return svn_kind_none for such nodes.
  *
- * ### This is a bit ugly. We should consider promoting svn_wc__db_kind_t
+ * ### This is a bit ugly. We should consider promoting svn_kind_t
  * ### to the de-facto node kind type instead of converting between them
  * ### in non-backwards compat code.
- * ### See also comments at the definition of svn_wc__db_kind_t. */
+ * ### See also comments at the definition of svn_kind_t. */
 static svn_error_t *
 convert_db_kind_to_node_kind(svn_node_kind_t *node_kind,
-                             svn_wc__db_kind_t db_kind,
+                             svn_kind_t db_kind,
                              svn_wc__db_status_t db_status,
                              svn_boolean_t show_hidden)
 {
   switch (db_kind)
     {
-      case svn_wc__db_kind_file:
+      case svn_kind_file:
         *node_kind = svn_node_file;
         break;
-      case svn_wc__db_kind_dir:
+      case svn_kind_dir:
         *node_kind = svn_node_dir;
         break;
-      case svn_wc__db_kind_symlink:
+      case svn_kind_symlink:
         *node_kind = svn_node_file;
         break;
-      case svn_wc__db_kind_unknown:
+      case svn_kind_unknown:
         *node_kind = svn_node_unknown;
         break;
       default:
@@ -287,7 +289,7 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t db_status;
-  svn_wc__db_kind_t db_kind;
+  svn_kind_t db_kind;
   svn_error_t *err;
 
   err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL, NULL,
@@ -603,7 +605,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_name = svn__apr_hash_index_key(hi);
       struct svn_wc__db_walker_info_t *wi = svn__apr_hash_index_val(hi);
-      svn_wc__db_kind_t child_kind = wi->kind;
+      svn_kind_t child_kind = wi->kind;
       svn_wc__db_status_t child_status = wi->status;
       const char *child_abspath;
 
@@ -627,7 +629,7 @@ walker_helper(svn_wc__db_t *db,
           }
 
       /* Return the child, if appropriate. */
-      if ( (child_kind == svn_wc__db_kind_file
+      if ( (child_kind == svn_kind_file
              || depth >= svn_depth_immediates)
            && svn_wc__internal_changelist_match(db, child_abspath,
                                                 changelist_filter,
@@ -646,7 +648,7 @@ walker_helper(svn_wc__db_t *db,
         }
 
       /* Recurse into this directory, if appropriate. */
-      if (child_kind == svn_wc__db_kind_dir
+      if (child_kind == svn_kind_dir
             && depth >= svn_depth_immediates)
         {
           svn_depth_t depth_below_here = depth;
@@ -681,7 +683,7 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t db_kind;
+  svn_kind_t db_kind;
   svn_node_kind_t kind;
   svn_wc__db_status_t status;
   apr_hash_t *changelist_hash = NULL;
@@ -706,13 +708,13 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                         changelist_hash, scratch_pool))
     SVN_ERR(walk_callback(local_abspath, kind, walk_baton, scratch_pool));
 
-  if (db_kind == svn_wc__db_kind_file
+  if (db_kind == svn_kind_file
       || status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_server_excluded)
     return SVN_NO_ERROR;
 
-  if (db_kind == svn_wc__db_kind_dir)
+  if (db_kind == svn_kind_dir)
     {
       return svn_error_trace(
         walker_helper(db, local_abspath, show_hidden, changelist_hash,
@@ -1347,6 +1349,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             const char **repos_relpath,
                             const char **repos_root_url,
                             const char **repos_uuid,
+                            const char **copy_root_abspath,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             svn_boolean_t scan_deleted,
@@ -1397,7 +1400,8 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
       if (repos_uuid)
         *repos_uuid = original_repos_uuid;
 
-      return SVN_NO_ERROR;
+      if (copy_root_abspath == NULL)
+        return SVN_NO_ERROR;
     }
 
   {
@@ -1426,13 +1430,19 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                                          result_pool, scratch_pool));
 
         if (status == svn_wc__db_status_added)
-          return SVN_NO_ERROR; /* Local addition */
+          {
+            if (is_copy)
+              *is_copy = FALSE;
+            return SVN_NO_ERROR; /* Local addition */
+          }
 
         *repos_relpath = svn_relpath_join(
                                 original_repos_relpath,
                                 svn_dirent_skip_ancestor(op_root_abspath,
                                                          local_abspath),
                                 result_pool);
+        if (copy_root_abspath)
+          *copy_root_abspath = op_root_abspath;
       }
     else /* Deleted, excluded, not-present, server-excluded, ... */
       {
@@ -1457,6 +1467,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t scan_deleted,
@@ -1465,6 +1476,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
 {
   return svn_error_trace(svn_wc__internal_get_origin(is_copy, revision,
                            repos_relpath, repos_root_url, repos_uuid,
+                           copy_root_abspath,
                            wc_ctx->db, local_abspath, scan_deleted,
                            result_pool, scratch_pool));
 }
@@ -1493,7 +1505,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t db_kind;
+  svn_kind_t db_kind;
   svn_wc__db_lock_t *lock;
   svn_boolean_t had_props;
   svn_boolean_t props_mod_tmp;
@@ -1517,9 +1529,9 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
 
   if (kind)
     {
-      if (db_kind == svn_wc__db_kind_file)
+      if (db_kind == svn_kind_file)
         *kind = svn_node_file;
-      else if (db_kind == svn_wc__db_kind_dir)
+      else if (db_kind == svn_kind_dir)
         *kind = svn_node_dir;
       else
         *kind = svn_node_unknown;
@@ -1552,7 +1564,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
       apr_hash_t *props;
       *symlink = FALSE;
 
-      if (db_kind == svn_wc__db_kind_file
+      if (db_kind == svn_kind_file
           && (had_props || *props_mod))
         {
           SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
@@ -1653,7 +1665,7 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t db_kind;
+  svn_kind_t db_kind;
   svn_node_kind_t disk_kind;
   svn_error_t *err;
 
@@ -1703,7 +1715,7 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
       else
         SVN_ERR(err);
 
-      if (db_kind != svn_wc__db_kind_dir
+      if (db_kind != svn_kind_dir
           || (status != svn_wc__db_status_normal
               && status != svn_wc__db_status_added))
         {
@@ -1718,7 +1730,7 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
 
   /* Check for obstructing working copies */
   if (!no_wcroot_check
-      && db_kind == svn_wc__db_kind_dir
+      && db_kind == svn_kind_dir
       && status == svn_wc__db_status_normal)
     {
       svn_boolean_t is_root;

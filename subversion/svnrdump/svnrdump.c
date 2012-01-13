@@ -80,7 +80,7 @@ enum svn_svnrdump__longopt_t
     opt_non_interactive,
     opt_incremental,
     opt_trust_server_cert,
-    opt_version,
+    opt_version
   };
 
 #define SVN_SVNRDUMP__BASE_OPTIONS opt_config_dir, \
@@ -311,7 +311,7 @@ dump_revision_header(svn_ra_session_t *session,
                             ": %ld\n", revision));
 
   prophash = apr_hash_make(pool);
-  propstring = svn_stringbuf_create("", pool);
+  propstring = svn_stringbuf_create_empty(pool);
   SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
 
   propstream = svn_stream_from_stringbuf(propstring, pool);

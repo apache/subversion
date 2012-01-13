@@ -242,7 +242,7 @@ svn_fs_fs__id_parse(const char *data,
 {
   svn_fs_id_t *id;
   id_private_t *pvt;
-  char *data_copy, *str, *last_str;
+  char *data_copy, *str;
 
   /* Dup the ID data into POOL.  Our returned ID will have references
      into this memory. */
@@ -255,24 +255,25 @@ svn_fs_fs__id_parse(const char *data,
   id->fsap_data = pvt;
 
   /* Now, we basically just need to "split" this data on `.'
-     characters.  We will use apr_strtok, which will put terminators
-     where each of the '.'s used to be.  Then our new id field will
-     reference string locations inside our duplicate string.*/
+     characters.  We will use svn_cstring_tokenize, which will put
+     terminators where each of the '.'s used to be.  Then our new
+     id field will reference string locations inside our duplicate
+     string.*/
 
   /* Node Id */
-  str = apr_strtok(data_copy, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->node_id = str;
 
   /* Copy Id */
-  str = apr_strtok(NULL, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->copy_id = str;
 
   /* Txn/Rev Id */
-  str = apr_strtok(NULL, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
 
@@ -284,12 +285,13 @@ svn_fs_fs__id_parse(const char *data,
       /* This is a revision type ID */
       pvt->txn_id = NULL;
 
-      str = apr_strtok(str + 1, "/", &last_str);
+      data_copy = str + 1;
+      str = svn_cstring_tokenize("/", &data_copy);
       if (str == NULL)
         return NULL;
       pvt->rev = SVN_STR_TO_REV(str);
 
-      str = apr_strtok(NULL, "/", &last_str);
+      str = svn_cstring_tokenize("/", &data_copy);
       if (str == NULL)
         return NULL;
       err = svn_cstring_atoi64(&val, str);

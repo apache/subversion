@@ -61,7 +61,7 @@ typedef struct db_node_t {
   const char *parent_relpath;
   svn_wc__db_status_t presence;
   svn_revnum_t revision;
-  svn_node_kind_t kind;  /* ### should switch to svn_wc__db_kind_t */
+  svn_node_kind_t kind;  /* ### should switch to svn_kind_t */
   svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   svn_revnum_t changed_rev;
@@ -148,7 +148,7 @@ check_file_external(svn_wc_entry_t *entry,
                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const char *repos_relpath;
   svn_revnum_t peg_revision;
   svn_revnum_t revision;
@@ -169,7 +169,7 @@ check_file_external(svn_wc_entry_t *entry,
     }
 
   if (status == svn_wc__db_status_normal
-      && kind == svn_wc__db_kind_file)
+      && kind == svn_kind_file)
     {
       entry->file_external_path = repos_relpath;
       if (SVN_IS_VALID_REVNUM(peg_revision))
@@ -204,7 +204,7 @@ check_file_external(svn_wc_entry_t *entry,
 */
 static svn_error_t *
 get_info_for_deleted(svn_wc_entry_t *entry,
-                     svn_wc__db_kind_t *kind,
+                     svn_kind_t *kind,
                      const char **repos_relpath,
                      const svn_checksum_t **checksum,
                      svn_wc__db_t *db,
@@ -384,7 +384,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_wc__db_status_t status;
   svn_wc__db_lock_t *lock;
   const char *repos_relpath;
@@ -840,11 +840,11 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   if (entry->depth == svn_depth_unknown)
     entry->depth = svn_depth_infinity;
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     entry->kind = svn_node_dir;
-  else if (kind == svn_wc__db_kind_file)
+  else if (kind == svn_kind_file)
     entry->kind = svn_node_file;
-  else if (kind == svn_wc__db_kind_symlink)
+  else if (kind == svn_kind_symlink)
     entry->kind = svn_node_file;  /* ### no symlink kind */
   else
     entry->kind = svn_node_unknown;
@@ -926,7 +926,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
   /* Let's check for a file external.  ugh.  */
   if (status == svn_wc__db_status_normal
-      && kind == svn_wc__db_kind_file)
+      && kind == svn_kind_file)
     SVN_ERR(check_file_external(entry, db, entry_abspath, dir_abspath,
                                 result_pool, scratch_pool));
 
@@ -1466,6 +1466,8 @@ insert_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "incomplete"));
   else if (node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "excluded"));
+  else if (node->presence == svn_wc__db_status_server_excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "absent"));
 
   if (node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, "unknown"));
@@ -1474,8 +1476,20 @@ insert_node(svn_sqlite__db_t *sdb,
                                   svn_node_kind_to_word(node->kind)));
 
   if (node->kind == svn_node_file)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
-                                      scratch_pool));
+    {
+      if (!node->checksum
+          && node->op_depth == 0
+          && node->presence != svn_wc__db_status_not_present
+          && node->presence != svn_wc__db_status_excluded
+          && node->presence != svn_wc__db_status_server_excluded)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("The file '%s' has no checksum"),
+                                 svn_dirent_local_style(node->local_relpath,
+                                                        scratch_pool));
+
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
+                                        scratch_pool));
+    }
 
   if (node->properties) /* ### Never set, props done later */
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
@@ -1670,6 +1684,13 @@ write_entry(struct write_baton **entry_node,
 
       case svn_wc_schedule_add:
         working_node = MAYBE_ALLOC(working_node, result_pool);
+        if (entry->deleted)
+          {
+            if (parent_node->base)
+              base_node = MAYBE_ALLOC(base_node, result_pool);
+            else
+              below_working_node = MAYBE_ALLOC(below_working_node, result_pool);
+          }
         break;
 
       case svn_wc_schedule_delete:
@@ -1693,14 +1714,17 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
+      SVN_ERR_ASSERT(base_node || below_working_node);
+      SVN_ERR_ASSERT(!entry->incomplete);
+      if (base_node)
+        base_node->presence = svn_wc__db_status_not_present;
+      else
+        below_working_node->presence = svn_wc__db_status_not_present;
+    }
+  else if (entry->absent)
+    {
       SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
       SVN_ERR_ASSERT(!entry->incomplete);
-      base_node->presence = svn_wc__db_status_not_present;
-    }
-
-  if (entry->absent)
-    {
-      SVN_ERR_ASSERT(base_node && !working_node);
       base_node->presence = svn_wc__db_status_server_excluded;
     }
 
@@ -1708,16 +1732,10 @@ write_entry(struct write_baton **entry_node,
     {
       if (entry->copyfrom_url)
         {
-          const char *relpath;
-
           working_node->repos_id = repos_id;
-          relpath = svn_uri__is_child(this_dir->repos,
-                                      entry->copyfrom_url,
-                                      result_pool);
-          if (relpath == NULL)
-            working_node->repos_relpath = "";
-          else
-            working_node->repos_relpath = relpath;
+          working_node->repos_relpath = svn_uri_skip_ancestor(
+                                          this_dir->repos, entry->copyfrom_url,
+                                          result_pool);
           working_node->revision = entry->copyfrom_rev;
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
@@ -1873,9 +1891,22 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->deleted)
         {
-          base_node->presence = svn_wc__db_status_not_present;
+          SVN_ERR_ASSERT(base_node->presence == svn_wc__db_status_not_present);
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
+        }
+      else if (entry->absent)
+        {
+          SVN_ERR_ASSERT(base_node->presence 
+                                == svn_wc__db_status_server_excluded);
+          /* ### should be svn_node_unknown, but let's store what we have. */
+          base_node->kind = entry->kind;
+
+          /* Store the most likely revision in the node to avoid
+             base nodes without a valid revision. Of course
+             we remember that the data is still incomplete. */
+          if (!SVN_IS_VALID_REVNUM(base_node->revision) && parent_node->base)
+            base_node->revision = parent_node->base->revision;
         }
       else
         {
@@ -1934,9 +1965,20 @@ write_entry(struct write_baton **entry_node,
                 found_md5_checksum = text_base_info->normal_base.md5_checksum;
               else
                 found_md5_checksum = NULL;
-              if (entry_md5_checksum && found_md5_checksum)
-                SVN_ERR_ASSERT(svn_checksum_match(entry_md5_checksum,
-                                                  found_md5_checksum));
+              if (entry_md5_checksum && found_md5_checksum &&
+                  !svn_checksum_match(entry_md5_checksum, found_md5_checksum))
+                return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                         _("Bad base MD5 checksum for '%s'; "
+                                           "expected: '%s'; found '%s'; "),
+                                       svn_dirent_local_style(
+                                         svn_dirent_join(root_abspath,
+                                                         local_relpath,
+                                                         scratch_pool),
+                                         scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         entry_md5_checksum, scratch_pool),
+                                       svn_checksum_to_cstring_display(
+                                         found_md5_checksum, scratch_pool));
               else
                 {
                   /* ### Not sure what conditions this should cover. */
@@ -1951,17 +1993,16 @@ write_entry(struct write_baton **entry_node,
 
           if (entry->url != NULL)
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      entry->url,
-                                                      result_pool);
-              base_node->repos_relpath = relpath ? relpath : "";
+              base_node->repos_relpath = svn_uri_skip_ancestor(
+                                           this_dir->repos, entry->url,
+                                           result_pool);
             }
           else
             {
-              const char *relpath = svn_uri__is_child(this_dir->repos,
-                                                      this_dir->url,
-                                                      scratch_pool);
-              if (relpath == NULL)
+              const char *relpath = svn_uri_skip_ancestor(this_dir->repos,
+                                                          this_dir->url,
+                                                          scratch_pool);
+              if (relpath == NULL || *relpath == '\0')
                 base_node->repos_relpath = entry->name;
               else
                 base_node->repos_relpath =
@@ -1979,6 +2020,9 @@ write_entry(struct write_baton **entry_node,
       base_node->changed_date = entry->cmt_date;
       base_node->changed_author = entry->cmt_author;
 
+      if (entry->file_external_path)
+        base_node->file_external = TRUE;
+
       SVN_ERR(insert_node(sdb, base_node, scratch_pool));
 
       /* We have to insert the lock after the base node, because the node
@@ -1995,12 +2039,6 @@ write_entry(struct write_baton **entry_node,
 
           SVN_ERR(svn_wc__db_lock_add(db, tmp_entry_abspath, &lock,
                                       scratch_pool));
-        }
-
-      /* Now, update the file external information. */
-      if (entry->file_external_path)
-        {
-          base_node->file_external = TRUE;
         }
     }
 
@@ -2503,7 +2541,7 @@ svn_wc_walk_entries3(const char *path,
   const char *local_abspath;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_error_t *err;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_depth_t depth;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
@@ -2527,7 +2565,7 @@ svn_wc_walk_entries3(const char *path,
         walk_baton, pool);
     }
 
-  if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
+  if (kind == svn_kind_file || depth == svn_depth_exclude)
     {
       const svn_wc_entry_t *entry;
 
@@ -2569,7 +2607,7 @@ svn_wc_walk_entries3(const char *path,
       return SVN_NO_ERROR;
     }
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
                          walk_depth, show_hidden, cancel_func, cancel_baton,
                          pool);

@@ -326,7 +326,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       SVN_ERR(svn_subst_translate_cstring2(contents->data, &translated,
                                            APR_EOL_STR, FALSE,
                                            NULL, FALSE, pool));
-      translated_contents = svn_string_create("", pool);
+      translated_contents = svn_string_create_empty(pool);
       if (encoding)
         SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated_contents->data,
                                               translated, encoding, pool));
@@ -737,7 +737,7 @@ svn_cl__get_log_message(const char **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup(default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
-      svn_string_t *msg_string = svn_string_create("", pool);
+      svn_string_t *msg_string = svn_string_create_empty(pool);
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -876,7 +876,7 @@ svn_cl__get_log_message(const char **log_msg,
                 {
                   SVN_ERR(svn_io_remove_file2(lmb->tmpfile_left, FALSE, pool));
                   *tmp_file = lmb->tmpfile_left = NULL;
-                  message = svn_stringbuf_create("", pool);
+                  message = svn_stringbuf_create_empty(pool);
                 }
 
               /* If the user chooses anything else, the loop will
@@ -937,7 +937,7 @@ svn_cl__error_checked_fputs(const char *string, FILE* stream)
 
 svn_error_t *
 svn_cl__try(svn_error_t *err,
-            svn_boolean_t *success,
+            apr_array_header_t *errors_seen,
             svn_boolean_t quiet,
             ...)
 {
@@ -946,12 +946,27 @@ svn_cl__try(svn_error_t *err,
       apr_status_t apr_err;
       va_list ap;
 
-      if (success)
-        *success = FALSE;
-
       va_start(ap, quiet);
-      while ((apr_err = va_arg(ap, apr_status_t)) != SVN_NO_ERROR)
+      while ((apr_err = va_arg(ap, apr_status_t)) != APR_SUCCESS)
         {
+          if (errors_seen)
+            {
+              int i;
+              svn_boolean_t add = TRUE;
+
+              /* Don't report duplicate error codes. */
+              for (i = 0; i < errors_seen->nelts; i++)
+                {
+                  if (APR_ARRAY_IDX(errors_seen, i,
+                                    apr_status_t) == err->apr_err)
+                    {
+                      add = FALSE;
+                      break;
+                    }
+                }
+              if (add)
+                APR_ARRAY_PUSH(errors_seen, apr_status_t) = err->apr_err;
+            }
           if (err->apr_err == apr_err)
             {
               if (! quiet)
@@ -961,10 +976,6 @@ svn_cl__try(svn_error_t *err,
             }
         }
       va_end(ap);
-    }
-  else if (success)
-    {
-      *success = TRUE;
     }
 
   return svn_error_trace(err);
@@ -1047,7 +1058,7 @@ svn_error_t *
 svn_cl__xml_print_header(const char *tagname,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* <?xml version="1.0" encoding="UTF-8"?> */
   svn_xml_make_header2(&sb, "UTF-8", pool);
@@ -1063,7 +1074,7 @@ svn_error_t *
 svn_cl__xml_print_footer(const char *tagname,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   /* "</TAGNAME>" */
   svn_xml_make_close_tag(&sb, pool, tagname);
@@ -1292,7 +1303,7 @@ svn_cl__indent_string(const char *str,
                       const char *indent,
                       apr_pool_t *pool)
 {
-  svn_stringbuf_t *out = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *out = svn_stringbuf_create_empty(pool);
   const char *line;
 
   while ((line = next_line(&str, pool)))
@@ -1347,10 +1358,14 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      const char *true_target;
+      const char *true_target, *peg;
 
-      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg,
                                                  target, pool));
+      if (peg[0] && peg[1])
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s': a peg revision is not allowed here"),
+                                 target);
       APR_ARRAY_PUSH(true_targets, const char *) = true_target;
     }
 
@@ -1407,4 +1422,44 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
     relpath = svn_dirent_skip_ancestor(parent_path, path);
 
   return svn_dirent_local_style(relpath ? relpath : path, pool);
+}
+
+/* Return a string of the form "PATH_OR_URL@REVISION". */
+static const char *
+path_for_display(const char *path_or_url,
+                 const svn_opt_revision_t *revision,
+                 apr_pool_t *pool)
+{
+  const char *rev_str = svn_opt__revision_to_string(revision, pool);
+
+  if (! svn_path_is_url(path_or_url))
+    path_or_url = svn_dirent_local_style(path_or_url, pool);
+  return apr_psprintf(pool, "%s@%s", path_or_url, rev_str);
+}
+
+svn_error_t *
+svn_cl__check_related_source_and_target(const char *path_or_url1,
+                                        const svn_opt_revision_t *revision1,
+                                        const char *path_or_url2,
+                                        const svn_opt_revision_t *revision2,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *pool)
+{
+  const char *ancestor_url;
+  svn_revnum_t ancestor_rev;
+
+  SVN_ERR(svn_client__youngest_common_ancestor(
+            &ancestor_url, &ancestor_rev,
+            path_or_url1, revision1, path_or_url2, revision2,
+            ctx, pool, pool));
+
+  if (ancestor_url == NULL)
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("Source and target have no common ancestor: "
+                                 "'%s' and '%s'"),
+                               path_for_display(path_or_url1, revision1, pool),
+                               path_for_display(path_or_url2, revision2, pool));
+    }
+  return SVN_NO_ERROR;
 }

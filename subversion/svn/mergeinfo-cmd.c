@@ -67,8 +67,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   const char *source, *target;
   svn_opt_revision_t src_peg_revision, tgt_peg_revision;
   /* Default to depth empty. */
-  svn_depth_t depth = opt_state->depth == svn_depth_unknown
-    ? svn_depth_empty : opt_state->depth;
+  svn_depth_t depth = (opt_state->depth == svn_depth_unknown)
+                      ? svn_depth_empty : opt_state->depth;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -113,6 +113,11 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       else
         tgt_peg_revision.kind = svn_opt_revision_base;
     }
+
+  SVN_ERR_W(svn_cl__check_related_source_and_target(source, &src_peg_revision,
+                                                    target, &tgt_peg_revision,
+                                                    ctx, pool),
+            _("Source and target must be different but related branches"));
 
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)

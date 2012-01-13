@@ -43,6 +43,7 @@
 #include "svn_checksum.h"
 #include "svn_sorts.h"
 #include "svn_path.h"
+#include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
 
@@ -978,59 +979,6 @@ zfree(voidpf opaque, voidpf address)
   /* Empty, since we allocate on the pool */
 }
 
-/* Converts a zlib error to an svn_error_t. zerr is the error code,
-   function is the function name, and stream is the z_stream we are
-   using.  */
-static svn_error_t *
-zerr_to_svn_error(int zerr, const char *function, z_stream *stream)
-{
-  apr_status_t status;
-  const char *message;
-
-  if (zerr == Z_OK)
-    return SVN_NO_ERROR;
-
-  switch (zerr)
-    {
-    case Z_STREAM_ERROR:
-      status = SVN_ERR_STREAM_MALFORMED_DATA;
-      message = "stream error";
-      break;
-
-    case Z_MEM_ERROR:
-      status = APR_ENOMEM;
-      message = "out of memory";
-      break;
-
-    case Z_BUF_ERROR:
-      status = APR_ENOMEM;
-      message = "buffer error";
-      break;
-
-    case Z_VERSION_ERROR:
-      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
-      message = "version error";
-      break;
-
-    case Z_DATA_ERROR:
-      status = SVN_ERR_STREAM_MALFORMED_DATA;
-      message = "corrupted data";
-      break;
-
-    default:
-      status = SVN_ERR_STREAM_UNRECOGNIZED_DATA;
-      message = "error";
-      break;
-    }
-
-  if (stream->msg != NULL)
-    return svn_error_createf(status, NULL, "zlib (%s): %s: %s", function,
-                             message, stream->msg);
-  else
-    return svn_error_createf(status, NULL, "zlib (%s): %s", function,
-                             message);
-}
-
 /* Helper function to figure out the sync mode */
 static svn_error_t *
 read_helper_gz(svn_read_fn_t read_fn,
@@ -1078,7 +1026,7 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
                              &btn->in->avail_in, &btn->read_flush));
 
       zerr = inflateInit(btn->in);
-      SVN_ERR(zerr_to_svn_error(zerr, "inflateInit", btn->in));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "inflateInit", btn->in->msg));
     }
 
   btn->in->next_out = (Bytef *) buffer;
@@ -1105,7 +1053,8 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
       if (zerr == Z_STREAM_END)
         break;
       else if (zerr != Z_OK)
-        return zerr_to_svn_error(zerr, "inflate", btn->in);
+        return svn_error_trace(svn_error__wrap_zlib(zerr, "inflate",
+                                                    btn->in->msg));
     }
 
   *len -= btn->in->avail_out;
@@ -1130,7 +1079,7 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
       btn->out->opaque =  btn->pool;
 
       zerr = deflateInit(btn->out, Z_DEFAULT_COMPRESSION);
-      SVN_ERR(zerr_to_svn_error(zerr, "deflateInit", btn->out));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "deflateInit", btn->out->msg));
     }
 
   /* The largest buffer we should need is 0.1% larger than the
@@ -1148,7 +1097,7 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
       btn->out->avail_out = buf_size;
 
       zerr = deflate(btn->out, Z_NO_FLUSH);
-      SVN_ERR(zerr_to_svn_error(zerr, "deflate", btn->out));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "deflate", btn->out->msg));
       write_len = buf_size - btn->out->avail_out;
       if (write_len > 0)
         SVN_ERR(btn->write(btn->subbaton, write_buf, &write_len));
@@ -1169,7 +1118,7 @@ close_handler_gz(void *baton)
   if (btn->in != NULL)
     {
       zerr = inflateEnd(btn->in);
-      SVN_ERR(zerr_to_svn_error(zerr, "inflateEnd", btn->in));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "inflateEnd", btn->in->msg));
     }
 
   if (btn->out != NULL)
@@ -1186,7 +1135,8 @@ close_handler_gz(void *baton)
 
           zerr = deflate(btn->out, Z_FINISH);
           if (zerr != Z_STREAM_END && zerr != Z_OK)
-            return zerr_to_svn_error(zerr, "deflate", btn->out);
+            return svn_error_trace(svn_error__wrap_zlib(zerr, "deflate",
+                                                        btn->out->msg));
           write_len = ZBUFFER_SIZE - btn->out->avail_out;
           if (write_len > 0)
             SVN_ERR(btn->write(btn->subbaton, buf, &write_len));
@@ -1195,7 +1145,7 @@ close_handler_gz(void *baton)
         }
 
       zerr = deflateEnd(btn->out);
-      SVN_ERR(zerr_to_svn_error(zerr, "deflateEnd", btn->out));
+      SVN_ERR(svn_error__wrap_zlib(zerr, "deflateEnd", btn->out->msg));
     }
 
   if (btn->close != NULL)

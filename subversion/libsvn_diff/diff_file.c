@@ -470,8 +470,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
          too many for the \r. */
       svn_boolean_t ended_at_nonmatching_newline = FALSE;
       for (i = 0; i < file_len; i++)
-        ended_at_nonmatching_newline = ended_at_nonmatching_newline
-                                       || *file[i].curp == '\n';
+        if (file[i].curp < file[i].endp)
+          ended_at_nonmatching_newline = ended_at_nonmatching_newline
+                                         || *file[i].curp == '\n';
       if (ended_at_nonmatching_newline)
         {
           lines--;
@@ -591,9 +592,9 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   had_nl = FALSE;
   while (is_match)
     {
+#if SVN_UNALIGNED_ACCESS_IS_OK
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
-#if SVN_UNALIGNED_ACCESS_IS_OK
       svn_boolean_t can_read_word;
 #endif /* SVN_UNALIGNED_ACCESS_IS_OK */
 
@@ -616,14 +617,13 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
 
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
 
+#if SVN_UNALIGNED_ACCESS_IS_OK
 
       min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
                   ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
                   : file_for_suffix[0].buffer + 1;
       for (i = 1; i < file_len; i++)
         min_curp[i] = file_for_suffix[i].buffer + 1;
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
 
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)
@@ -1636,7 +1636,7 @@ output_unified_diff_modified(void *baton,
 
       if (output_baton->show_c_function)
         {
-          int p;
+          apr_size_t p;
           const char *invalid_character;
 
           /* Save the extra context for later use.
@@ -1756,9 +1756,9 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.header_encoding = header_encoding;
       baton.path[0] = original_path;
       baton.path[1] = modified_path;
-      baton.hunk = svn_stringbuf_create("", pool);
+      baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
-      baton.extra_context = svn_stringbuf_create("", pool);
+      baton.extra_context = svn_stringbuf_create_empty(pool);
       baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
 
       c = apr_array_push(baton.extra_skip_match);
@@ -1920,7 +1920,7 @@ flush_context_saver(context_saver_t *cs,
   int i;
   for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
     {
-      int slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      apr_size_t slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
       if (cs->data[slot])
         {
           apr_size_t len = cs->len[slot];

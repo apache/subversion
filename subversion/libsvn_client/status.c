@@ -430,7 +430,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                                       pool));
             }
 
-          if (depth_as_sticky)
+          if (depth_as_sticky || !server_supports_depth)
             status_depth = depth;
           else
             status_depth = svn_depth_unknown; /* Use depth from WC */
@@ -620,27 +620,12 @@ svn_client__create_status(svn_client_status_t **cst,
   (*cst)->repos_relpath = status->repos_relpath;
 
   (*cst)->switched = status->switched;
-  (*cst)->file_external = FALSE;
 
-  if (/* Old style file-externals */
-      (status->versioned
-       && status->switched
-       && status->kind == svn_node_file))
+  (*cst)->file_external = status->file_external;
+  if (status->file_external)
     {
-      svn_node_kind_t external_kind;
-
-      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
-                                         NULL, wc_ctx,
-                                         local_abspath /* wri_abspath */,
-                                         local_abspath, TRUE,
-                                         scratch_pool, scratch_pool));
-
-      if (external_kind == svn_node_file)
-        {
-          (*cst)->file_external = TRUE;
-          (*cst)->switched = FALSE;
-          (*cst)->node_status = (*cst)->text_status;
-        }
+      (*cst)->switched = FALSE;
+      (*cst)->node_status = (*cst)->text_status;
     }
 
   (*cst)->lock = status->lock;

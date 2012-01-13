@@ -99,6 +99,10 @@ javahl_libdir = @libdir@
 javahl_test_rootdir=$(abs_builddir)/subversion/bindings/javahl/test-work
 javahl_test_srcdir=$(abs_srcdir)/subversion/bindings/javahl
 
+gnome_auth_dir = $(abs_builddir)/subversion/libsvn_auth_gnome_keyring/.libs
+kwallet_auth_dir = $(abs_builddir)/subversion/libsvn_auth_kwallet/.libs
+auth_plugin_dirs = $(gnome_auth_dir):$(kwallet_auth_dir)
+
 MSGFMT = @MSGFMT@
 MSGFMTFLAGS = @MSGFMTFLAGS@
 MSGMERGE = @MSGMERGE@
@@ -432,10 +436,17 @@ clean-javahl:
 
 extraclean-javahl: clean-javahl
 
-check-javahl: javahl javahl-compat
+check-tigris-javahl: javahl-compat
+	@FIX_JAVAHL_LIB@
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+
+check-apache-javahl: javahl
 	@FIX_JAVAHL_LIB@
 	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+
+check-javahl: check-apache-javahl
+
+check-all-javahl: check-apache-javahl check-tigris-javahl
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
@@ -477,6 +488,7 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	    flags="--list --milestone-filter=$(MILESTONE_FILTER)             \
 		   --mode-filter=$(MODE_FILTER) --log-to-stdout $$flags";    \
 	  fi;                                                                \
+	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
 	            $$flags                                                  \

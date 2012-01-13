@@ -85,33 +85,18 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
       ffsd->common_pool = common_pool;
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
-      status = apr_thread_mutex_create(&ffsd->fs_write_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS write-lock mutex"));
+      SVN_ERR(svn_mutex__init(&ffsd->fs_write_lock,
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn-current mutex"));
-#endif
-#if APR_HAS_THREADS
-      /* We also need a mutex for synchronising access to the active
-         transaction list and free transaction pointer. */
-      status = apr_thread_mutex_create(&ffsd->txn_list_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn list mutex"));
-#endif
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
+      SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
+                              SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
@@ -158,8 +143,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
-  fs_set_errcall,
-  svn_fs_fs__validate_mergeinfo,
+  fs_set_errcall
 };
 
 
@@ -292,16 +276,28 @@ fs_pack(svn_fs_t *fs,
 
 
 /* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
-   possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
+   possibly live Subversion filesystem SRC_FS from SRC_PATH to a
+   DST_FS at DEST_PATH. If INCREMENTAL is TRUE, make an effort not to
+   re-copy data which already exists in DST_FS.
    The CLEAN_LOGS argument is ignored and included for Subversion
    1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
-fs_hotcopy(const char *src_path,
-           const char *dest_path,
+fs_hotcopy(svn_fs_t *src_fs,
+           svn_fs_t *dst_fs,
+           const char *src_path,
+           const char *dst_path,
            svn_boolean_t clean_logs,
+           svn_boolean_t incremental,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
            apr_pool_t *pool)
 {
-  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
+  SVN_ERR(initialize_fs_struct(src_fs));
+  SVN_ERR(fs_serialized_init(src_fs, pool, pool));
+  SVN_ERR(initialize_fs_struct(dst_fs));
+  SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
+  return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
+                            incremental, cancel_func, cancel_baton, pool);
 }
 
 

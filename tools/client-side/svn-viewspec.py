@@ -20,6 +20,8 @@
 # ====================================================================
 
 """\
+__SCRIPTNAME__: checkout utility for sparse Subversion working copies
+
 Usage: 1. __SCRIPTNAME__ checkout VIEWSPEC-FILE TARGET-DIR
        2. __SCRIPTNAME__ examine VIEWSPEC-FILE
        3. __SCRIPTNAME__ help

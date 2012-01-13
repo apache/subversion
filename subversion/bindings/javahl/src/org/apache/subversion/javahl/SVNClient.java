@@ -27,6 +27,8 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.io.OutputStream;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.ByteArrayOutputStream;
 
 import java.util.Collection;
@@ -264,17 +266,53 @@ public class SVNClient implements ISVNClient
                                        LogMessageCallback callback)
         throws ClientException;
 
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, Depth depth,
+                     Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target1, revision1, target2, revision2, relativeToDir,
+                 stream, depth, changelists, ignoreAncestry, noDiffDeleted,
+                 force, copiesAsAdds);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, Depth depth,
+                            OutputStream stream, Depth depth,
                             Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds)
             throws ClientException;
 
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName,
+                     Depth depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        try {
+            OutputStream stream = new FileOutputStream(outFileName);
+            diff(target, pegRevision, startRevision, endRevision,
+                 relativeToDir, stream, depth, changelists, ignoreAncestry,
+                 noDiffDeleted, force, copiesAsAdds);
+        } catch (FileNotFoundException ex) {
+            throw ClientException.fromException(ex);
+        }
+    }
+
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
-                            String relativeToDir, String outFileName,
+                            String relativeToDir, OutputStream stream,
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force, boolean copiesAsAdds)

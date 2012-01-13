@@ -383,10 +383,10 @@ static svn_error_t *
 load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
                  apr_pool_t *pool)
 {
-  char *files, *file, *last;
+  char *files, *file;
   files = apr_pstrdup(pool, authorities);
 
-  while ((file = apr_strtok(files, ";", &last)) != NULL)
+  while ((file = svn_cstring_tokenize(";", &files)) != NULL)
     {
       serf_ssl_certificate_t *ca_cert;
       apr_status_t status = serf_ssl_load_cert_file(&ca_cert, file, pool);
@@ -400,7 +400,6 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
              _("Invalid config: unable to load certificate file '%s'"),
              svn_dirent_local_style(file, pool));
         }
-      files = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -478,7 +477,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 {
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
-  apr_status_t status = SVN_NO_ERROR;
+  apr_status_t status = APR_SUCCESS;
 
   svn_error_t *err = conn_setup(sock,
                                 read_bkt,
@@ -914,7 +913,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
               server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
               server_err->has_xml_response = TRUE;
               server_err->contains_precondition_error = FALSE;
-              server_err->cdata = svn_stringbuf_create("", pool);
+              server_err->cdata = svn_stringbuf_create_empty(pool);
               server_err->collect_cdata = FALSE;
               server_err->parser.pool = server_err->error->pool;
               server_err->parser.user_data = server_err;
@@ -1182,7 +1181,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
           server_err->has_xml_response = TRUE;
           server_err->contains_precondition_error = FALSE;
-          server_err->cdata = svn_stringbuf_create("", server_err->error->pool);
+          server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
           server_err->collect_cdata = FALSE;
           server_err->parser.pool = server_err->error->pool;
           server_err->parser.user_data = server_err;
@@ -2408,15 +2407,8 @@ svn_ra_serf__get_relative_path(const char **rel_path,
 
   decoded_root = svn_path_uri_decode(session->repos_root.path, pool);
   decoded_orig = svn_path_uri_decode(orig_path, pool);
-  if (strcmp(decoded_root, decoded_orig) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_urlpath__is_child(decoded_root, decoded_orig, pool);
-      SVN_ERR_ASSERT(*rel_path != NULL);
-    }
+  *rel_path = svn_urlpath__skip_ancestor(decoded_root, decoded_orig);
+  SVN_ERR_ASSERT(*rel_path != NULL);
   return SVN_NO_ERROR;
 }
 

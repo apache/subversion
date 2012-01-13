@@ -590,10 +590,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 #ifdef SVN_NEON_0_26
   if (http_auth_types)
     {
-      char *token, *last;
+      char *token;
       char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
       apr_collapse_spaces(auth_types_list, http_auth_types);
-      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+      while ((token = svn_cstring_tokenize(";", &auth_types_list)) != NULL)
         {
           auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
@@ -985,13 +985,12 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
       if (authorities != NULL)
         {
-          char *files, *file, *last;
+          char *files, *file;
           files = apr_pstrdup(pool, authorities);
 
-          while ((file = apr_strtok(files, ";", &last)) != NULL)
+          while ((file = svn_cstring_tokenize(";", &files)) != NULL)
             {
               ne_ssl_certificate *ca_cert;
-              files = NULL;
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {
@@ -1145,19 +1144,13 @@ svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
   const char *root_url;
 
   SVN_ERR(svn_ra_neon__get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri__is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
+
   return SVN_NO_ERROR;
 }
 

@@ -170,7 +170,7 @@ cstring_from_utf8(const char **path_apr,
 
 
 /* Set *NAME_P to the UTF-8 representation of directory entry NAME.
- * NAME is in the the internal encoding used by APR; PARENT is in
+ * NAME is in the internal encoding used by APR; PARENT is in
  * UTF-8 and in internal (not local) style.
  *
  * Use PARENT only for generating an error string if the conversion
@@ -438,7 +438,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
               /* The variable parts of unique_name will not require UTF8
                  conversion. Therefore, if UTF8 conversion had no effect
                  on it in the first iteration, it won't require conversion
-                 in any future interation. */
+                 in any future iteration. */
               needs_utf8_conversion = strcmp(unique_name_apr, unique_name);
             }
         }
@@ -1343,7 +1343,7 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
   static apr_fileperms_t default_perms = 0;
 
   /* Technically, this "racy": Multiple threads may use enter here and
-     try to figure out the default permisission concurrently. That's fine
+     try to figure out the default permission concurrently. That's fine
      since they will end up with the same results. Even more technical,
      apr_fileperms_t is an atomic type on 32+ bit machines.
    */
@@ -1555,7 +1555,7 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
      * Allocate the maximum string length based on leading 4
      * characters of \\?\ (allowing nearly unlimited path lengths)
      * plus the trailing null, then transform /'s into \\'s since
-     * the \\?\ form doesn't allow '/' path seperators.
+     * the \\?\ form doesn't allow '/' path separators.
      *
      * Note that the \\?\ form only works for local drive paths, and
      * \\?\UNC\ is needed UNC paths.
@@ -1565,7 +1565,7 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
     apr_status_t rv;
 
     /* This is correct, we don't twist the filename if it will
-     * definately be shorter than 248 characters.  It merits some
+     * definitely be shorter than 248 characters.  It merits some
      * performance testing to see if this has any effect, but there
      * seem to be applications that get confused by the resulting
      * Unicode \\?\ style file names, especially if they use argv[0]
@@ -2158,8 +2158,11 @@ svn_io_remove_file2(const char *path,
     }
 #endif
 
-  return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
-                            svn_dirent_local_style(path, scratch_pool));
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
+                              svn_dirent_local_style(path, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2170,7 +2173,7 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
 }
 
 /*
- Mac OS X has a bug where if you're readding the contents of a
+ Mac OS X has a bug where if you're reading the contents of a
  directory via readdir in a loop, and you remove one of the entries in
  the directory and the directory has 338 or more files in it you will
  skip over some of the entries in the directory.  Needless to say,
@@ -2934,9 +2937,11 @@ svn_io_detect_mimetype2(const char **mimetype,
      heuristic. */
   if (mimetype_map)
     {
-      const char *type_from_map, *path_ext;
-      svn_path_splitext(NULL, &path_ext, file, pool);
-      fileext_tolower((char *)path_ext);
+      const char *type_from_map;
+      char *path_ext; /* Can point to physical const memory but only when
+                         svn_path_splitext sets it to "". */
+      svn_path_splitext(NULL, (const char **)&path_ext, file, pool);
+      fileext_tolower(path_ext);
       if ((type_from_map = apr_hash_get(mimetype_map, path_ext,
                                         APR_HASH_KEY_STRING)))
         {
@@ -2974,6 +2979,13 @@ svn_boolean_t
 svn_io_is_binary_data(const void *data, apr_size_t len)
 {
   const unsigned char *buf = data;
+
+  if (len == 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF)
+    {
+      /* This is an empty UTF-8 file which only contains the UTF-8 BOM.
+       * Treat it as plain text. */
+      return FALSE;
+    }
 
   /* Right now, this function is going to be really stupid.  It's
      going to examine the block of data, and make sure that 15%

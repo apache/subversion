@@ -136,7 +136,7 @@ struct path_driver_cb_baton
   void *authz_read_baton;
 
   const char *base_path; /* relpath */
-  int base_path_len;
+  size_t base_path_len;
 
   svn_revnum_t low_water_mark;
   /* Stack of active copy operations. */
@@ -372,7 +372,7 @@ path_driver_cb_func(void **dir_baton,
   svn_fs_root_t *source_root = cb->compare_root;
   const char *source_fspath = NULL;
   const char *base_path = cb->base_path;
-  int base_path_len = cb->base_path_len;
+  size_t base_path_len = cb->base_path_len;
 
   *dir_baton = NULL;
 
@@ -573,8 +573,9 @@ path_driver_cb_func(void **dir_baton,
                                                   struct copy_info);
           if (info->copyfrom_path)
             {
-              const char *relpath = svn_relpath__is_child(info->path,
-                                                          edit_path, pool);
+              const char *relpath = svn_relpath_skip_ancestor(info->path,
+                                                              edit_path);
+              SVN_ERR_ASSERT(relpath && *relpath);
               SVN_ERR(svn_fs_revision_root(&source_root,
                                            svn_fs_root_fs(root),
                                            info->copyfrom_rev, pool));

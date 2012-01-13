@@ -244,7 +244,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   svn_stream_t *pristine_stream;
   svn_filesize_t pristine_size;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
@@ -265,7 +265,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   /* If we don't have a pristine or the node has a status that allows a
      pristine, just say that the node is modified */
   if (!checksum
-      || (kind != svn_wc__db_kind_file)
+      || (kind != svn_kind_file)
       || ((status != svn_wc__db_status_normal)
           && (status != svn_wc__db_status_added)))
     {
@@ -394,7 +394,7 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  svn_wc__db_kind_t node_kind;
+  svn_kind_t node_kind;
   const apr_array_header_t *conflicts;
   int i;
   svn_boolean_t conflicted;
@@ -527,19 +527,6 @@ svn_wc__min_max_revisions(svn_revnum_t *min_revision,
                                                       local_abspath,
                                                       committed,
                                                       scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(svn_wc__db_is_sparse_checkout(is_sparse_checkout,
-                                                       wc_ctx->db,
-                                                       local_abspath,
-                                                       scratch_pool));
 }
 
 

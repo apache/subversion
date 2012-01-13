@@ -1145,7 +1145,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "not known to exist in the repository",
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
@@ -1160,7 +1160,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "not known to exist in the repository",
                                         bloo_path)
 
 #----------------------------------------------------------------------
@@ -2803,6 +2803,58 @@ def commit_multiple_nested_deletes(sbox):
 
   svntest.main.run_svn(None, 'ci', A, A_B, '-m', 'Q')
 
+@Issue(4042)
+def commit_incomplete(sbox):
+  "commit an incomplete dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('pname', 'pval', 'A/B')
+  svntest.actions.set_incomplete(sbox.ospath('A/B'), 1)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B' : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B',  status='! ', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+  
+#----------------------------------------------------------------------
+# Reported here:
+#   Message-ID: <4EBF0FC9.300@gmail.com>
+#   Date: Sun, 13 Nov 2011 13:31:05 +1300
+#   From: Fergus Slorach <sugref@gmail.com>
+#   Subject: svn commit --targets behaviour change in 1.7?
+@Issue(4059)
+def commit_add_subadd(sbox):
+  "committing add with explicit subadd targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  targets_file = sbox.ospath('targets') # ### better tempdir?
+  targets_file = os.path.abspath(targets_file)
+
+  # prepare targets file
+  targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
+  open(targets_file, 'w').write("\n".join(targets))
+
+  # r2: rm A/D
+  sbox.simple_rm('A/D')
+  sbox.simple_commit(message='rm')
+
+  # r3: revert r2, with specific invocation
+  os.chdir(wc_dir)
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'merge', '-c', '-2', './')
+  svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
+
 
 ########################################################################
 # Run the tests
@@ -2871,6 +2923,8 @@ test_list = [ None,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
               commit_multiple_nested_deletes,
+              commit_incomplete,
+              commit_add_subadd,
              ]
 
 if __name__ == '__main__':

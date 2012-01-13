@@ -225,7 +225,7 @@ def change_external_expect_error(path, new_val, expected_err):
   but expect to get an error message that matches EXPECTED_ERR."""
 
   svntest.actions.set_prop('svn:externals', new_val, path,
-                           expected_err=expected_err)
+                           expected_re_string=expected_err)
 
 
 def probe_paths_exist(paths):
@@ -706,6 +706,13 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   if not external_urls: external_urls = list(external_url_for.values())
   externals_value_8 = external_urls.pop() + " /foo \n"
   if not external_urls: external_urls = list(external_url_for.values())
+  if svntest.main.is_os_windows():
+    externals_value_9 = external_urls.pop() + " D:/foo\n"
+    if not external_urls: external_urls = list(external_url_for.values())
+    externals_value_10 = external_urls.pop() + " D:\\foo\n"
+    if not external_urls: external_urls = list(external_url_for.values())
+    externals_value_11 = external_urls.pop() + " D:foo\n"
+    if not external_urls: external_urls = list(external_url_for.values())
 
   set_externals_for_path_expect_error(B_path, externals_value_1)
   set_externals_for_path_expect_error(G_path, externals_value_2)
@@ -715,6 +722,10 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   set_externals_for_path_expect_error(B_path, externals_value_6)
   set_externals_for_path_expect_error(G_path, externals_value_7)
   set_externals_for_path_expect_error(H_path, externals_value_8)
+  if svntest.main.is_os_windows():
+    set_externals_for_path_expect_error(B_path, externals_value_9)
+    set_externals_for_path_expect_error(B_path, externals_value_10)
+    set_externals_for_path_expect_error(B_path, externals_value_11)
 
 
 #----------------------------------------------------------------------
@@ -1886,7 +1897,7 @@ def file_externals_different_repos(sbox):
   r1_url = sbox.repo_url
 
   r2_dir, r2_url = sbox.add_repo_path('2')
-  shutil.copytree(sbox.repo_dir, r2_dir)
+  svntest.main.copy_repos(sbox.repo_dir, r2_dir, 1, 0)
 
 
   sbox.simple_propset('svn:externals',
@@ -1921,6 +1932,777 @@ def file_externals_different_repos(sbox):
                                         expected_output, None, None,
                                         'svn: warning: W200007: Unsupported.*')
 
+def file_external_in_unversioned(sbox):
+  "file external in unversioned dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('svn:externals', '^/A/mu X/mu', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/X/mu' : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None, None)
+
+  # At one point this failed with SVN_DEBUG wcng consistency checks enabled
+  svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
+
+
+from svntest import verify, actions, main
+
+@Issue(3589, 4000)
+def copy_file_externals(sbox):
+  "a WC->WC copy should exclude file externals"
+
+  #  svntest.factory.make(sbox,"""
+  #  svn mkdir X
+  #  ### manual edit: add '\n ^/A/mu xmu' to externals definition:
+  #  svn ps svn:externals "^/iota xiota" X
+  #  """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  X = os.path.join(wc_dir, 'X')
+
+  # svn mkdir X
+  expected_stdout = ['A         ' + X + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir', X)
+
+  # svn ps svn:externals "^/iota xiota" X
+  expected_stdout = ["property 'svn:externals' set on '" + X + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', '''
+    ^/iota xiota
+    ^/A/mu xmu
+    ''', X)
+
+  #  svntest.factory.make(sbox, '''
+  #  svn ci
+  #  svn up
+  #  # have a commit on one of the files
+  #  echo mod >> X/xmu
+  #  svn ci X/xmu
+  #  svn up
+  #  # now perform the WC->WC copy
+  #  svn cp X X_copy
+  #  ### manual edit: add a verify_disk(check_props=True) here
+  #  svn ci
+  #  ### manual edit: add check_props=True to below update
+  #  svn up
+  #  ''')
+
+  X = os.path.join(wc_dir, 'X')
+  X_copy = os.path.join(wc_dir, 'X_copy')
+  X_xmu = os.path.join(wc_dir, 'X', 'xmu')
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'                 : Item(verb='Adding'),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'                 : Item(status='  ', wc_rev='2'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(status='A '),
+    'X/xiota'           : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'                 : Item(),
+    'X/xiota'           : Item(contents="This is the file 'iota'.\n"),
+    'X/xmu'             : Item(contents="This is the file 'mu'.\n"),
+  })
+
+  expected_status.add({
+    'X/xiota'           : Item(status='  ', wc_rev='2', switched='X'),
+    'X/xmu'             : Item(status='  ', wc_rev='2', switched='X'),
+  })
+  expected_status.tweak(wc_rev='2')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # have a commit on one of the files
+  # echo mod >> X/xmu
+  main.file_append(X_xmu, 'mod\n')
+
+  # svn ci X/xmu
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(verb='Sending'),
+  })
+
+  expected_status.tweak('X/xmu', wc_rev='3')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, X_xmu)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(status='U '),
+  })
+
+  expected_disk.tweak('A/mu', 'X/xmu',
+    contents="This is the file 'mu'.\nmod\n")
+
+  expected_status.tweak(wc_rev='3')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # now perform the WC->WC copy
+  # svn cp X X_copy
+  expected_stdout = ['A         ' + X_copy + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', X,
+    X_copy)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'X_copy'            : Item(verb='Adding'),
+  })
+
+  expected_status.add({
+    'X_copy'            : Item(status='  ', wc_rev='4'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # verify disk state, also verifying props
+  expected_disk.add({
+    'X_copy'            : Item(),
+  })
+  expected_disk.tweak('X', 'X_copy',
+    props={'svn:externals' : '\n    ^/iota xiota\n    ^/A/mu xmu\n    \n'})
+
+  actions.verify_disk(wc_dir, expected_disk, True)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'X_copy/xmu'        : Item(status='A '),
+    'X_copy/xiota'      : Item(status='A '),
+  })
+
+  expected_disk.add({
+    'X_copy/xmu'        : Item(contents="This is the file 'mu'.\nmod\n"),
+    'X_copy/xiota'      : Item(contents="This is the file 'iota'.\n"),
+  })
+
+  expected_status.add({
+    'X_copy/xmu'        : Item(status='  ', wc_rev='4', switched='X'),
+    'X_copy/xiota'      : Item(status='  ', wc_rev='4', switched='X'),
+  })
+  expected_status.tweak(wc_rev='4')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, True, wc_dir)
+
+def include_externals(sbox):
+  "commit --include-externals"
+  # svntest.factory.make(sbox, """
+  #   mkdir Z
+  #   echo 'This is the file zeta.' > Z/zeta
+  #   svn add Z
+  #   svn mkdir --parents Xpegged X/Y
+  #   svn ci
+  #   svn up
+  #   svn ps svn:externals "^/Z xZ" A/D/H
+  #   svn ps svn:externals "^/iota@1 Xpegged/xiota" wc_dir
+  #   # ^^^ manually set externals to:
+  #   #  ^/iota@1 Xpegged/xiota
+  #   #  -r1 ^/A/B/E Xpegged/xE
+  #   #  ^/A/mu X/xmu
+  #   #  ^/A/B/lambda X/Y/xlambda
+  #   #  ^/A/D/G X/xG
+  #   #  ^/A/D/H X/Y/xH
+  #   """)
+  # exit(0)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
+  X = os.path.join(wc_dir, 'X')
+  X_Y = os.path.join(wc_dir, 'X', 'Y')
+  Xpegged = os.path.join(wc_dir, 'Xpegged')
+  Z = os.path.join(wc_dir, 'Z')
+  Z_zeta = os.path.join(wc_dir, 'Z', 'zeta')
+
+  # mkdir Z
+  os.makedirs(Z)
+
+  # echo 'This is the file zeta.' > Z/zeta
+  main.file_write(Z_zeta, 'This is the file zeta.\n')
+
+  # svn add Z
+  expected_stdout = verify.UnorderedOutput([
+    'A         ' + Z + '\n',
+    'A         ' + Z_zeta + '\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'add', Z)
+
+  # svn mkdir --parents Xpegged X/Y
+  expected_stdout = verify.UnorderedOutput([
+    'A         ' + Xpegged + '\n',
+    'A         ' + X + '\n',
+    'A         ' + X_Y + '\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+    '--parents', Xpegged, X_Y)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'Z'                 : Item(verb='Adding'),
+    'Z/zeta'            : Item(verb='Adding'),
+    'X'                 : Item(verb='Adding'),
+    'X/Y'               : Item(verb='Adding'),
+    'Xpegged'           : Item(verb='Adding'),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'Z'                 : Item(status='  ', wc_rev='2'),
+    'Z/zeta'            : Item(status='  ', wc_rev='2'),
+    'X'                 : Item(status='  ', wc_rev='2'),
+    'X/Y'               : Item(status='  ', wc_rev='2'),
+    'Xpegged'           : Item(status='  ', wc_rev='2'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'Z'                 : Item(),
+    'Z/zeta'            : Item(contents="This is the file zeta.\n"),
+    'Xpegged'           : Item(),
+    'X'                 : Item(),
+    'X/Y'               : Item(),
+  })
+
+  expected_status.tweak(wc_rev='2')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # svn ps svn:externals "^/Z xZ" A/D/H
+  expected_stdout = ["property 'svn:externals' set on '" + A_D_H + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', '^/Z xZ', A_D_H)
+
+  # svn ps svn:externals "^/iota@1 Xpegged/xiota" wc_dir
+  expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals',
+    '''
+      ^/iota@1 Xpegged/xiota
+      -r1 ^/A/B/E Xpegged/xE
+      ^/A/mu X/xmu
+      ^/A/B/lambda X/Y/xlambda
+      ^/A/D/G X/xG
+      ^/A/D/H X/Y/xH
+    ''', wc_dir)
+
+  # svntest.factory.make(sbox, prev_disk=expected_disk,
+  #                      prev_status=expected_status,
+  #                      commands = """
+  #   svn ci
+  #   svn up
+  #   echo mod >> Xpegged/xE/alpha
+  #   echo mod >> X/xmu
+  #   echo mod >> X/Y/xlambda
+  #   echo mod >> X/xG/pi
+  #   echo mod >> X/Y/xH/chi
+  #   echo mod >> X/Y/xH/xZ/zeta
+  #   svn status
+  #   # Expect no externals to be committed
+  #   svn ci
+  #   # Expect no externals to be committed, because pegged
+  #   svn ci --include-externals Xpegged
+  #   # Expect no externals to be committed, because of depth
+  #   svn ci --depth=immediates --include-externals
+  #   # Expect only unpegged externals to be committed (those in X/)
+  #   svn ci --include-externals
+  #   # ### Below, manually add:
+  #   # expected_status.tweak('A/D/H/xZ', 'Xpegged/xE', 'X/Y/xH', 'X/xG',
+  #   #                       wc_rev=None)
+  #   svn up
+  #   # new mods to check more cases
+  #   echo mod >> X/xmu
+  #   echo mod >> X/Y/xlambda
+  #   echo mod >> X/xG/pi
+  #   echo mod >> X/Y/xH/chi
+  #   echo mod >> X/Y/xH/xZ/zeta
+  #   svn status
+  #   # Expect no externals to be committed, because of depth
+  #   svn ci --include-externals --depth=empty X
+  #   # Expect only file external xmu to be committed, because of depth
+  #   svn ci --include-externals --depth=files X
+  #   svn status
+  #   # ### Below, manually add:
+  #   # expected_status.tweak('A/D/H/xZ', 'Xpegged/xE', 'X/Y/xH', 'X/xG',
+  #   #                       wc_rev=None)
+  #   svn up
+  #   echo mod >> X/xG/pi
+  #   svn status
+  #   # Expect explicit targets to be committed
+  #   svn ci X/Y/xlambda X/xG
+  #   svn status
+  #   """)
+
+  X = os.path.join(wc_dir, 'X')
+  X_xG = os.path.join(wc_dir, 'X', 'xG')
+  X_xG_pi = os.path.join(wc_dir, 'X', 'xG', 'pi')
+  X_xmu = os.path.join(wc_dir, 'X', 'xmu')
+  X_Y_xH_chi = os.path.join(wc_dir, 'X', 'Y', 'xH', 'chi')
+  X_Y_xH_xZ_zeta = os.path.join(wc_dir, 'X', 'Y', 'xH', 'xZ', 'zeta')
+  X_Y_xlambda = os.path.join(wc_dir, 'X', 'Y', 'xlambda')
+  Xpegged = os.path.join(wc_dir, 'Xpegged')
+  Xpegged_xE_alpha = os.path.join(wc_dir, 'Xpegged', 'xE', 'alpha')
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(verb='Sending'),
+    'A/D/H'             : Item(verb='Sending'),
+  })
+
+  expected_status.tweak('', 'A/D/H', wc_rev='3')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(status='A '),
+    'X/xG/tau'          : Item(status='A '),
+    'X/xG/rho'          : Item(status='A '),
+    'X/xG/pi'           : Item(status='A '),
+    'X/Y/xH'            : Item(status=' U'),
+    'X/Y/xH/psi'        : Item(status='A '),
+    'X/Y/xH/xZ/zeta'    : Item(status='A '),
+    'X/Y/xH/chi'        : Item(status='A '),
+    'X/Y/xH/omega'      : Item(status='A '),
+    'X/Y/xlambda'       : Item(status='A '),
+    'A/D/H/xZ/zeta'     : Item(status='A '),
+    'Xpegged/xiota'     : Item(status='A '),
+    'Xpegged/xE/alpha'  : Item(status='A '),
+    'Xpegged/xE/beta'   : Item(status='A '),
+  })
+
+  expected_disk.add({
+    'Xpegged/xE'        : Item(),
+    'Xpegged/xE/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'Xpegged/xE/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'Xpegged/xiota'     : Item(contents="This is the file 'iota'.\n"),
+    'A/D/H/xZ'          : Item(),
+    'A/D/H/xZ/zeta'     : Item(contents="This is the file zeta.\n"),
+    'X/Y/xlambda'       : Item(contents="This is the file 'lambda'.\n"),
+    'X/Y/xH'            : Item(),
+    'X/Y/xH/chi'        : Item(contents="This is the file 'chi'.\n"),
+    'X/Y/xH/xZ'         : Item(),
+    'X/Y/xH/xZ/zeta'    : Item(contents="This is the file zeta.\n"),
+    'X/Y/xH/psi'        : Item(contents="This is the file 'psi'.\n"),
+    'X/Y/xH/omega'      : Item(contents="This is the file 'omega'.\n"),
+    'X/xmu'             : Item(contents="This is the file 'mu'.\n"),
+    'X/xG'              : Item(),
+    'X/xG/tau'          : Item(contents="This is the file 'tau'.\n"),
+    'X/xG/rho'          : Item(contents="This is the file 'rho'.\n"),
+    'X/xG/pi'           : Item(contents="This is the file 'pi'.\n"),
+  })
+
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({
+    'A/D/H/xZ'          : Item(status='X '),
+    'Xpegged/xiota'     : Item(status='  ', wc_rev='1', switched='X'),
+    'Xpegged/xE'        : Item(status='X '),
+    'X/Y/xH'            : Item(status='X '),
+    'X/Y/xlambda'       : Item(status='  ', wc_rev='3', switched='X'),
+    'X/xmu'             : Item(status='  ', wc_rev='3', switched='X'),
+    'X/xG'              : Item(status='X '),
+  })
+  expected_status.tweak('Xpegged/xiota', wc_rev='1')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # echo mod >> Xpegged/xE/alpha
+  main.file_append(Xpegged_xE_alpha, 'mod\n')
+
+  # echo mod >> X/xmu
+  main.file_append(X_xmu, 'mod\n')
+
+  # echo mod >> X/Y/xlambda
+  main.file_append(X_Y_xlambda, 'mod\n')
+
+  # echo mod >> X/xG/pi
+  main.file_append(X_xG_pi, 'mod\n')
+
+  # echo mod >> X/Y/xH/chi
+  main.file_append(X_Y_xH_chi, 'mod\n')
+
+  # echo mod >> X/Y/xH/xZ/zeta
+  main.file_append(X_Y_xH_xZ_zeta, 'mod\n')
+
+  # svn status
+  expected_status.tweak('X/Y/xlambda', 'X/xmu', status='M ')
+
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # Expect no externals to be committed
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # Expect no externals to be committed, because pegged
+  # svn ci --include-externals Xpegged
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, '--include-externals', Xpegged)
+
+  # Expect no externals to be committed, because of depth
+  # svn ci --depth=immediates --include-externals
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, '--depth=immediates', '--include-externals', wc_dir)
+
+  # Expect only unpegged externals to be committed (those in X/)
+  # svn ci --include-externals
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(verb='Sending'),
+    'X/Y/xlambda'       : Item(verb='Sending'),
+    'X/Y/xH/xZ/zeta'    : Item(verb='Sending'),
+    'X/Y/xH/chi'        : Item(verb='Sending'),
+    'X/xG/pi'           : Item(verb='Sending'),
+  })
+
+  expected_status.tweak(status='  ')
+  expected_status.tweak('X/Y/xlambda', 'X/xmu', wc_rev='4')
+  expected_status.tweak('X/Y/xH', 'X/xG', 'A/D/H/xZ', 'Xpegged/xE',
+    status='X ')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, '--include-externals', wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(status='U '),
+    'A/D/H/chi'         : Item(status='U '),
+    'A/D/H/xZ/zeta'     : Item(status='U '),
+    'A/D/G/pi'          : Item(status='U '),
+    'A/B/lambda'        : Item(status='U '),
+    'Z/zeta'            : Item(status='U '),
+  })
+
+  expected_disk.tweak('Xpegged/xE/alpha',
+    contents="This is the file 'alpha'.\nmod\n")
+  expected_disk.tweak('A/D/H/chi', 'X/Y/xH/chi',
+    contents="This is the file 'chi'.\nmod\n")
+  expected_disk.tweak('A/D/H/xZ/zeta', 'X/Y/xH/xZ/zeta', 'Z/zeta',
+    contents='This is the file zeta.\nmod\n')
+  expected_disk.tweak('A/D/G/pi', 'X/xG/pi',
+    contents="This is the file 'pi'.\nmod\n")
+  expected_disk.tweak('A/mu', 'X/xmu',
+    contents="This is the file 'mu'.\nmod\n")
+  expected_disk.tweak('A/B/lambda', 'X/Y/xlambda',
+    contents="This is the file 'lambda'.\nmod\n")
+
+  expected_status.tweak(wc_rev='4')
+  expected_status.tweak('Xpegged/xiota', wc_rev='1')
+  expected_status.tweak('A/D/H/xZ', 'Xpegged/xE', 'X/Y/xH', 'X/xG',
+                        wc_rev=None)
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # new mods to check more cases
+  # echo mod >> X/xmu
+  main.file_append(X_xmu, 'mod\n')
+
+  # echo mod >> X/Y/xlambda
+  main.file_append(X_Y_xlambda, 'mod\n')
+
+  # echo mod >> X/xG/pi
+  main.file_append(X_xG_pi, 'mod\n')
+
+  # echo mod >> X/Y/xH/chi
+  main.file_append(X_Y_xH_chi, 'mod\n')
+
+  # echo mod >> X/Y/xH/xZ/zeta
+  main.file_append(X_Y_xH_xZ_zeta, 'mod\n')
+
+  # svn status
+  expected_status.tweak('X/Y/xlambda', 'X/xmu', status='M ')
+
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # Expect no externals to be committed, because of depth
+  # svn ci --include-externals --depth=empty X
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, '--include-externals', '--depth=empty', X)
+
+  # Expect only file external xmu to be committed, because of depth
+  # svn ci --include-externals --depth=files X
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/xmu'             : Item(verb='Sending'),
+  })
+
+  expected_status.tweak(status='  ')
+  expected_status.tweak('X/xmu', wc_rev='5')
+  expected_status.tweak('X/Y/xlambda', status='M ')
+  expected_status.tweak('X/Y/xH', 'X/xG', 'A/D/H/xZ', 'Xpegged/xE',
+    status='X ')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, '--include-externals', '--depth=files', X)
+
+  # svn status
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(status='U '),
+  })
+
+  expected_disk.tweak('A/mu', 'X/xmu',
+    contents="This is the file 'mu'.\nmod\nmod\n")
+  expected_disk.tweak('X/Y/xlambda',
+    contents="This is the file 'lambda'.\nmod\nmod\n")
+  expected_disk.tweak('X/Y/xH/chi',
+    contents="This is the file 'chi'.\nmod\nmod\n")
+  expected_disk.tweak('X/Y/xH/xZ/zeta',
+    contents='This is the file zeta.\nmod\nmod\n')
+  expected_disk.tweak('X/xG/pi',
+    contents="This is the file 'pi'.\nmod\nmod\n")
+
+  expected_status.tweak(wc_rev='5')
+  expected_status.tweak('Xpegged/xiota', wc_rev='1')
+  expected_status.tweak('A/D/H/xZ', 'Xpegged/xE', 'X/Y/xH', 'X/xG',
+                        wc_rev=None)
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # echo mod >> X/xG/pi
+  main.file_append(X_xG_pi, 'mod\n')
+
+  # svn status
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # Expect explicit targets to be committed
+  # svn ci X/Y/xlambda X/xG
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/Y/xlambda'       : Item(verb='Sending'),
+    'X/xG/pi'           : Item(verb='Sending'),
+  })
+
+  expected_status.tweak(status='  ')
+  expected_status.tweak('X/Y/xlambda', wc_rev='6')
+  expected_status.tweak('X/Y/xH', 'X/xG', 'A/D/H/xZ', 'Xpegged/xE',
+    status='X ')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, X_Y_xlambda, X_xG)
+
+  # svn status
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+
+@XFail()
+def include_immediate_dir_externals(sbox):
+  "commit --include-externals --depth=immediates"
+  # See also comment inside svn_client_commit6().
+
+  #   svntest.factory.make(sbox,"""
+  #     svn mkdir X
+  #     svn ci
+  #     svn up
+  #     svn ps svn:externals "^/A/B/E X/XE" wc_dir
+  #     svn ci
+  #     svn up
+  # 
+  #     svn ps some change X/XE
+  #     echo mod >> X/XE/alpha
+  # 
+  #     svn st X/XE
+  #     # Expect only the propset on X/XE to be committed.
+  #     # Should be like 'svn commit --include-externals --depth=empty X/XE'.
+  #     svn commit --include-externals --depth=immediates X
+  #     """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  X = os.path.join(wc_dir, 'X')
+  X_XE = os.path.join(wc_dir, 'X', 'XE')
+  X_XE_alpha = os.path.join(wc_dir, 'X', 'XE', 'alpha')
+
+  # svn mkdir X
+  expected_stdout = ['A         ' + X + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir', X)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'                 : Item(verb='Adding'),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'                 : Item(status='  ', wc_rev='2'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'X'                 : Item(),
+  })
+
+  expected_status.tweak(wc_rev='2')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # svn ps svn:externals "^/A/B/E X/XE" wc_dir
+  expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', '^/A/B/E X/XE', wc_dir)
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(verb='Sending'),
+  })
+
+  expected_status.tweak('', wc_rev='3')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/XE/alpha'        : Item(status='A '),
+    'X/XE/beta'         : Item(status='A '),
+  })
+
+  expected_disk.add({
+    'X/XE'              : Item(),
+    'X/XE/alpha'        : Item(contents="This is the file 'alpha'.\n"),
+    'X/XE/beta'         : Item(contents="This is the file 'beta'.\n"),
+  })
+
+  expected_status.tweak(wc_rev='3')
+  expected_status.add({
+    'X/XE'              : Item(status='X '),
+  })
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # svn ps some change X/XE
+  expected_stdout = ["property 'some' set on '" + X_XE + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps', 'some',
+    'change', X_XE)
+
+  # echo mod >> X/XE/alpha
+  main.file_append(X_XE_alpha, 'mod\n')
+
+  # svn st X/XE
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # Expect only the propset on X/XE to be committed.
+  # Should be like 'svn commit --include-externals --depth=empty X/XE'.
+  # svn commit --include-externals --depth=immediates X
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/XE'              : Item(verb='Sending'),
+  })
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, '--include-externals', '--depth=immediates', X)
+
+
+@Issue(4085)
+@XFail()
+def shadowing(sbox):
+  "external shadows an existing dir"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  # Setup external: /A/B/F as 'C' child of /A
+  externals_prop = "^/A/B/F C\n"
+
+  raised = False
+  try:
+    change_external(sbox.ospath('A'), externals_prop, commit=False)
+  except:
+    raised = True
+  if not raised:
+    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+
+# Test for issue #4093 'remapping a file external can segfault due to
+# "deleted" props'.
+@Issue(4093)
+def remap_file_external_with_prop_del(sbox):
+  "file external remap segfaults due to deleted props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path  = os.path.join(wc_dir, "A")
+  mu_path = os.path.join(wc_dir, "A", "mu")
+
+  # Add a property to A/mu
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'propname', 'propval', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'New property on a file',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Add a new file external A/external pointing to ^/A/mu
+  externals_prop = "^/A/mu external\n"
+  change_external(A_path, externals_prop)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Change A/external to point to ^/iota
+  externals_prop = "^/iota external\n"
+  change_external(A_path, externals_prop)
+
+  # Now update to bring the new external down.
+  # This previously segfaulted as described in
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -1961,6 +2743,12 @@ test_list = [ None,
               incoming_file_external_on_file,
               exclude_externals,
               file_externals_different_repos,
+              file_external_in_unversioned,
+              copy_file_externals,
+              include_externals,
+              include_immediate_dir_externals,
+              shadowing,
+              remap_file_external_with_prop_del,
              ]
 
 if __name__ == '__main__':

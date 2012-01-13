@@ -68,7 +68,7 @@ typedef enum report_state_e {
     ADD_FILE,
     PROP,
     IGNORE_PROP_NAME,
-    NEED_PROP_NAME,
+    NEED_PROP_NAME
 } report_state_e;
 
 
@@ -1604,9 +1604,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      SVN_ERR(ctx->update_editor->absent_directory(file_name,
-                                                   info->dir->dir_baton,
-                                                   info->dir->pool));
+      SVN_ERR(ctx->update_editor->absent_directory(
+                                        svn_relpath_join(info->name, file_name,
+                                                         info->dir->pool),
+                                        info->dir->dir_baton,
+                                        info->dir->pool));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-file") == 0)
@@ -1627,9 +1629,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      SVN_ERR(ctx->update_editor->absent_file(file_name,
-                                              info->dir->dir_baton,
-                                              info->dir->pool));
+      SVN_ERR(ctx->update_editor->absent_file(
+                                        svn_relpath_join(info->name, file_name,
+                                                         info->dir->pool),
+                                        info->dir->dir_baton,
+                                        info->dir->pool));
     }
   else if (state == OPEN_DIR || state == ADD_DIR)
     {

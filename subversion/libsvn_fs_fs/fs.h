@@ -25,7 +25,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
@@ -34,6 +33,7 @@
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_mutex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -190,19 +190,16 @@ typedef struct fs_fs_shared_data_t
      Access to this object is synchronised under TXN_LIST_LOCK. */
   fs_fs_shared_txn_data_t *free_txn;
 
-#if APR_HAS_THREADS
   /* A lock for intra-process synchronization when accessing the TXNS list. */
-  apr_thread_mutex_t *txn_list_lock;
-#endif
-#if SVN_FS_FS__USE_LOCK_MUTEX
+  svn_mutex__t *txn_list_lock;
+
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
-  apr_thread_mutex_t *fs_write_lock;
+  svn_mutex__t *fs_write_lock;
 
   /* A lock for intra-process synchronization when locking the
      txn-current file. */
-  apr_thread_mutex_t *txn_current_lock;
-#endif
+  svn_mutex__t *txn_current_lock;
 
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */

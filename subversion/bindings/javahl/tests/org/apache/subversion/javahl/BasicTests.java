@@ -32,6 +32,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Arrays;
@@ -2736,7 +2737,7 @@ public class BasicTests extends SVNTests
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        setprop(aPath, "testprop", "Test property value.");
+        setprop(aPath, "testprop", "Test property value." + NL);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false, false);
@@ -2754,7 +2755,7 @@ public class BasicTests extends SVNTests
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        setprop(aPath, "testprop", "Test property value.");
+        setprop(aPath, "testprop", "Test property value." + NL);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false, false);
@@ -3679,8 +3680,17 @@ public class BasicTests extends SVNTests
                                       Map<String, byte[]> revprops,
                                       boolean hasChildren)
             {
-                String author = new String(revprops.get("svn:author"));
-                String message = new String(revprops.get("svn:log"));
+                String author, message;
+                try {
+                    author = new String(revprops.get("svn:author"), "UTF8");
+                } catch (UnsupportedEncodingException e) {
+                    author = new String(revprops.get("svn:author"));
+                }
+                try {
+                    message = new String(revprops.get("svn:log"), "UTF8");
+                } catch (UnsupportedEncodingException e) {
+                    message = new String(revprops.get("svn:log"));
+                }
                 long timeMicros;
 
                 try {

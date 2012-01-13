@@ -73,6 +73,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   apr_status_t status;
   apr_pool_t *pool;
   svn_error_t *err;
+  char prefix_buf[64];  /* 64 is probably bigger than most program names */
 
 #ifndef WIN32
   {
@@ -197,11 +198,17 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       return EXIT_FAILURE;
     }
 
-  /* This has to happen before any pools are created. */
+  strncpy(prefix_buf, progname, sizeof(prefix_buf) - 3);
+  prefix_buf[sizeof(prefix_buf) - 3] = '\0';
+  strcat(prefix_buf, ": ");
+
+  /* DSO pool must be created before any other pools used by the
+     application so that pool cleanup doesn't unload DSOs too
+     early. See docstring of svn_dso_initialize2(). */
   if ((err = svn_dso_initialize2()))
     {
-      if (error_stream && err->message)
-        fprintf(error_stream, "%s", err->message);
+      if (error_stream)
+        svn_handle_error2(err, error_stream, TRUE, prefix_buf);
 
       svn_error_clear(err);
       return EXIT_FAILURE;
@@ -223,8 +230,8 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 
   if ((err = svn_nls_init()))
     {
-      if (error_stream && err->message)
-        fprintf(error_stream, "%s", err->message);
+      if (error_stream)
+        svn_handle_error2(err, error_stream, TRUE, prefix_buf);
 
       svn_error_clear(err);
       return EXIT_FAILURE;
@@ -630,7 +637,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   const char *encoding = NULL;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
   if (svn_xml_is_xml_safe(propval->data, propval->len))
     {

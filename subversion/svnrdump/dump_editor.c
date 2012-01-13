@@ -383,7 +383,7 @@ open_root(void *edit_baton,
 
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
-  eb->propstring = svn_stringbuf_create("", eb->pool);
+  eb->propstring = svn_stringbuf_create_empty(eb->pool);
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
                                edit_baton, NULL, FALSE, eb->pool);
@@ -718,7 +718,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   LDR_DBG(("apply_textdelta %p\n", file_baton));
 
-  /* Use a temporary file to measure the text-content-length */
+  /* Use a temporary file to measure the Text-content-length */
   delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
   /* Prepare to write the delta to the delta_filestream */
@@ -846,6 +846,18 @@ close_edit(void *edit_baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *filename = NULL;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
@@ -856,6 +868,8 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
 {
   struct dump_edit_baton *eb;
   svn_delta_editor_t *de;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                        svn_delta_shim_callbacks_default(pool);
 
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   eb->stream = stream;
@@ -888,6 +902,14 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
   *editor = de;
 
   /* Wrap this editor in a cancellation editor. */
-  return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                           de, eb, editor, edit_baton, pool);
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            de, eb, editor, edit_baton, pool));
+
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_baton = eb;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   shim_callbacks, pool, pool));
+
+  return SVN_NO_ERROR;
 }

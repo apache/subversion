@@ -51,8 +51,9 @@ struct log_receiver_baton
   /* Client context. */
   svn_client_ctx_t *ctx;
 
-  /* The URL target of the log operation. */
-  const char *target_url;
+  /* The target of the log operation. */
+  const char *target_path_or_url;
+  svn_opt_revision_t target_peg_revision;
 
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
@@ -227,8 +228,7 @@ log_entry_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path2_t *log_item
-            = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
+          svn_log_changed_path2_t *log_item = item->value;
           const char *copy_data = "";
 
           if (lb->ctx->cancel_func)
@@ -274,21 +274,20 @@ log_entry_receiver(void *baton,
       SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", message));
     }
 
+  SVN_ERR(svn_cmdline_fflush(stdout));
+  SVN_ERR(svn_cmdline_fflush(stderr));
+
   /* Print a diff if requested. */
   if (lb->show_diff)
     {
-      apr_file_t *outfile;
-      apr_file_t *errfile;
+      svn_stream_t *outstream;
+      svn_stream_t *errstream;
       apr_array_header_t *diff_options;
-      apr_status_t status;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
-      svn_error_t *err;
 
-      if ((status = apr_file_open_stdout(&outfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stdout"));
-      if ((status = apr_file_open_stderr(&errfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stderr"));
+      SVN_ERR(svn_stream_for_stdout(&outstream, pool));
+      SVN_ERR(svn_stream_for_stderr(&errstream, pool));
 
       /* Fall back to "" to get options initialized either way. */
       if (lb->diff_extensions)
@@ -302,88 +301,27 @@ log_entry_receiver(void *baton,
       end_revision.kind = svn_opt_revision_number;
       end_revision.value.number = log_entry->revision;
 
-      SVN_ERR(svn_cmdline_printf(pool, _("\n")));
-      err = svn_client_diff5(diff_options,
-                             lb->target_url,
-                             &start_revision,
-                             lb->target_url,
-                             &end_revision,
-                             NULL,
-                             lb->depth,
-                             FALSE, /* ignore ancestry */
-                             TRUE, /* no diff deleted */
-                             FALSE, /* show copies as adds */
-                             FALSE, /* ignore content type */
-                             FALSE, /* use git diff format */
-                             svn_cmdline_output_encoding(pool),
-                             outfile,
-                             errfile,
-                             NULL,
-                             lb->ctx, pool);
-      if (err)
-        {
-          /* We get a "path not found" error in case the revision created
-           * lb->target_url. Try to show a diff from the parent instead. */
-          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-            {
-              const char *parent;
-              apr_pool_t *iterpool;
-
-              svn_error_clear(err);
-
-              parent = svn_uri_dirname(lb->target_url, pool);
-              iterpool = svn_pool_create(pool);
-              while (strcmp(parent, lb->target_url) != 0)
-                {
-                  svn_pool_clear(iterpool);
-                  err = svn_client_diff5(diff_options,
-                                         parent,
-                                         &start_revision,
-                                         parent,
-                                         &end_revision,
-                                         NULL,
-                                         lb->depth,
-                                         FALSE, /* ignore ancestry */
-                                         TRUE, /* no diff deleted */
-                                         FALSE, /* show copies as adds */
-                                         FALSE, /* ignore content type */
-                                         FALSE, /* use git diff format */
-                                         svn_cmdline_output_encoding(iterpool),
-                                         outfile,
-                                         errfile,
-                                         NULL,
-                                         lb->ctx, iterpool);
-                  if (err == SVN_NO_ERROR)
-                    break;
-                  else
-                    {
-                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-                        {
-                          svn_error_clear(err);
-                          parent = svn_uri_dirname(parent, pool);
-                          continue;
-                        }
-                      if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
-                          err->apr_err == SVN_ERR_AUTHZ_UNREADABLE ||
-                          err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
-                        {
-                          svn_error_clear(err);
-                          break;
-                        }
-                      return svn_error_trace(err);
-                    }
-                }
-              svn_pool_destroy(iterpool);
-            }
-          else
-            return svn_error_trace(err);
-        }
-
-      SVN_ERR(svn_cmdline_printf(pool, _("\n")));
+      SVN_ERR(svn_stream_printf(outstream, pool, _("\n")));
+      SVN_ERR(svn_client_diff_peg6(diff_options,
+                                   lb->target_path_or_url,
+                                   &lb->target_peg_revision,
+                                   &start_revision, &end_revision,
+                                   NULL,
+                                   lb->depth,
+                                   FALSE, /* ignore ancestry */
+                                   TRUE, /* no diff deleted */
+                                   FALSE, /* show copies as adds */
+                                   FALSE, /* ignore content type */
+                                   FALSE, /* use git diff format */
+                                   svn_cmdline_output_encoding(pool),
+                                   outstream,
+                                   errstream,
+                                   NULL,
+                                   lb->ctx, pool));
+      SVN_ERR(svn_stream_printf(outstream, pool, _("\n")));
+      SVN_ERR(svn_stream_close(outstream));
+      SVN_ERR(svn_stream_close(errstream));
     }
-
-  SVN_ERR(svn_cmdline_fflush(stdout));
-  SVN_ERR(svn_cmdline_fflush(stderr));
 
   if (log_entry->has_children)
     APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
@@ -435,7 +373,7 @@ log_entry_receiver_xml(void *baton,
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   char *revstr;
   const char *author;
   const char *date;
@@ -571,8 +509,6 @@ svn_cl__log(apr_getopt_t *os,
   struct log_receiver_baton lb;
   const char *target;
   int i;
-  svn_opt_revision_t peg_revision;
-  const char *true_path;
   apr_array_header_t *revprops;
 
   if (!opt_state->xml)
@@ -626,8 +562,6 @@ svn_cl__log(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  target = APR_ARRAY_IDX(targets, 0, const char *);
-
   /* Determine if they really want a two-revision range. */
   if (opt_state->used_change_arg)
     {
@@ -649,9 +583,15 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Strip peg revision. */
-  SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
-  APR_ARRAY_IDX(targets, 0, const char *) = true_path;
+  /* Parse the first target into path-or-url and peg revision. */
+  target = APR_ARRAY_IDX(targets, 0, const char *);
+  SVN_ERR(svn_opt_parse_path(&lb.target_peg_revision, &lb.target_path_or_url,
+                             target, pool));
+  if (lb.target_peg_revision.kind == svn_opt_revision_unspecified)
+    lb.target_peg_revision.kind = (svn_path_is_url(target)
+                                     ? svn_opt_revision_head
+                                     : svn_opt_revision_working);
+  APR_ARRAY_IDX(targets, 0, const char *) = lb.target_path_or_url;
 
   if (svn_path_is_url(target))
     {
@@ -670,8 +610,6 @@ svn_cl__log(apr_getopt_t *os,
 
   lb.ctx = ctx;
   lb.omit_log_message = opt_state->quiet;
-  SVN_ERR(svn_client_url_from_path2(&lb.target_url, true_path, ctx,
-                                    pool, pool));
   lb.show_diff = opt_state->show_diff;
   lb.depth = opt_state->depth == svn_depth_unknown ? svn_depth_infinity
                                                    : opt_state->depth;
@@ -722,7 +660,7 @@ svn_cl__log(apr_getopt_t *os,
             APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
         }
       SVN_ERR(svn_client_log5(targets,
-                              &peg_revision,
+                              &lb.target_peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
@@ -745,7 +683,7 @@ svn_cl__log(apr_getopt_t *os,
       if (!opt_state->quiet)
         APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
       SVN_ERR(svn_client_log5(targets,
-                              &peg_revision,
+                              &lb.target_peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,

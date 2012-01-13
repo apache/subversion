@@ -410,6 +410,12 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    when harvesting committables; that is, don't add a path to
    COMMITTABLES unless it's a member of one of those changelists.
 
+   IS_EXPLICIT_TARGET should always be passed as TRUE, except when
+   harvest_committables() calls itself in recursion. This provides a way to
+   tell whether LOCAL_ABSPATH was an original target or whether it was reached
+   by recursing deeper into a dir target. (This is used to skip all file
+   externals that aren't explicit commit targets.)
+
    If CANCEL_FUNC is non-null, call it with CANCEL_BATON to see
    if the user has cancelled the operation.
 
@@ -428,6 +434,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      apr_hash_t *changelists,
                      svn_boolean_t skip_files,
                      svn_boolean_t skip_dirs,
+                     svn_boolean_t is_explicit_target,
                      svn_client__check_url_kind_t check_url_func,
                      void *check_url_baton,
                      svn_cancel_func_t cancel_func,
@@ -543,10 +550,24 @@ harvest_committables(svn_wc_context_t *wc_ctx,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
-  /* ### in need of comment */
-  if (copy_mode
-      && is_update_root
-      && db_kind == svn_node_file)
+  /* Handle file externals.
+   * (IS_UPDATE_ROOT is more generally defined, but at the moment this
+   * condition matches only file externals.)
+   *
+   * Don't copy files that svn:externals brought into the WC. So in copy_mode,
+   * even explicit targets are skipped.
+   *
+   * Exclude file externals from recursion. Hande file externals only when
+   * passed as explicit target. Note that svn_client_commit6() passes all
+   * committable externals in as explicit targets iff they count.
+   *
+   * Also note that dir externals will never be reached recursively by this
+   * function, since svn_wc__node_get_children_of_working_node() (used below
+   * to recurse) does not return switched subdirs. */
+  if (is_update_root
+      && db_kind == svn_node_file
+      && (copy_mode
+          || ! is_explicit_target))
     {
       return SVN_NO_ERROR;
     }
@@ -606,7 +627,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           /* Determine from what parent we would be the deleted child */
           SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
-                                          NULL, NULL, wc_ctx,
+                                          NULL, NULL, NULL, wc_ctx,
                                           svn_dirent_dirname(local_abspath,
                                                              scratch_pool),
                                           FALSE, scratch_pool, scratch_pool));
@@ -663,7 +684,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           SVN_ERR(svn_wc__node_get_origin(NULL, &cf_rev,
                                       &cf_relpath, NULL,
-                                      NULL,
+                                      NULL, NULL,
                                       wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
 
@@ -841,6 +862,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                        changelists,
                                        (depth < svn_depth_files),
                                        (depth < svn_depth_immediates),
+                                       FALSE, /* IS_EXPLICIT_TARGET */
                                        check_url_func, check_url_baton,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
@@ -1010,13 +1032,13 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
    * Since we don't know what's included in the commit until we've
    * harvested all the targets, we can't reliably check this as we
    * go.  So in `danglers', we record named targets whose parents
-   * are unversioned, then after harvesting the total commit group, we
-   * check to make sure those parents are included.
+   * do not yet exist in the repository. Then after harvesting the total
+   * commit group, we check to make sure those parents are included.
    *
-   * Each key of danglers is an unversioned parent.  The (const char *)
-   * value is one of that parent's children which is named as part of
-   * the commit; the child is included only to make a better error
-   * message.
+   * Each key of danglers is a parent which does not exist in the
+   * repository.  The (const char *) value is one of that parent's
+   * children which is named as part of the commit; the child is
+   * included only to make a better error message.
    *
    * (The reason we don't bother to check unnamed -- i.e, implicit --
    * targets is that they can only join the commit if their parents
@@ -1100,6 +1122,22 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
           if (is_added)
             {
+              svn_boolean_t is_copy;
+              const char *copy_root_abspath;
+
+              /* Copies are always committed recursively as long as the
+               * copy root is in the commit target list.
+               * So for nodes copied along with a parent, the copy root path
+               * is the dangling parent. See issue #4059. */
+              SVN_ERR(svn_wc__node_get_origin(&is_copy,
+                                              NULL, NULL, NULL, NULL,
+                                              &copy_root_abspath,
+                                              ctx->wc_ctx,
+                                              target_abspath,
+                                              FALSE, iterpool, iterpool));
+              if (is_copy && strcmp(copy_root_abspath, target_abspath) != 0)
+                parent_abspath = copy_root_abspath;
+
               /* Copy the parent and target into pool; iterpool
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */
@@ -1125,6 +1163,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                    FALSE /* COPY_MODE_ROOT */,
                                    depth, just_locked, changelist_hash,
                                    FALSE, FALSE,
+                                   TRUE /* IS_EXPLICIT_TARGET */,
                                    check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    ctx->notify_func2, ctx->notify_baton2,
@@ -1147,31 +1186,31 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
       svn_pool_clear(iterpool);
 
-       if (! look_up_committable(*committables, dangling_parent, iterpool))
-         {
-           const char *dangling_child = svn__apr_hash_index_val(hi);
+      if (! look_up_committable(*committables, dangling_parent, iterpool))
+        {
+          const char *dangling_child = svn__apr_hash_index_val(hi);
 
-           if (ctx->notify_func2 != NULL)
-             {
-               svn_wc_notify_t *notify;
+          if (ctx->notify_func2 != NULL)
+            {
+              svn_wc_notify_t *notify;
 
-               notify = svn_wc_create_notify(dangling_child,
-                                             svn_wc_notify_failed_no_parent,
-                                             scratch_pool);
+              notify = svn_wc_create_notify(dangling_child,
+                                            svn_wc_notify_failed_no_parent,
+                                            scratch_pool);
 
-               ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
-             }
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+            }
 
-           return svn_error_createf(
-                            SVN_ERR_ILLEGAL_TARGET, NULL,
-                            _("'%s' is not under version control "
-                              "and is not part of the commit, "
-                              "yet its child '%s' is part of the commit"),
-                            /* Probably one or both of these is an entry, but
-                               safest to local_stylize just in case. */
-                            svn_dirent_local_style(dangling_parent, iterpool),
-                            svn_dirent_local_style(dangling_child, iterpool));
-         }
+          return svn_error_createf(
+                           SVN_ERR_ILLEGAL_TARGET, NULL,
+                           _("'%s' is not known to exist in the repository "
+                             "and is not part of the commit, "
+                             "yet its child '%s' is part of the commit"),
+                           /* Probably one or both of these is an entry, but
+                              safest to local_stylize just in case. */
+                           svn_dirent_local_style(dangling_parent, iterpool),
+                           svn_dirent_local_style(dangling_child, iterpool));
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -1218,6 +1257,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                FALSE,  /* JUST_LOCKED */
                                NULL,
                                FALSE, FALSE, /* skip files, dirs */
+                               TRUE, /* IS_EXPLICIT_TARGET (don't care) */
                                btn->check_url_func,
                                btn->check_url_baton,
                                btn->ctx->cancel_func,
@@ -1341,14 +1381,9 @@ svn_client__condense_commit_items(const char **base_url,
     {
       svn_client_commit_item3_t *this_item
         = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
-      size_t url_len = strlen(this_item->url);
-      size_t base_url_len = strlen(*base_url);
 
-      if (url_len > base_url_len)
-        this_item->session_relpath = svn_uri__is_child(*base_url,
-                                                       this_item->url, pool);
-      else
-        this_item->session_relpath = "";
+      this_item->session_relpath = svn_uri_skip_ancestor(*base_url,
+                                                         this_item->url, pool);
     }
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */

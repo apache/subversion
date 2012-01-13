@@ -83,8 +83,7 @@ svn_client__dirent_fetcher(void *baton,
     *dirents = NULL;
 
   if (old_url)
-    SVN_ERR(svn_client__ensure_ra_session_url(&old_url, dfb->ra_session,
-                                              old_url, scratch_pool));
+    SVN_ERR(svn_ra_reparent(dfb->ra_session, old_url, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -169,7 +168,7 @@ is_empty_wc(svn_boolean_t *clean_checkout,
    This is typically either the same as LOCAL_ABSPATH, or the
    immediate parent of LOCAL_ABSPATH.
 
-   If NOTIFY_SUMMARY is set (and there's a notification hander in
+   If NOTIFY_SUMMARY is set (and there's a notification handler in
    CTX), transmit the final update summary upon successful
    completion of the update.
 */
@@ -390,7 +389,9 @@ update_internal(svn_revnum_t *result_rev,
      invalid revnum, that means RA will use the latest revision.  */
   SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
                             revnum, target,
-                            depth_is_sticky ? depth : svn_depth_unknown,
+                            (!server_supports_depth || depth_is_sticky
+                             ? depth
+                             : svn_depth_unknown),
                             FALSE, update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within

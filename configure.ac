@@ -172,6 +172,18 @@ SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
 
+AC_ARG_ENABLE(sqlite-compatibility-version,
+  AS_HELP_STRING([--enable-sqlite-compatibility-version=X.Y.Z],
+                 [Allow binary to run against SQLite as old as ARG]),
+  [sqlite_compat_ver=$enableval],[sqlite_compat_ver=no])
+
+if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
+  SVN_SQLITE_VERNUM_PARSE([$sqlite_compat_ver],
+                          [sqlite_compat_ver_num])
+  CFLAGS="-DSVN_SQLITE_MIN_VERSION='\"$sqlite_compat_ver\"' $CFLAGS"
+  CFLAGS="-DSVN_SQLITE_MIN_VERSION_NUMBER=$sqlite_compat_ver_num $CFLAGS"
+fi
+
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution
@@ -572,7 +584,7 @@ dnl GPG Agent -------------------
 AC_ARG_WITH(gpg_agent,
 AS_HELP_STRING([--without-gpg-agent], 
                [Disable support for GPG-Agent]),
-               [with_gpg_agent=no], [with_gpg_agent=yes])
+               [], [with_gpg_agent=yes])
 AC_MSG_CHECKING([whether to support GPG-Agent])
 if test "$svn_enable_shared" != "yes"; then
   AC_MSG_RESULT([no (shared library support is disabled)])
@@ -780,6 +792,20 @@ if test "$svn_lib_kwallet" = "yes"; then
             [Defined if KWallet support is enabled])
 fi
 
+dnl plaintext passwords -------------------
+AC_ARG_ENABLE(plaintext-password-storage,
+AS_HELP_STRING([--disable-plaintext-password-storage],
+               [Disable on-disk caching of plaintext passwords and passphrases.
+                (Leaving this functionality enabled will not force Subversion
+                to store passwords in plaintext, but does permit users to
+                explicitly allow that behavior via runtime configuration.)]),
+[
+   if test "$enableval" = "no"; then
+      AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
+      AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
+                [Defined if plaintext password/passphrase storage is disabled])
+   fi
+])
 
 dnl Build and install rules -------------------
 

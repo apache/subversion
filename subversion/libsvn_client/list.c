@@ -32,6 +32,7 @@
 #include "client.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
 /* Get the directory entries of DIR at REV (relative to the root of
@@ -91,7 +92,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
     {
       svn_sort__item_t *item = &APR_ARRAY_IDX(array, i, svn_sort__item_t);
       const char *path;
-      svn_dirent_t *the_ent = apr_hash_get(tmpdirents, item->key, item->klen);
+      svn_dirent_t *the_ent = item->value;
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);
@@ -121,42 +122,21 @@ get_dir_contents(apr_uint32_t dirent_fields,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_list2(const char *path_or_url,
-                 const svn_opt_revision_t *peg_revision,
-                 const svn_opt_revision_t *revision,
-                 svn_depth_t depth,
-                 apr_uint32_t dirent_fields,
-                 svn_boolean_t fetch_locks,
-                 svn_client_list_func_t list_func,
-                 void *baton,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+/* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
+static svn_error_t *
+ra_stat_compatible(svn_ra_session_t *ra_session,
+                   svn_revnum_t rev,
+                   svn_dirent_t **dirent_p,
+                   apr_uint32_t dirent_fields,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
-  svn_dirent_t *dirent;
-  const char *url;
-  const char *repos_root;
-  const char *fs_path;
+  const char *repos_root, *url;
   svn_error_t *err;
-  apr_hash_t *locks;
-
-  /* We use the kind field to determine if we should recurse, so we
-     always need it. */
-  dirent_fields |= SVN_DIRENT_KIND;
-
-  /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
-                                           peg_revision,
-                                           revision, ctx, pool));
+  svn_dirent_t *dirent;
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-
-  SVN_ERR(svn_client__path_relative_to_root(&fs_path, ctx->wc_ctx, url,
-                                            repos_root, TRUE, ra_session,
-                                            pool, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &url, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 
@@ -240,6 +220,45 @@ svn_client_list2(const char *path_or_url,
   else if (err)
     return svn_error_trace(err);
 
+  *dirent_p = dirent;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t rev;
+  svn_dirent_t *dirent;
+  const char *url;
+  const char *fs_path;
+  svn_error_t *err;
+  apr_hash_t *locks;
+
+  /* We use the kind field to determine if we should recurse, so we
+     always need it. */
+  dirent_fields |= SVN_DIRENT_KIND;
+
+  /* Get an RA plugin for this filesystem object. */
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
+                                           &url, path_or_url, NULL,
+                                           peg_revision,
+                                           revision, ctx, pool));
+
+  SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &fs_path, url,
+                                              pool));
+
+  SVN_ERR(ra_stat_compatible(ra_session, rev, &dirent, dirent_fields,
+                             ctx, pool));
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                              _("URL '%s' non-existent in revision %ld"),

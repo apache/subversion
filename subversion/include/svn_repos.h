@@ -242,7 +242,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_recover_start,
 
   /** Upgrade has started. */
-  svn_repos_notify_upgrade_start
+  svn_repos_notify_upgrade_start,
+
+  /** A revision was skipped during loading. @since New in 1.8. */
+  svn_repos_notify_load_skipped_rev
 
 } svn_repos_notify_action_t;
 
@@ -300,10 +303,10 @@ typedef struct svn_repos_notify_t
       #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
 
-  /** For #svn_repos_notify_load_committed_rev, the revision committed. */
+  /** For #svn_repos_notify_load_node_done, the revision committed. */
   svn_revnum_t new_revision;
 
-  /** For #svn_repos_notify_load_committed_rev, the source revision, if
+  /** For #svn_repos_notify_load_node_done, the source revision, if
       different from @a new_revision, otherwise #SVN_INVALID_REVNUM.
       For #svn_repos_notify_load_txn_start, the source revision. */
   svn_revnum_t old_revision;
@@ -513,7 +516,29 @@ svn_repos_fs(svn_repos_t *repos);
  * source filesystem as part of the copy operation; currently, this
  * means deleting copied, unused logfiles for a Berkeley DB source
  * repository.
+ *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented by the filesystem backend, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/** 
+ * Like svn_repos_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_hotcopy(const char *src_path,
                   const char *dst_path,
@@ -1628,8 +1653,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
- * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
- * revprops named in the array (i.e. retrieve none if the array is empty).
+ * If @a revprops is NULL, retrieve all revision properties; else, retrieve
+ * only the revision properties named by the (const char *) array elements
+ * (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1746,11 +1772,6 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
- * If the mergeinfo for any path is inherited and
- * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
- * that path in @a *catalog will only contain merge source
- * path-revisions that actually exist in repository.
- *
  * If @a revision is #SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If @a include_descendants is TRUE, then additionally return the
@@ -1767,27 +1788,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  *
  * Use @a pool for all allocations.
  *
- * @since New in 1.7.
+ * @since New in 1.5.
  */
-svn_error_t *
-svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                            svn_repos_t *repos,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t revision,
-                            svn_mergeinfo_inheritance_t inherit,
-                            svn_boolean_t validate_inherited_mergeinfo,
-                            svn_boolean_t include_descendants,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool);
-
-/**
- * Similar to svn_repos_fs_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.6 API.
- */
-SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            svn_repos_t *repos,
@@ -2570,6 +2572,13 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If the dumpstream contains no UUID, then @a uuid_action is
  * ignored and the repository UUID is not touched.
  *
+ * @a start_rev and @a end_rev act as filters, the lower and upper
+ * (inclusive) range values of revisions in @a dumpstream which will
+ * be loaded.  Either both of these values are #SVN_INVALID_REVNUM (in
+ * which case no revision-based filtering occurs at all), or both are
+ * valid revisions (where @a start_rev is older than or equivalent to
+ * @a end_rev).
+ *
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
@@ -2591,8 +2600,38 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
  *
- * @since New in 1.7.
+ * @note If @a start_rev and @a end_rev are valid revisions, this
+ * function presumes the revisions as numbered in @a dumpstream only
+ * increase from the beginning of the stream to the end.  Gaps in the
+ * number sequence are ignored, but upon finding a revision number
+ * younger than the specified range, this function may stop loading
+ * new revisions regardless of their number.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_repos_load_fs4(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/** Similar to svn_repos_load_fs4(), but with @a start_rev and @a
+ * end_rev always passed as #SVN_INVALID_REVNUM.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_load_fs3(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
@@ -2781,6 +2820,13 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * UUID records in a manner consistent with @a uuid_action.  Use @a pool
  * to operate on the fs.
  *
+ * @a start_rev and @a end_rev act as filters, the lower and upper
+ * (inclusive) range values of revisions in @a dumpstream which will
+ * be loaded.  Either both of these values are #SVN_INVALID_REVNUM (in
+ * which case no revision-based filtering occurs at all), or both are
+ * valid revisions (where @a start_rev is older than or equivalent to
+ * @a end_rev).
+ *
  * If @a use_history is set, then the parser will require relative
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
@@ -2793,10 +2839,37 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * Print all parsing feedback to @a outstream (if non-@c NULL).
+ * @note If @a start_rev and @a end_rev are valid revisions, this
+ * function presumes the revisions as numbered in @a dumpstream only
+ * increase from the beginning of the stream to the end.  Gaps in the
+ * number sequence are ignored, but upon finding a revision number
+ * younger than the specified range, this function may stop loading
+ * new revisions regardless of their number.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_repos_get_fs_build_parser4(const svn_repos_parse_fns2_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_fs_build_parser4(), but with @a start_rev
+ * and @a end_rev always passed as #SVN_INVALID_REVNUM.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                void **parse_baton,
@@ -2939,6 +3012,9 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * required_access anywhere in the repository.  Set @a *access_granted
  * to TRUE if at least one path is accessible with the @a
  * required_access.
+ *
+ * For compatibility with 1.6, and earlier, @a repos_name can be NULL
+ * in which case it is equivalent to a @a repos_name of "".
  *
  * @since New in 1.3.
  */

@@ -28,7 +28,6 @@
 #include <apr.h>
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
-#include <apr_lib.h>     /* for apr_isspace() */
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
@@ -132,6 +131,19 @@ create_string(const char *data, apr_size_t size,
 
   return new_string;
 }
+
+static char empty_buffer[1] = {0};
+  
+svn_string_t *
+svn_string_create_empty(apr_pool_t *pool)
+{
+  svn_string_t *new_string = apr_palloc(pool, sizeof(*new_string));
+  new_string->data = empty_buffer;
+  new_string->len = 0;
+
+  return new_string;
+}
+
 
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
@@ -283,6 +295,17 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
   new_string->pool = pool;
 
   return new_string;
+}
+
+svn_stringbuf_t *
+svn_stringbuf_create_empty(apr_pool_t *pool)
+{
+  /* All instances share the same zero-length buffer.
+   * Some algorithms, however, assume that they may write
+   * the terminating zero. So, empty_buffer must be writable 
+   * (a simple (char *)"" will cause SEGFAULTs). */
+
+  return create_stringbuf(empty_buffer, 0, 0, pool);
 }
 
 svn_stringbuf_t *
@@ -619,12 +642,11 @@ svn_cstring_split_append(apr_array_header_t *array,
                          svn_boolean_t chop_whitespace,
                          apr_pool_t *pool)
 {
-  char *last;
   char *pats;
   char *p;
 
   pats = apr_pstrdup(pool, input);  /* strtok wants non-const data */
-  p = apr_strtok(pats, sep_chars, &last);
+  p = svn_cstring_tokenize(sep_chars, &pats);
 
   while (p)
     {
@@ -644,7 +666,7 @@ svn_cstring_split_append(apr_array_header_t *array,
       if (p[0] != '\0')
         APR_ARRAY_PUSH(array, const char *) = p;
 
-      p = apr_strtok(NULL, sep_chars, &last);
+      p = svn_cstring_tokenize(sep_chars, &pats);
     }
 
   return;
@@ -695,6 +717,47 @@ svn_cstring_match_list(const char *str, const apr_array_header_t *list)
   return FALSE;
 }
 
+char * 
+svn_cstring_tokenize(const char *sep, char **str)
+{
+    char *token;
+    const char * next;
+    char csep;
+
+    /* check parameters */
+    if ((sep == NULL) || (str == NULL) || (*str == NULL))
+        return NULL;
+
+    /* let APR handle edge cases and multiple separators */
+    csep = *sep;
+    if (csep == '\0' || sep[1] != '\0')
+      return apr_strtok(NULL, sep, str);
+
+    /* skip characters in sep (will terminate at '\0') */
+    token = *str;
+    while (*token == csep)
+        ++token;
+
+    if (!*token)          /* no more tokens */
+        return NULL;
+
+    /* skip valid token characters to terminate token and
+     * prepare for the next call (will terminate at '\0) 
+     */
+    next = strchr(token, csep);
+    if (next == NULL)
+      {
+        *str = token + strlen(token);
+      }
+    else
+      {
+        *(char *)next = '\0';
+        *str = (char *)next + 1;
+      }
+
+    return token;
+}
+
 int svn_cstring_count_newlines(const char *msg)
 {
   int count = 0;
@@ -724,8 +787,8 @@ svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *new_str = svn_stringbuf_create("", pool);
-  int sep_len = strlen(separator);
+  svn_stringbuf_t *new_str = svn_stringbuf_create_empty(pool);
+  size_t sep_len = strlen(separator);
   int i;
 
   for (i = 0; i < strings->nelts; i++)

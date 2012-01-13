@@ -147,8 +147,8 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
   /* Mergeinfo is a special case: here we merely say that the server
-   * knows how to handle mergeinfo and validate inherited
-   * mergeinfo -- whether the repository does too is a separate matter.
+   * knows how to handle mergeinfo -- whether the repository does too
+   * is a separate matter.
    *
    * Think of it as offering the client an early out: if the server
    * can't do merge-tracking, there's no point finding out of the
@@ -159,7 +159,6 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
    * server capability and remain agnostic about the repository).
    */
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO_VALIDATION);
 
   /* ### fork-control? */
 }
@@ -1181,7 +1180,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
   if (! doc)
     {
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   /* Sanity check. */
@@ -1192,7 +1191,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
          definitely no lock-tokens to harvest.  This is likely a
          request from an old client. */
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   if ((doc->root->ns == ns)
@@ -1218,7 +1217,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
   if (! child)
     {
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   /* Then look for N different <lock> structures within. */
@@ -1263,7 +1262,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
     }
 
   *locks = hash;
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 

@@ -131,6 +131,55 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/** See svn_wc__committable_externals_below(). */
+typedef struct svn_wc__committable_external_info_t {
+
+  /* The local absolute path where the external should be checked out. */
+  const char *local_abspath;
+
+  /* The relpath part of the source URL the external should be checked out
+   * from. */
+  const char *repos_relpath;
+
+  /* The root URL part of the source URL the external should be checked out
+   * from. */
+  const char *repos_root_url;
+
+  /* Set to either svn_kind_file or svn_kind_dir. */
+  svn_kind_t kind;
+
+} svn_wc__committable_external_info_t;
+
+/* Add svn_wc__committable_external_info_t* items to *EXTERNALS, describing
+ * 'committable' externals checked out below LOCAL_ABSPATH. Recursively find
+ * all nested externals (externals defined inside externals).
+ *
+ * In this context, a 'committable' external belongs to the same repository as
+ * LOCAL_ABSPATH, is not revision-pegged and is currently checked out in the
+ * WC. (Local modifications are not tested for.)
+ *
+ * *EXTERNALS must be initialized either to NULL or to a pointer created with
+ * apr_array_make(..., sizeof(svn_wc__committable_external_info_t *)). If
+ * *EXTERNALS is initialized to NULL, an array will be allocated from
+ * RESULT_POOL as necessary. If no committable externals are found,
+ * *EXTERNALS is left unchanged.
+ *
+ * DEPTH limits the recursion below LOCAL_ABSPATH.
+ *
+ * This function will not find externals defined in some parent WC above
+ * LOCAL_ABSPATH's WC-root.
+ *
+ * ###TODO: Add a WRI_ABSPATH (wc root indicator) separate from LOCAL_ABSPATH,
+ * to allow searching any wc-root for externals under LOCAL_ABSPATH, not only
+ * LOCAL_ABSPATH's most immediate wc-root. */
+svn_error_t *
+svn_wc__committable_externals_below(apr_array_header_t **externals,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_depth_t depth,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 /* Gets a mapping from const char * local abspaths of externals to the const
    char * local abspath of where they are defined for all externals defined
    at or below LOCAL_ABSPATH.
@@ -339,10 +388,10 @@ svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           apr_pool_t *scratch_pool);
 
 /**
- * Like svn_wc__node_get_children2(), except also include any path that was
- * a child of a deleted directory that existed at @a dir_abspath, even if
- * that directory is now scheduled to be replaced by the working node at
- * @a dir_abspath.
+ * Like svn_wc__node_get_children_of_working_node(), except also include any
+ * path that was a child of a deleted directory that existed at
+ * @a dir_abspath, even if that directory is now scheduled to be replaced by
+ * the working node at @a dir_abspath.
  */
 svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,
@@ -354,13 +403,15 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 
 /**
- * Fetch the repository root information for a given @a local_abspath into
- * @a *repos_root_url and @a repos_uuid. Use @a wc_ctx to access the working copy
+ * Fetch the repository root information for the working version
+ * of the node at @a local_abspath into @a *repos_root_url
+ * and @a *repos_uuid. Use @a wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
- * @a result_pool for result allocations. Note: the result may be NULL if the
- * given node has no repository root associated with it (e.g. locally added).
+ * @a result_pool for result allocations. Note: the results will be NULL if
+ * the node does not exist or is not under version control. If the node is
+ * locally added, return the repository root it will have if committed.
  *
- * Either input value may be NULL, indicating no interest.
+ * Either output argument may be NULL, indicating no interest.
  */
 svn_error_t *
 svn_wc__node_get_repos_info(const char **repos_root_url,
@@ -428,6 +479,12 @@ svn_wc__node_get_url(const char **url,
  * If not NULL, sets @a revision, @a repos_relpath, @a repos_root_url and
  * @a repos_uuid to the original (if a copy) or their current values.
  *
+ * If @a copy_root_abspath is not NULL, and @a *is_copy indicates that the
+ * node was copied, set @a *copy_root_abspath to the local absolute path of
+ * the root of the copied subtree containing the node. If the copied node is
+ * a root by itself, @a *copy_root_abspath will match @a local_abspath (but
+ * won't necessarily point to the same string in memory).
+ *
  * If @a scan_deleted is TRUE, determine the origin of the deleted node. If
  * @a scan_deleted is FALSE, return NULL, SVN_INVALID_REVNUM or FALSE for
  * deleted nodes.
@@ -440,6 +497,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t scan_deleted,
@@ -748,6 +806,35 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/** Evaluate the expression @a expr while holding a write lock on
+ * @a local_abspath.
+ *
+ * @a expr must yield an (svn_error_t *) error code.  If the error code
+ * is not #SVN_NO_ERROR, cause the function using this macro to return
+ * the error to its caller.
+ *
+ * If @a lock_anchor is TRUE, determine if @a local_abspath has an anchor
+ * that should be locked instead.
+ *
+ * Use @a wc_ctx for working copy access.
+ *
+ * The lock is guaranteed to be released after evaluating @a expr.
+ */
+#define SVN_WC__CALL_WITH_WRITE_LOCK(expr, wc_ctx, local_abspath,             \
+                                     lock_anchor, scratch_pool)               \
+  do {                                                                        \
+    svn_error_t *svn_wc__err1, *svn_wc__err2;                                 \
+    const char *svn_wc__lock_root_abspath;                                    \
+    SVN_ERR(svn_wc__acquire_write_lock(&svn_wc__lock_root_abspath, wc_ctx,    \
+                                       local_abspath, lock_anchor,            \
+                                       scratch_pool, scratch_pool));          \
+    svn_wc__err1 = svn_error_trace(expr);                                     \
+    svn_wc__err2 = svn_wc__release_write_lock(                                \
+                     wc_ctx, svn_wc__lock_root_abspath, scratch_pool);        \
+    SVN_ERR(svn_error_compose_create(svn_wc__err1, svn_wc__err2));            \
+  } while (0)
+
+
 /**
  * Calculates the schedule and copied status of a node as that would
  * have been stored in an svn_wc_entry_t instance.
@@ -866,19 +953,6 @@ svn_wc__min_max_revisions(svn_revnum_t *min_revision,
                           const char *local_abspath,
                           svn_boolean_t committed,
                           apr_pool_t *scratch_pool);
-
-/* Indicate in @a *is_sparse_checkout whether any of the nodes within
- * @a local_abspath is sparse, using context @a wc_ctx.
- * Use @a scratch_pool for temporary allocations.
- *
- * This function provides a subset of the functionality of
- * svn_wc_revision_status2() and is more efficient if the caller
- * doesn't need all information returned by svn_wc_revision_status2(). */
-svn_error_t *
-svn_wc__is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *scratch_pool);
 
 /* Indicate in @a is_switched whether any node beneath @a local_abspath
  * is switched, using context @a wc_ctx.
@@ -1132,6 +1206,22 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
 
+
+/* Alternative version of svn_wc_delete4().
+ * It can delete multiple TARGETS more efficiently (within a single sqlite
+ * transaction per working copy), but lacks support for moves. */
+svn_error_t *
+svn_wc__delete_many(svn_wc_context_t *wc_ctx,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t keep_local,
+                    svn_boolean_t delete_unversioned_target,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool);
+
+
 /* If the node at LOCAL_ABSPATH was moved away set *MOVED_TO_ABSPATH to
  * the absolute path of the copied move-target node, and *COPY_OP_ROOT_ABSPATH
  * to the absolute path of the root node of the copy operation.
@@ -1168,6 +1258,50 @@ svn_wc__node_was_moved_here(const char **moved_from_abspath,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/* During an upgrade to wc-ng, supply known details about an existing
+ * external.  The working copy will suck in and store the information supplied
+ * about the existing external at @a local_abspath. */
+svn_error_t *
+svn_wc__upgrade_add_external_info(svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  svn_node_kind_t kind,
+                                  const char *def_local_abspath,
+                                  const char *repos_relpath,
+                                  const char *repos_root_url,
+                                  const char *repos_uuid,
+                                  svn_revnum_t def_peg_revision,
+                                  svn_revnum_t def_revision,
+                                  apr_pool_t *scratch_pool);
+
+/* If the URL for @a item is relative, then using the repository root
+   URL @a repos_root_url and the parent directory URL @parent_dir_url,
+   resolve it into an absolute URL and save it in @a *resolved_url.
+
+   Regardless if the URL is absolute or not, if there are no errors,
+   the URL returned in @a *resolved_url will be canonicalized.
+
+   The following relative URL formats are supported:
+
+     ../    relative to the parent directory of the external
+     ^/     relative to the repository root
+     //     relative to the scheme
+     /      relative to the server's hostname
+
+   The ../ and ^/ relative URLs may use .. to remove path elements up
+   to the server root.
+
+   The external URL should not be canonicalized before calling this function,
+   as otherwise the scheme relative URL '//host/some/path' would have been
+   canonicalized to '/host/some/path' and we would not be able to match on
+   the leading '//'. */
+svn_error_t *
+svn_wc__resolve_relative_external_url(const char **resolved_url,
+                                      const svn_wc_external_item2_t *item,
+                                      const char *repos_root_url,
+                                      const char *parent_dir_url,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
