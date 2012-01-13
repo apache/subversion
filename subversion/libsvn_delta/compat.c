@@ -221,6 +221,9 @@ process_actions(void *edit_baton,
   apr_hash_t *props = NULL;
   svn_boolean_t need_add = FALSE;
   svn_boolean_t need_delete = FALSE;
+  svn_boolean_t need_copy = FALSE;
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
   apr_array_header_t *children;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
@@ -317,9 +320,9 @@ process_actions(void *edit_baton,
             {
               struct copy_args *c_args = action->args;
 
-              SVN_ERR(svn_editor_copy(eb->editor, c_args->copyfrom_path,
-                                      c_args->copyfrom_rev, path,
-                                      SVN_INVALID_REVNUM));
+              copyfrom_path = c_args->copyfrom_path;
+              copyfrom_rev = c_args->copyfrom_rev;
+              need_copy = TRUE;
               break;
             }
 
@@ -339,7 +342,7 @@ process_actions(void *edit_baton,
   /* We've now got a wholistic view of what has happened to this node,
    * so we can call our own editor APIs on it. */
 
-  if (need_delete && !need_add)
+  if (need_delete && !need_add && !need_copy)
     {
       /* If we're only doing a delete, do it here. */
       SVN_ERR(svn_editor_delete(eb->editor, path, delete_revnum));
@@ -357,23 +360,29 @@ process_actions(void *edit_baton,
           SVN_ERR(svn_editor_add_file(eb->editor, path, checksum, contents,
                                       props, delete_revnum));
         }
-    }
-  else
-    {
-      if (props)
-        {
-          /* We fetched and modified the props in some way. Apply 'em now that
-             we have the new set.  */
-          SVN_ERR(svn_editor_set_props(eb->editor, path, props_base_revision,
-                                       props, contents == NULL));
-        }
 
-      if (contents)
-        {
-          /* If we have an content for this node, set it now. */
-          SVN_ERR(svn_editor_set_text(eb->editor, path, text_base_revision,
-                                      checksum, contents));
-        }
+      return SVN_NO_ERROR;
+    }
+
+  if (need_copy)
+    {
+      SVN_ERR(svn_editor_copy(eb->editor, copyfrom_path, copyfrom_rev, path,
+                              delete_revnum));
+    }
+
+  if (props)
+    {
+      /* We fetched and modified the props in some way. Apply 'em now that
+         we have the new set.  */
+      SVN_ERR(svn_editor_set_props(eb->editor, path, props_base_revision,
+                                   props, contents == NULL));
+    }
+
+  if (contents)
+    {
+      /* If we have an content for this node, set it now. */
+      SVN_ERR(svn_editor_set_text(eb->editor, path, text_base_revision,
+                                  checksum, contents));
     }
 
   return SVN_NO_ERROR;
@@ -1299,6 +1308,15 @@ copy_cb(void *baton,
   struct editor_baton *eb = baton;
 
   SVN_ERR(ensure_root_opened(eb));
+
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      /* We need to add the delete action. */
+
+      SVN_ERR(build(eb, ACTION_DELETE, dst_relpath, svn_kind_unknown,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+    }
 
   SVN_ERR(build(eb, ACTION_COPY, dst_relpath, svn_kind_unknown,
                 src_relpath, src_revision, NULL, NULL, SVN_INVALID_REVNUM,
