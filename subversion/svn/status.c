@@ -432,7 +432,8 @@ svn_cl__print_status_xml(const char *cwd_abspath,
   const char *local_abspath = status->local_abspath;
   svn_boolean_t tree_conflicted = FALSE;
 
-  if (status->node_status == svn_wc_status_none)
+  if (status->node_status == svn_wc_status_none
+      && status->repos_node_status == svn_wc_status_none)
     return SVN_NO_ERROR;
 
   if (status->conflicted)
