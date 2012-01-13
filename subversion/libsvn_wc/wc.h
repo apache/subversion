@@ -739,6 +739,7 @@ svn_error_t *
 svn_wc__fetch_kind_func(svn_kind_t *kind,
                         void *baton,
                         const char *path,
+                        svn_revnum_t base_revision,
                         apr_pool_t *scratch_pool);
 
 /* Using a BATON of struct shim_fetch_baton, return PROPS for PATH. */
