@@ -56,6 +56,9 @@ dav_svn__new_error(apr_pool_t *pool,
   /* old code assumed errno was valid; keep assuming */
   return dav_new_error(pool, status, error_id, errno, desc);
 #else
+
+  errno = 0; /* For the same reason as in dav_svn__new_error_tag */
+
   return dav_new_error(pool, status, error_id, desc);
 #endif
 }
