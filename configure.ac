@@ -793,8 +793,8 @@ if test "$svn_lib_kwallet" = "yes"; then
 fi
 
 dnl plaintext passwords -------------------
-AC_ARG_ENABLE(plaintext-passwords,
-AS_HELP_STRING([--disable-plaintext-passwords],
+AC_ARG_ENABLE(plaintext-password-storage,
+AS_HELP_STRING([--disable-plaintext-password-storage],
                [Disable on-disk caching of plaintext passwords and passphrases.
                 (Leaving this functionality enabled will not force Subversion
                 to store passwords in plaintext, but does permit users to
