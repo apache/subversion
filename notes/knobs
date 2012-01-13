@@ -22,6 +22,8 @@ The SVN source code boasts a number of enviroment variable or C pre-
 processor enabled tweaks that are mainly aimed at developer support.
 If you introduce new ones, please document them here.
 
+Macros documented in the configure-generated ../subversion/svn_private_config.h
+file are not repeated here.
 
 2 Defines and Environment Variables
 ===================================
