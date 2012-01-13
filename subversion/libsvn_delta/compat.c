@@ -132,6 +132,9 @@ struct ev2_dir_baton
   struct ev2_edit_baton *eb;
   const char *path;
   svn_revnum_t base_revision;
+
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
 };
 
 struct ev2_file_baton
@@ -483,6 +486,14 @@ ev2_add_directory(const char *path,
 
       *kind = svn_kind_dir;
       SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
+
+      if (pb->copyfrom_path)
+        {
+          const char *basename = svn_relpath_basename(path, result_pool);
+          cb->copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
+                                          "/", basename, NULL);
+          cb->copyfrom_rev = pb->copyfrom_rev;
+        }
     }
   else
     {
@@ -492,6 +503,9 @@ ev2_add_directory(const char *path,
       args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
       args->copyfrom_rev = copyfrom_revision;
       SVN_ERR(add_action(pb->eb, path, ACTION_COPY, args));
+
+      cb->copyfrom_path = args->copyfrom_path;
+      cb->copyfrom_rev = args->copyfrom_rev;
     }
 
   return SVN_NO_ERROR;
@@ -510,6 +524,16 @@ ev2_open_directory(const char *path,
   db->eb = pb->eb;
   db->path = apr_pstrdup(result_pool, path);
   db->base_revision = base_revision;
+
+  if (pb->copyfrom_path)
+    {
+      /* We are inside a copy. */
+      const char *basename = svn_relpath_basename(path, result_pool);
+
+      db->copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
+                                      "/", basename, NULL);
+      db->copyfrom_rev = pb->copyfrom_rev;
+    }
 
   *child_baton = db;
   return SVN_NO_ERROR;
@@ -613,10 +637,26 @@ ev2_open_file(const char *path,
   fb->path = apr_pstrdup(result_pool, path);
   fb->base_revision = base_revision;
 
-  SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
-                                  fb->eb->fetch_base_baton,
-                                  path, base_revision,
-                                  result_pool, result_pool));
+  if (pb->copyfrom_path)
+    {
+      /* We're in a copied directory, so the delta base is going to be
+         based up on the copy source. */
+      const char *basename = svn_relpath_basename(path, result_pool);
+      const char *copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
+                                              "/", basename, NULL);
+
+      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                      fb->eb->fetch_base_baton,
+                                      copyfrom_path, pb->copyfrom_rev,
+                                      result_pool, result_pool));
+    }
+  else
+    {
+      SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
+                                      fb->eb->fetch_base_baton,
+                                      path, base_revision,
+                                      result_pool, result_pool));
+    }
 
   *file_baton = fb;
   return SVN_NO_ERROR;
