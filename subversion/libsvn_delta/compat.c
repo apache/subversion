@@ -93,29 +93,13 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * large amount of information in the dir batons, and then process it in the
  * close_directory() handler. */
 
-typedef svn_error_t *(*start_edit_func_t)(
-    void *baton,
-    svn_revnum_t base_revision);
-
-typedef svn_error_t *(*target_revision_func_t)(
-    void *baton,
-    svn_revnum_t target_revision,
-    apr_pool_t *scratch_pool);
-
-/* svn_editor__See insert_shims() for more information. */
-struct extra_baton
-{
-  start_edit_func_t start_edit;
-  target_revision_func_t target_revision;
-  void *baton;
-};
 
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
-  struct extra_baton *exb;
+  struct svn_delta__extra_baton *exb;
 
   svn_boolean_t *found_abs_paths; /* Did we strip an incoming '/' from the
                                      paths?  */
@@ -802,8 +786,8 @@ ev2_abort_edit(void *edit_baton,
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
-static svn_error_t *
-delta_from_editor(const svn_delta_editor_t **deditor,
+svn_error_t *
+svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
                   svn_boolean_t *found_abs_paths,
@@ -811,7 +795,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
                   void *fetch_props_baton,
                   svn_delta_fetch_base_func_t fetch_base_func,
                   void *fetch_base_baton,
-                  struct extra_baton *exb,
+                  struct svn_delta__extra_baton *exb,
                   apr_pool_t *pool)
 {
   /* Static 'cause we don't want it to be on the stack. */
@@ -1610,9 +1594,9 @@ target_revision_func(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-editor_from_delta(svn_editor_t **editor_p,
-                  struct extra_baton **exb,
+svn_error_t *
+svn_delta__editor_from_delta(svn_editor_t **editor_p,
+                  struct svn_delta__extra_baton **exb,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
                   svn_boolean_t *send_abs_paths,
@@ -1641,7 +1625,7 @@ editor_from_delta(svn_editor_t **editor_p,
       abort_cb
     };
   struct editor_baton *eb = apr_pcalloc(result_pool, sizeof(*eb));
-  struct extra_baton *extra_baton = apr_pcalloc(result_pool,
+  struct svn_delta__extra_baton *extra_baton = apr_pcalloc(result_pool,
                                                 sizeof(*extra_baton));
 
   eb->deditor = deditor;
@@ -1713,9 +1697,9 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
 
   /* The "extra baton" is a set of functions and a baton which allows the
      shims to communicate additional events to each other.
-     editor_from_delta() returns a pointer to this baton, which
-     delta_from_editor() should then store. */
-  struct extra_baton *exb;
+     svn_delta__editor_from_delta() returns a pointer to this baton, which
+     svn_delta__delta_from_editor() should then store. */
+  struct svn_delta__extra_baton *exb;
 
   /* The reason this is a pointer is that we don't know the appropriate
      value until we start receiving paths.  So process_actions() sets the
@@ -1723,14 +1707,15 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
-  SVN_ERR(editor_from_delta(&editor, &exb, deditor_in, dedit_baton_in,
+  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb, deditor_in,
+                            dedit_baton_in,
                             found_abs_paths, NULL, NULL,
                             shim_callbacks->fetch_kind_func,
                             shim_callbacks->fetch_baton,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_baton,
                             result_pool, scratch_pool));
-  SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
+  SVN_ERR(svn_delta__delta_from_editor(deditor_out, dedit_baton_out, editor,
                             found_abs_paths,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_baton,
