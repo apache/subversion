@@ -916,9 +916,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "# store-plaintext-passwords = no"                                   NL
         "# store-ssl-client-cert-pp-plaintext = no"                          NL
-#else
-        ;
 #endif
+        ;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
