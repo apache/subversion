@@ -378,9 +378,12 @@ password_get_gpg_agent(const char **password,
 }
 
 
-/* Implementation of svn_auth__password_set_t that stores the password
-   in GPG Agent.  Except, you know, it doesn't.  But if it could,
-   wouldn't *that* be something?! */
+/* Implementation of svn_auth__password_set_t that would store the
+   password in GPG Agent if that's how this particular integration
+   worked.  But it isn't.  GPG Agent stores the password provided by
+   the user via the pinentry program immediately upon its provision
+   (and regardless of its accuracy as passwords go), so there's
+   nothing really to do here.  */
 static svn_boolean_t
 password_set_gpg_agent(apr_hash_t *creds,
                        const char *realmstring,
