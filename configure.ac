@@ -792,6 +792,20 @@ if test "$svn_lib_kwallet" = "yes"; then
             [Defined if KWallet support is enabled])
 fi
 
+dnl plaintext passwords -------------------
+AC_ARG_ENABLE(plaintext-passwords,
+AS_HELP_STRING([--disable-plaintext-passwords],
+               [Disable on-disk caching of plaintext passwords and passphrases.
+                (Leaving this functionality enabled will not force Subversion
+                to store passwords in plaintext, but does permit users to
+                explicitly allow that behavior via runtime configuration.)]),
+[
+   if test "$enableval" = "no"; then
+      AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
+      AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
+                [Defined if plaintext password/passphrase storage is disabled])
+   fi
+])
 
 dnl Build and install rules -------------------
 
