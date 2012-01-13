@@ -1455,8 +1455,7 @@ drive_tree(struct operation *op,
       
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
-        SVN_ERR(editor->open_file(path, parent_op->baton,
-                                  parent_op->base_revision,
+        SVN_ERR(editor->open_file(path, parent_op->baton, op->base_revision,
                                   scratch_pool, &file_baton));
 
       else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
