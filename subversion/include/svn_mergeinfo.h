@@ -166,9 +166,10 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo, const char *input,
                     apr_pool_t *pool);
 
 /** Calculate the delta between two mergeinfos, @a mergefrom and @a mergeto
- * (which may be @c NULL), and place the result in @a *deleted and @a
- * *added (neither output argument may be @c NULL), both allocated in @a
- * result_pool.
+ * (either or both of which may be @c NULL meaning an empty mergeinfo).
+ * Place the result in @a *deleted and @a *added (neither output argument
+ * may be @c NULL), both allocated in @a result_pool.  The resulting
+ * @a *deleted and @a *added will not be null.
  *
  * @a consider_inheritance determines how the rangelists in the two
  * hashes are compared for equality.  If @a consider_inheritance is FALSE,
