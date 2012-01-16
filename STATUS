@@ -119,8 +119,8 @@ Candidate changes:
    Notes:
      r1221767 is code formatting only, needed to avoid a conflict
    Votes:
-     +1: cmpilato, rhuijben (r1221780 only)
-     +1: philip
+     +1: cmpilato (r1221780 only)
+     +1: philip, rhuijben
 
  * r1222628, r1222644, r1222699
    Improve another error message coming from SASL.
@@ -143,13 +143,6 @@ Candidate changes:
      Client can assert or SEGV.
    Votes:
      +1: philip, rhuijben
-
- * r1229677
-   Fix a status SEGV caused by an "obstructing" unversioned directory.
-   Justification:
-     Client SEGV reported by user.
-   Votes:
-     +1: philip, rhuijben, steveking
 
  * r1230212
    Fix for large files on 32-bit systems
@@ -197,3 +190,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1229677
+   Fix a status SEGV caused by an "obstructing" unversioned directory.
+   Justification:
+     Client SEGV reported by user.
+   Votes:
+     +1: philip, rhuijben, steveking
