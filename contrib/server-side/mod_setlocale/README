@@ -20,7 +20,7 @@ ENTIRE* httpd process. This also sets the native encoding of mod_dav_svn
 and in consequence eliminates all of above problems.
 
 THIS IS USEFUL AS A QUICK WORKAROUND, BUT IT CAN'T REALLY BE CONSIDERED
-SAFE. If your httpd's job is to only serve Subersion, you may decide that
+SAFE. If your httpd's job is to only serve Subversion, you may decide that
 this module has little (or no?) adverse effects. BUT THIS IS JUST A HACK.
 
 *** WARNING! ***
