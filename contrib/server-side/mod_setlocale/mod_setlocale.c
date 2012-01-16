@@ -115,7 +115,7 @@ static void *
 setlocale_create_server_config(apr_pool_t *p, server_rec *s)
 {
   setlocale_config_rec *cfg = apr_pcalloc(p, sizeof(*cfg));
-  ap_log_error(APLOG_MARK, APLOG_EMERG, 0, s, 
+  ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, 
                "create:  0x%08x", cfg);
   return cfg;
 }
