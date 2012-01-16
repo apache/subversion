@@ -1607,7 +1607,7 @@ diff_prepare_repos_repos(const char **url1,
                                  *url1, *rev1, *rev2);
       else
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 _("Diff targets '%s and '%s' were not found "
+                                 _("Diff targets '%s' and '%s' were not found "
                                    "in the repository at revisions '%ld' and "
                                    "'%ld'"),
                                  *url1, *url2, *rev1, *rev2);

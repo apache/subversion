@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_props.h"
 
@@ -52,6 +53,8 @@ struct log_baton
   */
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
+  const char *cdata_encoding; /* encoding of CDATA (NULL or "base64") */
+
   /* Allocate log message information.
    * NOTE: this pool may be cleared multiple times as log messages are
    * received.
@@ -162,14 +165,27 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_comment:
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
+      lb->cdata_encoding = NULL;
+          
+      /* Some tags might contain encoded CDATA. */
+      if ((elm->id == ELEM_comment) ||
+          (elm->id == ELEM_creator_displayname) ||
+          (elm->id == ELEM_log_date) ||
+          (elm->id == ELEM_rev_prop))
+        {
+          lb->cdata_encoding = svn_xml_get_attr_value("encoding", atts);
+          if (lb->cdata_encoding)
+            lb->cdata_encoding = apr_pstrdup(lb->subpool, lb->cdata_encoding);
+        }
+
+      /* revprop tags have names. */
       if (elm->id == ELEM_revprop)
         {
-          lb->revprop_name = apr_pstrdup(lb->subpool,
-                                         svn_xml_get_attr_value("name",
-                                                                atts));
-          if (lb->revprop_name == NULL)
+          const char *revprop_name = svn_xml_get_attr_value("name", atts);
+          if (revprop_name == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                      _("Missing name attr in revprop element"));
+          lb->revprop_name = apr_pstrdup(lb->subpool, revprop_name);
         }
       break;
     case ELEM_has_children:
@@ -235,6 +251,36 @@ log_start_element(int *elem, void *baton, int parent,
   return SVN_NO_ERROR;
 }
 
+/*
+ * Set *DECODED_CDATA to a copy of current CDATA being tracked in LB,
+ * decoded as necessary, and allocated from LB->subpool.
+ */
+static svn_error_t *
+maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
+                       struct log_baton *lb)
+{
+  if (lb->cdata_encoding)
+    {
+      svn_string_t in;
+      in.data = lb->cdata->data;
+      in.len = lb->cdata->len;
+
+      /* Check for a known encoding type.  This is easy -- there's
+         only one.  */
+      if (strcmp(lb->cdata_encoding, "base64") != 0)
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
+
+      *decoded_cdata = svn_base64_decode_string(&in, lb->subpool);
+    }
+  else
+    {
+      *decoded_cdata = svn_string_create_from_buf(lb->cdata, lb->subpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+                       
 
 /*
  * This implements the `svn_ra_neon__xml_endelm_cb' prototype.
@@ -244,6 +290,10 @@ log_end_element(void *baton, int state,
                 const char *nspace, const char *name)
 {
   struct log_baton *lb = baton;
+  const svn_string_t *decoded_cdata;
+
+  if (lb->want_cdata)
+    SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, lb));
 
   switch (state)
     {
@@ -256,8 +306,7 @@ log_end_element(void *baton, int state,
           if (! lb->log_entry->revprops)
             lb->log_entry->revprops = apr_hash_make(lb->subpool);
           apr_hash_set(lb->log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                       APR_HASH_KEY_STRING,
-                       svn_string_create_from_buf(lb->cdata, lb->subpool));
+                       APR_HASH_KEY_STRING, decoded_cdata);
         }
       break;
     case ELEM_log_date:
@@ -266,8 +315,7 @@ log_end_element(void *baton, int state,
           if (! lb->log_entry->revprops)
             lb->log_entry->revprops = apr_hash_make(lb->subpool);
           apr_hash_set(lb->log_entry->revprops, SVN_PROP_REVISION_DATE,
-                       APR_HASH_KEY_STRING,
-                       svn_string_create_from_buf(lb->cdata, lb->subpool));
+                       APR_HASH_KEY_STRING, decoded_cdata);
         }
       break;
     case ELEM_added_path:
@@ -289,8 +337,7 @@ log_end_element(void *baton, int state,
       if (! lb->log_entry->revprops)
         lb->log_entry->revprops = apr_hash_make(lb->subpool);
       apr_hash_set(lb->log_entry->revprops, lb->revprop_name,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create_from_buf(lb->cdata, lb->subpool));
+                   APR_HASH_KEY_STRING, decoded_cdata);
       break;
     case ELEM_comment:
       if (lb->want_message)
@@ -298,8 +345,7 @@ log_end_element(void *baton, int state,
           if (! lb->log_entry->revprops)
             lb->log_entry->revprops = apr_hash_make(lb->subpool);
           apr_hash_set(lb->log_entry->revprops, SVN_PROP_REVISION_LOG,
-                       APR_HASH_KEY_STRING,
-                       svn_string_create_from_buf(lb->cdata, lb->subpool));
+                       APR_HASH_KEY_STRING, decoded_cdata);
         }
       break;
     case ELEM_log_item:
@@ -380,8 +426,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
      Maybe Greg can explain?  Meanwhile, I'm tentatively using
      "request_*" for my local vars below. */
 
-  static const char log_request_head[]
-    = "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
+  static const char log_request_head[] = "<S:log-report xmlns:S=\""
+    SVN_XML_NAMESPACE "\">" DEBUG_CR "<S:encode-binary-props/>";
 
   static const char log_request_tail[] = "</S:log-report>" DEBUG_CR;
 
@@ -404,23 +450,17 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (discover_changed_paths)
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:discover-changed-paths/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:discover-changed-paths/>");
     }
 
   if (strict_node_history)
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:strict-node-history/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:strict-node-history/>");
     }
 
   if (include_merged_revisions)
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:include-merged-revisions/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:include-merged-revisions/>");
     }
 
   if (revprops)
@@ -449,9 +489,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
     }
   else
     {
-      svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(pool,
-                                            "<S:all-revprops/>"));
+      svn_stringbuf_appendcstr(request_body, "<S:all-revprops/>");
       lb.want_author = lb.want_date = lb.want_message = TRUE;
       want_custom_revprops = TRUE;
     }
@@ -494,6 +532,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.cdata = svn_stringbuf_create_empty(pool);
   lb.log_entry = svn_log_entry_create(pool);
   lb.want_cdata = NULL;
+  lb.cdata_encoding = NULL;
   reset_log_item(&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send

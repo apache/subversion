@@ -1816,6 +1816,8 @@ parse_querystring(request_rec *r, const char *query,
 
   if (prevstr)
     {
+      while (*prevstr == 'r')
+        prevstr++;
       peg_rev = SVN_STR_TO_REV(prevstr);
       if (!SVN_IS_VALID_REVNUM(peg_rev))
         return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
@@ -1833,6 +1835,8 @@ parse_querystring(request_rec *r, const char *query,
   wrevstr = apr_table_get(pairs, "r");
   if (wrevstr)
     {
+      while (*wrevstr == 'r')
+        wrevstr++;
       working_rev = SVN_STR_TO_REV(wrevstr);
       if (!SVN_IS_VALID_REVNUM(working_rev))
         return dav_svn__new_error(pool, HTTP_BAD_REQUEST, 0,
@@ -3240,8 +3244,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                      resource->pool, resource->pool);
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                        "couldn't fetch dirents of SVNParentPath",
-                                        resource->pool);
+                                        "could not fetch dirents of "
+                                        "SVNParentPath", resource->pool);
 
           /* convert an io dirent hash to an fs dirent hash. */
           entries = apr_hash_make(resource->pool);
@@ -3259,18 +3263,21 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               if (dirent->kind == svn_node_file && dirent->special)
                 {
                   svn_node_kind_t resolved_kind;
-                  const char *name = key;
+                  const char *link_path = 
+                    svn_dirent_join(fs_parent_path, key, resource->pool);
 
-                  serr = svn_io_check_resolved_path(name, &resolved_kind,
+                  serr = svn_io_check_resolved_path(link_path, &resolved_kind,
                                                     resource->pool);
-                  if (serr != NULL)
+                  if (serr)
                     return dav_svn__convert_err(serr,
                                                 HTTP_INTERNAL_SERVER_ERROR,
-                                                "couldn't fetch dirents "
-                                                "of SVNParentPath",
+                                                "could not resolve symlink "
+                                                "dirent of SVNParentPath",
                                                 resource->pool);
                   if (resolved_kind != svn_node_dir)
                     continue;
+                  
+                  dirent->kind = svn_node_dir;
                 }
               else if (dirent->kind != svn_node_dir)
                 continue;
@@ -4467,7 +4474,12 @@ int dav_svn__method_post(request_rec *r)
   /* If something went wrong above, we'll generate a response back to
      the client with (hopefully) some helpful information. */
   if (derr)
-    return dav_svn__error_response_tag(r, derr);
+    {
+      /* POST is not a DAV method and so mod_dav isn't involved and
+         won't log this error.  Do it explicitly. */
+      dav_svn__log_err(r, derr, APLOG_ERR);
+      return dav_svn__error_response_tag(r, derr);
+    }
 
   return OK;
 }

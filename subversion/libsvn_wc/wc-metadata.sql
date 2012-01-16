@@ -383,8 +383,9 @@ CREATE TABLE NODES (
      perhaps add a column called "moved_from". */
 
   /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is implied by a different node with
-     a moved_to column pointing at this node. */
+     copied). This is set on all the nodes in the moved tree.  The source of
+     the move is implied by a different node with a moved_to column pointing
+     at the root node of the moved tree. */
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this

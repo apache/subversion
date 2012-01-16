@@ -916,8 +916,9 @@ typedef struct svn_delta_editor_t
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a subdirectory in the edit source, but
-   * cannot be conveyed to the edit consumer (perhaps because of
-   * authorization restrictions).
+   * cannot be conveyed to the edit consumer.  Currently, this would
+   * only occur because of authorization restrictions, but may change
+   * in the future.
    *
    * Any temporary allocations may be performed in @a scratch_pool.
    */
@@ -1040,8 +1041,9 @@ typedef struct svn_delta_editor_t
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a file in the edit source, but cannot be
-   * conveyed to the edit consumer (perhaps because of authorization
-   * restrictions).
+   * cannot be conveyed to the edit consumer.  Currently, this would
+   * only occur because of authorization restrictions, but may change
+   * in the future.
    *
    * Any temporary allocations may be performed in @a scratch_pool.
    */
@@ -1095,6 +1097,7 @@ typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
   apr_hash_t **props,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
@@ -1108,6 +1111,7 @@ typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
   svn_kind_t *kind,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *scratch_pool
   );
 
@@ -1121,6 +1125,7 @@ typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
   const char **filename,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
@@ -1134,11 +1139,9 @@ typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
 typedef struct svn_delta_shim_callbacks_t
 {
   svn_delta_fetch_props_func_t fetch_props_func;
-  void *fetch_props_baton;
   svn_delta_fetch_kind_func_t fetch_kind_func;
-  void *fetch_kind_baton;
   svn_delta_fetch_base_func_t fetch_base_func;
-  void *fetch_base_baton;
+  void *fetch_baton;
 } svn_delta_shim_callbacks_t;
 
 /** Return a collection of default shim functions in @a result_pool.

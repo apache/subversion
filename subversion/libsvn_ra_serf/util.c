@@ -383,10 +383,10 @@ static svn_error_t *
 load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
                  apr_pool_t *pool)
 {
-  char *files, *file, *last;
+  char *files, *file;
   files = apr_pstrdup(pool, authorities);
 
-  while ((file = apr_strtok(files, ";", &last)) != NULL)
+  while ((file = svn_cstring_tokenize(";", &files)) != NULL)
     {
       serf_ssl_certificate_t *ca_cert;
       apr_status_t status = serf_ssl_load_cert_file(&ca_cert, file, pool);
@@ -400,7 +400,6 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
              _("Invalid config: unable to load certificate file '%s'"),
              svn_dirent_local_style(file, pool));
         }
-      files = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -478,7 +477,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 {
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
-  apr_status_t status = SVN_NO_ERROR;
+  apr_status_t status = APR_SUCCESS;
 
   svn_error_t *err = conn_setup(sock,
                                 read_bkt,

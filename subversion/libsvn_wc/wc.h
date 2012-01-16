@@ -620,6 +620,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             const char **repos_relpath,
                             const char **repos_root_url,
                             const char **repos_uuid,
+                            const char **copy_root_abspath,
                             svn_wc__db_t *db,
                             const char *local_abspath,
                             svn_boolean_t scan_deleted,
@@ -738,6 +739,7 @@ svn_error_t *
 svn_wc__fetch_kind_func(svn_kind_t *kind,
                         void *baton,
                         const char *path,
+                        svn_revnum_t base_revision,
                         apr_pool_t *scratch_pool);
 
 /* Using a BATON of struct shim_fetch_baton, return PROPS for PATH. */
@@ -745,6 +747,7 @@ svn_error_t *
 svn_wc__fetch_props_func(apr_hash_t **props,
                          void *baton,
                          const char *path,
+                         svn_revnum_t base_revision,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
@@ -753,6 +756,7 @@ svn_error_t *
 svn_wc__fetch_base_func(const char **filename,
                         void *baton,
                         const char *path,
+                        svn_revnum_t base_revision,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

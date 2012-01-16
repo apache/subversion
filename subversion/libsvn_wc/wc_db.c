@@ -3781,6 +3781,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
                           apr_int64_t repos_id,
                           const char *repos_relpath,
                           svn_revnum_t revision,
+                          svn_boolean_t is_move,
                           apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *children;
@@ -3898,13 +3899,15 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                              STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
+      /* Perhaps we should avoid setting moved_here to 0 and leave it
+         null instead? */
       SVN_ERR(svn_sqlite__bindf(stmt, "issisti",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_dirname(dst_relpath, iterpool),
                         presence_map, dst_presence,
-                        (apr_int64_t)0));
+                        (apr_int64_t)(is_move ? 1 : 0)));
 
       if (src_op_depth > 0)
         SVN_ERR(svn_sqlite__bind_int64(stmt, 8, src_op_depth));
@@ -3965,7 +3968,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
                          src_wcroot, child_src_relpath, src_op_depth,
                          dst_wcroot, child_dst_relpath, dst_op_depth,
                          del_op_depth,
-                         repos_id, child_repos_relpath, revision,
+                         repos_id, child_repos_relpath, revision, is_move,
                          scratch_pool));
     }
 
@@ -4040,7 +4043,7 @@ op_copy_shadowed_layer_txn(void * baton, svn_sqlite__db_t *sdb,
                         ocb->src_wcroot, ocb->src_relpath, src_op_depth,
                         ocb->dst_wcroot, ocb->dst_relpath, dst_op_depth,
                         del_op_depth,
-                        repos_id, repos_relpath, revision,
+                        repos_id, repos_relpath, revision, ocb->is_move,
                         scratch_pool));
 
   return SVN_NO_ERROR;
@@ -4050,6 +4053,7 @@ svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
                                   const char *src_abspath,
                                   const char *dst_abspath,
+                                  svn_boolean_t is_move,
                                   apr_pool_t *scratch_pool)
 {
   struct op_copy_baton ocb = {0};
@@ -4069,6 +4073,7 @@ svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
 
+  ocb.is_move = is_move;
   ocb.work_items = NULL;
 
   /* Call with the sdb in src_wcroot. It might call itself again to
@@ -6355,11 +6360,8 @@ delete_node(void *baton,
           /* The node has already been moved, possibly along with a parent,
            * and is being moved again. Update the existing moved_to path
            * in the BASE node. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                            STMT_UPDATE_MOVED_TO_RELPATH));
-          SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                                    moved_from_relpath, b->moved_to_relpath));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(delete_update_movedto(wcroot, moved_from_relpath,
+                                        b->moved_to_relpath, scratch_pool));
         }
 
       /* If a subtree is being moved-away, we need to update moved-to
@@ -6548,12 +6550,8 @@ delete_node(void *baton,
       if (b->moved_to_relpath)
         {
           /* Record moved-to relpath in BASE. */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                            STMT_UPDATE_MOVED_TO_RELPATH));
-          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
-                                    wcroot->wc_id, local_relpath,
-                                    b->moved_to_relpath));
-          SVN_ERR(svn_sqlite__step_done(stmt));
+          SVN_ERR(delete_update_movedto(wcroot, local_relpath,
+                                        b->moved_to_relpath, scratch_pool));
         }
 
       /* Delete the node and possible descendants. */
@@ -7226,7 +7224,7 @@ read_children_info(void *baton,
   svn_boolean_t have_row;
   const char *repos_root_url = NULL;
   const char *repos_uuid = NULL;
-  apr_int64_t last_repos_id;
+  apr_int64_t last_repos_id = INVALID_REPOS_ID;
   apr_hash_t *nodes = rci->nodes;
   apr_hash_t *conflicts = rci->conflicts;
   apr_pool_t *result_pool = rci->result_pool;
@@ -7294,20 +7292,34 @@ read_children_info(void *baton,
             }
           else
             {
+              const char *last_repos_root_url = NULL;
+
               apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
-              if (!repos_root_url)
+              if (!repos_root_url ||
+                  (last_repos_id != INVALID_REPOS_ID &&
+                   repos_id != last_repos_id))
                 {
+                  last_repos_root_url = repos_root_url;
                   err = fetch_repos_info(&repos_root_url, &repos_uuid,
                                          wcroot->sdb, repos_id, result_pool);
                   if (err)
                     SVN_ERR(svn_error_compose_create(err,
-                                                     svn_sqlite__reset(stmt)));
-                  last_repos_id = repos_id;
+                                                 svn_sqlite__reset(stmt)));
                 }
+
+              if (last_repos_id == INVALID_REPOS_ID)
+                last_repos_id = repos_id;
 
               /* Assume working copy is all one repos_id so that a
                  single cached value is sufficient. */
-              SVN_ERR_ASSERT(repos_id == last_repos_id);
+              if (repos_id != last_repos_id)
+                return svn_error_createf(
+                         SVN_ERR_WC_DB_ERROR, NULL,
+                         _("The node '%s' comes from unexpected repository "
+                           "'%s', expected '%s'; if this node is a file "
+                           "external using the correct URL in the external "
+                           "definition can fix the problem, see issue #4087"),
+                         child_relpath, repos_root_url, last_repos_root_url);
               child->repos_root_url = repos_root_url;
               child->repos_uuid = repos_uuid;
             }

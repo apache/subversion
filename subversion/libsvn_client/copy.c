@@ -98,7 +98,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_wc__node_get_origin(NULL, &src_revnum,
                                       &repos_relpath, &repos_root_url,
-                                      NULL,
+                                      NULL, NULL,
                                       ctx->wc_ctx, local_abspath, FALSE,
                                       pool, pool));
 
@@ -113,20 +113,11 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
-      /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
-         reparent to the target URL here, just to keep the code simple.
-         We could, as an alternative, first see if the target URL was a
-         child of the session URL and use the relative "remainder",
-         falling back to this reparenting as necessary.  */
-      const char *old_session_url = NULL;
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
-                                                ra_session, src_url, pool));
+      /* Fetch any existing (explicit) mergeinfo. */
       SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
-                                              "", src_revnum,
+                                              src_url, src_revnum,
                                               svn_mergeinfo_inherited,
                                               TRUE, pool));
-      if (old_session_url)
-        SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
 
   *target_mergeinfo = src_mergeinfo;
@@ -981,7 +972,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
       else
         {
-          const char *old_url = NULL;
+          const char *old_url;
 
           src_rel = NULL;
           SVN_ERR_ASSERT(! is_move);
@@ -2127,7 +2118,7 @@ try_copy(const apr_array_header_t *sources,
                   SVN_ERR(svn_wc__node_get_origin(NULL, &copyfrom_rev,
                                                   &copyfrom_repos_relpath,
                                                   &copyfrom_repos_root_url,
-                                                  NULL,
+                                                  NULL, NULL,
                                                   ctx->wc_ctx,
                                                   pair->src_abspath_or_url,
                                                   TRUE, iterpool, iterpool));

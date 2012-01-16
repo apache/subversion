@@ -1649,7 +1649,7 @@ tweak_statushash(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Returns the URL for DB, or NULL: */
+/* Returns the URL for DB */
 static const char *
 find_dir_repos_relpath(const struct dir_baton *db, apr_pool_t *pool)
 {
@@ -1666,14 +1666,11 @@ find_dir_repos_relpath(const struct dir_baton *db, apr_pool_t *pool)
       /* Note that status->repos_relpath could be NULL in the case of a missing
        * directory, which means we need to recurse up another level to get
        * a useful relpath. */
-      if (status)
+      if (status && status->repos_relpath)
         return status->repos_relpath;
 
       repos_relpath = find_dir_repos_relpath(pb, pool);
-      if (repos_relpath)
-        return svn_relpath_join(repos_relpath, db->name, pool);
-      else
-        return NULL;
+      return svn_relpath_join(repos_relpath, db->name, pool);
     }
 }
 
@@ -2369,19 +2366,15 @@ close_file(void *file_baton,
           const char *dir_repos_relpath = find_dir_repos_relpath(fb->dir_baton,
                                                                  pool);
 
-          if (dir_repos_relpath)
-            {
-              /* repos_lock still uses the deprecated filesystem absolute path
-                 format */
+          /* repos_lock still uses the deprecated filesystem absolute path
+             format */
+          const char *repos_relpath = svn_relpath_join(dir_repos_relpath,
+                                                       fb->name, pool);
 
-              const char *repos_relpath = svn_relpath_join(dir_repos_relpath,
-                                                           fb->name, pool);
-
-              repos_lock = apr_hash_get(fb->edit_baton->wb.repos_locks,
-                                        svn_fspath__join("/", repos_relpath,
-                                                         pool),
-                                        APR_HASH_KEY_STRING);
-            }
+          repos_lock = apr_hash_get(fb->edit_baton->wb.repos_locks,
+                                    svn_fspath__join("/", repos_relpath,
+                                                     pool),
+                                    APR_HASH_KEY_STRING);
         }
     }
   else
@@ -2548,15 +2541,13 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
 
   sfb = apr_palloc(result_pool, sizeof(*sfb));
   sfb->db = wc_ctx->db;
-  sfb->base_abspath = eb->target_abspath;
+  sfb->base_abspath = eb->anchor_abspath;
   sfb->fetch_base = FALSE;
 
   shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
-  shim_callbacks->fetch_kind_baton = sfb;
   shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
-  shim_callbacks->fetch_props_baton = sfb;
   shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
-  shim_callbacks->fetch_base_baton = sfb;
+  shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks,

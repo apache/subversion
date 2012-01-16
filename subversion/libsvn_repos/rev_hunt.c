@@ -1252,8 +1252,8 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
   const apr_array_header_t *old;
   apr_array_header_t *new_merged_path_revs;
   apr_pool_t *iterpool, *last_pool;
-  apr_array_header_t *merged_path_revisions = apr_array_make(pool, 0,
-                                                sizeof(struct path_revision *));
+  apr_array_header_t *merged_path_revisions =
+    apr_array_make(pool, 0, sizeof(struct path_revision *));
 
   old = mainline_path_revisions;
   iterpool = svn_pool_create(pool);

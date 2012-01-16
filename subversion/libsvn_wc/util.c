@@ -539,6 +539,7 @@ svn_error_t *
 svn_wc__fetch_kind_func(svn_kind_t *kind,
                         void *baton,
                         const char *path,
+                        svn_revnum_t base_revision,
                         apr_pool_t *scratch_pool)
 {
   struct svn_wc__shim_fetch_baton_t *sfb = baton;
@@ -556,6 +557,7 @@ svn_error_t *
 svn_wc__fetch_props_func(apr_hash_t **props,
                          void *baton,
                          const char *path,
+                         svn_revnum_t base_revision,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -588,6 +590,7 @@ svn_error_t *
 svn_wc__fetch_base_func(const char **filename,
                         void *baton,
                         const char *path,
+                        svn_revnum_t base_revision,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -612,6 +615,13 @@ svn_wc__fetch_base_func(const char **filename,
     }
   else if (err)
     return svn_error_trace(err);
+
+  if (checksum == NULL)
+    {
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, sfb->db, local_abspath,
                                    checksum, scratch_pool, scratch_pool));
 

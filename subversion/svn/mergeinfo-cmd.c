@@ -353,6 +353,11 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   SVN_ERR(svn_client__peg_resolve(&target, NULL, target_peg,
                                   ctx, pool, pool));
 
+  SVN_ERR_W(svn_cl__check_related_source_and_target(source_peg->path_or_url, &source_peg->peg_revision,
+                                                    target_peg->path_or_url, &target_peg->peg_revision,
+                                                    ctx, pool),
+            _("Source and target must be different but related branches"));
+
   /* Locate the source branch: the first argument or automatic.
    *
    * ### Better, perhaps, to always discover the "default" source branch,

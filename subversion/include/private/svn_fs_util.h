@@ -44,7 +44,11 @@ extern "C" {
    ignored) we want any paths that are physically stored in the
    underlying database to look consistent.  Specifically, absolute
    filesystem paths should begin with '/', and all redundant and trailing '/'
-   characters be removed.  */
+   characters be removed.
+
+   This is similar to svn_fspath__canonicalize() but doesn't treat "."
+   segments as special.
+*/
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 

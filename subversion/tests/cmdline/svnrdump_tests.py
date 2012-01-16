@@ -70,6 +70,28 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
+def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
+  """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
+  by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
+  SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
+  re-dumped to do the match, which should generate the same dumpfile as
+  dumping SVNRDUMP_SBOX."""
+
+  svnrdump_contents = svntest.actions.run_and_verify_dump(
+                                                    svnrdump_sbox.repo_dir)
+
+  svnadmin_sbox = svnrdump_sbox.clone_dependent()
+  svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
+  svntest.main.create_repos(svnadmin_sbox.repo_dir)
+
+  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile)
+
+  svnadmin_contents = svntest.actions.run_and_verify_dump(
+                                                    svnadmin_sbox.repo_dir)
+
+  svntest.verify.compare_and_display_lines(
+    "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
+
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
@@ -108,11 +130,13 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                           expected_dumpfile_name),
                              'rb').readlines()
     svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
-
-  # Compare the output from stdout
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
-    None, mismatched_headers_re)
+    # Compare the output from stdout
+    svntest.verify.compare_and_display_lines(
+      "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+      None, mismatched_headers_re)
+    
+  else:
+    compare_repos_dumps(sbox, svnadmin_dumpfile)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   expect_deltas = True):
@@ -155,9 +179,12 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                           expected_dumpfile_name),
                              'rb').readlines()
 
-  # Compare the output from stdout
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+    # Compare the output from stdout
+    svntest.verify.compare_and_display_lines(
+      "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+
+  else:
+    compare_repos_dumps(sbox, svnrdump_dumpfile)
 
 ######################################################################
 # Tests
@@ -297,11 +324,13 @@ def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
+@XFail()
 def only_trunk_dump(sbox):
   "dump: subdirectory"
   run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
                 expected_dumpfile_name="trunk-only.expected.dump")
 
+@XFail()
 def only_trunk_A_with_changes_dump(sbox):
   "dump: subdirectory with changes on root"
   run_dump_test(sbox, "trunk-A-changes.dump", subdir="/trunk/A",

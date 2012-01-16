@@ -642,12 +642,11 @@ svn_cstring_split_append(apr_array_header_t *array,
                          svn_boolean_t chop_whitespace,
                          apr_pool_t *pool)
 {
-  char *last;
   char *pats;
   char *p;
 
   pats = apr_pstrdup(pool, input);  /* strtok wants non-const data */
-  p = apr_strtok(pats, sep_chars, &last);
+  p = svn_cstring_tokenize(sep_chars, &pats);
 
   while (p)
     {
@@ -667,7 +666,7 @@ svn_cstring_split_append(apr_array_header_t *array,
       if (p[0] != '\0')
         APR_ARRAY_PUSH(array, const char *) = p;
 
-      p = apr_strtok(NULL, sep_chars, &last);
+      p = svn_cstring_tokenize(sep_chars, &pats);
     }
 
   return;
@@ -716,6 +715,47 @@ svn_cstring_match_list(const char *str, const apr_array_header_t *list)
     }
 
   return FALSE;
+}
+
+char * 
+svn_cstring_tokenize(const char *sep, char **str)
+{
+    char *token;
+    const char * next;
+    char csep;
+
+    /* check parameters */
+    if ((sep == NULL) || (str == NULL) || (*str == NULL))
+        return NULL;
+
+    /* let APR handle edge cases and multiple separators */
+    csep = *sep;
+    if (csep == '\0' || sep[1] != '\0')
+      return apr_strtok(NULL, sep, str);
+
+    /* skip characters in sep (will terminate at '\0') */
+    token = *str;
+    while (*token == csep)
+        ++token;
+
+    if (!*token)          /* no more tokens */
+        return NULL;
+
+    /* skip valid token characters to terminate token and
+     * prepare for the next call (will terminate at '\0) 
+     */
+    next = strchr(token, csep);
+    if (next == NULL)
+      {
+        *str = token + strlen(token);
+      }
+    else
+      {
+        *(char *)next = '\0';
+        *str = (char *)next + 1;
+      }
+
+    return token;
 }
 
 int svn_cstring_count_newlines(const char *msg)

@@ -684,7 +684,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
 
   /* Test: YCA(iota@2, A/iota@2) is iota@1. */
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor_relpath, &yc_ancestor_rev,
+            &yc_ancestor_relpath, NULL, &yc_ancestor_rev,
             svn_path_url_add_component2(repos_url, "iota", pool), 2,
             svn_path_url_add_component2(repos_url, "A/iota", pool), 2,
             ctx, pool));
@@ -705,7 +705,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
 
   /* Test: YCA(''@0, A/ROOT@3) is ''@0 (handled as a special case). */
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor_relpath, &yc_ancestor_rev,
+            &yc_ancestor_relpath, NULL, &yc_ancestor_rev,
             svn_path_url_add_component2(repos_url, "", pool), 0,
             svn_path_url_add_component2(repos_url, "A/ROOT", pool), 3,
             ctx, pool));

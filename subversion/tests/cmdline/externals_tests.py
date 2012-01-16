@@ -2651,6 +2651,59 @@ def include_immediate_dir_externals(sbox):
     None, '--include-externals', '--depth=immediates', X)
 
 
+@Issue(4085)
+@XFail()
+def shadowing(sbox):
+  "external shadows an existing dir"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  # Setup external: /A/B/F as 'C' child of /A
+  externals_prop = "^/A/B/F C\n"
+
+  raised = False
+  try:
+    change_external(sbox.ospath('A'), externals_prop, commit=False)
+  except:
+    raised = True
+  if not raised:
+    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+
+# Test for issue #4093 'remapping a file external can segfault due to
+# "deleted" props'.
+@Issue(4093)
+def remap_file_external_with_prop_del(sbox):
+  "file external remap segfaults due to deleted props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path  = os.path.join(wc_dir, "A")
+  mu_path = os.path.join(wc_dir, "A", "mu")
+
+  # Add a property to A/mu
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'propname', 'propval', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'New property on a file',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Add a new file external A/external pointing to ^/A/mu
+  externals_prop = "^/A/mu external\n"
+  change_external(A_path, externals_prop)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Change A/external to point to ^/iota
+  externals_prop = "^/iota external\n"
+  change_external(A_path, externals_prop)
+
+  # Now update to bring the new external down.
+  # This previously segfaulted as described in
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2694,6 +2747,8 @@ test_list = [ None,
               copy_file_externals,
               include_externals,
               include_immediate_dir_externals,
+              shadowing,
+              remap_file_external_with_prop_del,
              ]
 
 if __name__ == '__main__':

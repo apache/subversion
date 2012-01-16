@@ -479,6 +479,12 @@ svn_wc__node_get_url(const char **url,
  * If not NULL, sets @a revision, @a repos_relpath, @a repos_root_url and
  * @a repos_uuid to the original (if a copy) or their current values.
  *
+ * If @a copy_root_abspath is not NULL, and @a *is_copy indicates that the
+ * node was copied, set @a *copy_root_abspath to the local absolute path of
+ * the root of the copied subtree containing the node. If the copied node is
+ * a root by itself, @a *copy_root_abspath will match @a local_abspath (but
+ * won't necessarily point to the same string in memory).
+ *
  * If @a scan_deleted is TRUE, determine the origin of the deleted node. If
  * @a scan_deleted is FALSE, return NULL, SVN_INVALID_REVNUM or FALSE for
  * deleted nodes.
@@ -491,6 +497,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t scan_deleted,

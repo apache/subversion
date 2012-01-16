@@ -22,6 +22,8 @@ The SVN source code boasts a number of enviroment variable or C pre-
 processor enabled tweaks that are mainly aimed at developer support.
 If you introduce new ones, please document them here.
 
+Macros documented in the configure-generated ../subversion/svn_private_config.h
+file are not repeated here.
 
 2 Defines and Environment Variables
 ===================================
@@ -33,6 +35,8 @@ DEFAULT_HTTP_LIBRARY
 MAX_SECS_TO_LINGER
 SUFFIX_LINES_TO_KEEP
 SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
+SVN_FS_FS_MAX_LINEAR_DELTIFICATION
+SVN_FS_FS_MAX_DELTIFICATION_WALK
 SVN_UNALIGNED_ACCESS_IS_OK
 
 2.2 Features
@@ -44,6 +48,8 @@ SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
 SVN_USE_WIN32_CRASHHANDLER
 SVN_DAV_SEND_VTXN_NAME
 SVN_DISABLE_PREFIX_SUFFIX_SCANNING
+SVN_FS_FS_DELTIFY_DIRECTORIES
+SVN_FS_FS_DELTIFY_PROPS
 SVN_SQLITE_MIN_VERSION_NUMBER
 SVN_SQLITE_MIN_VERSION
 
@@ -125,7 +131,25 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     natural integers
   Suggested: 1, 2, 3, 4, 5, 7, 11
 
-3.6 SVN_UNALIGNED_ACCESS_IS_OK
+3.6 SVN_FS_FS_MAX_LINEAR_DELTIFICATION
+
+  Scope:     libsvn_fs_fs
+  Purpose:   max length + 1 of the linear deltification history
+             before skip-deltification kicks in
+  Default:   16
+  Range:     natural integers
+  Suggested: 2, 4, 8, 16, 32, 64
+
+3.7 SVN_FS_FS_MAX_DELTIFICATION_WALK
+
+  Scope:     libsvn_fs_fs
+  Purpose:   max skip deltification range. Change histories
+             longer than that will be restarted with a fulltext.
+  Default:   1023
+  Range:     natural integers
+  Suggested: 1, 2, 3, 4, 5, 7, 11
+
+3.8 SVN_UNALIGNED_ACCESS_IS_OK
 
   Scope:     (global)
   Purpose:   enable data accesss optimizations.
@@ -207,7 +231,27 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: not defined
 
-4.8 SVN_SQLITE_MIN_VERSION_NUMBER
+4.8 SVN_FS_FS_DELTIFY_DIRECTORIES
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Define this symbol to enable directory deltification in FSFS.
+             When activated, previous versions of Subversion will still be
+             able to read from and write to this repository.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined
+
+4.9 SVN_FS_FS_DELTIFY_PROPS
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Define this symbol to enable node property deltification in
+             FSFS.  When activated, previous versions of Subversion will
+             still be able to read from and write to this repository.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
+
+4.10 SVN_SQLITE_MIN_VERSION_NUMBER
 
   Scope:     libsvn_subr
   Purpose:   The minimum SQLite version to have run-time support for.
@@ -215,7 +259,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   SQLITE_VERSION_NUMBER (i.e., the compile-time-sqlite version)
   Suggested: not defined (to use default)
 
-4.9 SVN_SQLITE_MIN_VERSION
+4.11 SVN_SQLITE_MIN_VERSION
 
   Scope:     libsvn_subr
   Purpose:   See SVN_SQLITE_MIN_VERSION_NUMBER.  The two must be overridden

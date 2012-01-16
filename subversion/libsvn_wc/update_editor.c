@@ -4716,6 +4716,46 @@ close_edit(void *edit_baton,
 }
 
 
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct svn_wc__shim_fetch_baton_t *sfb = baton;
+  const char *local_abspath = svn_dirent_join(sfb->base_abspath, path,
+                                              scratch_pool);
+  svn_error_t *err;
+
+  if (sfb->fetch_base)
+    err = svn_wc__db_base_get_props(props, sfb->db, local_abspath, result_pool,
+                                    scratch_pool);
+  else
+    err = svn_wc__db_read_props(props, sfb->db, local_abspath,
+                                result_pool, scratch_pool);
+
+  /* If the path doesn't exist, just return an empty set of props. */
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *props = apr_hash_make(result_pool);
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  /* Add a bogus LOCK_TOKEN if we don't already have one, so as to catch
+     any deletions thereto. */
+  if (!apr_hash_get(*props, SVN_PROP_ENTRY_LOCK_TOKEN, APR_HASH_KEY_STRING))
+    {
+      apr_hash_set(*props, SVN_PROP_ENTRY_LOCK_TOKEN, APR_HASH_KEY_STRING,
+                   svn_string_create("This is completely bogus", result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Returning editors. ***/
 
@@ -4988,15 +5028,13 @@ make_editor(svn_revnum_t *target_revision,
 
   sfb = apr_palloc(result_pool, sizeof(*sfb));
   sfb->db = db;
-  sfb->base_abspath = eb->target_abspath;
+  sfb->base_abspath = eb->anchor_abspath;
   sfb->fetch_base = TRUE;
 
   shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
-  shim_callbacks->fetch_kind_baton = sfb;
-  shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
-  shim_callbacks->fetch_props_baton = sfb;
+  shim_callbacks->fetch_props_func = fetch_props_func;
   shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
-  shim_callbacks->fetch_base_baton = sfb;
+  shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, result_pool, scratch_pool));

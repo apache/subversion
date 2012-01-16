@@ -627,7 +627,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           /* Determine from what parent we would be the deleted child */
           SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
-                                          NULL, NULL, wc_ctx,
+                                          NULL, NULL, NULL, wc_ctx,
                                           svn_dirent_dirname(local_abspath,
                                                              scratch_pool),
                                           FALSE, scratch_pool, scratch_pool));
@@ -684,7 +684,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           SVN_ERR(svn_wc__node_get_origin(NULL, &cf_rev,
                                       &cf_relpath, NULL,
-                                      NULL,
+                                      NULL, NULL,
                                       wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
 
@@ -1032,13 +1032,13 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
    * Since we don't know what's included in the commit until we've
    * harvested all the targets, we can't reliably check this as we
    * go.  So in `danglers', we record named targets whose parents
-   * are unversioned, then after harvesting the total commit group, we
-   * check to make sure those parents are included.
+   * do not yet exist in the repository. Then after harvesting the total
+   * commit group, we check to make sure those parents are included.
    *
-   * Each key of danglers is an unversioned parent.  The (const char *)
-   * value is one of that parent's children which is named as part of
-   * the commit; the child is included only to make a better error
-   * message.
+   * Each key of danglers is a parent which does not exist in the
+   * repository.  The (const char *) value is one of that parent's
+   * children which is named as part of the commit; the child is
+   * included only to make a better error message.
    *
    * (The reason we don't bother to check unnamed -- i.e, implicit --
    * targets is that they can only join the commit if their parents
@@ -1122,6 +1122,22 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
           if (is_added)
             {
+              svn_boolean_t is_copy;
+              const char *copy_root_abspath;
+
+              /* Copies are always committed recursively as long as the
+               * copy root is in the commit target list.
+               * So for nodes copied along with a parent, the copy root path
+               * is the dangling parent. See issue #4059. */
+              SVN_ERR(svn_wc__node_get_origin(&is_copy,
+                                              NULL, NULL, NULL, NULL,
+                                              &copy_root_abspath,
+                                              ctx->wc_ctx,
+                                              target_abspath,
+                                              FALSE, iterpool, iterpool));
+              if (is_copy && strcmp(copy_root_abspath, target_abspath) != 0)
+                parent_abspath = copy_root_abspath;
+
               /* Copy the parent and target into pool; iterpool
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */
@@ -1170,31 +1186,31 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
       svn_pool_clear(iterpool);
 
-       if (! look_up_committable(*committables, dangling_parent, iterpool))
-         {
-           const char *dangling_child = svn__apr_hash_index_val(hi);
+      if (! look_up_committable(*committables, dangling_parent, iterpool))
+        {
+          const char *dangling_child = svn__apr_hash_index_val(hi);
 
-           if (ctx->notify_func2 != NULL)
-             {
-               svn_wc_notify_t *notify;
+          if (ctx->notify_func2 != NULL)
+            {
+              svn_wc_notify_t *notify;
 
-               notify = svn_wc_create_notify(dangling_child,
-                                             svn_wc_notify_failed_no_parent,
-                                             scratch_pool);
+              notify = svn_wc_create_notify(dangling_child,
+                                            svn_wc_notify_failed_no_parent,
+                                            scratch_pool);
 
-               ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
-             }
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+            }
 
-           return svn_error_createf(
-                            SVN_ERR_ILLEGAL_TARGET, NULL,
-                            _("'%s' is not under version control "
-                              "and is not part of the commit, "
-                              "yet its child '%s' is part of the commit"),
-                            /* Probably one or both of these is an entry, but
-                               safest to local_stylize just in case. */
-                            svn_dirent_local_style(dangling_parent, iterpool),
-                            svn_dirent_local_style(dangling_child, iterpool));
-         }
+          return svn_error_createf(
+                           SVN_ERR_ILLEGAL_TARGET, NULL,
+                           _("'%s' is not known to exist in the repository "
+                             "and is not part of the commit, "
+                             "yet its child '%s' is part of the commit"),
+                           /* Probably one or both of these is an entry, but
+                              safest to local_stylize just in case. */
+                           svn_dirent_local_style(dangling_parent, iterpool),
+                           svn_dirent_local_style(dangling_child, iterpool));
+        }
     }
 
   svn_pool_destroy(iterpool);

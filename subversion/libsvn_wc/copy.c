@@ -435,6 +435,7 @@ copy_versioned_dir(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_op_copy_shadowed_layer(db,
                                                   child_src_abspath,
                                                   child_dst_abspath,
+                                                  is_move,
                                                   scratch_pool));
 
       if (child_status == svn_wc__db_status_normal
