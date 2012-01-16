@@ -230,7 +230,7 @@ def patch(sbox):
 def patch_absolute_paths(sbox):
   "patch containing absolute paths"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -932,7 +932,7 @@ def patch_no_index_line(sbox):
 def patch_add_new_dir(sbox):
   "patch with missing dirs"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -1032,7 +1032,7 @@ def patch_add_new_dir(sbox):
 def patch_remove_empty_dirs(sbox):
   "patch deleting all children of a directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -1581,7 +1581,7 @@ def patch_reverse(sbox):
 def patch_no_svn_eol_style(sbox):
   "patch target with no svn:eol-style"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -1798,7 +1798,7 @@ def patch_with_svn_eol_style(sbox):
 def patch_with_svn_eol_style_uncommitted(sbox):
   "patch target with uncommitted svn:eol-style"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -2571,7 +2571,7 @@ def patch_dir_properties(sbox):
 def patch_add_path_with_props(sbox):
   "patch that adds paths with props"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -2993,7 +2993,7 @@ def patch_prop_with_fuzz(sbox):
 def patch_git_empty_files(sbox):
   "patch that contains empty files"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   patch_file_path = make_patch_path(sbox)
 
@@ -3363,7 +3363,7 @@ def patch_one_property(sbox, trailing_eol):
   """Helper.  Apply a patch that sets the property 'k' to 'v\n' or to 'v',
    and check the results."""
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -3438,7 +3438,7 @@ def patch_set_prop_no_eol(sbox):
 def patch_add_symlink(sbox):
   "patch that adds a symlink"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -3755,7 +3755,7 @@ def patch_deletes_prop(sbox):
 def patch_reversed_add_with_props(sbox):
   "reverse patch new file+props atop uncommitted"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   patch_file_path = make_patch_path(sbox)
 
@@ -3858,7 +3858,7 @@ def patch_reversed_add_with_props2(sbox):
 def patch_dev_null(sbox):
   "patch with /dev/null filenames"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
@@ -3914,7 +3914,7 @@ def patch_dev_null(sbox):
 def patch_delete_and_skip(sbox):
   "patch that deletes and skips"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
