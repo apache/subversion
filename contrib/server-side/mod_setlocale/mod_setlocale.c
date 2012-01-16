@@ -86,6 +86,16 @@ setlocale_post_config(apr_pool_t *pconf,apr_pool_t *plog,
       return HTTP_INTERNAL_SERVER_ERROR;
     }
 
+  /* If the user omitted a configuration directive, then set_ctype will be
+   * NULL.  Below condition sets it to "" instead, which loads the default as
+   * determined by the environment.  httpd's env is typically set by
+   * /etc/apache2/envvars, where LANG defaults to 'C', but it can be set to
+   * the system default there by sourcing the system's config file (e.g. '.
+   * /etc/default/locale'). Then, it suffices to just load this module to
+   * obtain the system's default locale. */
+  if (cfg->set_ctype == NULL)
+    cfg->set_ctype = "";
+
   cfg->old_ctype = setlocale(LC_CTYPE, cfg->set_ctype);
   if (cfg->old_ctype)
     {
