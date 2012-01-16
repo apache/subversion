@@ -1993,6 +1993,23 @@ def modified_modulo_translation(sbox):
   sbox.simple_revert('iota')
   svntest.actions.run_and_verify_svn(None, [], [], 'status', wc_dir)
 
+@XFail()
+def status_not_present(sbox):
+  "no status on not-present and excluded nodes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_rm('iota')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', sbox.ospath('A'))
+  sbox.simple_commit()
+  
+  svntest.actions.run_and_verify_svn(None, [], [],'status',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A'),
+                                     sbox.ospath('no-file'))
+
 ########################################################################
 # Run the tests
 
@@ -2035,6 +2052,7 @@ test_list = [ None,
               wc_wc_copy_timestamp,
               wclock_status,
               modified_modulo_translation,
+              status_not_present,
              ]
 
 if __name__ == '__main__':
