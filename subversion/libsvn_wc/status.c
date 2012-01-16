@@ -2610,7 +2610,11 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
 
-  if (info && info->kind == svn_kind_dir)
+  if (info
+      && info->kind == svn_kind_dir
+      && info->status != svn_wc__db_status_not_present
+      && info->status != svn_wc__db_status_excluded
+      && info->status != svn_wc__db_status_server_excluded)
     {
       SVN_ERR(get_dir_status(&wb,
                              local_abspath,
