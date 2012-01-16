@@ -1646,6 +1646,137 @@ def hotcopy_incremental_packed(sbox):
         None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
 
 
+def locking(sbox):
+  "svnadmin lock tests"
+  sbox.build(create_wc=False)
+  
+  comment_path = os.path.join(svntest.main.temp_dir, "comment")
+  svntest.main.file_write(comment_path, "dummy comment")
+
+  invalid_comment_path = os.path.join(svntest.main.temp_dir, "invalid_comment")
+  svntest.main.file_write(invalid_comment_path, "character  is invalid")
+
+  # Test illegal character in comment file.
+  expected_error = ".*svnadmin: E130004:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          invalid_comment_path)
+  
+  # Test locking path with --bypass-hooks
+  expected_output = "'iota' locked by user 'jrandom'."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path,
+                                          "--bypass-hooks")
+
+  # Remove lock
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          None, "rmlocks", 
+                                          sbox.repo_dir, "iota")
+  
+  # Test locking path without --bypass-hooks
+  expected_output = "'iota' locked by user 'jrandom'."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Test locking already locked path.
+  expected_error = ".*svnadmin: E160035:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Test locking non-existent path.
+  expected_error = ".*svnadmin: E160013:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "non-existent", "jrandom",
+                                          comment_path)
+
+  # Test locking a path while specifying a lock token.
+  expected_output = "'A/D/G/rho' locked by user 'jrandom'."
+  lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock", 
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          comment_path, lock_token)
+
+  # Test unlocking a path, but provide the wrong lock token.
+  expected_error = ".*svnadmin: E160040:.*"
+  wrong_lock_token = "opaquelocktoken:12345670-9ab8-defc-9ab8-def01234567c"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "unlock", 
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          wrong_lock_token)
+  
+  # Test unlocking the path again, but this time provide the correct
+  # lock token.
+  expected_output = "'A/D/G/rho' unlocked."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "unlock",
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          lock_token)
+
+  # Install lock/unlock prevention hooks.
+  hook_path = svntest.main.get_pre_lock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+  hook_path = svntest.main.get_pre_unlock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+  
+  # Test locking a path.  Don't use --bypass-hooks, though, as we wish
+  # to verify that hook script is really getting executed.
+  expected_error = ".*svnadmin: E165001:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Fetch the lock token for our remaining locked path.  (We didn't
+  # explicitly set it, so it will vary from test run to test run.)
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir,
+                                                        "iota")
+  iota_token = None
+  for line in output:
+    if line.startswith("UUID Token: opaquelocktoken:"):
+      iota_token = line[12:].rstrip()
+      break
+  if iota_token is None:
+    raise svntest.Failure("Unable to lookup lock token for 'iota'")
+
+  # Try to unlock a path while providing the correct lock token but
+  # with a preventative hook in place.
+  expected_error = ".*svnadmin: E165001:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "unlock", 
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          iota_token)
+
+  # Finally, use --bypass-hooks to unlock the path (again using the
+  # correct lock token).
+  expected_output = "'iota' unlocked."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "unlock",
+                                          "--bypass-hooks",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          iota_token)
+
+
 ########################################################################
 # Run the tests
 
@@ -1679,6 +1810,7 @@ test_list = [ None,
               load_ranges,
               hotcopy_incremental,
               hotcopy_incremental_packed,
+              locking,
              ]
 
 if __name__ == '__main__':

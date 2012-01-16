@@ -148,7 +148,9 @@ svn_client__repos_locations(const char **start_url,
  *
  * Set *OP_URL to the URL that the object PEG_URL@PEG_REVNUM had in
  * revision OP_REVNUM.
- * RA_SESSION is required. */
+ *
+ * RA_SESSION is an open RA session to the correct repository; it may be
+ * temporarily reparented inside this function. */
 svn_error_t *
 svn_client__repos_location(const char **start_url,
                            svn_ra_session_t *ra_session,
@@ -161,8 +163,8 @@ svn_client__repos_location(const char **start_url,
 
 
 /* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
-   representing a reposition location segment for the history of PATH
-   (which is relative to RA_SESSION's session URL) in PEG_REVISION
+   representing a reposition location segment for the history of URL
+   in PEG_REVISION
    between END_REVISION and START_REVISION, ordered from oldest
    segment to youngest.  *SEGMENTS may be empty but it will never
    be NULL.
@@ -171,13 +173,16 @@ svn_client__repos_location(const char **start_url,
    svn_ra_get_location_segments() interface, which see for the rules
    governing PEG_REVISION, START_REVISION, and END_REVISION.
 
+   RA_SESSION is an RA session open to the repository of URL; it may be
+   temporarily reparented within this function.
+
    CTX is the client context baton.
 
    Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_location_segments(apr_array_header_t **segments,
                                     svn_ra_session_t *ra_session,
-                                    const char *path,
+                                    const char *url,
                                     svn_revnum_t peg_revision,
                                     svn_revnum_t start_revision,
                                     svn_revnum_t end_revision,
@@ -249,11 +254,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
-   reparenting that session if necessary.  If reparenting occurs,
-   store the previous session URL in *OLD_SESSION_URL (so that if the
+   reparenting that session if necessary.
+   Store the previous session URL in *OLD_SESSION_URL (so that if the
    reparenting is meant to be temporary, the caller can reparent the
-   session back to where it was); otherwise set *OLD_SESSION_URL to
-   NULL.
+   session back to where it was).
 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
    the RA session to the root of the repository".
@@ -268,8 +272,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
        [...]
 
-       if (old_session_url)
-         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+       SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
 */
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,

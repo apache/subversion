@@ -70,6 +70,28 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
+def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
+  """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
+  by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
+  SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
+  re-dumped to do the match, which should generate the same dumpfile as
+  dumping SVNRDUMP_SBOX."""
+
+  svnrdump_contents = svntest.actions.run_and_verify_dump(
+                                                    svnrdump_sbox.repo_dir)
+
+  svnadmin_sbox = svnrdump_sbox.clone_dependent()
+  svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
+  svntest.main.create_repos(svnadmin_sbox.repo_dir)
+
+  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile)
+
+  svnadmin_contents = svntest.actions.run_and_verify_dump(
+                                                    svnadmin_sbox.repo_dir)
+
+  svntest.verify.compare_and_display_lines(
+    "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
+
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
@@ -108,11 +130,13 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                           expected_dumpfile_name),
                              'rb').readlines()
     svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
-
-  # Compare the output from stdout
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
-    None, mismatched_headers_re)
+    # Compare the output from stdout
+    svntest.verify.compare_and_display_lines(
+      "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+      None, mismatched_headers_re)
+    
+  else:
+    compare_repos_dumps(sbox, svnadmin_dumpfile)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   expect_deltas = True):
@@ -155,9 +179,12 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                           expected_dumpfile_name),
                              'rb').readlines()
 
-  # Compare the output from stdout
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+    # Compare the output from stdout
+    svntest.verify.compare_and_display_lines(
+      "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+
+  else:
+    compare_repos_dumps(sbox, svnrdump_dumpfile)
 
 ######################################################################
 # Tests
@@ -225,32 +252,26 @@ def no_author_load(sbox):
   "load: copy revs with no svn:author revprops"
   run_load_test(sbox, "no-author.dump")
 
-@XFail()
 def copy_from_previous_version_and_modify_dump(sbox):
   "dump: copy from previous version and modify"
   run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
 
-@XFail()
 def copy_from_previous_version_and_modify_load(sbox):
   "load: copy from previous version and modify"
   run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
 
-@XFail()
 def modified_in_place_dump(sbox):
   "dump: modified in place"
   run_dump_test(sbox, "modified-in-place.dump")
 
-@XFail()
 def modified_in_place_load(sbox):
   "load: modified in place"
   run_load_test(sbox, "modified-in-place.dump")
 
-@XFail()
 def move_and_modify_in_the_same_revision_dump(sbox):
   "dump: move parent & modify child file in same rev"
   run_dump_test(sbox, "move-and-modify.dump")
 
-@XFail()
 def move_and_modify_in_the_same_revision_load(sbox):
   "load: move parent & modify child file in same rev"
   run_load_test(sbox, "move-and-modify.dump")
@@ -295,12 +316,10 @@ def copy_parent_modify_prop_load(sbox):
   "load: copy parent and modify prop"
   run_load_test(sbox, "copy-parent-modify-prop.dump")
 
-@XFail()
 def copy_revprops_dump(sbox):
   "dump: copy revprops other than svn:*"
   run_dump_test(sbox, "revprops.dump")
 
-@XFail()
 def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")

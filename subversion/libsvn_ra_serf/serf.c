@@ -108,7 +108,6 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
       apr_collapse_spaces(auth_types_list, http_auth_types);
       while ((token = svn_cstring_tokenize(";", &auth_types_list)) != NULL)
         {
-          auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
             *authn_types |= SERF_AUTHN_BASIC;
           else if (svn_cstring_casecmp("digest", token) == 0)

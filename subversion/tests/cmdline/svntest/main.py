@@ -319,6 +319,16 @@ def get_pre_revprop_change_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "pre-revprop-change")
 
+def get_pre_lock_hook_path(repo_dir):
+  "Return the path of the pre-lock hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-lock")
+
+def get_pre_unlock_hook_path(repo_dir):
+  "Return the path of the pre-unlock hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-unlock")
+
 def get_svnserve_conf_file_path(repo_dir):
   "Return the path of the svnserve.conf file in REPO_DIR."
 

@@ -29,9 +29,6 @@
 #include "svn_types.h"
 #include "svn_string.h"
 
-/* We only build this code if SVN_DEBUG is defined. */
-#ifdef SVN_DEBUG
-
 #include "private/svn_debug.h"
 
 
@@ -98,12 +95,21 @@ svn_dbg__print_props(apr_hash_t *props,
                      const char *header_fmt,
                      ...)
 {
+/* We only build this code if SVN_DEBUG is defined. */
+#ifdef SVN_DEBUG
+
   apr_hash_index_t *hi;
   va_list ap;
 
   va_start(ap, header_fmt);
   print_line(header_fmt, ap);
   va_end(ap);
+
+  if (props == NULL)
+    {
+      SVN_DBG(("    (null)\n"));
+      return;
+    }
 
   for (hi = apr_hash_first(apr_hash_pool_get(props), props); hi;
         hi = apr_hash_next(hi))
@@ -113,6 +119,6 @@ svn_dbg__print_props(apr_hash_t *props,
 
       SVN_DBG(("    '%s' -> '%s'\n", name, val->data));
     }
+#endif /* SVN_DEBUG */
 }
 
-#endif

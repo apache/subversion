@@ -124,7 +124,7 @@ ERROR: %s
     sys.exit(1)
 
   core.svn_config_ensure(None)
-  ctx = client.ctx_t()
+  ctx = client.svn_client_create_context()
   providers = [
     client.get_simple_provider(),
     core.svn_auth_get_ssl_server_trust_file_provider(),

@@ -846,6 +846,18 @@ close_edit(void *edit_baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *filename = NULL;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
@@ -892,6 +904,9 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
   /* Wrap this editor in a cancellation editor. */
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                             de, eb, editor, edit_baton, pool));
+
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    shim_callbacks, pool, pool));

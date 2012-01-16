@@ -2318,7 +2318,7 @@ struct rep_args
 
   svn_revnum_t base_revision;
   apr_off_t base_offset;
-  apr_size_t base_length;
+  svn_filesize_t base_length;
 };
 
 /* Read the next line from file FILE and parse it as a text
@@ -2379,7 +2379,7 @@ read_rep_line(struct rep_args **rep_args_p,
   if (! str)
     goto error;
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep_args->base_length = (apr_size_t)val;
+  rep_args->base_length = (svn_filesize_t)val;
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
@@ -5632,6 +5632,7 @@ write_hash_rep(svn_filesize_t *size,
 /* Write out the hash HASH pertaining to the NODEREV in FS as a deltified
    text representation to file FILE.  In the process, record the total size
    and the md5 digest in REP.  Perform temporary allocations in POOL. */
+#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
                      apr_file_t *file,
@@ -5713,6 +5714,7 @@ write_hash_delta_rep(representation_t *rep,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
    of (not yet committed) revision REV in FS.  Use POOL for temporary
@@ -7023,7 +7025,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 /** Node origin lazy cache. */
 
 /* If directory PATH does not exist, create it and give it the same
-   permissions as FS->path.*/
+   permissions as FS_path.*/
 svn_error_t *
 svn_fs_fs__ensure_dir_exists(const char *path,
                              const char *fs_path,
@@ -7039,7 +7041,7 @@ svn_fs_fs__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  return svn_io_copy_perms(path, fs_path, pool);
+  return svn_io_copy_perms(fs_path, path, pool);
 }
 
 /* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to

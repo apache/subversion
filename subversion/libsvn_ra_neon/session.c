@@ -991,7 +991,6 @@ svn_ra_neon__open(svn_ra_session_t *session,
           while ((file = svn_cstring_tokenize(";", &files)) != NULL)
             {
               ne_ssl_certificate *ca_cert;
-              files = NULL;
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {

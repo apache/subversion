@@ -737,7 +737,7 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 dav_error *
 dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
-                       int errno_id,
+                       int error_id,
                        const char *desc,
                        const char *namespace,
                        const char *tagname);
@@ -752,7 +752,7 @@ dav_svn__new_error_tag(apr_pool_t *pool,
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
-                   int errno_id,
+                   int error_id,
                    const char *desc);
 
 
