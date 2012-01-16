@@ -12,6 +12,7 @@ serious limitations concerning non-ASCII characters:
 This is all due to httpd running in the 'C' locale, where the native
 encoding allows only (7-bit) ASCII characters. (German Umlauts, "äöü", for
 example, are non-ASCII characters.)
+(Adjust your viewer to UTF-8 encoding to view this file properly.)
 
 * What:
 mod_setlocale is a minimalistic httpd module that sets the locale for *THE
@@ -147,12 +148,11 @@ TEST
    translated from the native locale to UTF-8.]"
 
 3) Test hook parameter
-(Assuming above SVNParentPath)
 - Locking needs a username -- create a users config:
   * Create a users file, with user 'jrandom' and password 'rayjandom':
     /etc/apache2/users:
       jrandom:xCGl35kV9oWCY
-  * Configure basic authentication:
+  * Configure SVNParentPath with basic authentication:
     /etc/apache2/mods-enabled/dav_svn.conf:
       # dav_svn.conf - Example Subversion/Apache configuration
       <Location /svn>
