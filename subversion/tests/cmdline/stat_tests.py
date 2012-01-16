@@ -2001,13 +2001,16 @@ def status_not_present(sbox):
   wc_dir = sbox.wc_dir
 
   # iota is a shell script.
-  sbox.simple_rm('iota')
-  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', sbox.ospath('A'))
+  sbox.simple_rm('iota', 'A/C')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude',
+                       sbox.ospath('A/mu'), sbox.ospath('A/B'))
   sbox.simple_commit()
   
   svntest.actions.run_and_verify_svn(None, [], [],'status',
                                      sbox.ospath('iota'),
-                                     sbox.ospath('A'),
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/C'),
+                                     sbox.ospath('A/mu'),
                                      sbox.ospath('no-file'))
 
 ########################################################################
