@@ -4045,7 +4045,6 @@ def patch_target_no_eol_at_eof(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-@XFail()
 def patch_add_and_delete(sbox):
   "patch add multiple levels and delete"
 
