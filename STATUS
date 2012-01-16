@@ -156,14 +156,22 @@ Candidate changes:
    Justification:
      Can corrupt FSFS repository.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1231029
    Fix issue 4097, XML status not showing new files in repository.
    Justification:
      Regression from 1.6.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+ * r1231944, r1231945
+   Fix a patch problem where the patch file causes multiple levels of
+   directories to be added and also deletes a file.
+   Justification:
+     Allows dry-run applying some patch files.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
