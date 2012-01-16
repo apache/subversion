@@ -1993,7 +1993,6 @@ def modified_modulo_translation(sbox):
   sbox.simple_revert('iota')
   svntest.actions.run_and_verify_svn(None, [], [], 'status', wc_dir)
 
-@XFail()
 def status_not_present(sbox):
   "no status on not-present and excluded nodes"
 
