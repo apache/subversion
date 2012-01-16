@@ -2,7 +2,7 @@
  * mod_setlocale.c: an Apache module that calls setlocale()
  *
  * THIS IS USEFUL AS A QUICK WORKAROUND, BUT IT CAN'T REALLY BE CONSIDERED
- * SAFE. If your httpd's job is to only serve Subersion, you may decide that
+ * SAFE. If your httpd's job is to only serve Subversion, you may decide that
  * this module has little (or no?) adverse effects. BUT THIS IS JUST A HACK.
  *
  * *** WARNING! ***
