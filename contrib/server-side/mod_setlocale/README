@@ -1,0 +1,195 @@
+mod_setlocale
+=============
+
+* Why:
+Subversion accessed via http:// URLs (i.e. via mod_dav_svn) typically has
+serious limitations concerning non-ASCII characters:
+- Repository root paths cannot contain non-ASCII.
+- Hook scripts may not output non-ASCII characters as error messages.
+- Hook scripts may not receive non-ASCII characters as arguments, and thus
+  locking files with non-ASCII characters in their name is impossible when
+  there is a pre-lock hook in place.
+This is all due to httpd running in the 'C' locale, where the native
+encoding allows only (7-bit) ASCII characters. (German Umlauts, "äöü", for
+example, are non-ASCII characters.)
+
+* What:
+mod_setlocale is a minimalistic httpd module that sets the locale for *THE
+ENTIRE* httpd process. This also sets the native encoding of mod_dav_svn
+and in consequence eliminates all of above problems.
+
+THIS IS USEFUL AS A QUICK WORKAROUND, BUT IT CAN'T REALLY BE CONSIDERED
+SAFE. If your httpd's job is to only serve Subersion, you may decide that
+this module has little (or no?) adverse effects. BUT THIS IS JUST A HACK.
+
+*** WARNING! ***
+httpd runs in the 'C' locale, with only ASCII characters allowed in the
+"native" encoding, for good reasons. Allowing non-ASCII characters opens
+httpd and its modules up to unicode/UTF-8 vulnerabilities, see:
+http://unicode.org/reports/tr36/#UTF-8_Exploit
+***
+
+History: This module was written out of curiosity and for testing purposes,
+after lively discussion on Subversion's IRC channel.
+
+Note: The problem only exists when using Subversion via http://. The root
+cause is httpd running in the 'C' locale. Svnserve or svn+ssh use the
+default locale and typically allow non-ASCII characters out of the box.
+
+
+LICENSE
+=======
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+
+INSTALL
+=======
+
+Build the module
+----------------
+
+You need apache's apxs (or apxs2) program to build the module. This is
+available when apache was built from source, or typically in "dev"
+packages. (Debian: 'sudo apt-get install apache2-threaded-dev')
+
+Run the command:
+  apxs -ci mod_setlocale.c
+OR
+  apxs2 -ci mod_setlocale.c
+
+This needs write access to httpd's "prefix", so you may need to obtain root
+permissions. It installs the file:
+  <httpd-prefix>/modules/mod_setlocale.so
+(Debian: /usr/lib/apache2/modules/mod_setlocale.so)
+
+
+Enable and configure the module
+-------------------------------
+
+The httpd configuration needs these two directives to enable this module:
+
+    LoadModule setlocale_module <path-to>/mod_setlocale.so
+    SetLocaleCTYPE "en_US.UTF-8"
+
+* NOTE: This API is ultimately intended to work like
+  "SetLocale LC_CTYPE en_US.UTF-8", to allow setting other locale
+  parameters besides just the character set. (says danielsh)
+
+For example, on Debian, the typical installation would be:
+- Create two files with one line each:
+  * /etc/apache2/mods-available/setlocale.load with contents:
+    LoadModule setlocale_module /usr/lib/apache2/modules/mod_setlocale.so
+  * /etc/apache2/mods-available/setlocale.conf with contents:
+    SetLocaleCTYPE "en_US.UTF-8"
+- Enable the module by placing symbolic links:
+    ln -s ../mods-available/setlocale.* /etc/apache2/mods-enabled/
+- Restart apache with
+    /etc/init.d/apache2 restart
+
+
+TEST
+====
+
+1) Test repository path with special characters
+- Have an SVNParentPath in the dav_svn config:
+  /etc/apache2/mods-enabled/dav_svn.conf:
+    # dav_svn.conf - Example Subversion/Apache configuration
+    <Location /svn>
+    DAV svn
+    SVNParentPath /tmp/svn
+    </Location>
+  (Remember to restart the httpd, '/etc/init.d/apache2 restart')
+- Create a repository with a special character in its name:
+    mkdir /tmp/svn
+    svnadmin create /tmp/svn/føø
+- Access the repository:
+    wget http://localhost/svn/føø
+=> If successful, this will download a bit of HTML containing
+   "føø - Revision 0:".
+   If unsuccessful, this will hit an "ERROR 500: Internal Server Error".
+
+2) Test hook output
+(Assuming above SVNParentPath)
+- Create empty repos:
+    svnadmin create /tmp/svn/repos
+- Create any pre-* hook that outputs a special character and exits != 0:
+  /tmp/svn/repos/hooks/pre-commit:
+    #!/bin/sh
+    echo "fööbår" >&2
+    exit 1
+  Remember to make it executable:
+    chmod a+x /tmp/svn/repos/hooks/pre-commit
+- Make sure the repository is writable by the apache process. For this
+  test, global write permission will do:
+    chmod -R a+rw /tmp/svn/repos
+  Usually this would be done like:
+    chown -R www-data: /tmp/svn/repos
+- Try to commit anything:
+    svn mkdir -mm http://localhost/svn/repos/anything
+=> If successful, you'll see a failing commit with the "fööbår" message.
+   If unsuccessful you'll see a failure like: "[Error output could not be
+   translated from the native locale to UTF-8.]"
+
+3) Test hook parameter
+(Assuming above SVNParentPath)
+- Locking needs a username -- create a users config:
+  * Create a users file, with user 'jrandom' and password 'rayjandom':
+    /etc/apache2/users:
+      jrandom:xCGl35kV9oWCY
+  * Configure basic authentication:
+    /etc/apache2/mods-enabled/dav_svn.conf:
+      # dav_svn.conf - Example Subversion/Apache configuration
+      <Location /svn>
+          DAV svn
+          SVNParentPath /tmp/svn
+          AuthType Basic
+          AuthName "Subversion Repository"
+          AuthUserFile /etc/apache2/users
+          Require valid-user
+      </Location>
+  * Remember to restart apache
+- Create a repos
+    svnadmin create /tmp/svn/rep2
+  and
+    chmod -R a+rw /tmp/svn/rep2
+- Setup a pre-lock hook that does nothing:
+  /tmp/svn/rep2/hooks/pre-lock:
+    #!/bin/sh
+    exit 0
+  and
+    chmod a+x /tmp/svn/rep2/hooks/pre-lock
+- Try to lock a file with special characters in its name:
+    cd /tmp
+    svn co --username jrandom --password rayjandom http://localhost/svn/rep2 wc
+    # (you may have to enter 'yes' for storing the password)
+    cd wc
+    touch føø
+    svn add føø
+    svn ci -mm
+    svn lock føø
+=> If successful, this will lock 'føø'.
+   If unsuccessful, locking will not work and the client program may hang
+   indefinitely.
+   If you see an error like "401 Authorization Required", then you forgot to
+   set up authentication and/or to use a username for locking.
+
+
+Don't forget to remove the apache configuration used for testing after
+you're done!
+
