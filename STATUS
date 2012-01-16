@@ -135,7 +135,7 @@ Candidate changes:
    Justification:
      Fixes api to allow running tests on UNC shares.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r1229303
    Fix an 'svn revert' assert caused by accessing the wrong memory.
@@ -149,7 +149,7 @@ Candidate changes:
    Justification:
      Client SEGV reported by user.
    Votes:
-     +1: philip, rhuijben
+     +1: philip, rhuijben, steveking
 
  * r1230212
    Fix for large files on 32-bit systems
@@ -171,7 +171,7 @@ Candidate changes:
    Justification:
      Allows dry-run applying some patch files.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
 Veto-blocked changes:
 =====================
