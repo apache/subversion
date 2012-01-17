@@ -83,7 +83,10 @@ permissions. It installs the file:
 Enable and configure the module
 -------------------------------
 
-The httpd configuration needs these two directives to enable this module:
+There are two ways of configuring the module.
+
+1) Set the locale explicitly:
+The httpd configuration consists of these two directives:
 
     LoadModule setlocale_module <path-to>/mod_setlocale.so
     SetLocaleCTYPE "en_US.UTF-8"
@@ -102,6 +105,24 @@ For example, on Debian, the typical installation would be:
     ln -s ../mods-available/setlocale.* /etc/apache2/mods-enabled/
 - Restart apache with
     /etc/init.d/apache2 restart
+
+2) Use the system default locale:
+- Do everything as above, but omit the 'SetLocaleCTYPE' directive
+  (e.g. leave the setlocale.conf file empty).
+- Set the desired locale in httpd's 'envvars' config file (e.g.
+  /etc/apache2/envars). In 'envvars', you can source the system's default
+  locale file (typically '/etc/default/locale') by adding the lines:
+    . /etc/default/locale
+    export LANG
+
+Explained: If the 'SetLocaleCTYPE' directive is omitted, this module will call
+setlocale() with an empty string (""), which will then use the locale as set
+by the environment ($LANG). Httpd's environment, as setup by a file like
+'/etc/apache2/envvars', typically sets LANG="C", meaning that the character
+set would still remain set as 7-bit ASCII. By sourcing the system's default
+locale file in 'envvars', httpd's LANG variable is set to the system default,
+causing the setlocale(LC_CTYPE,"") call to set up the system's default locale
+in the running httpd.
 
 
 TEST
