@@ -710,179 +710,6 @@ struct file_baton
 };
 
 
-struct handler_baton
-{
-  svn_txdelta_window_handler_t apply_handler;
-  void *apply_baton;
-  apr_pool_t *pool;
-  const char *tmppath;
-};
-
-
-static svn_error_t *
-set_target_revision(void *edit_baton,
-                    svn_revnum_t target_revision,
-                    apr_pool_t *pool)
-{
-  struct edit_baton *eb = edit_baton;
-
-  /* Stashing a target_revision in the baton */
-  *(eb->target_revision) = target_revision;
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Just ensure that the main export directory exists. */
-static svn_error_t *
-open_root(void *edit_baton,
-          svn_revnum_t base_revision,
-          apr_pool_t *pool,
-          void **root_baton)
-{
-  struct edit_baton *eb = edit_baton;
-  struct dir_baton *db = apr_pcalloc(pool, sizeof(*db));
-
-  SVN_ERR(open_root_internal(eb->root_path, eb->force,
-                             eb->notify_func, eb->notify_baton, pool));
-
-  /* Build our dir baton. */
-  db->path = eb->root_path;
-  db->edit_baton = eb;
-  *root_baton = db;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Ensure the directory exists, and send feedback. */
-static svn_error_t *
-add_directory(const char *path,
-              void *parent_baton,
-              const char *copyfrom_path,
-              svn_revnum_t copyfrom_revision,
-              apr_pool_t *pool,
-              void **baton)
-{
-  struct dir_baton *pb = parent_baton;
-  struct dir_baton *db = apr_pcalloc(pool, sizeof(*db));
-  struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_dirent_join(eb->root_path, path, pool);
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_io_check_path(full_path, &kind, pool));
-  if (kind == svn_node_none)
-    SVN_ERR(svn_io_dir_make(full_path, APR_OS_DEFAULT, pool));
-  else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("'%s' exists and is not a directory"),
-                             svn_dirent_local_style(full_path, pool));
-  else if (! (kind == svn_node_dir && eb->force))
-    return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                             _("'%s' already exists"),
-                             svn_dirent_local_style(full_path, pool));
-
-  if (eb->notify_func)
-    {
-      svn_wc_notify_t *notify = svn_wc_create_notify(full_path,
-                                                     svn_wc_notify_update_add,
-                                                     pool);
-      notify->kind = svn_node_dir;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
-    }
-
-  /* Build our dir baton. */
-  db->path = full_path;
-  db->edit_baton = eb;
-  *baton = db;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Build a file baton. */
-static svn_error_t *
-add_file(const char *path,
-         void *parent_baton,
-         const char *copyfrom_path,
-         svn_revnum_t copyfrom_revision,
-         apr_pool_t *pool,
-         void **baton)
-{
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
-  const char *full_path = svn_dirent_join(eb->root_path, path, pool);
-
-  /* PATH is not canonicalized, i.e. it may still contain spaces etc.
-   * but EB->root_url is. */
-  const char *full_url = svn_path_url_add_component2(eb->root_url,
-                                                     path,
-                                                     pool);
-
-  fb->edit_baton = eb;
-  fb->path = full_path;
-  fb->url = full_url;
-  fb->pool = pool;
-
-  *baton = fb;
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-window_handler(svn_txdelta_window_t *window, void *baton)
-{
-  struct handler_baton *hb = baton;
-  svn_error_t *err;
-
-  err = hb->apply_handler(window, hb->apply_baton);
-  if (err)
-    {
-      /* We failed to apply the patch; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
-    }
-
-  return svn_error_trace(err);
-}
-
-
-
-/* Write incoming data into the tmpfile stream */
-static svn_error_t *
-apply_textdelta(void *file_baton,
-                const char *base_checksum,
-                apr_pool_t *pool,
-                svn_txdelta_window_handler_t *handler,
-                void **handler_baton)
-{
-  struct file_baton *fb = file_baton;
-  struct handler_baton *hb = apr_palloc(pool, sizeof(*hb));
-
-  /* Create a temporary file in the same directory as the file. We're going
-     to rename the thing into place when we're done. */
-  SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                 svn_dirent_dirname(fb->path, pool),
-                                 svn_io_file_del_none, fb->pool, fb->pool));
-
-  hb->pool = pool;
-  hb->tmppath = fb->tmppath;
-
-  /* svn_txdelta_apply() closes the stream, but we want to close it in the
-     close_file() function, so disown it here. */
-  /* ### contrast to when we call svn_ra_get_file() which does NOT close the
-     ### tmp_stream. we *should* be much more consistent! */
-  svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_stream_disown(fb->tmp_stream, pool),
-                    fb->text_digest, NULL, pool,
-                    &hb->apply_handler, &hb->apply_baton);
-
-  *handler_baton = hb;
-  *handler = window_handler;
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -917,22 +744,6 @@ change_file_prop(void *file_baton,
 
   else if (strcmp(name, SVN_PROP_SPECIAL) == 0)
     fb->special = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-change_dir_prop(void *dir_baton,
-                const char *name,
-                const svn_string_t *value,
-                apr_pool_t *pool)
-{
-  struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
-
-  if (value && (strcmp(name, SVN_PROP_EXTERNALS) == 0))
-    SVN_ERR(add_externals(eb->externals, db->path, value));
 
   return SVN_NO_ERROR;
 }
@@ -1016,26 +827,6 @@ close_file(void *file_baton,
       (*fb->edit_baton->notify_func)(fb->edit_baton->notify_baton, notify,
                                      pool);
     }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *scratch_pool)
-{
-  /* We know the root of the edit is a directory. */
-  if (path[0] == '\0')
-    *kind = svn_kind_dir;
-
-  /* ### TODO: We could possibly fetch the kind of the object in question
-         from the server with a second ra_session, but right now this
-         seems to work. */
-  else
-    *kind = svn_kind_unknown;
 
   return SVN_NO_ERROR;
 }
@@ -1251,48 +1042,15 @@ add_directory_ev2(void *baton,
 static svn_error_t *
 get_editor(const svn_delta_editor_t **export_editor,
            void **edit_baton,
-           void *eb,
+           struct edit_baton *eb,
            svn_client_ctx_t *ctx,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
-  svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
-  svn_delta_shim_callbacks_t *shim_callbacks =
-                                svn_delta_shim_callbacks_default(result_pool);
   svn_editor_t *editorv2;
-  struct svn_delta__extra_baton *exb;
+  struct svn_delta__extra_baton *exb = apr_pcalloc(result_pool, sizeof(*exb));
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
-
-  editor->set_target_revision = set_target_revision;
-  editor->open_root = open_root;
-  editor->add_directory = add_directory;
-  editor->add_file = add_file;
-  editor->apply_textdelta = apply_textdelta;
-  editor->close_file = close_file;
-  editor->change_file_prop = change_file_prop;
-  editor->change_dir_prop = change_dir_prop;
-
-  SVN_ERR(svn_delta_get_cancellation_editor(ctx->cancel_func,
-                                            ctx->cancel_baton,
-                                            editor,
-                                            eb,
-                                            export_editor,
-                                            edit_baton,
-                                            result_pool));
-
-  shim_callbacks->fetch_kind_func = fetch_kind_func;
-  shim_callbacks->fetch_props_func = fetch_props_func;
-  shim_callbacks->fetch_base_func = fetch_base_func;
-  shim_callbacks->fetch_baton = eb;
-
-  SVN_ERR(svn_delta__editor_from_delta(&editorv2, &exb, *export_editor,
-                            *edit_baton, found_abs_paths, NULL, NULL,
-                            shim_callbacks->fetch_kind_func,
-                            shim_callbacks->fetch_baton,
-                            shim_callbacks->fetch_props_func,
-                            shim_callbacks->fetch_baton,
-                            result_pool, scratch_pool));
 
   SVN_ERR(svn_editor_create(&editorv2, eb, ctx->cancel_func, ctx->cancel_baton,
                             result_pool, scratch_pool));
@@ -1302,13 +1060,17 @@ get_editor(const svn_delta_editor_t **export_editor,
                                          scratch_pool));
   SVN_ERR(svn_editor_setcb_add_file(editorv2, add_file_ev2, scratch_pool));
 
+  *found_abs_paths = TRUE;
+
   SVN_ERR(svn_delta__delta_from_editor(export_editor, edit_baton,
-                            editorv2, found_abs_paths,
-                            shim_callbacks->fetch_props_func,
-                            shim_callbacks->fetch_baton,
-                            shim_callbacks->fetch_base_func,
-                            shim_callbacks->fetch_baton,
-                            exb, result_pool));
+                                       editorv2, found_abs_paths,
+                                       fetch_props_func, eb,
+                                       fetch_base_func, eb,
+                                       exb, result_pool));
+
+  /* Create the root of the export. */
+  SVN_ERR(open_root_internal(eb->root_path, eb->force, eb->notify_func,
+                             eb->notify_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
