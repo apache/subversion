@@ -180,6 +180,11 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1232413
+   Improve server certificate error collection code.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
