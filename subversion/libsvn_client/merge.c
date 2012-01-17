@@ -9898,7 +9898,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                         svn_revnum_t *youngest_merged_rev,
                         svn_revnum_t yc_ancestor_rev,
                         svn_mergeinfo_catalog_t source_catalog,
-                        apr_hash_t *target_segments_hash,
+                        apr_hash_t *target_history_hash,
                         const char *source_repos_rel_path,
                         const char *target_repos_rel_path,
                         svn_revnum_t target_rev,
@@ -9926,7 +9926,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
   /* Examine the natural history of each path in the reintegrate target
      with explicit mergeinfo. */
-  for (hi = apr_hash_first(scratch_pool, target_segments_hash);
+  for (hi = apr_hash_first(scratch_pool, target_history_hash);
        hi;
        hi = apr_hash_next(hi))
     {

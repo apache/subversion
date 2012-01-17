@@ -271,6 +271,8 @@ ssl_server_cert(void *baton, int failures,
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
     {
+      if (failures)
+        conn->server_cert_failures |= ssl_convert_serf_failures(failures);
       return APR_SUCCESS;
     }
 
@@ -295,7 +297,8 @@ ssl_server_cert(void *baton, int failures,
   cert_info.issuer_dname = convert_organisation_to_str(issuer, scratch_pool);
   cert_info.ascii_cert = serf_ssl_cert_export(cert, scratch_pool);
 
-  svn_failures = ssl_convert_serf_failures(failures);
+  svn_failures = (ssl_convert_serf_failures(failures)
+                  | conn->server_cert_failures);
 
   /* Try to find matching server name via subjectAltName first... */
   if (san) {
