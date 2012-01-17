@@ -671,166 +671,6 @@ struct edit_baton
 };
 
 
-struct dir_baton
-{
-  struct edit_baton *edit_baton;
-  const char *path;
-};
-
-
-struct file_baton
-{
-  struct edit_baton *edit_baton;
-
-  const char *path;
-  const char *tmppath;
-
-  /* We need to keep this around so we can explicitly close it in close_file,
-     thus flushing its output to disk so we can copy and translate it. */
-  svn_stream_t *tmp_stream;
-
-  /* The MD5 digest of the file's fulltext.  This is all zeros until
-     the last textdelta window handler call returns. */
-  unsigned char text_digest[APR_MD5_DIGESTSIZE];
-
-  /* The three svn: properties we might actually care about. */
-  const svn_string_t *eol_style_val;
-  const svn_string_t *keywords_val;
-  const svn_string_t *executable_val;
-  svn_boolean_t special;
-
-  /* Any keyword vals to be substituted */
-  const char *revision;
-  const char *url;
-  const char *author;
-  apr_time_t date;
-
-  /* Pool associated with this baton. */
-  apr_pool_t *pool;
-};
-
-
-static svn_error_t *
-change_file_prop(void *file_baton,
-                 const char *name,
-                 const svn_string_t *value,
-                 apr_pool_t *pool)
-{
-  struct file_baton *fb = file_baton;
-
-  if (! value)
-    return SVN_NO_ERROR;
-
-  /* Store only the magic three properties. */
-  if (strcmp(name, SVN_PROP_EOL_STYLE) == 0)
-    fb->eol_style_val = svn_string_dup(value, fb->pool);
-
-  else if (! fb->edit_baton->ignore_keywords &&
-           strcmp(name, SVN_PROP_KEYWORDS) == 0)
-    fb->keywords_val = svn_string_dup(value, fb->pool);
-
-  else if (strcmp(name, SVN_PROP_EXECUTABLE) == 0)
-    fb->executable_val = svn_string_dup(value, fb->pool);
-
-  /* Try to fill out the baton's keywords-structure too. */
-  else if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
-    fb->revision = apr_pstrdup(fb->pool, value->data);
-
-  else if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
-    SVN_ERR(svn_time_from_cstring(&fb->date, value->data, fb->pool));
-
-  else if (strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
-    fb->author = apr_pstrdup(fb->pool, value->data);
-
-  else if (strcmp(name, SVN_PROP_SPECIAL) == 0)
-    fb->special = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Move the tmpfile to file, and send feedback. */
-static svn_error_t *
-close_file(void *file_baton,
-           const char *text_digest,
-           apr_pool_t *pool)
-{
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
-  svn_checksum_t *text_checksum;
-  svn_checksum_t *actual_checksum;
-
-  /* Was a txdelta even sent? */
-  if (! fb->tmppath)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_stream_close(fb->tmp_stream));
-
-  SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5, text_digest,
-                                 pool));
-  actual_checksum = svn_checksum__from_digest(fb->text_digest,
-                                              svn_checksum_md5, pool);
-
-  /* Note that text_digest can be NULL when talking to certain repositories.
-     In that case text_checksum will be NULL and the following match code
-     will note that the checksums match */
-  if (!svn_checksum_match(text_checksum, actual_checksum))
-    return svn_checksum_mismatch_err(text_checksum, actual_checksum, pool,
-                                     _("Checksum mismatch for '%s'"),
-                                     svn_dirent_local_style(fb->path, pool));
-
-  if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
-    {
-      SVN_ERR(svn_io_file_rename(fb->tmppath, fb->path, pool));
-    }
-  else
-    {
-      svn_subst_eol_style_t style;
-      const char *eol = NULL;
-      svn_boolean_t repair = FALSE;
-      apr_hash_t *final_kw = NULL;
-
-      if (fb->eol_style_val)
-        {
-          SVN_ERR(get_eol_style(&style, &eol, fb->eol_style_val->data,
-                                eb->native_eol));
-          repair = TRUE;
-        }
-
-      if (fb->keywords_val)
-        SVN_ERR(svn_subst_build_keywords2(&final_kw, fb->keywords_val->data,
-                                          fb->revision, fb->url, fb->date,
-                                          fb->author, pool));
-
-      SVN_ERR(svn_subst_copy_and_translate4(fb->tmppath, fb->path,
-                                            eol, repair, final_kw,
-                                            TRUE, /* expand */
-                                            fb->special,
-                                            eb->cancel_func, eb->cancel_baton,
-                                            pool));
-
-      SVN_ERR(svn_io_remove_file2(fb->tmppath, FALSE, pool));
-    }
-
-  if (fb->executable_val)
-    SVN_ERR(svn_io_set_file_executable(fb->path, TRUE, FALSE, pool));
-
-  if (fb->date && (! fb->special))
-    SVN_ERR(svn_io_set_file_affected_time(fb->date, fb->path, pool));
-
-  if (fb->edit_baton->notify_func)
-    {
-      svn_wc_notify_t *notify = svn_wc_create_notify(fb->path,
-                                                     svn_wc_notify_update_add,
-                                                     pool);
-      notify->kind = svn_node_file;
-      (*fb->edit_baton->notify_func)(fb->edit_baton->notify_baton, notify,
-                                     pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 fetch_props_func(apr_hash_t **props,
                  void *baton,
@@ -1138,8 +978,8 @@ svn_client_export5(svn_revnum_t *result_rev,
       if (kind == svn_node_file)
         {
           apr_hash_t *props;
-          apr_hash_index_t *hi;
-          struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
+          svn_stream_t *tmp_stream;
+          const char *tmppath;
           svn_node_kind_t to_kind;
 
           if (svn_path_is_empty(to_path))
@@ -1171,41 +1011,21 @@ svn_client_export5(svn_revnum_t *result_rev,
                                        "overwrite directory with non-directory"),
                                      svn_dirent_local_style(to_path, pool));
 
-          /* Since you cannot actually root an editor at a file, we
-           * manually drive a few functions of our editor. */
+          SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmppath,
+                                         svn_dirent_dirname(eb->root_path, pool),
+                                         svn_io_file_del_on_pool_cleanup,
+                                         pool, pool));
 
-          /* This is the equivalent of a parentless add_file(). */
-          fb->edit_baton = eb;
-          fb->path = eb->root_path;
-          fb->url = eb->root_url;
-          fb->pool = pool;
-
-          /* Copied from apply_textdelta(). */
-          SVN_ERR(svn_stream_open_unique(&fb->tmp_stream, &fb->tmppath,
-                                         svn_dirent_dirname(fb->path, pool),
-                                         svn_io_file_del_none,
-                                         fb->pool, fb->pool));
-
-          /* Step outside the editor-likeness for a moment, to actually talk
-           * to the repository. */
-          /* ### note: the stream will not be closed */
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
-                                  fb->tmp_stream,
-                                  NULL, &props, pool));
+                                  tmp_stream, NULL, &props, pool));
+          SVN_ERR(svn_stream_close(tmp_stream));
 
-          /* Push the props into change_file_prop(), to update the file_baton
-           * with information. */
-          for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-            {
-              const char *propname = svn__apr_hash_index_key(hi);
-              const svn_string_t *propval = svn__apr_hash_index_val(hi);
+          SVN_ERR(svn_stream_open_readonly(&tmp_stream, tmppath, pool, pool));
 
-              SVN_ERR(change_file_prop(fb, propname, propval, pool));
-            }
-
-          /* And now just use close_file() to do all the keyword and EOL
-           * work, and put the file into place. */
-          SVN_ERR(close_file(fb, NULL, pool));
+          /* Since you cannot actually root an editor at a file, we
+           * manually drive a function of our editor. */
+          SVN_ERR(add_file_ev2(eb, "", NULL, tmp_stream, props,
+                               SVN_INVALID_REVNUM, pool));
         }
       else if (kind == svn_node_dir)
         {
