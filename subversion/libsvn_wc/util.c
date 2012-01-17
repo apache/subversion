@@ -595,9 +595,6 @@ svn_wc__fetch_base_func(const char **filename,
                         apr_pool_t *scratch_pool)
 {
   struct svn_wc__shim_fetch_baton_t *sfb = baton;
-  svn_stream_t *contents;
-  svn_stream_t *file_stream;
-  const char *tmp_filename;
   const svn_checksum_t *checksum;
   svn_error_t *err;
   const char *local_abspath = svn_dirent_join(sfb->base_abspath, path,
@@ -622,15 +619,8 @@ svn_wc__fetch_base_func(const char **filename,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, sfb->db, local_abspath,
-                                   checksum, scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
-
-  *filename = apr_pstrdup(result_pool, tmp_filename);
+  SVN_ERR(svn_wc__db_pristine_get_path(filename, sfb->db, local_abspath,
+                                       checksum, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
