@@ -717,8 +717,6 @@ add_file(void *baton,
   const char *full_url = svn_path_url_add_component2(eb->root_url,
                                                      relpath,
                                                      scratch_pool);
-  svn_stream_t *tmp_stream;
-  const char *tmppath;
   const svn_string_t *val;
   /* The four svn: properties we might actually care about. */
   const svn_string_t *eol_style_val = NULL;
@@ -758,7 +756,7 @@ add_file(void *baton,
     special = TRUE;
 
   /* Possibly wrap the stream to be translated, as dictated by the props. */
-  if (eol_style_val || keywords_val || special)
+  if (eol_style_val || keywords_val)
     {
       svn_subst_eol_style_t style;
       const char *eol = NULL;
@@ -777,28 +775,39 @@ add_file(void *baton,
                                           revision, full_url, date,
                                           author, scratch_pool));
 
-      /* ### Note: We used to use svn_subst_copy_and_translate() here, which
-             handles the "special" property correctly.  I'm unsure what the
-             right thing to do is now that we have a wrapped stream.  Maybe
-             we don't have a worry about it since Ev2 provides a add_symlink()
-             handler? */
       contents = svn_subst_stream_translated(contents, eol, repair, final_kw,
                                              TRUE, /* expand */
                                              scratch_pool);
     }
 
-  /* Create a temporary file in the same directory as the file. We're going
-     to rename the thing into place when we're done. */
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmppath,
-                                 svn_dirent_dirname(full_path, scratch_pool),
-                                 svn_io_file_del_none,
-                                 scratch_pool, scratch_pool));
+  if (special)
+    {
+      svn_stream_t *tmp_stream;
 
-  SVN_ERR(svn_stream_copy3(contents, tmp_stream,
-                           eb->cancel_func, eb->cancel_baton, scratch_pool));
+      SVN_ERR(svn_subst_create_specialfile(&tmp_stream, full_path,
+                                           scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_copy3(contents, tmp_stream, eb->cancel_func,
+                               eb->cancel_baton, scratch_pool));
+    }
+  else
+    {
+      svn_stream_t *tmp_stream;
+      const char *tmppath;
 
-  /* Move the file into place. */
-  SVN_ERR(svn_io_file_rename(tmppath, full_path, scratch_pool));
+      /* Create a temporary file in the same directory as the file. We're going
+         to rename the thing into place when we're done. */
+      SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmppath,
+                                     svn_dirent_dirname(full_path,
+                                                        scratch_pool),
+                                     svn_io_file_del_none,
+                                     scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_stream_copy3(contents, tmp_stream, eb->cancel_func,
+                               eb->cancel_baton, scratch_pool));
+
+      /* Move the file into place. */
+      SVN_ERR(svn_io_file_rename(tmppath, full_path, scratch_pool));
+    }
 
   if (executable_val)
     SVN_ERR(svn_io_set_file_executable(full_path, TRUE, FALSE, scratch_pool));
