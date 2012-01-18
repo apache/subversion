@@ -87,7 +87,7 @@ extern "C" {
  * receiver editing its tree to the target state defined by the driver.
  *
  *
- * HISTORY
+ * <h3>History</h3>
  *
  * Classically, Subversion had a notion of a "tree delta" which could be
  * passed around as an independent entity. Theory implied this delta was an
@@ -116,6 +116,31 @@ extern "C" {
  * While the "interposition" pattern is still possible with this interface,
  * the most common functionality (cancellation and debugging) have been
  * integrated directly into this new editor system.
+ *
+ *
+ * <h3>Implementation Plan</h3>
+ * @note This section can be removed after Ev2 is fully implemented.
+ *
+ * The delta editor is pretty engrained throughout Subversion, so attempting
+ * to replace it in situ is somewhat akin to performing open heart surgery
+ * while the patient is running a marathon.  However, a viable plan should
+ * make things a bit easier, and help parallelize the work.
+ *
+ * In short, the following items need to be done:
+ *  -# Implement backward compatibility wrappers ("shims")
+ *  -# Use shims to update editor consumers to Ev2
+ *  -# Update editor producers to drive Ev2
+ *     - This will largely involve rewriting the RA layers to accept and
+ *       send Ev2 commands
+ *  -# Optimize consumers and producers to leverage the features of Ev2
+ *
+ * The shims are largely self-contained, and as of this writing, are almost
+ * complete.  They can be released without much ado.  However, they do add
+ * <em>significant</em> performance regressions, which make releasing code
+ * which is half-delta-editor and half-Ev2 inadvisable.  As such, the updating
+ * of producers and consumers to Ev2 will probably need to wait until 1.9,
+ * though it could be largely parallelized.
+ *
  *
  * @defgroup svn_editor The editor interface
  * @{
