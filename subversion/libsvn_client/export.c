@@ -756,7 +756,7 @@ add_file(void *baton,
     special = TRUE;
 
   /* Possibly wrap the stream to be translated, as dictated by the props. */
-  if (eol_style_val || keywords_val)
+  if ((eol_style_val || keywords_val) && !special)
     {
       svn_subst_eol_style_t style;
       const char *eol = NULL;
@@ -770,7 +770,7 @@ add_file(void *baton,
           repair = TRUE;
         }
 
-      if (keywords_val && !special)
+      if (keywords_val)
         SVN_ERR(svn_subst_build_keywords2(&final_kw, keywords_val->data,
                                           revision, full_url, date,
                                           author, scratch_pool));
