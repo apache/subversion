@@ -770,7 +770,7 @@ add_file(void *baton,
           repair = TRUE;
         }
 
-      if (keywords_val)
+      if (keywords_val && !special)
         SVN_ERR(svn_subst_build_keywords2(&final_kw, keywords_val->data,
                                           revision, full_url, date,
                                           author, scratch_pool));
