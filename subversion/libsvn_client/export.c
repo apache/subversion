@@ -701,13 +701,13 @@ fetch_base_func(const char **filename,
 }
 
 static svn_error_t *
-add_file_ev2(void *baton,
-             const char *relpath,
-             const svn_checksum_t *checksum,
-             svn_stream_t *contents,
-             apr_hash_t *props,
-             svn_revnum_t replaces_rev,
-             apr_pool_t *scratch_pool)
+add_file(void *baton,
+         const char *relpath,
+         const svn_checksum_t *checksum,
+         svn_stream_t *contents,
+         apr_hash_t *props,
+         svn_revnum_t replaces_rev,
+         apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   const char *full_path = svn_dirent_join(eb->root_path, relpath,
@@ -820,31 +820,31 @@ add_file_ev2(void *baton,
 }
 
 static svn_error_t *
-set_props_ev2(void *baton,
-              const char *relpath,
-              svn_revnum_t revision,
-              apr_hash_t *props,
-              svn_boolean_t complete,
-              apr_pool_t *scratch_pool)
+set_props(void *baton,
+          const char *relpath,
+          svn_revnum_t revision,
+          apr_hash_t *props,
+          svn_boolean_t complete,
+          apr_pool_t *scratch_pool)
 {
   /* This is an export, we don't care about properties. */
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-complete_ev2(void *baton,
-             apr_pool_t *scratch_pool)
+complete(void *baton,
+         apr_pool_t *scratch_pool)
 {
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-add_directory_ev2(void *baton,
-                  const char *relpath,
-                  const apr_array_header_t *children,
-                  apr_hash_t *props,
-                  svn_revnum_t replaces_rev,
-                  apr_pool_t *scratch_pool)
+add_directory(void *baton,
+              const char *relpath,
+              const apr_array_header_t *children,
+              apr_hash_t *props,
+              svn_revnum_t replaces_rev,
+              apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_node_kind_t kind;
@@ -887,23 +887,23 @@ get_editor(const svn_delta_editor_t **export_editor,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
-  svn_editor_t *editorv2;
+  svn_editor_t *editor;
   struct svn_delta__extra_baton *exb = apr_pcalloc(result_pool, sizeof(*exb));
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
-  SVN_ERR(svn_editor_create(&editorv2, eb, ctx->cancel_func, ctx->cancel_baton,
+  SVN_ERR(svn_editor_create(&editor, eb, ctx->cancel_func, ctx->cancel_baton,
                             result_pool, scratch_pool));
-  SVN_ERR(svn_editor_setcb_set_props(editorv2, set_props_ev2, scratch_pool));
-  SVN_ERR(svn_editor_setcb_complete(editorv2, complete_ev2, scratch_pool));
-  SVN_ERR(svn_editor_setcb_add_directory(editorv2, add_directory_ev2,
+  SVN_ERR(svn_editor_setcb_set_props(editor, set_props, scratch_pool));
+  SVN_ERR(svn_editor_setcb_complete(editor, complete, scratch_pool));
+  SVN_ERR(svn_editor_setcb_add_directory(editor, add_directory,
                                          scratch_pool));
-  SVN_ERR(svn_editor_setcb_add_file(editorv2, add_file_ev2, scratch_pool));
+  SVN_ERR(svn_editor_setcb_add_file(editor, add_file, scratch_pool));
 
   *found_abs_paths = TRUE;
 
   SVN_ERR(svn_delta__delta_from_editor(export_editor, edit_baton,
-                                       editorv2, found_abs_paths,
+                                       editor, found_abs_paths,
                                        fetch_props_func, eb,
                                        fetch_base_func, eb,
                                        exb, result_pool));
@@ -1024,8 +1024,8 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           /* Since you cannot actually root an editor at a file, we
            * manually drive a function of our editor. */
-          SVN_ERR(add_file_ev2(eb, "", NULL, tmp_stream, props,
-                               SVN_INVALID_REVNUM, pool));
+          SVN_ERR(add_file(eb, "", NULL, tmp_stream, props,
+                           SVN_INVALID_REVNUM, pool));
         }
       else if (kind == svn_node_dir)
         {
