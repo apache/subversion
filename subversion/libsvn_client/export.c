@@ -820,25 +820,6 @@ add_file(void *baton,
 }
 
 static svn_error_t *
-set_props(void *baton,
-          const char *relpath,
-          svn_revnum_t revision,
-          apr_hash_t *props,
-          svn_boolean_t complete,
-          apr_pool_t *scratch_pool)
-{
-  /* This is an export, we don't care about properties. */
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-complete(void *baton,
-         apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 add_directory(void *baton,
               const char *relpath,
               const apr_array_header_t *children,
@@ -894,8 +875,6 @@ get_editor(const svn_delta_editor_t **export_editor,
 
   SVN_ERR(svn_editor_create(&editor, eb, ctx->cancel_func, ctx->cancel_baton,
                             result_pool, scratch_pool));
-  SVN_ERR(svn_editor_setcb_set_props(editor, set_props, scratch_pool));
-  SVN_ERR(svn_editor_setcb_complete(editor, complete, scratch_pool));
   SVN_ERR(svn_editor_setcb_add_directory(editor, add_directory,
                                          scratch_pool));
   SVN_ERR(svn_editor_setcb_add_file(editor, add_file, scratch_pool));
