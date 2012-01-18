@@ -712,7 +712,7 @@ add_file(void *baton,
   struct edit_baton *eb = baton;
   const char *full_path = svn_dirent_join(eb->root_path, relpath,
                                           scratch_pool);
-  /* PATH is not canonicalized, i.e. it may still contain spaces etc.
+  /* RELPATH is not canonicalized, i.e. it may still contain spaces etc.
    * but EB->root_url is. */
   const char *full_url = svn_path_url_add_component2(eb->root_url,
                                                      relpath,
@@ -720,7 +720,7 @@ add_file(void *baton,
   svn_stream_t *tmp_stream;
   const char *tmppath;
   const svn_string_t *val;
-  /* The three svn: properties we might actually care about. */
+  /* The four svn: properties we might actually care about. */
   const svn_string_t *eol_style_val = NULL;
   const svn_string_t *keywords_val = NULL;
   const svn_string_t *executable_val = NULL;
