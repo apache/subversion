@@ -966,7 +966,6 @@ svn_client_export5(svn_revnum_t *result_rev,
         {
           apr_hash_t *props;
           svn_stream_t *tmp_stream;
-          const char *tmppath;
           svn_node_kind_t to_kind;
 
           if (svn_path_is_empty(to_path))
@@ -998,16 +997,10 @@ svn_client_export5(svn_revnum_t *result_rev,
                                        "overwrite directory with non-directory"),
                                      svn_dirent_local_style(to_path, pool));
 
-          SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmppath,
-                                         svn_dirent_dirname(eb->root_path, pool),
-                                         svn_io_file_del_on_pool_cleanup,
-                                         pool, pool));
+          tmp_stream = svn_stream_buffered(pool);
 
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
                                   tmp_stream, NULL, &props, pool));
-          SVN_ERR(svn_stream_close(tmp_stream));
-
-          SVN_ERR(svn_stream_open_readonly(&tmp_stream, tmppath, pool, pool));
 
           /* Since you cannot actually root an editor at a file, we
            * manually drive a function of our editor. */
