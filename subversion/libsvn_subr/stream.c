@@ -45,6 +45,7 @@
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
+#include "private/svn_subr_private.h"
 
 
 struct svn_stream_t {
@@ -1641,4 +1642,17 @@ svn_string_from_stream(svn_string_t **result,
   (*result)->len = work->len;
 
   return SVN_NO_ERROR;
+}
+
+
+/* These are somewhat arbirary, if we ever get good empirical data as to
+   actually valid values, feel free to update them. */
+#define BUFFER_BLOCK_SIZE 1024
+#define BUFFER_MAX_SIZE 100000
+
+svn_stream_t *
+svn_stream_buffered(apr_pool_t *result_pool)
+{
+  return svn_stream__from_spillbuf(BUFFER_BLOCK_SIZE, BUFFER_MAX_SIZE,
+                                   result_pool);
 }
