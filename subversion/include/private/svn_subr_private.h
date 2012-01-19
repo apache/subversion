@@ -25,6 +25,7 @@
 #define SVN_SUBR_PRIVATE_H
 
 #include "svn_types.h"
+#include "svn_io.h"
 
 
 #ifdef __cplusplus
@@ -187,6 +188,16 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
                            const char *data,
                            apr_size_t len,
                            apr_pool_t *scratch_pool);
+
+
+/* Return a stream built on top of a spillbuf, using the same arguments as
+   svn_spillbuf__create().  This stream can be used for reading and writing,
+   but implements the same basic sematics of a spillbuf for the underlying
+   storage. */
+svn_stream_t *
+svn_stream__from_spillbuf(apr_size_t blocksize,
+                          apr_size_t maxsize,
+                          apr_pool_t *result_pool);
 
 /** @} */
 
