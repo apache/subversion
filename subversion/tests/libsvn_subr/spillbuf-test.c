@@ -132,7 +132,7 @@ test_spillbuf_file(apr_pool_t *pool)
   int i;
   const char *readptr;
   apr_size_t readlen;
-  int cur_index;
+  apr_size_t cur_index;
 
   /* Place enough data into the buffer to cause a spill to disk. Note that
      we are writing data that is *smaller* than the blocksize.  */
