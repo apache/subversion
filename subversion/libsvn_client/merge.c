@@ -9884,8 +9884,7 @@ find_unsynced_ranges(const char *source_repos_rel_path,
    TARGET_HISTORY_HASH.
 
    If no part of TARGET_HISTORY_HASH is found in SOURCE_CATALOG set
-   *NEVER_SYNCHED to TRUE and set *YOUNGEST_MERGED_REV to SVN_INVALID_REVNUM.
-   Otherwise set *NEVER_SYNCHED to FALSE, *YOUNGEST_MERGED_REV to the youngest
+   *YOUNGEST_MERGED_REV to SVN_INVALID_REVNUM; otherwise set it to the youngest
    revision previously merged from the target to the source, and filter
    *UNMERGED_TO_SOURCE_CATALOG so that it contains no ranges greater than
    *YOUNGEST_MERGED_REV.
@@ -9894,7 +9893,6 @@ find_unsynced_ranges(const char *source_repos_rel_path,
    SCRATCH_POOL is used for all temporary allocations.  */
 static svn_error_t *
 find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
-                        svn_boolean_t *never_synched,
                         svn_revnum_t *youngest_merged_rev,
                         svn_revnum_t yc_ancestor_rev,
                         svn_mergeinfo_catalog_t source_catalog,
@@ -9916,7 +9914,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_revnum_t old_rev, young_rev;
 
-  *never_synched = TRUE;
   *youngest_merged_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR(svn_ra_get_session_url(target_ra_session, &target_session_url,
@@ -9980,7 +9977,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
             iterpool, iterpool));
           if (apr_hash_count(explicit_source_target_history_intersection))
             {
-              *never_synched = FALSE;
               /* Keep track of the youngest revision merged from the
                  target to the source. */
               SVN_ERR(svn_mergeinfo__get_range_endpoints(
@@ -10129,7 +10125,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
           if (apr_hash_count(explicit_source_target_history_intersection))
             {
-              *never_synched = FALSE;
               /* Keep track of the youngest revision merged from the
                  target to the source. */
               SVN_ERR(svn_mergeinfo__get_range_endpoints(
@@ -10251,7 +10246,6 @@ calculate_left_hand_side(const char **url_left,
   apr_hash_index_t *hi;
   /* hash of paths mapped to arrays of svn_mergeinfo_t. */
   apr_hash_t *target_history_hash = apr_hash_make(scratch_pool);
-  svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_url;
   svn_revnum_t yc_ancestor_rev;
@@ -10359,7 +10353,6 @@ calculate_left_hand_side(const char **url_left,
      mergeinfo that describes what has *not* previously been merged from
      TARGET_REPOS_REL_PATH@TARGET_REV to SOURCE_REPOS_REL_PATH@SOURCE_REV. */
   SVN_ERR(find_unmerged_mergeinfo(&unmerged_catalog,
-                                  &never_synced,
                                   &youngest_merged_rev,
                                   yc_ancestor_rev,
                                   mergeinfo_catalog,
@@ -10379,7 +10372,7 @@ calculate_left_hand_side(const char **url_left,
   *unmerged_to_source_catalog = svn_mergeinfo_catalog_dup(unmerged_catalog,
                                                           result_pool);
 
-  if (never_synced)
+  if (youngest_merged_rev == SVN_INVALID_REVNUM)
     {
       /* We never merged to the source.  Just return the branch point. */
       *url_left = apr_pstrdup(result_pool, yc_ancestor_url);
