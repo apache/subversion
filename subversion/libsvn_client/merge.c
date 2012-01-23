@@ -9898,7 +9898,6 @@ find_unmerged_mergeinfo_subroutine(svn_mergeinfo_t *filtered_mergeinfo_p,
                                    apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t source_history_as_mergeinfo;
-  svn_mergeinfo_t common_mergeinfo;
 
   /* Get the source path's natural history and merge it into source
      path's explicit or inherited mergeinfo. */
@@ -9915,13 +9914,8 @@ find_unmerged_mergeinfo_subroutine(svn_mergeinfo_t *filtered_mergeinfo_p,
      corresponding target's history is *not* part of source_path's total
      history; because it is neither shared history nor was it ever merged
      from the target to the source. */
-  SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
-                                   source_mergeinfo,
-                                   target_history_as_mergeinfo, TRUE,
-                                   scratch_pool, scratch_pool));
-
   SVN_ERR(svn_mergeinfo_remove2(filtered_mergeinfo_p,
-                                common_mergeinfo,
+                                source_mergeinfo,
                                 target_history_as_mergeinfo, TRUE,
                                 result_pool, scratch_pool));
   return SVN_NO_ERROR;
