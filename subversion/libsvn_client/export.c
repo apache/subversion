@@ -755,31 +755,6 @@ add_file(void *baton,
   if ( (val = apr_hash_get(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING)) )
     special = TRUE;
 
-  /* Possibly wrap the stream to be translated, as dictated by the props. */
-  if ((eol_style_val || keywords_val) && !special)
-    {
-      svn_subst_eol_style_t style;
-      const char *eol = NULL;
-      svn_boolean_t repair = FALSE;
-      apr_hash_t *final_kw = NULL;
-
-      if (eol_style_val)
-        {
-          SVN_ERR(get_eol_style(&style, &eol, eol_style_val->data,
-                                eb->native_eol));
-          repair = TRUE;
-        }
-
-      if (keywords_val)
-        SVN_ERR(svn_subst_build_keywords2(&final_kw, keywords_val->data,
-                                          revision, full_url, date,
-                                          author, scratch_pool));
-
-      contents = svn_subst_stream_translated(contents, eol, repair, final_kw,
-                                             TRUE, /* expand */
-                                             scratch_pool);
-    }
-
   if (special)
     {
       svn_stream_t *tmp_stream;
@@ -801,6 +776,34 @@ add_file(void *baton,
                                                         scratch_pool),
                                      svn_io_file_del_none,
                                      scratch_pool, scratch_pool));
+
+      /* Possibly wrap the stream to be translated, as dictated by
+         the props. */
+      if (eol_style_val || keywords_val)
+        {
+          svn_subst_eol_style_t style;
+          const char *eol = NULL;
+          svn_boolean_t repair = FALSE;
+          apr_hash_t *final_kw = NULL;
+
+          if (eol_style_val)
+            {
+              SVN_ERR(get_eol_style(&style, &eol, eol_style_val->data,
+                                    eb->native_eol));
+              repair = TRUE;
+            }
+
+          if (keywords_val)
+            SVN_ERR(svn_subst_build_keywords2(&final_kw, keywords_val->data,
+                                              revision, full_url, date,
+                                              author, scratch_pool));
+
+          /* Writing through a translated stream is more efficient than
+             reading through one, so we wrap TMP_STREAM and not CONTENTS. */
+          tmp_stream = svn_subst_stream_translated(tmp_stream, eol, repair,
+                                                   final_kw, TRUE, /* expand */
+                                                   scratch_pool);
+        }
 
       SVN_ERR(svn_stream_copy3(contents, tmp_stream, eb->cancel_func,
                                eb->cancel_baton, scratch_pool));
