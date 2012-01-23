@@ -8348,6 +8348,799 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   return SVN_NO_ERROR;
 }
 
+/* ### for debug prints */
+static const char *
+show_mergeinfo(svn_mergeinfo_t mergeinfo,
+               const char *prefix,
+               apr_pool_t *scratch_pool)
+{
+  svn_string_t *str;
+
+  svn_error_clear(svn_mergeinfo__to_formatted_string(
+                    &str, mergeinfo,
+                    apr_pstrcat(scratch_pool, "DBG: ", prefix, (char *)NULL),
+                    scratch_pool));
+  if (strcmp(str->data, apr_pstrcat(scratch_pool, "DBG: ", prefix,
+                                    "empty mergeinfo\n", (char *)NULL)) == 0)
+    return "";
+  return str->data;
+}
+
+/* Set *MERGEINFO to the explicit or inherited mergeinfo of the repository
+ * node URL@REVNUM.  If the node URL@REVNUM does not exist, or there is no
+ * mergeinfo, the result is empty (not null).
+ * Use RA_SESSION, reparenting it temporarily.
+ */
+static svn_error_t *
+fetch_repos_mergeinfo(svn_mergeinfo_t *mergeinfo,
+                      const char *url,
+                      svn_revnum_t revnum,
+                      svn_ra_session_t *ra_session,
+                      apr_pool_t *result_pool)
+{
+  svn_error_t *err;
+
+  err = svn_client__get_repos_mergeinfo(
+          mergeinfo, ra_session, url, revnum,
+          svn_mergeinfo_inherited, TRUE /* squelch_incapable */,
+          result_pool);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND
+              || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+    {
+      svn_error_clear(err);
+      *mergeinfo = apr_hash_make(result_pool);
+    }
+  else
+    SVN_ERR(err);
+
+  if (! *mergeinfo)
+    *mergeinfo = apr_hash_make(result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Find the changes in (explicit or inherited) mergeinfo between the left
+ * and right sides of SOURCE.  Set *DELETED to the deleted mergeinfo and
+ * *ADDED to the added mergeinfo; neither of these results will be null.
+ *
+ * ### TODO: Optimization: cache the mergeinfo (in SOURCE?), instead of
+ * always fetching from the repo.
+ */
+static svn_error_t *
+incoming_mergeinfo_diff(svn_mergeinfo_t *deleted,
+                        svn_mergeinfo_t *added,
+                        const merge_source_t *source,
+                        svn_ra_session_t *ra_session,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_t mergeinfo_left, mergeinfo_right;
+
+  SVN_ERR(fetch_repos_mergeinfo(&mergeinfo_left,
+                                source->url1, source->rev1,
+                                ra_session, scratch_pool));
+  SVN_ERR(fetch_repos_mergeinfo(&mergeinfo_right,
+                                source->url2, source->rev2,
+                                ra_session, scratch_pool));
+
+  SVN_ERR(svn_mergeinfo_diff2(deleted, added,
+                              mergeinfo_left, mergeinfo_right,
+                              TRUE /* consider_inheritance */,
+                              result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Return the mergeinfo fspath corresponding to the (second) URL in
+ * ONE_REV_CHANGE. */
+static const char *
+mergeinfo_fspath(const merge_source_t *one_rev_change,
+                 const char *repos_root_url,
+                 apr_pool_t *pool)
+{
+  const char *relpath
+    = svn_uri_skip_ancestor(repos_root_url, one_rev_change->url2, pool);
+  return apr_pstrcat(pool, "/", relpath, (char *)NULL);
+}
+
+/* Find whether REV is in RANGELIST.
+ * ### TODO: Implement as a simple binary search: would be more efficient.
+ */
+static svn_error_t *
+rev_in_rangelist(svn_boolean_t *is_in_rangelist,
+                 svn_revnum_t rev,
+                 const apr_array_header_t *rangelist,
+                 apr_pool_t *scratch_pool)
+{
+  if (! rangelist)
+    {
+      *is_in_rangelist = FALSE;
+    }
+  else
+    {
+      apr_array_header_t *result;
+
+      SVN_ERR(rangelist_intersect_range(&result, rangelist, rev - 1, rev,
+                                        FALSE /* consider_inheritance */,
+                                        scratch_pool, scratch_pool));
+      *is_in_rangelist = (result->nelts > 0);
+    }
+  return SVN_NO_ERROR;
+}
+
+static const char *
+mergeinfo_graph_key(const merge_source_t *one_rev_change,
+                    apr_pool_t *pool);
+/* Set *IS_RECORDED to true if the single revision identified by
+ * ONE_REV_CHANGE is recorded as merged onto the (root) target in
+ * CHILDREN_WITH_MERGEINFO (or is part of its natural history);
+ * else to false. */
+static svn_error_t *
+change_is_recorded(svn_boolean_t *is_recorded,
+                   const merge_source_t *one_rev_change,
+                   const apr_array_header_t *children_with_mergeinfo,
+                   const char *repos_root_url,
+                   apr_pool_t *scratch_pool)
+{
+  svn_client__merge_path_t *root_child
+    = APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
+  svn_mergeinfo_t pre_merge_mergeinfo = root_child->pre_merge_mergeinfo;
+  svn_mergeinfo_t implicit_mergeinfo = root_child->implicit_mergeinfo;
+  const char *fspath
+    = mergeinfo_fspath(one_rev_change, repos_root_url, scratch_pool);
+
+  *is_recorded = FALSE;
+
+  if (! pre_merge_mergeinfo && ! implicit_mergeinfo)
+    {
+      SVN_DBG(("change_is_recorded(%s) => NO; no mergeinfo\n", mergeinfo_graph_key(one_rev_change, scratch_pool)));
+    }
+  else
+    {
+      if (pre_merge_mergeinfo)
+        {
+          const apr_array_header_t *rangelist
+            = apr_hash_get(pre_merge_mergeinfo, fspath, APR_HASH_KEY_STRING);
+          SVN_ERR(rev_in_rangelist(is_recorded, one_rev_change->rev2, rangelist,
+                                   scratch_pool));
+        }
+      if (*is_recorded)
+          SVN_DBG(("change_is_recorded(%s) => YES; in pre_merge_mergeinfo\n",
+                   mergeinfo_graph_key(one_rev_change, scratch_pool)));
+
+      if (implicit_mergeinfo && ! *is_recorded)
+        {
+          const apr_array_header_t *rangelist
+            = apr_hash_get(implicit_mergeinfo, fspath, APR_HASH_KEY_STRING);
+          SVN_ERR(rev_in_rangelist(is_recorded, one_rev_change->rev2, rangelist,
+                                   scratch_pool));
+        }
+      if (*is_recorded)
+          SVN_DBG(("change_is_recorded(%s) => YES; in implicit_mergeinfo\n",
+                   mergeinfo_graph_key(one_rev_change, scratch_pool)));
+      else
+          SVN_DBG(("change_is_recorded(%s) => NO\n",
+                   mergeinfo_graph_key(one_rev_change, scratch_pool)));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* A node of mergeinfo_graph_t. */
+typedef struct mergeinfo_graph_node_t
+{
+  enum
+    { mergeinfo_graph_merge,
+      mergeinfo_graph_change,
+      mergeinfo_graph_noop
+    } kind;
+  svn_mergeinfo_t added;
+  svn_mergeinfo_t deleted;
+} mergeinfo_graph_node_t;
+
+/* A graph of merges, or more specifically of mergeinfo changes.
+ *
+ * Each graph node represents a revision (of some directory or file) and
+ * contains (in the form of mergeinfo) pointers to all the graph nodes
+ * that represent the revisions merged into this revision at this time.
+ *
+ * ### TODO: compress the storage of a range of (non-merge) nodes, because
+ *     these (especially no-ops) typically come in long runs of many revs.
+ * ### TODO: store the 'inheritable' flag?
+ */
+typedef struct mergeinfo_graph_t
+{
+  /* Keys are (const char *) strings determined by mergeinfo_graph_key();
+   * values are mergeinfo_graph_node_t. */
+  apr_hash_t *hash;
+} mergeinfo_graph_t;
+
+/* Return a string representing ONE_REV_CHANGE in a way that is sufficiently
+ * unique to be used as a hash key in mergeinfo_graph_t. */
+static const char *
+mergeinfo_graph_key(const merge_source_t *one_rev_change,
+                    apr_pool_t *pool)
+{
+  const char *path = one_rev_change->url2;
+#ifdef SVN_DEBUG
+  /* Shorten paths for human convenience */
+#define SHORTEN(path,repo_root) \
+        (strstr(path, repo_root) ? strstr(path, repo_root) + strlen(repo_root) : path)
+  path = SHORTEN(path, "/merge_reintegrate_tests-");
+#endif
+
+  return apr_psprintf(pool, "%s:%ld",
+                      path, one_rev_change->rev2);
+}
+
+/* Set the node in GRAPH keyed by ONE_REV_CHANGE to a new node indicating
+ * a merge, MERGEINFO_ADDED and MERGEINFO_DELETED.  Allocate the new node
+ * in GRAPH's pool. */
+static void
+mergeinfo_graph_set(const mergeinfo_graph_t *graph,
+                    const merge_source_t *one_rev_change,
+                    svn_mergeinfo_t mergeinfo_deleted,
+                    svn_mergeinfo_t mergeinfo_added,
+                    apr_pool_t *scratch_pool)
+{
+  apr_pool_t *graph_pool = apr_hash_pool_get(graph->hash);
+  const char *key = mergeinfo_graph_key(one_rev_change, scratch_pool);
+  mergeinfo_graph_node_t *node = apr_palloc(graph_pool, sizeof(*node));
+
+  node->deleted = mergeinfo_deleted;
+  node->added = mergeinfo_added;
+  if (apr_hash_count(mergeinfo_deleted) || apr_hash_count(mergeinfo_added))
+    node->kind = mergeinfo_graph_merge;
+  else
+    node->kind = mergeinfo_graph_change;  /* ### or no-op */
+  apr_hash_set(graph->hash, key, APR_HASH_KEY_STRING, node);
+}
+
+/* Return a pointer to the node in GRAPH keyed by ONE_REV_CHANGE, or NULL
+ * if there is no such node. */
+static mergeinfo_graph_node_t *
+mergeinfo_graph_get(const mergeinfo_graph_t *graph,
+                    const merge_source_t *one_rev_change,
+                    apr_pool_t *scratch_pool)
+{
+  const char *key = mergeinfo_graph_key(one_rev_change, scratch_pool);
+
+  return apr_hash_get(graph->hash, key, APR_HASH_KEY_STRING);
+}
+
+/* Find the mergeinfo for PATH@REV, and all the mergeinfo it references,
+ * recursively, storing it all in GRAPH.  Assume any entry that is already
+ * in GRAPH is correct and complete.
+ *
+ * TODO: also recurse on mergeinfo_deleted revs.
+ */
+static svn_error_t *
+mergeinfo_graph_populate(mergeinfo_graph_t *graph,
+                         const merge_source_t *one_rev_change,
+                         svn_ra_session_t *ra_session,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  apr_pool_t *graph_pool = apr_hash_pool_get(graph->hash);
+  const char *repos_root_url;
+#ifdef SVN_DEBUG
+  svn_revnum_t rev = one_rev_change->rev2;
+  const char *relpath;
+#endif
+  svn_mergeinfo_t mergeinfo_deleted, mergeinfo_added, mergeinfo;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
+#ifdef SVN_DEBUG
+  relpath = svn_uri_skip_ancestor(repos_root_url, one_rev_change->url2, scratch_pool);
+#endif
+
+  if (mergeinfo_graph_get(graph, one_rev_change, scratch_pool))
+    {
+      SVN_DBG(("mi_graph_populate(%s:%ld) => already present\n", relpath, rev));
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(incoming_mergeinfo_diff(&mergeinfo_deleted, &mergeinfo_added,
+                                  one_rev_change, ra_session,
+                                  ctx, graph_pool, scratch_pool));
+
+  SVN_DBG(("mi_graph_populate(%s:%ld) => -%d,+%d\n"
+           "%s"
+           "%s",
+           relpath, rev, apr_hash_count(mergeinfo_deleted),
+           apr_hash_count(mergeinfo_added),
+           show_mergeinfo(mergeinfo_deleted, "- ", scratch_pool),
+           show_mergeinfo(mergeinfo_added,   "+ ", scratch_pool)));
+
+  mergeinfo_graph_set(graph, one_rev_change,
+                      mergeinfo_deleted, mergeinfo_added,
+                      scratch_pool);
+
+  /* We only care about whether revisions were merged or not; we don't care
+   * whether they were forward or reverse merges, so treat deleted mergeinfo
+   * exactly the same as added mergeinfo. */
+  for (mergeinfo = mergeinfo_added;
+       mergeinfo;
+       mergeinfo = (mergeinfo == mergeinfo_added ? mergeinfo_deleted : NULL))
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *merged_fspath = svn__apr_hash_index_key(hi);
+      const apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *merged_url
+        = svn_path_url_add_component2(repos_root_url, merged_fspath + 1,
+                                      scratch_pool);
+      int i;
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          const svn_merge_range_t *range
+            = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+          svn_revnum_t r;
+
+          for (r = range->start + 1; r <= range->end; r++)
+            {
+              merge_source_t merged_rev = { merged_url, r - 1, merged_url, r };
+              SVN_ERR(mergeinfo_graph_populate(graph, &merged_rev,
+                                               ra_session, ctx, scratch_pool));
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+enum is_recorded_t {
+  is_recorded_full, is_recorded_none, is_recorded_part, is_recorded_noop
+};
+
+#define IS_RECORDED_STR(e) (&"full\0none\0part\0noop"[(result) * 5])
+
+/* Given a merge source and target both represented by CHILDREN_WITH_MERGEINFO,
+ * and a mergeinfo graph GRAPH, determine whether the entire set of logical
+ * changes comprising ONE_REV_CHANGE is already on the target.
+ *
+ * ### TODO: If result is 'part', return information about what parts are
+ *     recorded and not recorded.
+ *
+ * Algorithm:
+ *
+ * If ONE_REV_CHANGE is a no-op:
+ *   return No-op
+ * If ONE_REV_CHANGE is itself recorded on the target:
+ *   return Yes
+ * If ONE_REV_CHANGE is a logical change:
+ *   return No
+ * If ONE_REV_CHANGE was a merge:
+ *   recurse to examine each merged change
+ *   if they are all No-op:
+ *     return No-op
+ *   if they are all Yes or No-op:
+ *     return Yes
+ *   if they are all No or No-op:
+ *     return No
+ *   return Partial
+ */
+static svn_error_t *
+mergeinfo_is_recorded(enum is_recorded_t *result,
+                      mergeinfo_graph_t *graph,
+                      const merge_source_t *one_rev_change,
+                      const apr_array_header_t *children_with_mergeinfo,
+                      svn_ra_session_t *ra_session,
+                      apr_pool_t *scratch_pool)
+{
+  mergeinfo_graph_node_t *node
+    = mergeinfo_graph_get(graph, one_rev_change, scratch_pool);
+  svn_boolean_t recorded;
+  const char *repos_root_url;
+  svn_mergeinfo_t mergeinfo;
+  apr_hash_index_t *hi;
+  int counter[4] = { 0 };
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
+
+  if (node->kind == mergeinfo_graph_noop)
+    {
+      SVN_DBG(("mi_graph_trace(%s) => noop\n",
+               mergeinfo_graph_key(one_rev_change, scratch_pool)));
+      *result = is_recorded_noop;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(change_is_recorded(&recorded, one_rev_change,
+                             children_with_mergeinfo,
+                             repos_root_url, scratch_pool));
+  if (recorded)
+    {
+      SVN_DBG(("mi_graph_trace(%s) => recorded\n",
+               mergeinfo_graph_key(one_rev_change, scratch_pool)));
+      *result = is_recorded_full;
+      return SVN_NO_ERROR;
+    }
+  if (node->kind == mergeinfo_graph_change)
+    {
+      SVN_DBG(("mi_graph_trace(%s) => not-recorded\n",
+               mergeinfo_graph_key(one_rev_change, scratch_pool)));
+      *result = is_recorded_none;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR_ASSERT(node->kind == mergeinfo_graph_merge);
+  SVN_DBG(("mi_graph_trace(%s) => merge...\n",
+           mergeinfo_graph_key(one_rev_change, scratch_pool)));
+
+  for (mergeinfo = node->added;
+       mergeinfo;
+       mergeinfo = (mergeinfo == node->added ? node->deleted : NULL))
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *merged_fspath = svn__apr_hash_index_key(hi);
+      const apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *merged_url
+        = svn_path_url_add_component2(repos_root_url, merged_fspath + 1,
+                                      scratch_pool);
+      int i;
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          const svn_merge_range_t *range
+            = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+          svn_revnum_t r;
+
+          for (r = range->start + 1; r <= range->end; r++)
+            {
+              merge_source_t merged_rev = { merged_url, r - 1, merged_url, r };
+              enum is_recorded_t this_result;
+
+              SVN_ERR(mergeinfo_is_recorded(&this_result, graph, &merged_rev,
+                                            children_with_mergeinfo,
+                                            ra_session, scratch_pool));
+              ++counter[this_result];
+            }
+        }
+    }
+  if (!counter[is_recorded_full] && !counter[is_recorded_none] && !counter[is_recorded_part])
+    {
+      *result = is_recorded_noop;
+      return SVN_NO_ERROR;
+    }
+  if (!counter[is_recorded_none] && !counter[is_recorded_part])
+    {
+      *result = is_recorded_full;
+      return SVN_NO_ERROR;
+    }
+  if (!counter[is_recorded_full] && !counter[is_recorded_part])
+    {
+      *result = is_recorded_none;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR_ASSERT(counter[is_recorded_part] || (counter[is_recorded_full] && counter[is_recorded_none]));
+    {
+      *result = is_recorded_part;
+      return SVN_NO_ERROR;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Look at the overall change in mergeinfo (that is, compare
+ * mergeinfo in SOURCE left with SOURCE right), and see if
+ * there is any addition of mergeinfo about merges *from* TARGET.
+ *
+ * Set *reflected_completely to true if the change in mergeinfo contains
+ * any merges from TARGET.
+ *
+ * TODO: Set *reflected_completely to true if the change in mergeinfo
+ * consists of nothing more that changes that are present in TARGET,
+ * taking into consideration that a merge 'MB' from another branch 'B' might
+ * show up because of having been merged via TARGET.  So, if the merge
+ * directly from TARGET is 'MT', and the corresponding change(s) on TARGET
+ * brought in the change 'MB', then we can ignore 'MB' because we know it
+ * was a transitive merge.  (### What if in fact MB was transitive in the
+ * other direction?)
+ */
+static svn_error_t *
+is_reflected_merge(svn_boolean_t *reflected,
+                   svn_boolean_t *reflected_completely,
+                   apr_array_header_t *children_with_mergeinfo,
+                   const merge_source_t *source,
+                   svn_ra_session_t *ra_session,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  svn_client__merge_path_t *root_child =
+    APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
+  svn_mergeinfo_t deleted;
+  svn_mergeinfo_t added;
+
+  SVN_ERR(incoming_mergeinfo_diff(&deleted, &added, source, ra_session,
+                                  ctx, scratch_pool, scratch_pool));
+  /* Find which differences represent merges from TARGET_LOCATIONS. */
+  SVN_ERR(svn_mergeinfo_intersect2(&deleted, deleted,
+                                   root_child->implicit_mergeinfo,
+                                   FALSE /* consider_inheritance */,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_mergeinfo_intersect2(&added, added,
+                                   root_child->implicit_mergeinfo,
+                                   FALSE /* consider_inheritance */,
+                                   scratch_pool, scratch_pool));
+
+  /*if (apr_hash_count(deleted) || apr_hash_count(added))
+    SVN_DBG(("r%ld:%ld mi change:\n%s%s",
+             source->rev1, source->rev2,
+             show_mergeinfo(deleted, "- ", scratch_pool),
+             show_mergeinfo(added,   "+ ", scratch_pool)));*/
+
+  *reflected = (apr_hash_count(deleted) || apr_hash_count(added));
+  *reflected_completely = FALSE;
+  return SVN_NO_ERROR;
+}
+
+
+/* Are we trying to merge into TGT a change that contains a merge
+ * *from* TGT?  If so, that is probably not desired
+ * and will probably result in conflicts; certainly it is logically
+ * wrong.  The exception is if rollback, reverse-merging or other
+ * forms of undoing are involved; but these are not fully supported
+ * by merge tracking.
+ *
+ * At the very least we should detect and warn.  Better, we could
+ * automatically skip such already-present changes.
+ *
+ * If the entire incoming change (or any single revision of it) says
+ * it is (or includes) a merge from TGT, then we know it is not a
+ * safe change to merge, and we can at least warn about it.
+ *
+ * If we can detect that one revision of the incoming change consists
+ * entirely of a change merged from TGT then we should skip it.  That
+ * will enable us to automatically ignore the following changes in SRC:
+ *
+ *   * the result of a reintegrate merge from TGT
+ *   * the result of a cherry-pick merge from TGT
+ *   * the result of any tracked merge from some other branch, that
+ *     was equivalent (in the merge tracking sense) to a merge from TGT
+ */
+
+/* Given an incoming (multi-rev) change SOURCE, and a target described by
+ * (the first item of) CHILDREN_WITH_MERGEINFO, set *REV to the first
+ * reflective merge in SOURCE, or SVN_INVALID_REVNUM if none.
+ *
+ * This implements algorithm 1.
+ *
+ * ### TODO: Support a reverse range. Presently assumes a forward range.
+ *
+ * Algorithm 1:
+ *
+ *  def find(RANGE):
+ *     # Precondition: rev range RANGE = SOURCE may contain a reflected merge.
+ *     # Postcondition: returns revision R which is in RANGE, or NULL.
+ *     if is_reflected_merge(RANGE):
+ *       if RANGE is a single (operative) revision:
+ *         return R = that revision
+ *       else:
+ *         R := find(first half of RANGE)
+ *         if R:
+ *           return R
+ *         R := find(second half of RANGE)
+ *         assert(R)  # because if RANGE not reflective we should
+ *                      have taken the outer 'else' branch
+ *         return R
+ *     else:
+ *       return NULL
+ *
+ * Algorithm 2:
+ *
+ *   Note: more efficient than algorithm 1.
+ *
+ *   def find(RANGE):
+ *     # Precondition: RANGE contains a reflected merge.
+ *     # Postcondition: returns revision R which is in RANGE.
+ *     if RANGE is a single (operative) revision:
+ *       return R = that revision
+ *     else:
+ *       RANGE1 := first half of RANGE
+ *       if is_reflected_merge(RANGE1):
+ *         return find(RANGE1)
+ *       else:
+ *         RANGE2 := second half of RANGE
+ *         return find(RANGE2)
+ *
+ *   Start:
+ *     if is_reflected_merge(SOURCE):
+ *       return find(SOURCE)
+ *     else:
+ *       return NULL
+ */
+static svn_error_t *
+find_reflected_rev(svn_revnum_t *rev,
+                   apr_array_header_t *children_with_mergeinfo,
+                   const merge_source_t *source,
+                   svn_ra_session_t *ra_session,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  svn_boolean_t reflected, reflected_completely;
+
+  SVN_ERR(is_reflected_merge(&reflected, &reflected_completely,
+                             children_with_mergeinfo, source,
+                             ra_session, ctx, scratch_pool));
+  /* SVN_DBG(("r=%ld:%ld reflected=%d\n", source->rev1, source->rev2, reflected)); */
+
+  if (reflected)
+    {
+      if (source->rev1 + 1 == source->rev2)
+        {
+          *rev = source->rev2;
+        }
+      else
+        {
+          svn_revnum_t half_way = (source->rev1 + source->rev2) / 2;
+          merge_source_t *source1 = subrange_source(source, source->rev1,
+                                                    half_way, scratch_pool);
+          SVN_ERR(find_reflected_rev(rev, children_with_mergeinfo, source1,
+                                     ra_session, ctx, scratch_pool));
+          if (! SVN_IS_VALID_REVNUM(*rev))
+            {
+              merge_source_t *source2
+                = subrange_source(source, half_way, source->rev2, scratch_pool);
+              SVN_ERR(find_reflected_rev(rev, children_with_mergeinfo, source2,
+                                         ra_session, ctx, scratch_pool));
+              SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*rev));
+            }
+        }
+    }
+  else
+    {
+      *rev = SVN_INVALID_REVNUM;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Remove revision REV from the 'remaining_ranges' of every child (including
+ * the target root) in CHILDREN_WITH_MERGEINFO. */
+static svn_error_t *
+remove_rev_from_children_with_mergeinfo(
+                apr_array_header_t *children_with_mergeinfo,
+                svn_revnum_t rev,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *rangelist
+    = svn_rangelist__initialize(rev - 1, rev, TRUE, scratch_pool);
+  int i;
+
+  for (i = 0; i < children_with_mergeinfo->nelts; i++)
+    {
+      svn_client__merge_path_t *child
+        = APR_ARRAY_IDX(children_with_mergeinfo, i,
+                        svn_client__merge_path_t *);
+
+      if (child->remaining_ranges && child->remaining_ranges->nelts)
+        {
+          SVN_ERR(svn_rangelist_remove(&child->remaining_ranges,
+                                       rangelist,
+                                       child->remaining_ranges,
+                                       FALSE, result_pool));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Skip any individual change (revision) on the source that was the
+ * result of a merge from the (current) target branch.  This is a
+ * special case of support for 'reflective' merges.  In particular,
+ * we want to skip any source change that was the result of a
+ * reintegrate merge from the (current) target.
+ *
+ * If it's a record-only merge, then we don't care and we must
+ * allow this case because it's the historically recommended
+ * way of keeping a reintegrated branch alive.
+ */
+#define policy_partially_reflective_skip FALSE
+#define policy_partially_reflective_stop TRUE
+static svn_error_t *
+remove_reflected_revs(const merge_source_t *source,
+                      svn_ra_session_t *ra_session,
+                      apr_array_header_t *children_with_mergeinfo,
+                      merge_cmd_baton_t *merge_b,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_client__merge_path_t *root_child =
+    APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
+  const merge_source_t *remaining_source = source;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  if (! root_child->implicit_mergeinfo || merge_b->record_only)
+    return SVN_NO_ERROR;
+
+  while (remaining_source->rev1 < remaining_source->rev2)
+    {
+      svn_revnum_t rev;
+      enum is_recorded_t result;
+      svn_boolean_t skip = FALSE;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(find_reflected_rev(&rev, children_with_mergeinfo,
+                                 remaining_source,
+                                 merge_b->ra_session1,
+                                 merge_b->ctx, iterpool));
+      if (rev == SVN_INVALID_REVNUM)
+        {
+          break;
+        }
+
+      /* Incoming change is (partly or completely) reflective. */
+      SVN_DBG((_("r%ld is partly or completely reflective; tracing...\n"), rev));
+
+      /* Determine whether it's partly or completely reflective.
+       * ### TODO: Make use of this info in some way: if partial, then
+       *     issue a diagnostic message with details, and/or go ahead and
+       *     merge like we used to, even though there will be conflicts. */
+      {
+        merge_source_t *rev_source
+          = subrange_source(source, rev - 1, rev, iterpool);
+        mergeinfo_graph_t *graph = apr_palloc(scratch_pool, sizeof(*graph));
+
+        graph->hash = apr_hash_make(scratch_pool);
+        SVN_ERR(mergeinfo_graph_populate(graph, rev_source, ra_session,
+                                         merge_b->ctx, scratch_pool));
+        /* We ask: are some or all or none of the changes already recorded
+         * in CHILDREN_WITH_MERGEINFO, tracing the graph from REV_SOURCE? */
+        SVN_ERR(mergeinfo_is_recorded(&result, graph, rev_source,
+                                      children_with_mergeinfo,
+                                      ra_session, scratch_pool));
+        SVN_DBG(("r%ld is how reflective? => %s\n", rev,
+                 IS_RECORDED_STR(result)));
+      }
+
+      if (result == is_recorded_full)
+        {
+          skip = TRUE;
+        }
+      else if (result == is_recorded_none)
+        {
+          ;
+        }
+      else if (result == is_recorded_part)
+        {
+          if (policy_partially_reflective_skip)
+            skip = TRUE;
+          else if (policy_partially_reflective_stop)
+            {
+              return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                       _("r%ld is partially reflective"), rev);
+            }
+        }
+      else if (result == is_recorded_noop)
+        {
+          ;
+        }
+      if (skip)
+        {
+          /* Incoming change is completely reflective. */
+          SVN_DBG((_("Skipping reflective revision r%ld\n"), rev));
+          /* Remove this revision from target and all children. */
+          SVN_ERR(remove_rev_from_children_with_mergeinfo(
+                    children_with_mergeinfo, rev, result_pool, scratch_pool));
+        }
+
+      /* Next iteration */
+      remaining_source = subrange_source(remaining_source,
+                                         rev /*exclusive*/,
+                                         source->rev2 /*inclusive*/,
+                                         scratch_pool);
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for do_merge() when the merge target is a directory.
 
    Perform a merge of changes in SOURCE to the working copy path
@@ -8485,6 +9278,24 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
         notify_b->children_with_mergeinfo, is_rollback, TRUE);
       if (SVN_IS_VALID_REVNUM(new_range_start))
         range.start = new_range_start;
+
+      /* Don't merge any revision that represents a reflected merge (a merge
+         of a change that was earlier merged *from* the current target). */
+      if (merge_b->reintegrate_merge)
+        {
+          SVN_ERR(get_full_mergeinfo(
+                    &target_merge_path->pre_merge_mergeinfo, NULL,
+                    &target_merge_path->inherited_mergeinfo,
+                    svn_mergeinfo_inherited, ra_session,
+                    target_merge_path->abspath,
+                    MAX(source->rev1, source->rev2),
+                    MIN(source->rev1, source->rev2),
+                    merge_b->ctx, scratch_pool /* ###? */, scratch_pool));
+          SVN_ERR(remove_reflected_revs(source,
+                                        ra_session,
+                                        notify_b->children_with_mergeinfo,
+                                        merge_b, scratch_pool, iterpool));
+        }
 
       /* Remove inoperative ranges from any subtrees' remaining_ranges
          to spare the expense of noop editor drives. */
@@ -8821,6 +9632,18 @@ do_merge(apr_hash_t **modified_subtrees,
   apr_pool_t *iterpool;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
+
+#ifdef SVN_DEBUG
+  for (i = 0; i < merge_sources->nelts; i++)
+    {
+      merge_source_t *source =
+        APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
+
+#define abbrev(s) (strstr(s, "/repo") ? strstr(s, "/repo") + 5 : s)
+      SVN_DBG(("do_merge srcs[%d]: (%s@%ld : %s@%ld)\n",
+               i, abbrev(source->url1), source->rev1, abbrev(source->url2), source->rev2));
+    }
+#endif
 
   /* Check from some special conditions when in record-only mode
      (which is a merge-tracking thing). */

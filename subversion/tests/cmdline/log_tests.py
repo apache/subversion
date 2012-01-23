@@ -391,22 +391,14 @@ def merge_history_repos(sbox):
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'mu' on branches/c.")
 
-  # Merge branches/c to trunk, which produces a conflict - r17
+  # Merge branches/c to trunk - r17
+  # (This used to produce a conflict which we then resolved.)
   #
   # Mergeinfo changes on /trunk:
   #    Merged /branches/c:r5-16
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
                        os.path.join('..', branch_c) + '@HEAD')
-  svntest.main.file_write(os.path.join('A', 'mu'),
-                          "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.\n" +
-                          "This is yet more content in 'mu'.",
-                          "wb")
-  # Resolve conflicts, and commit
-  svntest.actions.run_and_verify_resolved([os.path.join('A', 'mu'),
-                                           os.path.join('A', 'xi'),
-                                           os.path.join('A', 'upsilon')])
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",

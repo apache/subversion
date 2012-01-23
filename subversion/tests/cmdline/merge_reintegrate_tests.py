@@ -2541,7 +2541,229 @@ def reintegrate_replaced_source(sbox):
                                        expected_skip,
                                        [], None, None, None, None, True, True,
                                        '--reintegrate', A_path)
-  
+
+#----------------------------------------------------------------------
+
+def simple_reintegrate(sbox, source, target_wcpath):
+  """"""
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '--reintegrate',
+                                     source, target_wcpath)
+  os.chdir(was_cwd)
+
+def simple_sync_merge(sbox, source, target_wcpath):
+  """"""
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge',
+                                     source, target_wcpath)
+  os.chdir(was_cwd)
+
+@SkipUnless(server_has_mergeinfo)
+def reintegrate_keep_alive1(sbox):
+  "reintegrate with automatic keep-alive"
+
+  # Test the ability to keep using a branch after reintegrating it.
+  # Make a branch, reintegrate it to trunk, and then sync the branch without
+  # first doing the 'keep-alive dance' (a record-only merge) that was
+  # required in the past.
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Make a change on the branch
+  sbox.simple_mkdir('A_COPY/NewDir')
+  sbox.simple_commit()
+
+  # Sync the branch
+  sbox.simple_update()
+  simple_sync_merge(sbox, '^/A', 'A_COPY')
+  sbox.simple_commit()
+
+  # Reintegrate
+  simple_reintegrate(sbox, '^/A_COPY', 'A')
+  sbox.simple_commit()
+
+  # Try to sync the branch again, without first doing a keep-alive dance.
+  # If the 'keep alive' works automatically then there should be no
+  # conflicts. In fact in this case there should be no change at all
+  # because it is already up to date and the reintegrate commit that
+  # happened on the trunk should be ignored.
+  sbox.simple_update()
+  simple_sync_merge(sbox, '^/A', 'A_COPY')
+
+@SkipUnless(server_has_mergeinfo)
+def reintegrate_keep_alive2(sbox):
+  "reintegrate with automatic keep-alive"
+
+  # Test the ability to keep using a branch after reintegrating it.
+  #
+  # Like reintegrate_keep_alive1(), but with more complex merges involving
+  # branches other than the two principal branches. Specifically, changes on
+  # 'trunk' (A) will include changes made in a temporary side-branch
+  # (SIDE_BRANCHn) off A, and changes on the child branch (A_COPY) will
+  # include changes made in a temporary side-branch (FEATn) off A_COPY.
+
+  # Make a branch A_COPY in r2, and then a few more commits to A, ending at r7.
+  # Also make a branch A_COPY_2 in r3, which we'll use as a short-term feature branch.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  def change_via_side_branch(branch, side_branch):
+    """Work on the branch BRANCH, through a short-term feature branch named
+       SIDE_BRANCH."""
+    sbox.simple_repo_copy(branch, side_branch)
+    sbox.simple_update()
+    sbox.simple_mkdir(side_branch + '/NewVia' + side_branch)
+    sbox.simple_commit(side_branch)
+    simple_reintegrate(sbox, '^/' + side_branch, branch)
+    sbox.simple_commit()
+
+  # Work on the branch
+  sbox.simple_mkdir('A_COPY/BranchFix1')
+  sbox.simple_commit()
+  change_via_side_branch('A_COPY', 'BRANCH_DEV1')
+
+  # Work on trunk
+  sbox.simple_mkdir('A/TrunkFix1')
+  sbox.simple_commit()
+  change_via_side_branch('A', 'TRUNK_DEV1')
+
+  # Sync the branch
+  sbox.simple_update()
+  simple_sync_merge(sbox, '^/A', 'A_COPY')
+  sbox.simple_commit()
+
+  # Work on the branch
+  sbox.simple_mkdir('A_COPY/BranchFix2')
+  sbox.simple_commit()
+  change_via_side_branch('A_COPY', 'BRANCH_DEV2')
+
+  # Work on trunk (after the latest sync, but still allowed by reintegrate)
+  sbox.simple_mkdir('A/TrunkFix2')
+  sbox.simple_commit()
+  change_via_side_branch('A', 'TRUNK_DEV2')
+
+  # Reintegrate
+  sbox.simple_update()
+  simple_reintegrate(sbox, '^/A_COPY', 'A')
+  sbox.simple_commit()
+
+  # Work on the branch
+  sbox.simple_mkdir('A_COPY/BranchFix3')
+  sbox.simple_commit()
+  change_via_side_branch('A_COPY', 'BRANCH_DEV3')
+
+  # Work on trunk
+  sbox.simple_mkdir('A/TrunkFix3')
+  sbox.simple_commit()
+  change_via_side_branch('A', 'TRUNK_DEV3')
+
+  # Try to sync the branch again, without first doing a keep-alive dance.
+  # Subversion should automatically skip the reintegrate merge revisions and
+  # merge the other changes (TrunkFix2, TRUNK_DEV2, TrunkFix3, TRUNK_DEV3)
+  # with no conflicts.
+  sbox.simple_update()
+  simple_sync_merge(sbox, '^/A', 'A_COPY')
+
+@SkipUnless(server_has_mergeinfo)
+def reintegrate_keep_alive3(sbox):
+  "reintegrate with automatic keep-alive 3"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+
+  gamma_COPY_path = os.path.join(sbox.wc_dir, "A_COPY", "D", "gamma")
+  chi_COPY_2_path = os.path.join(sbox.wc_dir, "A_COPY_2", "D", "H", "chi")
+  A_COPY_2_path   = os.path.join(sbox.wc_dir, "A_COPY_2")
+  A_path          = os.path.join(sbox.wc_dir, "A")
+  A_COPY_path     = os.path.join(sbox.wc_dir, "A_COPY")
+
+  # A@1---r4---r5---r6---r7----------------r11----------->
+  #  |\                                     ^          |
+  #  | \                                    |          |
+  #  |  \                              reintegrate     |
+  #  |   V                                  |          |
+  #  |   A_COPY_2-----------------r9---r10---          |
+  #  |                            ^                sync merge
+  #  |                           /                     |
+  #  |                  cherry-pick merge of r8        |
+  #  V                         /                       V
+  #  A_COPY-------------------r8------------------------->
+  #
+  #
+  # Make a branch A_COPY in r2, and A_COPY_2 in r3, and then a few more
+  # commits to A in r4 through r7.
+  expected_disk, expected_status = set_up_branch(sbox, nbr_of_branches=2)
+
+  # r8 - Make an edit on the first branch to A_COPY/D/gamma
+  svntest.main.file_write(gamma_COPY_path, "Branch 1 edit.\n")
+  svntest.main.run_svn(None, "ci", "-m", "Branch 1 edit", wc_dir)
+
+  # r9 - Cherry pick r8 from ^/A_COPY to A_COPY_2
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A_COPY',
+                                     A_COPY_2_path, '-c8')
+  svntest.main.run_svn(None, "ci", "-m",
+                       "Cherry pick r8 from A_COPY to A_COPY_2", wc_dir)
+
+  # r10 - Make an edit on the second branch to A_COPY_2/D/H/chi
+  svntest.main.file_write(chi_COPY_2_path, "Branch 2 edit.\n")
+  svntest.main.run_svn(None, "ci", "-m", "Branch 2 edit", wc_dir)
+
+  # r11 - Reintegrate A_COPY_2 to A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A_COPY_2',
+                                     A_path, '--reintegrate')
+  svntest.main.run_svn(None, "ci", "-m", "Reintegrate A_COPY_2 back to A",
+                       wc_dir)
+
+  # Now try to sync merge ^/A to A_COPY.
+  #
+  # Revision r11 is skipped so the change from r10 never makes it into A_COPY.
+  #
+  # >svn merge ^^/A A_COPY
+  # DBG: merge.c:8464: r1:11 mi added:
+  # DBG:   /A_COPY:8
+  # DBG: merge.c:8464: r6:11 mi added:
+  # DBG:   /A_COPY:8
+  # DBG: merge.c:8464: r8:11 mi added:
+  # DBG:   /A_COPY:8
+  # DBG: merge.c:8464: r9:11 mi added:
+  # DBG:   /A_COPY:8
+  # DBG: merge.c:8464: r10:11 mi added:
+  # DBG:   /A_COPY:8
+  # DBG: merge.c:8633: Skipping reflective revision r11
+  # --- Merging r2 through r10 into 'A_COPY':
+  # U    A_COPY\B\E\beta
+  # U    A_COPY\D\G\rho
+  # U    A_COPY\D\H\omega
+  # U    A_COPY\D\H\psi
+  # --- Recording mergeinfo for merge of r2 through r11 into 'A_COPY':
+  #  U   A_COPY
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+
+  # And what's more worrisome is that if we commit this sync merge and later
+  # reintegrate ^/A_COPY back to A, the change in r10 is removed from A
+  #
+  #
+  ###svntest.main.run_svn(None, "ci", "-m", "Sync A to A_COPY",
+  ###                     wc_dir)
+  ###svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  ###                                   sbox.repo_url + '/A_COPY',
+  ###                                   A_path, '--reintegrate')
+
+
 ########################################################################
 # Run the tests
 
@@ -2565,6 +2787,9 @@ test_list = [ None,
               reintegrate_creates_bogus_mergeinfo,
               no_source_subtree_mergeinfo,
               reintegrate_replaced_source,
+              reintegrate_keep_alive1,
+              reintegrate_keep_alive2,
+              reintegrate_keep_alive3,
              ]
 
 if __name__ == '__main__':
