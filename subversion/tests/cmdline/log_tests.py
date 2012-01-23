@@ -218,7 +218,7 @@ def guarantee_repos_and_wc(sbox):
 
 def merge_history_repos(sbox):
   """Make a repos with varied and interesting merge history, similar
-  to the repos found at: log_tests_data/merge_history_dump.png"""
+  to the repos found at: log_tests_data/merge_history_repo.png"""
 
   upsilon_path = os.path.join('A', 'upsilon')
   omicron_path = os.path.join('blocked', 'omicron')
@@ -281,7 +281,6 @@ def merge_history_repos(sbox):
   # From branch_a to trunk: add 'upsilon' and modify 'iota' and 'mu'.
   #
   # Mergeinfo changes on /trunk:
-  #    Merged /trunk:r2
   #    Merged /branches/a:r3-5
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a) + '@HEAD')
@@ -363,8 +362,6 @@ def merge_history_repos(sbox):
   # More merging - r14
   #
   # Mergeinfo changes on /trunk:
-  #    Reverse-merged /trunk:r2
-  #    Merged /trunk:r3-9
   #    Merged /branches/a:r6,8-11
   #    Merged /branches/b:r10-13
   os.chdir('trunk')
@@ -397,8 +394,7 @@ def merge_history_repos(sbox):
   # Merge branches/c to trunk, which produces a conflict - r17
   #
   # Mergeinfo changes on /trunk:
-  #    Merged /trunk:r2
-  #    Merged /branches/c:r3-16
+  #    Merged /branches/c:r5-16
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
                        os.path.join('..', branch_c) + '@HEAD')
