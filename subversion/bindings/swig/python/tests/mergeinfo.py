@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os, sys, gc, itertools
+import unittest, os, sys, gc
 from svn import core, repos, fs
 import utils
 
