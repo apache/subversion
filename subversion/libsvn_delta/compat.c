@@ -1005,7 +1005,9 @@ build(struct editor_baton *eb,
             APR_ARRAY_PUSH(operation->prop_dels, const char *) = 
                                         apr_pstrdup(eb->edit_pool, prop->name);
           else
-            apr_hash_set(operation->prop_mods, prop->name, APR_HASH_KEY_STRING,
+            apr_hash_set(operation->prop_mods,
+                         apr_pstrdup(eb->edit_pool, prop->name),
+                         APR_HASH_KEY_STRING,
                          svn_string_dup(prop->value, eb->edit_pool));
         }
 
