@@ -185,6 +185,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1235264
+   Fix a swig-py memory leak.
+   Justification:
+     Seen in the wild with significant effects.
+   Notes: 
+     Testsuite patch is under review.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
