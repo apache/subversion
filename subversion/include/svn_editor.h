@@ -182,6 +182,7 @@ extern "C" {
  *      svn_editor_setcb_delete() \n
  *      svn_editor_setcb_copy() \n
  *      svn_editor_setcb_move() \n
+ *      svn_editor_setcb_rotate() \n
  *      svn_editor_setcb_complete() \n
  *      svn_editor_setcb_abort()
  *
@@ -203,7 +204,8 @@ extern "C" {
  *      svn_editor_set_target() \n
  *      svn_editor_delete() \n
  *      svn_editor_copy() \n
- *      svn_editor_move()
+ *      svn_editor_move() \n
+ *      svn_editor_rotate()
  *    \n\n
  *    Just before each callback invocation is carried out, the @a cancel_func
  *    that was passed to svn_editor_create() is invoked to poll any
@@ -260,15 +262,17 @@ extern "C" {
  *   its children, if a directory) may be copied many times, and are
  *   otherwise subject to the Once Rule. The destination path of a copy
  *   or move may have set_* operations applied, but not add_* or delete.
- *   If the destination path of a copy or move is a directory, then its
- *   children are subject to the Once Rule. The source path of a move
- *   (and its child paths) may be referenced in add_*, or as the
- *   destination of a copy (where these new, copied nodes are subject to
- *   the Once Rule).
+ *   If the destination path of a copy, move, or rotate is a directory,
+ *   then its children are subject to the Once Rule. The source path of
+ *   a move (and its child paths) may be referenced in add_*, or as the
+ *   destination of a copy (where these new or copied nodes are subject
+ *   to the Once Rule). Paths listed in a rotation are both sources and
+ *   destinations, so they may not be referenced again in an add_* or a
+ *   deletion; these paths may have set_* operations applied.
  *
- * - The ancestor of an added, copied-here, moved-here or modified node may
- *   not be deleted. The ancestor may not be moved (instead: perform the
- *   move, *then* the edits).
+ * - The ancestor of an added, copied-here, moved-here, rotated, or
+ *   modified node may not be deleted. The ancestor may not be moved
+ *   (instead: perform the move, *then* the edits).
  *
  * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
@@ -288,6 +292,10 @@ extern "C" {
  *   Note: if the desired semantics is one (or more) copies, followed
  *   by a delete... that is fine. It is simply that svn_editor_move()
  *   should be used to describe a semantic move.
+ *
+ * - Paths mentioned in svn_editor_rotate() may have their properties
+ *   and contents edited (via set_* calls) by a previous or later call,
+ *   but they may not be subject to a later move, rotate, or deletion.
  *
  * - One of svn_editor_complete() or svn_editor_abort() must be called
  *   exactly once, which must be the final call the driver invokes.
@@ -505,6 +513,15 @@ typedef svn_error_t *(*svn_editor_cb_move_t)(
   svn_revnum_t replaces_rev,
   apr_pool_t *scratch_pool);
 
+/** @see svn_editor_rotate(), svn_editor_t.
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_editor_cb_rotate_t)(
+  void *baton,
+  const apr_array_header_t *relpaths,
+  const apr_array_header_t *revisions,
+  apr_pool_t *scratch_pool);
+
 /** @see svn_editor_complete(), svn_editor_t.
  * @since New in 1.8.
  */
@@ -655,6 +672,17 @@ svn_editor_setcb_move(svn_editor_t *editor,
                       svn_editor_cb_move_t callback,
                       apr_pool_t *scratch_pool);
 
+/** Sets the #svn_editor_cb_rotate_t callback in @a editor
+ * to @a callback.
+ * @a scratch_pool is used for temporary allocations (if any).
+ * @see also svn_editor_setcb_many().
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_setcb_rotate(svn_editor_t *editor,
+                        svn_editor_cb_rotate_t callback,
+                        apr_pool_t *scratch_pool);
+
 /** Sets the #svn_editor_cb_complete_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
@@ -695,6 +723,7 @@ typedef struct svn_editor_cb_many_t
   svn_editor_cb_delete_t cb_delete;
   svn_editor_cb_copy_t cb_copy;
   svn_editor_cb_move_t cb_move;
+  svn_editor_cb_rotate_t cb_rotate;
   svn_editor_cb_complete_t cb_complete;
   svn_editor_cb_abort_t cb_abort;
 
@@ -928,6 +957,33 @@ svn_editor_move(svn_editor_t *editor,
                 svn_revnum_t src_revision,
                 const char *dst_relpath,
                 svn_revnum_t replaces_rev);
+
+/** Drive @a editor's #svn_editor_cb_rotate_t callback.
+ *
+ * Perform a rotation among multiple nodes in the target tree.
+ *
+ * The @relpaths and @revisions arrays (pair-wise) specify nodes in the
+ * tree which are located at a path and expected to be at a specific
+ * revision. These nodes are simultaneously moved in a rotation pattern.
+ * For example, the node at index 0 of @a relpaths and @a revisions will
+ * be moved to the relpath specified at index 1 of @a relpaths. The node
+ * at index 1 will be moved to the location at index 2. The node at index
+ * N-1 will be moved to the relpath specifed at index 0.
+ *
+ * The simplest form of this operation is to swap nodes A and B. One may
+ * think to move A to a temporary location T, then move B to A, then move
+ * T to B. However, this last move violations the Once Rule by moving T
+ * (which had already by edited by the move from A). In order to keep the
+ * restrictions against multiple moves of a single node, the rotation
+ * operation is needed for certain types of tree edits.
+ *
+ * For all restrictions on driving the editor, see #svn_editor_t.
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_editor_rotate(svn_editor_t *editor,
+                  const apr_array_header_t *relpaths,
+                  const apr_array_header_t *revisions);
 
 /** Drive @a editor's #svn_editor_cb_complete_t callback.
  *
