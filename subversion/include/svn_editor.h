@@ -329,6 +329,19 @@ extern "C" {
  * for these items are invoked.
  * \n\n
  *
+ * <h3>Timing and State</h3>
+ * The calls made by the driver to alter the state in the receiver are
+ * based on the receiver's *current* state, which includes all prior changes
+ * made during the edit.
+ *
+ * Example: copy A to B; set-props on A; copy A to C. The props on C
+ * should reflect the updated properties of A.
+ *
+ * Example: mv A@N to B; mv C@M to A. The second move cannot be marked as
+ * a "replacing" move since it is not replacing A. The node at A was moved
+ * away. The second operation is simply moving C to the now-empty path
+ * known as A.
+ *
  * <h3>Paths</h3>
  * Each driver/receiver implementation of this editor interface must
  * establish the expected root path for the paths sent and received via the
