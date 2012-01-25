@@ -73,7 +73,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-svn-patch-eol-fixes
    Votes:
-     +1: stsp, philip
+     +1: stsp, philip, steveking
 
  * r1220783
    Fix mis-ordered text output of 'svn log --diff' on Windows.
@@ -142,7 +142,7 @@ Candidate changes:
    Justification:
      Client can assert or SEGV.
    Votes:
-     +1: philip, rhuijben
+     +1: philip, rhuijben, steveking
 
  * r1230212
    Fix for large files on 32-bit systems
@@ -178,7 +178,7 @@ Candidate changes:
      The actual fix had to be reimplemented on the branch as the relevant code
      was refactored since branching 1.7.x.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r1232413
    Improve server certificate error collection code.
