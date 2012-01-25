@@ -1032,7 +1032,10 @@ build(struct editor_baton *eb,
     }
 
   if (action == ACTION_DELETE)
-    operation->operation = OP_DELETE;
+    {
+      operation->operation = OP_DELETE;
+      operation->base_revision = rev;
+    }
 
   else if (action == ACTION_ADD_ABSENT)
     operation->operation = OP_ADD_ABSENT;
@@ -1269,7 +1272,7 @@ delete_cb(void *baton,
   struct editor_baton *eb = baton;
 
   SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
-                NULL, SVN_INVALID_REVNUM, NULL, NULL, SVN_INVALID_REVNUM,
+                NULL, revision, NULL, NULL, SVN_INVALID_REVNUM,
                 scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1390,7 +1393,7 @@ drive_tree(struct operation *op,
   /* Deletes and replacements are simple -- just delete the thing. */
   if (op->operation == OP_DELETE || op->operation == OP_REPLACE)
     {
-      SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
+      SVN_ERR(editor->delete_entry(path, op->base_revision,
                                    parent_op->baton, scratch_pool));
     }
 
