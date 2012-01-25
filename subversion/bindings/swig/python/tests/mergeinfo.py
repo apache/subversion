@@ -156,8 +156,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
   def test_mergeinfo_leakage__lingering_range_t_objects_after_del(self):
     """Ensure that there are no svn_merge_range_t objects being tracked by
        the garbage collector after we explicitly `del` the results returned
-       by svn_mergeinfo_parse().  We disable gc before the svn_mergeinfo_parse
-       call and force an explicit collection cycle straight after the `del`;
+       by svn_mergeinfo_parse().  We call gc.collect() to force an explicit
+       garbage collection cycle after the `del`;
        if our reference counts are correct, the allocated svn_merge_range_t
        objects will be garbage collected and thus, not appear in the list of
        objects returned by gc.get_objects()."""
