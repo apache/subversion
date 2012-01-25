@@ -988,11 +988,16 @@ build(struct editor_baton *eb,
       apr_hash_t *current_props;
       apr_array_header_t *propdiffs;
 
-      if (kind == svn_kind_unknown)
-        SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                    relpath, rev, scratch_pool));
-      else
-        operation->kind = kind;
+      /* Only fetch the kind if operating on something other than the root,
+         as we already know the kind on the root. */
+      if (operation->path)
+        {
+          if (kind == svn_kind_unknown)
+            SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                        relpath, rev, scratch_pool));
+          else
+            operation->kind = kind;
+        }
 
       if (operation->operation == OP_REPLACE)
         current_props = apr_hash_make(scratch_pool);
