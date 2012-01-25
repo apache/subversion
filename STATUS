@@ -47,34 +47,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
-   r1206724, r1206741, r1207656, r1207663, r1207823
-   Fix issues #3814, and #3991, and other EOL-handling problems in patch.
-   Justification:
-     svn patch is broken for file content and property values not terminated
-     with EOL, and for patches not terminated with EOL.
-     Fixes requested on users@:
-     http://svn.haxx.se/users/archive-2011-11/0513.shtml
-     http://svn.haxx.se/users/archive-2011-11/0523.shtml
-   Notes:
-     r1150344: Merged to avoid conflicts in diff parsing test.
-     r1158923: Adds a cmdline regression test for issue #3991.
-     r1158929: Adds a new C diff parsing regression test for issue #3991.
-     r1166267: Merged to prevent conflicts in diff_tests.py.
-     r1206576: Tweak 'svn diff' output for prop values not terminated with EOL.
-     r1206718: Fix issue #3814.
-     r1206719: Follow-up fix for JavaHL tests.
-     r1206724: Fix issue #3991.
-     r1206741: Fixes the #3991 C diff parsing test to make it PASS.
-     r1206748: Remove an obsolete comment.
-     r1207656: Fix a pointer dereference bug from r1206718.
-     r1207663: Fix handling of '\ No newline ...' comments within hunk text.
-     r1207823: Fixes spurious test failures.
-   Branch:
-     ^/subversion/branches/1.7.x-svn-patch-eol-fixes
-   Votes:
-     +1: stsp, philip, steveking
-
  * r1220783
    Fix mis-ordered text output of 'svn log --diff' on Windows.
    Justification:
@@ -136,13 +108,6 @@ Candidate changes:
      Fixes api to allow running tests on UNC shares.
    Votes:
      +1: rhuijben, steveking
-
- * r1229303
-   Fix an 'svn revert' assert caused by accessing the wrong memory.
-   Justification:
-     Client can assert or SEGV.
-   Votes:
-     +1: philip, rhuijben, steveking
 
  * r1230212
    Fix for large files on 32-bit systems
@@ -209,6 +174,41 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
+   r1206724, r1206741, r1207656, r1207663, r1207823
+   Fix issues #3814, and #3991, and other EOL-handling problems in patch.
+   Justification:
+     svn patch is broken for file content and property values not terminated
+     with EOL, and for patches not terminated with EOL.
+     Fixes requested on users@:
+     http://svn.haxx.se/users/archive-2011-11/0513.shtml
+     http://svn.haxx.se/users/archive-2011-11/0523.shtml
+   Notes:
+     r1150344: Merged to avoid conflicts in diff parsing test.
+     r1158923: Adds a cmdline regression test for issue #3991.
+     r1158929: Adds a new C diff parsing regression test for issue #3991.
+     r1166267: Merged to prevent conflicts in diff_tests.py.
+     r1206576: Tweak 'svn diff' output for prop values not terminated with EOL.
+     r1206718: Fix issue #3814.
+     r1206719: Follow-up fix for JavaHL tests.
+     r1206724: Fix issue #3991.
+     r1206741: Fixes the #3991 C diff parsing test to make it PASS.
+     r1206748: Remove an obsolete comment.
+     r1207656: Fix a pointer dereference bug from r1206718.
+     r1207663: Fix handling of '\ No newline ...' comments within hunk text.
+     r1207823: Fixes spurious test failures.
+   Branch:
+     ^/subversion/branches/1.7.x-svn-patch-eol-fixes
+   Votes:
+     +1: stsp, philip, steveking
+
+ * r1229303
+   Fix an 'svn revert' assert caused by accessing the wrong memory.
+   Justification:
+     Client can assert or SEGV.
+   Votes:
+     +1: philip, rhuijben, steveking
 
  * r1235264, r1235296, r1235302, r1235736
    Fix a swig-py memory leak.
