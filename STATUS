@@ -183,7 +183,7 @@ Candidate changes:
  * r1232413
    Improve server certificate error collection code.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
  * r1235264, r1235296, r1235302
    Fix a swig-py memory leak.
