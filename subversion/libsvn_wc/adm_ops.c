@@ -1277,11 +1277,11 @@ remove_conflict_file(svn_boolean_t *notify_required,
 static int
 compare_revert_list_copied_children(const void *a, const void *b)
 {
-  const svn_wc__db_revert_list_copied_child_info_t *ca = a;
-  const svn_wc__db_revert_list_copied_child_info_t *cb = b;
+  const svn_wc__db_revert_list_copied_child_info_t * const *ca = a;
+  const svn_wc__db_revert_list_copied_child_info_t * const *cb = b;
   int i;
 
-  i = svn_path_compare_paths(ca->abspath, cb->abspath);
+  i = svn_path_compare_paths(ca[0]->abspath, cb[0]->abspath);
 
   /* Reverse the result of svn_path_compare_paths() to achieve
    * descending order. */

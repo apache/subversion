@@ -175,13 +175,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1229303
-   Fix an 'svn revert' assert caused by accessing the wrong memory.
-   Justification:
-     Client can assert or SEGV.
-   Votes:
-     +1: philip, rhuijben, steveking
-
  * r1235264, r1235296, r1235302, r1235736
    Fix a swig-py memory leak.
    Justification:
