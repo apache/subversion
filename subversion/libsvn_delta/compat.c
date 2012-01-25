@@ -261,10 +261,13 @@ process_actions(void *edit_baton,
                 {
                   /* Fetch the original props. We can then apply each of
                      the modifications to it.  */
-                  SVN_ERR(eb->fetch_props_func(&props,
-                                               eb->fetch_props_baton,
-                                               path, props_base_revision,
-                                               scratch_pool, scratch_pool));
+                  if (need_delete && need_add)
+                    props = apr_hash_make(scratch_pool);
+                  else
+                    SVN_ERR(eb->fetch_props_func(&props,
+                                                 eb->fetch_props_baton,
+                                                 path, props_base_revision,
+                                                 scratch_pool, scratch_pool));
                 }
 
               /* Note that p_args->value may be NULL.  */
@@ -991,8 +994,12 @@ build(struct editor_baton *eb,
       else
         operation->kind = kind;
 
-      SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
-                                   relpath, rev, scratch_pool, scratch_pool));
+      if (operation->operation == OP_REPLACE)
+        current_props = apr_hash_make(scratch_pool);
+      else
+        SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                     relpath, rev, scratch_pool,
+                                     scratch_pool));
 
       SVN_ERR(svn_prop_diffs(&propdiffs, props, current_props, scratch_pool));
 
