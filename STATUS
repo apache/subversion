@@ -190,11 +190,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1231944, r1231945
-   Fix a patch problem where the patch file causes multiple levels of
-   directories to be added and also deletes a file.
-   Justification:
-     Allows dry-run applying some patch files.
-   Votes:
-     +1: rhuijben, steveking, philip
