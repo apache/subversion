@@ -340,7 +340,8 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
 
 /* Sometimes SASL returns SASL_FAIL as RESULT and sets errno.
  * SASL_FAIL translates to "generic error" which is quite unhelpful.
- * Try to append a more informative error message based on errno. */
+ * Try to append a more informative error message based on errno so
+ * should be called before doing anything that may change errno. */
 static const char *
 get_sasl_errno_msg(int result, apr_pool_t *result_pool)
 {
@@ -353,14 +354,16 @@ get_sasl_errno_msg(int result, apr_pool_t *result_pool)
 }
 
 /* Wrap an error message from SASL with a prefix that allows users
- * to tell that the error message came from SASL. */
+ * to tell that the error message came from SASL.  Queries errno and
+ * so should be called before doing anything that may change errno. */
 static const char *
 get_sasl_error(sasl_conn_t *sasl_ctx, int result, apr_pool_t *result_pool)
 {
+  const char *sasl_errno_msg = get_sasl_errno_msg(result, result_pool);
+
   return apr_psprintf(result_pool,
                       _("SASL authentication error: %s%s"),
-                      sasl_errdetail(sasl_ctx),
-                      get_sasl_errno_msg(result, result_pool));
+                      sasl_errdetail(sasl_ctx), sasl_errno_msg);
 }
 
 /* Create a new SASL context. */
@@ -380,10 +383,14 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                            callbacks, SASL_SUCCESS_DATA,
                            sasl_ctx);
   if (result != SASL_OK)
-    return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                             _("Could not create SASL context: %s%s"),
-                             sasl_errstring(result, NULL, NULL),
-                             get_sasl_errno_msg(result, pool));
+    {
+      const char *sasl_errno_msg = get_sasl_errno_msg(result, pool);
+
+      return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                               _("Could not create SASL context: %s%s"),
+                               sasl_errstring(result, NULL, NULL),
+                               sasl_errno_msg);
+    }
   svn_atomic_inc(&sasl_ctx_count);
   apr_pool_cleanup_register(pool, *sasl_ctx, sasl_dispose_cb,
                             apr_pool_cleanup_null);
