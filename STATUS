@@ -164,6 +164,15 @@ Candidate changes:
    Votes:
      +1: neels, rhuijben
 
+ * r1236173
+   Do canonicalization rather than requring canonical data in some
+   mod_dav_svn requests.
+   Justification:
+     Backward compatibility with 1.6 clients when using URLs such
+     as http://host:80/rep%6f that 1.7 considers non-canonical.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
