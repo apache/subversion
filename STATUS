@@ -145,10 +145,16 @@ Candidate changes:
    Votes:
      +1: rhuijben, steveking
 
- * r1232413
+ * r1232413, r1236099
    Improve server certificate error collection code.
+   Notes:
+     r1232413 updates serf.
+     r1236099 updates neon.
+     The changes are independent, but as it changes how the config file
+     behaves, I think both should be applied at the same time. (rhuijben)
    Votes:
-     +1: rhuijben, gstein
+     +1: gstein (without r1236099)
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
