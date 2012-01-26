@@ -153,8 +153,7 @@ Candidate changes:
      The changes are independent, but as it changes how the config file
      behaves, I think both should be applied at the same time. (rhuijben)
    Votes:
-     +1: gstein (without r1236099)
-     +1: rhuijben
+     +1: rhuijben, gstein
 
 Veto-blocked changes:
 =====================
