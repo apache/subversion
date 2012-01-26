@@ -47,6 +47,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
+ * r1220783
+   Fix mis-ordered text output of 'svn log --diff' on Windows.
+   Justification:
+     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
+   Notes:
+     Doesn't compile on 1.7.x.
+   Votes:
+     +1: julianfoad, rhuijben
+
  * r1210147, r1202132, r1202333, r1220740
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
@@ -183,9 +192,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
- * r1220783
-   Fix mis-ordered text output of 'svn log --diff' on Windows.
-   Justification:
-     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
-   Votes:
-     +1: julianfoad, rhuijben, philip
