@@ -155,6 +155,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, gstein
 
+ * r1163372, r1236163
+   Issue #4053: svn:externals with explicit rev checks out HEAD
+   Justification:
+     Regression.
+   Notes:
+     r1236163 adds a regression test
+   Votes:
+     +1: neels
+
 Veto-blocked changes:
 =====================
 
