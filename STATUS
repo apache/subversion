@@ -150,15 +150,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, gstein
 
- * r1163372, r1236163
-   Issue #4053: svn:externals with explicit rev checks out HEAD
-   Justification:
-     Regression.
-   Notes:
-     r1236163 adds a regression test
-   Votes:
-     +1: neels, rhuijben
-
  * r1236173
    Do canonicalization rather than requring canonical data in some
    mod_dav_svn requests.
@@ -192,3 +183,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1163372, r1236163
+   Issue #4053: svn:externals with explicit rev checks out HEAD
+   Justification:
+     Regression.
+   Notes:
+     r1236163 adds a regression test
+   Votes:
+     +1: neels, rhuijben, philip
