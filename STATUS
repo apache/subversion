@@ -162,7 +162,7 @@ Candidate changes:
    Notes:
      r1236163 adds a regression test
    Votes:
-     +1: neels
+     +1: neels, rhuijben
 
 Veto-blocked changes:
 =====================
