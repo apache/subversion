@@ -931,6 +931,11 @@ get_operation(const char *path,
       apr_hash_set(operation->children, apr_pstrdup(result_pool, path),
                    APR_HASH_KEY_STRING, child);
     }
+
+  /* If an operation has a child, it must of necessity be a directory,
+     so ensure this fact. */
+  operation->kind = svn_kind_dir;
+
   return child;
 }
 
