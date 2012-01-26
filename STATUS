@@ -183,12 +183,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1163372, r1236163
-   Issue #4053: svn:externals with explicit rev checks out HEAD
-   Justification:
-     Regression.
-   Notes:
-     r1236163 adds a regression test
-   Votes:
-     +1: neels, rhuijben, philip

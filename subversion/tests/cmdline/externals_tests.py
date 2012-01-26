@@ -2094,6 +2094,77 @@ def remap_file_external_with_prop_del(sbox):
   # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
+
+# Test for issue #4053 'svn:externals with explicit rev checks out HEAD'
+@Issue(4053)
+def dir_external_with_dash_r_only(sbox):
+  "whether '-r1 ^/A B' updates properly"
+  # svntest.factory.make(sbox,"""
+  #   echo 'newer alpha' > A/B/E/alpha
+  #   svn ci
+  #   svn ps svn:externals ' -r1 ^/A/B/E E_ext' .
+  #   svn up
+  #   # ^ move the 'status.tweak(wc_rev=2)' above the 'add()' call
+  #   svn info E_ext
+  #   # ^ change the 'svn info' call to
+  #   #  expected_info = { 'Revision': '1' }
+  #   #  actions.run_and_verify_info([expected_info], E_ext)
+  #   """)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A_B_E_alpha = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  E_ext = os.path.join(wc_dir, 'E_ext')
+
+  # echo 'newer alpha' > A/B/E/alpha
+  main.file_write(A_B_E_alpha, 'newer alpha\n')
+
+  # svn ci
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'       : Item(verb='Sending'),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', wc_rev='2')
+
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
+
+  # svn ps svn:externals ' -r1 ^/A/B/E E_ext' .
+  expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+    'svn:externals', ' -r1 ^/A/B/E E_ext', wc_dir)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'E_ext/beta'        : Item(status='A '),
+    'E_ext/alpha'       : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'E_ext'             : Item(),
+    'E_ext/alpha'       : Item(contents="This is the file 'alpha'.\n"),
+    'E_ext/beta'        : Item(contents="This is the file 'beta'.\n"),
+  })
+  expected_disk.tweak('A/B/E/alpha', contents='newer alpha\n')
+
+  expected_status.tweak(wc_rev='2')
+  expected_status.tweak('', status=' M')
+  expected_status.add({
+    'E_ext'             : Item(status='X '),
+  })
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+  # svn info E_ext/alpha
+  expected_info = { 'Revision': '1' }
+  actions.run_and_verify_info([expected_info], E_ext)
+
 ########################################################################
 # Run the tests
 
@@ -2135,6 +2206,7 @@ test_list = [ None,
               file_external_in_unversioned,
               copy_file_externals,
               remap_file_external_with_prop_del,
+              dir_external_with_dash_r_only,
              ]
 
 if __name__ == '__main__':
