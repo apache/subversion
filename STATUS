@@ -102,6 +102,8 @@ Candidate changes:
      Similar fixes already went into 1.7.1.
    Votes:
      +1: stsp, rhuijben
+     -0: philip (Is errno a good indicator of SASL errors?
+                 Needs r1179776 for conflict, r1236283 for correctness)
 
  * r1225491
    Allow converting //server/share paths to file://server/share by using
