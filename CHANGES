@@ -54,6 +54,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.3
     * improve 'svn log --with-all-revprops' over ra-dav (issue #4082)
     * fix segfault when remapping a file external (issue #4093)
     * fix segfault caused by obstructing unversioned dir (r1229677)
+    * fix regression on first update of external dir with '-r' (issue #4053) 
 
   Developer-visible changes:
     * JavaHL: Add missing notify action, fixing an exception (r1221793)
