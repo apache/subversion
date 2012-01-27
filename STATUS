@@ -148,6 +148,8 @@ Candidate changes:
      r1236099 updates neon.
      The changes are independent, but as it changes how the config file
      behaves, I think both should be applied at the same time. (rhuijben)
+     r1236099 is the neon equivalent of the serf change r1235831 but the
+     serf change is not nominated. (philip)
      Needs branch as r1236099 gives a merge conflict. (philip)
    Votes:
      +1: rhuijben, gstein
