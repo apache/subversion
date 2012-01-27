@@ -47,6 +47,7 @@ svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
                            svn_stream_t *stream,
+                           svn_ra_session_t *ra_session,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool);
