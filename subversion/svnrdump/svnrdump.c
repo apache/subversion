@@ -343,6 +343,7 @@ dump_revision_header(svn_ra_session_t *session,
  */
 static svn_error_t *
 replay_revisions(svn_ra_session_t *session,
+                 svn_ra_session_t *extra_ra_session,
                  const char *url,
                  svn_revnum_t start_revision,
                  svn_revnum_t end_revision,
@@ -359,7 +360,8 @@ replay_revisions(svn_ra_session_t *session,
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
   SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, stdout_stream,
-                                     check_cancel, NULL, pool));
+                                     extra_ra_session, check_cancel, NULL,
+                                     pool));
 
   replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
   replay_baton->editor = dump_editor;
@@ -531,7 +533,14 @@ dump_cmd(apr_getopt_t *os,
          apr_pool_t *pool)
 {
   opt_baton_t *opt_baton = baton;
-  return replay_revisions(opt_baton->session, opt_baton->url,
+  svn_ra_session_t *extra_ra_session;
+
+  SVN_ERR(svn_client_open_ra_session(&extra_ra_session,
+                                     opt_baton->url,
+                                     opt_baton->ctx, pool));
+
+  return replay_revisions(opt_baton->session, extra_ra_session,
+                          opt_baton->url,
                           opt_baton->start_revision.value.number,
                           opt_baton->end_revision.value.number,
                           opt_baton->quiet, opt_baton->incremental, pool);
