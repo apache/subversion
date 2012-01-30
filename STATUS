@@ -107,13 +107,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, steveking
 
- * r1231029
-   Fix issue 4097, XML status not showing new files in repository.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, rhuijben
-
  * r1232202, r1232207, r1232221, r1232222 
    Calling 'svn status PATH' on a node that is not present in a working
    copy shouldn't show the status as missing.
@@ -205,3 +198,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1231029
+   Fix issue 4097, XML status not showing new files in repository.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip, rhuijben, stsp
