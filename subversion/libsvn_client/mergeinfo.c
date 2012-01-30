@@ -1570,14 +1570,29 @@ filter_log_entry_with_rangelist(void *baton,
                                                       iterpool));
                       if (intersection->nelts)
                         {
-                          SVN_ERR(svn_rangelist_intersect(&intersection,
-                                                          rangelist,
-                                                          this_rev_rangelist,
-                                                          TRUE, iterpool));
-                          if (intersection->nelts)
+                          if (ancestor_is_self)
                             {
+                              /* TARGET_PATH_AFFECTED has explicit mergeinfo,
+                                 so we don't need to worry if that mergeinfo
+                                 is inheritable or not. */
                               found_this_revision = TRUE;
                               break;
+                            }
+                          else
+                            {
+                              /* TARGET_PATH_AFFECTED inherited its mergeinfo,
+                                 se we have to ignore non-inheritable
+                                 ranges. */
+                              SVN_ERR(svn_rangelist_intersect(
+                                &intersection,
+                                rangelist,
+                                this_rev_rangelist,
+                                TRUE, iterpool));
+                              if (intersection->nelts)
+                                {
+                                  found_this_revision = TRUE;
+                                  break;
+                                }
                             }
                         }
                     }
