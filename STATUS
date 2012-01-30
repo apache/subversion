@@ -96,8 +96,8 @@ Candidate changes:
    Branches:
      ^/subversion/branches/1.7.x-r1236343
    Votes:
-     +1: stsp, rhuijben (r1222628, r1222644, r1222699 only)
-     +1: philip
+     +1: rhuijben (r1222628, r1222644, r1222699 only)
+     +1: philip, stsp
 
  * r1225491
    Allow converting //server/share paths to file://server/share by using
