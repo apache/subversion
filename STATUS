@@ -177,17 +177,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1232202, r1232207, r1232221, r1232222 
-   Calling 'svn status PATH' on a node that is not present in a working
-   copy shouldn't show the status as missing.
-   Justification:
-     Calling svn status on non-versioned paths should just work.
-     Resolves a weird side effect from moving files in AnkhSVN.
-   Branch:
-     ^/subversion/branches/1.7.x-r1232221
-   Notes:
-     The actual fix had to be reimplemented on the branch as the relevant code
-     was refactored since branching 1.7.x.
-   Votes:
-     +1: rhuijben, steveking, pburba
-

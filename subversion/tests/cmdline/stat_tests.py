@@ -1967,6 +1967,24 @@ def wclock_status(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'status', wc_dir)
 
+def status_not_present(sbox):
+  "no status on not-present and excluded nodes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_rm('iota', 'A/C')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude',
+                       sbox.ospath('A/mu'), sbox.ospath('A/B'))
+  sbox.simple_commit()
+  
+  svntest.actions.run_and_verify_svn(None, [], [],'status',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/C'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('no-file'))
 
 ########################################################################
 # Run the tests
@@ -2009,6 +2027,7 @@ test_list = [ None,
               status_locked_deleted,
               wc_wc_copy_timestamp,
               wclock_status,
+              status_not_present,
              ]
 
 if __name__ == '__main__':

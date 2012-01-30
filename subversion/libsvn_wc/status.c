@@ -2356,7 +2356,11 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
 
   err = read_info(&dir_info, local_abspath, db, scratch_pool, scratch_pool);
 
-  if (!err && dir_info->kind == svn_wc__db_kind_dir)
+  if (!err
+      && dir_info->kind == svn_wc__db_kind_dir
+      && dir_info->status != svn_wc__db_status_not_present
+      && dir_info->status != svn_wc__db_status_excluded
+      && dir_info->status != svn_wc__db_status_server_excluded)
     {
       anchor_abspath = local_abspath;
       target_name = NULL;
