@@ -905,7 +905,7 @@ def missing_dir_in_anchor(sbox):
 def status_in_xml(sbox):
   "status output in XML format"
 
-  sbox.build(read_only = True)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   file_name = "iota"
@@ -943,6 +943,44 @@ def status_in_xml(sbox):
               "</entry>\n",
               "<against\n",
               "   revision=\"1\"/>\n",
+              "</target>\n",
+              "</status>\n",
+             ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                                'status',
+                                                                file_path,
+                                                                '--xml', '-u')
+
+  for i in range(0, len(output)):
+    if output[i] != template[i]:
+      print("ERROR: expected: %s actual: %s" % (template[i], output[i]))
+      raise svntest.Failure
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', 'repo-to-repo copy',
+                                     sbox.repo_url + '/iota',
+                                     sbox.repo_url + '/iota2')
+  
+  file_path = sbox.ospath('iota2')
+
+  template = ['<?xml version="1.0" encoding="UTF-8"?>\n',
+              "<status>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<entry\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<wc-status\n",
+              "   props=\"none\"\n",
+              "   item=\"none\">\n",
+              "</wc-status>\n",
+              "<repos-status\n",
+              "   props=\"none\"\n",
+              "   item=\"added\">\n",
+              "</repos-status>\n",
+              "</entry>\n",
+              "<against\n",
+              "   revision=\"2\"/>\n",
               "</target>\n",
               "</status>\n",
              ]

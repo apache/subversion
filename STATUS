@@ -198,10 +198,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1231029
-   Fix issue 4097, XML status not showing new files in repository.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, rhuijben, stsp
