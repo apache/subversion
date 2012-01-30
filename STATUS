@@ -94,7 +94,7 @@ Candidate changes:
    Justification:
      Similar fixes already went into 1.7.1.
    Branches:
-     ^/subversion/1.7.x-r1236343
+     ^/subversion/branches/1.7.x-r1236343
    Votes:
      +1: stsp, rhuijben (r1222628, r1222644, r1222699 only)
      +1: philip
