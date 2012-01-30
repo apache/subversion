@@ -47,15 +47,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1220783
-   Fix mis-ordered text output of 'svn log --diff' on Windows.
-   Justification:
-     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
-   Notes:
-     Doesn't compile on 1.7.x.
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1210147, r1202132, r1202333, r1220740
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
@@ -69,7 +60,9 @@ Candidate changes:
     depend on the issue #2873 fix which has been backported in 1.7.2
     r1220740 expands the test so that it would fail without r1210147 applied.
    Votes:
-     +1: stsp (without r1220740)
+     +1: stsp (without r1220740 -- r1220740 depends on r1220783 which
+               in turn needs new-in-1.8 APIs. Are there test failures
+               on Windows without it that cannot be fixed some other way?)
      +1: julianfoad
 
  * r1221178, r1221303
@@ -206,6 +199,16 @@ Veto-blocked changes:
          room for a future public API that really does full verification.)
          (without r1161164, r1161180)
      -1: danielsh (invasive, new feature)
+
+ * r1220783
+   Fix mis-ordered text output of 'svn log --diff' on Windows.
+   Justification:
+     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
+   Notes:
+     Doesn't compile on 1.7.x.
+   Votes:
+     +1: julianfoad, rhuijben
+     -1: stsp (doesn't compile and would need new-in-1.8 public APIs).
 
 Approved changes:
 =================
