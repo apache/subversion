@@ -164,6 +164,18 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1237720
+   Log errors instead of ignoring them.
+   Justification:
+     Ignoring errors is bad.
+   Notes:
+     Due to preexisting ra_serf behaviour, may result in many server-side error
+     log entries for every serf checkout.  (This is separate from
+     <http://subversion.apache.org/docs/release-notes/1.7#serf>, which has to do
+     with the access log.)
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
