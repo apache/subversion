@@ -194,7 +194,7 @@ sub handle_entry {
 
   # TODO: this changes ./STATUS, which we're reading below, but
   #       on my system the loop in main() doesn't seem to care.
-  merge %entry if prompt;
+  merge %entry if $ENV{YES} or prompt;
 
   1;
 }
