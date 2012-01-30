@@ -107,13 +107,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, steveking
 
- * r1230212
-   Fix for large files on 32-bit systems
-   Justification:
-     Can corrupt FSFS repository.
-   Votes:
-     +1: philip, rhuijben
-
  * r1231029
    Fix issue 4097, XML status not showing new files in repository.
    Justification:
@@ -212,3 +205,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1230212
+   Fix for large files on 32-bit systems
+   Justification:
+     Can corrupt FSFS repository.
+   Votes:
+     +1: philip, rhuijben, stsp
