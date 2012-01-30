@@ -24,18 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1201072, r1205188, r1205209
-   Fix issue #4050 "'svn mergeinfo' always considers non-inheritable ranges
-   as partially merged".
-   Justification:
-     'svn mergeinfo' gave incorrect answers in what is admittedly an edge
-     case, but the fix is very simple.
-   Notes:
-     r1201072 and r1205188 are a new test and minor tweak respectively.
-     r1205209 is the fix.
-   Votes:
-     +1: pburba, rhuijben
-
  * r1207555, r1207808
    mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
    Justification:
@@ -210,3 +198,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1201072, r1205188, r1205209
+   Fix issue #4050 "'svn mergeinfo' always considers non-inheritable ranges
+   as partially merged".
+   Justification:
+     'svn mergeinfo' gave incorrect answers in what is admittedly an edge
+     case, but the fix is very simple.
+   Notes:
+     r1201072 and r1205188 are a new test and minor tweak respectively.
+     r1205209 is the fix.
+   Votes:
+     +1: pburba, rhuijben, stsp
+
