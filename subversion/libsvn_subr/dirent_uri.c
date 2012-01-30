@@ -2415,10 +2415,10 @@ svn_uri_get_file_url_from_dirent(const char **url,
 #else
   if (dirent[0] == '/')
     {
-      /* Handle UNC paths */
-      assert(dirent[1] != '/'); /* Not absolute! */
+      /* Handle UNC paths //server/share -> file://server/share */
+      assert(dirent[1] == '/'); /* Expect UNC, not non-absolute */
 
-      *url = apr_pstrcat(pool, "file://", dirent+1, NULL);
+      *url = apr_pstrcat(pool, "file:", dirent, NULL);
     }
   else
     *url = apr_pstrcat(pool, "file:///", dirent, NULL);

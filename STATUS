@@ -177,14 +177,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1225491
-   Allow converting //server/share paths to file://server/share by using
-   svn_uri_get_file_url_from_dirent().
-   Justification:
-     Fixes api to allow running tests on UNC shares.
-   Votes:
-     +1: rhuijben, steveking, pburba
-
  * r1232202, r1232207, r1232221, r1232222 
    Calling 'svn status PATH' on a node that is not present in a working
    copy shouldn't show the status as missing.
