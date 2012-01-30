@@ -205,10 +205,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1230212
-   Fix for large files on 32-bit systems
-   Justification:
-     Can corrupt FSFS repository.
-   Votes:
-     +1: philip, rhuijben, stsp
