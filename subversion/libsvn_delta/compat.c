@@ -840,6 +840,26 @@ ev2_abort_edit(void *edit_baton,
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
+/* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
+ * DEDITOR_BATON, which will be driven by EDITOR.  These will both be
+ * allocated in RESULT_POOL, which may become large and long-lived;
+ * SCRATCH_POOL is used for temporary allocations.
+ *
+ * The other parameters are as follows:
+ *  - UNLOCK_FUNC / UNLOCK_BATON: A callback / baton which will be called
+ *         when an unlocking action is received.
+ *  - FOUND_ABS_PATHS: A pointer to a boolean flag which will be set if
+ *         this shim determines that it is receiving absolute paths.
+ *  - FETCH_PROPS_FUNC / FETCH_PROPS_BATON: A callback / baton pair which
+ *         will be used by the shim handlers if they need to determine the
+ *         existing properties on a  path.
+ *  - FETCH_BASE_FUNC / FETCH_BASE_BATON: A callback / baton pair which will
+ *         be used by the shims handlers if they need to determine the base
+ *         text of a path.  It should only be invoked for files.
+ *  - EXB: An 'extra baton' which is used to communicate between the shims.
+ *         Its callbacks should be invoked at the appropriate time by this
+ *         shim.
+ */ 
 static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
@@ -1677,6 +1697,32 @@ do_unlock(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Return an svn_editor_t * in EDITOR_P which will be driven by
+ * DEDITOR/DEDIT_BATON.  EDITOR_P is allocated in RESULT_POOL, which may
+ * become large and long-lived; SCRATCH_POOL is used for temporary
+ * allocations.
+ *
+ * The other parameters are as follows:
+ *  - EXB: An 'extra_baton' used for passing information between the coupled
+ *         shims.  This includes actions like 'start edit' and 'set target'.
+ *         As this shim receives these actions, it provides the extra baton
+ *         to its caller.
+ *  - UNLOCK_FUNC / UNLOCK_BATON: A callback / baton pair which a caller
+ *         can use to notify this shim that a path should be unlocked (in the
+ *         'svn lock' sense).  As this shim receives this action, it provides
+ *         this callback / baton to its caller.
+ *  - SEND_ABS_PATHS: A pointer which will be set prior to this edit (but
+ *         not necessarily at the invocation of editor_from_delta()),and
+ *         which indicates whether incoming paths should be expected to
+ *         be absolute or relative.
+ *  - CANCEL_FUNC / CANCEL_BATON: The usual; folded into the produced editor.
+ *  - FETCH_KIND_FUNC / FETCH_KIND_BATON: A callback / baton pair which will
+ *         be used by the shim handlers if they need to determine the kind of
+ *         a path.
+ *  - FETCH_PROPS_FUNC / FETCH_PROPS_BATON: A callback / baton pair which
+ *         will be used by the shim handlers if they need to determine the
+ *         existing properties on a path.
+ */
 static svn_error_t *
 editor_from_delta(svn_editor_t **editor_p,
                   struct extra_baton **exb,
