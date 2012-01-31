@@ -886,6 +886,45 @@ fetch_base_func(const char **filename,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct dump_edit_baton *eb = baton;
+  svn_node_kind_t node_kind;
+
+  SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, &node_kind,
+                            scratch_pool));
+
+  if (node_kind == svn_node_file)
+    {
+      SVN_ERR(svn_ra_get_file(eb->ra_session, path, base_revision,
+                              NULL, NULL, props, result_pool));
+    }
+  else if (node_kind == svn_node_dir)
+    {
+      apr_array_header_t *tmp_props;
+
+      SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, props, path,
+                              base_revision, 0 /* Dirent fields */,
+                              result_pool));
+      tmp_props = svn_prop_hash_to_array(*props, result_pool);
+      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
+                                   result_pool));
+      *props = svn_prop_array_to_hash(tmp_props, result_pool);
+    }
+  else
+    {
+      *props = apr_hash_make(result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
@@ -936,6 +975,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                                             de, eb, editor, edit_baton, pool));
 
   shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_props_func = fetch_props_func;
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
