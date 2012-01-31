@@ -1160,6 +1160,12 @@ typedef svn_error_t *(*svn_delta__target_revision_func_t)(
     svn_revnum_t target_revision,
     apr_pool_t *scratch_pool);
 
+typedef svn_error_t *(*svn_delta_unlock_func_t)(
+    void *baton,
+    const char *path,
+    apr_pool_t *scratch_pool);
+
+
 /* svn_editor__See insert_shims() for more information. */
 struct svn_delta__extra_baton
 {
@@ -1172,6 +1178,8 @@ struct svn_delta__extra_baton
 svn_error_t *
 svn_delta__editor_from_delta(svn_editor_t **editor_p,
                   struct svn_delta__extra_baton **exb,
+                  svn_delta_unlock_func_t *unlock_func,
+                  void **unlock_baton,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
                   svn_boolean_t *send_abs_paths,
@@ -1189,6 +1197,8 @@ svn_error_t *
 svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
+                  svn_delta_unlock_func_t unlock_func,
+                  void *unlock_baton,
                   svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,

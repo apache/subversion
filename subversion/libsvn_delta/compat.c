@@ -105,12 +105,6 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  */
 
 
-typedef svn_error_t *(*unlock_func_t)(
-    void *baton,
-    const char *path,
-    apr_pool_t *scratch_pool);
-
-
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
@@ -127,7 +121,7 @@ struct ev2_edit_baton
   svn_delta_fetch_base_func_t fetch_base_func;
   void *fetch_base_baton;
 
-  unlock_func_t do_unlock;
+  svn_delta_unlock_func_t do_unlock;
   void *unlock_baton;
 };
 
@@ -829,7 +823,7 @@ svn_error_t *
 svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
-                  unlock_func_t unlock_func,
+                  svn_delta_unlock_func_t unlock_func,
                   void *unlock_baton,
                   svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
@@ -1665,7 +1659,7 @@ do_unlock(void *baton,
 svn_error_t *
 svn_delta__editor_from_delta(svn_editor_t **editor_p,
                   struct svn_delta__extra_baton **exb,
-                  unlock_func_t *unlock_func,
+                  svn_delta_unlock_func_t *unlock_func,
                   void **unlock_baton,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
@@ -1780,11 +1774,12 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
-  unlock_func_t unlock_func;
+  svn_delta_unlock_func_t unlock_func;
   void *unlock_baton;
 
-  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb, deditor_in,
-                            dedit_baton_in,
+  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
+                            &unlock_func, &unlock_baton,
+                            deditor_in, dedit_baton_in,
                             found_abs_paths, NULL, NULL,
                             shim_callbacks->fetch_kind_func,
                             shim_callbacks->fetch_baton,
