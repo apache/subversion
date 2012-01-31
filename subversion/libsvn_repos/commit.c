@@ -823,6 +823,7 @@ kind_fetch_func(svn_kind_t *kind,
 {
   struct edit_baton *eb = baton;
   svn_node_kind_t node_kind;
+  svn_fs_root_t *fs_root;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
     base_revision = svn_fs_txn_base_revision(eb->txn);
@@ -831,6 +832,7 @@ kind_fetch_func(svn_kind_t *kind,
     {
       /* This is a copyfrom URL. */
       path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
     }
   else
     {
@@ -840,7 +842,9 @@ kind_fetch_func(svn_kind_t *kind,
         path = svn_fspath__join(eb->base_path, path, scratch_pool);
     }
 
-  SVN_ERR(svn_fs_check_path(&node_kind, eb->txn_root, path, scratch_pool));
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
 
   return SVN_NO_ERROR;
@@ -868,6 +872,7 @@ fetch_base_func(const char **filename,
     {
       /* This is a copyfrom URL. */
       path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
     }
   else
     {

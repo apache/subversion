@@ -1050,7 +1050,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### path separator.  A single backslash will be treated as an"      NL
         "### escape for the following character."                            NL
         ""                                                                   NL
-        "### Section for configuring miscelleneous Subversion options."      NL
+        "### Section for configuring miscellaneous Subversion options."      NL
         "[miscellany]"                                                       NL
         "### Set global-ignores to a set of whitespace-delimited globs"      NL
         "### which Subversion will ignore in its 'status' output, and"       NL

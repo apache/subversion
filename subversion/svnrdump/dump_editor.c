@@ -81,6 +81,9 @@ struct dump_edit_baton {
   /* The output stream we write the dumpfile to */
   svn_stream_t *stream;
 
+  /* A backdoor ra session to fetch additional information during the edit. */
+  svn_ra_session_t *ra_session;
+
   /* Pool for per-revision allocations */
   apr_pool_t *pool;
 
@@ -854,7 +857,32 @@ fetch_base_func(const char **filename,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  *filename = NULL;
+  struct dump_edit_baton *eb = baton;
+  svn_stream_t *fstream;
+  svn_error_t *err;
+
+  if (path[0] == '/')
+    path += 1;
+
+  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  err = svn_ra_get_file(eb->ra_session, path, base_revision,
+                        fstream, NULL, NULL, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_stream_close(fstream));
+
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  
+  SVN_ERR(svn_stream_close(fstream));
+
   return SVN_NO_ERROR;
 }
 
@@ -862,6 +890,7 @@ svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
                            svn_stream_t *stream,
+                           svn_ra_session_t *ra_session,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool)
@@ -873,6 +902,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
 
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   eb->stream = stream;
+  eb->ra_session = ra_session;
 
   /* Create a special per-revision pool */
   eb->pool = svn_pool_create(pool);
