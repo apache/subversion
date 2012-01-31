@@ -91,7 +91,24 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * The general idea here is that we have to see *all* the actions on a node's
  * parent before we can process that node, which means we need to buffer a
  * large amount of information in the dir batons, and then process it in the
- * close_directory() handler. */
+ * close_directory() handler.
+ *
+ * There are a few ways we alter the callback stream.  One is when unlocking
+ * paths.  To tell a client a path should be unlocked, the server sends a
+ * prop-del for the SVN_PROP_ENTRY_LOCK_TOKEN property.  This causes problems,
+ * since the client doesn't have this property in the first place, but the
+ * deletion has side effects (unlike deleting a non-existent regular property
+ * would).  To solve this, we introduce *another* function into the API, not
+ * a part of the Ev2 callbacks, but a companion which is used to register
+ * the unlock of a path.  See ev2_change_file_prop() for implemenation
+ * details.
+ */
+
+
+typedef svn_error_t *(*unlock_func_t)(
+    void *baton,
+    const char *path,
+    apr_pool_t *scratch_pool);
 
 
 struct ev2_edit_baton
@@ -109,6 +126,9 @@ struct ev2_edit_baton
 
   svn_delta_fetch_base_func_t fetch_base_func;
   void *fetch_base_baton;
+
+  unlock_func_t do_unlock;
+  void *unlock_baton;
 };
 
 struct ev2_dir_baton
@@ -139,7 +159,8 @@ enum action_code_t
   ACTION_ADD,
   ACTION_DELETE,
   ACTION_ADD_ABSENT,
-  ACTION_SET_TEXT
+  ACTION_SET_TEXT,
+  ACTION_UNLOCK
 };
 
 struct path_action
@@ -318,6 +339,12 @@ process_actions(void *edit_baton,
               kind = *((svn_kind_t *) action->args);
               SVN_ERR(svn_editor_add_absent(eb->editor, path, kind,
                                             SVN_INVALID_REVNUM));
+              break;
+            }
+
+          case ACTION_UNLOCK:
+            {
+              SVN_ERR(eb->do_unlock(eb->unlock_baton, path, scratch_pool));
               break;
             }
 
@@ -738,6 +765,15 @@ ev2_change_file_prop(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
 
+  if (!strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) && value == NULL)
+    {
+      /* We special case the lock token propery deletion, which is the
+         server's way of telling the client to unlock the path. */
+      SVN_ERR(add_action(fb->eb, fb->path, ACTION_UNLOCK, NULL));
+    }
+
+  /* We also pass through the deletion, since there may actually exist such
+     a property we want to get rid of.   In the worse case, this is a no-op. */
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
   p_args->base_revision = fb->base_revision;
@@ -793,6 +829,8 @@ svn_error_t *
 svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
+                  unlock_func_t unlock_func,
+                  void *unlock_baton,
                   svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
@@ -834,6 +872,9 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->fetch_base_func = fetch_base_func;
   eb->fetch_base_baton = fetch_base_baton;
+
+  eb->do_unlock = unlock_func;
+  eb->unlock_baton = unlock_baton;
 
   *dedit_baton = eb;
   *deditor = &delta_editor;
@@ -1592,9 +1633,40 @@ target_revision_func(void *baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+do_unlock(void *baton,
+          const char *path,
+          apr_pool_t *scratch_pool)
+{
+  struct editor_baton *eb = baton;
+  apr_array_header_t *path_bits = svn_path_decompose(path, scratch_pool);
+  const char *path_so_far = "";
+  struct operation *operation = &eb->root;
+  int i;
+
+  /* Look for any previous operations we've recognized for PATH.  If
+     any of PATH's ancestors have not yet been traversed, we'll be
+     creating OP_OPEN operations for them as we walk down PATH's path
+     components. */
+  for (i = 0; i < path_bits->nelts; ++i)
+    {
+      const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
+      path_so_far = svn_relpath_join(path_so_far, path_bit, scratch_pool);
+      operation = get_operation(path_so_far, operation, SVN_INVALID_REVNUM,
+                                eb->edit_pool);
+    }
+
+  APR_ARRAY_PUSH(operation->prop_dels, const char *) =
+                                                SVN_PROP_ENTRY_LOCK_TOKEN;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_delta__editor_from_delta(svn_editor_t **editor_p,
                   struct svn_delta__extra_baton **exb,
+                  unlock_func_t *unlock_func,
+                  void **unlock_baton,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
                   svn_boolean_t *send_abs_paths,
@@ -1653,6 +1725,9 @@ svn_delta__editor_from_delta(svn_editor_t **editor_p,
 
   *editor_p = editor;
 
+  *unlock_func = do_unlock;
+  *unlock_baton = eb;
+
   extra_baton->start_edit = start_edit_func;
   extra_baton->target_revision = target_revision_func;
   extra_baton->baton = eb;
@@ -1705,6 +1780,9 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
+  unlock_func_t unlock_func;
+  void *unlock_baton;
+
   SVN_ERR(svn_delta__editor_from_delta(&editor, &exb, deditor_in,
                             dedit_baton_in,
                             found_abs_paths, NULL, NULL,
@@ -1714,6 +1792,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                             shim_callbacks->fetch_baton,
                             result_pool, scratch_pool));
   SVN_ERR(svn_delta__delta_from_editor(deditor_out, dedit_baton_out, editor,
+                            unlock_func, unlock_baton,
                             found_abs_paths,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_baton,
