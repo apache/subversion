@@ -175,12 +175,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1179776, r1222628, r1222644, r1222699, r1236283, r1236343
-   Improve another error message coming from SASL.
-   Justification:
-     Similar fixes already went into 1.7.1.
-   Branches:
-     ^/subversion/branches/1.7.x-r1236343
-   Votes:
-     +1: philip, stsp, rhuijben
