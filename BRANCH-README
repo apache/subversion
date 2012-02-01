@@ -1,0 +1,4 @@
+Multi-layer moves in the WC
+
+This involves moving NODES.moved_to from the BASE node to the WORKING
+node.  See: http://wiki.apache.org/subversion/MultiLayerMoves
