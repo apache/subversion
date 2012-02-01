@@ -240,6 +240,9 @@ replay_revend(svn_revnum_t revision,
 {
   /* No resources left to free. */
   struct replay_baton *rb = replay_baton;
+
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
   if (! rb->quiet)
     SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
                                 revision));
