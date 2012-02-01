@@ -937,6 +937,7 @@ struct operation {
   svn_kind_t kind;  /* to copy, mkdir, put or set revprops */
   svn_revnum_t base_revision;       /* When committing, the base revision */
   svn_revnum_t copyfrom_revision;      /* to copy, valid for add and replace */
+  svn_checksum_t *new_checksum;   /* An MD5 hash of the new contents, if any */
   const char *copyfrom_url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
@@ -1024,6 +1025,7 @@ build(struct editor_baton *eb,
       svn_revnum_t rev,
       apr_hash_t *props,
       const char *src_file,
+      svn_checksum_t *checksum,
       svn_revnum_t head,
       apr_pool_t *scratch_pool)
 {
@@ -1149,7 +1151,8 @@ build(struct editor_baton *eb,
                                      "'%s' is not a file", relpath);
         }
       operation->kind = svn_kind_file;
-      operation->src_file = src_file;
+      operation->src_file = apr_pstrdup(eb->edit_pool, src_file);
+      operation->new_checksum = svn_checksum_dup(checksum, eb->edit_pool);
     }
   else
     {
@@ -1177,17 +1180,17 @@ add_directory_cb(void *baton,
 
       SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   SVN_ERR(build(eb, ACTION_MKDIR, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   if (props && apr_hash_count(props) > 0)
     SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_dir,
                   NULL, SVN_INVALID_REVNUM, props,
-                  NULL, SVN_INVALID_REVNUM, scratch_pool));
+                  NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1205,6 +1208,14 @@ add_file_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+  svn_checksum_t *md5_checksum;
+
+  /* We may need to re-checksum these contents */
+  if (!(checksum && checksum->kind == svn_checksum_md5))
+    contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
+                                       svn_checksum_md5, TRUE, scratch_pool);
+  else
+    md5_checksum = (svn_checksum_t *)checksum;
 
   if (SVN_IS_VALID_REVNUM(replaces_rev))
     {
@@ -1212,24 +1223,24 @@ add_file_cb(void *baton,
 
       SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  eb->edit_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
-                           tmp_stream, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_none,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, tmp_filename, md5_checksum, SVN_INVALID_REVNUM,
+                scratch_pool));
 
   if (props && apr_hash_count(props) > 0)
     SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_file,
                   NULL, SVN_INVALID_REVNUM, props,
-                  NULL, SVN_INVALID_REVNUM, scratch_pool));
+                  NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1251,7 +1262,7 @@ add_symlink_cb(void *baton,
 
       SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1269,7 +1280,7 @@ add_absent_cb(void *baton,
 
   SVN_ERR(build(eb, ACTION_ADD_ABSENT, relpath, kind,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1287,7 +1298,7 @@ set_props_cb(void *baton,
 
   SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_unknown,
                 NULL, SVN_INVALID_REVNUM,
-                props, NULL, revision, scratch_pool));
+                props, NULL, NULL, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1304,17 +1315,24 @@ set_text_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+  svn_checksum_t *md5_checksum;
+
+  /* We may need to re-checksum these contents */
+  if (!(checksum && checksum->kind == svn_checksum_md5))
+    contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
+                                       svn_checksum_md5, TRUE, scratch_pool);
+  else
+    md5_checksum = (svn_checksum_t *)checksum;
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  eb->edit_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
-                           tmp_stream, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, revision, scratch_pool));
+                NULL, tmp_filename, md5_checksum, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1342,7 +1360,7 @@ delete_cb(void *baton,
   struct editor_baton *eb = baton;
 
   SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
-                NULL, revision, NULL, NULL, SVN_INVALID_REVNUM,
+                NULL, revision, NULL, NULL, NULL, SVN_INVALID_REVNUM,
                 scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1365,12 +1383,12 @@ copy_cb(void *baton,
 
       SVN_ERR(build(eb, ACTION_DELETE, dst_relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   SVN_ERR(build(eb, ACTION_COPY, dst_relpath, svn_kind_unknown,
-                src_relpath, src_revision, NULL, NULL, SVN_INVALID_REVNUM,
-                scratch_pool));
+                src_relpath, src_revision, NULL, NULL, NULL,
+                SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1547,7 +1565,10 @@ drive_tree(struct operation *op,
           SVN_ERR(change_props(editor, file_baton, op, scratch_pool));
 
           /* Close the file. */
-          SVN_ERR(editor->close_file(file_baton, NULL, scratch_pool));
+          SVN_ERR(editor->close_file(file_baton,
+                                     svn_checksum_to_cstring(op->new_checksum,
+                                                             scratch_pool),
+                                     scratch_pool));
         }
 
     }
