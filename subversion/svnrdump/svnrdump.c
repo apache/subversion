@@ -151,11 +151,11 @@ static const apr_getopt_option_t svnrdump__options[] =
 
 /* Baton for the RA replay session. */
 struct replay_baton {
-  /* The editor producing diffs. */
-  const svn_delta_editor_t *editor;
+  /* A backdoor ra session for fetching information. */
+  svn_ra_session_t *extra_ra_session;
 
-  /* Baton for the editor. */
-  void *edit_baton;
+  /* The output stream */
+  svn_stream_t *stdout_stream;
 
   /* Whether to be quiet. */
   svn_boolean_t quiet;
@@ -220,10 +220,9 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
   SVN_ERR(svn_stream_close(stdout_stream));
 
-  /* Extract editor and editor_baton from the replay_baton and
-     set them so that the editor callbacks can use them. */
-  *editor = rb->editor;
-  *edit_baton = rb->edit_baton;
+  SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, rb->stdout_stream,
+                                     rb->extra_ra_session, check_cancel,
+                                     NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -354,21 +353,15 @@ replay_revisions(svn_ra_session_t *session,
                  svn_boolean_t incremental,
                  apr_pool_t *pool)
 {
-  const svn_delta_editor_t *dump_editor;
   struct replay_baton *replay_baton;
-  void *dump_baton;
   const char *uuid;
   svn_stream_t *stdout_stream;
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
-  SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, stdout_stream,
-                                     extra_ra_session, check_cancel, NULL,
-                                     pool));
-
   replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
-  replay_baton->editor = dump_editor;
-  replay_baton->edit_baton = dump_baton;
+  replay_baton->stdout_stream = stdout_stream;
+  replay_baton->extra_ra_session = extra_ra_session;
   replay_baton->quiet = quiet;
 
   /* Write the magic header and UUID */
@@ -406,6 +399,8 @@ replay_revisions(svn_ra_session_t *session,
     {
       const svn_ra_reporter3_t *reporter;
       void *report_baton;
+      const svn_delta_editor_t *dump_editor;
+      void *dump_baton;
 
       /* First, we need to dump the start_revision in full.  We'll
          start with a revision record header. */
@@ -418,6 +413,9 @@ replay_revisions(svn_ra_session_t *session,
          to the update reporter, telling it that we have nothing to
          start with.  The delta between nothing and everything-at-REV
          is, effectively, a full dump of REV. */
+      SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton,
+                                         stdout_stream, extra_ra_session,
+                                         check_cancel, NULL, pool));
       SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton,
                                 start_revision, "", svn_depth_infinity,
                                 FALSE, dump_editor, dump_baton, pool));
