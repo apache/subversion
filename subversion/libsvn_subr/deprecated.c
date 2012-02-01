@@ -39,6 +39,7 @@
 #include "svn_pools.h"
 #include "svn_dso.h"
 #include "svn_mergeinfo.h"
+#include "svn_utf.h"
 #include "svn_xml.h"
 
 #include "opt.h"
@@ -1172,4 +1173,10 @@ void
 svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
 {
   svn_xml_make_header2(str, NULL, pool);
+}
+
+void
+svn_utf_initialize(apr_pool_t *pool)
+{
+  svn_utf_initialize2(pool, FALSE);
 }
