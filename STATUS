@@ -77,16 +77,6 @@ Candidate changes:
      +1: cmpilato (r1221780 only)
      +1: philip, rhuijben
 
- * r1179776, r1222628, r1222644, r1222699, r1236283, r1236343
-   Improve another error message coming from SASL.
-   Justification:
-     Similar fixes already went into 1.7.1.
-   Branches:
-     ^/subversion/branches/1.7.x-r1236343
-   Votes:
-     +1: rhuijben (r1222628, r1222644, r1222699 only)
-     +1: philip, stsp
-
  * r1232413, r1236099
    Improve server certificate error collection code.
    Notes:
@@ -110,7 +100,7 @@ Candidate changes:
      +1: philip, stsp
 
  * r1146762, r1201419, r1227237, r1227250, r1227352, r1227372, r1227384,
-   r1227385
+   r1227385, r1239382
    Fix issue #4059, "can't commit when copy-op-root and copied-along
    grandchild are explicit targets".
    Justification:
@@ -128,7 +118,8 @@ Candidate changes:
      r1227384 prepares the actual fix and needs --accept=mine-conflict
      r1227385 is the actual fix
    Votes:
-     +1: stsp
+     +1: stsp (without r1239382)
+     +1: rhuijben
 
  * r1237720
    Log errors instead of ignoring them.
@@ -140,7 +131,7 @@ Candidate changes:
      <http://subversion.apache.org/docs/release-notes/1.7#serf>, which has to do
      with the access log.)
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1238121
    Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
@@ -185,3 +176,11 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1179776, r1222628, r1222644, r1222699, r1236283, r1236343
+   Improve another error message coming from SASL.
+   Justification:
+     Similar fixes already went into 1.7.1.
+   Branches:
+     ^/subversion/branches/1.7.x-r1236343
+   Votes:
+     +1: philip, stsp, rhuijben
