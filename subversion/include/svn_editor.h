@@ -885,6 +885,7 @@ svn_editor_set_props(svn_editor_t *editor,
  * with checksum @a checksum.
  * ### TODO @todo Does this send the *complete* content, always?
  * ### TODO @todo What is REVISION for?
+ * ### TODO @todo Who is responsible for closing the stream?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
