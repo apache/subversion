@@ -16,6 +16,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * reject some attempts to merge between unrelated branches (r1215273)
     * support GPG agent for password storage on UNIX-like platforms (r1150783)
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
+    * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
 
   - Client-side bugfixes:
     *
