@@ -112,6 +112,9 @@ struct dump_edit_baton {
   svn_boolean_t dump_text;
   svn_boolean_t dump_props;
   svn_boolean_t dump_newlines;
+
+  /* The revision we're currently dumping. */
+  svn_revnum_t current_revision;
 };
 
 /* Make a directory baton to represent the directory at PATH (relative
@@ -864,6 +867,9 @@ fetch_base_func(const char **filename,
   if (path[0] == '/')
     path += 1;
 
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_revision - 1;
+
   SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  result_pool, scratch_pool));
@@ -897,6 +903,12 @@ fetch_props_func(apr_hash_t **props,
   struct dump_edit_baton *eb = baton;
   svn_node_kind_t node_kind;
 
+  if (path[0] == '/')
+    path += 1;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_revision - 1;
+
   SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, &node_kind,
                             scratch_pool));
 
@@ -925,9 +937,33 @@ fetch_props_func(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct dump_edit_baton *eb = baton;
+  svn_node_kind_t node_kind;
+
+  if (path[0] == '/')
+    path += 1;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_revision - 1;
+
+  SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, &node_kind,
+                            scratch_pool));
+
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
+                           svn_revnum_t revision,
                            svn_stream_t *stream,
                            svn_ra_session_t *ra_session,
                            svn_cancel_func_t cancel_func,
@@ -942,6 +978,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   eb->stream = stream;
   eb->ra_session = ra_session;
+  eb->current_revision = revision;
 
   /* Create a special per-revision pool */
   eb->pool = svn_pool_create(pool);
@@ -976,6 +1013,7 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
 
   shim_callbacks->fetch_base_func = fetch_base_func;
   shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,

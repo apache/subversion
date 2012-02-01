@@ -220,9 +220,9 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
   SVN_ERR(svn_stream_close(stdout_stream));
 
-  SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, rb->stdout_stream,
-                                     rb->extra_ra_session, check_cancel,
-                                     NULL, pool));
+  SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
+                                     rb->stdout_stream, rb->extra_ra_session,
+                                     check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -414,6 +414,7 @@ replay_revisions(svn_ra_session_t *session,
          start with.  The delta between nothing and everything-at-REV
          is, effectively, a full dump of REV. */
       SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton,
+                                         start_revision,
                                          stdout_stream, extra_ra_session,
                                          check_cancel, NULL, pool));
       SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton,
@@ -535,10 +536,13 @@ dump_cmd(apr_getopt_t *os,
 {
   opt_baton_t *opt_baton = baton;
   svn_ra_session_t *extra_ra_session;
+  const char *repos_root;
 
   SVN_ERR(svn_client_open_ra_session(&extra_ra_session,
                                      opt_baton->url,
                                      opt_baton->ctx, pool));
+  SVN_ERR(svn_ra_get_repos_root2(extra_ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_reparent(extra_ra_session, repos_root, pool));
 
   return replay_revisions(opt_baton->session, extra_ra_session,
                           opt_baton->url,
