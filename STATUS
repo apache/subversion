@@ -53,15 +53,6 @@ Candidate changes:
      +1: gstein
      +1: rhuijben (r1236099 only)
 
- * r1236173
-   Do canonicalization rather than requring canonical data in some
-   mod_dav_svn requests.
-   Justification:
-     Backward compatibility with 1.6 clients when using URLs such
-     as http://host:80/rep%6f that 1.7 considers non-canonical.
-   Votes:
-     +1: philip, stsp
-
  * r1146762, r1201419, r1227237, r1227250, r1227352, r1227372, r1227384,
    r1227385, r1239382, r1239631, r1239655
    Fix issue #4059, "can't commit when copy-op-root and copied-along
@@ -166,3 +157,12 @@ Approved changes:
      r1239596 avoids suprious log messages for directory checksums with serf.
    Votes:
      +1: philip, danielsh, rhuijben
+
+ * r1236173
+   Do canonicalization rather than requring canonical data in some
+   mod_dav_svn requests.
+   Justification:
+     Backward compatibility with 1.6 clients when using URLs such
+     as http://host:80/rep%6f that 1.7 considers non-canonical.
+   Votes:
+     +1: philip, stsp, cmpilato
