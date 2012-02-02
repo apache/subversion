@@ -29,6 +29,8 @@ my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
+
+my $YES = $ENV{YES}; # batch mode: assume 'yes' without asking
 my $WET_RUN = qw[false true][1]; # don't commit
 my $DEBUG = qw[false true][0]; # 'set -x', etc
 my $SVNq = "$SVN -q ";
@@ -189,7 +191,7 @@ sub handle_entry {
   my %entry = parse_entry @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
-  if ($ENV{YES}) {
+  if ($YES) {
     merge %entry unless @vetoes;
   } else {
     print "";
@@ -227,7 +229,7 @@ sub main {
     given ($lines[0]) {
       # Section header
       when (/^[A-Z].*:$/i) {
-        print "\n\n=== $lines[0]" unless $ENV{YES};
+        print "\n\n=== $lines[0]" unless $YES;
       }
       # Backport entry?
       when (/^ \*/) {
