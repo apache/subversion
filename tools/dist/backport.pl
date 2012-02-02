@@ -30,6 +30,9 @@ my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 my $WET_RUN = qw[false true][1]; # don't commit
+my $DEBUG = qw[false true][0]; # 'set -x', etc
+my $SVNq = "$SVN -q ";
+$SVNq =~ s/-q// if $DEBUG eq 'true';
 
 sub usage {
   my $basename = $0;
@@ -92,16 +95,16 @@ sub merge {
   my $script = <<"EOF";
 #!/bin/sh
 set -e
-if $WET_RUN; then
+if $DEBUG; then
   set -x
 fi
 $SVN diff > $backupfile
-$SVN revert -R .
-$SVN up
-$SVN merge $mergeargs
+$SVNq revert -R .
+$SVNq up
+$SVNq merge $mergeargs
 $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $WET_RUN; then
-  $SVN commit -F $logmsg_filename
+  $SVNq commit -F $logmsg_filename
 else
   echo "Committing:"
   $SVN status -q
@@ -112,7 +115,7 @@ EOF
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
-  $SVN rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
 else
   echo "Removing reintegrated '$entry{branch}' branch"
 fi
