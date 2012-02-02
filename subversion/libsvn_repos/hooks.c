@@ -174,6 +174,7 @@ run_hook_cmd(svn_string_t **result,
              const char *name,
              const char *cmd,
              const char **args,
+             const char *const *hooks_env,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
 {
@@ -196,7 +197,7 @@ run_hook_cmd(svn_string_t **result,
             (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
     }
 
-  err = svn_io_start_cmd2(&cmd_proc, ".", cmd, args, FALSE,
+  err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args, hooks_env, FALSE,
                           FALSE, stdin_handle, result != NULL, null_handle,
                           TRUE, NULL, pool);
 
@@ -358,8 +359,8 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       args[3] = capabilities_string;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_START_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_START_COMMIT, hook, args,
+                           repos->hooks_env, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -438,7 +439,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
                                  APR_READ, APR_OS_DEFAULT, pool));
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_COMMIT, hook, args,
-                           stdin_handle, pool));
+                           repos->hooks_env, stdin_handle, pool));
     }
 
   return SVN_NO_ERROR;
@@ -466,8 +467,8 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_COMMIT, hook, args,
+                           repos->hooks_env, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -514,8 +515,8 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE, hook, args,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE, hook,
+                           args, repos->hooks_env, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -577,7 +578,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
       args[6] = NULL;
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook,
-                           args, stdin_handle, pool));
+                           args, repos->hooks_env, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -615,8 +616,8 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
       args[5] = steal_lock ? "1" : "0";
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args,
+                           repos->hooks_env, NULL, pool));
 
       if (token)
         /* No validation here; the FS will take care of that. */
@@ -660,7 +661,7 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
       args[4] = NULL;
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_LOCK, hook, args,
-                           stdin_handle, pool));
+                           repos->hooks_env, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -696,8 +697,8 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
       args[5] = break_lock ? "1" : "0";
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_UNLOCK, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_UNLOCK, hook, args,
+                           repos->hooks_env, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -734,7 +735,7 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
       args[4] = NULL;
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_UNLOCK, hook, args,
-                           stdin_handle, pool));
+                           repos->hooks_env, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
