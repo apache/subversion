@@ -127,17 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1207555, r1207808
-   mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
-   Justification:
-     ASF infra is using this so we should maintain it.
-     Stuff in contrib/ isn't officially maintained.
-   Notes:
-     r1207555: Perform the move (from r1207550) and relicense
-     r1207808: Enable building mod_dontdothat from our standard make scripts.
-   Votes:
-     +1: rhuijben, stsp, cmpilato
-
  * r1221178, r1221303
    Fix issue 4086, mod_dav_svn's handling of POST errors.
    Justification:
