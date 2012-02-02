@@ -42,13 +42,6 @@ Candidate changes:
                on Windows without it that cannot be fixed some other way?)
      +1: julianfoad
 
- * r1221463
-   Allow leading "r" in ?p= query string arguments.
-   Justification:
-     Same as for allowing '-r r42' in svn(1).
-   Votes:
-     -0: rhuijben (Behavior change without positive votes? 1.8?)
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
@@ -130,6 +123,15 @@ Veto-blocked changes:
    Votes:
      +1: julianfoad, rhuijben
      -1: stsp (doesn't compile and would need new-in-1.8 public APIs).
+
+ * r1221463
+   Allow leading "r" in ?p= query string arguments.
+   Justification:
+     Same as for allowing '-r r42' in svn(1).
+   Votes:
+     -0: rhuijben (Behavior change without positive votes? 1.8?)
+     -1: cmpilato (a rollback to an earlier patch release would break any
+                   bookmarks saved for URLs using the new syntax)
 
 Approved changes:
 =================
