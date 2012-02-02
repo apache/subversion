@@ -612,7 +612,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
      a URL and without that we cannot get accurate mergeinfo for
      TARGET_WCPATH. */
   SVN_ERR(svn_wc__node_get_origin(NULL, &target_rev, &repos_relpath,
-                                  &repos_root, NULL,
+                                  &repos_root, NULL, NULL,
                                   ctx->wc_ctx, local_abspath, FALSE,
                                   scratch_pool, scratch_pool));
 
@@ -1124,7 +1124,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
                                       scratch_pool));
 
       SVN_ERR(svn_wc__node_get_origin(NULL, &rev, &repos_relpath,
-                                      &repos_root_url, NULL,
+                                      &repos_root_url, NULL, NULL,
                                       ctx->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
 
