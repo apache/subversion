@@ -848,9 +848,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
           if (parent_is_copy)
             parent_abspath = copy_root_abspath;
 
-          /* Copy the parent and target into pool; iterpool
-             lasts only for this loop iteration, and we check
-             danglers after the loop is over. */
           if (!apr_hash_get(danglers, parent_abspath, APR_HASH_KEY_STRING))
             {
               apr_hash_set(danglers,
