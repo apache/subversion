@@ -174,7 +174,7 @@ svn_cl__diff(apr_getopt_t *os,
   svn_boolean_t show_copies_as_adds =
     opt_state->use_patch_diff_format ? TRUE : opt_state->show_copies_as_adds;
   svn_boolean_t ignore_prop_diff =
-    opt_state->use_patch_diff_format ? TRUE : opt_state->no_diff_props;
+    opt_state->use_patch_diff_format ? TRUE : opt_state->ignore_props;
   int i;
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
