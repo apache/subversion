@@ -77,21 +77,13 @@ Candidate changes:
      +1: cmpilato (r1221780 only)
      +1: philip, rhuijben
 
- * r1232413
-   Improve server certificate error collection code in libsvn_ra_serf.
-   Justification:
-     Problems in the certificate chain are not properly surfaced, which
-     could potentially allow for MitM attacks.
-   Votes:
-     +1: rhuijben, gstein
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
    Justification:
      Low impact change to help users.
    Notes:
-     philip reports a merge conflict of r1236099, so a branch is needed
+     Both r1235831 and r1236099 conflict and will need a branch.
    Votes:
      +1: gstein
      +1: rhuijben (r1236099 only)
@@ -181,3 +173,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1232413
+   Improve server certificate error collection code in libsvn_ra_serf.
+   Justification:
+     Problems in the certificate chain are not properly surfaced, which
+     could potentially allow for MitM attacks.
+   Votes:
+     +1: rhuijben, gstein, philip
