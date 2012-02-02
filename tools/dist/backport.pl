@@ -1,6 +1,7 @@
 #!/usr/bin/perl -l
 use warnings;
 use strict;
+use feature qw/switch say/;
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -217,14 +218,22 @@ sub main {
   while (<>) {
     my @lines = split /\n/;
 
-    # Section header?
+    # Skip most of the file
     next unless $sawapproved ||= /^Approved changes/;
-    print "\n\n=== $lines[0]" and next if $lines[0] =~ /^[A-Z].*:$/i;
 
-    # Backport entry?
-    handle_entry @lines and next if $lines[0] =~ /^ \*/ and $sawapproved;
-
-    warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
+    given ($lines[0]) {
+      # Section header
+      when (/^[A-Z].*:$/i) {
+        print "\n\n=== $lines[0]" unless $ENV{YES};
+      }
+      # Backport entry?
+      when (/^ \*/) {
+        handle_entry @lines if $sawapproved;
+      }
+      default {
+        warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
+      }
+    }
   }
 }
 
