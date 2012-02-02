@@ -829,10 +829,11 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
         return NULL;
 
     apr_hash_t *props;
-    SVN_JNI_ERR(svn_client_propget3(&props, name,
+    SVN_JNI_ERR(svn_client_propget4(&props, name,
                                     intPath.c_str(), pegRevision.revision(),
                                     revision.revision(), NULL, svn_depth_empty,
-                                    NULL, ctx, subPool.getPool()),
+                                    NULL, ctx, subPool.getPool(),
+                                    subPool.getPool()),
                 NULL);
 
     apr_hash_index_t *hi;
