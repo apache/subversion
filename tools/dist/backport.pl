@@ -91,6 +91,9 @@ sub merge {
   my $script = <<"EOF";
 #!/bin/sh
 set -e
+if $WET_RUN; then
+  set -x
+fi
 $SVN diff > $backupfile
 $SVN revert -R .
 $SVN up
@@ -114,7 +117,7 @@ else
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh#, ($WET_RUN ? () : '-x') or die $!;
+  open SHELL, '|-', qw#/bin/sh# or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
