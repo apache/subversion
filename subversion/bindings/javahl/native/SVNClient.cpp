@@ -971,7 +971,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    noDiffDelete,
                                    showCopiesAsAdds,
                                    force,
-                                   FALSE,
+                                   FALSE, /* ignore_prop_diff */
+                                   FALSE, /* use_git_diff_format */
                                    SVN_APR_LOCALE_CHARSET,
                                    outputStream.getStream(subPool),
                                    NULL /* error file */,
@@ -997,7 +998,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                noDiffDelete,
                                showCopiesAsAdds,
                                force,
-                               FALSE,
+                               FALSE, /* ignore_prop_diff */
+                               FALSE, /* use_git_diff_format */
                                SVN_APR_LOCALE_CHARSET,
                                outputStream.getStream(subPool),
                                NULL /* error stream */,
