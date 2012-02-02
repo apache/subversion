@@ -164,12 +164,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1221767, r1221780
-   Fix SVNParentPath listings for parent paths which contain symlinks.
-   This was supposed to have been fixed by r1132782, but that solution
-   had problems of its own.
-   Notes:
-     r1221767 is code formatting only, needed to avoid a conflict
-   Votes:
-     +1: cmpilato, philip, rhuijben
-
