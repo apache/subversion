@@ -834,14 +834,12 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
       if (parent_added)
         {
-          /* The op-root of the parent must be part of the commit */
           const char *copy_root_abspath;
           svn_boolean_t parent_is_copy;
 
-          /* Copies are always committed recursively as long as the
-           * copy root is in the commit target list.
-           * So for nodes copied along with a parent, the copy root path
-           * is the dangling parent. See issue #4059. */
+          /* The parent is added, so either it is a copy, or a locally added
+           * directory. In either case, we require the op-root of the parent
+           * to be part of the commit. See issue #4059. */
           SVN_ERR(svn_wc__node_get_origin(&parent_is_copy, NULL, NULL, NULL,
                                           NULL, &copy_root_abspath,
                                           wc_ctx, parent_abspath,
