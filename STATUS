@@ -109,20 +109,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1237720, r1239596
-   Log errors instead of ignoring them.
-   Justification:
-     Ignoring errors is bad.
-   Notes:
-     Due to preexisting ra_serf behaviour, may result in many server-side error
-     log entries for every serf checkout.  (This is separate from
-     <http://subversion.apache.org/docs/release-notes/1.7#serf>, which has to do
-     with the access log.)
-     r1239596 avoids suprious log messages for directory checksums.
-   Votes:
-     +1: rhuijben (r1237720 only)
-     +1: philip, danielsh
-
  * r1238121
    Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
    called against a HTTPv2 server with a SVN_INVALID_REVNUM revision.
@@ -166,3 +152,15 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1237720, r1239596
+   Log errors instead of ignoring them.
+   Justification:
+     Ignoring errors is bad.
+   Notes:
+     Due to preexisting ra_serf behaviour, may result in many server-side error
+     log entries for every serf checkout.  (This is separate from
+     <http://subversion.apache.org/docs/release-notes/1.7#serf>, which has to do
+     with the access log.)
+     r1239596 avoids suprious log messages for directory checksums with serf.
+   Votes:
+     +1: philip, danielsh, rhuijben
