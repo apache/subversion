@@ -140,6 +140,10 @@ struct svn_repos_t
      sufficiently well-informed internal code may just compare against
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
+
+  /* The environment inherited to hook scripts. If NULL, hooks run
+   * in an empty environment. */
+  const char *const *hooks_env;
 };
 
 
