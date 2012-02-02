@@ -84,6 +84,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * r1227900
+   Fix build of mod_dontdothat on Windows.
+   Justification:
+     Failing builds are not nice. The move of mod_dontdothat from contrib
+     to tools and adding it to build.conf was just backported to 1.7.x
+     in r1239695.
+   Votes:
+     +1: jcorvel
+
 Veto-blocked changes:
 =====================
 
