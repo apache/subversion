@@ -54,7 +54,7 @@ Candidate changes:
      +1: rhuijben (r1236099 only)
 
  * r1146762, r1201419, r1227237, r1227250, r1227352, r1227372, r1227384,
-   r1227385, r1239382, r1239631, r1239655
+   r1227385, r1239382, r1239631, r1239655, r1239749 
    Fix issue #4059, "can't commit when copy-op-root and copied-along
    grandchild are explicit targets".
    Justification:
@@ -72,6 +72,7 @@ Candidate changes:
      r1227385 is the actual fix
      r1239382 fixes the problem for nested copies, too
      r1239631 and r1239655 are follow-up comment fixes
+     r1239749 fixes a performance regression on the backport branch
    Votes:
      +1: stsp, rhuijben
 
