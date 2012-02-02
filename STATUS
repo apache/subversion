@@ -93,10 +93,9 @@ Candidate changes:
    grandchild are explicit targets".
    Justification:
      Some copies can't be committed. Users complained.
+   Branch:
+     ^/subversion/1.7.x-issue4059
    Notes:
-     +-----------------------------------+
-     | Merge with --accept=mine-conflict |
-     +-----------------------------------+
      r1146762 avoids a semantic conflict
      r1201419 adds a regression test
      r1227237 is a comment fix
