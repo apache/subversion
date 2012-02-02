@@ -114,7 +114,7 @@ else
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh -x# or die $!;
+  open SHELL, '|-', qw#/bin/sh#, ($WET_RUN ? () : '-x') or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
