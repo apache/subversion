@@ -350,9 +350,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"patch-compatible", opt_use_patch_diff_format, 0,
                        N_("generate diff suitable for generic third-party\n"
                        "                             "
-                       "patch tools; implies --show-copies-as-adds and\n"
+                       "patch tools; currently the same as\n"
                        "                             "
-                       "--no-diff-properties\n"
+                       "--show-copies-as-adds --no-diff-properties\n"
                        )},
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow merge into mixed-revision working copy.\n"
