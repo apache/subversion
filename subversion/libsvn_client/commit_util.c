@@ -417,8 +417,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    externals that aren't explicit commit targets.)
 
    DANGLERS is a hash table mapping const char* absolute paths of a parent
-   that must be committed to a const char * absolute path of a child that
-   needs them.
+   to a const char * absolute path of a child. See the comment about
+   danglers at the top of svn_client__harvest_committables().
 
    If CANCEL_FUNC is non-null, call it with CANCEL_BATON to see
    if the user has cancelled the operation.
