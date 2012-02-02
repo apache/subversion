@@ -185,20 +185,25 @@ sub handle_entry {
   my %entry = parse_entry @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
-  print "";
-  print "\n>>> The $entry{header}:";
-  print join ", ", map { "r$_" } @{$entry{revisions}};
-  print "$BRANCHES/$entry{branch}" if $entry{branch};
-  print "";
-  print for @{$entry{logsummary}};
-  print "";
-  print for @{$entry{votes}};
-  print "";
-  print "Vetoes found!" if @vetoes;
+  if ($ENV{YES}) {
+    merge %entry unless @vetoes;
+  } else {
+    print "";
+    print "\n>>> The $entry{header}:";
+    print join ", ", map { "r$_" } @{$entry{revisions}};
+    print "$BRANCHES/$entry{branch}" if $entry{branch};
+    print "";
+    print for @{$entry{logsummary}};
+    print "";
+    print for @{$entry{votes}};
+    print "";
+    print "Vetoes found!" if @vetoes;
 
-  # TODO: this changes ./STATUS, which we're reading below, but
+    merge %entry if prompt;
+  }
+
+  # TODO: merge() changes ./STATUS, which we're reading below, but
   #       on my system the loop in main() doesn't seem to care.
-  merge %entry if $ENV{YES} ? !@vetoes : prompt;
 
   1;
 }
