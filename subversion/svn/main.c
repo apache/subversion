@@ -347,12 +347,13 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
-  {"patch", opt_use_patch_diff_format, 0,
-                       N_("generate diff suitable for GNU patch;\n"
+  {"patch-compatible", opt_use_patch_diff_format, 0,
+                       N_("generate diff suitable for generic third-party\n"
                        "                             "
-                       "implies show-copies-as-adds and ignores property\n"
+                       "patch tools; implies --show-copies-as-adds and\n"
                        "                             "
-                       "differences")},
+                       "--no-diff-properties\n"
+                       )},
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow merge into mixed-revision working copy.\n"
                        "                             "
