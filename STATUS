@@ -105,6 +105,7 @@ Candidate changes:
      r1227372 is a follow-up test fix for previous
      r1227384 prepares the actual fix and needs --accept=mine-conflict
      r1227385 is the actual fix
+     r1239382 fixes the problem for nested copies, too
    Votes:
      +1: stsp, rhuijben
 
