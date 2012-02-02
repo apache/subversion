@@ -173,11 +173,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1232413
-   Improve server certificate error collection code in libsvn_ra_serf.
-   Justification:
-     Problems in the certificate chain are not properly surfaced, which
-     could potentially allow for MitM attacks.
-   Votes:
-     +1: rhuijben, gstein, philip

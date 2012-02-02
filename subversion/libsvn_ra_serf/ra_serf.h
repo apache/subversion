@@ -78,6 +78,7 @@ typedef struct svn_ra_serf__connection_t {
 
   /* Are we using ssl */
   svn_boolean_t using_ssl;
+  int server_cert_failures; /* Collected cert failures in chain */
 
   /* Should we ask for compressed responses? */
   svn_boolean_t using_compression;
