@@ -118,7 +118,7 @@ typedef svn_error_t *(*unlock_func_t)(
     const char *path,
     apr_pool_t *scratch_pool);
 
-/* svn_editor__See insert_shims() for more information. */
+/* See svn_editor__insert_shims() for more information. */
 struct extra_baton
 {
   start_edit_func_t start_edit;
