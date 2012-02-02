@@ -120,8 +120,8 @@ Candidate changes:
      with the access log.)
      r1239596 avoids suprious log messages for directory checksums.
    Votes:
-     +1: danielsh, rhuijben (r1237720 only)
-     +1: philip
+     +1: rhuijben (r1237720 only)
+     +1: philip, danielsh
 
  * r1238121
    Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
