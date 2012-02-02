@@ -68,7 +68,7 @@ sub merge {
 
   if ($entry{branch}) {
     # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch\|branches\/%s\|Branch:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch(es)?:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
@@ -158,7 +158,7 @@ sub parse_entry {
 
   # branch
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
+    shift and next unless $_[0] =~ s/^\s*Branch(es)?:\s*//;
     $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
@@ -194,7 +194,7 @@ sub handle_entry {
 
   # TODO: this changes ./STATUS, which we're reading below, but
   #       on my system the loop in main() doesn't seem to care.
-  merge %entry if prompt;
+  merge %entry if $ENV{YES} or prompt;
 
   1;
 }

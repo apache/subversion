@@ -660,9 +660,9 @@ execute(const apr_array_header_t *actions,
   for (i = 0; i < actions->nelts; ++i)
     {
       struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
+      const char *path1, *path2;
       switch (action->action)
         {
-          const char *path1, *path2;
         case ACTION_MV:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);

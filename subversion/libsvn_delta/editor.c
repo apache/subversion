@@ -192,6 +192,16 @@ svn_editor_setcb_move(svn_editor_t *editor,
 
 
 svn_error_t *
+svn_editor_setcb_rotate(svn_editor_t *editor,
+                        svn_editor_cb_rotate_t callback,
+                        apr_pool_t *scratch_pool)
+{
+  editor->funcs.cb_rotate = callback;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_editor_setcb_complete(svn_editor_t *editor,
                           svn_editor_cb_complete_t callback,
                           apr_pool_t *scratch_pool)
@@ -228,6 +238,7 @@ svn_editor_setcb_many(svn_editor_t *editor,
   COPY_CALLBACK(cb_delete);
   COPY_CALLBACK(cb_copy);
   COPY_CALLBACK(cb_move);
+  COPY_CALLBACK(cb_rotate);
   COPY_CALLBACK(cb_complete);
   COPY_CALLBACK(cb_abort);
 
@@ -585,6 +596,32 @@ svn_editor_move(svn_editor_t *editor,
                apr_pstrdup(editor->result_pool, dst_relpath),
                APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
 #endif
+#endif
+  svn_pool_clear(editor->scratch_pool);
+  return err;
+}
+
+
+svn_error_t *
+svn_editor_rotate(svn_editor_t *editor,
+                  const apr_array_header_t *relpaths,
+                  const apr_array_header_t *revisions)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+#ifdef ENABLE_ORDERING_CHECK
+  SVN_ERR_ASSERT(!editor->finished);
+  /* ### something more  */
+#endif
+
+  if (editor->cancel_func)
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+
+  if (editor->funcs.cb_rotate)
+    err = editor->funcs.cb_rotate(editor->baton, relpaths, revisions,
+                                  editor->scratch_pool);
+#ifdef ENABLE_ORDERING_CHECK
+  /* ### something more  */
 #endif
   svn_pool_clear(editor->scratch_pool);
   return err;

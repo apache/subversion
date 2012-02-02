@@ -1136,19 +1136,26 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   A_path = os.path.join(wc_dir, 'A')
   Z_path = os.path.join(wc_dir, 'Z')
+  Z_abspath = os.path.abspath(Z_path)
   mu_path = os.path.join(wc_dir, 'Z', 'mu')
 
   svntest.main.run_svn(None, 'move', A_path, Z_path)
+  
+  # Make sure mu is a committable
+  svntest.main.file_write(mu_path, "xxxx")
 
   # Commit a copied thing inside an added-with-history directory,
   # expecting a specific error to occur!
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not known to exist in the repository",
+                                        "svn: E200009: '" +
+                                        re.escape(Z_abspath) +
+                                        "' is not known to exist in the",
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
+  Q_abspath = os.path.abspath(Q_path)
   bloo_path = os.path.join(Q_path, 'bloo')
 
   os.mkdir(Q_path)
@@ -1160,8 +1167,23 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not known to exist in the repository",
+                                        "svn: E200009: '" +
+                                        re.escape(Q_abspath) +
+                                        "' is not known to exist in the",
                                         bloo_path)
+
+  R_path = sbox.ospath('Z/B/R')
+  sbox.simple_mkdir('Z/B/R')
+
+  # Commit a d added thing inside an added directory,
+  # expecting a specific error to occur!
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        "svn: E200009: '" +
+                                        re.escape(Z_abspath) +
+                                        "' is not known to exist in the.*",
+                                        R_path)                                        
 
 #----------------------------------------------------------------------
 
