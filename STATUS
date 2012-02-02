@@ -67,16 +67,6 @@ Candidate changes:
    Votes:
      -0: rhuijben (Behavior change without positive votes? 1.8?)
 
- * r1221767, r1221780
-   Fix SVNParentPath listings for parent paths which contain symlinks.
-   This was supposed to have been fixed by r1132782, but that solution
-   had problems of its own.
-   Notes:
-     r1221767 is code formatting only, needed to avoid a conflict
-   Votes:
-     +1: cmpilato (r1221780 only)
-     +1: philip, rhuijben
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
@@ -173,3 +163,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1221767, r1221780
+   Fix SVNParentPath listings for parent paths which contain symlinks.
+   This was supposed to have been fixed by r1132782, but that solution
+   had problems of its own.
+   Notes:
+     r1221767 is code formatting only, needed to avoid a conflict
+   Votes:
+     +1: cmpilato, philip, rhuijben
+
