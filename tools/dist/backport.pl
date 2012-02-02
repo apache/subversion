@@ -180,6 +180,7 @@ sub parse_entry {
 
 sub handle_entry {
   my %entry = parse_entry @_;
+  my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   print "";
   print "\n>>> The $entry{header}:";
@@ -190,11 +191,11 @@ sub handle_entry {
   print "";
   print for @{$entry{votes}};
   print "";
-  print "Vetoes found!" if grep { /^  -1:/ } @{$entry{votes}};
+  print "Vetoes found!" if @vetoes;
 
   # TODO: this changes ./STATUS, which we're reading below, but
   #       on my system the loop in main() doesn't seem to care.
-  merge %entry if $ENV{YES} or prompt;
+  merge %entry if $ENV{YES} ? !@vetoes : prompt;
 
   1;
 }
