@@ -24,17 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1207555, r1207808
-   mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
-   Justification:
-     ASF infra is using this so we should maintain it.
-     Stuff in contrib/ isn't officially maintained.
-   Notes:
-     r1207555: Perform the move (from r1207550) and relicense
-     r1207808: Enable building mod_dontdothat from our standard make scripts.
-   Votes:
-     +1: rhuijben, stsp
-
  * r1210147, r1202132, r1202333, r1220740
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
@@ -52,13 +41,6 @@ Candidate changes:
                in turn needs new-in-1.8 APIs. Are there test failures
                on Windows without it that cannot be fixed some other way?)
      +1: julianfoad
-
- * r1221178, r1221303
-   Fix issue 4086, mod_dav_svn's handling of POST errors.
-   Justification:
-     Regression when using the v2 protocol.
-   Votes:
-     +1: philip, rhuijben
 
  * r1221463
    Allow leading "r" in ?p= query string arguments.
@@ -151,6 +133,24 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1207555, r1207808
+   mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
+   Justification:
+     ASF infra is using this so we should maintain it.
+     Stuff in contrib/ isn't officially maintained.
+   Notes:
+     r1207555: Perform the move (from r1207550) and relicense
+     r1207808: Enable building mod_dontdothat from our standard make scripts.
+   Votes:
+     +1: rhuijben, stsp, cmpilato
+
+ * r1221178, r1221303
+   Fix issue 4086, mod_dav_svn's handling of POST errors.
+   Justification:
+     Regression when using the v2 protocol.
+   Votes:
+     +1: philip, rhuijben, cmpilato
 
  * r1237720, r1239596
    Log errors instead of ignoring them.
