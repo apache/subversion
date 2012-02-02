@@ -985,12 +985,15 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
       if (authorities != NULL)
         {
-          char *files, *file;
-          files = apr_pstrdup(pool, authorities);
+          int i;
+          apr_array_header_t *files = svn_cstring_split(authorities, ";", TRUE,
+                                                        pool);
 
-          while ((file = svn_cstring_tokenize(";", &files)) != NULL)
+          for (i = 0; i < files->nelts; ++i)
             {
               ne_ssl_certificate *ca_cert;
+              const char *file = APR_ARRAY_IDX(files, i, const char *);
+
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {

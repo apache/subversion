@@ -68,7 +68,7 @@ sub merge {
 
   if ($entry{branch}) {
     # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch\|branches\/%s\|Branch:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch(es)?:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
     print $logmsg_fh "Reintergrate the $entry{header}:";
     print $logmsg_fh "";
@@ -114,7 +114,7 @@ else
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh -x# or die $!;
+  open SHELL, '|-', qw#/bin/sh#, ($WET_RUN ? () : '-x') or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
@@ -158,7 +158,7 @@ sub parse_entry {
 
   # branch
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
+    shift and next unless $_[0] =~ s/^\s*Branch(es)?:\s*//;
     $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
@@ -180,6 +180,7 @@ sub parse_entry {
 
 sub handle_entry {
   my %entry = parse_entry @_;
+  my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   print "";
   print "\n>>> The $entry{header}:";
@@ -190,11 +191,11 @@ sub handle_entry {
   print "";
   print for @{$entry{votes}};
   print "";
-  print "Vetoes found!" if grep { /^  -1:/ } @{$entry{votes}};
+  print "Vetoes found!" if @vetoes;
 
   # TODO: this changes ./STATUS, which we're reading below, but
   #       on my system the loop in main() doesn't seem to care.
-  merge %entry if prompt;
+  merge %entry if $ENV{YES} ? !@vetoes : prompt;
 
   1;
 }

@@ -1937,7 +1937,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   sfb = apr_palloc(result_pool, sizeof(*sfb));
   sfb->db = wc_ctx->db;
   sfb->base_abspath = eb->anchor_abspath;
-  sfb->fetch_base = FALSE;
+  sfb->fetch_base = TRUE;
 
   shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
   shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;

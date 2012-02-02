@@ -9842,6 +9842,85 @@ find_unsynced_ranges(const char *source_repos_rel_path,
 }
 
 
+/* Find the youngest revision that has been merged from target to source.
+ *
+ * If any location in TARGET_HISTORY_AS_MERGEINFO is mentioned in
+ * SOURCE_MERGEINFO, then we know that at least one merge was done from the
+ * target to the source.  In that case, set *YOUNGEST_MERGED_REV to the
+ * youngest revision of that intersection (unless *YOUNGEST_MERGED_REV is
+ * already younger than that).  Otherwise, leave *YOUNGEST_MERGED_REV alone.
+ */
+static svn_error_t *
+find_youngest_merged_rev(svn_revnum_t *youngest_merged_rev,
+                         svn_mergeinfo_t target_history_as_mergeinfo,
+                         svn_mergeinfo_t source_mergeinfo,
+                         apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_t explicit_source_target_history_intersection;
+
+  SVN_ERR(svn_mergeinfo_intersect2(
+            &explicit_source_target_history_intersection,
+            source_mergeinfo, target_history_as_mergeinfo, TRUE,
+            scratch_pool, scratch_pool));
+  if (apr_hash_count(explicit_source_target_history_intersection))
+    {
+      svn_revnum_t old_rev, young_rev;
+
+      /* Keep track of the youngest revision merged from target to source. */
+      SVN_ERR(svn_mergeinfo__get_range_endpoints(
+                &young_rev, &old_rev,
+                explicit_source_target_history_intersection, scratch_pool));
+      if (!SVN_IS_VALID_REVNUM(*youngest_merged_rev)
+          || (young_rev > *youngest_merged_rev))
+        *youngest_merged_rev = young_rev;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Set *FILTERED_MERGEINFO_P to the parts of TARGET_HISTORY_AS_MERGEINFO
+ * that are not present in the source branch.
+ *
+ * SOURCE_MERGEINFO is the explicit or inherited mergeinfo of the source
+ * branch SOURCE_URL@SOURCE_REV.  Extend SOURCE_MERGEINFO, modifying it in
+ * place, to include the natural history (implicit mergeinfo) of
+ * SOURCE_URL@SOURCE_REV.  ### But make these additions in SCRATCH_POOL.
+ */
+static svn_error_t *
+find_unmerged_mergeinfo_subroutine(svn_mergeinfo_t *filtered_mergeinfo_p,
+                                   svn_mergeinfo_t target_history_as_mergeinfo,
+                                   svn_mergeinfo_t source_mergeinfo,
+                                   const char *source_url,
+                                   svn_revnum_t source_rev,
+                                   svn_ra_session_t *source_ra_session,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_t source_history_as_mergeinfo;
+
+  /* Get the source path's natural history and merge it into source
+     path's explicit or inherited mergeinfo. */
+  SVN_ERR(svn_client__get_history_as_mergeinfo(
+            &source_history_as_mergeinfo, NULL /* has_rev_zero_history */,
+            source_url, source_rev, source_rev, SVN_INVALID_REVNUM,
+            source_ra_session, ctx, scratch_pool));
+  SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
+                               source_history_as_mergeinfo,
+                               scratch_pool, scratch_pool));
+
+  /* Now source_mergeinfo represents everything we know about
+     source_path's history.  Now we need to know what part, if any, of the
+     corresponding target's history is *not* part of source_path's total
+     history; because it is neither shared history nor was it ever merged
+     from the target to the source. */
+  SVN_ERR(svn_mergeinfo_remove2(filtered_mergeinfo_p,
+                                source_mergeinfo,
+                                target_history_as_mergeinfo, TRUE,
+                                result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* Helper for calculate_left_hand_side() which produces a mergeinfo catalog
    describing what parts of of the reintegrate target have not previously been
    merged to the reintegrate source.
@@ -9884,8 +9963,7 @@ find_unsynced_ranges(const char *source_repos_rel_path,
    TARGET_HISTORY_HASH.
 
    If no part of TARGET_HISTORY_HASH is found in SOURCE_CATALOG set
-   *NEVER_SYNCHED to TRUE and set *YOUNGEST_MERGED_REV to SVN_INVALID_REVNUM.
-   Otherwise set *NEVER_SYNCHED to FALSE, *YOUNGEST_MERGED_REV to the youngest
+   *YOUNGEST_MERGED_REV to SVN_INVALID_REVNUM; otherwise set it to the youngest
    revision previously merged from the target to the source, and filter
    *UNMERGED_TO_SOURCE_CATALOG so that it contains no ranges greater than
    *YOUNGEST_MERGED_REV.
@@ -9894,7 +9972,6 @@ find_unsynced_ranges(const char *source_repos_rel_path,
    SCRATCH_POOL is used for all temporary allocations.  */
 static svn_error_t *
 find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
-                        svn_boolean_t *never_synched,
                         svn_revnum_t *youngest_merged_rev,
                         svn_revnum_t yc_ancestor_rev,
                         svn_mergeinfo_catalog_t source_catalog,
@@ -9914,9 +9991,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
   apr_hash_index_t *hi;
   svn_mergeinfo_catalog_t new_catalog = apr_hash_make(result_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_revnum_t old_rev, young_rev;
 
-  *never_synched = TRUE;
   *youngest_merged_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR(svn_ra_get_session_url(target_ra_session, &target_session_url,
@@ -9932,12 +10007,11 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
     {
       const char *target_path = svn__apr_hash_index_key(hi);
       svn_mergeinfo_t target_history_as_mergeinfo = svn__apr_hash_index_val(hi);
-      svn_mergeinfo_t source_history_as_mergeinfo;
       const char *path_rel_to_session
         = svn_relpath_skip_ancestor(target_repos_rel_path, target_path);
       const char *source_path;
       const char *source_url;
-      svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo, common_mergeinfo;
+      svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
 
       svn_pool_clear(iterpool);
 
@@ -9966,31 +10040,13 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                                       APR_HASH_KEY_STRING);
       if (source_mergeinfo)
         {
-          svn_mergeinfo_t explicit_source_target_history_intersection;
-
           apr_hash_set(source_catalog, source_path, APR_HASH_KEY_STRING,
                        NULL);
-          /* If there is an intersection between the *explicit* mergeinfo on
-             this source path and the corresponding target's history then we
-             know that at least one merge was done from the target to the
-             source. */
-          SVN_ERR(svn_mergeinfo_intersect2(
-            &explicit_source_target_history_intersection,
-            source_mergeinfo, target_history_as_mergeinfo, TRUE,
-            iterpool, iterpool));
-          if (apr_hash_count(explicit_source_target_history_intersection))
-            {
-              *never_synched = FALSE;
-              /* Keep track of the youngest revision merged from the
-                 target to the source. */
-              SVN_ERR(svn_mergeinfo__get_range_endpoints(
-                &young_rev, &old_rev,
-                explicit_source_target_history_intersection,
-                iterpool));
-              if (!SVN_IS_VALID_REVNUM(*youngest_merged_rev)
-                  || (young_rev > *youngest_merged_rev))
-                *youngest_merged_rev = young_rev;
-            }
+
+          SVN_ERR(find_youngest_merged_rev(youngest_merged_rev,
+                                           target_history_as_mergeinfo,
+                                           source_mergeinfo,
+                                           iterpool));
         }
       else
         {
@@ -10027,40 +10083,13 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
             source_mergeinfo = apr_hash_make(iterpool);
         }
 
-      /* Get the source path's natural history and convert it to mergeinfo.
-         Then merge that natural history into source path's explicit
-         or inherited mergeinfo. */
-      SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history_as_mergeinfo,
-                                                   NULL /* has_rev_zero_history */,
-                                                   source_url,
-                                                   source_rev, source_rev,
-                                                   SVN_INVALID_REVNUM,
-                                                   source_ra_session,
-                                                   ctx, iterpool));
-      SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
-                                   source_history_as_mergeinfo, iterpool,
-                                   iterpool));
-
-      /* Now source_mergeinfo represents everything we know about
-         source_path's history.  Now we need to know what part, if any, of the
-         corresponding target's history is *not* part of source_path's total
-         history; because it is neither shared history nor was it ever merged
-         from the target to the source. */
-      SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
-                                       source_mergeinfo,
-                                       target_history_as_mergeinfo, TRUE,
-                                       iterpool, iterpool));
-
-      /* Use scratch_pool rather than iterpool because filtered_mergeinfo is
-         going into new_catalog below and needs to last to the end of
+      /* Use scratch_pool rather than iterpool because filtered_mergeinfo
+         is going into new_catalog below and needs to last to the end of
          this function. */
-      SVN_ERR(svn_mergeinfo_remove2(&filtered_mergeinfo,
-                                    common_mergeinfo,
-                                    target_history_as_mergeinfo, TRUE,
-                                    scratch_pool, iterpool));
-
-      /* As with svn_mergeinfo_intersect above, we need to use scratch_pool
-         rather than iterpool. */
+      SVN_ERR(find_unmerged_mergeinfo_subroutine(
+                &filtered_mergeinfo, target_history_as_mergeinfo,
+                source_mergeinfo, source_url, source_rev,
+                source_ra_session, ctx, scratch_pool, iterpool));
       apr_hash_set(new_catalog,
                    apr_pstrdup(scratch_pool, source_path),
                    APR_HASH_KEY_STRING,
@@ -10081,9 +10110,9 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
         svn_relpath_skip_ancestor(source_repos_rel_path, source_path);
       const char *source_url;
       svn_mergeinfo_t source_mergeinfo = svn__apr_hash_index_val(hi);
-      svn_mergeinfo_t filtered_mergeinfo, common_mergeinfo;
+      svn_mergeinfo_t filtered_mergeinfo;
       const char *target_url;
-      svn_mergeinfo_t target_history_as_mergeinfo, source_history_as_mergeinfo;
+      svn_mergeinfo_t target_history_as_mergeinfo;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -10116,56 +10145,19 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
         }
       else
         {
-          svn_mergeinfo_t explicit_source_target_history_intersection;
-
-          /* If there is an intersection between the *explicit* mergeinfo
-             on this source path and the corresponding target's history
-             then we know that at least one merge was done from the target
-             to the source. */
-          SVN_ERR(svn_mergeinfo_intersect2(
-            &explicit_source_target_history_intersection,
-            source_mergeinfo, target_history_as_mergeinfo, TRUE,
-            iterpool, iterpool));
-
-          if (apr_hash_count(explicit_source_target_history_intersection))
-            {
-              *never_synched = FALSE;
-              /* Keep track of the youngest revision merged from the
-                 target to the source. */
-              SVN_ERR(svn_mergeinfo__get_range_endpoints(
-                &young_rev, &old_rev,
-                explicit_source_target_history_intersection, iterpool));
-              if (!SVN_IS_VALID_REVNUM(*youngest_merged_rev)
-                  || (young_rev > *youngest_merged_rev))
-                *youngest_merged_rev = young_rev;
-            }
-
-          /* Get the source path's natural history and convert it to
-             mergeinfo.  Then merge that natural history into source
-             path's explicit or inherited mergeinfo. */
-          SVN_ERR(svn_client__get_history_as_mergeinfo(
-            &source_history_as_mergeinfo,
-            NULL /* has_rev_zero_history */,
-            source_url,
-            target_rev,
-            target_rev,
-            SVN_INVALID_REVNUM,
-            source_ra_session,
-            ctx, iterpool));
-          SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
-                                       source_history_as_mergeinfo,
-                                       iterpool, iterpool));
-          SVN_ERR(svn_mergeinfo_intersect2(&common_mergeinfo,
-                                           source_mergeinfo,
+          SVN_ERR(find_youngest_merged_rev(youngest_merged_rev,
                                            target_history_as_mergeinfo,
-                                           TRUE, iterpool, iterpool));
-          /* Use subpool rather than iterpool because filtered_mergeinfo
-             is  going into new_catalog below and needs to last to the
-             end of this function. */
-          SVN_ERR(svn_mergeinfo_remove2(&filtered_mergeinfo,
-                                        common_mergeinfo,
-                                        target_history_as_mergeinfo,
-                                        TRUE, scratch_pool, iterpool));
+                                           source_mergeinfo,
+                                           iterpool));
+
+          /* Use scratch_pool rather than iterpool because filtered_mergeinfo
+             is going into new_catalog below and needs to last to the end of
+             this function. */
+          /* ### Why looking at SOURCE_url at TARGET_rev? */
+          SVN_ERR(find_unmerged_mergeinfo_subroutine(
+                    &filtered_mergeinfo, target_history_as_mergeinfo,
+                    source_mergeinfo, source_url, target_rev,
+                    source_ra_session, ctx, scratch_pool, iterpool));
           if (apr_hash_count(filtered_mergeinfo))
             apr_hash_set(new_catalog,
                          apr_pstrdup(scratch_pool, source_path),
@@ -10251,7 +10243,6 @@ calculate_left_hand_side(const char **url_left,
   apr_hash_index_t *hi;
   /* hash of paths mapped to arrays of svn_mergeinfo_t. */
   apr_hash_t *target_history_hash = apr_hash_make(scratch_pool);
-  svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_url;
   svn_revnum_t yc_ancestor_rev;
@@ -10359,7 +10350,6 @@ calculate_left_hand_side(const char **url_left,
      mergeinfo that describes what has *not* previously been merged from
      TARGET_REPOS_REL_PATH@TARGET_REV to SOURCE_REPOS_REL_PATH@SOURCE_REV. */
   SVN_ERR(find_unmerged_mergeinfo(&unmerged_catalog,
-                                  &never_synced,
                                   &youngest_merged_rev,
                                   yc_ancestor_rev,
                                   mergeinfo_catalog,
@@ -10379,7 +10369,7 @@ calculate_left_hand_side(const char **url_left,
   *unmerged_to_source_catalog = svn_mergeinfo_catalog_dup(unmerged_catalog,
                                                           result_pool);
 
-  if (never_synced)
+  if (youngest_merged_rev == SVN_INVALID_REVNUM)
     {
       /* We never merged to the source.  Just return the branch point. */
       *url_left = apr_pstrdup(result_pool, yc_ancestor_url);

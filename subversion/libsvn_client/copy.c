@@ -1558,27 +1558,18 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   else if (pair->src_kind == svn_node_file)
     {
-      svn_stream_t *fstream;
-      const char *new_text_path;
       apr_hash_t *new_props;
       const char *src_rel;
-      svn_stream_t *new_base_contents;
-
-      SVN_ERR(svn_stream_open_unique(&fstream, &new_text_path, NULL,
-                                     svn_io_file_del_on_pool_cleanup, pool,
-                                     pool));
+      svn_stream_t *new_base_contents = svn_stream_buffered(pool);
 
       SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
                                                   pair->src_abspath_or_url,
                                                   pool));
       /* Fetch the file content. While doing so, resolve pair->src_revnum
        * to an actual revision number if it's 'invalid' meaning 'head'. */
-      SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum, fstream,
+      SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
+                              new_base_contents,
                               &pair->src_revnum, &new_props, pool));
-      SVN_ERR(svn_stream_close(fstream));
-
-      SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_path,
-                                       pool, pool));
       SVN_ERR(svn_wc_add_repos_file4(
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,

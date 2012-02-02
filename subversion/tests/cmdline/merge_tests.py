@@ -13449,6 +13449,12 @@ def natural_history_filtering(sbox):
   #
   # To set up a situation where this can occur we'll do the following:
   #
+  #     trunk   -1-----3-4-5-6-------8----------- A
+  #                \           \       \
+  #     branch1     2-----------\-------9-------- A_COPY
+  #                              \        \
+  #     branch2                   7--------10---- A_COPY_2
+  #
   #   1) Create a 'trunk'.
   #
   #   2) Copy 'trunk' to 'branch1'.

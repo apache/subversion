@@ -25,7 +25,7 @@
 #ifndef LIBSVN_FS_FS_H
 #define LIBSVN_FS_FS_H
 
-#include "svn_version.h"
+#include "svn_types.h"
 #include "svn_fs.h"
 
 #ifdef __cplusplus

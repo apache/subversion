@@ -988,32 +988,33 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
      revision (if needed) with an OPTIONS request.  */
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      basecoll_url = apr_psprintf(pool, "%s/%ld",
-                                  session->rev_root_stub, revision);
+      svn_revnum_t actual_revision;
 
-      if (latest_revnum)
+      if (SVN_IS_VALID_REVNUM(revision))
         {
-          if (SVN_IS_VALID_REVNUM(revision))
-            {
-              *latest_revnum = revision;
-            }
-          else
-           {
-              svn_ra_serf__options_context_t *opt_ctx;
+          actual_revision = revision;
+        }
+      else
+        {
+          svn_ra_serf__options_context_t *opt_ctx;
 
-              SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
+          SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
                                                   session->session_url.path,
                                                   pool));
-              SVN_ERR(svn_ra_serf__context_run_wait(
+          SVN_ERR(svn_ra_serf__context_run_wait(
                 svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool));
 
-             *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
-             if (! SVN_IS_VALID_REVNUM(*latest_revnum))
-               return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                       _("The OPTIONS response did not include "
-                                         "the youngest revision"));
-          }
+          actual_revision = svn_ra_serf__options_get_youngest_rev(opt_ctx);
+          if (! SVN_IS_VALID_REVNUM(actual_revision))
+            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                    _("The OPTIONS response did not include "
+                                      "the youngest revision"));
         }
+
+      basecoll_url = apr_psprintf(pool, "%s/%ld",
+                                  session->rev_root_stub, actual_revision);
+      if (latest_revnum)
+        *latest_revnum = actual_revision;
     }
 
   /* Otherwise, we fall back to the old VCC_URL PROPFIND hunt.  */
@@ -1021,7 +1022,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
     {
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, conn, pool));
 
-      if (revision != SVN_INVALID_REVNUM)
+      if (SVN_IS_VALID_REVNUM(revision))
         {
           /* First check baseline information cache. */
           SVN_ERR(svn_ra_serf__blncache_get_bc_url(&basecoll_url,

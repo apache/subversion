@@ -989,6 +989,16 @@ svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
 
+/** Return a generic stream which implements buffered reads and writes.
+ *  The stream will preferentially store data in-memory, but may use
+ *  disk storage as backup if the amount of data is large.
+ *  Allocate the stream in @a result_pool
+ *
+ * @since New in 1.8.
+ */
+svn_stream_t *
+svn_stream_buffered(apr_pool_t *result_pool);
+
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
  * compressed data. All compression data structures are allocated on

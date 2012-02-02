@@ -91,7 +91,18 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * The general idea here is that we have to see *all* the actions on a node's
  * parent before we can process that node, which means we need to buffer a
  * large amount of information in the dir batons, and then process it in the
- * close_directory() handler. */
+ * close_directory() handler.
+ *
+ * There are a few ways we alter the callback stream.  One is when unlocking
+ * paths.  To tell a client a path should be unlocked, the server sends a
+ * prop-del for the SVN_PROP_ENTRY_LOCK_TOKEN property.  This causes problems,
+ * since the client doesn't have this property in the first place, but the
+ * deletion has side effects (unlike deleting a non-existent regular property
+ * would).  To solve this, we introduce *another* function into the API, not
+ * a part of the Ev2 callbacks, but a companion which is used to register
+ * the unlock of a path.  See ev2_change_file_prop() for implemenation
+ * details.
+ */
 
 typedef svn_error_t *(*start_edit_func_t)(
     void *baton,
@@ -100,6 +111,11 @@ typedef svn_error_t *(*start_edit_func_t)(
 typedef svn_error_t *(*target_revision_func_t)(
     void *baton,
     svn_revnum_t target_revision,
+    apr_pool_t *scratch_pool);
+
+typedef svn_error_t *(*unlock_func_t)(
+    void *baton,
+    const char *path,
     apr_pool_t *scratch_pool);
 
 /* svn_editor__See insert_shims() for more information. */
@@ -125,6 +141,9 @@ struct ev2_edit_baton
 
   svn_delta_fetch_base_func_t fetch_base_func;
   void *fetch_base_baton;
+
+  unlock_func_t do_unlock;
+  void *unlock_baton;
 };
 
 struct ev2_dir_baton
@@ -155,7 +174,8 @@ enum action_code_t
   ACTION_ADD,
   ACTION_DELETE,
   ACTION_ADD_ABSENT,
-  ACTION_SET_TEXT
+  ACTION_SET_TEXT,
+  ACTION_UNLOCK
 };
 
 struct path_action
@@ -261,10 +281,13 @@ process_actions(void *edit_baton,
                 {
                   /* Fetch the original props. We can then apply each of
                      the modifications to it.  */
-                  SVN_ERR(eb->fetch_props_func(&props,
-                                               eb->fetch_props_baton,
-                                               path, props_base_revision,
-                                               scratch_pool, scratch_pool));
+                  if (need_delete && need_add)
+                    props = apr_hash_make(scratch_pool);
+                  else
+                    SVN_ERR(eb->fetch_props_func(&props,
+                                                 eb->fetch_props_baton,
+                                                 path, props_base_revision,
+                                                 scratch_pool, scratch_pool));
                 }
 
               /* Note that p_args->value may be NULL.  */
@@ -331,6 +354,12 @@ process_actions(void *edit_baton,
               kind = *((svn_kind_t *) action->args);
               SVN_ERR(svn_editor_add_absent(eb->editor, path, kind,
                                             SVN_INVALID_REVNUM));
+              break;
+            }
+
+          case ACTION_UNLOCK:
+            {
+              SVN_ERR(eb->do_unlock(eb->unlock_baton, path, scratch_pool));
               break;
             }
 
@@ -751,6 +780,15 @@ ev2_change_file_prop(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
 
+  if (!strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) && value == NULL)
+    {
+      /* We special case the lock token propery deletion, which is the
+         server's way of telling the client to unlock the path. */
+      SVN_ERR(add_action(fb->eb, fb->path, ACTION_UNLOCK, NULL));
+    }
+
+  /* We also pass through the deletion, since there may actually exist such
+     a property we want to get rid of.   In the worse case, this is a no-op. */
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
   p_args->base_revision = fb->base_revision;
@@ -802,10 +840,32 @@ ev2_abort_edit(void *edit_baton,
   return svn_error_trace(svn_editor_abort(eb->editor));
 }
 
+/* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
+ * DEDITOR_BATON, which will be driven by EDITOR.  These will both be
+ * allocated in RESULT_POOL, which may become large and long-lived;
+ * SCRATCH_POOL is used for temporary allocations.
+ *
+ * The other parameters are as follows:
+ *  - UNLOCK_FUNC / UNLOCK_BATON: A callback / baton which will be called
+ *         when an unlocking action is received.
+ *  - FOUND_ABS_PATHS: A pointer to a boolean flag which will be set if
+ *         this shim determines that it is receiving absolute paths.
+ *  - FETCH_PROPS_FUNC / FETCH_PROPS_BATON: A callback / baton pair which
+ *         will be used by the shim handlers if they need to determine the
+ *         existing properties on a  path.
+ *  - FETCH_BASE_FUNC / FETCH_BASE_BATON: A callback / baton pair which will
+ *         be used by the shims handlers if they need to determine the base
+ *         text of a path.  It should only be invoked for files.
+ *  - EXB: An 'extra baton' which is used to communicate between the shims.
+ *         Its callbacks should be invoked at the appropriate time by this
+ *         shim.
+ */ 
 static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
+                  unlock_func_t unlock_func,
+                  void *unlock_baton,
                   svn_boolean_t *found_abs_paths,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
@@ -848,6 +908,9 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->fetch_base_func = fetch_base_func;
   eb->fetch_base_baton = fetch_base_baton;
 
+  eb->do_unlock = unlock_func;
+  eb->unlock_baton = unlock_baton;
+
   *dedit_baton = eb;
   *deditor = &delta_editor;
 
@@ -874,6 +937,7 @@ struct operation {
   svn_kind_t kind;  /* to copy, mkdir, put or set revprops */
   svn_revnum_t base_revision;       /* When committing, the base revision */
   svn_revnum_t copyfrom_revision;      /* to copy, valid for add and replace */
+  svn_checksum_t *new_checksum;   /* An MD5 hash of the new contents, if any */
   const char *copyfrom_url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
@@ -895,7 +959,6 @@ struct editor_baton
   void *fetch_props_baton;
 
   struct operation root;
-  svn_boolean_t root_opened;
   svn_boolean_t *make_abs_paths;
 
   apr_hash_t *paths;
@@ -929,6 +992,11 @@ get_operation(const char *path,
       apr_hash_set(operation->children, apr_pstrdup(result_pool, path),
                    APR_HASH_KEY_STRING, child);
     }
+
+  /* If an operation has a child, it must of necessity be a directory,
+     so ensure this fact. */
+  operation->kind = svn_kind_dir;
+
   return child;
 }
 
@@ -957,6 +1025,7 @@ build(struct editor_baton *eb,
       svn_revnum_t rev,
       apr_hash_t *props,
       const char *src_file,
+      svn_checksum_t *checksum,
       svn_revnum_t head,
       apr_pool_t *scratch_pool)
 {
@@ -986,14 +1055,23 @@ build(struct editor_baton *eb,
       apr_hash_t *current_props;
       apr_array_header_t *propdiffs;
 
-      if (kind == svn_kind_unknown)
-        SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                    relpath, rev, scratch_pool));
-      else
-        operation->kind = kind;
+      /* Only fetch the kind if operating on something other than the root,
+         as we already know the kind on the root. */
+      if (operation->path)
+        {
+          if (kind == svn_kind_unknown)
+            SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
+                                        relpath, rev, scratch_pool));
+          else
+            operation->kind = kind;
+        }
 
-      SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
-                                   relpath, rev, scratch_pool, scratch_pool));
+      if (operation->operation == OP_REPLACE)
+        current_props = apr_hash_make(scratch_pool);
+      else
+        SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                     relpath, rev, scratch_pool,
+                                     scratch_pool));
 
       SVN_ERR(svn_prop_diffs(&propdiffs, props, current_props, scratch_pool));
 
@@ -1006,7 +1084,9 @@ build(struct editor_baton *eb,
             APR_ARRAY_PUSH(operation->prop_dels, const char *) = 
                                         apr_pstrdup(eb->edit_pool, prop->name);
           else
-            apr_hash_set(operation->prop_mods, prop->name, APR_HASH_KEY_STRING,
+            apr_hash_set(operation->prop_mods,
+                         apr_pstrdup(eb->edit_pool, prop->name),
+                         APR_HASH_KEY_STRING,
                          svn_string_dup(prop->value, eb->edit_pool));
         }
 
@@ -1024,7 +1104,10 @@ build(struct editor_baton *eb,
     }
 
   if (action == ACTION_DELETE)
-    operation->operation = OP_DELETE;
+    {
+      operation->operation = OP_DELETE;
+      operation->base_revision = rev;
+    }
 
   else if (action == ACTION_ADD_ABSENT)
     operation->operation = OP_ADD_ABSENT;
@@ -1068,25 +1151,13 @@ build(struct editor_baton *eb,
                                      "'%s' is not a file", relpath);
         }
       operation->kind = svn_kind_file;
-      operation->src_file = src_file;
+      operation->src_file = apr_pstrdup(eb->edit_pool, src_file);
+      operation->new_checksum = svn_checksum_dup(checksum, eb->edit_pool);
     }
   else
     {
       /* We shouldn't get here. */
       SVN_ERR_MALFUNCTION();
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ensure_root_opened(struct editor_baton *eb)
-{
-  if (!eb->root_opened)
-    {
-      SVN_ERR(eb->deditor->open_root(eb->dedit_baton, eb->root.base_revision,
-                                     eb->edit_pool, &eb->root.baton));
-      eb->root_opened = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -1103,25 +1174,23 @@ add_directory_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   if (SVN_IS_VALID_REVNUM(replaces_rev))
     {
       /* We need to add the delete action. */
 
       SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   SVN_ERR(build(eb, ACTION_MKDIR, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   if (props && apr_hash_count(props) > 0)
     SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_dir,
                   NULL, SVN_INVALID_REVNUM, props,
-                  NULL, SVN_INVALID_REVNUM, scratch_pool));
+                  NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1139,8 +1208,14 @@ add_file_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+  svn_checksum_t *md5_checksum;
 
-  SVN_ERR(ensure_root_opened(eb));
+  /* We may need to re-checksum these contents */
+  if (!(checksum && checksum->kind == svn_checksum_md5))
+    contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
+                                       svn_checksum_md5, TRUE, scratch_pool);
+  else
+    md5_checksum = (svn_checksum_t *)checksum;
 
   if (SVN_IS_VALID_REVNUM(replaces_rev))
     {
@@ -1148,24 +1223,24 @@ add_file_cb(void *baton,
 
       SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  eb->edit_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
-                           tmp_stream, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_none,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, tmp_filename, md5_checksum, SVN_INVALID_REVNUM,
+                scratch_pool));
 
   if (props && apr_hash_count(props) > 0)
     SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_file,
                   NULL, SVN_INVALID_REVNUM, props,
-                  NULL, SVN_INVALID_REVNUM, scratch_pool));
+                  NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1181,15 +1256,13 @@ add_symlink_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   if (SVN_IS_VALID_REVNUM(replaces_rev))
     {
       /* We need to add the delete action. */
 
       SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1205,11 +1278,9 @@ add_absent_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   SVN_ERR(build(eb, ACTION_ADD_ABSENT, relpath, kind,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1225,11 +1296,9 @@ set_props_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_unknown,
                 NULL, SVN_INVALID_REVNUM,
-                props, NULL, revision, scratch_pool));
+                props, NULL, NULL, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1246,19 +1315,24 @@ set_text_cb(void *baton,
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
+  svn_checksum_t *md5_checksum;
 
-  SVN_ERR(ensure_root_opened(eb));
+  /* We may need to re-checksum these contents */
+  if (!(checksum && checksum->kind == svn_checksum_md5))
+    contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
+                                       svn_checksum_md5, TRUE, scratch_pool);
+  else
+    md5_checksum = (svn_checksum_t *)checksum;
 
   /* Spool the contents to a tempfile, and provide that to the driver. */
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  eb->edit_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(svn_stream_disown(contents, scratch_pool),
-                           tmp_stream, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, revision, scratch_pool));
+                NULL, tmp_filename, md5_checksum, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1273,8 +1347,6 @@ set_target_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   return SVN_NO_ERROR;
 }
 
@@ -1287,10 +1359,8 @@ delete_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   SVN_ERR(build(eb, ACTION_DELETE, relpath, svn_kind_unknown,
-                NULL, SVN_INVALID_REVNUM, NULL, NULL, SVN_INVALID_REVNUM,
+                NULL, revision, NULL, NULL, NULL, SVN_INVALID_REVNUM,
                 scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1307,20 +1377,18 @@ copy_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   if (SVN_IS_VALID_REVNUM(replaces_rev))
     {
       /* We need to add the delete action. */
 
       SVN_ERR(build(eb, ACTION_DELETE, dst_relpath, svn_kind_unknown,
                     NULL, SVN_INVALID_REVNUM,
-                    NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
     }
 
   SVN_ERR(build(eb, ACTION_COPY, dst_relpath, svn_kind_unknown,
-                src_relpath, src_revision, NULL, NULL, SVN_INVALID_REVNUM,
-                scratch_pool));
+                src_relpath, src_revision, NULL, NULL, NULL,
+                SVN_INVALID_REVNUM, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1336,7 +1404,17 @@ move_cb(void *baton,
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(ensure_root_opened(eb));
+  return SVN_NO_ERROR;
+}
+
+/* This implements svn_editor_cb_rotate_t */
+static svn_error_t *
+rotate_cb(void *baton,
+          const apr_array_header_t *relpaths,
+          const apr_array_header_t *revisions,
+          apr_pool_t *scratch_pool)
+{
+  struct editor_baton *eb = baton;
 
   return SVN_NO_ERROR;
 }
@@ -1403,7 +1481,7 @@ drive_tree(struct operation *op,
   /* Deletes and replacements are simple -- just delete the thing. */
   if (op->operation == OP_DELETE || op->operation == OP_REPLACE)
     {
-      SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
+      SVN_ERR(editor->delete_entry(path, op->base_revision,
                                    parent_op->baton, scratch_pool));
     }
 
@@ -1411,8 +1489,7 @@ drive_tree(struct operation *op,
     {
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
-        SVN_ERR(editor->open_directory(path, parent_op->baton,
-                                       parent_op->base_revision,
+        SVN_ERR(editor->open_directory(path, parent_op->baton, op->base_revision,
                                        scratch_pool, &op->baton));
 
       else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
@@ -1488,7 +1565,10 @@ drive_tree(struct operation *op,
           SVN_ERR(change_props(editor, file_baton, op, scratch_pool));
 
           /* Close the file. */
-          SVN_ERR(editor->close_file(file_baton, NULL, scratch_pool));
+          SVN_ERR(editor->close_file(file_baton,
+                                     svn_checksum_to_cstring(op->new_checksum,
+                                                             scratch_pool),
+                                     scratch_pool));
         }
 
     }
@@ -1540,8 +1620,6 @@ complete_cb(void *baton,
   struct editor_baton *eb = baton;
   svn_error_t *err;
 
-  SVN_ERR(ensure_root_opened(eb));
-
   /* Drive the tree we've created. */
   err = drive_root(&eb->root, eb->deditor, *eb->make_abs_paths, scratch_pool);
   if (!err)
@@ -1592,7 +1670,8 @@ start_edit_func(void *baton,
   struct editor_baton *eb = baton;
 
   eb->root.base_revision = base_revision;
-  SVN_ERR(ensure_root_opened(eb));
+  SVN_ERR(eb->deditor->open_root(eb->dedit_baton, eb->root.base_revision,
+                                 eb->edit_pool, &eb->root.baton));
 
   return SVN_NO_ERROR;
 }
@@ -1611,8 +1690,65 @@ target_revision_func(void *baton,
 }
 
 static svn_error_t *
+do_unlock(void *baton,
+          const char *path,
+          apr_pool_t *scratch_pool)
+{
+  struct editor_baton *eb = baton;
+  apr_array_header_t *path_bits = svn_path_decompose(path, scratch_pool);
+  const char *path_so_far = "";
+  struct operation *operation = &eb->root;
+  int i;
+
+  /* Look for any previous operations we've recognized for PATH.  If
+     any of PATH's ancestors have not yet been traversed, we'll be
+     creating OP_OPEN operations for them as we walk down PATH's path
+     components. */
+  for (i = 0; i < path_bits->nelts; ++i)
+    {
+      const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
+      path_so_far = svn_relpath_join(path_so_far, path_bit, scratch_pool);
+      operation = get_operation(path_so_far, operation, SVN_INVALID_REVNUM,
+                                eb->edit_pool);
+    }
+
+  APR_ARRAY_PUSH(operation->prop_dels, const char *) =
+                                                SVN_PROP_ENTRY_LOCK_TOKEN;
+
+  return SVN_NO_ERROR;
+}
+
+/* Return an svn_editor_t * in EDITOR_P which will be driven by
+ * DEDITOR/DEDIT_BATON.  EDITOR_P is allocated in RESULT_POOL, which may
+ * become large and long-lived; SCRATCH_POOL is used for temporary
+ * allocations.
+ *
+ * The other parameters are as follows:
+ *  - EXB: An 'extra_baton' used for passing information between the coupled
+ *         shims.  This includes actions like 'start edit' and 'set target'.
+ *         As this shim receives these actions, it provides the extra baton
+ *         to its caller.
+ *  - UNLOCK_FUNC / UNLOCK_BATON: A callback / baton pair which a caller
+ *         can use to notify this shim that a path should be unlocked (in the
+ *         'svn lock' sense).  As this shim receives this action, it provides
+ *         this callback / baton to its caller.
+ *  - SEND_ABS_PATHS: A pointer which will be set prior to this edit (but
+ *         not necessarily at the invocation of editor_from_delta()),and
+ *         which indicates whether incoming paths should be expected to
+ *         be absolute or relative.
+ *  - CANCEL_FUNC / CANCEL_BATON: The usual; folded into the produced editor.
+ *  - FETCH_KIND_FUNC / FETCH_KIND_BATON: A callback / baton pair which will
+ *         be used by the shim handlers if they need to determine the kind of
+ *         a path.
+ *  - FETCH_PROPS_FUNC / FETCH_PROPS_BATON: A callback / baton pair which
+ *         will be used by the shim handlers if they need to determine the
+ *         existing properties on a path.
+ */
+static svn_error_t *
 editor_from_delta(svn_editor_t **editor_p,
                   struct extra_baton **exb,
+                  unlock_func_t *unlock_func,
+                  void **unlock_baton,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
                   svn_boolean_t *send_abs_paths,
@@ -1637,6 +1773,7 @@ editor_from_delta(svn_editor_t **editor_p,
       delete_cb,
       copy_cb,
       move_cb,
+      rotate_cb,
       complete_cb,
       abort_cb
     };
@@ -1662,7 +1799,6 @@ editor_from_delta(svn_editor_t **editor_p,
   eb->root.prop_dels = apr_array_make(result_pool, 1, sizeof(const char *));
   eb->root.copyfrom_revision = SVN_INVALID_REVNUM;
 
-  eb->root_opened = FALSE;
   eb->make_abs_paths = send_abs_paths;
 
   SVN_ERR(svn_editor_create(&editor, eb, cancel_func, cancel_baton,
@@ -1670,6 +1806,9 @@ editor_from_delta(svn_editor_t **editor_p,
   SVN_ERR(svn_editor_setcb_many(editor, &editor_cbs, scratch_pool));
 
   *editor_p = editor;
+
+  *unlock_func = do_unlock;
+  *unlock_baton = eb;
 
   extra_baton->start_edit = start_edit_func;
   extra_baton->target_revision = target_revision_func;
@@ -1723,7 +1862,11 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
-  SVN_ERR(editor_from_delta(&editor, &exb, deditor_in, dedit_baton_in,
+  unlock_func_t unlock_func;
+  void *unlock_baton;
+
+  SVN_ERR(editor_from_delta(&editor, &exb, &unlock_func, &unlock_baton,
+                            deditor_in, dedit_baton_in,
                             found_abs_paths, NULL, NULL,
                             shim_callbacks->fetch_kind_func,
                             shim_callbacks->fetch_baton,
@@ -1731,6 +1874,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                             shim_callbacks->fetch_baton,
                             result_pool, scratch_pool));
   SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
+                            unlock_func, unlock_baton,
                             found_abs_paths,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_baton,
