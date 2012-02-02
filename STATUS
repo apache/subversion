@@ -77,18 +77,24 @@ Candidate changes:
      +1: cmpilato (r1221780 only)
      +1: philip, rhuijben
 
- * r1232413, r1236099
-   Improve server certificate error collection code.
-   Notes:
-     r1232413 updates serf.
-     r1236099 updates neon.
-     The changes are independent, but as it changes how the config file
-     behaves, I think both should be applied at the same time. (rhuijben)
-     r1236099 is the neon equivalent of the serf change r1235831 but the
-     serf change is not nominated. (philip)
-     Needs branch as r1236099 gives a merge conflict. (philip)
+ * r1232413
+   Improve server certificate error collection code in libsvn_ra_serf.
+   Justification:
+     Problems in the certificate chain are not properly surfaced, which
+     could potentially allow for MitM attacks.
    Votes:
      +1: rhuijben, gstein
+
+ * r1235831, r1236099
+   Tweak the parsing of the ssl-authority-files config option to make it
+   easier for users to configure.
+   Justification:
+     Low impact change to help users.
+   Notes:
+     philip reports a merge conflict of r1236099, so a branch is needed
+   Votes:
+     +1: gstein
+     +1: rhuijben (r1236099 only)
 
  * r1236173
    Do canonicalization rather than requring canonical data in some
