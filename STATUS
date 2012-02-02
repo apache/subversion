@@ -60,7 +60,7 @@ Candidate changes:
    Justification:
      Some copies can't be committed. Users complained.
    Branch:
-     ^/subversion/1.7.x-issue4059
+     ^/subversion/branches/1.7.x-issue4059
    Notes:
      r1146762 avoids a semantic conflict
      r1201419 adds a regression test
