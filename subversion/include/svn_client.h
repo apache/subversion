@@ -2877,6 +2877,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t ignore_prop_diff,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2886,7 +2887,8 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  apr_pool_t *pool);
 
 /** Similar to svn_client_diff6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream.
+ * instead of @a outstream and @a errstream, and always showing property
+ * changes.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3035,6 +3037,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t ignore_prop_diff,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -3044,7 +3047,8 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      apr_pool_t *pool);
 
 /** Similar to svn_client_diff_peg6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream.
+ * instead of @a outstream and @a errstream, and always showing property
+ * changes.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
