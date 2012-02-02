@@ -4470,7 +4470,12 @@ int dav_svn__method_post(request_rec *r)
   /* If something went wrong above, we'll generate a response back to
      the client with (hopefully) some helpful information. */
   if (derr)
-    return dav_svn__error_response_tag(r, derr);
+    {
+      /* POST is not a DAV method and so mod_dav isn't involved and
+         won't log this error.  Do it explicitly. */
+      dav_svn__log_err(r, derr, APLOG_ERR);
+      return dav_svn__error_response_tag(r, derr);
+    }
 
   return OK;
 }

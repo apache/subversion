@@ -127,13 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1221178, r1221303
-   Fix issue 4086, mod_dav_svn's handling of POST errors.
-   Justification:
-     Regression when using the v2 protocol.
-   Votes:
-     +1: philip, rhuijben, cmpilato
-
  * r1237720, r1239596
    Log errors instead of ignoring them.
    Justification:
