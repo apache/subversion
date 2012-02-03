@@ -85,8 +85,8 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
 /* The following code maps the calls to a traditional delta editor to an
  * Editorv2 editor.  It does this by keeping track of a lot of state, and
  * then communicating that state to Ev2 upon closure of the file or dir (or
- * edit).  Note that Ev2 calls add_symlink() and set_target() are not present
- * in the delta editor paradigm, so we never call them.
+ * edit).  Note that Ev2 calls add_symlink() and alter_symlink() are not
+ * present in the delta editor paradigm, so we never call them.
  *
  * The general idea here is that we have to see *all* the actions on a node's
  * parent before we can process that node, which means we need to buffer a
@@ -399,6 +399,9 @@ process_actions(void *edit_baton,
                               delete_revnum));
     }
 
+#if 0
+  /* ### need to fix this up. call alter_directory or alter_file. pass
+     ### NULL if PROPS or CONTENTS will be unchanged.  */
   if (props)
     {
       /* We fetched and modified the props in some way. Apply 'em now that
@@ -413,6 +416,7 @@ process_actions(void *edit_baton,
       SVN_ERR(svn_editor_set_text(eb->editor, path, text_base_revision,
                                   checksum, contents));
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1285,37 +1289,41 @@ add_absent_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_set_props_t */
+/* This implements svn_editor_cb_alter_directory_t */
 static svn_error_t *
-set_props_cb(void *baton,
-             const char *relpath,
-             svn_revnum_t revision,
-             apr_hash_t *props,
-             svn_boolean_t complete,
-             apr_pool_t *scratch_pool)
+alter_directory_cb(void *baton,
+                   const char *relpath,
+                   svn_revnum_t revision,
+                   apr_hash_t *props,
+                   apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_unknown,
+  /* ### should we verify the kind is truly a directory?  */
+
+  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
                 props, NULL, NULL, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_set_text_t */
+/* This implements svn_editor_cb_alter_file_t */
 static svn_error_t *
-set_text_cb(void *baton,
-            const char *relpath,
-            svn_revnum_t revision,
-            const svn_checksum_t *checksum,
-            svn_stream_t *contents,
-            apr_pool_t *scratch_pool)
+alter_file_cb(void *baton,
+              const char *relpath,
+              svn_revnum_t revision,
+              apr_hash_t *props,
+              const svn_checksum_t *checksum,
+              svn_stream_t *contents,
+              apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
   svn_checksum_t *md5_checksum;
+
+  /* ### should we verify the kind is truly a file?  */
 
   /* We may need to re-checksum these contents */
   if (!(checksum && checksum->kind == svn_checksum_md5))
@@ -1332,20 +1340,25 @@ set_text_cb(void *baton,
 
   SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
                 NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, md5_checksum, revision, scratch_pool));
+                props, tmp_filename, md5_checksum, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_set_target_t */
+/* This implements svn_editor_cb_alter_symlink_t */
 static svn_error_t *
-set_target_cb(void *baton,
-              const char *relpath,
-              svn_revnum_t revision,
-              const char *target,
-              apr_pool_t *scratch_pool)
+alter_symlink_cb(void *baton,
+                 const char *relpath,
+                 svn_revnum_t revision,
+                 apr_hash_t *props,
+                 const char *target,
+                 apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+
+  /* ### should we verify the kind is truly a symlink?  */
+
+  /* ### do something  */
 
   return SVN_NO_ERROR;
 }
@@ -1767,9 +1780,9 @@ editor_from_delta(svn_editor_t **editor_p,
       add_file_cb,
       add_symlink_cb,
       add_absent_cb,
-      set_props_cb,
-      set_text_cb,
-      set_target_cb,
+      alter_directory_cb,
+      alter_file_cb,
+      alter_symlink_cb,
       delete_cb,
       copy_cb,
       move_cb,
