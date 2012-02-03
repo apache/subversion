@@ -91,7 +91,7 @@ Candidate changes:
      to tools and adding it to build.conf was just backported to 1.7.x
      in r1239695.
    Votes:
-     +1: jcorvel
+     +1: jcorvel, rhuijben
 
 Veto-blocked changes:
 =====================
