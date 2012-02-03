@@ -677,7 +677,7 @@ insert_prop_internal(const dav_resource *resource,
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
                             resource->info->r,
-                            "Can't get fetch or compute md5 checksum of '%s': "
+                            "Can't fetch or compute MD5 checksum of '%s': "
                             "%s",
                             resource->info->repos_path,
                             serr->message);
