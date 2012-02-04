@@ -39,6 +39,7 @@
 #include "svn_pools.h"
 #include "svn_dso.h"
 #include "svn_mergeinfo.h"
+#include "svn_utf.h"
 #include "svn_xml.h"
 
 #include "opt.h"
@@ -766,6 +767,25 @@ svn_io_get_dirents(apr_hash_t **dirents,
 }
 
 svn_error_t *
+svn_io_start_cmd2(apr_proc_t *cmd_proc,
+                  const char *path,
+                  const char *cmd,
+                  const char *const *args,
+                  svn_boolean_t inherit,
+                  svn_boolean_t infile_pipe,
+                  apr_file_t *infile,
+                  svn_boolean_t outfile_pipe,
+                  apr_file_t *outfile,
+                  svn_boolean_t errfile_pipe,
+                  apr_file_t *errfile,
+                  apr_pool_t *pool)
+{
+  return svn_io_start_cmd3(cmd_proc, path, cmd, args, NULL, inherit,
+                           infile_pipe, infile, outfile_pipe, outfile,
+                           errfile_pipe, errfile, pool);
+}
+
+svn_error_t *
 svn_io_start_cmd(apr_proc_t *cmd_proc,
                  const char *path,
                  const char *cmd,
@@ -1172,4 +1192,10 @@ void
 svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
 {
   svn_xml_make_header2(str, NULL, pool);
+}
+
+void
+svn_utf_initialize(apr_pool_t *pool)
+{
+  svn_utf_initialize2(pool, FALSE);
 }

@@ -278,7 +278,7 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target1, revision1, target2, revision2, relativeToDir,
                  stream, depth, changelists, ignoreAncestry, noDiffDeleted,
-                 force, copiesAsAdds);
+                 force, copiesAsAdds, false);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -289,7 +289,8 @@ public class SVNClient implements ISVNClient
                             OutputStream stream, Depth depth,
                             Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force, boolean copiesAsAdds)
+                            boolean force, boolean copiesAsAdds,
+                            boolean ignoreProps)
             throws ClientException;
 
     public void diff(String target, Revision pegRevision,
@@ -304,7 +305,7 @@ public class SVNClient implements ISVNClient
             OutputStream stream = new FileOutputStream(outFileName);
             diff(target, pegRevision, startRevision, endRevision,
                  relativeToDir, stream, depth, changelists, ignoreAncestry,
-                 noDiffDeleted, force, copiesAsAdds);
+                 noDiffDeleted, force, copiesAsAdds, false);
         } catch (FileNotFoundException ex) {
             throw ClientException.fromException(ex);
         }
@@ -315,7 +316,8 @@ public class SVNClient implements ISVNClient
                             String relativeToDir, OutputStream stream,
                             Depth depth, Collection<String> changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force, boolean copiesAsAdds)
+                            boolean force, boolean copiesAsAdds,
+                            boolean ignoreProps)
             throws ClientException;
 
     public native void diffSummarize(String target1, Revision revision1,

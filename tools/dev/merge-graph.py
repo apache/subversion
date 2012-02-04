@@ -22,6 +22,8 @@
 args_message = 'GRAPH_CONFIG_FILE...'
 help_message = """Produce pretty graphs representing branches and merging.
 For each config file specified, construct a graph and write it as a PNG file."""
+
+# Config file format:
 example = """
   [graph]
   filename = merge-sync-1.png
@@ -93,19 +95,21 @@ class MergeGraph(pydot.Graph):
   """Base class, not intended for direct use.  Use MergeDot for the main
      graph and MergeSubgraph for a subgraph."""
 
-  def mk_origin_node(graph, name):
+  def mk_origin_node(graph, name, label):
     """Add a node to the graph"""
-    graph.add_node(Node(name + '0', label=name, shape='plaintext'))
+    graph.add_node(Node(name, label=label, shape='plaintext'))
 
   def mk_invis_node(graph, name):
     """Add a node to the graph"""
     graph.add_node(Node(name, style='invis'))
 
-  def mk_node(graph, name):
+  def mk_node(graph, name, label=None):
     """Add a node to the graph, if not already present"""
     if not graph.get_node(name):
+      if not label:
+        label = name
       if name in graph.changes:
-        graph.add_node(Node(name))
+        graph.add_node(Node(name, label=label))
       else:
         graph.add_node(Node(name, color='grey', label=''))
 
@@ -138,8 +142,6 @@ class MergeGraph(pydot.Graph):
              style='bold')
     if kind == 'cherry':
       e.set_style('dashed')
-      e.set_dir('both')
-      e.set_arrowtail('tee')
     graph.add_edge(e)
 
   def mk_mergeinfo_edge(graph, base_node, src_node, important):
@@ -160,7 +162,7 @@ class MergeGraph(pydot.Graph):
     """Add a merge"""
     base_node, src_node, tgt_node, kind = merge
 
-    if base_node and src_node and kind != 'cherry':
+    if base_node and src_node:  # and kind != 'cherry':
       graph.mk_mergeinfo_edge(base_node, src_node, important)
 
     # Merge target node
@@ -170,12 +172,29 @@ class MergeGraph(pydot.Graph):
     graph.mk_merge_edge(src_node, tgt_node, kind, kind, important)
 
   def add_annotation(graph, node, label, color='red'):
-    """"""
-    ann_node = node + '_annotation'
-    g = pydot.Subgraph(rank='same')
+    """Add a graph node that serves as an annotation to a normal node.
+       More than one annotation can be added to the same normal node."""
+    subg_name = node + '_annotations'
+
+    def get_subgraph(graph, name):
+      """Equivalent to pydot.Graph.get_subgraph() when there is no more than
+         one subgraph of the given name, but working aroung a bug in
+         pydot.Graph.get_subgraph()."""
+      for subg in graph.get_subgraph_list():
+        if subg.get_name() == name:
+          return subg
+      return None
+
+    g = get_subgraph(graph, subg_name)
+    if not g:
+      g = pydot.Subgraph(subg_name, rank='same')
+      graph.add_subgraph(g)
+
+    ann_node = node + '_'
+    while g.get_node(ann_node):
+      ann_node = ann_node + '_'
     g.add_node(Node(ann_node, shape='box', color=color, label='"' + label + '"'))
     g.add_edge(Edge(ann_node, node, style='dotted', color=color, dir='none', constraint='false'))
-    graph.add_subgraph(g)
 
 class MergeSubgraph(MergeGraph, pydot.Subgraph):
   """"""
@@ -189,7 +208,7 @@ class MergeDot(MergeGraph, pydot.Dot):
   # TODO: In the 'merges' input, find the predecessor automatically.
   """
   def __init__(graph, config_filename, **attrs):
-    """Return a new MergeDot graph generated from the specified config file."""
+    """Return a new MergeDot graph generated from a config file."""
     MergeGraph.__init__(graph)
     pydot.Dot.__init__(graph, **attrs)
 
@@ -198,15 +217,15 @@ class MergeDot(MergeGraph, pydot.Dot):
     graph.construct()
 
   def read_config(graph, config_filename):
-    """"""
+    """Initialize a MergeDot graph's input data from a config file."""
     import ConfigParser
     config = ConfigParser.SafeConfigParser()
     files_read = config.read(config_filename)
     if len(files_read) == 0:
       print >> sys.stderr, 'graph: unable to read graph config from "' + config_filename + '"'
       sys.exit(1)
-    graph.title = config.get('graph', 'title')
     graph.filename = config.get('graph', 'filename')
+    graph.title = config.get('graph', 'title')
     graph.branches = eval(config.get('graph', 'branches'))
     graph.changes = eval(config.get('graph', 'changes'))
     graph.merges = eval(config.get('graph', 'merges'))
@@ -216,7 +235,11 @@ class MergeDot(MergeGraph, pydot.Dot):
     """"""
     # Origin nodes (done first, in an attempt to set the order)
     for br, orig, r1, head in graph.branches:
-      graph.mk_origin_node(br)
+      name = br + '0'
+      if r1 > 0:
+        graph.mk_origin_node(name, br)
+      else:
+        graph.mk_node(name, label=br)
 
     # Edges and target nodes for merges
     for merge in graph.merges:
@@ -224,7 +247,7 @@ class MergeDot(MergeGraph, pydot.Dot):
       important = (merge == graph.merges[-1])
       graph.add_merge(merge, important)
 
-    # Edges for basic lines of descent
+    # Parallel edges for basic lines of descent
     for br, orig, r1, head in graph.branches:
       sub_g = MergeSubgraph(ordering='out')
       for i in range(1, head + 1):
@@ -252,7 +275,8 @@ class MergeDot(MergeGraph, pydot.Dot):
       graph.add_annotation(node, label)
 
     # A title for the graph (added last so it goes at the top)
-    #graph.add_node(Node('title', shape='plaintext', label='"' + graph.title + '"'))
+    #if graph.title:
+    #  graph.add_node(Node('title', shape='plaintext', label='"' + graph.title + '"'))
 
 
 # If run as a program, process each input filename as a graph config file.

@@ -665,17 +665,21 @@ insert_prop_internal(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
+          svn_node_kind_t kind;
           svn_checksum_t *checksum;
 
-          serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
-                                      resource->info->root.root,
-                                      resource->info->repos_path, TRUE,
-                                      scratch_pool);
+          serr = svn_fs_check_path(&kind, resource->info->root.root,
+                                   resource->info->repos_path, scratch_pool);
+          if (!serr && kind == svn_node_file)
+            serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                        resource->info->root.root,
+                                        resource->info->repos_path, TRUE,
+                                        scratch_pool);
           if (serr != NULL)
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
                             resource->info->r,
-                            "Can't get fetch or compute md5 checksum of '%s': "
+                            "Can't fetch or compute MD5 checksum of '%s': "
                             "%s",
                             resource->info->repos_path,
                             serr->message);
@@ -683,6 +687,9 @@ insert_prop_internal(const dav_resource *resource,
               value = "###error###";
               break;
             }
+
+          if (kind != svn_node_file)
+            return DAV_PROP_INSERT_NOTSUPP;
 
           value = svn_checksum_to_cstring(checksum, scratch_pool);
 

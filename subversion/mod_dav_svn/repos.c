@@ -1917,7 +1917,32 @@ parse_querystring(request_rec *r, const char *query,
   return NULL;
 }
 
+/* Copy the environment given as key/value pairs of ENV_HASH into
+ * an array of C strings allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static const char **
+env_from_env_hash(apr_hash_t *env_hash,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  const char **env;
+  const char **envp;
+  
+  env = apr_palloc(result_pool,
+                   sizeof(const char *) * (apr_hash_count(env_hash) + 1));
+  envp = env;
+  for (hi = apr_hash_first(scratch_pool, env_hash); hi; hi = apr_hash_next(hi))
+    {
+      *envp = apr_psprintf(result_pool, "%s=%s",
+                           (const char *)svn__apr_hash_index_key(hi),
+                           (const char *)svn__apr_hash_index_val(hi));
+      envp++;
+    }
+  *envp = NULL;
 
+  return env;
+}
 
 static dav_error *
 get_resource(request_rec *r,
@@ -2146,6 +2171,8 @@ get_resource(request_rec *r,
   repos->repos = userdata;
   if (repos->repos == NULL)
     {
+      apr_hash_t *hooks_env;
+
       /* construct FS configuration parameters */
       fs_config = apr_hash_make(r->connection->pool);
       apr_hash_set(fs_config,
@@ -2187,6 +2214,16 @@ get_resource(request_rec *r,
                                          "Error storing client capabilities "
                                          "in repos object",
                                          HTTP_INTERNAL_SERVER_ERROR, r);
+        }
+
+      /* Configure the hooks environment, if not empty. */
+      hooks_env = dav_svn__get_hooks_env(r);
+      if (hooks_env && apr_hash_count(hooks_env) > 0)
+        {
+          const char **env;
+          
+          env = env_from_env_hash(hooks_env, r->connection->pool, r->pool);
+          svn_repos_hooks_setenv(repos->repos, env);
         }
     }
 

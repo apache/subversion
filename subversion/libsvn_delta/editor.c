@@ -57,7 +57,6 @@ struct svn_editor_t
 #ifdef ENABLE_ORDERING_CHECK
   apr_hash_t *pending_incomplete_children;
   apr_hash_t *completed_nodes;
-  apr_hash_t *needs_text_or_target;
   svn_boolean_t finished;
 
   apr_pool_t *result_pool;
@@ -82,7 +81,6 @@ svn_editor_create(svn_editor_t **editor,
 #ifdef ENABLE_ORDERING_CHECK
   (*editor)->pending_incomplete_children = apr_hash_make(result_pool);
   (*editor)->completed_nodes = apr_hash_make(result_pool);
-  (*editor)->needs_text_or_target = apr_hash_make(result_pool);
   (*editor)->finished = FALSE;
   (*editor)->result_pool = result_pool;
 #endif
@@ -132,31 +130,31 @@ svn_editor_setcb_add_absent(svn_editor_t *editor,
 
 
 svn_error_t *
-svn_editor_setcb_set_props(svn_editor_t *editor,
-                           svn_editor_cb_set_props_t callback,
-                           apr_pool_t *scratch_pool)
+svn_editor_setcb_alter_directory(svn_editor_t *editor,
+                                 svn_editor_cb_alter_directory_t callback,
+                                 apr_pool_t *scratch_pool)
 {
-  editor->funcs.cb_set_props = callback;
+  editor->funcs.cb_alter_directory = callback;
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_editor_setcb_set_text(svn_editor_t *editor,
-                          svn_editor_cb_set_text_t callback,
-                          apr_pool_t *scratch_pool)
-{
-  editor->funcs.cb_set_text = callback;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_editor_setcb_set_target(svn_editor_t *editor,
-                            svn_editor_cb_set_target_t callback,
+svn_editor_setcb_alter_file(svn_editor_t *editor,
+                            svn_editor_cb_alter_file_t callback,
                             apr_pool_t *scratch_pool)
 {
-  editor->funcs.cb_set_target = callback;
+  editor->funcs.cb_alter_file = callback;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_editor_setcb_alter_symlink(svn_editor_t *editor,
+                               svn_editor_cb_alter_symlink_t callback,
+                               apr_pool_t *scratch_pool)
+{
+  editor->funcs.cb_alter_symlink = callback;
   return SVN_NO_ERROR;
 }
 
@@ -232,9 +230,9 @@ svn_editor_setcb_many(svn_editor_t *editor,
   COPY_CALLBACK(cb_add_file);
   COPY_CALLBACK(cb_add_symlink);
   COPY_CALLBACK(cb_add_absent);
-  COPY_CALLBACK(cb_set_props);
-  COPY_CALLBACK(cb_set_text);
-  COPY_CALLBACK(cb_set_target);
+  COPY_CALLBACK(cb_alter_directory);
+  COPY_CALLBACK(cb_alter_file);
+  COPY_CALLBACK(cb_alter_symlink);
   COPY_CALLBACK(cb_delete);
   COPY_CALLBACK(cb_copy);
   COPY_CALLBACK(cb_move);
@@ -395,11 +393,10 @@ svn_editor_add_absent(svn_editor_t *editor,
 
 
 svn_error_t *
-svn_editor_set_props(svn_editor_t *editor,
-                     const char *relpath,
-                     svn_revnum_t revision,
-                     apr_hash_t *props,
-                     svn_boolean_t complete)
+svn_editor_alter_directory(svn_editor_t *editor,
+                           const char *relpath,
+                           svn_revnum_t revision,
+                           apr_hash_t *props)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -412,54 +409,11 @@ svn_editor_set_props(svn_editor_t *editor,
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  if (editor->funcs.cb_set_props)
-    err = editor->funcs.cb_set_props(editor->baton, relpath, revision, props,
-                                     complete, editor->scratch_pool);
+  if (editor->funcs.cb_alter_directory)
+    err = editor->funcs.cb_alter_directory(editor->baton,
+                                           relpath, revision, props,
+                                           editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  /* ### Some of the ordering here depends upon the kind of RELPATH, but
-   * ### we have no way of determining what that is. */
-  if (complete)
-    {
-      apr_hash_set(editor->completed_nodes,
-                   apr_pstrdup(editor->result_pool, relpath),
-                   APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
-    }
-  else
-    {
-      apr_hash_set(editor->needs_text_or_target,
-                   apr_pstrdup(editor->result_pool, relpath),
-                   APR_HASH_KEY_STRING, (void *) 0xba5eba11);
-    }
-#endif
-  svn_pool_clear(editor->scratch_pool);
-  return err;
-}
-
-
-svn_error_t *
-svn_editor_set_text(svn_editor_t *editor,
-                    const char *relpath,
-                    svn_revnum_t revision,
-                    const svn_checksum_t *checksum,
-                    svn_stream_t *contents)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
-
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
-
-  if (editor->funcs.cb_set_text)
-    err = editor->funcs.cb_set_text(editor->baton, relpath, revision,
-                                    checksum, contents, editor->scratch_pool);
-#ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->needs_text_or_target, relpath, APR_HASH_KEY_STRING,
-               NULL);
   apr_hash_set(editor->completed_nodes,
                apr_pstrdup(editor->result_pool, relpath),
                APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
@@ -470,10 +424,12 @@ svn_editor_set_text(svn_editor_t *editor,
 
 
 svn_error_t *
-svn_editor_set_target(svn_editor_t *editor,
+svn_editor_alter_file(svn_editor_t *editor,
                       const char *relpath,
                       svn_revnum_t revision,
-                      const char *target)
+                      apr_hash_t *props,
+                      const svn_checksum_t *checksum,
+                      svn_stream_t *contents)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -486,12 +442,45 @@ svn_editor_set_target(svn_editor_t *editor,
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  if (editor->funcs.cb_set_target)
-    err = editor->funcs.cb_set_target(editor->baton, relpath, revision,
-                                      target, editor->scratch_pool);
+  if (editor->funcs.cb_alter_file)
+    err = editor->funcs.cb_alter_file(editor->baton,
+                                      relpath, revision, props,
+                                      checksum, contents,
+                                      editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->needs_text_or_target, relpath, APR_HASH_KEY_STRING,
-               NULL);
+  apr_hash_set(editor->completed_nodes,
+               apr_pstrdup(editor->result_pool, relpath),
+               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
+#endif
+  svn_pool_clear(editor->scratch_pool);
+  return err;
+}
+
+
+svn_error_t *
+svn_editor_alter_symlink(svn_editor_t *editor,
+                         const char *relpath,
+                         svn_revnum_t revision,
+                         apr_hash_t *props,
+                         const char *target)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+#ifdef ENABLE_ORDERING_CHECK
+  SVN_ERR_ASSERT(!editor->finished);
+  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
+                               APR_HASH_KEY_STRING));
+#endif
+
+  if (editor->cancel_func)
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+
+  if (editor->funcs.cb_alter_symlink)
+    err = editor->funcs.cb_alter_symlink(editor->baton,
+                                         relpath, revision, props,
+                                         target,
+                                         editor->scratch_pool);
+#ifdef ENABLE_ORDERING_CHECK
   apr_hash_set(editor->completed_nodes,
                apr_pstrdup(editor->result_pool, relpath),
                APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
@@ -636,7 +625,6 @@ svn_editor_complete(svn_editor_t *editor)
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(apr_hash_count(editor->pending_incomplete_children) == 0);
-  SVN_ERR_ASSERT(apr_hash_count(editor->needs_text_or_target) == 0);
 #endif
 
   if (editor->funcs.cb_complete)
