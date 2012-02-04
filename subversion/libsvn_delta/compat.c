@@ -286,6 +286,12 @@ process_actions(void *edit_baton,
                      the modifications to it.  */
                   if (need_delete && need_add)
                     props = apr_hash_make(scratch_pool);
+                  else if (need_copy)
+                    SVN_ERR(eb->fetch_props_func(&props,
+                                                 eb->fetch_props_baton,
+                                                 copyfrom_path,
+                                                 copyfrom_rev,
+                                                 scratch_pool, scratch_pool));
                   else
                     SVN_ERR(eb->fetch_props_func(&props,
                                                  eb->fetch_props_baton,
@@ -1078,6 +1084,11 @@ build(struct editor_baton *eb,
 
       if (operation->operation == OP_REPLACE)
         current_props = apr_hash_make(scratch_pool);
+      else if (operation->copyfrom_url)
+        SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                     operation->copyfrom_url,
+                                     operation->copyfrom_revision,
+                                     scratch_pool, scratch_pool));
       else
         SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
                                      relpath, rev, scratch_pool,
