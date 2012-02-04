@@ -375,6 +375,7 @@ process_actions(void *edit_baton,
     {
       /* If we're only doing a delete, do it here. */
       SVN_ERR(svn_editor_delete(eb->editor, path, delete_revnum));
+      return SVN_NO_ERROR;
     }
 
   if (need_add)
@@ -399,24 +400,24 @@ process_actions(void *edit_baton,
                               delete_revnum));
     }
 
-#if 0
   /* ### need to fix this up. call alter_directory or alter_file. pass
      ### NULL if PROPS or CONTENTS will be unchanged.  */
-  if (props)
+  if (props || contents)
     {
-      /* We fetched and modified the props in some way. Apply 'em now that
-         we have the new set.  */
-      SVN_ERR(svn_editor_set_props(eb->editor, path, props_base_revision,
-                                   props, contents == NULL));
-    }
+      /* We fetched and modified the props or content in some way. Apply 'em
+         now.  */
+      svn_revnum_t base_revision;
 
-  if (contents)
-    {
-      /* If we have an content for this node, set it now. */
-      SVN_ERR(svn_editor_set_text(eb->editor, path, text_base_revision,
-                                  checksum, contents));
+      if (SVN_IS_VALID_REVNUM(props_base_revision))
+        base_revision = props_base_revision;
+      else if (SVN_IS_VALID_REVNUM(text_base_revision))
+        base_revision = text_base_revision;
+      else
+        SVN_ERR_MALFUNCTION();
+
+      SVN_ERR(svn_editor_alter_file(eb->editor, path, base_revision, props,
+                                    checksum, contents));
     }
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -1325,22 +1326,34 @@ alter_file_cb(void *baton,
 
   /* ### should we verify the kind is truly a file?  */
 
-  /* We may need to re-checksum these contents */
-  if (!(checksum && checksum->kind == svn_checksum_md5))
-    contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
-                                       svn_checksum_md5, TRUE, scratch_pool);
-  else
-    md5_checksum = (svn_checksum_t *)checksum;
+  if (contents)
+    {
+      /* We may need to re-checksum these contents */
+      if (!(checksum && checksum->kind == svn_checksum_md5))
+        contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
+                                           svn_checksum_md5, TRUE,
+                                           scratch_pool);
+      else
+        md5_checksum = (svn_checksum_t *)checksum;
 
-  /* Spool the contents to a tempfile, and provide that to the driver. */
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 eb->edit_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
+      /* Spool the contents to a tempfile, and provide that to the driver. */
+      SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     eb->edit_pool, scratch_pool));
+      SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL,
+                               scratch_pool));
 
-  SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
-                NULL, SVN_INVALID_REVNUM,
-                props, tmp_filename, md5_checksum, revision, scratch_pool));
+      SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, tmp_filename, md5_checksum, revision, scratch_pool));
+    }
+
+  if (props)
+    {
+      SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_file,
+                    NULL, SVN_INVALID_REVNUM,
+                    props, NULL, NULL, revision, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
