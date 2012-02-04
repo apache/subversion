@@ -22,6 +22,7 @@ use feature qw/switch say/;
 
 use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Temp qw/tempfile/;
+use POSIX qw/ctermid/;
 
 $/ = ""; # paragraph mode
 
@@ -33,7 +34,12 @@ my $BRANCHES = '^/subversion/branches';
 my $YES = $ENV{YES}; # batch mode: assume 'yes' without asking
 my $WET_RUN = qw[false true][1]; # don't commit
 my $DEBUG = qw[false true][0]; # 'set -x', etc
-my $SVNq = "$SVN -q ";
+
+# derived values
+my $SVNq;
+
+$SVN .= " --non-interactive" unless defined ctermid;
+$SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG eq 'true';
 
 sub usage {
