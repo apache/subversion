@@ -408,12 +408,16 @@ process_actions(void *edit_baton,
          now.  */
       svn_revnum_t base_revision;
 
+      if (SVN_IS_VALID_REVNUM(props_base_revision)
+            && SVN_IS_VALID_REVNUM(text_base_revision))
+        SVN_ERR_ASSERT(props_base_revision == text_base_revision);
+
       if (SVN_IS_VALID_REVNUM(props_base_revision))
         base_revision = props_base_revision;
       else if (SVN_IS_VALID_REVNUM(text_base_revision))
         base_revision = text_base_revision;
       else
-        SVN_ERR_MALFUNCTION();
+        base_revision = SVN_INVALID_REVNUM;
 
       SVN_ERR(svn_editor_alter_file(eb->editor, path, base_revision, props,
                                     checksum, contents));
