@@ -189,6 +189,7 @@ struct prop_args
   const char *name;
   svn_revnum_t base_revision;
   const svn_string_t *value;
+  svn_kind_t kind;
 };
 
 struct copy_args
@@ -271,6 +272,8 @@ process_actions(void *edit_baton,
           case ACTION_PROPSET:
             {
               const struct prop_args *p_args = action->args;
+
+              kind = p_args->kind;
 
               if (!SVN_IS_VALID_REVNUM(props_base_revision))
                 props_base_revision = p_args->base_revision;
@@ -400,8 +403,6 @@ process_actions(void *edit_baton,
                               delete_revnum));
     }
 
-  /* ### need to fix this up. call alter_directory or alter_file. pass
-     ### NULL if PROPS or CONTENTS will be unchanged.  */
   if (props || contents)
     {
       /* We fetched and modified the props or content in some way. Apply 'em
@@ -419,8 +420,12 @@ process_actions(void *edit_baton,
       else
         base_revision = SVN_INVALID_REVNUM;
 
-      SVN_ERR(svn_editor_alter_file(eb->editor, path, base_revision, props,
-                                    checksum, contents));
+      if (kind == svn_kind_dir)
+        SVN_ERR(svn_editor_alter_directory(eb->editor, path, base_revision,
+                                           props));
+      else
+        SVN_ERR(svn_editor_alter_file(eb->editor, path, base_revision, props,
+                                      checksum, contents));
     }
 
   return SVN_NO_ERROR;
@@ -598,6 +603,7 @@ ev2_change_dir_prop(void *dir_baton,
   p_args->name = apr_pstrdup(db->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
   p_args->base_revision = db->base_revision;
+  p_args->kind = svn_kind_dir;
 
   SVN_ERR(add_action(db->eb, db->path, ACTION_PROPSET, p_args));
 
@@ -801,6 +807,7 @@ ev2_change_file_prop(void *file_baton,
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
   p_args->base_revision = fb->base_revision;
+  p_args->kind = svn_kind_file;
 
   SVN_ERR(add_action(fb->eb, fb->path, ACTION_PROPSET, p_args));
 
