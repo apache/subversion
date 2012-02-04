@@ -251,7 +251,7 @@ process_actions(void *edit_baton,
   svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t props_base_revision = SVN_INVALID_REVNUM;
   svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
-  svn_kind_t kind;
+  svn_kind_t kind = svn_kind_unknown;
   int i;
 
   if (*path == '/')
@@ -329,6 +329,9 @@ process_actions(void *edit_baton,
           case ACTION_SET_TEXT:
             {
               struct path_checksum_args *pca = action->args;
+
+              /* We can only set text on files. */
+              kind = svn_node_file;
 
               SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
