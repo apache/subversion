@@ -900,19 +900,28 @@ close_revision(void *baton)
   const char *conflict_msg = NULL;
   svn_revnum_t committed_rev;
   svn_error_t *err;
+  const char *txn_name;
 
   /* If we're skipping this revision or it has an invalid revision
      number, we're done here. */
   if (rb->skipped || (rb->rev <= 0))
     return SVN_NO_ERROR;
 
+  /* Get the txn name, if it will be needed. */
+  if (pb->use_pre_commit_hook || pb->use_post_commit_hook)
+    {
+      err = svn_fs_txn_name(&txn_name, rb->txn, rb->pool);
+      if (err)
+        {
+          svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
+          return svn_error_trace(err);
+        }
+    }
+
   /* Run the pre-commit hook, if so commanded. */
   if (pb->use_pre_commit_hook)
     {
-      const char *txn_name;
-      err = svn_fs_txn_name(&txn_name, rb->txn, rb->pool);
-      if (! err)
-        err = svn_repos__hooks_pre_commit(pb->repos, txn_name, rb->pool);
+      err = svn_repos__hooks_pre_commit(pb->repos, txn_name, rb->pool);
       if (err)
         {
           svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
@@ -945,7 +954,7 @@ close_revision(void *baton)
   if (pb->use_post_commit_hook)
     {
       if ((err = svn_repos__hooks_post_commit(pb->repos, committed_rev,
-                                              rb->pool)))
+                                              txn_name, rb->pool)))
         return svn_error_create
           (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
            _("Commit succeeded, but post-commit hook failed"));
