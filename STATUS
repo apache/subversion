@@ -84,18 +84,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1240752
-   Workround for a faulty APR truncate() implementation. When rep sharing
-   has been activated on FSFS repositories, a rep will be truncated from
-   the file after it has been found to be a duplicate of some existing rep.
-   If this happens high up in the tree (in the root folder, preferrably),
-   not enough data may be written afterwards (parent directories + list
-   of changes in that revision) to fully overwrite the stale rep content.
-   Justification:
-     Rare but real source of corruption.
-   Votes:
-     +1: stefan2, danielsh, blair
-
 Veto-blocked changes:
 =====================
 
@@ -140,3 +128,14 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1240752
+   Workround for a faulty APR truncate() implementation. When rep sharing
+   has been activated on FSFS repositories, a rep will be truncated from
+   the file after it has been found to be a duplicate of some existing rep.
+   If this happens high up in the tree (in the root folder, preferrably),
+   not enough data may be written afterwards (parent directories + list
+   of changes in that revision) to fully overwrite the stale rep content.
+   Justification:
+     Rare but real source of corruption.
+   Votes:
+     +1: stefan2, danielsh, blair
