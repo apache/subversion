@@ -36,8 +36,6 @@ TODO:
     Subject: FSFS successor ID design draft
     Message-ID: <20110826111432.GA8819@ted.stsp.name>
 
-* ensure concurrent writers are not starved
-
 
 Suggested:
 
@@ -67,3 +65,10 @@ Wishlist or out-of-scope:
 * finer-grained (two-staged) locks for other operations
   (eg, packing revision shards)
 
+
+Not a problem:
+
+* ensure concurrent writers are not starved
+  (Not more of a problem than it is with large commits today. Shouldn't
+  be a problem in practice. Perhaps the antivirus retry logic will help,
+  too.)
