@@ -16,6 +16,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * reject some attempts to merge between unrelated branches (r1215273)
     * support GPG agent for password storage on UNIX-like platforms (r1150783)
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
+    * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
+    * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --patch-compatible option for 'svn diff' (r1239561)
 
   - Client-side bugfixes:
     *
@@ -35,6 +38,30 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Bindings:
     *
+
+
+Version 1.7.3
+(XX XXX 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.3
+
+  User-visible changes:
+    * fix segfault on 'svn rm $ROOT_URL' (issue #4074)
+    * replace a couple of assertions in favor of errors (r1207858, -949)
+    * fix a server assert after being upgraded (r1210195)
+    * fix segfault on 'svn mkdir svn://localhost' (r1211483)
+    * make 'svnadmin recover' prune the rep cache (r1213331, et al)
+    * make svnmucc use values from --config-dir option
+    * update and clarify the merge help text (r1154121, et al)
+    * replace wc assertion with informative error (r1222521, -693)
+    * copy permissions correctly for FSFS dirs (r1229252)
+    * improve 'svn log --with-all-revprops' over ra-dav (issue #4082)
+    * fix segfault when remapping a file external (issue #4093)
+    * fix segfault caused by obstructing unversioned dir (r1229677)
+    * fix regression on first update of external dir with '-r' (issue #4053) 
+
+  Developer-visible changes:
+    * JavaHL: Add missing notify action, fixing an exception (r1221793)
+    * fix spurious test suite failure (r1220742, -50)
 
 
 Version 1.7.2

@@ -416,6 +416,10 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    by recursing deeper into a dir target. (This is used to skip all file
    externals that aren't explicit commit targets.)
 
+   DANGLERS is a hash table mapping const char* absolute paths of a parent
+   to a const char * absolute path of a child. See the comment about
+   danglers at the top of svn_client__harvest_committables().
+
    If CANCEL_FUNC is non-null, call it with CANCEL_BATON to see
    if the user has cancelled the operation.
 
@@ -435,6 +439,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      svn_boolean_t skip_files,
                      svn_boolean_t skip_dirs,
                      svn_boolean_t is_explicit_target,
+                     apr_hash_t *danglers,
                      svn_client__check_url_kind_t check_url_func,
                      void *check_url_baton,
                      svn_cancel_func_t cancel_func,
@@ -814,6 +819,45 @@ harvest_committables(svn_wc_context_t *wc_ctx,
         }
     }
 
+  /* Make sure we check for dangling children on additions */
+  if (state_flags && is_added && is_explicit_target && danglers)
+    {
+      /* If a node is added, it's parent must exist in the repository at the
+         time of committing */
+
+      svn_boolean_t parent_added;
+      const char *parent_abspath = svn_dirent_dirname(local_abspath,
+                                                      scratch_pool);
+
+      SVN_ERR(svn_wc__node_is_added(&parent_added, wc_ctx, parent_abspath,
+                                    scratch_pool));
+
+      if (parent_added)
+        {
+          const char *copy_root_abspath;
+          svn_boolean_t parent_is_copy;
+
+          /* The parent is added, so either it is a copy, or a locally added
+           * directory. In either case, we require the op-root of the parent
+           * to be part of the commit. See issue #4059. */
+          SVN_ERR(svn_wc__node_get_origin(&parent_is_copy, NULL, NULL, NULL,
+                                          NULL, &copy_root_abspath,
+                                          wc_ctx, parent_abspath,
+                                          FALSE, scratch_pool, scratch_pool));
+
+          if (parent_is_copy)
+            parent_abspath = copy_root_abspath;
+
+          if (!apr_hash_get(danglers, parent_abspath, APR_HASH_KEY_STRING))
+            {
+              apr_hash_set(danglers,
+                           apr_pstrdup(result_pool, parent_abspath),
+                           APR_HASH_KEY_STRING,
+                           apr_pstrdup(result_pool, local_abspath));
+            }
+        }
+    }
+
   if (db_kind != svn_node_dir || depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
@@ -863,6 +907,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                        (depth < svn_depth_files),
                                        (depth < svn_depth_immediates),
                                        FALSE, /* IS_EXPLICIT_TARGET */
+                                       danglers,
                                        check_url_func, check_url_baton,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
@@ -1063,10 +1108,8 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
   for (i = 0; i < targets->nelts; ++i)
     {
       const char *target_abspath;
-      svn_boolean_t is_added;
       svn_node_kind_t kind;
       const char *repos_root_url;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -1103,51 +1146,6 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                           target_abspath,
                                           result_pool, iterpool));
 
-      /* Handle an added/replaced node. */
-      SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath,
-                                    iterpool));
-      if (is_added)
-        {
-          /* This node is added. Is the parent also added? */
-          const char *parent_abspath = svn_dirent_dirname(target_abspath,
-                                                          iterpool);
-          err = svn_wc__node_is_added(&is_added, ctx->wc_ctx, parent_abspath,
-                                      iterpool);
-          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_createf(
-                SVN_ERR_WC_CORRUPT, err,
-                _("'%s' is scheduled for addition within unversioned parent"),
-                svn_dirent_local_style(target_abspath, iterpool));
-          SVN_ERR(err);
-
-          if (is_added)
-            {
-              svn_boolean_t is_copy;
-              const char *copy_root_abspath;
-
-              /* Copies are always committed recursively as long as the
-               * copy root is in the commit target list.
-               * So for nodes copied along with a parent, the copy root path
-               * is the dangling parent. See issue #4059. */
-              SVN_ERR(svn_wc__node_get_origin(&is_copy,
-                                              NULL, NULL, NULL, NULL,
-                                              &copy_root_abspath,
-                                              ctx->wc_ctx,
-                                              target_abspath,
-                                              FALSE, iterpool, iterpool));
-              if (is_copy && strcmp(copy_root_abspath, target_abspath) != 0)
-                parent_abspath = copy_root_abspath;
-
-              /* Copy the parent and target into pool; iterpool
-                 lasts only for this loop iteration, and we check
-                 danglers after the loop is over. */
-              apr_hash_set(danglers,
-                           apr_pstrdup(scratch_pool, parent_abspath),
-                           APR_HASH_KEY_STRING,
-                           apr_pstrdup(scratch_pool, target_abspath));
-            }
-        }
-
       /* Handle our TARGET. */
       /* Make sure this isn't inside a working copy subtree that is
        * marked as tree-conflicted. */
@@ -1164,6 +1162,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                    depth, just_locked, changelist_hash,
                                    FALSE, FALSE,
                                    TRUE /* IS_EXPLICIT_TARGET */,
+                                   danglers,
                                    check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    ctx->notify_func2, ctx->notify_baton2,
@@ -1258,6 +1257,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                NULL,
                                FALSE, FALSE, /* skip files, dirs */
                                TRUE, /* IS_EXPLICIT_TARGET (don't care) */
+                               NULL,
                                btn->check_url_func,
                                btn->check_url_baton,
                                btn->ctx->cancel_func,

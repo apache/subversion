@@ -22,6 +22,8 @@
  * ====================================================================
  */
 
+#include <stdlib.h>
+
 #include <apr_strings.h>
 
 #include <httpd.h>
@@ -55,6 +57,7 @@
 /* per-server configuration */
 typedef struct server_conf_t {
   const char *special_uri;
+  svn_boolean_t use_utf8;
 } server_conf_t;
 
 
@@ -111,6 +114,8 @@ static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 {
   svn_error_t *serr;
+  server_conf_t *conf;
+
   ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
 
   serr = svn_fs_initialize(p);
@@ -123,7 +128,8 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
     }
 
   /* This returns void, so we can't check for error. */
-  svn_utf_initialize(p);
+  conf = ap_get_module_config(s->module_config, &dav_svn_module);
+  svn_utf_initialize2(p, conf->use_utf8);
 
   return OK;
 }
@@ -506,6 +512,18 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
                         (int)SVN_DELTA_COMPRESSION_LEVEL_MAX);
 
   svn__compression_level = value;
+
+  return NULL;
+}
+
+static const char *
+SVNUseUTF8_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  server_conf_t *conf;
+
+  conf = ap_get_module_config(cmd->server->module_config,
+                              &dav_svn_module);
+  conf->use_utf8 = arg;
 
   return NULL;
 }
@@ -1021,6 +1039,11 @@ static const command_rec cmds[] =
                 "content over the network (0 for no compression, 9 for "
                 "maximum, 5 is default)."),
 
+  /* per server */
+  AP_INIT_FLAG("SVNUseUTF8",
+               SVNUseUTF8_cmd, NULL,
+               RSRC_CONF,
+               "use UTF-8 as native character encoding (default is ASCII)."),
   { NULL }
 };
 

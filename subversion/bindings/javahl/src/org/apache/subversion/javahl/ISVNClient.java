@@ -521,13 +521,14 @@ public interface ISVNClient
      * @param force         diff even on binary files
      * @param copiesAsAdds  if set, copied files will be shown in their
      *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, OutputStream outStream,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
-              boolean copiesAsAdds)
+              boolean copiesAsAdds, boolean ignoreProps)
             throws ClientException;
 
     void diff(String target1, Revision revision1, String target2,
@@ -552,6 +553,7 @@ public interface ISVNClient
      * @param force         diff even on binary files
      * @param copiesAsAdds  if set, copied files will be shown in their
      *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
      * @throws ClientException
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
@@ -559,7 +561,7 @@ public interface ISVNClient
               OutputStream outStream,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
-              boolean copiesAsAdds)
+              boolean copiesAsAdds, boolean ignoreProps)
             throws ClientException;
 
     void diff(String target, Revision pegRevision, Revision startRevision,
