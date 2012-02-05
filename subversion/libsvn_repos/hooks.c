@@ -449,6 +449,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
 svn_error_t  *
 svn_repos__hooks_post_commit(svn_repos_t *repos,
                              svn_revnum_t rev,
+                             const char *txn_name,
                              apr_pool_t *pool)
 {
   const char *hook = svn_repos_post_commit_hook(repos, pool);
@@ -460,12 +461,13 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[4];
+      const char *args[5];
 
       args[0] = hook;
       args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
       args[2] = apr_psprintf(pool, "%ld", rev);
-      args[3] = NULL;
+      args[3] = txn_name;
+      args[4] = NULL;
 
       SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_COMMIT, hook, args,
                            repos->hooks_env, NULL, pool));

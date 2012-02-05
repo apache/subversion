@@ -742,6 +742,7 @@ PREWRITTEN_HOOKS_TEXT
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] REV          (the number of the revision just committed)"           NL
+"#   [3] TXN-NAME     (the name of the transaction that has become REV)"     NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
@@ -771,6 +772,7 @@ PREWRITTEN_HOOKS_TEXT
 ""                                                                           NL
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
+"TXN_NAME=\"$3\""                                                            NL
                                                                              NL
 "mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
