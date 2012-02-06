@@ -159,6 +159,37 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
                           failure_message->data);
 }
 
+/* Copy the environment given as key/value pairs of ENV_HASH into
+ * an array of C strings allocated in RESULT_POOL.
+ * If the hook environment is empty, return NULL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static const char **
+env_from_env_hash(apr_hash_t *env_hash,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  const char **env;
+  const char **envp;
+  
+  if (!env_hash || apr_hash_count(env_hash) == 0)
+    return NULL;
+
+  env = apr_palloc(result_pool,
+                   sizeof(const char *) * (apr_hash_count(env_hash) + 1));
+  envp = env;
+  for (hi = apr_hash_first(scratch_pool, env_hash); hi; hi = apr_hash_next(hi))
+    {
+      *envp = apr_psprintf(result_pool, "%s=%s",
+                           (const char *)svn__apr_hash_index_key(hi),
+                           (const char *)svn__apr_hash_index_val(hi));
+      envp++;
+    }
+  *envp = NULL;
+
+  return env;
+}
+
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
    program that is to be run.  The hook's exit status will be checked,
    and if an error occurred the hook's stderr output will be added to
@@ -174,7 +205,7 @@ run_hook_cmd(svn_string_t **result,
              const char *name,
              const char *cmd,
              const char **args,
-             const char *const *hooks_env,
+             apr_hash_t *hooks_env,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
 {
@@ -197,9 +228,10 @@ run_hook_cmd(svn_string_t **result,
             (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
     }
 
-  err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args, hooks_env, FALSE,
-                          FALSE, stdin_handle, result != NULL, null_handle,
-                          TRUE, NULL, pool);
+  err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,
+                          env_from_env_hash(hooks_env, pool, pool),
+                          FALSE, FALSE, stdin_handle, result != NULL,
+                          null_handle, TRUE, NULL, pool);
 
   if (err)
     {
