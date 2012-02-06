@@ -3133,6 +3133,15 @@ svn_io_write_unique(const char **tmp_path,
 svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
 {
+  /* This is a work-around. APR would flush the write buffer
+     _after_ truncating the file causing now invalid buffered
+     data to be written behind OFFSET. */
+  SVN_ERR(do_io_file_wrapper_cleanup
+    (file, apr_file_flush(file),
+     N_("Can't flush file '%s'"),
+     N_("Can't flush stream"),
+     pool));
+
   return do_io_file_wrapper_cleanup
     (file, apr_file_trunc(file, offset),
      N_("Can't truncate file '%s'"),
