@@ -3617,7 +3617,8 @@ apply_textdelta(void *file_baton,
                                         recorded_base_checksum, pool, pool));
 
 
-  if (!svn_checksum_match(expected_base_checksum, recorded_base_checksum))
+  if (!svn_checksum_is_empty_checksum(expected_base_checksum)
+        && !svn_checksum_match(expected_base_checksum, recorded_base_checksum))
       return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                      _("Checksum mismatch for '%s':\n"
                        "   expected:  %s\n"

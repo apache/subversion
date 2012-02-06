@@ -500,7 +500,8 @@ apply_textdelta(void *file_baton,
           else
             original_md5 = eb->original_checksum;
 
-          if (!svn_checksum_match(expected_checksum, original_md5))
+          if (!svn_checksum_is_empty_checksum(expected_checksum)
+                && !svn_checksum_match(expected_checksum, original_md5))
             return svn_error_trace(svn_checksum_mismatch_err(
                                     expected_checksum,
                                     original_md5,

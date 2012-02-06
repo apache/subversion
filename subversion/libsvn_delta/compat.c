@@ -1593,8 +1593,15 @@ drive_tree(struct operation *op,
               svn_txdelta_window_handler_t handler;
               void *handler_baton;
               svn_stream_t *contents;
+              const char *empty_md5;
+              
+              /* ### We could probably allocate this just once somewhere. */
+              empty_md5 = svn_checksum_to_cstring(svn_checksum_empty_checksum(
+                                            svn_checksum_md5, scratch_pool),
+                                            scratch_pool);
 
-              SVN_ERR(editor->apply_textdelta(file_baton, NULL, scratch_pool,
+              SVN_ERR(editor->apply_textdelta(file_baton, empty_md5,
+                                              scratch_pool,
                                               &handler, &handler_baton));
               SVN_ERR(svn_stream_open_readonly(&contents, op->src_file,
                                                scratch_pool, scratch_pool));
