@@ -430,10 +430,12 @@ svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
   switch (checksum->kind)
     {
       case svn_checksum_md5:
-        return !strcmp(checksum->digest, svn_md5__empty_string_digest());
+        return svn_md5__digests_match(checksum->digest,
+                                      svn_md5__empty_string_digest());
 
       case svn_checksum_sha1:
-        return !strcmp(checksum->digest, svn_sha1__empty_string_digest());
+        return svn_sha1__digests_match(checksum->digest,
+                                       svn_sha1__empty_string_digest());
 
       default:
         /* We really shouldn't get here, but if we do... */
