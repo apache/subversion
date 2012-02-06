@@ -225,9 +225,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
-  newconf->hooks_env = apr_hash_merge(p, child->hooks_env, parent->hooks_env,
-                                      NULL /* child overrides parent */,
-                                      NULL /* unused data baton */);
+  newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
