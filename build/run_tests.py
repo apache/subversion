@@ -43,7 +43,6 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-LINE_LENGTH = 45
 SVN_VER_MINOR = 8
 
 import os, re, subprocess, sys, imp
@@ -70,6 +69,38 @@ class TextColors:
     cls.ENDC = ''
     cls.FAILURE = ''
     cls.SUCCESS = ''
+
+
+def _get_term_width():
+  'Attempt to discern the width of the terminal'
+  # This may not work on all platforms, in which case the default of 80
+  # characters is used.  Improvements welcomed.
+
+  def ioctl_GWINSZ(fd):
+    try:
+      import fcntl, termios, struct, os
+      cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+    except:
+      return None
+    return cr
+
+  cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+  if not cr:
+    try:
+      fd = os.open(os.ctermid(), os.O_RDONLY)
+      cr = ioctl_GWINSZ(fd)
+      os.close(fd)
+    except:
+      pass
+  if not cr:
+    try:
+      cr = (env['LINES'], env['COLUMNS'])
+    except:
+      cr = None
+  if not cr:
+    # Default
+    cr = (25, 80)
+  return int(cr[1])
 
 
 class TestHarness:
@@ -511,14 +542,17 @@ class TestHarness:
 
     progabs = os.path.abspath(os.path.join(self.srcdir, prog))
     old_cwd = os.getcwd()
+    line_length = _get_term_width()
+    dots_needed = line_length \
+                    - len(test_info) \
+                    - len('Running tests in ') \
+                    - len('success')
     try:
       os.chdir(progdir)
       if progbase[-3:] == '.py':
-        failed = self._run_py_test(progabs, test_nums,
-                                   (LINE_LENGTH - len(test_info)))
+        failed = self._run_py_test(progabs, test_nums, dots_needed)
       else:
-        failed = self._run_c_test(prog, test_nums,
-                                  (LINE_LENGTH - len(test_info)))
+        failed = self._run_c_test(prog, test_nums, dots_needed)
     except:
       os.chdir(old_cwd)
       raise
