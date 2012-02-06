@@ -765,15 +765,15 @@ svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
 
 /** Set the environment that @a repos's hooks will inherit to @a hooks_env,
- * which may be either @c NULL or a @c NULL-terminated C array.  @a hooks_env
- * must live at least as long as @a repos.
+ * a hash table where keys and values represent names and values of environment
+ * variables. @a hooks_env must live at least as long as @a repos.
  *
  * If this function is not called, hooks will run in an empty environment.
  *
  * @since New in 1.8. */
 void
 svn_repos_hooks_setenv(svn_repos_t *repos,
-                       const char *const *hooks_env);
+                       apr_hash_t *hooks_env);
 
 /** @} */
 

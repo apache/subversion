@@ -167,7 +167,7 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 
 void
 svn_repos_hooks_setenv(svn_repos_t *repos,
-                       const char *const *hooks_env)
+                       apr_hash_t *hooks_env)
 {
   repos->hooks_env = hooks_env;
 }

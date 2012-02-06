@@ -143,7 +143,7 @@ struct svn_repos_t
 
   /* The environment inherited to hook scripts. If NULL, hooks run
    * in an empty environment. */
-  const char *const *hooks_env;
+  apr_hash_t *hooks_env;
 };
 
 
