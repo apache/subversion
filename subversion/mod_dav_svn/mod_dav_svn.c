@@ -195,7 +195,6 @@ create_dir_config(apr_pool_t *p, char *dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
-  conf->hooks_env = apr_hash_make(p);
 
   return conf;
 }
@@ -225,9 +224,14 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
-  newconf->hooks_env = apr_hash_merge(p, child->hooks_env, parent->hooks_env,
-                                      NULL /* child overrides parent */,
-                                      NULL /* unused data baton */);
+  if (child->hooks_env && parent->hooks_env)
+    newconf->hooks_env = apr_hash_merge(p, child->hooks_env, parent->hooks_env,
+                                        NULL /* child overrides parent */,
+                                        NULL /* unused data baton */);
+  else if (child->hooks_env)
+    newconf->hooks_env = child->hooks_env;
+  else if (parent->hooks_env)
+    newconf->hooks_env = parent->hooks_env;
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
@@ -544,10 +548,15 @@ SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
     {
       dir_conf_t *conf = config;
 
+      if (!conf->hooks_env)
+        conf->hooks_env = apr_hash_make(cmd->pool);
+
       apr_hash_set(conf->hooks_env,
-                   APR_ARRAY_IDX(var, 0, const char *),
+                   apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
+                     APR_ARRAY_IDX(var, 0, const char *)),
                    APR_HASH_KEY_STRING,
-                   APR_ARRAY_IDX(var, 1, const char *));
+                   apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
+                     APR_ARRAY_IDX(var, 1, const char *)));
     }
 
   return NULL;
