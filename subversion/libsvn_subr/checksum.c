@@ -427,6 +427,11 @@ svn_checksum_mismatch_err(const svn_checksum_t *expected,
 svn_boolean_t
 svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
 {
+  /* By definition, the NULL checksum matches all others, including the
+     empty one. */
+  if (!checksum)
+    return TRUE;
+
   switch (checksum->kind)
     {
       case svn_checksum_md5:
