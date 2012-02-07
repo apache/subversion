@@ -2353,7 +2353,7 @@ struct rep_args
 
   svn_revnum_t base_revision;
   apr_off_t base_offset;
-  apr_size_t base_length;
+  svn_filesize_t base_length;
 };
 
 /* Read the next line from file FILE and parse it as a text
@@ -2407,7 +2407,7 @@ read_rep_line(struct rep_args **rep_args_p,
 
   str = apr_strtok(NULL, " ", &last_str);
   if (! str) goto err;
-  rep_args->base_length = (apr_size_t) apr_atoi64(str);
+  rep_args->base_length = (svn_filesize_t) apr_atoi64(str);
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
