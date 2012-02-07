@@ -652,10 +652,22 @@ static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
   apr_array_header_t *array = value;
 
   list = PyList_New(0);
+  if (list == NULL)
+    return NULL;
+
   for (i = 0; i < array->nelts; i++)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(array, i, svn_merge_range_t *);
-      if (PyList_Append(list, convert_to_swigtype(range, ctx, py_pool)) == -1)
+      PyObject *obj;
+      int result;
+
+      obj = convert_to_swigtype(range, ctx, py_pool);
+      if (obj == NULL)
+        goto error;
+
+      result = PyList_Append(list, obj);
+      Py_DECREF(obj);
+      if (result == -1)
         goto error;
     }
   return list;
