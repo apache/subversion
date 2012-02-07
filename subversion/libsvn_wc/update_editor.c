@@ -2275,13 +2275,33 @@ delete_entry(const char *path,
               break;
             }
 
-          if (result->choice == svn_wc_conflict_choose_mine_conflict)
+          if (tree_conflict->reason == svn_wc_conflict_reason_moved_away &&
+              tree_conflict->action == svn_wc_conflict_action_move_away &&
+              result->choice == svn_wc_conflict_choose_mine_conflict)
             {
               /* ### TODO */
               break;
             }
 
-          if (result->choice == svn_wc_conflict_choose_theirs_conflict)
+          if (tree_conflict->reason == svn_wc_conflict_reason_moved_away &&
+              tree_conflict->action == svn_wc_conflict_action_move_away &&
+              result->choice == svn_wc_conflict_choose_theirs_conflict)
+            {
+              /* ### TODO */
+              break;
+            }
+
+          if (tree_conflict->reason == svn_wc_conflict_reason_deleted &&
+              tree_conflict->action == svn_wc_conflict_action_move_away &&
+              result->choice == svn_wc_conflict_choose_mine_conflict)
+            {
+              /* ### TODO */
+              break;
+            }
+
+          if (tree_conflict->reason == svn_wc_conflict_reason_deleted &&
+              tree_conflict->action == svn_wc_conflict_action_move_away &&
+              result->choice == svn_wc_conflict_choose_theirs_conflict)
             {
               /* ### TODO */
               break;
