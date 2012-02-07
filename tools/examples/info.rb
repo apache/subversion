@@ -26,6 +26,7 @@
 #
 
 require "svn/core"
+require "svn/ext/core"
 require "svn/client"
 require "svn/wc"
 require "svn/repos"
@@ -45,6 +46,12 @@ simple_prompt = Proc.new do
   result.password = STDIN.gets.strip
 end
 
+gnome_keyring_prompt = Proc.new do
+  |keyring_name|
+
+  print "Password for '#{keyring_name}' GNOME keyring: "
+  STDIN.gets.strip
+end
 
 if ARGV.length != 1
   puts "Usage: info.rb URL[@REV]"
@@ -57,6 +64,12 @@ else
   ctx.add_ssl_server_trust_file_provider
   ctx.add_ssl_client_cert_file_provider
   ctx.add_ssl_client_cert_pw_file_provider
+
+  # Allow asking for the gnome keyring password, in case the keyring is
+  # locked.
+  if Svn::Ext::Core.respond_to?(:svn_auth_set_gnome_keyring_unlock_prompt_func)
+    Svn::Ext::Core::svn_auth_set_gnome_keyring_unlock_prompt_func(ctx.auth_baton, gnome_keyring_prompt)
+  end
 
   repos_uri, revision = ARGV[0].split("@", 2)
   if revision
