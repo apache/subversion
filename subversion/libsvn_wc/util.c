@@ -283,6 +283,9 @@ svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict
   if (conflict->src_right_version)
     new_conflict->src_right_version =
       svn_wc_conflict_version_dup(conflict->src_right_version, pool);
+  if (conflict->suggested_moves)
+    new_conflict->suggested_moves = apr_array_copy(pool,
+                                                   conflict->suggested_moves);
 
   return new_conflict;
 }
