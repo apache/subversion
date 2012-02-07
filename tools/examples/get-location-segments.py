@@ -128,12 +128,11 @@ ERROR: %s
 
   core.svn_config_ensure(None)
   ctx = client.svn_client_create_context()
+  ctx.config = core.svn_config_get_config(None)
 
   # Make sure that these are at the start of the list, so passwords from
   # gnome-keyring / kwallet are checked before asking for new passwords.
-  # Note that we don't pass our config here, since we can't seem to access
-  # ctx.config.config (ctx.config is opaque).
-  providers = core.svn_auth_get_platform_specific_client_providers(None, None)
+  providers = core.svn_auth_get_platform_specific_client_providers(ctx.config['config'], None)
   providers.extend([
     client.get_simple_provider(),
     core.svn_auth_get_ssl_server_trust_file_provider(),
@@ -146,7 +145,6 @@ ERROR: %s
   ])
 
   ctx.auth_baton = core.svn_auth_open(providers)
-  ctx.config = core.svn_config_get_config(None)
 
   if hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'):
     core.svn_auth_set_gnome_keyring_unlock_prompt_func(ctx.auth_baton, prompt_func_gnome_keyring_prompt)
