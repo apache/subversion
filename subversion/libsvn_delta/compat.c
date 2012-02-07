@@ -393,6 +393,9 @@ process_actions(void *edit_baton,
 
   if (need_add)
     {
+      if (props == NULL)
+        props = apr_hash_make(scratch_pool);
+
       if (kind == svn_kind_dir)
         {
           SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
