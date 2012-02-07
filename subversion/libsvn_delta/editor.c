@@ -63,6 +63,33 @@ struct svn_editor_t
 #endif
 };
 
+#ifdef ENABLE_ORDERING_CHECK
+
+static const int singleton;
+
+#define SHOULD_NOT_BE_FINISHED(editor)  SVN_ERR_ASSERT(!(editor)->finished)
+
+#define MARK_COMPLETED(editor, relpath)   \
+  apr_hash_set((editor)->completed_nodes, \
+               apr_pstrdup((editor)->result_pool, relpath), \
+               APR_HASH_KEY_STRING, &singleton)
+#define SHOULD_NOT_BE_COMPLETED(editor, relpath) \
+  SVN_ERR_ASSERT(!apr_hash_get((editor)->completed_nodes, relpath, \
+                               APR_HASH_KEY_STRING));
+
+
+#else
+
+/* Be wary with the definition of these macros so that we don't
+   end up with "statement with no effect" warnings. Obviously, this
+   depends upon particular usage, which is easy to verify.  */
+#define SHOULD_NOT_BE_FINISHED(editor)  /* empty */
+
+#define MARK_COMPLETED(editor, relpath)  /* empty */
+#define SHOULD_NOT_BE_COMPLETED(editor, relpath)  /* empty */
+
+#endif /* ENABLE_ORDERING_CHECK */
+
 
 svn_error_t *
 svn_editor_create(svn_editor_t **editor,
@@ -257,11 +284,8 @@ svn_editor_add_directory(svn_editor_t *editor,
 
   SVN_ERR_ASSERT(children != NULL);
   SVN_ERR_ASSERT(props != NULL);
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -271,9 +295,7 @@ svn_editor_add_directory(svn_editor_t *editor,
                                          props, replaces_rev,
                                          editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
+  MARK_COMPLETED(editor, relpath);
   apr_hash_set(editor->pending_incomplete_children, relpath,
                APR_HASH_KEY_STRING, NULL);
   {
@@ -285,7 +307,7 @@ svn_editor_add_directory(svn_editor_t *editor,
                                              editor->result_pool);
 
         apr_hash_set(editor->pending_incomplete_children, child,
-                     APR_HASH_KEY_STRING, (void *)0xdeadbeef);
+                     APR_HASH_KEY_STRING, &singleton);
       }
   }
 #endif
@@ -307,11 +329,8 @@ svn_editor_add_file(svn_editor_t *editor,
   SVN_ERR_ASSERT(checksum != NULL);
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(props != NULL);
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -321,9 +340,7 @@ svn_editor_add_file(svn_editor_t *editor,
                                     checksum, contents, props,
                                     replaces_rev, editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
+  MARK_COMPLETED(editor, relpath);
   apr_hash_set(editor->pending_incomplete_children, relpath,
                APR_HASH_KEY_STRING, NULL);
 #endif
@@ -342,11 +359,8 @@ svn_editor_add_symlink(svn_editor_t *editor,
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(props != NULL);
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -355,9 +369,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
     err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
                                        replaces_rev, editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
+  MARK_COMPLETED(editor, relpath);
   apr_hash_set(editor->pending_incomplete_children, relpath,
                APR_HASH_KEY_STRING, NULL);
 #endif
@@ -374,11 +386,8 @@ svn_editor_add_absent(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -387,9 +396,7 @@ svn_editor_add_absent(svn_editor_t *editor,
     err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
                                       replaces_rev, editor->scratch_pool);
 #ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
+  MARK_COMPLETED(editor, relpath);
   apr_hash_set(editor->pending_incomplete_children, relpath,
                APR_HASH_KEY_STRING, NULL);
 #endif
@@ -407,11 +414,8 @@ svn_editor_alter_directory(svn_editor_t *editor,
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(props != NULL);
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -420,11 +424,9 @@ svn_editor_alter_directory(svn_editor_t *editor,
     err = editor->funcs.cb_alter_directory(editor->baton,
                                            relpath, revision, props,
                                            editor->scratch_pool);
-#ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
-#endif
+
+  MARK_COMPLETED(editor, relpath);
+
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -443,11 +445,8 @@ svn_editor_alter_file(svn_editor_t *editor,
   SVN_ERR_ASSERT((checksum != NULL && contents != NULL)
                  || (checksum == NULL && contents == NULL));
   SVN_ERR_ASSERT(props != NULL || checksum != NULL);
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -457,11 +456,9 @@ svn_editor_alter_file(svn_editor_t *editor,
                                       relpath, revision, props,
                                       checksum, contents,
                                       editor->scratch_pool);
-#ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
-#endif
+
+  MARK_COMPLETED(editor, relpath);
+
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -477,11 +474,8 @@ svn_editor_alter_symlink(svn_editor_t *editor,
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(props != NULL || target != NULL);
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -491,11 +485,9 @@ svn_editor_alter_symlink(svn_editor_t *editor,
                                          relpath, revision, props,
                                          target,
                                          editor->scratch_pool);
-#ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
-#endif
+
+  MARK_COMPLETED(editor, relpath);
+
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -508,11 +500,8 @@ svn_editor_delete(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -520,11 +509,9 @@ svn_editor_delete(svn_editor_t *editor,
   if (editor->funcs.cb_delete)
     err = editor->funcs.cb_delete(editor->baton, relpath, revision,
                                   editor->scratch_pool);
-#ifdef ENABLE_ORDERING_CHECK
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, relpath),
-               APR_HASH_KEY_STRING, (void *) 0x5ca1ab1e);
-#endif
+
+  MARK_COMPLETED(editor, relpath);
+
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -539,11 +526,8 @@ svn_editor_copy(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, dst_relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, dst_relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -566,13 +550,9 @@ svn_editor_move(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, src_relpath,
-                               APR_HASH_KEY_STRING));
-  SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, dst_relpath,
-                               APR_HASH_KEY_STRING));
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
+  SHOULD_NOT_BE_COMPLETED(editor, src_relpath);
+  SHOULD_NOT_BE_COMPLETED(editor, dst_relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -609,8 +589,8 @@ svn_editor_rotate(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SHOULD_NOT_BE_FINISHED(editor);
 #ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
   /* ### something more  */
 #endif
 
@@ -633,8 +613,8 @@ svn_editor_complete(svn_editor_t *editor)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SHOULD_NOT_BE_FINISHED(editor);
 #ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(apr_hash_count(editor->pending_incomplete_children) == 0);
 #endif
 
@@ -653,9 +633,7 @@ svn_editor_abort(svn_editor_t *editor)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-#ifdef ENABLE_ORDERING_CHECK
-  SVN_ERR_ASSERT(!editor->finished);
-#endif
+  SHOULD_NOT_BE_FINISHED(editor);
 
   if (editor->funcs.cb_abort)
     err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
