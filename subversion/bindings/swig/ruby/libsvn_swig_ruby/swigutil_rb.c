@@ -1313,6 +1313,9 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item2,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_merge_range,
                           c2r_merge_range_dup, EMPTY_CPP_ARGUMENT,
                           svn_merge_range_t *, NULL)
+DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_auth_provider_object,
+                          c2r_swig_type, EMPTY_CPP_ARGUMENT,
+                          svn_auth_provider_object_t *, "svn_auth_provider_object_t*")
 
 static VALUE
 c2r_merge_range_array(void *value, void *ctx)
