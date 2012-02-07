@@ -2437,8 +2437,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
          contents, in other words, the base text. */
       SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node,
                                            tb->base_checksum->kind, pool));
-      if (!svn_checksum_is_empty_checksum(tb->base_checksum)
-            && !svn_checksum_match(tb->base_checksum, checksum))
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_checksum_mismatch_err(tb->base_checksum, checksum, pool,
                                          _("Base checksum mismatch on '%s'"),
                                          tb->path);
