@@ -906,7 +906,8 @@ apply_textdelta(void *file_baton,
       SVN_ERR(svn_checksum_parse_hex(&base_md5_checksum, svn_checksum_md5,
                                      base_md5_digest, scratch_pool));
 
-      if (!svn_checksum_match(base_md5_checksum, b->start_md5_checksum))
+      if (!svn_checksum_is_empty_checksum(base_md5_checksum) &&
+            !svn_checksum_match(base_md5_checksum, b->start_md5_checksum))
         return svn_error_trace(svn_checksum_mismatch_err(
                                       base_md5_checksum,
                                       b->start_md5_checksum,
