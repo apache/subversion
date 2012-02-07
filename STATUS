@@ -269,3 +269,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1235264, r1235296, r1235302, r1235736
+   Fix a swig-py memory leak.
+   Justification:
+     Seen in the wild with significant effects.
+   Notes:
+     r1235264 is the fix.
+     r1235296 adds a regression test.
+     r1235302 is trivial / obvious fix.
+     r1235736 is trivial / obvious fix.
+   Votes:
+     +1: danielsh
+     +0: gstein
