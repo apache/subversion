@@ -2219,7 +2219,7 @@ delete_entry(const char *path,
               break;
             }
 
-          if (moved_to_abspath &&
+          if (tree_conflict->reason == svn_wc_conflict_reason_moved_away &&
               result->choice == svn_wc_conflict_choose_delete_is_delete)
             {
               svn_boolean_t all_edits_are_deletes = FALSE;
