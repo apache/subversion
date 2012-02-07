@@ -1023,8 +1023,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           desc->reason == svn_wc_conflict_reason_moved_here)
         help_text = 
           _("  (p)  postpone        - resolve the conflict later\n"
-            "  (mc) mine-conflict   - use incoming move\n"
-            "  (tc) theirs-conflict - use local move\n"
+            "  (mc) mine-conflict   - use local move\n"
+            "  (tc) theirs-conflict - use incoming move\n"
             "  (ci) change-incoming - change incoming move target\n"
             "  (cl) change-local    - change local move target\n"
             "  (h)  help            - show this help\n\n");
