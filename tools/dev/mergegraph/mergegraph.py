@@ -167,7 +167,7 @@ class MergeGraph(pydot.Graph):
     # Merge edge
     graph.mk_merge_edge(src_node, tgt_node, kind, kind, important)
 
-  def add_annotation(graph, node, label, color='red'):
+  def add_annotation(graph, node, label, color='lightblue'):
     """Add a graph node that serves as an annotation to a normal node.
        More than one annotation can be added to the same normal node."""
     subg_name = node + '_annotations'
@@ -189,8 +189,10 @@ class MergeGraph(pydot.Graph):
     ann_node = node + '_'
     while g.get_node(ann_node):
       ann_node = ann_node + '_'
-    g.add_node(Node(ann_node, shape='box', color=color, label='"' + label + '"'))
-    g.add_edge(Edge(ann_node, node, style='dotted', color=color, dir='none', constraint='false'))
+    g.add_node(Node(ann_node, shape='box', style='filled', color=color,
+                    label='"' + label + '"'))
+    g.add_edge(Edge(ann_node, node, style='solid', color=color,
+                    dir='none', constraint='false'))
 
 class MergeSubgraph(MergeGraph, pydot.Subgraph):
   """"""
