@@ -2266,6 +2266,15 @@ delete_entry(const char *path,
               break;
             }
 
+          if (tree_conflict->reason == svn_wc_conflict_reason_deleted &&
+              result->choice == svn_wc_conflict_choose_delete_is_delete)
+            {
+              /* Both the incoming and local change want to delete the
+               * node. This is not a conflict. */
+              tree_conflict = NULL;
+              break;
+            }
+
           if (result->choice == svn_wc_conflict_choose_mine_conflict)
             {
               /* ### TODO */
