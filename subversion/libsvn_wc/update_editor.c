@@ -2158,6 +2158,8 @@ delete_entry(const char *path,
                   /* Assume an incoming move vs. local delete/move conflict. */
                   tree_conflict->action = svn_wc_conflict_action_move_away;
                 }
+
+              /* Return to the conflict callback. */
               continue;
             }
 
@@ -2192,13 +2194,11 @@ delete_entry(const char *path,
 
                   /* Incoming move vs. local move tree conflict. */
                   tree_conflict->action = svn_wc_conflict_action_move_away;
-                  break;
                 }
               else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
                 {
                   /* Incoming move vs. local delete tree conflict. */
                   tree_conflict->action = svn_wc_conflict_action_move_away;
-                  break;
                 }
 
               /* Now that the precise nature of the conflict is known, invoke
