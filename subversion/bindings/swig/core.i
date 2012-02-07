@@ -792,10 +792,14 @@ static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
 %include svn_pools_h.swg
 %include svn_version_h.swg
 
+%{
+#ifdef SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC
 /* This is the function defined above */
 void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
                                                    svn_auth_gnome_keyring_unlock_prompt_func_t prompt_func,
                                                    void *prompt_baton);
+#endif
+%}
 
 
 /* The constant SVN_PROP_REVISION_ALL_PROPS is a C fragment, not a single
