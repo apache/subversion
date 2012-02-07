@@ -379,6 +379,8 @@ class SubversionClientTestCase(unittest.TestCase):
     # Not much more we can test in this minimal environment.
     self.assert_(isinstance(providers, list))
 
+  @unittest.skipUnless(hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'),
+                       "not supported on this platform")
   def testGnomeKeyring(self):
     # This tests setting the gnome-keyring unlock prompt function as an
     # auth baton parameter. It doesn't actually call gnome-keyring
