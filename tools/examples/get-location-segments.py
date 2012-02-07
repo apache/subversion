@@ -105,6 +105,9 @@ def prompt_func_simple_prompt(realm, username, may_save, pool):
   simple_cred.may_save = False
   return simple_cred
 
+def prompt_func_gnome_keyring_prompt(keyring, pool):
+  return getpass.getpass(prompt="Password for '%s' GNOME keyring: " % keyring)
+
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
@@ -144,6 +147,9 @@ ERROR: %s
 
   ctx.auth_baton = core.svn_auth_open(providers)
   ctx.config = core.svn_config_get_config(None)
+
+  if hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'):
+    core.svn_auth_set_gnome_keyring_unlock_prompt_func(ctx.auth_baton, prompt_func_gnome_keyring_prompt)
 
   ra_callbacks = ra.callbacks_t()
   ra_callbacks.auth_baton = ctx.auth_baton

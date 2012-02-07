@@ -2963,6 +2963,41 @@ svn_swig_rb_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
 }
 
 svn_error_t *
+svn_swig_rb_auth_gnome_keyring_unlock_prompt_func(char **keyring_passwd,
+                                                  const char *keyring_name,
+                                                  void *baton,
+                                                  apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+  *keyring_passwd = NULL;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    char error_message[] =
+      "svn_auth_gnome_keyring_unlock_prompt_func_t should"
+      "return a string, not '%s'.";
+
+    callback_baton_t cbb;
+    VALUE result;
+
+    cbb.receiver = proc;
+    cbb.message = id_call;
+    cbb.args = rb_ary_new3(1, c2r_string2(keyring_name));
+    result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+
+    if (!NIL_P(result)) {
+      if (!RTEST(rb_obj_is_kind_of(result, rb_cString)))
+        rb_raise(rb_eTypeError, error_message, r2c_inspect(result));
+      *keyring_passwd = (char *)r2c_string(result, NULL, pool);
+    }
+  }
+
+  return err;
+}
+
+svn_error_t *
 svn_swig_rb_auth_username_prompt_func(svn_auth_cred_username_t **cred,
                                       void *baton,
                                       const char *realm,

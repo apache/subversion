@@ -423,6 +423,13 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
 
 /* auth provider callbacks */
 SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t * svn_swig_py_auth_gnome_keyring_unlock_prompt_func(
+        char **keyring_passwd,
+        const char *keyring_name,
+        void *baton,
+        apr_pool_t *pool);
+
+SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_auth_simple_prompt_func(
     svn_auth_cred_simple_t **cred,
     void *baton,

@@ -379,6 +379,17 @@ class SubversionClientTestCase(unittest.TestCase):
     # Not much more we can test in this minimal environment.
     self.assert_(isinstance(providers, list))
 
+  def testGnomeKeyring(self):
+    # This tests setting the gnome-keyring unlock prompt function as an
+    # auth baton parameter. It doesn't actually call gnome-keyring
+    # stuff, since that would require having a gnome-keyring running. We
+    # just test if this doesn't error out, there's not even a return
+    # value to test.
+    def prompt_func(realm_string, pool):
+      return "Foo"
+
+    core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
+
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
       SubversionClientTestCase)

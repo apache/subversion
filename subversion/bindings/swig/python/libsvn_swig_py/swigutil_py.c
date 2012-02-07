@@ -2804,6 +2804,41 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
 }
 
 svn_error_t *
+svn_swig_py_auth_gnome_keyring_unlock_prompt_func(char **keyring_passwd,
+                                                  const char *keyring_name,
+                                                  void *baton,
+                                                  apr_pool_t *pool)
+{
+  /* The baton is the actual prompt function passed from python */
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  *keyring_passwd = NULL;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sO&",
+                                      keyring_name,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      *keyring_passwd = make_string_from_ob(result, pool);
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+
+svn_error_t *
 svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
                                     void *baton,
                                     const char *realm,
