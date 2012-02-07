@@ -986,6 +986,8 @@ struct editor_baton
   struct operation root;
   svn_boolean_t *make_abs_paths;
 
+  svn_boolean_t driven;
+
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
 };
@@ -1664,6 +1666,7 @@ complete_cb(void *baton,
 
   /* Drive the tree we've created. */
   err = drive_root(&eb->root, eb->deditor, *eb->make_abs_paths, scratch_pool);
+  eb->driven = TRUE;
   if (!err)
      {
        err = svn_error_compose_create(err, eb->deditor->close_edit(
@@ -1683,14 +1686,16 @@ abort_cb(void *baton,
          apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *err2;
 
   /* We still need to drive anything we collected in the editor to this
      point. */
 
   /* Drive the tree we've created. */
-  err = drive_root(&eb->root, eb->deditor, *eb->make_abs_paths, scratch_pool);
+  if (!eb->driven)
+    err = drive_root(&eb->root, eb->deditor, *eb->make_abs_paths,
+                     scratch_pool);
 
   err2 = eb->deditor->abort_edit(eb->dedit_baton, scratch_pool);
 
