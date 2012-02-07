@@ -477,22 +477,27 @@ foreach my $p (@providers) {
 }
 ok($ok, 'svn_auth_get_platform_specific_client_providers returns _p_svn_auth_provider_object_t\'s');
 
-# Test setting gnome_keyring prompt function. This just sets the proper
-# attributes in the auth baton and checks the return value (which should
-# be a reference to the passed function reference). This does not
-# actually try the prompt, since that would require setting up a
-# gnome-keyring-daemon...
-sub gnome_keyring_unlock_prompt {
-    my $keyring_name = shift;
-    my $pool = shift;
+SKIP: {
+  skip 'Gnome-Keyring support not compiled in', 1
+      unless defined &SVN::Core::auth_set_gnome_keyring_unlock_prompt_func;
 
-    'test';
+  # Test setting gnome_keyring prompt function. This just sets the proper
+  # attributes in the auth baton and checks the return value (which should
+  # be a reference to the passed function reference). This does not
+  # actually try the prompt, since that would require setting up a
+  # gnome-keyring-daemon...
+  sub gnome_keyring_unlock_prompt {
+      my $keyring_name = shift;
+      my $pool = shift;
+
+      'test';
+  }
+
+  my $callback = \&gnome_keyring_unlock_prompt;
+  my $result = SVN::Core::auth_set_gnome_keyring_unlock_prompt_func(
+                   $ctx->auth(), $callback);
+  is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals paramter');
 }
-
-my $callback = \&gnome_keyring_unlock_prompt;
-my $result = SVN::Core::auth_set_gnome_keyring_unlock_prompt_func(
-              $ctx->auth(), $callback);
-is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals paramter');
 
 END {
 diag('cleanup');
