@@ -86,7 +86,7 @@ Candidate changes:
      - the 'psvn.el' emacs plug-in;
      - the installed ctypes-python bindings 'egg-info' file.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
  * r1151911
    Fix description of svndumpfilter's --targets option.
@@ -116,15 +116,6 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1205726
-   Plug a memory leak in the fs-base deltification logic which has
-   been observed to exhaust all the available memory on a server on a
-   real-world dataset.
-   Justification:
-     Can you say DoS?
-   Votes:
-     +1: cmpilato, danielsh
-
  * r1230212
    Fix for large files on 32-bit systems.
    Justification:
@@ -132,7 +123,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r1230212
    Votes:
-     +1: philip
+     +1: philip, stsp
 
 Veto-blocked changes:
 =====================
@@ -278,3 +269,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1205726
+   Plug a memory leak in the fs-base deltification logic which has
+   been observed to exhaust all the available memory on a server on a
+   real-world dataset.
+   Justification:
+     Can you say DoS?
+   Votes:
+     +1: cmpilato, danielsh, stsp
