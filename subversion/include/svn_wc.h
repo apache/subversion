@@ -2120,8 +2120,8 @@ typedef enum svn_wc_conflict_choice_t
    * @since New in 1.8. */
   svn_wc_conflict_choose_copy_is_copy,
 
-  /** The user has chosen to map an incoming delete or copy to a
-   * server-side move. The incoming move is described by
+  /** The conflict callback has chosen to map an incoming delete or
+   * copy to a server-side move. The incoming move is described by
    * svn_wc_conflict_result_t and must not be NULL.
    * This choice causes the conflict callback to be invoked again with a
    * more specific conflict description.
