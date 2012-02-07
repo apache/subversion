@@ -225,7 +225,15 @@ class MergeDot(MergeGraph, pydot.Dot):
   def read_config(graph, config_filename):
     """Initialize a MergeDot graph's input data from a config file."""
     import ConfigParser
-    config = ConfigParser.SafeConfigParser()
+    if config_filename.endswith('.txt'):
+      default_filename = config_filename[:-4] + '.png'
+    else:
+      default_filename = config_filename + '.png'
+
+    config = ConfigParser.SafeConfigParser({ 'filename': default_filename,
+                                             'title': None,
+                                             'merges': '[]',
+                                             'annotations': '[]' })
     files_read = config.read(config_filename)
     if len(files_read) == 0:
       print >> sys.stderr, 'graph: unable to read graph config from "' + config_filename + '"'
@@ -281,6 +289,6 @@ class MergeDot(MergeGraph, pydot.Dot):
       graph.add_annotation(node, label)
 
     # A title for the graph (added last so it goes at the top)
-    #if graph.title:
-    #  graph.add_node(Node('title', shape='plaintext', label='"' + graph.title + '"'))
+    if graph.title:
+      graph.add_node(Node('title', shape='plaintext', label='"' + graph.title + '"'))
 
