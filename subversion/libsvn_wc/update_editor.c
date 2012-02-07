@@ -2242,7 +2242,27 @@ delete_entry(const char *path,
                 tree_conflict->reason =
                   svn_wc_conflict_reason_moved_away_and_edited;
               else
-                tree_conflict = NULL; /* discard conflict */
+                {
+                  /* Automatically merge the incoming deletion with the
+                   * local move by deleting the node from the moved-away
+                   * subtree. */
+                  /* ### This should probably use a work queue. */
+                  SVN_ERR(svn_wc__db_op_delete(eb->db, moved_to_abspath, NULL,
+                                               NULL, NULL, /* notify below */
+                                               eb->cancel_func,
+                                               eb->cancel_baton,
+                                               scratch_pool));
+                  if (kind == svn_kind_dir)
+                    SVN_ERR(svn_io_remove_dir2(moved_to_abspath, TRUE,
+                                               eb->cancel_func,
+                                               eb->cancel_baton,
+                                               scratch_pool));
+                  else
+                    SVN_ERR(svn_io_remove_file2(moved_to_abspath, TRUE,
+                                                scratch_pool));
+
+                  tree_conflict = NULL; /* discard conflict */
+                }
               break;
             }
 
@@ -2308,23 +2328,6 @@ delete_entry(const char *path,
         }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
-    }
-  else if (moved_to_abspath)
-    {
-      /* No tree conflict was flagged, and the node was moved-away.
-       * Automatically merge the incoming deletion with the local move
-       * by deleting the node from the moved-away subtree. */
-      /* ### This should probably use a work queue. */
-      SVN_ERR(svn_wc__db_op_delete(eb->db, moved_to_abspath, NULL,
-                                   NULL, NULL, /* notify below */
-                                   eb->cancel_func, eb->cancel_baton,
-                                   scratch_pool));
-      if (kind == svn_kind_dir)
-        SVN_ERR(svn_io_remove_dir2(moved_to_abspath, TRUE,
-                                   eb->cancel_func, eb->cancel_baton,
-                                   scratch_pool));
-      else
-        SVN_ERR(svn_io_remove_file2(moved_to_abspath, TRUE, scratch_pool));
     }
 
   /* Issue a wq operation to delete the BASE_NODE data and to delete actual
