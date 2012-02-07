@@ -3743,7 +3743,6 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
          reps-strings.c.  Could we keep them both around somehow so this
          check could be more comprehensive? */
       if (tb->base_checksum->kind == checksum->kind
-            && !svn_checksum_is_empty_checksum(tb->base_checksum)
             && !svn_checksum_match(tb->base_checksum, checksum))
         return svn_checksum_mismatch_err(tb->base_checksum, checksum,
                             trail->pool,
