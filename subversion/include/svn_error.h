@@ -479,8 +479,11 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  *
  * @since New in 1.6.
  */
-#include <assert.h>
-#define SVN_ERR_ASSERT(expr)                         assert((expr))
+#define SVN_ERR_ASSERT(expr)                                            \
+  do {                                                                  \
+    if (!(expr))                                                        \
+      SVN_ERR(svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr)); \
+  } while (0)
 
 /** Similar to SVN_ERR_ASSERT(), but without the option of returning
  * an error to the calling function.
