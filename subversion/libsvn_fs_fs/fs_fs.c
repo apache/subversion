@@ -3476,7 +3476,7 @@ read_representation(svn_stream_t **contents_p,
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
-          svn_string_t *fulltext;
+          svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
           fulltext_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
                                       rep->revision, rep->offset);
@@ -3484,7 +3484,7 @@ read_representation(svn_stream_t **contents_p,
                                  ffd->fulltext_cache, fulltext_key, pool));
           if (is_cached)
             {
-              *contents_p = svn_stream_from_string(fulltext, pool);
+              *contents_p = svn_stream_from_stringbuf(fulltext, pool);
               return SVN_NO_ERROR;
             }
         }
