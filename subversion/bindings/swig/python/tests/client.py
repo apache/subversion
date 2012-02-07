@@ -374,6 +374,11 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.assertEqual(readme_text, 'This is a test.\n')
 
+  def test_platform_providers(self):
+    providers = core.svn_auth_get_platform_specific_client_providers(None, None)
+    # Not much more we can test in this minimal environment.
+    self.assert_(isinstance(providers, list))
+
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
       SubversionClientTestCase)
