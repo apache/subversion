@@ -84,6 +84,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * r1241530
+   Fix the python bindings for svn_auth_get_platform_specific_client_providers.
+   Justification:
+     The bindings should see passwords cached in the platform-specific providers.
+     Already fixed for the Perl bindings.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
