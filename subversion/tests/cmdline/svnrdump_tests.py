@@ -93,7 +93,8 @@ def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
     "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
-                  subdir = None, bypass_prop_validation = False):
+                  subdir = None, bypass_prop_validation = False,
+                  ignore_base_checksums = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
   dump' and check that the same dumpfile is produced or that
   expected_dumpfile_name is produced if provided. Additionally, the
@@ -129,8 +130,15 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
-    svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
     # Compare the output from stdout
+    if ignore_base_checksums:
+      svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+                                    if not l.startswith('Text-delta-base-md5')]
+      svnrdump_dumpfile = [l for l in svnrdump_dumpfile
+                                    if not l.startswith('Text-delta-base-md5')]
+
+    svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
+
     svntest.verify.compare_and_display_lines(
       "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
       None, mismatched_headers_re)
@@ -354,7 +362,7 @@ def copy_bad_line_endings2_dump(sbox):
   "dump: non-LF line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings2.dump",
                 expected_dumpfile_name="copy-bad-line-endings2.expected.dump",
-                bypass_prop_validation=True)
+                bypass_prop_validation=True, ignore_base_checksums=True)
 
 def commit_a_copy_of_root_dump(sbox):
   "dump: commit a copy of root"
