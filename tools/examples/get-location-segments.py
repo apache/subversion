@@ -125,7 +125,13 @@ ERROR: %s
 
   core.svn_config_ensure(None)
   ctx = client.svn_client_create_context()
-  providers = [
+
+  # Make sure that these are at the start of the list, so passwords from
+  # gnome-keyring / kwallet are checked before asking for new passwords.
+  # Note that we don't pass our config here, since we can't seem to access
+  # ctx.config.config (ctx.config is opaque).
+  providers = core.svn_auth_get_platform_specific_client_providers(None, None)
+  providers.extend([
     client.get_simple_provider(),
     core.svn_auth_get_ssl_server_trust_file_provider(),
     core.svn_auth_get_simple_prompt_provider(prompt_func_simple_prompt, 2),
@@ -134,7 +140,8 @@ ERROR: %s
     client.get_ssl_server_trust_file_provider(),
     client.get_ssl_client_cert_file_provider(),
     client.get_ssl_client_cert_pw_file_provider(),
-    ]
+  ])
+
   ctx.auth_baton = core.svn_auth_open(providers)
   ctx.config = core.svn_config_get_config(None)
 

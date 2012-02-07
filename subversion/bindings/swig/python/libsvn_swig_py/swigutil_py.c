@@ -650,7 +650,7 @@ PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_string, NULL, NULL);
 }
 
-static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
+static PyObject *convert_pointerlist(void *value, void *ctx, PyObject *py_pool)
 {
   int i;
   PyObject *list;
@@ -662,11 +662,11 @@ static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
 
   for (i = 0; i < array->nelts; i++)
     {
-      svn_merge_range_t *range = APR_ARRAY_IDX(array, i, svn_merge_range_t *);
+      void *ptr = APR_ARRAY_IDX(array, i, void *);
       PyObject *obj;
       int result;
 
-      obj = convert_to_swigtype(range, ctx, py_pool);
+      obj = convert_to_swigtype(ptr, ctx, py_pool);
       if (obj == NULL)
         goto error;
 
@@ -681,18 +681,18 @@ static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
   return NULL;
 }
 
-PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
-                                        swig_type_info *type,
-                                        PyObject *py_pool)
+PyObject *svn_swig_py_pointerlist_to_list(apr_array_header_t *list,
+                                          swig_type_info *type,
+                                          PyObject *py_pool)
 {
-  return convert_rangelist(rangelist, type, py_pool);
+  return convert_pointerlist(list, type, py_pool);
 }
 
 PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool)
 {
-  return convert_hash(hash, convert_rangelist, type, py_pool);
+  return convert_hash(hash, convert_pointerlist, type, py_pool);
 }
 
 static PyObject *convert_mergeinfo_hash(void *value, void *ctx,
