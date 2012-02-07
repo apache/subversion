@@ -229,9 +229,7 @@ module Svn
 
     def parse_diff_unified(entry)
       in_content = false
-      # accomodation for ruby 1.9 and 1.8
-      each_meth = entry.body.respond_to?(:each_line) ? :each_line : :each
-      entry.body.send(each_meth) do |line|
+      entry.body.each do |line|
         case line
         when /^@@/
           in_content = true
