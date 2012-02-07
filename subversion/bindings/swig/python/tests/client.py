@@ -388,10 +388,7 @@ class SubversionClientTestCase(unittest.TestCase):
     def prompt_func(realm_string, pool):
       return "Foo"
 
-    try:
-      core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
-    except AttributeError:
-      pass # gnome-keyring support not compiled-in
+    core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
