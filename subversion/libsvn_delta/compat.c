@@ -132,6 +132,7 @@ struct ev2_edit_baton
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
   struct extra_baton *exb;
+  svn_boolean_t closed;
 
   svn_boolean_t *found_abs_paths; /* Did we strip an incoming '/' from the
                                      paths?  */
@@ -852,6 +853,7 @@ ev2_close_edit(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
+  eb->closed = TRUE;
   return svn_error_trace(svn_editor_complete(eb->editor));
 }
 
@@ -862,7 +864,10 @@ ev2_abort_edit(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
-  return svn_error_trace(svn_editor_abort(eb->editor));
+  if (!eb->closed)
+    return svn_error_trace(svn_editor_abort(eb->editor));
+  else
+    return SVN_NO_ERROR;
 }
 
 /* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
