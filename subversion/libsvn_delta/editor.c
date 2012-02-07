@@ -255,6 +255,8 @@ svn_editor_add_directory(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(children != NULL);
+  SVN_ERR_ASSERT(props != NULL);
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
@@ -302,6 +304,9 @@ svn_editor_add_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(contents != NULL);
+  SVN_ERR_ASSERT(props != NULL);
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
@@ -336,6 +341,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(props != NULL);
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
@@ -400,6 +406,7 @@ svn_editor_alter_directory(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(props != NULL);
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
@@ -433,6 +440,9 @@ svn_editor_alter_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT((checksum != NULL && contents != NULL)
+                 || (checksum == NULL && contents == NULL));
+  SVN_ERR_ASSERT(props != NULL || checksum != NULL);
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
@@ -466,6 +476,7 @@ svn_editor_alter_symlink(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(props != NULL || target != NULL);
 #ifdef ENABLE_ORDERING_CHECK
   SVN_ERR_ASSERT(!editor->finished);
   SVN_ERR_ASSERT(!apr_hash_get(editor->completed_nodes, relpath,
