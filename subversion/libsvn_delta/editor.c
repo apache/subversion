@@ -143,7 +143,7 @@ check_unknown_child(const svn_editor_t *editor,
   parent = svn_relpath_dirname(relpath, editor->scratch_pool);
 
   /* Was this parent created via svn_editor_add_directory() ?  */
-  if (apr_hash_get(editor->completed_nodes, relpath, APR_HASH_KEY_STRING)
+  if (apr_hash_get(editor->completed_nodes, parent, APR_HASH_KEY_STRING)
       == MARKER_ADDED_DIR)
     {
       /* Whoops. This child should have been listed in that add call,
