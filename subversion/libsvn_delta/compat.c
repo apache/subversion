@@ -1910,6 +1910,10 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   unlock_func_t unlock_func;
   void *unlock_baton;
 
+  SVN_ERR_ASSERT(shim_callbacks->fetch_kind_func != NULL);
+  SVN_ERR_ASSERT(shim_callbacks->fetch_props_func != NULL);
+  SVN_ERR_ASSERT(shim_callbacks->fetch_base_func != NULL);
+
   SVN_ERR(editor_from_delta(&editor, &exb, &unlock_func, &unlock_baton,
                             deditor_in, dedit_baton_in,
                             found_abs_paths, NULL, NULL,
