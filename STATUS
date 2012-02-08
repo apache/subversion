@@ -102,6 +102,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1242116
+   Fix erratum ra001.
+   Justification:
+     The fix is directly relevant to documenting 1.7.x's behaviour.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
