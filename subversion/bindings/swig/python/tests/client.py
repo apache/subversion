@@ -378,9 +378,9 @@ class SubversionClientTestCase(unittest.TestCase):
     providers = core.svn_auth_get_platform_specific_client_providers(None, None)
     # Not much more we can test in this minimal environment.
     self.assert_(isinstance(providers, list))
-    self.assert_(all(map(lambda x:
-                           isinstance(x, core.svn_auth_provider_object_t),
-                         providers)))
+    self.assert_(not filter(lambda x:
+                             not isinstance(x, core.svn_auth_provider_object_t),
+                            providers))
 
   def testGnomeKeyring(self):
     if not hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'):
