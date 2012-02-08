@@ -1999,8 +1999,10 @@ deserialize_svn_stringbuf(void **item,
                           apr_size_t buffer_size,
                           apr_pool_t *result_pool)
 {
-  svn_string_t *value_str = apr_palloc(result_pool, sizeof(svn_string_t));
+  svn_stringbuf_t *value_str = apr_palloc(result_pool, sizeof(svn_stringbuf_t));
 
+  value_str->pool = result_pool;
+  value_str->blocksize = buffer_size;
   value_str->data = buffer;
   value_str->len = buffer_size-1;
   *item = value_str;

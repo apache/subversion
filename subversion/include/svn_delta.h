@@ -792,8 +792,9 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * number of operations later.  As a result, an editor driver must not
  * assume that an error from an editing function resulted from the
  * particular operation being detected.  Moreover, once an editing
- * function returns an error, the edit is dead; the only further
- * operation which may be called on the editor is abort_edit.
+ * function (including @c close_edit) returns an error, the edit is
+ * dead; the only further operation which may be called on the editor
+ * is @c abort_edit.
  */
 typedef struct svn_delta_editor_t
 {

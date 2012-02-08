@@ -2802,6 +2802,8 @@ struct rep_state
   apr_file_t *file;
                     /* The txdelta window cache to use or NULL. */
   svn_cache__t *window_cache;
+                    /* Caches un-deltified windows. May be NULL. */
+  svn_cache__t *combined_cache;
   apr_off_t start;  /* The starting offset for the raw
                        svndiff/plaintext data minus header. */
   apr_off_t off;    /* The current offset into the file. */
@@ -2825,6 +2827,7 @@ create_rep_state_body(struct rep_state **rep_state,
 
   SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
   rs->window_cache = ffd->txdelta_window_cache;
+  rs->combined_cache = ffd->combined_window_cache;
 
   SVN_ERR(read_rep_line(&ra, rs->file, pool));
   SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
@@ -2885,57 +2888,14 @@ create_rep_state(struct rep_state **rep_state,
   return svn_error_trace(err);
 }
 
-/* Build an array of rep_state structures in *LIST giving the delta
-   reps from first_rep to a plain-text or self-compressed rep.  Set
-   *SRC_STATE to the plain-text rep we find at the end of the chain,
-   or to NULL if the final delta representation is self-compressed.
-   The representation to start from is designated by filesystem FS, id
-   ID, and representation REP. */
-static svn_error_t *
-build_rep_list(apr_array_header_t **list,
-               struct rep_state **src_state,
-               svn_fs_t *fs,
-               representation_t *first_rep,
-               apr_pool_t *pool)
-{
-  representation_t rep;
-  struct rep_state *rs;
-  struct rep_args *rep_args;
-
-  *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
-  rep = *first_rep;
-
-  while (1)
-    {
-      SVN_ERR(create_rep_state(&rs, &rep_args, &rep, fs, pool));
-      if (rep_args->is_delta == FALSE)
-        {
-          /* This is a plaintext, so just return the current rep_state. */
-          *src_state = rs;
-          return SVN_NO_ERROR;
-        }
-
-      /* Push this rep onto the list.  If it's self-compressed, we're done. */
-      APR_ARRAY_PUSH(*list, struct rep_state *) = rs;
-      if (rep_args->is_delta_vs_empty)
-        {
-          *src_state = NULL;
-          return SVN_NO_ERROR;
-        }
-
-      rep.revision = rep_args->base_revision;
-      rep.offset = rep_args->base_offset;
-      rep.size = rep_args->base_length;
-      rep.txn_id = NULL;
-    }
-}
-
-
 struct rep_read_baton
 {
   /* The FS from which we're reading. */
   svn_fs_t *fs;
 
+  /* If not NULL, this is the base for the first delta window in rs_list */
+  svn_stringbuf_t *base_window;
+  
   /* The state of all prior delta representations. */
   apr_array_header_t *rs_list;
 
@@ -2979,49 +2939,6 @@ struct rep_read_baton
      for the entire stream read. */
   apr_pool_t *filehandle_pool;
 };
-
-/* Create a rep_read_baton structure for node revision NODEREV in
-   filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
-   NULL, it is the rep's key in the fulltext cache, and a stringbuf
-   must be allocated to store the text.  Perform all allocations in
-   POOL.  If rep is mutable, it must be for file contents. */
-static svn_error_t *
-rep_read_get_baton(struct rep_read_baton **rb_p,
-                   svn_fs_t *fs,
-                   representation_t *rep,
-                   const char *fulltext_cache_key,
-                   apr_pool_t *pool)
-{
-  struct rep_read_baton *b;
-
-  b = apr_pcalloc(pool, sizeof(*b));
-  b->fs = fs;
-  b->chunk_index = 0;
-  b->buf = NULL;
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
-  b->checksum_finalized = FALSE;
-  b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
-  b->len = rep->expanded_size ? rep->expanded_size : rep->size;
-  b->off = 0;
-  b->fulltext_cache_key = fulltext_cache_key;
-  b->pool = svn_pool_create(pool);
-  b->filehandle_pool = svn_pool_create(pool);
-
-  if (fulltext_cache_key)
-    b->current_fulltext = svn_stringbuf_create_ensure
-                            ((apr_size_t)b->len,
-                             b->filehandle_pool);
-  else
-    b->current_fulltext = NULL;
-
-  SVN_ERR(build_rep_list(&b->rs_list, &b->src_state, fs, rep,
-                         b->filehandle_pool));
-
-  /* Save our output baton. */
-  *rb_p = b;
-
-  return SVN_NO_ERROR;
-}
 
 /* Combine the name of the rev file in RS with the given OFFSET to form
  * a cache lookup key. Allocations will be made from POOL. */
@@ -3138,6 +3055,165 @@ set_cached_window(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
+/* Read the WINDOW_P for the rep state RS from the current FSFS session's
+ * cache. This will be a no-op and IS_CACHED will be set to FALSE if no
+ * cache has been given. If a cache is available IS_CACHED will inform
+ * the caller about the success of the lookup. Allocations (of the window
+ * in particualar) will be made from POOL.
+ */
+static svn_error_t *
+get_cached_combined_window(svn_stringbuf_t **window_p,
+                           struct rep_state *rs,
+                           svn_boolean_t *is_cached,
+                           apr_pool_t *pool)
+{
+  if (! rs->combined_cache)
+    {
+      /* txdelta window has not been enabled */
+      *is_cached = FALSE;
+    }
+  else
+    {
+      /* ask the cache for the desired txdelta window */
+      return svn_cache__get((void **)window_p,
+                            is_cached,
+                            rs->combined_cache,
+                            get_window_key(rs, rs->start, pool),
+                            pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Store the WINDOW read at OFFSET for the rep state RS in the current
+ * FSFS session's cache. This will be a no-op if no cache has been given.
+ * Temporary allocations will be made from SCRATCH_POOL. */
+static svn_error_t *
+set_cached_combined_window(svn_stringbuf_t *window,
+                           struct rep_state *rs,
+                           apr_off_t offset,
+                           apr_pool_t *scratch_pool)
+{
+  if (rs->combined_cache)
+    {
+      /* but key it with the start offset because that is the known state
+       * when we will look it up */
+      return svn_cache__set(rs->combined_cache,
+                            get_window_key(rs, offset, scratch_pool),
+                            window,
+                            scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Build an array of rep_state structures in *LIST giving the delta
+   reps from first_rep to a plain-text or self-compressed rep.  Set
+   *SRC_STATE to the plain-text rep we find at the end of the chain,
+   or to NULL if the final delta representation is self-compressed.
+   The representation to start from is designated by filesystem FS, id
+   ID, and representation REP.
+   Also, set *WINDOW_P to the base window content for *LIST, if it
+   could be found in cache. Otherwise, *LIST will contain the base
+   representation for the whole delta chain.  */
+static svn_error_t *
+build_rep_list(apr_array_header_t **list,
+               svn_stringbuf_t **window_p,
+               struct rep_state **src_state,
+               svn_fs_t *fs,
+               representation_t *first_rep,
+               apr_pool_t *pool)
+{
+  representation_t rep;
+  struct rep_state *rs;
+  struct rep_args *rep_args;
+  svn_boolean_t is_cached = FALSE;
+
+  *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
+  rep = *first_rep;
+
+  while (1)
+    {
+      SVN_ERR(create_rep_state(&rs, &rep_args, &rep, fs, pool));
+      SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
+      if (is_cached)
+        {
+          /* We already have a reconstructed window in our cache. 
+             Write a pseudo rep_state with the full length. */
+          rs->off = rs->start;
+          rs->end = rs->start + (*window_p)->len;
+          *src_state = rs;
+          return SVN_NO_ERROR;
+        }
+      
+      if (rep_args->is_delta == FALSE)
+        {
+          /* This is a plaintext, so just return the current rep_state. */
+          *src_state = rs;
+          return SVN_NO_ERROR;
+        }
+
+      /* Push this rep onto the list.  If it's self-compressed, we're done. */
+      APR_ARRAY_PUSH(*list, struct rep_state *) = rs;
+      if (rep_args->is_delta_vs_empty)
+        {
+          *src_state = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      rep.revision = rep_args->base_revision;
+      rep.offset = rep_args->base_offset;
+      rep.size = rep_args->base_length;
+      rep.txn_id = NULL;
+    }
+}
+
+
+/* Create a rep_read_baton structure for node revision NODEREV in
+   filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
+   NULL, it is the rep's key in the fulltext cache, and a stringbuf
+   must be allocated to store the text.  Perform all allocations in
+   POOL.  If rep is mutable, it must be for file contents. */
+static svn_error_t *
+rep_read_get_baton(struct rep_read_baton **rb_p,
+                   svn_fs_t *fs,
+                   representation_t *rep,
+                   const char *fulltext_cache_key,
+                   apr_pool_t *pool)
+{
+  struct rep_read_baton *b;
+
+  b = apr_pcalloc(pool, sizeof(*b));
+  b->fs = fs;
+  b->base_window = NULL;
+  b->chunk_index = 0;
+  b->buf = NULL;
+  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->checksum_finalized = FALSE;
+  b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
+  b->len = rep->expanded_size ? rep->expanded_size : rep->size;
+  b->off = 0;
+  b->fulltext_cache_key = fulltext_cache_key;
+  b->pool = svn_pool_create(pool);
+  b->filehandle_pool = svn_pool_create(pool);
+
+  if (fulltext_cache_key)
+    b->current_fulltext = svn_stringbuf_create_ensure
+                            ((apr_size_t)b->len,
+                             b->filehandle_pool);
+  else
+    b->current_fulltext = NULL;
+
+  SVN_ERR(build_rep_list(&b->rs_list, &b->base_window, 
+                         &b->src_state, fs, rep,
+                         b->filehandle_pool));
+
+  /* Save our output baton. */
+  *rb_p = b;
+
+  return SVN_NO_ERROR;
+}
+
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
@@ -3185,45 +3261,73 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
   return set_cached_window(*nwin, rs, old_offset, pool);
 }
 
-/* Get one delta window that is a result of combining all but the last deltas
-   from the current desired representation identified in *RB, to its
-   final base representation.  Store the window in *RESULT. */
+/* Get the undeltified window that is a result of combining all deltas
+   from the current desired representation identified in *RB with its
+   base representation.  Store the window in *RESULT. */
 static svn_error_t *
-get_combined_window(svn_txdelta_window_t **result,
+get_combined_window(svn_stringbuf_t **result,
                     struct rep_read_baton *rb)
 {
-  apr_pool_t *pool, *new_pool;
+  apr_pool_t *pool, *new_pool, *window_pool;
   int i;
-  svn_txdelta_window_t *window, *nwin;
+  svn_txdelta_window_t *window;
+  apr_array_header_t *windows;
+  svn_stringbuf_t *source, *buf = rb->base_window;
   struct rep_state *rs;
 
-  SVN_ERR_ASSERT(rb->rs_list->nelts >= 2);
-
-  pool = svn_pool_create(rb->pool);
-
-  /* Read the next window from the original rep. */
-  rs = APR_ARRAY_IDX(rb->rs_list, 0, struct rep_state *);
-  SVN_ERR(read_window(&window, rb->chunk_index, rs, pool));
-
-  /* Combine in the windows from the other delta reps, if needed. */
-  for (i = 1; i < rb->rs_list->nelts - 1; i++)
+  /* Read all windows that we need to combine. This is fine because
+     the size of each window is relatively small (100kB) and skip-
+     delta limits the number of deltas in a chain to well under 100.
+     Stop early if one of them does not depend on its predecessors. */
+  window_pool = svn_pool_create(rb->pool);
+  windows = apr_array_make(window_pool, 0, sizeof(svn_txdelta_window_t *));
+  for (i = 0; i < rb->rs_list->nelts; ++i)
     {
-      if (window->src_ops == 0)
-        break;
-
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
+      SVN_ERR(read_window(&window, rb->chunk_index, rs, window_pool));
+      
+      APR_ARRAY_PUSH(windows, svn_txdelta_window_t *) = window;
+      if (window->src_ops == 0)
+        {
+          ++i;
+          break;
+        }
+    }
+    
+  /* Combine in the windows from the other delta reps. */
+  pool = svn_pool_create(rb->pool);
+  for (--i; i >= 0; --i)
+    {
+      rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
+      window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
-      SVN_ERR(read_window(&nwin, rb->chunk_index, rs, pool));
-
-      /* Combine this window with the current one.  Cycle pools so that we
-         only need to hold three windows at a time. */
+      /* Combine this window with the current one. */
+      source = buf;
       new_pool = svn_pool_create(rb->pool);
-      window = svn_txdelta_compose_windows(nwin, window, new_pool);
+      buf = svn_stringbuf_create_ensure(window->tview_len, new_pool);
+      buf->len = window->tview_len;
+      
+      svn_txdelta_apply_instructions(window, source ? source->data : NULL,
+                                     buf->data, &buf->len);
+      if (buf->len != window->tview_len)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("svndiff window length is "
+                                  "corrupt"));
+
+      /* Cache windows only if the whole rep content could be read as a
+         single chunk.  Only then will no other chunk need a deeper RS
+         list than the cached chunk. */
+      if ((rb->chunk_index == 0) && (rs->off == rs->end))
+        SVN_ERR(set_cached_combined_window(buf, rs, rs->start, new_pool));
+
+      /* Cycle pools so that we only need to hold three windows at a time. */
       svn_pool_destroy(pool);
       pool = new_pool;
     }
 
-  *result = window;
+  svn_pool_destroy(window_pool);
+  
+  *result = buf;
   return SVN_NO_ERROR;
 }
 
@@ -3256,10 +3360,9 @@ get_contents(struct rep_read_baton *rb,
              char *buf,
              apr_size_t *len)
 {
-  apr_size_t copy_len, remaining = *len, tlen;
-  char *sbuf, *tbuf, *cur = buf;
+  apr_size_t copy_len, remaining = *len, offset;
+  char *cur = buf;
   struct rep_state *rs;
-  svn_txdelta_window_t *cwindow, *lwindow;
 
   /* Special case for when there are no delta reps, only a plain
      text. */
@@ -3267,10 +3370,28 @@ get_contents(struct rep_read_baton *rb,
     {
       copy_len = remaining;
       rs = rb->src_state;
-      if (((apr_off_t) copy_len) > rs->end - rs->off)
-        copy_len = (apr_size_t) (rs->end - rs->off);
-      SVN_ERR(svn_io_file_read_full2(rs->file, cur, copy_len, NULL,
-                                     NULL, rb->pool));
+
+      if (rb->base_window != NULL)
+        {
+          /* We got the desired rep directly from the cache.
+             This is where we need the pseudo rep_state created
+             by build_rep_list(). */
+          offset = rs->off - rs->start;
+          if (copy_len + offset > rb->base_window->len)
+            copy_len = offset < rb->base_window->len
+                     ? rb->base_window->len - offset
+                     : 0;
+
+          memcpy (cur, rb->base_window->data + offset, copy_len);
+        }
+      else
+        {
+          if (((apr_off_t) copy_len) > rs->end - rs->off)
+            copy_len = (apr_size_t) (rs->end - rs->off);
+          SVN_ERR(svn_io_file_read_full2(rs->file, cur, copy_len, NULL,
+                                         NULL, rb->pool));
+        }
+
       rs->off += copy_len;
       *len = copy_len;
       return SVN_NO_ERROR;
@@ -3302,90 +3423,18 @@ get_contents(struct rep_read_baton *rb,
         }
       else
         {
+          svn_stringbuf_t *sbuf = NULL;
 
           rs = APR_ARRAY_IDX(rb->rs_list, 0, struct rep_state *);
           if (rs->off == rs->end)
             break;
 
           /* Get more buffered data by evaluating a chunk. */
-          if (rb->rs_list->nelts > 1)
-            SVN_ERR(get_combined_window(&cwindow, rb));
-          else
-            cwindow = NULL;
-          if (!cwindow || cwindow->src_ops > 0)
-            {
-              rs = APR_ARRAY_IDX(rb->rs_list, rb->rs_list->nelts - 1,
-                                 struct rep_state *);
-              /* Read window from last representation in list. */
-              /* We apply this window directly instead of combining it
-                 with the others.  We do this because vdelta used to
-                 be used for deltas against the empty stream, which
-                 will trigger quadratic behaviour in the delta
-                 combiner.  It's still likely that we'll find such
-                 deltas in an old repository; it may be worth
-                 considering whether or not this special case is still
-                 needed in the future, though. */
-              SVN_ERR(read_window(&lwindow, rb->chunk_index, rs, rb->pool));
-
-              if (lwindow->src_ops > 0)
-                {
-                  if (! rb->src_state)
-                    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                            _("svndiff data requested "
-                                              "non-existent source"));
-                  rs = rb->src_state;
-                  sbuf = apr_palloc(rb->pool, lwindow->sview_len);
-                  if (! ((rs->start + lwindow->sview_offset) < rs->end))
-                    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                            _("svndiff requested position "
-                                              "beyond end of stream"));
-                  if ((rs->start + lwindow->sview_offset) != rs->off)
-                    {
-                      rs->off = rs->start + lwindow->sview_offset;
-                      SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off,
-                                               rb->pool));
-                    }
-                  SVN_ERR(svn_io_file_read_full2(rs->file, sbuf,
-                                                 lwindow->sview_len,
-                                                 NULL, NULL, rb->pool));
-                  rs->off += lwindow->sview_len;
-                }
-              else
-                sbuf = NULL;
-
-              /* Apply lwindow to source. */
-              tlen = lwindow->tview_len;
-              tbuf = apr_palloc(rb->pool, tlen);
-              svn_txdelta_apply_instructions(lwindow, sbuf, tbuf,
-                                             &tlen);
-              if (tlen != lwindow->tview_len)
-                return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                        _("svndiff window length is "
-                                          "corrupt"));
-              sbuf = tbuf;
-            }
-          else
-            sbuf = NULL;
+          SVN_ERR(get_combined_window(&sbuf, rb));
 
           rb->chunk_index++;
-
-          if (cwindow)
-            {
-              rb->buf_len = cwindow->tview_len;
-              rb->buf = apr_palloc(rb->pool, rb->buf_len);
-              svn_txdelta_apply_instructions(cwindow, sbuf, rb->buf,
-                                             &rb->buf_len);
-              if (rb->buf_len != cwindow->tview_len)
-                return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                        _("svndiff window length is "
-                                          "corrupt"));
-            }
-          else
-            {
-              rb->buf_len = lwindow->tview_len;
-              rb->buf = sbuf;
-            }
-
+          rb->buf_len = sbuf->len;
+          rb->buf = sbuf->data;
           rb->buf_pos = 0;
         }
     }
@@ -3476,7 +3525,7 @@ read_representation(svn_stream_t **contents_p,
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
-          svn_string_t *fulltext;
+          svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
           fulltext_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
                                       rep->revision, rep->offset);
@@ -3484,7 +3533,7 @@ read_representation(svn_stream_t **contents_p,
                                  ffd->fulltext_cache, fulltext_key, pool));
           if (is_cached)
             {
-              *contents_p = svn_stream_from_string(fulltext, pool);
+              *contents_p = svn_stream_from_stringbuf(fulltext, pool);
               return SVN_NO_ERROR;
             }
         }

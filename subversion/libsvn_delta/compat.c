@@ -111,6 +111,7 @@ struct ev2_edit_baton
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
   struct svn_delta__extra_baton *exb;
+  svn_boolean_t closed;
 
   svn_boolean_t *found_abs_paths; /* Did we strip an incoming '/' from the
                                      paths?  */
@@ -181,7 +182,6 @@ struct path_checksum_args
 {
   const char *path;
   svn_revnum_t base_revision;
-  svn_checksum_t *checksum;
 };
 
 static svn_error_t *
@@ -230,7 +230,7 @@ process_actions(void *edit_baton,
   svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t props_base_revision = SVN_INVALID_REVNUM;
   svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
-  svn_kind_t kind;
+  svn_kind_t kind = svn_kind_unknown;
   int i;
 
   if (*path == '/')
@@ -265,6 +265,12 @@ process_actions(void *edit_baton,
                      the modifications to it.  */
                   if (need_delete && need_add)
                     props = apr_hash_make(scratch_pool);
+                  else if (need_copy)
+                    SVN_ERR(eb->fetch_props_func(&props,
+                                                 eb->fetch_props_baton,
+                                                 copyfrom_path,
+                                                 copyfrom_rev,
+                                                 scratch_pool, scratch_pool));
                   else
                     SVN_ERR(eb->fetch_props_func(&props,
                                                  eb->fetch_props_baton,
@@ -309,9 +315,13 @@ process_actions(void *edit_baton,
             {
               struct path_checksum_args *pca = action->args;
 
+              /* We can only set text on files. */
+              kind = svn_node_file;
+
+              SVN_ERR(svn_io_file_checksum2(&checksum, pca->path,
+                                            svn_checksum_sha1, scratch_pool));
               SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
-              checksum = pca->checksum;
 
               if (!SVN_IS_VALID_REVNUM(text_base_revision))
                 text_base_revision = pca->base_revision;
@@ -362,6 +372,9 @@ process_actions(void *edit_baton,
 
   if (need_add)
     {
+      if (props == NULL)
+        props = apr_hash_make(scratch_pool);
+
       if (kind == svn_kind_dir)
         {
           SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
@@ -745,11 +758,6 @@ ev2_apply_textdelta(void *file_baton,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
 
-  /* Wrap our target with a checksum'ing stream. */
-  target = svn_stream_checksummed2(target, NULL, &pca->checksum,
-                                   svn_checksum_sha1, TRUE,
-                                   fb->eb->edit_pool);
-
   svn_txdelta_apply(source, target,
                     NULL, NULL,
                     handler_pool,
@@ -822,6 +830,7 @@ ev2_close_edit(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
+  eb->closed = TRUE;
   return svn_error_trace(svn_editor_complete(eb->editor));
 }
 
@@ -832,7 +841,10 @@ ev2_abort_edit(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
-  return svn_error_trace(svn_editor_abort(eb->editor));
+  if (!eb->closed)
+    return svn_error_trace(svn_editor_abort(eb->editor));
+  else
+    return SVN_NO_ERROR;
 }
 
 /* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
@@ -1050,19 +1062,15 @@ build(struct editor_baton *eb,
       apr_hash_t *current_props;
       apr_array_header_t *propdiffs;
 
-      /* Only fetch the kind if operating on something other than the root,
-         as we already know the kind on the root. */
-      if (operation->path)
-        {
-          if (kind == svn_kind_unknown)
-            SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                        relpath, rev, scratch_pool));
-          else
-            operation->kind = kind;
-        }
+      operation->kind = kind;
 
       if (operation->operation == OP_REPLACE)
         current_props = apr_hash_make(scratch_pool);
+      else if (operation->copyfrom_url)
+        SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                     operation->copyfrom_url,
+                                     operation->copyfrom_revision,
+                                     scratch_pool, scratch_pool));
       else
         SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
                                      relpath, rev, scratch_pool,
