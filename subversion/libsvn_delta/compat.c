@@ -203,7 +203,6 @@ struct path_checksum_args
 {
   const char *path;
   svn_revnum_t base_revision;
-  svn_checksum_t *checksum;
 };
 
 static svn_error_t *
@@ -340,9 +339,10 @@ process_actions(void *edit_baton,
               /* We can only set text on files. */
               kind = svn_node_file;
 
+              SVN_ERR(svn_io_file_checksum2(&checksum, pca->path,
+                                            svn_checksum_sha1, scratch_pool));
               SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
-              checksum = pca->checksum;
 
               if (!SVN_IS_VALID_REVNUM(text_base_revision))
                 text_base_revision = pca->base_revision;
@@ -778,11 +778,6 @@ ev2_apply_textdelta(void *file_baton,
   SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
-
-  /* Wrap our target with a checksum'ing stream. */
-  target = svn_stream_checksummed2(target, NULL, &pca->checksum,
-                                   svn_checksum_sha1, TRUE,
-                                   fb->eb->edit_pool);
 
   svn_txdelta_apply(source, target,
                     NULL, NULL,
