@@ -88,9 +88,17 @@ Candidate changes:
    Fix the python bindings for svn_auth_get_platform_specific_client_providers.
    Justification:
      The bindings should see passwords cached in the platform-specific providers.
-     Already fixed for the Perl bindings.
+     Already fixed for the Perl bindings.  Ruby fix is nominated separately.
    Votes:
      +1: danielsh
+
+ * r1241553
+   Fix the ruby bindings for svn_auth_get_platform_specific_client_providers.
+   Justification:
+     The bindings should see passwords cached in the platform-specific providers.
+     Already fixed for the Perl bindings.  Python fix is nominated separately.
+   Votes:
+     +1: stsp
 
 Veto-blocked changes:
 =====================
