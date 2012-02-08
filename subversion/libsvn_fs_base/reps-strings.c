@@ -669,8 +669,10 @@ struct rep_read_baton
      is digestified. */
   svn_boolean_t checksum_finalized;
 
-  /* Used for temporary allocations, iff `trail' (above) is null.  */
-  apr_pool_t *pool;
+  /* Used for temporary allocations.  This pool is cleared at the
+     start of each invocation of the relevant stream read function --
+     see rep_read_contents().  */
+  apr_pool_t *scratch_pool;
 
 };
 
@@ -698,7 +700,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->checksum_finalized = FALSE;
   b->fs = fs;
   b->trail = use_trail_for_reads ? trail : NULL;
-  b->pool = pool;
+  b->scratch_pool = svn_pool_create(pool);
   b->rep_key = rep_key;
   b->offset = 0;
 
@@ -866,7 +868,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
                              args->buf,
                              args->len,
                              trail,
-                             trail->pool));
+                             args->rb->scratch_pool));
 
       args->rb->offset += *(args->len);
 
@@ -957,6 +959,9 @@ rep_read_contents(void *baton, char *buf, apr_size_t *len)
   struct rep_read_baton *rb = baton;
   struct read_rep_args args;
 
+  /* Clear the scratch pool of the results of previous invocations. */
+  svn_pool_clear(rb->scratch_pool);
+
   args.rb = rb;
   args.buf = buf;
   args.len = len;
@@ -975,7 +980,7 @@ rep_read_contents(void *baton, char *buf, apr_size_t *len)
                                      txn_body_read_rep,
                                      &args,
                                      TRUE,
-                                     rb->pool));
+                                     rb->scratch_pool));
     }
   return SVN_NO_ERROR;
 }
