@@ -508,7 +508,7 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len);
+          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len + 1);
           svn_stringbuf_appendbytes(str, buf, length_len);
           str->data[str->len++] = ' ';
           svn_stringbuf_appendbytes(str, skel->data, skel->len);
@@ -520,7 +520,7 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
       svn_skel_t *child;
 
       /* Emit an opening parenthesis.  */
-      svn_stringbuf_ensure(str, str->len + 1);
+      svn_stringbuf_ensure(str, str->len + 1 + 1);
       str->data[str->len++] = '(';
 
       /* Append each element.  Emit a space between each pair of elements.  */
@@ -529,7 +529,7 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
           unparse(child, str, pool);
           if (child->next)
             {
-              svn_stringbuf_ensure(str, str->len + 1);
+              svn_stringbuf_ensure(str, str->len + 1 + 1);
               str->data[str->len++] = ' ';
             }
         }
