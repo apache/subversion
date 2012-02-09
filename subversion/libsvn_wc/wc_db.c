@@ -6301,6 +6301,23 @@ struct op_delete_baton_t {
   const char *moved_to_relpath; /* NULL if delete is not part of a move */
 };
 
+/* This structure is used while rewriting move information for
+ * a node which becomes a nested moved node.
+ *
+ * A nested move happens when a subtree child is moved before or after
+ * the subtree itself is moved. For example:
+ *   mv A/F A/G
+ *   mv A B
+ * In this case, the move A/F -> A/G is rewritten to B/F -> B/G.
+ *
+ * Note that the following sequence results in the same DB state
+ * as the above sequence:
+ *   mv A B
+ *   mv B/F B/G
+ * We do not care about the order the moves were performed in.
+ *
+ * For details, see http://wiki.apache.org/subversion/MultiLayerMoves
+ */
 struct moved_node_t {
   const char *local_relpath;
   const char *moved_to_relpath;
