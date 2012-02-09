@@ -6396,8 +6396,8 @@ delete_node(void *baton,
       APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
 
       /* If a subtree is being moved-away, we need to update moved-to
-       * information for all children that were moved into this
-       * subtree. */
+       * information for all children that were moved into or within
+       * this subtree. */
       if (kind == svn_kind_dir)
         {
           apr_pool_t *iterpool;
