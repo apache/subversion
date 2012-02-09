@@ -572,6 +572,11 @@ test_stream_base64(apr_pool_t *pool)
    triggers the problem reported here:
 
    http://mail-archives.apache.org/mod_mbox/subversion-dev/201202.mbox/%3C87sjik3m8q.fsf@stat.home.lan%3E
+
+   The two data writes caused the base 64 code to allocate a buffer
+   that was a byte short but exactly matched a stringbuf blocksize.
+   That meant the stringbuf didn't overallocate and a write beyond
+   the end of the buffer occured.
  */
 static svn_error_t *
 test_stream_base64_2(apr_pool_t *pool)
