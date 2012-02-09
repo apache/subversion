@@ -109,6 +109,16 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1242337
+   Fix potential write beyond buffer during base64 decoding.
+   Justification:
+     Potential memory corruption, although much less likely than on trunk.
+   Notes:
+     Test won't compile but isn't necessary as it doesn't trigger the problem
+     on 1.7.  Do a subtree merge of svn_base64.c.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
