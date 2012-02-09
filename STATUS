@@ -85,6 +85,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1242607
+   Convert ra_serf assertions to errors.
+   Justification:
+     Malicious server can DoS clients.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
