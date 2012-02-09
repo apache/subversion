@@ -169,6 +169,46 @@ make_dir_baton(const char *path,
   return new_db;
 }
 
+/* Return in *HEADER and *CONTENT the headers and content for PROPS. */
+static svn_error_t *
+get_props_content(svn_stringbuf_t **header,
+                  svn_stringbuf_t **content,
+                  apr_hash_t *props,
+                  apr_hash_t *deleted_props,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_stream_t *content_stream;
+  svn_stream_t *header_stream;
+  apr_hash_t *normal_props;
+  
+  *content = svn_stringbuf_create_empty(result_pool);
+  *header = svn_stringbuf_create_empty(result_pool);
+
+  content_stream = svn_stream_from_stringbuf(*content, scratch_pool);
+  header_stream = svn_stream_from_stringbuf(*header, scratch_pool);
+
+  SVN_ERR(svn_rdump__normalize_props(&normal_props, props, scratch_pool));
+  SVN_ERR(svn_hash_write_incremental(normal_props, deleted_props,
+                                     content_stream, "PROPS-END",
+                                     scratch_pool));
+  SVN_ERR(svn_stream_close(content_stream));
+
+  /* Prop-delta: true */
+  SVN_ERR(svn_stream_printf(header_stream, scratch_pool,
+                            SVN_REPOS_DUMPFILE_PROP_DELTA
+                            ": true\n"));
+
+  /* Prop-content-length: 193 */
+  SVN_ERR(svn_stream_printf(header_stream, scratch_pool,
+                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n", (*content)->len));
+
+  SVN_ERR(svn_stream_close(header_stream));
+
+  return SVN_NO_ERROR;
+}
+
 /* Extract and dump properties stored in edit baton EB, using POOL for
  * any temporary allocations. If TRIGGER_VAR is not NULL, it is set to FALSE.
  * Unless DUMP_DATA_TOO is set, only property headers are dumped.
@@ -179,28 +219,21 @@ do_dump_props(struct dump_edit_baton *eb,
               svn_boolean_t dump_data_too,
               apr_pool_t *pool)
 {
-  svn_stream_t *propstream;
-  apr_hash_t *normal_props;
+  svn_stringbuf_t *header;
+  svn_stringbuf_t *content;
+  apr_size_t len;
 
   if (trigger_var && !*trigger_var)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_rdump__normalize_props(&normal_props, eb->props, eb->pool));
-  svn_stringbuf_setempty(eb->propstring);
-  propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
-  SVN_ERR(svn_hash_write_incremental(normal_props, eb->deleted_props,
-                                     propstream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(propstream));
+  SVN_ERR(get_props_content(&header, &content, eb->props, eb->deleted_props,
+                            pool, pool));
 
-  /* Prop-delta: true */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_DELTA
-                            ": true\n"));
+  /* This is a wacky side-effect of this function. */
+  eb->propstring = svn_stringbuf_dup(content, eb->pool);
 
-  /* Prop-content-length: 193 */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n", eb->propstring->len));
+  len = header->len;
+  SVN_ERR(svn_stream_write(eb->stream, header->data, &len));
 
   if (dump_data_too)
     {
@@ -208,11 +241,10 @@ do_dump_props(struct dump_edit_baton *eb,
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_CONTENT_LENGTH
                                 ": %" APR_SIZE_T_FMT "\n\n",
-                                eb->propstring->len));
+                                content->len));
 
-      /* The properties. */
-      SVN_ERR(svn_stream_write(eb->stream, eb->propstring->data,
-                               &(eb->propstring->len)));
+      len = content->len;
+      SVN_ERR(svn_stream_write(eb->stream, content->data, &len));
 
       /* No text is going to be dumped. Write a couple of newlines and
          wait for the next node/ revision. */
