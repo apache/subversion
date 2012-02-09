@@ -407,10 +407,16 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
   signed char find;
   const char *end = data + len;
 
-  /* Resize the stringbuf to make room for the (approximate) size of
-     output, to avoid repeated resizes later.
-     The optimizations in decode_line rely on no resizes being necessary! */
-  svn_stringbuf_ensure(str, str->len + (len / 4) * 3 + 3);
+  /* Resize the stringbuf to make room for the maximum size of output,
+     to avoid repeated resizes later.  The optimizations in
+     decode_line rely on no resizes being necessary!
+
+     (*inbuflen+len) is encoded data length
+     (*inbuflen+len)/4 is the number of complete 4-bytes sets
+     (*inbuflen+len)/4*3 is the number of decoded bytes
+     (*inbuflen+len)/4*3+1 is the number of decoded bytes plus a null
+  */
+  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3 + 1);
 
   while ( !*done && p < end )
     {
