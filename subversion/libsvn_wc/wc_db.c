@@ -6414,7 +6414,7 @@ delete_node(void *baton,
             {
               const char *child_moved_to
                 = svn_sqlite__column_text(stmt, 1, NULL);
-              const char *child_subtree_relpath
+              const char *child_moved_to_subtree_relpath
                 = svn_relpath_skip_ancestor(local_relpath, child_moved_to);
               apr_int64_t child_op_depth = svn_sqlite__column_int64(stmt, 2);
 
@@ -6423,10 +6423,11 @@ delete_node(void *baton,
               moved_node->local_relpath
                 = svn_sqlite__column_text(stmt, 0, scratch_pool);
 
-              if (child_subtree_relpath)
+              if (child_moved_to_subtree_relpath)
                 moved_node->moved_to_relpath
                   = svn_relpath_join(b->moved_to_relpath,
-                                     child_subtree_relpath, scratch_pool);
+                                     child_moved_to_subtree_relpath,
+                                     scratch_pool);
               else
                 moved_node->moved_to_relpath
                   = apr_pstrdup(scratch_pool, child_moved_to);
