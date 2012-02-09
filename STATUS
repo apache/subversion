@@ -78,6 +78,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1242537
+   Skip 'svnrdump dump' tests over serf.
+   Justification:
+     Users should not have to ignore regression test FAILs.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
