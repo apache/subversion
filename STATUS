@@ -76,7 +76,7 @@ Candidate changes:
      Test won't compile but isn't necessary as it doesn't trigger the problem
      on 1.7.  Do a subtree merge of svn_base64.c.
    Votes:
-     +1: philip
+     +1: philip, danielsh
 
  * r1242537
    Skip 'svnrdump dump' tests over serf.
