@@ -884,3 +884,9 @@
   }
 }
 #endif
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_array_header_t **providers {
+  %append_output(svn_swig_rb_apr_array_to_array_auth_provider_object(*$1));
+}
+#endif
