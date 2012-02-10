@@ -104,13 +104,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1242116
-   Fix erratum ra001.
-   Justification:
-     The fix is directly relevant to documenting 1.7.x's behaviour.
-   Votes:
-     +1: danielsh, hwright, philip
-
  * r1242337
    Fix potential write beyond buffer during base64 decoding.
    Justification:
