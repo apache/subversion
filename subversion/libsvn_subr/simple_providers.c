@@ -224,7 +224,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
               SVN_ERR(password_get(&done, &default_password, creds_hash,
                                    realmstring, username, parameters,
                                    non_interactive, pool));
-              if (done)
+              if (!done)
                 {
                   need_to_save = TRUE;
                 }
