@@ -135,26 +135,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1146762, r1201419, r1227237, r1227250, r1227352, r1227372, r1227384,
-   r1227385, r1239382, r1239631, r1239655, r1239749 
-   Fix issue #4059, "can't commit when copy-op-root and copied-along
-   grandchild are explicit targets".
-   Justification:
-     Some copies can't be committed. Users complained. Regression from 1.6.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4059
-   Notes:
-     r1146762 avoids a semantic conflict
-     r1201419 adds a regression test
-     r1227237 is a comment fix
-     r1227250 is an indentation fix
-     r1227352 is merged to avoid a conflict and improves an error message
-     r1227372 is a follow-up test fix for previous
-     r1227384 prepares the actual fix and needs --accept=mine-conflict
-     r1227385 is the actual fix
-     r1239382 fixes the problem for nested copies, too
-     r1239631 and r1239655 are follow-up comment fixes
-     r1239749 fixes a performance regression on the backport branch
-   Votes:
-     +1: stsp, rhuijben, philip
