@@ -179,14 +179,13 @@ get_props_content(svn_stringbuf_t **header,
                   apr_pool_t *scratch_pool)
 {
   svn_stream_t *content_stream;
-  svn_stream_t *header_stream;
   apr_hash_t *normal_props;
+  const char *buf;
   
   *content = svn_stringbuf_create_empty(result_pool);
   *header = svn_stringbuf_create_empty(result_pool);
 
   content_stream = svn_stream_from_stringbuf(*content, scratch_pool);
-  header_stream = svn_stream_from_stringbuf(*header, scratch_pool);
 
   SVN_ERR(svn_rdump__normalize_props(&normal_props, props, scratch_pool));
   SVN_ERR(svn_hash_write_incremental(normal_props, deleted_props,
@@ -195,16 +194,13 @@ get_props_content(svn_stringbuf_t **header,
   SVN_ERR(svn_stream_close(content_stream));
 
   /* Prop-delta: true */
-  SVN_ERR(svn_stream_printf(header_stream, scratch_pool,
-                            SVN_REPOS_DUMPFILE_PROP_DELTA
-                            ": true\n"));
+  *header = svn_stringbuf_createf(result_pool, SVN_REPOS_DUMPFILE_PROP_DELTA
+                                  ": true\n");
 
   /* Prop-content-length: 193 */
-  SVN_ERR(svn_stream_printf(header_stream, scratch_pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n", (*content)->len));
-
-  SVN_ERR(svn_stream_close(header_stream));
+  buf = apr_psprintf(scratch_pool, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                     ": %" APR_SIZE_T_FMT "\n", (*content)->len);
+  svn_stringbuf_appendcstr(*header, buf);
 
   return SVN_NO_ERROR;
 }
