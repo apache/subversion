@@ -74,13 +74,12 @@ windows_password_encrypter(svn_boolean_t *done,
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
       apr_base64_encode(coded, (const char*)blobout.pbData, blobout.cbData);
-      crypted = svn_auth__simple_password_set(creds, realmstring, username,
-                                              coded, parameters,
-                                              non_interactive, pool);
+      SVN_ERR(svn_auth__simple_password_set(done, creds, realmstring, username,
+                                            coded, parameters,
+                                            non_interactive, pool));
       LocalFree(blobout.pbData);
     }
 
-  *done = crypted;
   return SVN_NO_ERROR;
 }
 
@@ -213,13 +212,12 @@ windows_ssl_client_cert_pw_encrypter(svn_boolean_t *done,
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
       apr_base64_encode(coded, (const char*)blobout.pbData, blobout.cbData);
-      crypted = svn_auth__ssl_client_cert_pw_set(creds, realmstring, username,
-                                                 coded, parameters,
-                                                 non_interactive, pool);
+      SVN_ERR(svn_auth__ssl_client_cert_pw_set(done, creds, realmstring,
+                                               username, coded, parameters,
+                                               non_interactive, pool));
       LocalFree(blobout.pbData);
     }
 
-  *done = crypted;
   return SVN_NO_ERROR;
 }
 
