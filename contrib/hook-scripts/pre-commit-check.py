@@ -19,7 +19,8 @@ import os.path
 from svn import repos, fs, delta, core
 
 
-### DEAR USER: implement your logic in test_props() and/or test_path_change()
+### DEAR USER:  Please populate the test_props() and test_path_change()
+### to do your bidding.
 
 
 def test_props(props):
