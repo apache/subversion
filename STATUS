@@ -60,22 +60,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1242537
-   Skip 'svnrdump dump' tests over serf.
-   Justification:
-     Users should not have to ignore regression test FAILs.
-   Votes:
-     +1: philip
-     +1: rhuijben (Really +0.5, as we should just fix the problems. But we
-                   won't get this done in time for 1.7.3)
-
- * r1242607
-   Convert ra_serf assertions to errors.
-   Justification:
-     Malicious server can DoS clients.
-   Votes:
-     +1: danielsh, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -136,3 +120,20 @@ Approved changes:
      on 1.7.  Do a subtree merge of svn_base64.c.
    Votes:
      +1: philip, danielsh, rhuijben
+
+ * r1242537
+   Skip 'svnrdump dump' tests over serf.
+   Justification:
+     Users should not have to ignore regression test FAILs.
+   Votes:
+     +1: philip, stsp
+     +1: rhuijben (Really +0.5, as we should just fix the problems. But we
+                   won't get this done in time for 1.7.3)
+
+ * r1242607
+   Convert ra_serf assertions to errors.
+   Justification:
+     Malicious server can DoS clients.
+   Votes:
+     +1: danielsh, rhuijben, stsp
+
