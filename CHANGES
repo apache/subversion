@@ -85,7 +85,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.3
     * fix swig-py memory leak (r1235264, -296, -302, -736)
     * fix spurious test suite failure (r1220742, -50)
     * allow running tests on UNC shares (r1225491)
-    * bindings: see platform-specific password providers (1242660, -1)
+    * bindings: see platform-specific password providers (r1242660, -1)
     * skip 'svnrdump dump' tests over ra_serf (r1242537)
     * convert a few ra_serf assertions to errors (r1242607)
 
