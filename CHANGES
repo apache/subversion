@@ -78,7 +78,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.3
     * relax requirements for canonicalization in mod_dav_svn (r1236173)
     * fix a rare source of FSFS corruption (r1240752)
     * allow committing the result of some copy operations (issue #4059)
-    * prevent buffer overflow in base64 decoding (r1242337)
+    * prevent one-byte buffer overflow in base64 decoding (r1242337)
 
   Developer-visible changes:
     * JavaHL: Add missing notify action, fixing an exception (r1221793)
