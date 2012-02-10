@@ -192,6 +192,7 @@ make_dir_baton(const char *path,
   new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make(pool);
+  new_db->pool = pool;
 
   return new_db;
 }
@@ -450,7 +451,7 @@ open_root(void *edit_baton,
   eb->deleted_props = apr_hash_make(eb->pool);*/
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                               edit_baton, NULL, FALSE, eb->pool);
+                               edit_baton, NULL, FALSE, pool);
   LDR_DBG(("open_root %p\n", *root_baton));
 
   return SVN_NO_ERROR;
@@ -498,7 +499,7 @@ add_directory(const char *path,
   LDR_DBG(("add_directory %s\n", path));
 
   new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb,
-                          pb, TRUE, pb->eb->pool);
+                          pb, TRUE, pool);
 
   /* Some pending properties to dump? */
   /*SVN_ERR(do_dump_props(&pb->eb->propstring, pb->eb->stream,
@@ -566,7 +567,7 @@ open_directory(const char *path,
     }
 
   new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb,
-                          FALSE, pb->eb->pool);
+                          FALSE, pool);
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
@@ -586,8 +587,9 @@ close_directory(void *dir_baton,
                         eb->props, eb->deleted_props,
                         &(eb->dump_props), TRUE, pool, pool));*/
 
-  /* Some pending newlines to dump? */
-  SVN_ERR(do_dump_newlines(eb, &(eb->dump_newlines), pool));
+  SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
+                    svn_node_action_change, FALSE, db->copyfrom_path,
+                    db->copyfrom_rev, pool));
 
   /* Dump the deleted directory entries */
   for (hi = apr_hash_first(pool, db->deleted_entries); hi;
@@ -672,6 +674,8 @@ open_file(const char *path,
       fb->copyfrom_rev = pb->copyfrom_rev;
     }
 
+  *file_baton = fb;
+
   return SVN_NO_ERROR;
 }
 
@@ -691,24 +695,20 @@ change_dir_prop(void *parent_baton,
   /* The fact that we're here means this node has information, it isn't just
      being opened for the sake of reading its children. */
   if (value)
-    apr_hash_set(db->props, apr_pstrdup(db->eb->pool, name),
-                 APR_HASH_KEY_STRING, svn_string_dup(value, db->eb->pool));
-  else
-    apr_hash_set(db->deleted_props, apr_pstrdup(db->eb->pool, name),
-                 APR_HASH_KEY_STRING, "");
-
-  if (! db->written_out)
     {
-      /* If db->written_out is set, it means that the node information
-         corresponding to this directory has already been written: don't
-         do anything; do_dump_props() will take care of dumping the
-         props. If it not, dump the node itself before dumping the
-         props. */
+      if (!db->props)
+        db->props = apr_hash_make(db->pool);
 
-      SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
-                        svn_node_action_change, FALSE, db->copyfrom_path,
-                        db->copyfrom_rev, pool));
-      db->written_out = TRUE;
+      apr_hash_set(db->props, apr_pstrdup(db->pool, name),
+                   APR_HASH_KEY_STRING, svn_string_dup(value, db->eb->pool));
+    }
+  else
+    {
+      if (!db->deleted_props)
+        db->deleted_props = apr_hash_make(db->pool);
+
+      apr_hash_set(db->deleted_props, apr_pstrdup(db->pool, name),
+                   APR_HASH_KEY_STRING, "");
     }
 
   return SVN_NO_ERROR;
