@@ -50,8 +50,7 @@ Candidate changes:
    Notes:
      Both r1235831 and r1236099 conflict and will need a branch.
    Votes:
-     +1: gstein
-     +1: rhuijben (r1236099 only)
+     +1: gstein, rhuijben
 
  * r1238121
    Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
@@ -61,29 +60,21 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1242337
-   Fix potential write beyond buffer during base64 decoding.
-   Justification:
-     Potential memory corruption, although much less likely than on trunk.
-   Notes:
-     Test won't compile but isn't necessary as it doesn't trigger the problem
-     on 1.7.  Do a subtree merge of svn_base64.c.
-   Votes:
-     +1: philip, danielsh
-
  * r1242537
    Skip 'svnrdump dump' tests over serf.
    Justification:
      Users should not have to ignore regression test FAILs.
    Votes:
      +1: philip
+     +1: rhuijben (Really +0.5, as we should just fix the problems. But we
+                   won't get this done in time for 1.7.3)
 
  * r1242607
    Convert ra_serf assertions to errors.
    Justification:
      Malicious server can DoS clients.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -135,3 +126,13 @@ Approved changes:
      The fix is directly relevant to documenting 1.7.x's behaviour.
    Votes:
      +1: danielsh, hwright, philip
+
+ * r1242337
+   Fix potential write beyond buffer during base64 decoding.
+   Justification:
+     Potential memory corruption, although much less likely than on trunk.
+   Notes:
+     Test won't compile but isn't necessary as it doesn't trigger the problem
+     on 1.7.  Do a subtree merge of svn_base64.c.
+   Votes:
+     +1: philip, danielsh, rhuijben
