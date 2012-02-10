@@ -1,0 +1,2 @@
+A simple branch with the goal of fixing svnrdump's abuse of the delta editor
+API.  I expect this to break tests, hence the reason for a branch.
