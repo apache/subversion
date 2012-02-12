@@ -2941,7 +2941,8 @@ struct rep_read_baton
 };
 
 /* Combine the name of the rev file in RS with the given OFFSET to form
- * a cache lookup key. Allocations will be made from POOL. */
+ * a cache lookup key.  Allocations will be made from POOL.  May return
+ * NULL if the key cannot be constructed. */
 static const char*
 get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
 {
@@ -2955,7 +2956,7 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
    * comparison _will_ find them.
    */
   if (apr_file_name_get(&name, rs->file))
-    return "";
+    return NULL;
 
   /* Handle packed files as well by scanning backwards until we find the
    * revision or pack number. */
