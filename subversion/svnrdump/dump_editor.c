@@ -319,10 +319,9 @@ do_dump_newlines(struct dump_edit_baton *eb,
 }
 
 /*
- * Write out a node record for PATH of type KIND under EB->FS_ROOT.
- * ACTION describes what is happening to the node (see enum
- * svn_node_action). Write record to writable EB->STREAM, using
- * EB->BUFFER to write in chunks.
+ * Write out a node record for PATH of type KIND. ACTION describes what is
+ * happening to the node (see enum svn_node_action). Write record to
+ * writable STREAM.
  *
  * If the node was itself copied, IS_COPY is TRUE and the
  * path/revision of the copy source are in COPYFROM_PATH/COPYFROM_REV.
@@ -330,7 +329,7 @@ do_dump_newlines(struct dump_edit_baton *eb,
  * node is part of a copied subtree.
  */
 static svn_error_t *
-dump_node(struct dump_edit_baton *eb,
+dump_node(svn_stream_t *stream,
           const char *path,    /* an absolute path. */
           svn_node_kind_t kind,
           enum svn_node_action action,
@@ -349,15 +348,15 @@ dump_node(struct dump_edit_baton *eb,
     copyfrom_path = svn_relpath_canonicalize(copyfrom_path, pool);
 
   /* Node-path: commons/STATUS */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
+  SVN_ERR(svn_stream_printf(stream, pool,
                             SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
 
   /* Node-kind: file */
   if (kind == svn_node_file)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
+    SVN_ERR(svn_stream_printf(stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
   else if (kind == svn_node_dir)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
+    SVN_ERR(svn_stream_printf(stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
 
@@ -368,7 +367,7 @@ dump_node(struct dump_edit_baton *eb,
       /* We are here after a change_file_prop or change_dir_prop. They
          set up whatever dump_props they needed to- nothing to
          do here but print node action information */
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
+      SVN_ERR(svn_stream_printf(stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION
                                 ": change\n"));
       break;
@@ -377,7 +376,7 @@ dump_node(struct dump_edit_baton *eb,
       if (!is_copy)
         {
           /* Node-action: replace */
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
+          SVN_ERR(svn_stream_printf(stream, pool,
                                     SVN_REPOS_DUMPFILE_NODE_ACTION
                                     ": replace\n"));
           break;
@@ -386,12 +385,12 @@ dump_node(struct dump_edit_baton *eb,
          copyfrom_rev are present: delete the original, and then re-add
          it */
 
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
+      SVN_ERR(svn_stream_printf(stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION
                                 ": delete\n\n"));
 
       /* Recurse: Print an additional add-with-history record. */
-      SVN_ERR(dump_node(eb, path, kind, svn_node_action_add, props,
+      SVN_ERR(dump_node(stream, path, kind, svn_node_action_add, props,
                         deleted_props, is_copy, copyfrom_path, copyfrom_rev,
                         pool));
 
@@ -400,21 +399,21 @@ dump_node(struct dump_edit_baton *eb,
       break;
 
     case svn_node_action_delete:
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
+      SVN_ERR(svn_stream_printf(stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION
                                 ": delete\n"));
 
       /* We can leave this routine quietly now. Nothing more to do-
          print a couple of newlines because we're not dumping props or
          text. */
-      SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
+      SVN_ERR(svn_stream_printf(stream, pool, "\n\n"));
       break;
 
     case svn_node_action_add:
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
+      SVN_ERR(svn_stream_printf(stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
+      SVN_ERR(svn_stream_printf(stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV
                                 ": %ld\n"
                                 SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
@@ -530,12 +529,7 @@ close_directory(void *dir_baton,
 
   LDR_DBG(("close_directory %p\n", dir_baton));
 
-  /* Some pending properties to dump? */
-  /*SVN_ERR(do_dump_props(&eb->propstring, eb->stream,
-                        eb->props, eb->deleted_props,
-                        &(eb->dump_props), TRUE, pool, pool));*/
-
-  SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
+  SVN_ERR(dump_node(db->eb->stream, db->abspath, svn_node_dir,
                     svn_node_action_change, db->props, db->deleted_props,
                     db->is_copy, db->copyfrom_path,
                     db->copyfrom_rev, pool));
@@ -546,7 +540,8 @@ close_directory(void *dir_baton,
     {
       const char *path = svn__apr_hash_index_key(hi);
 
-      SVN_ERR(dump_node(db->eb, path, svn_node_unknown, svn_node_action_delete,
+      SVN_ERR(dump_node(db->eb->stream, path, svn_node_unknown,
+                        svn_node_action_delete,
                         NULL, NULL, FALSE, NULL, SVN_INVALID_REVNUM, pool));
     }
 
@@ -750,7 +745,7 @@ close_file(void *file_baton,
   val = apr_hash_get(fb->pb->deleted_entries, fb->path, APR_HASH_KEY_STRING);
 
   /* Dump the node. */
-  SVN_ERR(dump_node(fb->eb, fb->path,
+  SVN_ERR(dump_node(fb->eb->stream, fb->path,
                     svn_node_file,
                     val ? svn_node_action_replace : svn_node_action_add,
                     fb->props, fb->deleted_props,
