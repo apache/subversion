@@ -1884,6 +1884,60 @@ def exclude_externals(sbox):
                                         None, None, None, None, False,
                                         '--set-depth', 'infinity', wc_dir)
 
+def file_externals_different_url(sbox):
+  "update file externals via different url"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  r1_url = sbox.repo_url
+
+  r2_dir, r2_url = sbox.add_repo_path('2')
+  svntest.main.copy_repos(sbox.repo_dir, r2_dir, 1, 0)
+
+
+  sbox.simple_propset('svn:externals',
+                      'r1-e-1   ' + r1_url + '/iota\n' +
+                      r1_url + '/iota  r1-e-2\n' +
+                      'r2-e-1   ' + r2_url + '/iota\n' +
+                      r2_url + '/iota  r2-e-2\n' +
+                      '^/iota  rr-e-1\n', '')
+
+  # All file externals appear in the working copy, with normalised URLs.
+  expected_output = svntest.wc.State(wc_dir, {
+    'r1-e-1'            : Item(status='A '),
+    'r1-e-2'            : Item(status='A '),
+    'r2-e-1'            : Item(status='A '),
+    'r2-e-2'            : Item(status='A '),
+    'rr-e-1'            : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None, None)
+
+  # Verify that all file external URLs are descendants of r1_url
+  for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
+    actions.run_and_verify_info([{'Repository Root' : r1_url}],
+                                os.path.join(sbox.wc_dir, e))
+    
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', r1_url, r2_url, wc_dir)
+
+
+  # URLs of existing file externals are silently rewritten
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, None, None)
+
+  # Verify that all file external URLs are descendants of r2_url
+  for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
+    actions.run_and_verify_info([{'Repository Root' : r2_url}],
+                                os.path.join(sbox.wc_dir, e))
+
+
 def file_external_in_unversioned(sbox):
   "file external in unversioned dir"
 
@@ -2203,6 +2257,7 @@ test_list = [ None,
               incoming_file_on_file_external,
               incoming_file_external_on_file,
               exclude_externals,
+              file_externals_different_url,
               file_external_in_unversioned,
               copy_file_externals,
               remap_file_external_with_prop_del,
