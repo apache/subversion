@@ -42,6 +42,27 @@
 #define LDR_DBG(x) while(0)
 #endif
 
+
+/* The Plan
+ *
+ * This editor receives the edit for a specific revision (usually as part
+ * of a series through the svn_ra_replay_range() interface).  It's job is to
+ * output to a stream dumpfile-compatible text describing that revision.
+ *
+ * The goal is for each file_baton and directory_baton to be as encapsulated
+ * as possible, and the output to happen in a limited number of places, with
+ * entire nodes being written out at once.  (The dumpfile format is such that
+ * header information can only be known after all content has been received,
+ * which make streamily constructing the dumpfile difficult.)
+ *
+ * Most of the work is done in close_file() and close_directory(), as all the
+ * changes for a given node are known by that point, and we can write out
+ * a "complete" description of the node therefrom.  The intermediate editor
+ * callbacks are used to collect this state and stashing it in the batons
+ * for later processing.
+ */
+
+
 /* A directory baton used by all directory-related callback functions
  * in the dump editor.  */
 struct dir_baton
