@@ -16,6 +16,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * reject some attempts to merge between unrelated branches (r1215273)
     * support GPG agent for password storage on UNIX-like platforms (r1150783)
     * new 'svnadmin lock' / 'svnadmin unlock' subcommands (issue #3942, #4092)
+    * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
+    * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
+    * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --patch-compatible option for 'svn diff' (r1239561)
 
   - Client-side bugfixes:
     *
@@ -38,8 +42,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.3
-(XX XXX 2012, from /branches/1.7.x)
+(14 Feb 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.3
+
+  General:
+    * ship mod_dontdothat with the standard release
 
   User-visible changes:
     * fix segfault on 'svn rm $ROOT_URL' (issue #4074)
@@ -54,11 +61,33 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.3
     * improve 'svn log --with-all-revprops' over ra-dav (issue #4082)
     * fix segfault when remapping a file external (issue #4093)
     * fix segfault caused by obstructing unversioned dir (r1229677)
-    * fix regression on first update of external dir with '-r' (issue #4053) 
+    * fix regression on first update of external dir with '-r' (issue #4053)
+    * fix various EOL-handling problems in 'svn patch' (issues #3814, #3991)
+    * fix segfault in 'svn revert' (r1229303)
+    * improve correctness of 'svn patch --dry-run' (r1231944, -5)
+    * enforce revisions given in 'svn:externals' (issue #4053)
+    * fix potential corruption on 32-bit FSFS with large files (r1230212)
+    * make 'svn status --xml' show new files (issue #4097)
+    * fix 'svn mergeinfo' correctness (issue #4050)
+    * return the correct status for non-present nodes (r1232202, -07, -21, -22)
+    * improve SASL error messages (r1236343, et al)
+    * improve server cert error code for ra_serf (r1232413)
+    * fix SVNParentPath listings for parent path symlinks (r1221767, -80)
+    * fix mod_dav_svn's handling of POST errors (issue #4086)
+    * log some mod_dav_svn errors, rather than ignoring them (r1237720, -9596)
+    * relax requirements for canonicalization in mod_dav_svn (r1236173)
+    * fix a rare source of FSFS corruption (r1240752)
+    * allow committing the result of some copy operations (issue #4059)
+    * prevent one-byte buffer overflow in base64 decoding (r1242337)
 
   Developer-visible changes:
     * JavaHL: Add missing notify action, fixing an exception (r1221793)
+    * fix swig-py memory leak (r1235264, -296, -302, -736)
     * fix spurious test suite failure (r1220742, -50)
+    * allow running tests on UNC shares (r1225491)
+    * bindings: see platform-specific password providers (r1242660, -1)
+    * skip 'svnrdump dump' tests over ra_serf (r1242537)
+    * convert a few ra_serf assertions to errors (r1242607)
 
 
 Version 1.7.2

@@ -49,12 +49,28 @@ extern "C" {
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
  *
+ * If @a assume_native_utf8 is TRUE, the native character set is
+ * assumed to be UTF-8, i.e. conversion is a no-op. This is useful
+ * in contexts where the native character set is ASCII but UTF-8
+ * should be used regardless (e.g. for mod_dav_svn which runs within
+ * httpd and always uses the "C" locale).
+ *
  * @note It is optional to call this function, but if it is used, no other
  * svn function may be in use in other threads during the call of this
  * function or when @a pool is cleared or destroyed.
  * Initializing the UTF-8 routines will improve performance.
  *
- * @since New in 1.1.
+ * @since New in 1.8.
+ */
+void
+svn_utf_initialize2(apr_pool_t *pool,
+                    svn_boolean_t assume_native_utf8);
+
+/**
+ * Like svn_utf_initialize but without the ability to force the
+ * native encoding to UTF-8.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 void
 svn_utf_initialize(apr_pool_t *pool);

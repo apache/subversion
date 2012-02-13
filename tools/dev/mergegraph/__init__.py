@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
@@ -19,25 +17,4 @@
 #    under the License.
 # ====================================================================
 
-args_message = 'GRAPH_CONFIG_FILE...'
-help_message = """Produce pretty graphs representing branches and merging.
-For each config file specified, construct a graph and write it as a PNG file."""
-
-import sys
-from mergegraph import MergeDot
-
-
-# If run as a program, process each input filename as a graph config file.
-if __name__ == '__main__':
-  prog_name = sys.argv[0]
-  if len(sys.argv) == 1:
-    usage = '%s: usage: "%s %s"' % (prog_name, prog_name, args_message)
-    print >> sys.stderr, usage
-    sys.exit(1)
-
-  for config_filename in sys.argv[1:]:
-    print prog_name + ": reading '" + config_filename + "',",
-    graph = MergeDot(config_filename, rankdir='LR')
-    print "writing '" + graph.filename + "'"
-    graph.write_png(graph.filename)
-
+from mergegraph import MergeDot, MergeGraph, MergeSubgraph

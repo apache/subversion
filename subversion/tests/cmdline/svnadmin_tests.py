@@ -1422,9 +1422,12 @@ def verify_non_utf8_paths(sbox):
     if line == "A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write("\xE6\n")
-    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
       # fix up the representation checksum
-      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+      fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
     elif line == "cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")

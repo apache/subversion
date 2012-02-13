@@ -22,7 +22,10 @@
  * ====================================================================
  */
 
+#include <stdlib.h>
+
 #include <apr_strings.h>
+#include <apr_hash.h>
 
 #include <httpd.h>
 #include <http_config.h>
@@ -55,6 +58,7 @@
 /* per-server configuration */
 typedef struct server_conf_t {
   const char *special_uri;
+  svn_boolean_t use_utf8;
 } server_conf_t;
 
 
@@ -91,6 +95,7 @@ typedef struct dir_conf_t {
   const char *activities_db;         /* path to activities database(s) */
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
+  apr_hash_t *hooks_env;             /* environment for hook scripts */
 } dir_conf_t;
 
 
@@ -111,6 +116,8 @@ static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 {
   svn_error_t *serr;
+  server_conf_t *conf;
+
   ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
 
   serr = svn_fs_initialize(p);
@@ -123,7 +130,8 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
     }
 
   /* This returns void, so we can't check for error. */
-  svn_utf_initialize(p);
+  conf = ap_get_module_config(s->module_config, &dav_svn_module);
+  svn_utf_initialize2(p, conf->use_utf8);
 
   return OK;
 }
@@ -187,6 +195,7 @@ create_dir_config(apr_pool_t *p, char *dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
+  conf->hooks_env = apr_hash_make(p);
 
   return conf;
 }
@@ -216,6 +225,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
+  newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
@@ -510,6 +520,59 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
   return NULL;
 }
 
+static const char *
+SVNUseUTF8_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  server_conf_t *conf;
+
+  conf = ap_get_module_config(cmd->server->module_config,
+                              &dav_svn_module);
+  conf->use_utf8 = arg;
+
+  return NULL;
+}
+
+static const char *
+SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  apr_array_header_t *var;
+
+  var = svn_cstring_split(arg1, "=", TRUE, cmd->pool);
+  if (var && var->nelts >= 2)
+    {
+      dir_conf_t *conf = config;
+      const char *name;
+      const char *val;
+
+      name = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
+                         APR_ARRAY_IDX(var, 0, const char *));
+
+      /* Special case for values which contain '='. */
+      if (var->nelts > 2)
+        {
+          svn_stringbuf_t *buf;
+          int i;
+
+          buf = svn_stringbuf_create(APR_ARRAY_IDX(var, 1, const char *),
+                                     cmd->pool);
+          for (i = 2; i < var->nelts; i++)
+            {
+              svn_stringbuf_appendbyte(buf, '=');
+              svn_stringbuf_appendcstr(buf, APR_ARRAY_IDX(var, i, const char *));
+            } 
+
+          val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env), buf->data);
+        }
+      else
+        val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
+                          APR_ARRAY_IDX(var, 1, const char *));
+
+      apr_hash_set(conf->hooks_env, name, APR_HASH_KEY_STRING, val);
+    }
+
+  return NULL;
+}
+
 
 /** Accessor functions for the module's configuration state **/
 
@@ -787,6 +850,15 @@ dav_svn__get_compression_level(void)
   return svn__compression_level;
 }
 
+apr_hash_t *
+dav_svn__get_hooks_env(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->hooks_env;
+}
+
 static void
 merge_xml_filter_insert(request_rec *r)
 {
@@ -1021,6 +1093,17 @@ static const command_rec cmds[] =
                 "content over the network (0 for no compression, 9 for "
                 "maximum, 5 is default)."),
 
+  /* per server */
+  AP_INIT_FLAG("SVNUseUTF8",
+               SVNUseUTF8_cmd, NULL,
+               RSRC_CONF,
+               "use UTF-8 as native character encoding (default is ASCII)."),
+
+  /* per directory/location */
+  AP_INIT_ITERATE("SVNHooksEnv", SVNHooksEnv_cmd, NULL,
+                  ACCESS_CONF|RSRC_CONF,
+                  "Set the environment of hook scripts via any number of "
+                  "VAR=VAL arguments (the default hook environment is empty)."),
   { NULL }
 };
 
