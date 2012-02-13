@@ -826,7 +826,7 @@ main(int argc, const char **argv)
                                                sizeof(struct action *));
   const char *anchor = NULL;
   svn_error_t *err = SVN_NO_ERROR;
-  apr_getopt_t *getopt;
+  apr_getopt_t *opts;
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
     config_inline_opt,
@@ -866,15 +866,15 @@ main(int argc, const char **argv)
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
-  apr_getopt_init(&getopt, pool, argc, argv);
-  getopt->interleave = 1;
+  apr_getopt_init(&opts, pool, argc, argv);
+  opts->interleave = 1;
   while (1)
     {
       int opt;
       const char *arg;
       const char *opt_arg;
 
-      apr_status_t status = apr_getopt_long(getopt, options, &opt, &arg);
+      apr_status_t status = apr_getopt_long(opts, options, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
@@ -957,7 +957,7 @@ main(int argc, const char **argv)
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_INT_ERR(display_version(getopt, pool));
+          SVN_INT_ERR(display_version(opts, pool));
           exit(EXIT_SUCCESS);
           break;
         case 'h':
@@ -968,10 +968,10 @@ main(int argc, const char **argv)
 
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
-  action_args = apr_array_make(pool, getopt->argc, sizeof(const char *));
-  while (getopt->ind < getopt->argc)
+  action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
+  while (opts->ind < opts->argc)
     {
-      const char *arg = getopt->argv[getopt->ind++];
+      const char *arg = opts->argv[opts->ind++];
       if ((err = svn_utf_cstring_to_utf8(&(APR_ARRAY_PUSH(action_args,
                                                           const char *)),
                                          arg, pool)))

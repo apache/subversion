@@ -401,23 +401,16 @@ explicit_atom(const char *data,
 
 static apr_size_t estimate_unparsed_size(const svn_skel_t *skel);
 static svn_stringbuf_t *unparse(const svn_skel_t *skel,
-                                svn_stringbuf_t *str,
-                                apr_pool_t *pool);
+                                svn_stringbuf_t *str);
 
 
 svn_stringbuf_t *
 svn_skel__unparse(const svn_skel_t *skel, apr_pool_t *pool)
 {
-  svn_stringbuf_t *str;
+  svn_stringbuf_t *str
+    = svn_stringbuf_create_ensure(estimate_unparsed_size(skel) + 200, pool);
 
-  /* Allocate a string to hold the data.  */
-  str = apr_palloc(pool, sizeof(*str));
-  str->pool = pool;
-  str->blocksize = estimate_unparsed_size(skel) + 200;
-  str->data = apr_palloc(pool, str->blocksize);
-  str->len = 0;
-
-  return unparse(skel, str, pool);
+  return unparse(skel, str);
 }
 
 
@@ -486,10 +479,9 @@ use_implicit(const svn_skel_t *skel)
 }
 
 
-/* Append the concrete representation of SKEL to the string STR.
-   Grow S with new space from POOL as necessary.  */
+/* Append the concrete representation of SKEL to the string STR. */
 static svn_stringbuf_t *
-unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
+unparse(const svn_skel_t *skel, svn_stringbuf_t *str)
 {
   if (skel->is_atom)
     {
@@ -508,33 +500,27 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len);
+          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len + 1);
           svn_stringbuf_appendbytes(str, buf, length_len);
-          str->data[str->len++] = ' ';
+          svn_stringbuf_appendbyte(str, ' ');
           svn_stringbuf_appendbytes(str, skel->data, skel->len);
         }
     }
   else
     {
-      /* Append a list to STR.  */
+      /* Append a list to STR: an opening parenthesis, the list elements
+       * separated by a space, and a closing parenthesis.  */
       svn_skel_t *child;
 
-      /* Emit an opening parenthesis.  */
-      svn_stringbuf_ensure(str, str->len + 1);
-      str->data[str->len++] = '(';
+      svn_stringbuf_appendbyte(str, '(');
 
-      /* Append each element.  Emit a space between each pair of elements.  */
       for (child = skel->children; child; child = child->next)
         {
-          unparse(child, str, pool);
+          unparse(child, str);
           if (child->next)
-            {
-              svn_stringbuf_ensure(str, str->len + 1);
-              str->data[str->len++] = ' ';
-            }
+            svn_stringbuf_appendbyte(str, ' ');
         }
 
-      /* Emit a closing parenthesis.  */
       svn_stringbuf_appendbyte(str, ')');
     }
 

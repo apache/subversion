@@ -794,9 +794,19 @@ prop_fetch_func(apr_hash_t **props,
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (path[0] != '/')
-    /* Get an absolute path for use in the FS. */
-    path = svn_fspath__join(eb->base_path, path, scratch_pool);
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        path = svn_fspath__join(eb->base_path, path, scratch_pool);
+    }
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),

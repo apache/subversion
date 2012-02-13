@@ -239,6 +239,14 @@ svn_checksum_final(svn_checksum_t **checksum,
 apr_size_t
 svn_checksum_size(const svn_checksum_t *checksum);
 
+/**
+ * Return @c TRUE iff CHECKSUM matches the checksum for the empty string.
+ *
+ * @since New in 1.8.
+ */
+svn_boolean_t
+svn_checksum_is_empty_checksum(svn_checksum_t *checksum);
+
 
 /**
  * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and

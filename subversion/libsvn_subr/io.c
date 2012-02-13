@@ -2417,10 +2417,11 @@ handle_child_process_error(apr_pool_t *pool, apr_status_t status,
 
 
 svn_error_t *
-svn_io_start_cmd2(apr_proc_t *cmd_proc,
+svn_io_start_cmd3(apr_proc_t *cmd_proc,
                   const char *path,
                   const char *cmd,
                   const char *const *args,
+                  const char *const *env,
                   svn_boolean_t inherit,
                   svn_boolean_t infile_pipe,
                   apr_file_t *infile,
@@ -2542,8 +2543,8 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
 
 
   /* Start the cmd command. */
-  apr_err = apr_proc_create(cmd_proc, cmd_apr, args_native, NULL,
-                            cmdproc_attr, pool);
+  apr_err = apr_proc_create(cmd_proc, cmd_apr, args_native,
+                            inherit ? NULL : env, cmdproc_attr, pool);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't start process '%s'"), cmd);
 
@@ -3279,6 +3280,15 @@ svn_io_write_unique(const char **tmp_path,
 svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
 {
+  /* This is a work-around. APR would flush the write buffer
+     _after_ truncating the file causing now invalid buffered
+     data to be written behind OFFSET. */
+  SVN_ERR(do_io_file_wrapper_cleanup
+    (file, apr_file_flush(file),
+     N_("Can't flush file '%s'"),
+     N_("Can't flush stream"),
+     pool));
+
   return do_io_file_wrapper_cleanup
     (file, apr_file_trunc(file, offset),
      N_("Can't truncate file '%s'"),

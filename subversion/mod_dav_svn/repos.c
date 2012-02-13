@@ -1917,8 +1917,6 @@ parse_querystring(request_rec *r, const char *query,
   return NULL;
 }
 
-
-
 static dav_error *
 get_resource(request_rec *r,
              const char *root_path,
@@ -2188,6 +2186,9 @@ get_resource(request_rec *r,
                                          "in repos object",
                                          HTTP_INTERNAL_SERVER_ERROR, r);
         }
+
+      /* Configure the hooks environment, if not empty. */
+      svn_repos_hooks_setenv(repos->repos, dav_svn__get_hooks_env(r));
     }
 
   /* cache the filesystem object */

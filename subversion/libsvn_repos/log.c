@@ -264,6 +264,12 @@ detect_changed(apr_hash_t **changed,
                                              : svn_tristate_false;
       item->props_modified = change->prop_mod ? svn_tristate_true
                                               : svn_tristate_false;
+
+      /* Pre-1.6 revision files don't store the change path kind, so fetch
+         it manually. */
+      if (item->node_kind == svn_node_unknown)
+        SVN_ERR(svn_fs_check_path(&item->node_kind, root, path, subpool));
+
       if ((action == 'A') || (action == 'R'))
         {
           const char *copyfrom_path;

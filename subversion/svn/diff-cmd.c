@@ -171,6 +171,10 @@ svn_cl__diff(apr_getopt_t *os,
   const char *old_target, *new_target;
   apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
+  svn_boolean_t show_copies_as_adds =
+    opt_state->use_patch_diff_format ? TRUE : opt_state->show_copies_as_adds;
+  svn_boolean_t ignore_prop_diff =
+    opt_state->use_patch_diff_format ? TRUE : opt_state->ignore_props;
   int i;
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
@@ -361,8 +365,9 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
-                     opt_state->show_copies_as_adds,
+                     show_copies_as_adds,
                      opt_state->force,
+                     ignore_prop_diff,
                      opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outstream,
@@ -406,8 +411,9 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
-                     opt_state->show_copies_as_adds,
+                     show_copies_as_adds,
                      opt_state->force,
+                     ignore_prop_diff,
                      opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outstream,

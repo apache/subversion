@@ -589,6 +589,9 @@ get_group_index(svn_membuffer_t **cache,
   svn_checksum_t *checksum;
   svn_error_t *err;
 
+  if (key == NULL)
+    return NO_INDEX;
+  
   err = svn_checksum(&checksum, svn_checksum_md5, key, len, pool);
   if (err != NULL)
   {
@@ -1363,11 +1366,12 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 
   group_index = get_group_index(&cache, key, key_len, to_find, result_pool);
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_get_partial_internal
-                           (cache, group_index, to_find, item, found,
-                            deserializer, baton, DEBUG_CACHE_MEMBUFFER_TAG
-                            result_pool));
+  if (group_index != NO_INDEX)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         membuffer_cache_get_partial_internal
+                             (cache, group_index, to_find, item, found,
+                              deserializer, baton, DEBUG_CACHE_MEMBUFFER_TAG
+                              result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1499,11 +1503,12 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
    */
   group_index = get_group_index(&cache, key, key_len, to_find, scratch_pool);
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_set_partial_internal
-                           (cache, group_index, to_find, func, baton,
-                            DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                            scratch_pool));
+  if (group_index != NO_INDEX)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         membuffer_cache_set_partial_internal
+                             (cache, group_index, to_find, func, baton,
+                              DEBUG_CACHE_MEMBUFFER_TAG_ARG
+                              scratch_pool));
 
   /* done here -> unlock the cache
    */
@@ -1597,14 +1602,22 @@ combine_key(const void *prefix,
             apr_size_t *full_key_len,
             apr_pool_t *pool)
 {
-  if (key_len == APR_HASH_KEY_STRING)
-    key_len = strlen((const char *) key);
+  if (key == NULL)
+    {
+      *full_key = NULL;
+      *full_key_len = 0;
+    }
+  else
+    {
+      if (key_len == APR_HASH_KEY_STRING)
+        key_len = strlen((const char *) key);
 
-  *full_key_len = prefix_len + key_len;
-  *full_key = apr_palloc(pool, *full_key_len);
+      *full_key_len = prefix_len + key_len;
+      *full_key = apr_palloc(pool, *full_key_len);
 
-  memcpy(*full_key, prefix, prefix_len);
-  memcpy((char *)*full_key + prefix_len, key, key_len);
+      memcpy(*full_key, prefix, prefix_len);
+      memcpy((char *)*full_key + prefix_len, key, key_len);
+    }
 }
 
 /* Implement svn_cache__vtable_t.get (not thread-safe)
@@ -1999,8 +2012,10 @@ deserialize_svn_stringbuf(void **item,
                           apr_size_t buffer_size,
                           apr_pool_t *result_pool)
 {
-  svn_string_t *value_str = apr_palloc(result_pool, sizeof(svn_string_t));
+  svn_stringbuf_t *value_str = apr_palloc(result_pool, sizeof(svn_stringbuf_t));
 
+  value_str->pool = result_pool;
+  value_str->blocksize = buffer_size;
   value_str->data = buffer;
   value_str->len = buffer_size-1;
   *item = value_str;

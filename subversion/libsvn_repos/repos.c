@@ -165,6 +165,12 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
                        pool);
 }
 
+void
+svn_repos_hooks_setenv(svn_repos_t *repos,
+                       apr_hash_t *hooks_env)
+{
+  repos->hooks_env = hooks_env;
+}
 
 static svn_error_t *
 create_repos_dir(const char *path, apr_pool_t *pool)
@@ -736,6 +742,7 @@ PREWRITTEN_HOOKS_TEXT
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] REV          (the number of the revision just committed)"           NL
+"#   [3] TXN-NAME     (the name of the transaction that has become REV)"     NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
@@ -765,6 +772,7 @@ PREWRITTEN_HOOKS_TEXT
 ""                                                                           NL
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
+"TXN_NAME=\"$3\""                                                            NL
                                                                              NL
 "mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
@@ -1040,7 +1048,17 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### to the effective key length for encryption (e.g. 128 means 128-bit"     NL
 "### encryption). The values below are the defaults."                        NL
 "# min-encryption = 0"                                                       NL
-"# max-encryption = 256"                                                     NL;
+"# max-encryption = 256"                                                     NL
+""                                                                           NL
+"[hooks-env]"                                                                NL
+"### Options in this section define environment variables for use by"        NL
+"### hook scripts run by svnserve."                                          NL
+#ifdef WIN32
+"# PATH = C:\\Program Files\\Subversion\\bin"                                NL
+#else
+"# PATH = /bin:/sbin:/usr/bin:/usr/sbin"                                     NL
+#endif
+"# LC_CTYPE = en_US.UTF-8"                                                   NL;
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
                                  svnserve_conf_contents, pool),
