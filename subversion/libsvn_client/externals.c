@@ -277,7 +277,7 @@ switch_dir_external(const char *local_abspath,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, local_abspath, peg_revision,
-                                        revision, NULL, svn_depth_infinity,
+                                        revision, svn_depth_infinity,
                                         FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
@@ -604,11 +604,15 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                             apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
-  svn_client__ra_session_from_path_results ra_cache = { 0 };
+  svn_revnum_t ra_revnum;
+  const char *ra_session_url;
+  const char *repos_root_url;
+  const char *repos_uuid;
   const char *new_url;
-  svn_node_kind_t kind;
+  svn_node_kind_t ext_kind;
+  svn_node_kind_t local_kind;
 
-  ra_cache.kind = svn_node_unknown;
+  local_kind = svn_node_unknown;
 
   SVN_ERR_ASSERT(eb->repos_root_url && parent_dir_url);
   SVN_ERR_ASSERT(new_item != NULL);
@@ -628,34 +632,30 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   /* Determine if the external is a file or directory. */
   /* Get the RA connection. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                           &ra_cache.ra_revnum,
-                                           &ra_cache.ra_session_url,
+                                           &ra_revnum,
+                                           &ra_session_url,
                                            new_url, NULL,
                                            &(new_item->peg_revision),
                                            &(new_item->revision), eb->ctx,
                                            scratch_pool));
 
-  SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid,
-                           scratch_pool));
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
-                                 scratch_pool));
-  SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_uuid, scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
+  SVN_ERR(svn_ra_check_path(ra_session, "", ra_revnum, &ext_kind,
                             scratch_pool));
 
-  if (svn_node_none == kind)
+  if (svn_node_none == ext_kind)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("URL '%s' at revision %ld doesn't exist"),
-                             ra_cache.ra_session_url,
-                             ra_cache.ra_revnum);
+                             ra_session_url, ra_revnum);
 
-  if (svn_node_dir != kind && svn_node_file != kind)
+  if (svn_node_dir != ext_kind && svn_node_file != ext_kind)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("URL '%s' at revision %ld is not a file "
                                "or a directory"),
-                             ra_cache.ra_session_url,
-                             ra_cache.ra_revnum);
+                             ra_session_url, ra_revnum);
 
-  ra_cache.kind = kind;
+  local_kind = ext_kind;
 
 
   /* Not protecting against recursive externals.  Detecting them in
@@ -682,7 +682,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                           scratch_pool));
     }
 
-  switch (ra_cache.kind)
+  switch (local_kind)
     {
       case svn_node_dir:
         SVN_ERR(switch_dir_external(local_abspath, new_url,
@@ -693,9 +693,9 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                     scratch_pool));
         break;
       case svn_node_file:
-        if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
+        if (strcmp(eb->repos_root_url, repos_root_url))
           {
-            const char *repos_uuid;
+            const char *old_repos_uuid;
             const char *ext_repos_relpath;
             
             /* 
@@ -708,18 +708,18 @@ handle_external_item_change(const struct external_change_baton_t *eb,
              */
 
             SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                                     &ra_cache.ra_revnum,
-                                                     &ra_cache.ra_session_url,
+                                                     &ra_revnum,
+                                                     &ra_session_url,
                                                      eb->repos_root_url,
                                                      NULL,
                                                      &(new_item->peg_revision),
                                                      &(new_item->revision),
                                                      eb->ctx, scratch_pool));
-            SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_uuid,
+            SVN_ERR(svn_ra_get_uuid2(ra_session, &old_repos_uuid,
                                      scratch_pool));
-            ext_repos_relpath = svn_uri_skip_ancestor(ra_cache.repos_root_url,
+            ext_repos_relpath = svn_uri_skip_ancestor(repos_root_url,
                                                       new_url, scratch_pool);
-            if (strcmp(repos_uuid, ra_cache.repos_uuid) != 0 ||
+            if (strcmp(old_repos_uuid, repos_uuid) != 0 ||
                 ext_repos_relpath == NULL)
               return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                         _("Unsupported external: url of file external '%s' "
@@ -727,9 +727,9 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                         new_url, eb->repos_root_url);
 
             SVN_ERR(svn_ra_get_repos_root2(ra_session,
-                                           &ra_cache.repos_root_url,
+                                           &repos_root_url,
                                            scratch_pool));
-            new_url = svn_path_url_add_component2(ra_cache.repos_root_url,
+            new_url = svn_path_url_add_component2(repos_root_url,
                                                   ext_repos_relpath,
                                                   scratch_pool);
             SVN_ERR(svn_ra_reparent(ra_session, new_url, scratch_pool));
@@ -742,9 +742,9 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                      &new_item->revision,
                                      parent_dir_abspath,
                                      ra_session,
-                                     ra_cache.ra_session_url,
-                                     ra_cache.ra_revnum,
-                                     ra_cache.repos_root_url,
+                                     ra_session_url,
+                                     ra_revnum,
+                                     repos_root_url,
                                      eb->timestamp_sleep, eb->ctx,
                                      scratch_pool));
         break;
