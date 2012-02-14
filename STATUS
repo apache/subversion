@@ -81,7 +81,7 @@ Candidate changes:
      Regression in 1.7.2 where we added mod_dontdothat to the buildscripts
      on Windows.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
 Veto-blocked changes:
 =====================
