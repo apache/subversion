@@ -90,6 +90,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.sqlite_path = 'sqlite-amalgamation'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None,
+                           'mod_dontdothat' : None,
                            'libsvn_auth_kwallet': None,
                            'libsvn_auth_gnome_keyring': None }
 
@@ -126,6 +127,7 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.httpd_path = val
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
+        del self.skip_sections['mod_dontdothat']
       elif opt == '--with-libintl':
         self.libintl_path = val
         self.enable_nls = 1
