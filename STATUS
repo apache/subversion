@@ -66,6 +66,8 @@ Candidate changes:
      Regression from 1.6. Some repositories with file externals cannot be
      checked out with 1.7. Users complained.
      See http://svn.haxx.se/users/archive-2011-12/0299.shtml
+   Branch:
+     ^/subversion/branches/1.7.x-issue4087
    Notes:
      r1200277 was merged to simplify conflict resolution
      r1243694 implements the workaround
