@@ -971,7 +971,7 @@ svn_editor_move(svn_editor_t *editor,
  *
  * Perform a rotation among multiple nodes in the target tree.
  *
- * The @relpaths and @revisions arrays (pair-wise) specify nodes in the
+ * The @a relpaths and @a revisions arrays (pair-wise) specify nodes in the
  * tree which are located at a path and expected to be at a specific
  * revision. These nodes are simultaneously moved in a rotation pattern.
  * For example, the node at index 0 of @a relpaths and @a revisions will
