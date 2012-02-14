@@ -60,12 +60,16 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1200277, r1243694
+ * r1200277, r1243694, r1243840
    Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
    Justification:
      Regression from 1.6. Some repositories with file externals cannot be
      checked out with 1.7. Users complained.
      See http://svn.haxx.se/users/archive-2011-12/0299.shtml
+   Notes:
+     r1200277 was merged to simplify conflict resolution
+     r1243694 implements the workaround
+     r1243840 is a cosmetic follow-up treak
    Votes:
      +1: stsp
 
