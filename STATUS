@@ -75,6 +75,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1243976
+   On Windows, don't try to build mod_dontdothat if building without httpd.
+   Justification:
+     Regression in 1.7.2 where we added mod_dontdothat to the buildscripts
+     on Windows.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
