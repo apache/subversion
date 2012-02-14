@@ -693,21 +693,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                     scratch_pool));
         break;
       case svn_node_file:
-        if (strcmp(eb->repos_root_url, ra_cache.repos_root_url) == 0)
-          {
-            SVN_ERR(switch_file_external(local_abspath,
-                                         new_url,
-                                         &new_item->peg_revision,
-                                         &new_item->revision,
-                                         parent_dir_abspath,
-                                         ra_session,
-                                         ra_cache.ra_session_url,
-                                         ra_cache.ra_revnum,
-                                         ra_cache.repos_root_url,
-                                         eb->timestamp_sleep, eb->ctx,
-                                         scratch_pool));
-          }
-        else
+        if (strcmp(eb->repos_root_url, ra_cache.repos_root_url))
           {
             const char *repos_uuid;
             const char *ext_repos_relpath;
@@ -747,19 +733,20 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                                   ext_repos_relpath,
                                                   scratch_pool);
             SVN_ERR(svn_ra_reparent(ra_session, new_url, scratch_pool));
-            SVN_ERR(switch_file_external(local_abspath,
-                                         new_url,
-                                         &new_item->peg_revision,
-                                         &new_item->revision,
-                                         parent_dir_abspath,
-                                         ra_session,
-                                         ra_cache.ra_session_url,
-                                         ra_cache.ra_revnum,
-                                         ra_cache.repos_root_url,
-                                         eb->timestamp_sleep, eb->ctx,
-                                         scratch_pool));
 
           }
+
+        SVN_ERR(switch_file_external(local_abspath,
+                                     new_url,
+                                     &new_item->peg_revision,
+                                     &new_item->revision,
+                                     parent_dir_abspath,
+                                     ra_session,
+                                     ra_cache.ra_session_url,
+                                     ra_cache.ra_revnum,
+                                     ra_cache.repos_root_url,
+                                     eb->timestamp_sleep, eb->ctx,
+                                     scratch_pool));
         break;
       default:
         SVN_ERR_MALFUNCTION();
