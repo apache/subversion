@@ -232,6 +232,42 @@ add_action(struct ev2_edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+/* Find all the paths which are immediate children of PATH and return their
+   basenames in a list. */
+static apr_array_header_t *
+get_children(struct ev2_edit_baton *eb,
+             const char *path,
+             apr_pool_t *pool)
+{
+  apr_array_header_t *children = apr_array_make(pool, 1, sizeof(const char *));
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, eb->paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *p = svn__apr_hash_index_key(hi);
+      const char *child;
+
+      /* Sanitize our paths. */
+      if (*p == '/')
+        p++;
+      
+      /* Find potential children. */
+      child = svn_relpath_skip_ancestor(path, p);
+      if (!child || !*child)
+        continue;
+
+      /* If we have a path separator, it's a deep child, so just ignore it.
+         ### Is there an API we should be using for this? */
+      if (strchr(child, '/') != NULL)
+        continue;
+
+      APR_ARRAY_PUSH(children, const char *) = child;
+    }
+
+  return children;
+}
+                  
+
 static svn_error_t *
 process_actions(void *edit_baton,
                 const char *path,
@@ -319,8 +355,7 @@ process_actions(void *edit_baton,
 
               if (kind == svn_kind_dir)
                 {
-                  children = apr_array_make(scratch_pool, 1,
-                                            sizeof(const char *));
+                  children = get_children(eb, path, scratch_pool);
                 }
               else
                 {
