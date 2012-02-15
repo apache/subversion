@@ -632,6 +632,7 @@ svn_editor_copy(svn_editor_t *editor,
                                 editor->scratch_pool);
 
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
   return err;
@@ -661,6 +662,7 @@ svn_editor_move(svn_editor_t *editor,
 
   MARK_ALLOW_ADD(editor, src_relpath);
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
   return err;
