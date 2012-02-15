@@ -715,7 +715,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                 ext_repos_relpath == NULL ||
                 strcmp(local_repos_uuid, repos_uuid) != 0)
               return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                        _("Unsupported external: url of file external '%s' "
+                        _("Unsupported external: URL of file external '%s' "
                           "is not in repository '%s'"),
                         new_url, eb->repos_root_url);
 
