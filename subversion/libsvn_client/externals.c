@@ -703,12 +703,11 @@ handle_external_item_change(const struct external_change_baton_t *eb,
              * sure both URLs point to the same repository. See issue #4087.
              */
 
-            SVN_ERR(svn_wc__node_get_origin(NULL, NULL, NULL,
-                                            &local_repos_root_url,
-                                            &local_repos_uuid, NULL,
-                                            eb->ctx->wc_ctx,
-                                            parent_dir_abspath,
-                                            FALSE, scratch_pool, scratch_pool));
+            SVN_ERR(svn_wc__node_get_repos_info(&local_repos_root_url,
+                                                &local_repos_uuid,
+                                                eb->ctx->wc_ctx,
+                                                parent_dir_abspath,
+                                                scratch_pool, scratch_pool));
             ext_repos_relpath = svn_uri_skip_ancestor(repos_root_url,
                                                       new_url, scratch_pool);
             if (local_repos_uuid == NULL || local_repos_root_url == NULL ||
