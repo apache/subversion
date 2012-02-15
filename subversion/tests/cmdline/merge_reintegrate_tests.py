@@ -2567,7 +2567,7 @@ def reintegrate_symlink_deletion(sbox):
   sbox.simple_commit(message='add symlink')
 
   ## branch
-  svntest.main.run_svn(None, 'cp', A_url, A_COPY_url, '-m', 'branch')
+  sbox.simple_repo_copy('A', 'A_COPY')
   sbox.simple_update()
 
   ## branch rm
