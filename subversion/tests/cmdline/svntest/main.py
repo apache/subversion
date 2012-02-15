@@ -302,12 +302,10 @@ def get_start_commit_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "start-commit")
 
-
 def get_pre_commit_hook_path(repo_dir):
   "Return the path of the pre-commit-hook conf file in REPO_DIR."
 
   return os.path.join(repo_dir, "hooks", "pre-commit")
-
 
 def get_post_commit_hook_path(repo_dir):
   "Return the path of the post-commit-hook conf file in REPO_DIR."
