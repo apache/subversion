@@ -695,7 +695,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
       case svn_node_file:
         if (strcmp(eb->repos_root_url, repos_root_url))
           {
-            const char *old_repos_uuid;
+            const char *local_repos_root_url;
+            const char *local_repos_uuid;
             const char *ext_repos_relpath;
             
             /* 
@@ -707,33 +708,35 @@ handle_external_item_change(const struct external_change_baton_t *eb,
              * sure both URLs point to the same repository. See issue #4087.
              */
 
-            SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                                     &ra_revnum,
-                                                     &ra_session_url,
-                                                     eb->repos_root_url,
-                                                     NULL,
-                                                     &(new_item->peg_revision),
-                                                     &(new_item->revision),
-                                                     eb->ctx, scratch_pool));
-            SVN_ERR(svn_ra_get_uuid2(ra_session, &old_repos_uuid,
-                                     scratch_pool));
+            SVN_ERR(svn_wc__node_get_origin(NULL, NULL, NULL,
+                                            &local_repos_root_url,
+                                            &local_repos_uuid, NULL,
+                                            eb->ctx->wc_ctx,
+                                            parent_dir_abspath,
+                                            FALSE, scratch_pool, scratch_pool));
             ext_repos_relpath = svn_uri_skip_ancestor(repos_root_url,
                                                       new_url, scratch_pool);
-            if (strcmp(old_repos_uuid, repos_uuid) != 0 ||
-                ext_repos_relpath == NULL)
+            if (local_repos_uuid == NULL || local_repos_root_url == NULL ||
+                ext_repos_relpath == NULL ||
+                strcmp(local_repos_uuid, repos_uuid) != 0)
               return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                         _("Unsupported external: url of file external '%s' "
                           "is not in repository '%s'"),
                         new_url, eb->repos_root_url);
 
-            SVN_ERR(svn_ra_get_repos_root2(ra_session,
-                                           &repos_root_url,
-                                           scratch_pool));
-            new_url = svn_path_url_add_component2(repos_root_url,
+            new_url = svn_path_url_add_component2(local_repos_root_url,
                                                   ext_repos_relpath,
                                                   scratch_pool);
-            SVN_ERR(svn_ra_reparent(ra_session, new_url, scratch_pool));
-
+            SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                                     &ra_revnum,
+                                                     &ra_session_url,
+                                                     new_url,
+                                                     NULL,
+                                                     &(new_item->peg_revision),
+                                                     &(new_item->revision),
+                                                     eb->ctx, scratch_pool));
+            SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                           scratch_pool));
           }
 
         SVN_ERR(switch_file_external(local_abspath,
