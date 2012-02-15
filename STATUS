@@ -60,7 +60,7 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1200277, r1243694, r1243840, r1243920, r1244466
+ * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551
    Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
    Justification:
      Regression from 1.6. Some repositories with file externals cannot be
@@ -74,6 +74,7 @@ Candidate changes:
      r1243840 is a cosmetic follow-up treak
      r1243920 was merged for conflict resolution for r1244466
      r1244466 eliminates an unneccesary RA round-trip from r1243694
+     r1244551 uses a better API to query the local repos root and uuid
    Votes:
      +1: stsp
 
