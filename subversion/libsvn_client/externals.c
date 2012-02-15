@@ -610,9 +610,6 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   const char *repos_uuid;
   const char *new_url;
   svn_node_kind_t ext_kind;
-  svn_node_kind_t local_kind;
-
-  local_kind = svn_node_unknown;
 
   SVN_ERR_ASSERT(eb->repos_root_url && parent_dir_url);
   SVN_ERR_ASSERT(new_item != NULL);
@@ -655,8 +652,6 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                "or a directory"),
                              ra_session_url, ra_revnum);
 
-  local_kind = ext_kind;
-
 
   /* Not protecting against recursive externals.  Detecting them in
      the global case is hard, and it should be pretty obvious to a
@@ -682,7 +677,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
                                           scratch_pool));
     }
 
-  switch (local_kind)
+  switch (ext_kind)
     {
       case svn_node_dir:
         SVN_ERR(switch_dir_external(local_abspath, new_url,
