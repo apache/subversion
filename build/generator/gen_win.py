@@ -90,6 +90,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.sqlite_path = 'sqlite-amalgamation'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None,
+                           'mod_dontdothat' : None,
                            'libsvn_auth_kwallet': None,
                            'libsvn_auth_gnome_keyring': None }
 
@@ -126,6 +127,7 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.httpd_path = val
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
+        del self.skip_sections['mod_dontdothat']
       elif opt == '--with-libintl':
         self.libintl_path = val
         self.enable_nls = 1
@@ -185,6 +187,11 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.vs_version = '2010'
           self.sln_version = '11.00'
           self.vcproj_version = '10.0'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '11':
+          self.vs_version = '11'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
           self.vcproj_extension = '.vcxproj'
         else:
           print('WARNING: Unknown VS.NET version "%s",'
@@ -1219,7 +1226,8 @@ class WinGeneratorBase(GeneratorBase):
     data = {
       'version' : self.vcproj_version,
       'configs' : self.configs,
-      'platforms' : self.platforms
+      'platforms' : self.platforms,
+      'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
       }
     for key, val in params:
       data[key] = val

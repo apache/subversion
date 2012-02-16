@@ -211,6 +211,42 @@ add_action(struct ev2_edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+/* Find all the paths which are immediate children of PATH and return their
+   basenames in a list. */
+static apr_array_header_t *
+get_children(struct ev2_edit_baton *eb,
+             const char *path,
+             apr_pool_t *pool)
+{
+  apr_array_header_t *children = apr_array_make(pool, 1, sizeof(const char *));
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, eb->paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *p = svn__apr_hash_index_key(hi);
+      const char *child;
+
+      /* Sanitize our paths. */
+      if (*p == '/')
+        p++;
+      
+      /* Find potential children. */
+      child = svn_relpath_skip_ancestor(path, p);
+      if (!child || !*child)
+        continue;
+
+      /* If we have a path separator, it's a deep child, so just ignore it.
+         ### Is there an API we should be using for this? */
+      if (strchr(child, '/') != NULL)
+        continue;
+
+      APR_ARRAY_PUSH(children, const char *) = child;
+    }
+
+  return children;
+}
+                  
+
 static svn_error_t *
 process_actions(void *edit_baton,
                 const char *path,
@@ -298,8 +334,7 @@ process_actions(void *edit_baton,
 
               if (kind == svn_kind_dir)
                 {
-                  children = apr_array_make(scratch_pool, 1,
-                                            sizeof(const char *));
+                  children = get_children(eb, path, scratch_pool);
                 }
               else
                 {
@@ -712,6 +747,8 @@ struct handler_baton
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
 
+  svn_stream_t *source;
+
   apr_pool_t *pool;
 };
 
@@ -724,6 +761,8 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   err = hb->apply_handler(window, hb->apply_baton);
   if (window != NULL && !err)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_stream_close(hb->source));
 
   svn_pool_destroy(hb->pool);
 
@@ -741,7 +780,6 @@ ev2_apply_textdelta(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
-  svn_stream_t *source;
   svn_stream_t *target;
   struct path_checksum_args *pca = apr_pcalloc(fb->eb->edit_pool,
                                                sizeof(*pca));
@@ -749,16 +787,16 @@ ev2_apply_textdelta(void *file_baton,
   pca->base_revision = fb->base_revision;
 
   if (! fb->delta_base)
-    source = svn_stream_empty(handler_pool);
+    hb->source = svn_stream_empty(handler_pool);
   else
-    SVN_ERR(svn_stream_open_readonly(&source, fb->delta_base, handler_pool,
+    SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
                                      result_pool));
 
   SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
 
-  svn_txdelta_apply(source, target,
+  svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
                     handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
@@ -1888,6 +1926,10 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
 
   svn_delta_unlock_func_t unlock_func;
   void *unlock_baton;
+
+  SVN_ERR_ASSERT(shim_callbacks->fetch_kind_func != NULL);
+  SVN_ERR_ASSERT(shim_callbacks->fetch_props_func != NULL);
+  SVN_ERR_ASSERT(shim_callbacks->fetch_base_func != NULL);
 
   SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
                             &unlock_func, &unlock_baton,

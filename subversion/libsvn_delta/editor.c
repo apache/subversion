@@ -65,12 +65,25 @@ struct svn_editor_t
 
 #ifdef ENABLE_ORDERING_CHECK
 
+/* Marker to indicate no further changes are allowed on this node.  */
 static const int marker_done;
-static const int marker_allow_add;
-static const int marker_allow_alter;
 #define MARKER_DONE (&marker_done)
+
+/* Marker indicating that add_* may be called for this path, or that it
+   can be the destination of a copy or move. For copy/move, the path
+   will switch to MARKER_ALLOW_ALTER, to enable further tweaks.  */
+static const int marker_allow_add;
 #define MARKER_ALLOW_ADD (&marker_allow_add)
+
+/* Marker indicating that alter_* may be called for this path.  */
+static const int marker_allow_alter;
 #define MARKER_ALLOW_ALTER (&marker_allow_alter)
+
+/* Just like MARKER_DONE, but also indicates that the node was created
+   via add_directory(). This allows us to verify that the CHILDREN param
+   was comprehensive.  */
+static const int marker_added_dir;
+#define MARKER_ADDED_DIR (&marker_added_dir)
 
 #define MARK_FINISHED(editor) ((editor)->finished = TRUE)
 #define SHOULD_NOT_BE_FINISHED(editor)  SVN_ERR_ASSERT(!(editor)->finished)
@@ -79,27 +92,31 @@ static const int marker_allow_alter;
   apr_hash_set((editor)->pending_incomplete_children, relpath,  \
                APR_HASH_KEY_STRING, NULL);
 
-#define MARK_COMPLETED(editor, relpath)   \
+#define MARK_RELPATH(editor, relpath, value) \
   apr_hash_set((editor)->completed_nodes, \
                apr_pstrdup((editor)->result_pool, relpath), \
-               APR_HASH_KEY_STRING, MARKER_DONE)
+               APR_HASH_KEY_STRING, value)
+
+#define MARK_COMPLETED(editor, relpath) \
+  MARK_RELPATH(editor, relpath, MARKER_DONE)
 #define SHOULD_NOT_BE_COMPLETED(editor, relpath) \
   SVN_ERR_ASSERT(apr_hash_get((editor)->completed_nodes, relpath, \
                               APR_HASH_KEY_STRING) == NULL)
 
 #define MARK_ALLOW_ADD(editor, relpath) \
-  apr_hash_set((editor)->completed_nodes, \
-               apr_pstrdup((editor)->result_pool, relpath), \
-               APR_HASH_KEY_STRING, MARKER_ALLOW_ADD)
+  MARK_RELPATH(editor, relpath, MARKER_ALLOW_ADD)
 #define SHOULD_ALLOW_ADD(editor, relpath) \
   SVN_ERR_ASSERT(allow_either(editor, relpath, MARKER_ALLOW_ADD, NULL))
 
 #define MARK_ALLOW_ALTER(editor, relpath) \
-  apr_hash_set((editor)->completed_nodes, \
-               apr_pstrdup((editor)->result_pool, relpath), \
-               APR_HASH_KEY_STRING, MARKER_ALLOW_ALTER)
+  MARK_RELPATH(editor, relpath, MARKER_ALLOW_ALTER)
 #define SHOULD_ALLOW_ALTER(editor, relpath) \
   SVN_ERR_ASSERT(allow_either(editor, relpath, MARKER_ALLOW_ALTER, NULL))
+
+#define MARK_ADDED_DIR(editor, relpath) \
+  MARK_RELPATH(editor, relpath, MARKER_ADDED_DIR)
+#define CHECK_UNKNOWN_CHILD(editor, relpath) \
+  SVN_ERR_ASSERT(check_unknown_child(editor, relpath))
 
 static svn_boolean_t
 allow_either(const svn_editor_t *editor,
@@ -110,6 +127,32 @@ allow_either(const svn_editor_t *editor,
   void *value = apr_hash_get(editor->completed_nodes, relpath,
                              APR_HASH_KEY_STRING);
   return value == marker1 || value == marker2;
+}
+
+static svn_boolean_t
+check_unknown_child(const svn_editor_t *editor,
+                    const char *relpath)
+{
+  const char *parent;
+
+  /* If we already know about the new child, then exit early.  */
+  if (apr_hash_get(editor->pending_incomplete_children, relpath,
+                   APR_HASH_KEY_STRING) != NULL)
+    return TRUE;
+
+  parent = svn_relpath_dirname(relpath, editor->scratch_pool);
+
+  /* Was this parent created via svn_editor_add_directory() ?  */
+  if (apr_hash_get(editor->completed_nodes, parent, APR_HASH_KEY_STRING)
+      == MARKER_ADDED_DIR)
+    {
+      /* Whoops. This child should have been listed in that add call,
+         and placed into ->pending_incomplete_children.  */
+      return FALSE;
+    }
+
+  /* The parent was not added in this drive.  */
+  return TRUE;
 }
 
 #else
@@ -131,6 +174,9 @@ allow_either(const svn_editor_t *editor,
 
 #define MARK_ALLOW_ALTER(editor, relpath)  /* empty */
 #define SHOULD_ALLOW_ALTER(editor, relpath)  /* empty */
+
+#define MARK_ADDED_DIR(editor, relpath)  /* empty */
+#define CHECK_UNKNOWN_CHILD(editor, relpath)  /* empty */
 
 #endif /* ENABLE_ORDERING_CHECK */
 
@@ -331,6 +377,7 @@ svn_editor_add_directory(svn_editor_t *editor,
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  CHECK_UNKNOWN_CHILD(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -340,7 +387,7 @@ svn_editor_add_directory(svn_editor_t *editor,
                                          props, replaces_rev,
                                          editor->scratch_pool);
 
-  MARK_COMPLETED(editor, relpath);
+  MARK_ADDED_DIR(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
 
 #ifdef ENABLE_ORDERING_CHECK
@@ -378,6 +425,7 @@ svn_editor_add_file(svn_editor_t *editor,
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  CHECK_UNKNOWN_CHILD(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -407,6 +455,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  CHECK_UNKNOWN_CHILD(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -433,6 +482,7 @@ svn_editor_add_absent(svn_editor_t *editor,
 
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
+  CHECK_UNKNOWN_CHILD(editor, relpath);
 
   if (editor->cancel_func)
     SVN_ERR(editor->cancel_func(editor->cancel_baton));
@@ -582,6 +632,7 @@ svn_editor_copy(svn_editor_t *editor,
                                 editor->scratch_pool);
 
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
   return err;
@@ -611,6 +662,7 @@ svn_editor_move(svn_editor_t *editor,
 
   MARK_ALLOW_ADD(editor, src_relpath);
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
   return err;

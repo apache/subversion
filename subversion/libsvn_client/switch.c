@@ -228,7 +228,7 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
   dfb.target_revision = revnum;
 
-  SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
+  SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, switch_rev_url, use_commit_times,
                                     depth,

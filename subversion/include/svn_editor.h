@@ -241,10 +241,11 @@ extern "C" {
  *   follow for each child mentioned in the @a children argument of any
  *   svn_editor_add_directory() call.
  *
- * - ### add section describing: add_* cannot be called for a child of
- *   ### a directory added via add_directory in this edit, where that
- *   ### child was not mentioned. ie. it should have been passed to the
- *   ### parent add_directory so it could be marked as incomplete.
+ * - For each node created with add_*, if its parent was created using
+ *   svn_editor_add_directory(), then the new child node MUST have been
+ *   mentioned in the @a children parameter of the parent's creation.
+ *   This allows the parent directory to properly mark the child as
+ *   "incomplete" until the child's add_* call arrives.
  *
  * - A path should
  *   never be referenced more than once by the add_*, alter_*, and
@@ -970,7 +971,7 @@ svn_editor_move(svn_editor_t *editor,
  *
  * Perform a rotation among multiple nodes in the target tree.
  *
- * The @relpaths and @revisions arrays (pair-wise) specify nodes in the
+ * The @a relpaths and @a revisions arrays (pair-wise) specify nodes in the
  * tree which are located at a path and expected to be at a specific
  * revision. These nodes are simultaneously moved in a rotation pattern.
  * For example, the node at index 0 of @a relpaths and @a revisions will
