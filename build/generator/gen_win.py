@@ -188,6 +188,11 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.sln_version = '11.00'
           self.vcproj_version = '10.0'
           self.vcproj_extension = '.vcxproj'
+        elif val == '11':
+          self.vs_version = '11'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
         else:
           print('WARNING: Unknown VS.NET version "%s",'
                  ' assuming "%s"\n' % (val, '7.00'))
@@ -1221,7 +1226,8 @@ class WinGeneratorBase(GeneratorBase):
     data = {
       'version' : self.vcproj_version,
       'configs' : self.configs,
-      'platforms' : self.platforms
+      'platforms' : self.platforms,
+      'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
       }
     for key, val in params:
       data[key] = val
