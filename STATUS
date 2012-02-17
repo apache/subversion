@@ -31,7 +31,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1210147
    Notes:
-    Depends on the r1220783 bug fix, otherwise the test will fail on Windows.
+    I previously said this depended on r1220783 to make the test pass on
+    Windows, but it doesn't.
     r1210147 is the actual fix.
     r1202132 and r1202333 were merged for conflict resolution. These revisions
     depend on the issue #2873 fix which has been backported in 1.7.2
