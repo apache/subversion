@@ -268,7 +268,38 @@ detect_changed(apr_hash_t **changed,
       /* Pre-1.6 revision files don't store the change path kind, so fetch
          it manually. */
       if (item->node_kind == svn_node_unknown)
-        SVN_ERR(svn_fs_check_path(&item->node_kind, root, path, subpool));
+        {
+          svn_fs_root_t *check_root = root;
+          const char *check_path = path;
+
+          /* Deleted items don't exist so check earlier revision.  We
+             know the parent must exist and could be a copy */
+          if (change->change_kind == svn_fs_path_change_delete)
+            {
+              svn_fs_history_t *history;
+              svn_revnum_t prev_rev;
+              const char *parent_path, *name;
+
+              svn_fspath__split(&parent_path, &name, path, subpool);
+
+              SVN_ERR(svn_fs_node_history(&history, root, parent_path,
+                                          subpool));
+
+              /* Two calls because the first call returns the original
+                 revision as the deleted child means it is 'interesting' */
+              SVN_ERR(svn_fs_history_prev(&history, history, TRUE, subpool));
+              SVN_ERR(svn_fs_history_prev(&history, history, TRUE, subpool));
+
+              SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
+                                              subpool));
+              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev, subpool));
+              check_path = svn_fspath__join(parent_path, name, subpool);
+            }
+
+          SVN_ERR(svn_fs_check_path(&item->node_kind, check_root, check_path,
+                                    subpool));
+        }
+
 
       if ((action == 'A') || (action == 'R'))
         {
