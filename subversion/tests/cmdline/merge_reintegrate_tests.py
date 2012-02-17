@@ -2544,7 +2544,6 @@ def reintegrate_replaced_source(sbox):
   
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_posix_os)
-@XFail()
 @Issue(4052)
 def reintegrate_symlink_deletion(sbox):
   "reintegrate symlink deletion"

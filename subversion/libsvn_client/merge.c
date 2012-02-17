@@ -1995,10 +1995,14 @@ files_same_p(svn_boolean_t *same,
       svn_opt_revision_t working_rev = { svn_opt_revision_working, { 0 } };
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
-      SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
-                                                mine_abspath, &working_rev,
-                                                FALSE, TRUE, NULL, NULL,
-                                                scratch_pool, scratch_pool));
+      if (svn_prop_get_value(working_props, SVN_PROP_SPECIAL) != NULL)
+        SVN_ERR(svn_subst_read_specialfile(&mine_stream, mine_abspath,
+                                           scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
+                                                  mine_abspath, &working_rev,
+                                                  FALSE, TRUE, NULL, NULL,
+                                                  scratch_pool, scratch_pool));
 
       SVN_ERR(svn_stream_open_readonly(&older_stream, older_abspath,
                                        scratch_pool, scratch_pool));
