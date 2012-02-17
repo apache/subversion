@@ -48,6 +48,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_subst.h"
 #include "svn_ra.h"
 #include "client.h"
 #include "mergeinfo.h"
