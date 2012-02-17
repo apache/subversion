@@ -625,6 +625,10 @@ try_symlink_as_dir:
        * points to a directory, try to find a wcroot in that
        * directory instead. */
 
+      /* ### This catches all nodes, regardless of presence.
+       * ### Should we treat not-present/excluded symlinks as
+       * ### unversioned here, allowing unversioned on-disk
+       * ### symlinks to override them? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, (*wcroot)->sdb,
                                         STMT_SELECT_NODE_INFO));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", (*wcroot)->wc_id, *local_relpath));
