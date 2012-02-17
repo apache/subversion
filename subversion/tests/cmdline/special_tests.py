@@ -1023,7 +1023,6 @@ def replace_symlinks(sbox):
   sbox.simple_update()
 
 
-@XFail()
 @Issue(4102)
 @SkipUnless(svntest.main.is_posix_os)
 def externals_as_symlink_targets(sbox):
