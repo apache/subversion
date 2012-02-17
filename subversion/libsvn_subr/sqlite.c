@@ -120,16 +120,17 @@ struct svn_sqlite__value_t
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
-    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, sqlite3_errmsg((db)->db3));    \
+    return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                             NULL, "sqlite: %s",                 \
+                             sqlite3_errmsg((db)->db3));         \
 } while (0)
 
 #define SQLITE_ERR_MSG(x, msg) do                                \
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
-    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, msg);                          \
+    return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                             NULL, "sqlite: %s", (msg));         \
 } while (0)
 
 
