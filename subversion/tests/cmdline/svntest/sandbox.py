@@ -93,12 +93,13 @@ class Sandbox:
       shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
     return clone
 
-  def build(self, name=None, create_wc=True, read_only=False):
+  def build(self, name=None, create_wc=True, read_only=False,
+            minor_version=None):
     """Make a 'Greek Tree' repo (or refer to the central one if READ_ONLY),
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
     self._set_name(name, read_only)
-    svntest.actions.make_repo_and_wc(self, create_wc, read_only)
+    svntest.actions.make_repo_and_wc(self, create_wc, read_only, minor_version)
     self._is_built = True
 
   def add_test_path(self, path, remove=True):
