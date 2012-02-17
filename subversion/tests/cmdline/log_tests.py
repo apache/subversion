@@ -2198,7 +2198,6 @@ def log_diff(sbox):
   compare_diff_output(r9diff, log_chain[1]['diff_lines'])
   compare_diff_output(r8diff, log_chain[2]['diff_lines'])
 
-@XFail()
 def log_xml_old(sbox):
   "log --xml shows kind for old style repository"
 
