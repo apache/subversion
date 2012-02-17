@@ -54,7 +54,7 @@ struct svn_wc__db_t {
   struct
   {
     svn_stringbuf_t *abspath;
-    svn_node_kind_t kind;
+    svn_kind_t kind;
   } parse_cache;
 
   /* As we grow the state of this DB, allocate that state here. */
