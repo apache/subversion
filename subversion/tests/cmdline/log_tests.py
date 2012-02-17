@@ -179,7 +179,8 @@ def guarantee_repos_and_wc(sbox):
   to test the code"""
   svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "8")
-  svntest.main.file_append(rho_path, "8")
+  svntest.main.file_append(rho_path, "88") # More than one char so libmagic
+                                           # treats it as text.
   svntest.main.run_svn(None, 'add', rho_path)
   svntest.main.run_svn(None,
                        'ci', '-F', msg_file)
@@ -2089,7 +2090,7 @@ def log_diff(sbox):
              ]
   r8diff = make_diff_header('A2/D/G/rho', 'revision 0', 'revision 8') \
            + [ "@@ -0,0 +1 @@\n",
-               "+8\n",
+               "+88\n",
                "\ No newline at end of file\n",
              ]
   log_chain = parse_log_output(output, with_diffs=True)
