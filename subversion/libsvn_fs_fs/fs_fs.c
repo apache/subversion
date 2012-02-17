@@ -2575,7 +2575,7 @@ struct rep_args
 
   svn_revnum_t base_revision;
   apr_off_t base_offset;
-  apr_size_t base_length;
+  svn_filesize_t base_length;
 };
 
 /* Read the next line from file FILE and parse it as a text
@@ -2636,7 +2636,7 @@ read_rep_line(struct rep_args **rep_args_p,
   if (! str)
     goto error;
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep_args->base_length = (apr_size_t)val;
+  rep_args->base_length = (svn_filesize_t)val;
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
@@ -7187,7 +7187,7 @@ svn_fs_fs__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  return svn_io_copy_perms(path, fs_path, pool);
+  return svn_io_copy_perms(fs_path, path, pool);
 }
 
 /* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to

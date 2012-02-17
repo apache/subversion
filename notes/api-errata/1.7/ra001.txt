@@ -3,7 +3,7 @@ API ERRATA -- $Id$
 Root Cause of Errata: 
  Library(s) Affected: libsvn_ra, RA servers (svnserve, mod_dav_svn)
 Function(s) Affected: svn_delta_editor_t
-     New Behavior in: 1.7 (default), 1.4 (client optional)
+     New Behavior in: 1.8 (default), 1.4 (client optional)
       Related Issues: #2932, #3628
 
 

@@ -3427,7 +3427,6 @@ def patch_strip_cwd(sbox):
   "patch --strip propchanges cwd"
   return patch_one_property(sbox, True)
 
-@XFail()
 @Issue(3814)
 def patch_set_prop_no_eol(sbox):
   "patch doesn't append newline to properties"
@@ -3805,6 +3804,169 @@ def patch_delete_and_skip(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+@Issue(3991)
+def patch_lacking_trailing_eol(sbox):
+  "patch file lacking trailing eol"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Prepare
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Apply patch
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    # TODO: -1 +1
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes", # No trailing \n on this line!
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\n"
+  new_contents = "new\n"
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+
+  # Expect a newline to be appended
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=iota_contents + "Some more bytes")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+def patch_target_no_eol_at_eof(sbox):
+  "patch target with no eol at eof"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  iota_contents = [
+    "This is the file iota."
+  ]
+
+  svntest.main.file_write(iota_path, ''.join(iota_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'  : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  unidiff_patch = [
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1,7 +1,7 @@\n",
+    "-This is the file iota.\n"
+    "\\ No newline at end of file\n",
+    "+It is really the file 'iota'.\n",
+    "\\ No newline at end of file\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  iota_contents = [
+    "It is really the file 'iota'."
+  ]
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(iota_contents))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+def patch_add_and_delete(sbox):
+  "patch add multiple levels and delete"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  unidiff_patch = [
+    "Index: foo\n",
+    "===================================================================\n",
+    "--- P/Q/foo\t(revision 0)\n"
+    "+++ P/Q/foo\t(working copy)\n"
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'foo'.\n",
+    "Index: iota\n"
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n"
+    "+++ iota\t(working copy)\n"
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'iota'.\n",
+    ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'P'),
+    'A         %s\n' % os.path.join(wc_dir, 'P', 'Q'),
+    'A         %s\n' % os.path.join(wc_dir, 'P', 'Q', 'foo'),
+    'D         %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk.add({'P/Q/foo' : Item(contents="This is the file 'foo'.\n")})
+  expected_status.tweak('iota', status='D ')
+  expected_status.add({
+      'P'       : Item(status='A ', wc_rev=0),
+      'P/Q'     : Item(status='A ', wc_rev=0),
+      'P/Q/foo' : Item(status='A ', wc_rev=0),
+      })
+  expected_skip = wc.State('', { })
+
+  # Failed with "The node 'P' was not found" when erroneously checking
+  # whether 'P/Q' should be deleted.
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -3845,6 +4007,9 @@ test_list = [ None,
               patch_reversed_add_with_props2,
               patch_dev_null,
               patch_delete_and_skip,
+              patch_lacking_trailing_eol,
+              patch_target_no_eol_at_eof,
+              patch_add_and_delete,
             ]
 
 if __name__ == '__main__':

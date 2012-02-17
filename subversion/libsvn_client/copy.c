@@ -98,7 +98,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_wc__node_get_origin(NULL, &src_revnum,
                                       &repos_relpath, &repos_root_url,
-                                      NULL,
+                                      NULL, NULL,
                                       ctx->wc_ctx, local_abspath, FALSE,
                                       pool, pool));
 
@@ -2206,7 +2206,7 @@ try_copy(const apr_array_header_t *sources,
                   SVN_ERR(svn_wc__node_get_origin(NULL, &copyfrom_rev,
                                                   &copyfrom_repos_relpath,
                                                   &copyfrom_repos_root_url,
-                                                  NULL,
+                                                  NULL, NULL,
                                                   ctx->wc_ctx,
                                                   pair->src_abspath_or_url,
                                                   TRUE, iterpool, iterpool));

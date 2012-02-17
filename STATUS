@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.7.3:
+Status of 1.7.4:
 
 Candidate changes:
 ==================
@@ -24,64 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1201072, r1205188, r1205209
-   Fix issue #4050 "'svn mergeinfo' always considers non-inheritable ranges
-   as partially merged".
-   Justification:
-     'svn mergeinfo' gave incorrect answers in what is admittedly an edge
-     case, but the fix is very simple.
-   Notes:
-     r1201072 and r1205188 are a new test and minor tweak respectively.
-     r1205209 is the fix.
-   Votes:
-     +1: pburba
-
- * r1207555, r1207808
-   mod_dontdothat: contrib/ -> tools/ and relicense under ALv2.
-   Justification:
-     ASF infra is using this so we should maintain it.
-     Stuff in contrib/ isn't officially maintained.
-   Notes:
-     r1207555: Perform the move (from r1207550) and relicense
-     r1207808: Enable building mod_dontdothat from our standard make scripts.
-   Votes:
-     +1: rhuijben, stsp
-
- * r1150344, r1158923, r1158929, r1166267, r1206576, r1206718, r1206719,
-   r1206724, r1206741, r1207656, r1207663, r1207823
-   Fix issues #3814, and #3991, and other EOL-handling problems in patch.
-   Justification:
-     svn patch is broken for file content and property values not terminated
-     with EOL, and for patches not terminated with EOL.
-     Fixes requested on users@:
-     http://svn.haxx.se/users/archive-2011-11/0513.shtml
-     http://svn.haxx.se/users/archive-2011-11/0523.shtml
-   Notes:
-     r1150344: Merged to avoid conflicts in diff parsing test.
-     r1158923: Adds a cmdline regression test for issue #3991.
-     r1158929: Adds a new C diff parsing regression test for issue #3991.
-     r1166267: Merged to prevent conflicts in diff_tests.py.
-     r1206576: Tweak 'svn diff' output for prop values not terminated with EOL.
-     r1206718: Fix issue #3814.
-     r1206719: Follow-up fix for JavaHL tests.
-     r1206724: Fix issue #3991.
-     r1206741: Fixes the #3991 C diff parsing test to make it PASS.
-     r1206748: Remove an obsolete comment.
-     r1207656: Fix a pointer dereference bug from r1206718.
-     r1207663: Fix handling of '\ No newline ...' comments within hunk text.
-     r1207823: Fixes spurious test failures.
-   Branch:
-     ^/subversion/branches/1.7.x-svn-patch-eol-fixes
-   Votes:
-     +1: stsp, philip
-
- * r1220783
-   Fix mis-ordered text output of 'svn log --diff' on Windows.
-   Justification:
-     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
-   Votes:
-     +1: julianfoad
-
  * r1210147, r1202132, r1202333, r1220740
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
@@ -89,62 +31,73 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1210147
    Notes:
-    Depends on the r1220783 bug fix, otherwise the test will fail on Windows.
+    I previously said this (r1220740 specifically) depended on r1220783 to
+    make the test pass on Windows, but it doesn't here; on trunk it does.
     r1210147 is the actual fix.
     r1202132 and r1202333 were merged for conflict resolution. These revisions
     depend on the issue #2873 fix which has been backported in 1.7.2
     r1220740 expands the test so that it would fail without r1210147 applied.
    Votes:
-     +1: stsp (without r1220740)
+     +1: stsp (without r1220740 -- r1220740 depends on r1220783 which
+               in turn needs new-in-1.8 APIs. Are there test failures
+               on Windows without it that cannot be fixed some other way?)
+              (The back-port of r1220740 doesn't have that dependency. -- JAF)
      +1: julianfoad
 
- * r1154121, r1195480, r1208840, r1209631, r1209654, r1212476, r1212482,
-   r1212484
-   Update and clarify the merge help text.
+ * r1235831, r1236099
+   Tweak the parsing of the ssl-authority-files config option to make it
+   easier for users to configure.
    Justification:
-     Merge usage questions are very frequently asked questions in #svn IRC and
-     on the users@ list. We should improve the documentation whenever we can
-     and point people to it.
+     Low impact change to help users.
    Notes:
-     Merge with --accept=theirs-conflict
+     Both r1235831 and r1236099 conflict and will need a branch.
    Votes:
-     +1: stsp, philip
+     +1: gstein, rhuijben
 
- * r1215260, r1215288, r1215374, r1215375, r1215379
-   Fix issue #4082 ("'svn log --with-all-revprops' over ra-dav
-   intolerant of XML-unsafe property values").
+ * r1238121
+   Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
+   called against a HTTPv2 server with a SVN_INVALID_REVNUM revision.
    Justification:
-     'Tis better to succeed than to fail.  Unless of course you're
-     talking about successfully doing evil, in which case 'tis better
-     to fail.  But we're not talking about doing evil here.  Unless
-     you think XML is evil.  But seriously, these commits introduce a
-     protocol change for WebDAV.  I suspect that might disqualify it
-     in some folks' eyes from backport to a patch release rather
-     automatically.  But the protocol change is (as all our other
-     protocol changes are) designed to maintain compatibility across
-     client and server versions.  If the client advertises support for
-     the new behavior, and the server has such support, the bugfix
-     logic is activitated.  A patched client will not trouble an
-     unpatched server; nor vice-versa.  Further, the effects of the
-     corrected behavior do not persist, so there's no dataset damage
-     imposed for users who would roll this change back out of their
-     systems (by reverting to a prior release).  Therefore, cmpilato
-     can't think of a good reason not to backport the change.
+     Privately reported as AnkhSVN issue.
+   Votes:
+     +1: rhuijben, philip
+
+ * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551
+   Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
+   Justification:
+     Regression from 1.6. Some repositories with file externals cannot be
+     checked out with 1.7. Users complained.
+     See http://svn.haxx.se/users/archive-2011-12/0299.shtml
+   Branch:
+     ^/subversion/branches/1.7.x-issue4087
    Notes:
-     r1215260 - mod_dav_svn support for this issue
-     r1215288 - libsvn_ra_neon support for this issue
-     r1215374 - followup to r1215288
-     r1215375 - libsvn_ra_serf support for this issue
-     r1215379 - followup to r1215375
+     r1200277 was merged to simplify conflict resolution
+     r1243694 implements the workaround
+     r1243840 is a cosmetic follow-up treak
+     r1243920 was merged for conflict resolution for r1244466
+     r1244466 eliminates an unneccesary RA round-trip from r1243694
+     r1244551 uses a better API to query the local repos root and uuid
    Votes:
-     +1: cmpilato
+     +1: stsp
 
- * r1220742, r1220750
-   Fix spurious testsuite FAIL
+ * r1243976
+   On Windows, don't try to build mod_dontdothat if building without httpd.
    Justification:
-     We don't expect users to ignore tests that FAIL.
+     Regression in 1.7.2 where we added mod_dontdothat to the buildscripts
+     on Windows.
    Votes:
-     +1: philip, rhuijben
+     +1: rhuijben, ivan
+
+ * r1244303, r1244317, r1245284, r1245285
+   Fix issue #4052, "merge tree-conflicts deleted symbolic links".
+   Justification:
+     Regression from 1.6.
+     Users complained: http://mail-archives.apache.org/mod_mbox/subversion-users/201202.mbox/%3C36358219FB198140A2CD558823C1A57805374260%40NZURC101PEX1.ubsw.net%3E
+   Notes:
+     r1244303 and r1244317 add a test.
+     r1245284 and r1245285 implement a fix.
+   Votes:
+     +1: stsp
 
 Veto-blocked changes:
 =====================
@@ -167,6 +120,15 @@ Veto-blocked changes:
          room for a future public API that really does full verification.)
          (without r1161164, r1161180)
      -1: danielsh (invasive, new feature)
+
+ * r1221463
+   Allow leading "r" in ?p= query string arguments.
+   Justification:
+     Same as for allowing '-r r42' in svn(1).
+   Votes:
+     -0: rhuijben (Behavior change without positive votes? 1.8?)
+     -1: cmpilato (a rollback to an earlier patch release would break any
+                   bookmarks saved for URLs using the new syntax)
 
 Approved changes:
 =================
