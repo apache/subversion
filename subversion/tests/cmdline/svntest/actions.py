@@ -129,7 +129,7 @@ def guarantee_empty_repository(path):
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_greek_repository was called once before
 # using this function.
-def guarantee_greek_repository(path):
+def guarantee_greek_repository(path, minor_version):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
 
@@ -139,7 +139,7 @@ def guarantee_greek_repository(path):
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_greek_repos_dir, path, 1):
+  if main.copy_repos(main.pristine_greek_repos_dir, path, 1, 1, minor_version):
     print("ERROR:  copying repository failed.")
     sys.exit(1)
 
@@ -558,7 +558,10 @@ class LogEntry:
   def assert_changed_paths(self, changed_paths):
     """Not implemented, so just raises svntest.Failure.
     """
-    raise Failure('NOT IMPLEMENTED')
+    if self.changed_paths != changed_paths:
+      raise Failure('\n' + '\n'.join(difflib.ndiff(
+            pprint.pformat(changed_paths).splitlines(),
+            pprint.pformat(self.changed_paths).splitlines())))
 
   def assert_revprops(self, revprops):
     """Assert that the dict revprops is the same as this entry's revprops.
@@ -591,11 +594,13 @@ class LogParser:
     self.parser.EndElementHandler = self.handle_end_element
     self.parser.CharacterDataHandler = self.handle_character_data
     # Ignore some things.
-    self.ignore_elements('log', 'paths', 'path', 'revprops')
+    self.ignore_elements('log', 'paths', 'revprops')
     self.ignore_tags('logentry_end', 'author_start', 'date_start', 'msg_start')
     # internal state
     self.cdata = []
     self.property = None
+    self.kind = None
+    self.action = None
     # the result
     self.entries = []
 
@@ -639,6 +644,12 @@ class LogParser:
     self.property = attrs['name']
   def property_end(self):
     self.entries[-1].revprops[self.property] = self.use_cdata()
+  def path_start(self, attrs):
+    self.kind = attrs['kind']
+    self.action = attrs['action']
+  def path_end(self):
+    self.entries[-1].changed_paths[self.use_cdata()] = [{'kind': self.kind,
+                                                         'action': self.action}]
 
 def run_and_verify_log_xml(message=None, expected_paths=None,
                            expected_revprops=None, expected_stdout=None,
@@ -1678,7 +1689,8 @@ def run_and_verify_revert(expected_paths, *args):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox, create_wc = True, read_only = False):
+def make_repo_and_wc(sbox, create_wc = True, read_only = False,
+                     minor_version = None):
   """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
   If READ_ONLY is False, a dedicated repository will be created, at the path
@@ -1693,7 +1705,7 @@ def make_repo_and_wc(sbox, create_wc = True, read_only = False):
 
   # Create (or copy afresh) a new repos with a greek tree in it.
   if not read_only:
-    guarantee_greek_repository(sbox.repo_dir)
+    guarantee_greek_repository(sbox.repo_dir, minor_version)
 
   if create_wc:
     # Generate the expected output tree.
