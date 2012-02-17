@@ -24,7 +24,7 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1210147, r1202132, r1202333, r1220740
+ * r1210147, r1202132, r1202333, r1220740, r1220861
    Fix the 'svn log --diff' code so that it correctly shows a diff of a
    target file (or directory) that was at a different path in the past.
    Previously it would error out. A test is included.
@@ -37,12 +37,10 @@ Candidate changes:
     r1202132 and r1202333 were merged for conflict resolution. These revisions
     depend on the issue #2873 fix which has been backported in 1.7.2
     r1220740 expands the test so that it would fail without r1210147 applied.
+    r1220861 fixes spurious failure of the new test
    Votes:
-     +1: stsp (without r1220740 -- r1220740 depends on r1220783 which
-               in turn needs new-in-1.8 APIs. Are there test failures
-               on Windows without it that cannot be fixed some other way?)
-              (The back-port of r1220740 doesn't have that dependency. -- JAF)
-     +1: julianfoad
+     +1: stsp
+     +1: julianfoad (without r1220861)
 
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
