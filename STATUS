@@ -31,8 +31,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1210147
    Notes:
-    I previously said this depended on r1220783 to make the test pass on
-    Windows, but it doesn't.
+    I previously said this (r1220740 specifically) depended on r1220783 to
+    make the test pass on Windows, but it doesn't here; on trunk it does.
     r1210147 is the actual fix.
     r1202132 and r1202333 were merged for conflict resolution. These revisions
     depend on the issue #2873 fix which has been backported in 1.7.2
@@ -41,6 +41,7 @@ Candidate changes:
      +1: stsp (without r1220740 -- r1220740 depends on r1220783 which
                in turn needs new-in-1.8 APIs. Are there test failures
                on Windows without it that cannot be fixed some other way?)
+              (The back-port of r1220740 doesn't have that dependency. -- JAF)
      +1: julianfoad
 
  * r1235831, r1236099
@@ -119,16 +120,6 @@ Veto-blocked changes:
          room for a future public API that really does full verification.)
          (without r1161164, r1161180)
      -1: danielsh (invasive, new feature)
-
- * r1220783
-   Fix mis-ordered text output of 'svn log --diff' on Windows.
-   Justification:
-     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
-   Notes:
-     Doesn't compile on 1.7.x.
-   Votes:
-     +1: julianfoad, rhuijben
-     -1: stsp (doesn't compile and would need new-in-1.8 public APIs).
 
  * r1221463
    Allow leading "r" in ?p= query string arguments.
