@@ -97,10 +97,12 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1245738
+ * r1245738, r1245817
    Say "sqlite:" in front of SQLite's error messages.
    Justification:
      Clarify vague errors, as already done for SASL.
+   Note:
+     The two revisions are independent.
    Votes:
      +1: danielsh
 
