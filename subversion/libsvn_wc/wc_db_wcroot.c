@@ -617,25 +617,44 @@ try_symlink_as_dir:
 
   if (kind == svn_kind_symlink)
     {
-      svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
+      svn_boolean_t retry_if_dir = FALSE;
+      svn_wc__db_status_t status;
+      svn_boolean_t conflicted;
+      svn_error_t *err;
 
-      /* Check if the symlink is versioned in this DB.
-       * If it is, use this wcroot. If it is not, and the symlink
-       * points to a directory, try to find a wcroot in that
-       * directory instead. */
+      /* Check if the symlink is versioned or obstructs a versioned node
+       * in this DB -- in that case, use this wcroot. Else, if the symlink
+       * points to a directory, try to find a wcroot in that directory
+       * instead. */
+      
+      err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
+                                          NULL, NULL, NULL, NULL, NULL, NULL,
+                                          NULL, NULL, NULL, NULL, NULL, NULL,
+                                          NULL, &conflicted, NULL, NULL, NULL,
+                                          NULL, NULL, NULL,
+                                          *wcroot, *local_relpath,
+                                          scratch_pool, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_trace(err);
 
-      /* ### This catches all nodes, regardless of presence.
-       * ### Should we treat not-present/excluded symlinks as
-       * ### unversioned here, allowing unversioned on-disk
-       * ### symlinks to override them? */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, (*wcroot)->sdb,
-                                        STMT_SELECT_NODE_INFO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", (*wcroot)->wc_id, *local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      SVN_ERR(svn_sqlite__reset(stmt));
+          svn_error_clear(err);
+          retry_if_dir = TRUE; /* The symlink is unversioned. */
+        }
+      else
+        {
+          /* The symlink is versioned, or obstructs a versioned node.
+           * Ignore non-conflicted not-present/excluded nodes.
+           * This allows the symlink to redirect the wcroot query to a
+           * directory, regardless of 'invisible' nodes in this WC. */
+          retry_if_dir = ((status == svn_wc__db_status_not_present ||
+                           status == svn_wc__db_status_excluded ||
+                           status == svn_wc__db_status_server_excluded)
+                          && !conflicted);
+        }
 
-      if (!have_row)
+      if (retry_if_dir)
         {
           svn_node_kind_t resolved_kind;
 
