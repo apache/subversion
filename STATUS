@@ -39,8 +39,7 @@ Candidate changes:
     r1220740 expands the test so that it would fail without r1210147 applied.
     r1220861 fixes spurious failure of the new test
    Votes:
-     +1: stsp
-     +1: julianfoad (without r1220861)
+     +1: stsp, julianfoad
 
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
