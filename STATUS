@@ -94,7 +94,7 @@ Candidate changes:
      r1244303 and r1244317 add a test.
      r1245284 and r1245285 implement a fix.
    Votes:
-     +1: stsp
+     +1: stsp, julianfoad
 
  * r1245738, r1245817
    Say "sqlite:" in front of SQLite's error messages.
