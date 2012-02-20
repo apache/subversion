@@ -695,7 +695,7 @@ fp.close()"""
                     #  internal property, not really expected
                     '  svn:check-locks\n',
                     '  bogus_rev_prop\n', '  svn:date\n']
-  verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
+  verify_logfile(logfilepath, expected_data)
 
 ########################################################################
 # Run the tests
