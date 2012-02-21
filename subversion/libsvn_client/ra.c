@@ -40,7 +40,6 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_ra_private.h"
 #include "private/svn_client_private.h"
 
 
@@ -368,9 +367,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
       SVN_ERR(svn_ra_open4(ra_session, NULL, base_url,
                            uuid, cbtable, cb, ctx->config, pool));
     }
-
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
-                                    svn_client__get_shim_callbacks(pool)));
 
   return SVN_NO_ERROR;
 }

@@ -49,6 +49,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
 
 #include "svn_private_config.h"
@@ -645,6 +646,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               apr_pool_t *pool)
 {
   apr_hash_t *commit_revprops;
+  const char *anchor_abspath;
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, base_url,
@@ -669,7 +671,22 @@ get_ra_editor(svn_ra_session_t **ra_session,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
+  /* We need this for the shims. */
+  if (base_dir_abspath)
+    {
+      const char *relpath;
+
+      SVN_ERR(svn_ra_get_path_relative_to_root(*ra_session, &relpath, base_url,
+                                               pool));
+      anchor_abspath = svn_dirent_join(base_dir_abspath, relpath, pool);
+    }
+  else
+    anchor_abspath = NULL;
+
   /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       anchor_abspath, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
                                     commit_revprops, commit_callback,
                                     commit_baton, lock_tokens, keep_locks,
