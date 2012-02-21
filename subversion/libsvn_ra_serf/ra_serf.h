@@ -148,6 +148,9 @@ struct svn_ra_serf__session_t {
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 
+  /* Ev2 shim callbacks */
+  svn_delta_shim_callbacks_t *shim_callbacks;
+
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
 
@@ -1453,6 +1456,11 @@ svn_error_t *
 svn_ra_serf__error_on_status(int status_code,
                              const char *path,
                              const char *location);
+
+svn_error_t *
+svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks);
+
 
 #ifdef __cplusplus
 }
