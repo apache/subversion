@@ -959,6 +959,8 @@ class WinGeneratorBase(GeneratorBase):
           fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
       else:
         fakeincludes.append(self.swig_libdir)
+      if target.lang == "perl":
+        fakeincludes.extend(self.perl_includes)
       if target.lang == "python":
         fakeincludes.extend(self.python_includes)
       if target.lang == "ruby":
@@ -1011,6 +1013,8 @@ class WinGeneratorBase(GeneratorBase):
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang == "perl" and self.perl_libdir:
+        fakelibdirs.append(self.perl_libdir)
       if target.lang == "python" and self.python_libdir:
         fakelibdirs.append(self.python_libdir)
       if target.lang == "ruby" and self.ruby_libdir:
@@ -1248,18 +1252,30 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
+    self.perl_includes = []
+    self.perl_libdir = None
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
                   'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
     try:
-      num = fp.readline()
-      if num:
+      line = fp.readline()
+      if line:
         msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + num.rstrip() + '.lib'
+        self.perl_lib = 'perl' + line.rstrip() + '.lib'
       else:
         msg = 'Could not detect perl version.'
         self.perl_lib = 'perl56.lib'
       print('%s\n  Perl bindings will be linked with %s\n'
              % (msg, self.perl_lib))
+    finally:
+      fp.close()
+      
+    fp = os.popen('perl -e ' + escape_shell_arg(
+                  '"print $Config{archlib}"'), 'r')
+    try:
+      line = fp.readline()
+      if line:
+        self.perl_libdir = os.path.join(line, 'CORE')
+        self.perl_includes = [os.path.join(line, 'CORE')]
     finally:
       fp.close()
 
