@@ -1270,8 +1270,8 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       fp.close()
       
-    fp = os.popen('perl -e ' + escape_shell_arg(
-                  '"print $Config{archlib}"'), 'r')
+    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print $Config{archlib}'), 'r')
     try:
       line = fp.readline()
       if line:
