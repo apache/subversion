@@ -341,7 +341,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
-    return ".." + "\\.." * self.projfilesdir.count(os.sep) + "\\"
+    return os.path.relpath('.', self.projfilesdir) + "\\"
 
   def makeguid(self, data):
     "Generate a windows style GUID"
@@ -1148,16 +1148,19 @@ class WinGeneratorBase(GeneratorBase):
     if not self.zlib_path:
       return
     zlib_path = os.path.abspath(self.zlib_path)
+    zlib_sources = map(lambda x : os.path.relpath(x, self.projfilesdir),
+                       glob.glob(os.path.join(zlib_path, '*.c')) +
+                       glob.glob(os.path.join(zlib_path,
+                                              'contrib/masmx86/*.c')) +
+                       glob.glob(os.path.join(zlib_path,
+                                              'contrib/masmx86/*.asm')))
+    zlib_headers = map(lambda x : os.path.relpath(x, self.projfilesdir),
+                       glob.glob(os.path.join(zlib_path, '*.h')))
+                       
     self.move_proj_file(self.projfilesdir, name,
                         (('zlib_path', zlib_path),
-                         ('zlib_sources',
-                          glob.glob(os.path.join(zlib_path, '*.c'))
-                          + glob.glob(os.path.join(zlib_path,
-                                                   'contrib/masmx86/*.c'))
-                          + glob.glob(os.path.join(zlib_path,
-                                                   'contrib/masmx86/*.asm'))),
-                         ('zlib_headers',
-                          glob.glob(os.path.join(zlib_path, '*.h'))),
+                         ('zlib_sources', zlib_sources),
+                         ('zlib_headers', zlib_headers),
                          ('zlib_version', self.zlib_version),
                          ('project_guid', self.makeguid('zlib')),
                          ('use_ml', self.have_ml and 1 or None),
@@ -1168,19 +1171,22 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     neon_path = os.path.abspath(self.neon_path)
+    neon_sources = map(lambda x : os.path.relpath(x, self.neon_path),
+                       glob.glob(os.path.join(neon_path, 'src', '*.c')))
+    neon_headers = map(lambda x : os.path.relpath(x, self.neon_path),
+                       glob.glob(os.path.join(neon_path, 'src', '*.h')))
+
     self.move_proj_file(self.neon_path, name,
-                        (('neon_sources',
-                          glob.glob(os.path.join(neon_path, 'src', '*.c'))),
-                         ('neon_headers',
-                          glob.glob(os.path.join(neon_path, 'src', '*.h'))),
+                        (('neon_sources', neon_sources),
+                         ('neon_headers', neon_headers),
                          ('expat_path',
-                          os.path.join(os.path.abspath(self.apr_util_path),
-                                       'xml', 'expat', 'lib')),
-                         ('zlib_path', self.zlib_path
-                                       and os.path.abspath(self.zlib_path)),
-                         ('openssl_path',
-                          self.openssl_path
-                            and os.path.abspath(self.openssl_path)),
+                           os.path.relpath(os.path.join(self.apr_util_path,
+                                                        'xml', 'expat', 'lib'),
+                                           self.neon_path)),
+                         ('zlib_path', os.path.relpath(self.zlib_path,
+                                                       self.neon_path)),
+                         ('openssl_path', os.path.relpath(self.openssl_path,
+                                                          self.neon_path)),
                          ('project_guid', self.makeguid('neon')),
                         ))
 
@@ -1189,29 +1195,31 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     serf_path = os.path.abspath(self.serf_path)
+    serf_sources = map(lambda x : os.path.relpath(x, self.serf_path),
+                       glob.glob(os.path.join(serf_path, '*.c'))
+                       + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
+                       + glob.glob(os.path.join(serf_path, 'buckets',
+                                                   '*.c')))
+    serf_headers = map(lambda x : os.path.relpath(x, self.serf_path),
+                       glob.glob(os.path.join(serf_path, '*.h'))
+                       + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
+                       + glob.glob(os.path.join(serf_path, 'buckets', '*.h')))
     if self.serf_ver_maj != 0:
       serflib = 'serf-%d.lib' % self.serf_ver_maj
     else:
       serflib = 'serf.lib'
 
     self.move_proj_file(self.serf_path, name,
-                        (('serf_sources',
-                          glob.glob(os.path.join(serf_path, '*.c'))
-                          + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
-                          + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.c'))),
-                         ('serf_headers',
-                          glob.glob(os.path.join(serf_path, '*.h'))
-                          + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
-                          + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.h'))),
-                         ('zlib_path', self.zlib_path
-                                       and os.path.abspath(self.zlib_path)),
-                         ('openssl_path',
-                          self.openssl_path
-                            and os.path.abspath(self.openssl_path)),
-                         ('apr_path', os.path.abspath(self.apr_path)),
-                         ('apr_util_path', os.path.abspath(self.apr_util_path)),
+                        (('serf_sources', serf_sources),
+                         ('serf_headers', serf_headers),
+                         ('zlib_path', os.path.relpath(self.zlib_path,
+                                                       self.serf_path)),
+                         ('openssl_path', os.path.relpath(self.openssl_path,
+                                                          self.serf_path)),
+                         ('apr_path', os.path.relpath(self.apr_path,
+                                                      self.serf_path)),
+                         ('apr_util_path', os.path.relpath(self.apr_util_path,
+                                                           self.serf_path)),
                          ('project_guid', self.makeguid('serf')),
                          ('apr_static', self.static_apr),
                          ('serf_lib', serflib),
