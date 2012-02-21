@@ -38,6 +38,7 @@
 #include "svn_utf.h"
 #include "svn_xml.h"
 #include "svn_props.h"
+#include "../libsvn_ra/ra_loader.h"
 
 #include "private/svn_fspath.h"
 #include "svn_private_config.h"
