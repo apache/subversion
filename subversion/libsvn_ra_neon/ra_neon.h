@@ -131,6 +131,9 @@ typedef struct svn_ra_neon__session_t {
      deadprop-count property.*/
   svn_tristate_t supports_deadprop_count;
 
+  /* Ev2 shim callbacks. */
+  svn_delta_shim_callbacks_t *shim_callbacks;
+
   /*** HTTP v2 protocol stuff. ***
    *
    * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
@@ -1180,6 +1183,10 @@ svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
                                         svn_ra_neon__session_t *ras,
                                         const char *final_url,
                                         apr_pool_t *pool);
+
+svn_error_t *
+svn_ra_neon__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks);
 
 #ifdef __cplusplus
 }

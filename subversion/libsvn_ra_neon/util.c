@@ -1649,3 +1649,13 @@ svn_ra_neon__get_deadprop_count_support(svn_boolean_t *supported,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_ra_neon__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks)
+{
+  svn_ra_neon__session_t *ras = session->priv;
+
+  ras->shim_callbacks = callbacks;
+  return SVN_NO_ERROR;
+}
