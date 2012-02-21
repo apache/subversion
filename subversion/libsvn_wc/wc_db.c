@@ -7462,7 +7462,6 @@ read_children_info(void *baton,
       struct svn_wc__db_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 7, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
-      svn_error_t *err;
 
       child_item = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
       if (!child_item)
@@ -7479,6 +7478,7 @@ read_children_info(void *baton,
 #ifdef HAVE_SYMLINK
       if (child->props_mod)
         {
+          svn_error_t *err;
           apr_hash_t *properties;
 
           err = svn_sqlite__column_properties(&properties, stmt, 6,
