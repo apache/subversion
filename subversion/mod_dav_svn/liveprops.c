@@ -436,8 +436,14 @@ insert_prop_internal(const dav_resource *resource,
                                   resource->info->repos_path, scratch_pool);
         if (serr != NULL)
           {
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                          resource->info->r,
+                          "Can't get filesize of '%s': "
+                          "%s",
+                          resource->info->repos_path,
+                          serr->message);
             svn_error_clear(serr);
-            value = "0";  /* ### what to do? */
+            value = "###error###";
             break;
           }
 
