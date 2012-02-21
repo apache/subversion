@@ -240,3 +240,48 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+svn_delta_shim_callbacks_t *
+svn_client__get_shim_callbacks(apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *callbacks = 
+                            svn_delta_shim_callbacks_default(result_pool);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+
+  return callbacks;
+}
