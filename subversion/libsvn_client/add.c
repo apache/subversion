@@ -47,6 +47,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
 
 #include "svn_private_config.h"
@@ -896,6 +897,9 @@ mkdir_urls(const apr_array_header_t *urls,
                                                  ctx, pool));
 
   /* Fetch RA commit editor */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
