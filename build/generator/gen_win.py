@@ -301,7 +301,7 @@ class WinGeneratorBase(GeneratorBase):
 
     # Generate the build_zlib.bat file
     if self.zlib_path:
-      data = {'zlib_path': os.path.abspath(self.zlib_path),
+      data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
               'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
       bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
@@ -1162,7 +1162,8 @@ class WinGeneratorBase(GeneratorBase):
                        glob.glob(os.path.join(zlib_path, '*.h')))
                        
     self.move_proj_file(self.projfilesdir, name,
-                        (('zlib_path', zlib_path),
+                        (('zlib_path', os.path.relpath(zlib_path,
+                                                       self.projfilesdir)),
                          ('zlib_sources', zlib_sources),
                          ('zlib_headers', zlib_headers),
                          ('zlib_version', self.zlib_version),
