@@ -1217,16 +1217,11 @@ def run_and_verify_patch(dir, patch_path,
     raise verify.SVNUnexpectedStderr
 
   if dry_run and out != out_dry:
-    print("=============================================================")
-    print("Outputs differ")
-    print("'svn patch --dry-run' output:")
-    for x in out_dry:
-      sys.stdout.write(x)
-    print("'svn patch' output:")
-    for x in out:
-      sys.stdout.write(x)
-    print("=============================================================")
-    raise main.SVNUnmatchedError
+    # APR hash order means the output order can vary, assume everything is OK
+    # if only the order changes.
+    out_dry_expected = svntest.verify.UnorderedOutput(out)
+    verify.compare_and_display_lines('dry-run patch output not as expected',
+                                     '', out_dry_expected, out_dry)
 
   def missing_skip(a, b):
     print("=============================================================")
@@ -1249,7 +1244,8 @@ def run_and_verify_patch(dir, patch_path,
 
   # when the expected output is a list, we want a line-by-line
   # comparison to happen instead of a tree comparison
-  if isinstance(output_tree, list):
+  if (isinstance(output_tree, list)
+      or isinstance(output_tree, verify.UnorderedOutput)):
     verify.verify_outputs(None, out, err, output_tree, error_re_string)
     output_tree = None
 
