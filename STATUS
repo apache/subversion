@@ -105,6 +105,13 @@ Candidate changes:
    Votes:
      +1: danielsh, julianfoad
 
+ * r1291594
+   Support httpd-2.4 in davautocheck.
+   Justification:
+     Allow testing against imminently current stable httpd.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
