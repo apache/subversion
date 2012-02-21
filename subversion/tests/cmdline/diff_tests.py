@@ -3633,6 +3633,9 @@ def diff_git_with_props(sbox):
                     make_diff_prop_header("iota") + \
                     make_diff_prop_added("svn:keywords", "Id")
 
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
 
