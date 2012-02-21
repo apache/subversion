@@ -281,7 +281,9 @@ insert_prop_internal(const dav_resource *resource,
   const dav_liveprop_spec *info;
   int global_ns;
   svn_error_t *serr;
-  static const char *error_value = "###error###"; /* ### TODO proper errors */
+
+  /* ### TODO proper errors */
+  static const char *const error_value = "###error###";
 
   /*
   ** Almost none of the SVN provider properties are defined if the
