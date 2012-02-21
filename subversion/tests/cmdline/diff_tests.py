@@ -1169,8 +1169,7 @@ def diff_base_to_repos(sbox):
     if not re_infoline.match(line):
       list2.append(line)
 
-  if list1 != list2:
-    raise svntest.Failure
+  svntest.verify.compare_and_display_lines('', '', list1, list2)
 
 
 #----------------------------------------------------------------------
