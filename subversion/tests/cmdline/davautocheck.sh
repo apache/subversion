@@ -292,9 +292,22 @@ $LOAD_MOD_AUTHZ_USER
 $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 
+__EOF__
+
+if "$HTTPD" -v | grep '/2\.[012]' >/dev/null; then
+  cat >> "$HTTPD_CFG" <<__EOF__
 LockFile            lock
 User                $(id -un)
 Group               $(id -gn)
+__EOF__
+else
+  cat >> "$HTTPD_CFG" <<__EOF__
+# TODO: maybe uncomment this for prefork,worker MPMs only?
+# Mutex file:lock mpm-accept
+__EOF__
+fi
+
+cat >> "$HTTPD_CFG" <<__EOF__
 Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
