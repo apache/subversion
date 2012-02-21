@@ -112,6 +112,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1291797, r1291810
+   On Windows detect where perl is installed and add this information to the
+   include and lib directory settings of the swig-perl projects.
+   Justification:
+     Allows building swig-perl without copying perl libraries manually.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
