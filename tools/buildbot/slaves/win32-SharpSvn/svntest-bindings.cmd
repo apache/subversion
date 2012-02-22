@@ -57,4 +57,25 @@ IF ERRORLEVEL 1 (
   SET result=1
 )
 
+mkdir "%TESTDIR%\swig\pl-release\SVN"
+mkdir "%TESTDIR%\swig\pl-release\auto\SVN"
+xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-release\SVN"
+pushd release\subversion\bindings\swig\perl\native
+for %%i in (*.dll) do (
+  set name=%%i
+  mkdir "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
+  xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
+  xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
+)
+popd
+
+SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-release;
+pushd subversion\bindings\swig\perl\native
+perl -MExtUtils::Command::MM -e test_harness() t\*.t
+IF ERRORLEVEL 1 (
+  echo [Perl reported error %ERRORLEVEL%]
+  REM SET result=1
+)
+popd
+
 exit /b %result%
