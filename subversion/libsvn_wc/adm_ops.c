@@ -1553,8 +1553,15 @@ revert_restore(svn_wc__db_t *db,
         }
       else if (on_disk == svn_node_file && kind != svn_wc__db_kind_file)
         {
-          SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
-          on_disk = svn_node_none;
+#ifdef HAVE_SYMLINK
+          /* Preserve symlinks pointing at directories. Changes on the
+           * directory node have been reverted. The symlink should remain. */
+          if (!(special && kind == svn_wc__db_kind_dir))
+#endif
+            {
+              SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
+              on_disk = svn_node_none;
+            }
         }
       else if (on_disk == svn_node_file)
         {
