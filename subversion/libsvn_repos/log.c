@@ -2272,7 +2272,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
          ### FIXME:  Strictly speaking, we should be checking this
          ### access in every revision along the line.  But currently,
          ### there are no known authz implementations which concern
-         ### themselves will per-revision access.  */
+         ### themselves with per-revision access.  */
       if (authz_read_func)
         {
           svn_boolean_t readable;
