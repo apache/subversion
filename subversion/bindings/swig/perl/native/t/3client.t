@@ -46,7 +46,10 @@ my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')
 my $wcpath = catdir($testpath,'wc');
 my $importpath = catdir($testpath,'import');
 
+# Use internal style paths on Windows
 $reposurl =~ s/\\/\//g;
+$wcpath =~ s/\\/\//g;
+$importpath =~ s/\\/\//g;
 
 # track current rev ourselves to test against
 my $current_rev = 0;
