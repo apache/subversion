@@ -24,23 +24,6 @@ Candidate changes:
      -0: stsp (we can backport these when we need to)
      -0: gstein
 
- * r1210147, r1202132, r1202333, r1220740, r1220861
-   Fix the 'svn log --diff' code so that it correctly shows a diff of a
-   target file (or directory) that was at a different path in the past.
-   Previously it would error out. A test is included.
-   Branch:
-     ^/subversion/branches/1.7.x-r1210147
-   Notes:
-    I previously said this (r1220740 specifically) depended on r1220783 to
-    make the test pass on Windows, but it doesn't here; on trunk it does.
-    r1210147 is the actual fix.
-    r1202132 and r1202333 were merged for conflict resolution. These revisions
-    depend on the issue #2873 fix which has been backported in 1.7.2
-    r1220740 expands the test so that it would fail without r1210147 applied.
-    r1220861 fixes spurious failure of the new test
-   Votes:
-     +1: stsp, julianfoad
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
@@ -50,14 +33,6 @@ Candidate changes:
      Both r1235831 and r1236099 conflict and will need a branch.
    Votes:
      +1: gstein, rhuijben
-
- * r1238121
-   Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
-   called against a HTTPv2 server with a SVN_INVALID_REVNUM revision.
-   Justification:
-     Privately reported as AnkhSVN issue.
-   Votes:
-     +1: rhuijben, philip
 
  * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551
    Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
@@ -84,6 +59,7 @@ Candidate changes:
      on Windows.
    Votes:
      +1: rhuijben, ivan
+     +0: cmpilato
 
  * r1244303, r1244317, r1245284, r1245285
    Fix issue #4052, "merge tree-conflicts deleted symbolic links".
@@ -95,15 +71,6 @@ Candidate changes:
      r1245284 and r1245285 implement a fix.
    Votes:
      +1: stsp, julianfoad
-
- * r1245738, r1245817
-   Say "sqlite:" in front of SQLite's error messages.
-   Justification:
-     Clarify vague errors, as already done for SASL.
-   Note:
-     The two revisions are independent.
-   Votes:
-     +1: danielsh, julianfoad
 
  * r1291594
    Support httpd-2.4 in davautocheck.
@@ -168,3 +135,37 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1210147, r1202132, r1202333, r1220740, r1220861
+   Fix the 'svn log --diff' code so that it correctly shows a diff of a
+   target file (or directory) that was at a different path in the past.
+   Previously it would error out. A test is included.
+   Branch:
+     ^/subversion/branches/1.7.x-r1210147
+   Notes:
+    I previously said this (r1220740 specifically) depended on r1220783 to
+    make the test pass on Windows, but it doesn't here; on trunk it does.
+    r1210147 is the actual fix.
+    r1202132 and r1202333 were merged for conflict resolution. These revisions
+    depend on the issue #2873 fix which has been backported in 1.7.2
+    r1220740 expands the test so that it would fail without r1210147 applied.
+    r1220861 fixes spurious failure of the new test
+   Votes:
+     +1: stsp, julianfoad, cmpilato
+
+ * r1238121
+   Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
+   called against a HTTPv2 server with a SVN_INVALID_REVNUM revision.
+   Justification:
+     Privately reported as AnkhSVN issue.
+   Votes:
+     +1: rhuijben, philip, cmpilato
+
+ * r1245738, r1245817
+   Say "sqlite:" in front of SQLite's error messages.
+   Justification:
+     Clarify vague errors, as already done for SASL.
+   Note:
+     The two revisions are independent.
+   Votes:
+     +1: danielsh, julianfoad, cmpilato
