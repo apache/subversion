@@ -53,7 +53,7 @@ my $current_rev = 0;
 $SVN::Error::handler = undef;
 
 # Get username we are running as
-my $username = getpwuid($>);
+my $username = getlogin() || getpwuid($>);
 
 # This is ugly to create the test repo with SVN::Repos, but
 # it seems to be the most reliable way.
