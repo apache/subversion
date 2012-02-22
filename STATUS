@@ -125,6 +125,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1233292, r1245711, r1245746, r1245764, r1245809, r1245929, r1245935
+   Fix various problems with symlinks pointing at externals (issue #4102).
+   Justification:
+     Regression from 1.6.x. Users complained:
+     http://svn.haxx.se/users/archive-2012-02/0266.shtml
+   Branch:
+     ^/subversion/branches/1.7.x-issue4102
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
