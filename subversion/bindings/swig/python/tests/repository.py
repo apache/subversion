@@ -172,9 +172,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     # Check results.
     # Ignore the order in which the editor delivers the two sibling files.
-    self.assertEqual(set(editor.textdeltas[0].new_data,
-                         editor.textdeltas[1].new_data),
-                     set("This is a test.\n", "A test.\n"))
+    self.assertEqual(set([editor.textdeltas[0].new_data,
+                          editor.textdeltas[1].new_data]),
+                     set(["This is a test.\n", "A test.\n"]))
     self.assertEqual(len(editor.textdeltas), 2)
 
   def test_retrieve_and_change_rev_prop(self):
