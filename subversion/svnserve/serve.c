@@ -1981,7 +1981,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
-  svn_boolean_t changed_paths, strict_node, include_merged_revisions;
+  svn_boolean_t send_changed_paths, strict_node, include_merged_revisions;
   apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
   char *revprop_word;
   svn_ra_svn_item_t *elt;
@@ -1990,7 +1990,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   log_baton_t lb;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
-                                 &start_rev, &end_rev, &changed_paths,
+                                 &start_rev, &end_rev, &send_changed_paths,
                                  &strict_node, &limit,
                                  &include_merged_revs_param,
                                  &revprop_word, &revprop_items));
@@ -2047,7 +2047,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__log(full_paths, start_rev, end_rev,
-                                   limit, changed_paths, strict_node,
+                                   limit, send_changed_paths, strict_node,
                                    include_merged_revisions, revprops,
                                    pool)));
 
@@ -2056,7 +2056,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.conn = conn;
   lb.stack_depth = 0;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
-                            (int) limit, changed_paths, strict_node,
+                            (int) limit, send_changed_paths, strict_node,
                             include_merged_revisions, revprops,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
