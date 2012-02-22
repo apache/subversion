@@ -112,7 +112,7 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1292255 r1292260 r1292296
+ * r1292255 r1292260 r1292296 r1292322
    APR hash unordering: swig-py tests
    Votes:
      +1: danielsh
