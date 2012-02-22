@@ -223,7 +223,7 @@ def verify_mirror(dest_sbox, src_sbox):
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
   src_dump = svntest.actions.run_and_verify_dump(src_sbox.repo_dir)
 
-  svntest.verify.compare_and_display_lines(
+  svntest.verify.compare_dump_files(
     "Dump files", "DUMP", src_dump, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,

@@ -89,7 +89,7 @@ def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
   svnadmin_contents = svntest.actions.run_and_verify_dump(
                                                     svnadmin_sbox.repo_dir)
 
-  svntest.verify.compare_and_display_lines(
+  svntest.verify.compare_dump_files(
     "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
