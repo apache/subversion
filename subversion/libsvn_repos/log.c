@@ -2265,17 +2265,40 @@ svn_repos_get_logs4(svn_repos_t *repos,
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
+      /* If we are provided an authz callback function, use it to
+         verify that the user has read access to the root path in the
+         first of our revisions.
+
+         ### FIXME:  Strictly speaking, we should be checking this
+         ### access in every revision along the line.  But currently,
+         ### there are no known authz implementations which concern
+         ### themselves will per-revision access.  */
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *rev_root;
+
+          SVN_ERR(svn_fs_revision_root(&rev_root, fs, 
+                                       descending_order ? end : start, pool));
+          SVN_ERR(authz_read_func(&readable, rev_root, "",
+                                  authz_read_baton, pool));
+          if (! readable)
+            return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
+        }
+
       send_count = end - start + 1;
       if (limit && send_count > limit)
         send_count = limit;
       for (i = 0; i < send_count; ++i)
         {
-          svn_revnum_t rev = start + i;
+          svn_revnum_t rev;
 
           svn_pool_clear(iterpool);
 
           if (descending_order)
             rev = end - i;
+          else
+            rev = start + i;
           SVN_ERR(send_log(rev, fs, NULL, NULL, discover_changed_paths, FALSE,
                            FALSE, revprops, FALSE, receiver,
                            receiver_baton, authz_read_func,
