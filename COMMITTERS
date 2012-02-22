@@ -137,7 +137,7 @@ Commit access for specific areas:
        madanus   Madan U S <madan@collab.net>                (svnmerge) [EMAIL
                                                              IS BOUNCING]
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
-        bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py,
+        bhuvan   Bhuvaneswaran A <bhuvan@apache.org>         (svn2feed.py,
                                                               build/hudson)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
