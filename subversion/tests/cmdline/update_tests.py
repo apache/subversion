@@ -1189,6 +1189,7 @@ def another_hudson_problem(sbox):
 
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None,
                                      expected_output, [],
                                      'up', G_path)
