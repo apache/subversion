@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 120;
+use Test::More tests => 121;
 use strict;
 
 # shut up about variables that are only used once.
@@ -95,13 +95,14 @@ if ($^O eq 'MSWin32') {
     ok(open(NEW, ">$repospath/hooks/pre-revprop-change.bat"),
        'Open pre-revprop-change hook for writing');
     ok(print(NEW 'exit 0'), 'Print to hook');
-    ok(close(NEW),'Close hook');
+    ok(close(NEW), 'Close hook');
 } else {
     ok(rename("$repospath/hooks/pre-revprop-change.tmpl",
               "$repospath/hooks/pre-revprop-change"),
        'Rename pre-revprop-change hook');
     ok(chmod(0700,"$repospath/hooks/pre-revprop-change"),
        'Change permissions on pre-revprop-change hook');
+    is(1, 1, '-')
 }
 my ($rps_rev) = $ctx->revprop_set('svn:log','mkdir dir1',
                                   $reposurl, $current_rev, 0);
