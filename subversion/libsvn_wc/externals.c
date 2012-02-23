@@ -1363,6 +1363,16 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
     }
 }
 
+svn_error_t *
+svn_wc__close_db(const char *external_abspath,
+                 svn_wc_context_t *wc_ctx,
+                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_drop_root(wc_ctx->db, external_abspath,
+                               scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
    If @a uri does not appear to be a valid URI, then @a scheme will
    not be updated.  */
