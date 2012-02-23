@@ -266,7 +266,7 @@ Within a revision:
   "r<rev>/<offset>" txn-id fields.
 
   In Format 3 and above, this uniqueness is done by changing a temporary
-  id of "_<base36>" to "<rev>-<base36>".  Note that this means that the
+  id of "_<base36>" to "<base36>-<rev>".  Note that this means that the
   originating revision of a line of history or a copy can be determined
   by looking at the node ID.
 
