@@ -102,6 +102,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1230714,r1240619,1241599,r1241626,1242537,1291429,1291446,1291520,1291680,1291685,1291700,1291704,1291726,1291729,1291941,1292507,1292516
+   Fix the testsuite to avoid spurious FAILs on APR hash order.
+   Justification:
+     Users should not have to ignore FAILs
+   Notes:
+     Reverse merge -c-1242537 first to avoid conflicts.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
