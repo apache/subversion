@@ -299,6 +299,9 @@ switch_dir_external(const char *local_abspath,
                                       external_peg_rev,
                                       external_rev,
                                       pool));
+    /* Issue #4123: We don't need to keep the newly checked out external's
+       DB open. */
+    SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
   }
 
   return SVN_NO_ERROR;
