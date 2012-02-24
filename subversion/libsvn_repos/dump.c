@@ -1432,6 +1432,10 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                 cancel_editor, cancel_edit_baton,
                                 NULL, NULL, iterpool));
+      /* While our editor close_edit implementation is a no-op, we still
+         do this for completeness. */
+      SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, iterpool));
+
       SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
 
       if (notify_func)
