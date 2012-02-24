@@ -145,14 +145,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1238121
-   Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
-   called against a HTTPv2 server with a SVN_INVALID_REVNUM revision.
-   Justification:
-     Privately reported as AnkhSVN issue.
-   Votes:
-     +1: rhuijben, philip, cmpilato
-
  * r1245738, r1245817
    Say "sqlite:" in front of SQLite's error messages.
    Justification:
