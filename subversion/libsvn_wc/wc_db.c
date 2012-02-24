@@ -6311,8 +6311,13 @@ struct op_delete_baton_t {
  * For details, see http://wiki.apache.org/subversion/MultiLayerMoves
  */
 struct moved_node_t {
+  /* The source of the move. */
   const char *local_relpath;
+
+  /* The move destination. */
   const char *moved_to_relpath;
+
+  /* The op-depth of the deleted node at the source of the move. */
   apr_int64_t op_depth;
 };
 
