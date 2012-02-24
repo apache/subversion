@@ -31,7 +31,7 @@ my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
-my $YES = $ENV{YES}; # batch mode: assume 'yes' without asking
+my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $WET_RUN = qw[false true][1]; # don't commit
 my $DEBUG = qw[false true][0]; # 'set -x', etc
 
@@ -139,6 +139,8 @@ EOF
 
   unlink $backupfile if -z $backupfile;
   unlink $logmsg_filename unless $? or $!;
+
+  sleep 15 if $YES; # avoid out-of-order commit notifications
 }
 
 sub sanitize_branch {
