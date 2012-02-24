@@ -109,6 +109,8 @@ Candidate changes:
      a regression from 1.6.
    Notes:
      r1292090 is a regression test and r1292827 is the fix.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4123
    Votes:
      +1: pburba
 
