@@ -100,7 +100,7 @@ Candidate changes:
    Notes:
      Reverse merge -c-1242537 first to avoid conflicts.
    Votes:
-     +1: philip
+     +1: philip, pburba
 
  * r1292090, r1292827
    Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
