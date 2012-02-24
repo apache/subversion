@@ -52,15 +52,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1243976
-   On Windows, don't try to build mod_dontdothat if building without httpd.
-   Justification:
-     Regression in 1.7.2 where we added mod_dontdothat to the buildscripts
-     on Windows.
-   Votes:
-     +1: rhuijben, ivan
-     +0: cmpilato
-
  * r1244303, r1244317, r1245284, r1245285
    Fix issue #4052, "merge tree-conflicts deleted symbolic links".
    Justification:
@@ -111,15 +102,24 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1293229
-   Fix 'svn log -g' random missing "Merged via" notifications.
-   Justification:
-     It's a bug, occasional log_tests 32 FAIL with new APR.
-   Votes:
-     +1: philip, danielsh
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1243976
+   On Windows, don't try to build mod_dontdothat if building without httpd.
+   Justification:
+     Regression in 1.7.2 where we added mod_dontdothat to the buildscripts
+     on Windows.
+   Votes:
+     +1: rhuijben, ivan, pburba
+     +0: cmpilato
+
+ * r1293229
+   Fix 'svn log -g' random missing "Merged via" notifications.
+   Justification:
+     It's a bug, occasional log_tests 32 FAIL with new APR.
+   Votes:
+     +1: philip, danielsh, pburba
