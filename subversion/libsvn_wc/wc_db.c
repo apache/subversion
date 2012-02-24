@@ -6296,7 +6296,7 @@ struct op_delete_baton_t {
  * a moved-away subtree is moved again:  mv A B; mv B C
  * The second move requires rewriting moved-to info at or within A.
  *
- * Another case is where a node which becomes a nested moved node.
+ * Another case is where a node becomes a nested moved node.
  * A nested move happens when a subtree child is moved before or after
  * the subtree itself is moved. For example:
  *   mv A/F A/G
