@@ -121,33 +121,5 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1146131 and followups
-   Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
-   Branch:
-     1.7.x-fs-verify
-   Justification:
-     Would be nice to extend verify already in 1.7.x.
-   Notes:
-     This does not include progress reporting; that has been postponed to 1.8.
-   Conflicts:
-     On fs_fs.c.  Resolve with 'theirs-conflict'.
-   Votes:
-     +1: danielsh, rhuijben
-     +0: gstein (progress would be nice) (without r1161164, r1161180)
-     -0: cmpilato (For a function with this name, the implementation is far
-         too anemic. I'd prefer this be a private function in 1.7.x, leaving
-         room for a future public API that really does full verification.)
-         (without r1161164, r1161180)
-     -1: danielsh (invasive, new feature)
-
- * r1221463
-   Allow leading "r" in ?p= query string arguments.
-   Justification:
-     Same as for allowing '-r r42' in svn(1).
-   Votes:
-     -0: rhuijben (Behavior change without positive votes? 1.8?)
-     -1: cmpilato (a rollback to an earlier patch release would break any
-                   bookmarks saved for URLs using the new syntax)
-
 Approved changes:
 =================
