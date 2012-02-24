@@ -1169,6 +1169,7 @@ send_log(svn_revnum_t rev,
           apr_hash_index_t *hi2;
           apr_pool_t *inner_subpool = svn_pool_create(subpool);
 
+          /* Look at each path on the log target's mergeinfo. */
           for (hi2 = apr_hash_first(inner_subpool,
                                     log_target_history_as_mergeinfo);
                hi2;
@@ -1179,6 +1180,8 @@ send_log(svn_revnum_t rev,
               apr_array_header_t *rangelist =
                 svn__apr_hash_index_val(hi2);
 
+              /* Check whether CHANGED_PATH at revision REV is a child of 
+                 a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
               if (svn_fspath__skip_ancestor(mergeinfo_path, changed_path))
                 {
                   int i;
