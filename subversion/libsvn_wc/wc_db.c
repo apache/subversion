@@ -5378,12 +5378,6 @@ op_revert_txn(void *baton,
       /* If this node was moved-here, clear moved-to at the move source. */
       if (moved_here)
         SVN_ERR(clear_moved_to(local_relpath, wcroot, scratch_pool));
-
-      /* In case this node was moved-away, clear its moved-to path. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_CLEAR_MOVED_TO_RELPATH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -5514,12 +5508,6 @@ op_revert_recursive_txn(void *baton,
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath)
       && moved_here)
     SVN_ERR(clear_moved_to(local_relpath, wcroot, scratch_pool));
-
-  /* Clear any moved-to paths of potentially 'moved-away' nodes. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
