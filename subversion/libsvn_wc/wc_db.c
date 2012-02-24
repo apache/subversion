@@ -5375,10 +5375,11 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+      /* If this node was moved-here, clear moved-to at the move source. */
       if (moved_here)
         SVN_ERR(clear_moved_to(local_relpath, wcroot, scratch_pool));
 
-      /* Clear the moved-to path of the BASE node. */
+      /* In case this node was moved-away, clear its moved-to path. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_CLEAR_MOVED_TO_RELPATH));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -6315,6 +6316,12 @@ struct op_delete_baton_t {
  *   mv A B
  *   mv B/F B/G
  * We do not care about the order the moves were performed in.
+ *
+ * Another example is a move of a subtree which had nodes moved into it:
+ *   mv A B/F
+ *   mv B G
+ * This requires rewriting such that A/F is marked has having moved
+ * to G/F.
  *
  * For details, see http://wiki.apache.org/subversion/MultiLayerMoves
  */
