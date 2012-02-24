@@ -2167,7 +2167,6 @@ def dir_external_with_dash_r_only(sbox):
 
 # Test for issue #4123 'URL-to-WC copy of externals fails on Windows'
 @Issue(4123)
-@XFail(svntest.main.is_os_windows)
 def url_to_wc_copy_of_externals(sbox):
   "url-to-wc copy of externals"
 
@@ -2185,7 +2184,8 @@ def url_to_wc_copy_of_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy ^/A/C to External-WC-to-URL-Copy.
-  # Currently this fails with:
+  #
+  # Previously this failed with:
   #   >svn copy ^^/A/C External-WC-to-URL-Copy
   #    U   External-WC-to-URL-Copy
   #   
