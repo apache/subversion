@@ -6290,9 +6290,13 @@ struct op_delete_baton_t {
   const char *moved_to_relpath; /* NULL if delete is not part of a move */
 };
 
-/* This structure is used while rewriting move information for
- * a node which becomes a nested moved node.
+/* This structure is used while rewriting move information for nodes.
+ * 
+ * The most simple case of rewriting move information happens when
+ * a moved-away subtree is moved again:  mv A B; mv B C
+ * The second move requires rewriting moved-to info at or within A.
  *
+ * Another case is where a node which becomes a nested moved node.
  * A nested move happens when a subtree child is moved before or after
  * the subtree itself is moved. For example:
  *   mv A/F A/G
