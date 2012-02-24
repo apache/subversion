@@ -6445,6 +6445,9 @@ delete_node(void *baton,
         }
     }
 
+  /* Find children that were moved out of the subtree rooted at this node.
+   * We'll need to update their op-depth columns because their deletion
+   * is now implied by the deletion of their parent (i.e. this node). */
   if (kind == svn_kind_dir)
     {
       apr_pool_t *iterpool;
