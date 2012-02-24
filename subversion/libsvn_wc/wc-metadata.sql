@@ -389,12 +389,13 @@ CREATE TABLE NODES (
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this
-     specifies the local_relpath of where the BASE node was moved to.
+     specifies the local_relpath of where the node was moved to.
      This is set only on the root of a move, and is NULL for all children.
 
-     Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node in the BASE tree. A non-NULL moved_to column
-     is only valid in rows where op_depth == 0. */
+     The op-depth of the moved-to node is not recorded. A moved_to path
+     always points at a node within the highest op-depth layer at the
+     destination. This invariant must be maintained by operations which
+     change existing move information. */
   moved_to  TEXT,
 
 
