@@ -6296,25 +6296,18 @@ struct op_delete_baton_t {
  * a moved-away subtree is moved again:  mv A B; mv B C
  * The second move requires rewriting moved-to info at or within A.
  *
+ * Another example is a move of a subtree which had nodes moved into it:
+ *   mv A B/F; mv B G
+ * This requires rewriting such that A/F is marked has having moved to G/F.
+ *
  * Another case is where a node becomes a nested moved node.
  * A nested move happens when a subtree child is moved before or after
  * the subtree itself is moved. For example:
- *   mv A/F A/G
- *   mv A B
+ *   mv A/F A/G; mv A B
  * In this case, the move A/F -> A/G is rewritten to B/F -> B/G.
- *
- * Note that the following sequence results in the same DB state
- * as the above sequence:
- *   mv A B
- *   mv B/F B/G
+ * Note that the following sequence results in the same DB state:
+ *   mv A B; mv B/F B/G
  * We do not care about the order the moves were performed in.
- *
- * Another example is a move of a subtree which had nodes moved into it:
- *   mv A B/F
- *   mv B G
- * This requires rewriting such that A/F is marked has having moved
- * to G/F.
- *
  * For details, see http://wiki.apache.org/subversion/MultiLayerMoves
  */
 struct moved_node_t {
@@ -6375,6 +6368,9 @@ delete_node(void *baton,
       struct moved_node_t *moved_node
         = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
 
+      /* The node is being moved-away.
+       * Figure out if the node was moved-here before, or whether this
+       * is the first time the node is moved. */
       if (status == svn_wc__db_status_added)
         SVN_ERR(scan_addition(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                               &moved_node->local_relpath, NULL,
@@ -6384,6 +6380,7 @@ delete_node(void *baton,
 
       if (status != svn_wc__db_status_moved_here)
         {
+          /* The node is being moved for the first time. */
           moved_node->local_relpath = local_relpath;
           moved_node->op_depth = b->delete_depth;
         }
@@ -6395,8 +6392,7 @@ delete_node(void *baton,
       APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
 
       /* If a subtree is being moved-away, we need to update moved-to
-       * information for all children that were moved into or within
-       * this subtree. */
+       * information for all children that were moved into this subtree. */
       if (kind == svn_kind_dir)
         {
           apr_pool_t *iterpool;
