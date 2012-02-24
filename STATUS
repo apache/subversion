@@ -102,6 +102,16 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1292090, r1292827
+   Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
+   Justification:
+     URL-to-WC copies of externals are broken without this fix.  This is
+     a regression from 1.6.
+   Notes:
+     r1292090 is a regression test and r1292827 is the fix.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
