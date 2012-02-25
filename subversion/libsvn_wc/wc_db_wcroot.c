@@ -637,7 +637,8 @@ try_symlink_as_dir:
                                           scratch_pool, scratch_pool);
       if (err)
         {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+              && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
             return svn_error_trace(err);
 
           svn_error_clear(err);
