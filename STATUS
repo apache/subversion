@@ -68,8 +68,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4102
    Votes:
-     +1: stsp (without r1293577)
-     +1: rhuijben
+     +1: stsp, rhuijben
 
  * r1292090, r1292827
    Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
