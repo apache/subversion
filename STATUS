@@ -15,15 +15,6 @@ Status of 1.7.4:
 Candidate changes:
 ==================
 
- * r1147540, r1147541
-   Remove unused variables in build system.
-   Justification:
-     Backporting of future changes will be easier.
-   Votes:
-     +1: arfrever
-     -0: stsp (we can backport these when we need to)
-     -0: gstein
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
@@ -70,16 +61,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1292255 r1292260 r1292296 r1292322
-   APR hash unordering: swig-py tests
-   Votes:
-     +1: danielsh
-
  * r1291797, r1291810
    On Windows detect where perl is installed and add this information to the
    include and lib directory settings of the swig-perl projects.
    Justification:
      Allows building swig-perl without copying perl libraries manually.
+     Somehow required on the Windows buildbot since the last library version
+     bump.
    Votes:
      +1: rhuijben
 
@@ -92,15 +80,6 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4102
    Votes:
      +1: stsp
-
- * -c-1242537,1230714,1240619,1241599,1241626,1242537,1291429,1291446,1291520,1291680,1291685,1291700,1291704,1291726,1291729,1291941,1292507,1292516,1292768,1292926
-   Fix the testsuite to avoid spurious FAILs on APR hash order.
-   Justification:
-     Users should not have to ignore FAILs
-   Notes:
-     Reverse merge -c-1242537 first to avoid conflicts.
-   Votes:
-     +1: philip, pburba
 
  * r1292090, r1292827
    Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
@@ -117,5 +96,32 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+ * r1147540, r1147541
+   Remove unused variables in build system.
+   Justification:
+     Backporting of future changes will be easier.
+   Votes:
+     +1: arfrever
+     -0: stsp (we can backport these when we need to)
+     -0: gstein
+     -1: rhuijben (Keep the candidate list readable, by removing unneeded
+                   backports. Should be part of the backport change when
+                   needed)
+     
 Approved changes:
 =================
+
+ * r1292255 r1292260 r1292296 r1292322
+   APR hash unordering: swig-py tests
+   Votes:
+     +1: danielsh
+     +0: rhuijben
+
+ * -c-1242537,1230714,1240619,1241599,1241626,1242537,1291429,1291446,1291520,1291680,1291685,1291700,1291704,1291726,1291729,1291941,1292507,1292516,1292768,1292926
+   Fix the testsuite to avoid spurious FAILs on APR hash order.
+   Justification:
+     Users should not have to ignore FAILs
+   Notes:
+     Reverse merge -c-1242537 first to avoid conflicts.
+   Votes:
+     +1: philip, pburba, rhuijben
