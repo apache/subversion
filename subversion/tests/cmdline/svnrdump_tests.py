@@ -70,8 +70,31 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
+def compare_repos_dumps(svnrdump_sbox, svnadmin_dumpfile):
+  """Compare two dumpfiles, one created from SVNRDUMP_SBOX, and other given
+  by SVNADMIN_DUMPFILE.  The dumpfiles do not need to match linewise, as the
+  SVNADMIN_DUMPFILE contents will first be loaded into a repository and then
+  re-dumped to do the match, which should generate the same dumpfile as
+  dumping SVNRDUMP_SBOX."""
+
+  svnrdump_contents = svntest.actions.run_and_verify_dump(
+                                                    svnrdump_sbox.repo_dir)
+
+  svnadmin_sbox = svnrdump_sbox.clone_dependent()
+  svntest.main.safe_rmtree(svnadmin_sbox.repo_dir)
+  svntest.main.create_repos(svnadmin_sbox.repo_dir)
+
+  svntest.actions.run_and_verify_load(svnadmin_sbox.repo_dir, svnadmin_dumpfile)
+
+  svnadmin_contents = svntest.actions.run_and_verify_dump(
+                                                    svnadmin_sbox.repo_dir)
+
+  svntest.verify.compare_dump_files(
+    "Dump files", "DUMP", svnadmin_contents, svnrdump_contents)
+
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
-                  subdir = None, bypass_prop_validation = False):
+                  subdir = None, bypass_prop_validation = False,
+                  ignore_base_checksums = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
   dump' and check that the same dumpfile is produced or that
   expected_dumpfile_name is produced if provided. Additionally, the
@@ -107,12 +130,21 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
+    # Compare the output from stdout
+    if ignore_base_checksums:
+      svnadmin_dumpfile = [l for l in svnadmin_dumpfile
+                                    if not l.startswith('Text-delta-base-md5')]
+      svnrdump_dumpfile = [l for l in svnrdump_dumpfile
+                                    if not l.startswith('Text-delta-base-md5')]
+
     svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
 
-  # Compare the output from stdout
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
-    None, mismatched_headers_re)
+    svntest.verify.compare_and_display_lines(
+      "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+      None, mismatched_headers_re)
+    
+  else:
+    compare_repos_dumps(sbox, svnadmin_dumpfile)
 
 def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   expect_deltas = True):
@@ -155,9 +187,12 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                           expected_dumpfile_name),
                              'rb').readlines()
 
-  # Compare the output from stdout
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+    # Compare the output from stdout
+    svntest.verify.compare_and_display_lines(
+      "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+
+  else:
+    compare_repos_dumps(sbox, svnrdump_dumpfile)
 
 ######################################################################
 # Tests
@@ -345,7 +380,7 @@ def copy_bad_line_endings2_dump(sbox):
   "dump: non-LF line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings2.dump",
                 expected_dumpfile_name="copy-bad-line-endings2.expected.dump",
-                bypass_prop_validation=True)
+                bypass_prop_validation=True, ignore_base_checksums=True)
 
 @Skip(svntest.main.is_ra_type_dav_serf)
 def commit_a_copy_of_root_dump(sbox):

@@ -222,7 +222,7 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
 
-  svntest.verify.compare_and_display_lines(
+  svntest.verify.compare_dump_files(
     "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
