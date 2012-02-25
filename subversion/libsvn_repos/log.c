@@ -1074,7 +1074,6 @@ send_log(svn_revnum_t rev,
       && log_target_history_as_mergeinfo
       && apr_hash_count(log_target_history_as_mergeinfo))
     {
-      svn_boolean_t path_is_in_history = FALSE;
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -1087,6 +1086,7 @@ send_log(svn_revnum_t rev,
            hi;
            hi = apr_hash_next(hi))
         {
+          svn_boolean_t path_is_in_history = FALSE;
           const char *changed_path = svn__apr_hash_index_key(hi);
           apr_hash_index_t *hi2;
           apr_pool_t *inner_subpool = svn_pool_create(subpool);

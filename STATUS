@@ -119,10 +119,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1293229
-   Fix 'svn log -g' random missing "Merged via" notifications.
-   Justification:
-     It's a bug, occasional log_tests 32 FAIL with new APR.
-   Votes:
-     +1: philip, danielsh, pburba
