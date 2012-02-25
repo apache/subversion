@@ -43,17 +43,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1244303, r1244317, r1245284, r1245285
-   Fix issue #4052, "merge tree-conflicts deleted symbolic links".
-   Justification:
-     Regression from 1.6.
-     Users complained: http://mail-archives.apache.org/mod_mbox/subversion-users/201202.mbox/%3C36358219FB198140A2CD558823C1A57805374260%40NZURC101PEX1.ubsw.net%3E
-   Notes:
-     r1244303 and r1244317 add a test.
-     r1245284 and r1245285 implement a fix.
-   Votes:
-     +1: stsp, julianfoad
-
  * r1291594
    Support httpd-2.4 in davautocheck.
    Justification:
@@ -71,7 +60,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1233292, r1245711, r1245746, r1245764, r1245809, r1245929, r1245935
+ * r1233292, r1245711, r1245746, r1245764, r1245809, r1245929, r1245935, r1293577
    Fix various problems with symlinks pointing at externals (issue #4102).
    Justification:
      Regression from 1.6.x. Users complained:
@@ -79,7 +68,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4102
    Votes:
-     +1: stsp
+     +1: stsp (without r1293577)
+     +1: rhuijben
 
  * r1292090, r1292827
    Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
@@ -125,3 +115,14 @@ Approved changes:
      Reverse merge -c-1242537 first to avoid conflicts.
    Votes:
      +1: philip, pburba, rhuijben
+
+ * r1244303, r1244317, r1245284, r1245285
+   Fix issue #4052, "merge tree-conflicts deleted symbolic links".
+   Justification:
+     Regression from 1.6.
+     Users complained: http://mail-archives.apache.org/mod_mbox/subversion-users/201202.mbox/%3C36358219FB198140A2CD558823C1A57805374260%40NZURC101PEX1.ubsw.net%3E
+   Notes:
+     r1244303 and r1244317 add a test.
+     r1245284 and r1245285 implement a fix.
+   Votes:
+     +1: stsp, julianfoad, rhuijben
