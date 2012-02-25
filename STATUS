@@ -120,15 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1243976
-   On Windows, don't try to build mod_dontdothat if building without httpd.
-   Justification:
-     Regression in 1.7.2 where we added mod_dontdothat to the buildscripts
-     on Windows.
-   Votes:
-     +1: rhuijben, ivan, pburba
-     +0: cmpilato
-
  * r1293229
    Fix 'svn log -g' random missing "Merged via" notifications.
    Justification:
