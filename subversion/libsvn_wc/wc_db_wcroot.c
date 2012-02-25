@@ -100,9 +100,7 @@ get_old_version(int *version,
    of LOCAL_ABSPATH, using DB and SCRATCH_POOL as needed.
 
    This function may do strange things, but at long as it comes up with the
-   Right Answer, we should be happy.
-
-   Sets *KIND to svn_node_dir for symlinks. */
+   Right Answer, we should be happy. */
 static svn_error_t *
 get_path_kind(svn_kind_t *kind,
               svn_wc__db_t *db,
