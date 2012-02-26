@@ -24,8 +24,6 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid/;
 
-$/ = ""; # paragraph mode
-
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
@@ -230,22 +228,32 @@ sub main {
   usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
 
-  my $sawapproved;
   @ARGV = $STATUS;
+
+  # Skip most of the file
+  while (<>) {
+    last if /^Approved changes/;
+  }
+  while (<>) {
+    last unless /^=+$/;
+  }
+  $/ = ""; # paragraph mode
+
   while (<>) {
     my @lines = split /\n/;
-
-    # Skip most of the file
-    next unless $sawapproved ||= /^Approved changes/;
 
     given ($lines[0]) {
       # Section header
       when (/^[A-Z].*:$/i) {
         print "\n\n=== $lines[0]" unless $YES;
       }
+      # Separator after section header
+      when (/^=+$/i) {
+        break;
+      }
       # Backport entry?
       when (/^ \*/) {
-        handle_entry @lines if $sawapproved;
+        handle_entry @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
