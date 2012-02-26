@@ -368,7 +368,6 @@ path_driver_cb_func(void **dir_baton,
   void *file_baton = NULL;
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
-  svn_boolean_t src_readable = TRUE;
   svn_fs_root_t *source_root = cb->compare_root;
   const char *source_fspath = NULL;
   const char *base_path = cb->base_path;
@@ -437,7 +436,9 @@ path_driver_cb_func(void **dir_baton,
   /* Handle any adds/opens. */
   if (do_add)
     {
+      svn_boolean_t src_readable = TRUE;
       svn_fs_root_t *copyfrom_root = NULL;
+
       /* Was this node copied? */
       if (! change->copyfrom_known)
         {
