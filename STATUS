@@ -15,16 +15,6 @@ Status of 1.7.4:
 Candidate changes:
 ==================
 
- * r1235831, r1236099
-   Tweak the parsing of the ssl-authority-files config option to make it
-   easier for users to configure.
-   Justification:
-     Low impact change to help users.
-   Notes:
-     Both r1235831 and r1236099 conflict and will need a branch.
-   Votes:
-     +1: gstein, rhuijben
-
  * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551
    Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
    Justification:
@@ -70,18 +60,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1292090, r1292827
-   Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
-   Justification:
-     URL-to-WC copies of externals are broken without this fix.  This is
-     a regression from 1.6.
-   Notes:
-     r1292090 is a regression test and r1292827 is the fix.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4123
-   Votes:
-     +1: pburba, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -116,3 +94,26 @@ Approved changes:
      r1245284 and r1245285 implement a fix.
    Votes:
      +1: stsp, julianfoad, rhuijben
+
+ * r1235831, r1236099
+   Tweak the parsing of the ssl-authority-files config option to make it
+   easier for users to configure.
+   Justification:
+     Low impact change to help users.
+   Notes:
+     Both r1235831 and r1236099 conflict and will need a branch.
+   Votes:
+     +1: gstein, rhuijben, steveking
+
+ * r1292090, r1292827
+   Fix issue #4123 'URL-to-WC copy of externals fails on Windows'.
+   Justification:
+     URL-to-WC copies of externals are broken without this fix.  This is
+     a regression from 1.6.
+   Notes:
+     r1292090 is a regression test and r1292827 is the fix.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4123
+   Votes:
+     +1: pburba, stsp, steveking
+
