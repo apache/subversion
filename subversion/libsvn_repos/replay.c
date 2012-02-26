@@ -353,6 +353,51 @@ is_within_base_path(const char *path, const char *base_path,
 }
 
 static svn_error_t *
+fill_copyfrom(svn_fs_root_t **copyfrom_root,
+              const char **copyfrom_path,
+              svn_revnum_t *copyfrom_rev,
+              svn_boolean_t *src_readable,
+              svn_fs_root_t *root,
+              svn_fs_path_change2_t *change,
+              svn_repos_authz_func_t authz_read_func,
+              void *authz_read_baton,
+              const char *path,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  if (! change->copyfrom_known)
+    {
+      SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
+                                 &(change->copyfrom_path),
+                                 root, path, result_pool));
+      change->copyfrom_known = TRUE;
+    }
+  *copyfrom_rev = change->copyfrom_rev;
+  *copyfrom_path = change->copyfrom_path;
+
+  if (*copyfrom_path && SVN_IS_VALID_REVNUM(*copyfrom_rev))
+    {
+      SVN_ERR(svn_fs_revision_root(copyfrom_root,
+                                   svn_fs_root_fs(root),
+                                   *copyfrom_rev, result_pool));
+
+      if (authz_read_func)
+        {
+          SVN_ERR(authz_read_func(src_readable, *copyfrom_root,
+                                  *copyfrom_path,
+                                  authz_read_baton, result_pool));
+        }
+      else
+        *src_readable = TRUE;
+    }
+  else
+    {
+      *copyfrom_root = NULL;
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
                     void *callback_baton,
@@ -440,29 +485,10 @@ path_driver_cb_func(void **dir_baton,
       svn_fs_root_t *copyfrom_root = NULL;
 
       /* Was this node copied? */
-      if (! change->copyfrom_known)
-        {
-          SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
-                                     &(change->copyfrom_path),
-                                     root, edit_path, pool));
-          change->copyfrom_known = TRUE;
-        }
-      copyfrom_rev = change->copyfrom_rev;
-      copyfrom_path = change->copyfrom_path;
-
-      if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
-        {
-          SVN_ERR(svn_fs_revision_root(&copyfrom_root,
-                                       svn_fs_root_fs(root),
-                                       copyfrom_rev, pool));
-
-          if (cb->authz_read_func)
-            {
-              SVN_ERR(cb->authz_read_func(&src_readable, copyfrom_root,
-                                          copyfrom_path,
-                                          cb->authz_read_baton, pool));
-            }
-        }
+      SVN_ERR(fill_copyfrom(&copyfrom_root, &copyfrom_path, &copyfrom_rev,
+                            &src_readable, root, change,
+                            cb->authz_read_func, cb->authz_read_baton,
+                            edit_path, pool, pool));
 
       /* If we have a copyfrom path, and we can't read it or we're just
          ignoring it, or the copyfrom rev is prior to the low water mark
