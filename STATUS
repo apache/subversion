@@ -78,17 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1244303, r1244317, r1245284, r1245285
-   Fix issue #4052, "merge tree-conflicts deleted symbolic links".
-   Justification:
-     Regression from 1.6.
-     Users complained: http://mail-archives.apache.org/mod_mbox/subversion-users/201202.mbox/%3C36358219FB198140A2CD558823C1A57805374260%40NZURC101PEX1.ubsw.net%3E
-   Notes:
-     r1244303 and r1244317 add a test.
-     r1245284 and r1245285 implement a fix.
-   Votes:
-     +1: stsp, julianfoad, rhuijben
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
