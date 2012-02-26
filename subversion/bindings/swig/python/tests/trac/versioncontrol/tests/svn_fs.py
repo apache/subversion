@@ -278,16 +278,27 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     def test_diff_dir_different_dirs(self):
         diffs = self.repos.get_deltas('trunk', 1, 'branches/v1x', 12)
-        self._cmp_diff((None, ('branches/v1x/dir1', 12),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/dir1/dir2', 12),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/dir1/dir3', 12),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/README.txt', 12),
-                        (Node.FILE, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/README2.txt', 12),
-                        (Node.FILE, Changeset.ADD)), diffs.next())
+        expected = [
+          (None, ('branches/v1x/README.txt', 12),
+           (Node.FILE, Changeset.ADD)),
+          (None, ('branches/v1x/README2.txt', 12),
+           (Node.FILE, Changeset.ADD)),
+          (None, ('branches/v1x/dir1', 12),
+           (Node.DIRECTORY, Changeset.ADD)),
+          (None, ('branches/v1x/dir1/dir2', 12),
+           (Node.DIRECTORY, Changeset.ADD)),
+          (None, ('branches/v1x/dir1/dir3', 12),
+           (Node.DIRECTORY, Changeset.ADD)),
+        ]
+        actual = [diffs.next() for i in range(5)]
+        actual = sorted(actual, key=lambda diff: (diff[1].path, diff[1].rev))
+        # for e,a in zip(expected, actual):
+        #   t.write("%r\n" % (e,))
+        #   t.write("%r\n" % ((None, (a[1].path, a[1].rev), (a[2], a[3])),) )
+        #   t.write('\n')
+        self.assertEqual(len(expected), len(actual))
+        for e,a in zip(expected, actual):
+          self._cmp_diff(e,a)
         self.assertRaises(StopIteration, diffs.next)
 
     def test_diff_dir_no_change(self):

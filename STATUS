@@ -78,12 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1292255 r1292260 r1292296 r1292322
-   APR hash unordering: swig-py tests
-   Votes:
-     +1: danielsh
-     +0: rhuijben
-
  * r1244303, r1244317, r1245284, r1245285
    Fix issue #4052, "merge tree-conflicts deleted symbolic links".
    Justification:
