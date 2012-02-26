@@ -74,7 +74,7 @@ Veto-blocked changes:
      -1: rhuijben (Keep the candidate list readable, by removing unneeded
                    backports. Should be part of the backport change when
                    needed)
-     
+
 Approved changes:
 =================
 
