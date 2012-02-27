@@ -352,6 +352,11 @@ is_within_base_path(const char *path, const char *base_path,
   return FALSE;
 }
 
+/* Initialize COPYFROM_ROOT, COPYFROM_PATH, and COPYFROM_REV with the
+   revision root, fspath, and revnum of the copyfrom of CHANGE, which
+   corresponds to PATH under ROOT.  If the copyfrom info is valid
+   (i.e., is not (NULL, SVN_INVALID_REVNUM)), then initialize SRC_READABLE
+   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided. */
 static svn_error_t *
 fill_copyfrom(svn_fs_root_t **copyfrom_root,
               const char **copyfrom_path,
@@ -393,6 +398,7 @@ fill_copyfrom(svn_fs_root_t **copyfrom_root,
   else
     {
       *copyfrom_root = NULL;
+      /* SRC_READABLE left uninitialized */
     }
   return SVN_NO_ERROR;
 }
@@ -481,8 +487,8 @@ path_driver_cb_func(void **dir_baton,
   /* Handle any adds/opens. */
   if (do_add)
     {
-      svn_boolean_t src_readable = TRUE;
-      svn_fs_root_t *copyfrom_root = NULL;
+      svn_boolean_t src_readable;
+      svn_fs_root_t *copyfrom_root;
 
       /* Was this node copied? */
       SVN_ERR(fill_copyfrom(&copyfrom_root, &copyfrom_path, &copyfrom_rev,
