@@ -2941,7 +2941,8 @@ struct rep_read_baton
 };
 
 /* Combine the name of the rev file in RS with the given OFFSET to form
- * a cache lookup key. Allocations will be made from POOL. */
+ * a cache lookup key.  Allocations will be made from POOL.  May return
+ * NULL if the key cannot be constructed. */
 static const char*
 get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
 {
@@ -2955,7 +2956,7 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
    * comparison _will_ find them.
    */
   if (apr_file_name_get(&name, rs->file))
-    return "";
+    return NULL;
 
   /* Handle packed files as well by scanning backwards until we find the
    * revision or pack number. */
@@ -5376,6 +5377,80 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   return SVN_NO_ERROR;
 }
 
+/* For the hash REP->SHA1, try to find an already existing representation
+   in FS and return it in *OUT_REP.  If no such representation exists or
+   if rep sharing has been disabled for FS, NULL will be returned.  Since
+   there may be new duplicate representations within the same uncommitted
+   revision, those can be passed in REPS_HASH (maps a sha1 digest onto
+   representation_t*), otherwise pass in NULL for REPS_HASH.
+   POOL will be used for allocations. The lifetime of the returned rep is
+   limited by both, POOL and REP lifetime.
+ */
+static svn_error_t *
+get_shared_rep(representation_t **old_rep, 
+               svn_fs_t *fs, 
+               representation_t *rep,
+               apr_hash_t *reps_hash,
+               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* Return NULL, if rep sharing has been disabled. */
+  *old_rep = NULL;
+  if (!ffd->rep_sharing_allowed)
+    return SVN_NO_ERROR;
+
+  /* Check and see if we already have a representation somewhere that's
+     identical to the one we just wrote out.  Start with the hash lookup
+     because it is cheepest. */
+  if (reps_hash)
+    *old_rep = apr_hash_get(reps_hash,
+                            rep->sha1_checksum->digest,
+                            APR_SHA1_DIGESTSIZE);
+   
+  /* If we haven't found anything yet, try harder and consult our DB. */
+  if (*old_rep == NULL)
+    {
+      err = svn_fs_fs__get_rep_reference(old_rep, fs, rep->sha1_checksum,
+                                         pool);
+      /* ### Other error codes that we shouldn't mask out? */
+      if (err == SVN_NO_ERROR
+          || err->apr_err == SVN_ERR_FS_CORRUPT
+          || SVN_ERROR_IN_CATEGORY(err->apr_err,
+                                   SVN_ERR_MALFUNC_CATEGORY_START))
+        {
+          /* Fatal error; don't mask it.
+
+             In particular, this block is triggered when the rep-cache refers
+             to revisions in the future.  We signal that as a corruption situation
+             since, once those revisions are less than youngest (because of more
+             commits), the rep-cache would be invalid.
+           */
+          SVN_ERR(err);
+        }
+      else
+        {
+          /* Something's wrong with the rep-sharing index.  We can continue
+             without rep-sharing, but warn.
+           */
+          (fs->warning)(fs->warning_baton, err);
+          svn_error_clear(err);
+          *old_rep = NULL;
+        }
+    }
+
+  /* Add information that is missing in the cached data. */
+  if (*old_rep)
+    {
+      /* Use the old rep for this content. */
+      (*old_rep)->md5_checksum = rep->md5_checksum;
+      (*old_rep)->uniquifier = rep->uniquifier;
+    }
+    
+  return SVN_NO_ERROR;
+}
+
 /* Close handler for the representation write stream.  BATON is a
    rep_write_baton.  Writes out a new node-rev that correctly
    references the representation we just finished writing. */
@@ -5383,7 +5458,6 @@ static svn_error_t *
 rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
-  fs_fs_data_t *ffd = b->fs->fsap_data;
   const char *unique_suffix;
   representation_t *rep;
   representation_t *old_rep;
@@ -5417,38 +5491,7 @@ rep_write_contents_close(void *baton)
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  if (ffd->rep_sharing_allowed)
-    {
-      svn_error_t *err;
-      err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
-                                         b->parent_pool);
-      /* ### Other error codes that we shouldn't mask out? */
-      if (err == SVN_NO_ERROR
-          || err->apr_err == SVN_ERR_FS_CORRUPT
-          || SVN_ERROR_IN_CATEGORY(err->apr_err,
-                                   SVN_ERR_MALFUNC_CATEGORY_START))
-        {
-          /* Fatal error; don't mask it.
-
-             In particular, this block is triggered when the rep-cache refers
-             to revisions in the future.  We signal that as a corruption situation
-             since, once those revisions are less than youngest (because of more
-             commits), the rep-cache would be invalid.
-           */
-          SVN_ERR(err);
-        }
-      else
-        {
-          /* Something's wrong with the rep-sharing index.  We can continue
-             without rep-sharing, but warn.
-           */
-          (b->fs->warning)(b->fs->warning_baton, err);
-          svn_error_clear(err);
-          old_rep = NULL;
-        }
-    }
-  else
-    old_rep = NULL;
+  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->parent_pool));
 
   if (old_rep)
     {
@@ -5456,8 +5499,6 @@ rep_write_contents_close(void *baton)
       SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
       /* Use the old rep for this content. */
-      old_rep->md5_checksum = rep->md5_checksum;
-      old_rep->uniquifier = rep->uniquifier;
       b->noderev->data_rep = old_rep;
     }
   else
@@ -5624,7 +5665,8 @@ struct write_hash_baton
 
   apr_size_t size;
 
-  svn_checksum_ctx_t *checksum_ctx;
+  svn_checksum_ctx_t *md5_ctx;
+  svn_checksum_ctx_t *sha1_ctx;
 };
 
 /* The handler for the write_hash_rep stream.  BATON is a
@@ -5637,7 +5679,8 @@ write_hash_handler(void *baton,
 {
   struct write_hash_baton *whb = baton;
 
-  SVN_ERR(svn_checksum_update(whb->checksum_ctx, data, *len));
+  SVN_ERR(svn_checksum_update(whb->md5_ctx, data, *len));
+  SVN_ERR(svn_checksum_update(whb->sha1_ctx, data, *len));
 
   SVN_ERR(svn_stream_write(whb->stream, data, len));
   whb->size += *len;
@@ -5646,23 +5689,32 @@ write_hash_handler(void *baton,
 }
 
 /* Write out the hash HASH as a text representation to file FILE.  In
-   the process, record the total size of the dump in *SIZE, and the
-   md5 digest in CHECKSUM.  Perform temporary allocations in POOL. */
+   the process, record position, the total size of the dump and MD5 as
+   well as SHA1 in REP.   If rep sharing has been enabled and REPS_HASH
+   is not NULL, it will be used in addition to the on-disk cache to find
+   earlier reps with the same content.  When such existing reps can be
+   found,  we will truncate the one just written from the file and return
+   the existing rep.  Perform temporary allocations in POOL. */
 static svn_error_t *
-write_hash_rep(svn_filesize_t *size,
-               svn_checksum_t **checksum,
+write_hash_rep(representation_t *rep,
                apr_file_t *file,
                apr_hash_t *hash,
+               svn_fs_t *fs,
+               apr_hash_t *reps_hash,
                apr_pool_t *pool)
 {
   svn_stream_t *stream;
   struct write_hash_baton *whb;
+  representation_t *old_rep;
+
+  SVN_ERR(get_file_offset(&rep->offset, file, pool));
 
   whb = apr_pcalloc(pool, sizeof(*whb));
 
   whb->stream = svn_stream_from_aprfile2(file, TRUE, pool);
   whb->size = 0;
-  whb->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
 
   stream = svn_stream_create(whb, pool);
   svn_stream_set_write(stream, write_hash_handler);
@@ -5672,15 +5724,41 @@ write_hash_rep(svn_filesize_t *size,
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   /* Store the results. */
-  SVN_ERR(svn_checksum_final(checksum, whb->checksum_ctx, pool));
-  *size = whb->size;
+  SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->md5_ctx, pool));
+  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, whb->sha1_ctx, pool));
 
-  return svn_stream_printf(whb->stream, pool, "ENDREP\n");
+  /* Check and see if we already have a representation somewhere that's
+     identical to the one we just wrote out. */
+  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
+
+  if (old_rep)
+    {
+      /* We need to erase from the protorev the data we just wrote. */
+      SVN_ERR(svn_io_file_trunc(file, rep->offset, pool));
+
+      /* Use the old rep for this content. */
+      memcpy(rep, old_rep, sizeof (*rep));
+    }
+  else
+    {
+      /* Write out our cosmetic end marker. */
+      SVN_ERR(svn_stream_printf(whb->stream, pool, "ENDREP\n"));
+
+      /* update the representation */
+      rep->size = whb->size;
+      rep->expanded_size = 0;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* Write out the hash HASH pertaining to the NODEREV in FS as a deltified
    text representation to file FILE.  In the process, record the total size
-   and the md5 digest in REP.  Perform temporary allocations in POOL. */
+   and the md5 digest in REP.  If rep sharing has been enabled and REPS_HASH
+   is not NULL, it will be used in addition to the on-disk cache to find
+   earlier reps with the same content.  When such existing reps can be found,
+   we will truncate the one just written from the file and return the existing
+   rep.  Perform temporary allocations in POOL. */
 #ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
@@ -5688,6 +5766,7 @@ write_hash_delta_rep(representation_t *rep,
                      apr_hash_t *hash,
                      svn_fs_t *fs,
                      node_revision_t *noderev,
+                     apr_hash_t *reps_hash,
                      apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t diff_wh;
@@ -5696,6 +5775,7 @@ write_hash_delta_rep(representation_t *rep,
   svn_stream_t *file_stream;
   svn_stream_t *stream;
   representation_t *base_rep;
+  representation_t *old_rep;
   svn_stream_t *source;
   const char *header;
 
@@ -5741,7 +5821,8 @@ write_hash_delta_rep(representation_t *rep,
   whb = apr_pcalloc(pool, sizeof(*whb));
   whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source, pool);
   whb->size = 0;
-  whb->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
 
   /* serialize the hash */
   stream = svn_stream_create(whb, pool);
@@ -5751,15 +5832,31 @@ write_hash_delta_rep(representation_t *rep,
   SVN_ERR(svn_stream_close(whb->stream));
 
   /* Store the results. */
-  SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->checksum_ctx, pool));
+  SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->md5_ctx, pool));
+  SVN_ERR(svn_checksum_final(&rep->sha1_checksum, whb->sha1_ctx, pool));
 
-  /* Write out our cosmetic end marker. */
-  SVN_ERR(get_file_offset(&rep_end, file, pool));
-  SVN_ERR(svn_stream_printf(file_stream, pool, "ENDREP\n"));
+  /* Check and see if we already have a representation somewhere that's
+     identical to the one we just wrote out. */
+  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
 
-  /* update the representation */
-  rep->expanded_size = whb->size;
-  rep->size = rep_end - delta_start;
+  if (old_rep)
+    {
+      /* We need to erase from the protorev the data we just wrote. */
+      SVN_ERR(svn_io_file_trunc(file, rep->offset, pool));
+
+      /* Use the old rep for this content. */
+      memcpy(rep, old_rep, sizeof (*rep));
+    }
+  else
+    {
+      /* Write out our cosmetic end marker. */
+      SVN_ERR(get_file_offset(&rep_end, file, pool));
+      SVN_ERR(svn_stream_printf(file_stream, pool, "ENDREP\n"));
+
+      /* update the representation */
+      rep->expanded_size = whb->size;
+      rep->size = rep_end - delta_start;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5838,6 +5935,10 @@ validate_root_noderev(svn_fs_t *fs,
    If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
    REPS_POOL) of each data rep that is new in this revision.
 
+   If REPS_HASH is not NULL, append copies (allocated in REPS_POOL)
+   of the representations of each property rep that is new in this
+   revision.
+
    AT_ROOT is true if the node revision being written is the root
    node-revision.  It is only controls additional sanity checking
    logic.
@@ -5853,6 +5954,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const char *start_copy_id,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
+                apr_hash_t *reps_hash,
                 apr_pool_t *reps_pool,
                 svn_boolean_t at_root,
                 apr_pool_t *pool)
@@ -5891,7 +5993,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id, initial_offset,
-                                  reps_to_cache, reps_pool, FALSE,
+                                  reps_to_cache, reps_hash, reps_pool, FALSE,
                                   subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
@@ -5908,13 +6010,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
 #ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
           SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
-                                       str_entries, fs, noderev, pool));
+                                       str_entries, fs, noderev, NULL,
+                                       pool));
 #else
-          SVN_ERR(get_file_offset(&noderev->data_rep->offset, file, pool));
-          SVN_ERR(write_hash_rep(&noderev->data_rep->size,
-                                 &noderev->data_rep->md5_checksum, file,
-                                 str_entries, pool));
-          noderev->data_rep->expanded_size = noderev->data_rep->size;
+          SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
+                                 fs, NULL, pool));
 #endif
         }
     }
@@ -5945,17 +6045,17 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       apr_hash_t *proplist;
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
 
-#ifdef SVN_FS_FS_DELTIFY_PROPS
-      SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
-                                   proplist, fs, noderev, pool));
-#else
-      SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
-      SVN_ERR(write_hash_rep(&noderev->prop_rep->size,
-                             &noderev->prop_rep->md5_checksum, file,
-                             proplist, pool));
-#endif
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
+
+#ifdef SVN_FS_FS_DELTIFY_PROPS
+      SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
+                                   proplist, fs, noderev, reps_hash,
+                                   pool));
+#else
+      SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist, 
+                             fs, reps_hash, pool));
+#endif
     }
 
 
@@ -5998,6 +6098,41 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   noderev->id = new_id;
 
+  if (ffd->rep_sharing_allowed)
+    {
+      /* Save the data representation's hash in the rep cache. */
+      if (   noderev->data_rep && noderev->kind == svn_node_file
+          && noderev->data_rep->revision == rev)
+        {
+          SVN_ERR_ASSERT(reps_to_cache && reps_pool);
+          APR_ARRAY_PUSH(reps_to_cache, representation_t *)
+            = svn_fs_fs__rep_copy(noderev->data_rep, reps_pool);
+        }
+
+      if (noderev->prop_rep && noderev->prop_rep->revision == rev)
+        {
+          /* Add new property reps to hash and on-disk cache. */
+          representation_t *copy 
+            = svn_fs_fs__rep_copy(noderev->prop_rep, reps_pool);
+
+          SVN_ERR_ASSERT(reps_to_cache && reps_pool);
+          APR_ARRAY_PUSH(reps_to_cache, representation_t *) = copy;
+
+          apr_hash_set(reps_hash, 
+                        copy->sha1_checksum->digest, 
+                        APR_SHA1_DIGESTSIZE, 
+                        copy);
+        }
+    }
+
+  /* don't serialize SHA1 for dirs to disk (waste of space) */
+  if (noderev->data_rep && noderev->kind == svn_node_dir)
+    noderev->data_rep->sha1_checksum = NULL;
+
+  /* don't serialize SHA1 for props to disk (waste of space) */
+  if (noderev->prop_rep)
+    noderev->prop_rep->sha1_checksum = NULL;
+
   /* Write out our new node-revision. */
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
@@ -6005,16 +6140,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
-
-  /* Save the data representation's hash in the rep cache. */
-  if (ffd->rep_sharing_allowed
-        && noderev->data_rep && noderev->kind == svn_node_file
-        && noderev->data_rep->revision == rev)
-    {
-      SVN_ERR_ASSERT(reps_to_cache && reps_pool);
-      APR_ARRAY_PUSH(reps_to_cache, representation_t *)
-        = svn_fs_fs__rep_copy(noderev->data_rep, reps_pool);
-    }
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
@@ -6223,6 +6348,7 @@ struct commit_baton {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   apr_array_header_t *reps_to_cache;
+  apr_hash_t *reps_hash;
   apr_pool_t *reps_pool;
 };
 
@@ -6280,8 +6406,8 @@ commit_body(void *baton, apr_pool_t *pool)
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id, initial_offset,
-                          cb->reps_to_cache, cb->reps_pool, TRUE,
-                          pool));
+                          cb->reps_to_cache, cb->reps_hash, cb->reps_pool,
+                          TRUE, pool));
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
@@ -6455,11 +6581,13 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   if (ffd->rep_sharing_allowed)
     {
       cb.reps_to_cache = apr_array_make(pool, 5, sizeof(representation_t *));
+      cb.reps_hash = apr_hash_make(pool);
       cb.reps_pool = pool;
     }
   else
     {
       cb.reps_to_cache = NULL;
+      cb.reps_hash = NULL;
       cb.reps_pool = NULL;
     }
 

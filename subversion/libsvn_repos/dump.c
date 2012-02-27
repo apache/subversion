@@ -864,8 +864,14 @@ fetch_props_func(apr_hash_t **props,
 {
   struct edit_baton *eb = baton;
   svn_error_t *err;
+  svn_fs_root_t *fs_root;
 
-  err = svn_fs_node_proplist(props, eb->fs_root, path, result_pool);
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_rev - 1;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  err = svn_fs_node_proplist(props, fs_root, path, result_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -890,10 +896,9 @@ fetch_kind_func(svn_kind_t *kind,
   svn_fs_root_t *fs_root;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
-    fs_root = eb->fs_root;
-  else
-    SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision,
-                                 scratch_pool));
+    base_revision = eb->current_rev - 1;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
   SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
@@ -917,10 +922,9 @@ fetch_base_func(const char **filename,
   svn_fs_root_t *fs_root;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
-    fs_root = eb->fs_root;
-  else
-    SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision,
-                                 scratch_pool));
+    base_revision = eb->current_rev - 1;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
   err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -1415,7 +1419,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       /* Get cancellable dump editor, but with our close_directory handler. */
       SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
                               &dump_edit_baton, fs, rev, "",
-                              svn_stream_empty(pool),
+                              svn_stream_empty(iterpool),
                               NULL, NULL,
                               verify_close_directory,
                               notify_func, notify_baton,
@@ -1432,6 +1436,10 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                 cancel_editor, cancel_edit_baton,
                                 NULL, NULL, iterpool));
+      /* While our editor close_edit implementation is a no-op, we still
+         do this for completeness. */
+      SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, iterpool));
+
       SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
 
       if (notify_func)

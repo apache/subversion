@@ -1505,6 +1505,15 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_ra_local__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks)
+{
+  /* This is currenly a no-op, since we don't provide our own editor, just
+     use the one the libsvn_repos hands back to us. */
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -1551,7 +1560,8 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__replay,
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
-  svn_ra_local__get_deleted_rev
+  svn_ra_local__get_deleted_rev,
+  svn_ra_local__register_editor_shim_callbacks
 };
 
 

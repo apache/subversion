@@ -90,6 +90,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.sqlite_path = 'sqlite-amalgamation'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None,
+                           'mod_dontdothat' : None,
                            'libsvn_auth_kwallet': None,
                            'libsvn_auth_gnome_keyring': None }
 
@@ -126,6 +127,7 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.httpd_path = val
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
+        del self.skip_sections['mod_dontdothat']
       elif opt == '--with-libintl':
         self.libintl_path = val
         self.enable_nls = 1
@@ -185,6 +187,11 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.vs_version = '2010'
           self.sln_version = '11.00'
           self.vcproj_version = '10.0'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '11':
+          self.vs_version = '11'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
           self.vcproj_extension = '.vcxproj'
         else:
           print('WARNING: Unknown VS.NET version "%s",'
@@ -294,7 +301,7 @@ class WinGeneratorBase(GeneratorBase):
 
     # Generate the build_zlib.bat file
     if self.zlib_path:
-      data = {'zlib_path': os.path.abspath(self.zlib_path),
+      data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
               'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
       bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
@@ -334,7 +341,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
-    return ".." + "\\.." * self.projfilesdir.count(os.sep) + "\\"
+    return os.path.relpath('.', self.projfilesdir) + "\\"
 
   def makeguid(self, data):
     "Generate a windows style GUID"
@@ -952,6 +959,8 @@ class WinGeneratorBase(GeneratorBase):
           fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
       else:
         fakeincludes.append(self.swig_libdir)
+      if target.lang == "perl":
+        fakeincludes.extend(self.perl_includes)
       if target.lang == "python":
         fakeincludes.extend(self.python_includes)
       if target.lang == "ruby":
@@ -1004,6 +1013,8 @@ class WinGeneratorBase(GeneratorBase):
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang == "perl" and self.perl_libdir:
+        fakelibdirs.append(self.perl_libdir)
       if target.lang == "python" and self.python_libdir:
         fakelibdirs.append(self.python_libdir)
       if target.lang == "ruby" and self.ruby_libdir:
@@ -1141,16 +1152,20 @@ class WinGeneratorBase(GeneratorBase):
     if not self.zlib_path:
       return
     zlib_path = os.path.abspath(self.zlib_path)
+    zlib_sources = map(lambda x : os.path.relpath(x, self.projfilesdir),
+                       glob.glob(os.path.join(zlib_path, '*.c')) +
+                       glob.glob(os.path.join(zlib_path,
+                                              'contrib/masmx86/*.c')) +
+                       glob.glob(os.path.join(zlib_path,
+                                              'contrib/masmx86/*.asm')))
+    zlib_headers = map(lambda x : os.path.relpath(x, self.projfilesdir),
+                       glob.glob(os.path.join(zlib_path, '*.h')))
+                       
     self.move_proj_file(self.projfilesdir, name,
-                        (('zlib_path', zlib_path),
-                         ('zlib_sources',
-                          glob.glob(os.path.join(zlib_path, '*.c'))
-                          + glob.glob(os.path.join(zlib_path,
-                                                   'contrib/masmx86/*.c'))
-                          + glob.glob(os.path.join(zlib_path,
-                                                   'contrib/masmx86/*.asm'))),
-                         ('zlib_headers',
-                          glob.glob(os.path.join(zlib_path, '*.h'))),
+                        (('zlib_path', os.path.relpath(zlib_path,
+                                                       self.projfilesdir)),
+                         ('zlib_sources', zlib_sources),
+                         ('zlib_headers', zlib_headers),
                          ('zlib_version', self.zlib_version),
                          ('project_guid', self.makeguid('zlib')),
                          ('use_ml', self.have_ml and 1 or None),
@@ -1161,19 +1176,22 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     neon_path = os.path.abspath(self.neon_path)
+    neon_sources = map(lambda x : os.path.relpath(x, self.neon_path),
+                       glob.glob(os.path.join(neon_path, 'src', '*.c')))
+    neon_headers = map(lambda x : os.path.relpath(x, self.neon_path),
+                       glob.glob(os.path.join(neon_path, 'src', '*.h')))
+
     self.move_proj_file(self.neon_path, name,
-                        (('neon_sources',
-                          glob.glob(os.path.join(neon_path, 'src', '*.c'))),
-                         ('neon_headers',
-                          glob.glob(os.path.join(neon_path, 'src', '*.h'))),
+                        (('neon_sources', neon_sources),
+                         ('neon_headers', neon_headers),
                          ('expat_path',
-                          os.path.join(os.path.abspath(self.apr_util_path),
-                                       'xml', 'expat', 'lib')),
-                         ('zlib_path', self.zlib_path
-                                       and os.path.abspath(self.zlib_path)),
-                         ('openssl_path',
-                          self.openssl_path
-                            and os.path.abspath(self.openssl_path)),
+                           os.path.relpath(os.path.join(self.apr_util_path,
+                                                        'xml', 'expat', 'lib'),
+                                           self.neon_path)),
+                         ('zlib_path', os.path.relpath(self.zlib_path,
+                                                       self.neon_path)),
+                         ('openssl_path', os.path.relpath(self.openssl_path,
+                                                          self.neon_path)),
                          ('project_guid', self.makeguid('neon')),
                         ))
 
@@ -1182,29 +1200,31 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     serf_path = os.path.abspath(self.serf_path)
+    serf_sources = map(lambda x : os.path.relpath(x, self.serf_path),
+                       glob.glob(os.path.join(serf_path, '*.c'))
+                       + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
+                       + glob.glob(os.path.join(serf_path, 'buckets',
+                                                   '*.c')))
+    serf_headers = map(lambda x : os.path.relpath(x, self.serf_path),
+                       glob.glob(os.path.join(serf_path, '*.h'))
+                       + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
+                       + glob.glob(os.path.join(serf_path, 'buckets', '*.h')))
     if self.serf_ver_maj != 0:
       serflib = 'serf-%d.lib' % self.serf_ver_maj
     else:
       serflib = 'serf.lib'
 
     self.move_proj_file(self.serf_path, name,
-                        (('serf_sources',
-                          glob.glob(os.path.join(serf_path, '*.c'))
-                          + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
-                          + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.c'))),
-                         ('serf_headers',
-                          glob.glob(os.path.join(serf_path, '*.h'))
-                          + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
-                          + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.h'))),
-                         ('zlib_path', self.zlib_path
-                                       and os.path.abspath(self.zlib_path)),
-                         ('openssl_path',
-                          self.openssl_path
-                            and os.path.abspath(self.openssl_path)),
-                         ('apr_path', os.path.abspath(self.apr_path)),
-                         ('apr_util_path', os.path.abspath(self.apr_util_path)),
+                        (('serf_sources', serf_sources),
+                         ('serf_headers', serf_headers),
+                         ('zlib_path', os.path.relpath(self.zlib_path,
+                                                       self.serf_path)),
+                         ('openssl_path', os.path.relpath(self.openssl_path,
+                                                          self.serf_path)),
+                         ('apr_path', os.path.relpath(self.apr_path,
+                                                      self.serf_path)),
+                         ('apr_util_path', os.path.relpath(self.apr_util_path,
+                                                           self.serf_path)),
                          ('project_guid', self.makeguid('serf')),
                          ('apr_static', self.static_apr),
                          ('serf_lib', serflib),
@@ -1219,7 +1239,8 @@ class WinGeneratorBase(GeneratorBase):
     data = {
       'version' : self.vcproj_version,
       'configs' : self.configs,
-      'platforms' : self.platforms
+      'platforms' : self.platforms,
+      'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
       }
     for key, val in params:
       data[key] = val
@@ -1232,18 +1253,30 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
+    self.perl_includes = []
+    self.perl_libdir = None
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
                   'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
     try:
-      num = fp.readline()
-      if num:
+      line = fp.readline()
+      if line:
         msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + num.rstrip() + '.lib'
+        self.perl_lib = 'perl' + line.rstrip() + '.lib'
       else:
         msg = 'Could not detect perl version.'
         self.perl_lib = 'perl56.lib'
       print('%s\n  Perl bindings will be linked with %s\n'
              % (msg, self.perl_lib))
+    finally:
+      fp.close()
+      
+    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print $Config{archlib}'), 'r')
+    try:
+      line = fp.readline()
+      if line:
+        self.perl_libdir = os.path.join(line, 'CORE')
+        self.perl_includes = [os.path.join(line, 'CORE')]
     finally:
       fp.close()
 

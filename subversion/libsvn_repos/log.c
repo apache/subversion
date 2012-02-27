@@ -264,6 +264,43 @@ detect_changed(apr_hash_t **changed,
                                              : svn_tristate_false;
       item->props_modified = change->prop_mod ? svn_tristate_true
                                               : svn_tristate_false;
+
+      /* Pre-1.6 revision files don't store the change path kind, so fetch
+         it manually. */
+      if (item->node_kind == svn_node_unknown)
+        {
+          svn_fs_root_t *check_root = root;
+          const char *check_path = path;
+
+          /* Deleted items don't exist so check earlier revision.  We
+             know the parent must exist and could be a copy */
+          if (change->change_kind == svn_fs_path_change_delete)
+            {
+              svn_fs_history_t *history;
+              svn_revnum_t prev_rev;
+              const char *parent_path, *name;
+
+              svn_fspath__split(&parent_path, &name, path, subpool);
+
+              SVN_ERR(svn_fs_node_history(&history, root, parent_path,
+                                          subpool));
+
+              /* Two calls because the first call returns the original
+                 revision as the deleted child means it is 'interesting' */
+              SVN_ERR(svn_fs_history_prev(&history, history, TRUE, subpool));
+              SVN_ERR(svn_fs_history_prev(&history, history, TRUE, subpool));
+
+              SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
+                                              subpool));
+              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev, subpool));
+              check_path = svn_fspath__join(parent_path, name, subpool);
+            }
+
+          SVN_ERR(svn_fs_check_path(&item->node_kind, check_root, check_path,
+                                    subpool));
+        }
+
+
       if ((action == 'A') || (action == 'R'))
         {
           const char *copyfrom_path;
@@ -1115,7 +1152,6 @@ send_log(svn_revnum_t rev,
       && log_target_history_as_mergeinfo
       && apr_hash_count(log_target_history_as_mergeinfo))
     {
-      svn_boolean_t path_is_in_history = FALSE;
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -1128,10 +1164,12 @@ send_log(svn_revnum_t rev,
            hi;
            hi = apr_hash_next(hi))
         {
+          svn_boolean_t path_is_in_history = FALSE;
           const char *changed_path = svn__apr_hash_index_key(hi);
           apr_hash_index_t *hi2;
           apr_pool_t *inner_subpool = svn_pool_create(subpool);
 
+          /* Look at each path on the log target's mergeinfo. */
           for (hi2 = apr_hash_first(inner_subpool,
                                     log_target_history_as_mergeinfo);
                hi2;
@@ -1142,6 +1180,8 @@ send_log(svn_revnum_t rev,
               apr_array_header_t *rangelist =
                 svn__apr_hash_index_val(hi2);
 
+              /* Check whether CHANGED_PATH at revision REV is a child of 
+                 a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
               if (svn_fspath__skip_ancestor(mergeinfo_path, changed_path))
                 {
                   int i;
@@ -2228,17 +2268,40 @@ svn_repos_get_logs4(svn_repos_t *repos,
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
+      /* If we are provided an authz callback function, use it to
+         verify that the user has read access to the root path in the
+         first of our revisions.
+
+         ### FIXME:  Strictly speaking, we should be checking this
+         ### access in every revision along the line.  But currently,
+         ### there are no known authz implementations which concern
+         ### themselves with per-revision access.  */
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *rev_root;
+
+          SVN_ERR(svn_fs_revision_root(&rev_root, fs, 
+                                       descending_order ? end : start, pool));
+          SVN_ERR(authz_read_func(&readable, rev_root, "",
+                                  authz_read_baton, pool));
+          if (! readable)
+            return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
+        }
+
       send_count = end - start + 1;
       if (limit && send_count > limit)
         send_count = limit;
       for (i = 0; i < send_count; ++i)
         {
-          svn_revnum_t rev = start + i;
+          svn_revnum_t rev;
 
           svn_pool_clear(iterpool);
 
           if (descending_order)
             rev = end - i;
+          else
+            rev = start + i;
           SVN_ERR(send_log(rev, fs, NULL, NULL, discover_changed_paths, FALSE,
                            FALSE, revprops, FALSE, receiver,
                            receiver_baton, authz_read_func,

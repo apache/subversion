@@ -374,7 +374,7 @@ svn_client_status5(svn_revnum_t *result_rev,
       SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                     SVN_RA_CAPABILITY_DEPTH, pool));
 
-      SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
+      SVN_ERR(svn_wc__get_status_editor(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, ctx->wc_ctx,
                                     dir_abspath, target_basename,
                                     depth, get_all,

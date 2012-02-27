@@ -2198,6 +2198,25 @@ def log_diff(sbox):
   compare_diff_output(r9diff, log_chain[1]['diff_lines'])
   compare_diff_output(r8diff, log_chain[2]['diff_lines'])
 
+def log_xml_old(sbox):
+  "log --xml shows kind for old style repository"
+
+  sbox.build(minor_version=5)
+
+  sbox.simple_copy('A/B', 'A/B2')
+  sbox.simple_rm('A/B/lambda', 'A/B/E', 'A/B2/lambda', 'A/B2/E')
+  sbox.simple_commit()
+
+  os.chdir(sbox.wc_dir)
+  paths=[{'/A/B/E'       : [{'kind':'dir',  'action':'D'}],
+          '/A/B/lambda'  : [{'kind':'file', 'action':'D'}],
+          '/A/B2'        : [{'kind':'dir',  'action':'A'}],
+          '/A/B2/E'      : [{'kind':'dir',  'action':'D'}],
+          '/A/B2/lambda' : [{'kind':'file', 'action':'D'}]}]
+  svntest.actions.run_and_verify_log_xml(args=['-r', '2', '-v'],
+                                         expected_paths=paths)
+
+
 
 ########################################################################
 # Run the tests
@@ -2240,6 +2259,7 @@ test_list = [ None,
               log_on_nonexistent_path_and_valid_rev,
               merge_sensitive_log_copied_path_inherited_mergeinfo,
               log_diff,
+              log_xml_old,
              ]
 
 if __name__ == '__main__':

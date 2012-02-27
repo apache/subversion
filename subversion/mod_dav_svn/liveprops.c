@@ -282,6 +282,9 @@ insert_prop_internal(const dav_resource *resource,
   int global_ns;
   svn_error_t *serr;
 
+  /* ### TODO proper errors */
+  static const char *const error_value = "###error###";
+
   /*
   ** Almost none of the SVN provider properties are defined if the
   ** resource does not exist.  We do need to return the one VCC
@@ -385,7 +388,7 @@ insert_prop_internal(const dav_resource *resource,
                               resource->info->repos_path,
                               serr->message);
                 svn_error_clear(serr);
-                value = "###error###";
+                value = error_value;
                 break;
               }
           }
@@ -408,7 +411,7 @@ insert_prop_internal(const dav_resource *resource,
                           committed_rev,
                           serr->message);
             svn_error_clear(serr);
-            value = "###error###";
+            value = error_value;
             break;
           }
 
@@ -436,8 +439,14 @@ insert_prop_internal(const dav_resource *resource,
                                   resource->info->repos_path, scratch_pool);
         if (serr != NULL)
           {
+            ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, 
+                          resource->info->r,
+                          "Can't get filesize of '%s': "
+                          "%s",
+                          resource->info->repos_path,
+                          serr->message);
             svn_error_clear(serr);
-            value = "0";  /* ### what to do? */
+            value = error_value;
             break;
           }
 
@@ -557,7 +566,7 @@ insert_prop_internal(const dav_resource *resource,
                                         scratch_pool),
                             serr->message);
               svn_error_clear(serr);
-              value = "###error###";
+              value = error_value;
               break;
             }
           s = dav_svn__build_uri(resource->info->repos,
@@ -636,7 +645,7 @@ insert_prop_internal(const dav_resource *resource,
                             resource->info->repos_path,
                             serr->message);
               svn_error_clear(serr);
-              value = "###error###";
+              value = error_value;
               break;
             }
 
@@ -684,7 +693,7 @@ insert_prop_internal(const dav_resource *resource,
                             resource->info->repos_path,
                             serr->message);
               svn_error_clear(serr);
-              value = "###error###";
+              value = error_value;
               break;
             }
 
@@ -712,7 +721,7 @@ insert_prop_internal(const dav_resource *resource,
                         svn_fs_path(resource->info->repos->fs, scratch_pool),
                         serr->message);
           svn_error_clear(serr);
-          value = "###error###";
+          value = error_value;
           break;
         }
       break;
@@ -737,7 +746,7 @@ insert_prop_internal(const dav_resource *resource,
                           resource->info->repos_path,
                           serr->message);
             svn_error_clear(serr);
-            value = "###error###";
+            value = error_value;
             break;
           }
 

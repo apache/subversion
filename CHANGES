@@ -32,7 +32,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
   
  Developer-visible changes:
   - General:
-    *
+    * Now require Python 2.5 for tests and dev tools (r1243627)
 
   - API changes:
     * fix inconsistent handling of log revs without changed paths (issue #3694)
@@ -42,7 +42,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.3
-(XX Feb 2012, from /branches/1.7.x)
+(14 Feb 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.3
 
   General:
@@ -77,12 +77,17 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.3
     * log some mod_dav_svn errors, rather than ignoring them (r1237720, -9596)
     * relax requirements for canonicalization in mod_dav_svn (r1236173)
     * fix a rare source of FSFS corruption (r1240752)
+    * allow committing the result of some copy operations (issue #4059)
+    * prevent one-byte buffer overflow in base64 decoding (r1242337)
 
   Developer-visible changes:
     * JavaHL: Add missing notify action, fixing an exception (r1221793)
     * fix swig-py memory leak (r1235264, -296, -302, -736)
     * fix spurious test suite failure (r1220742, -50)
     * allow running tests on UNC shares (r1225491)
+    * bindings: see platform-specific password providers (r1242660, -1)
+    * skip 'svnrdump dump' tests over ra_serf (r1242537)
+    * convert a few ra_serf assertions to errors (r1242607)
 
 
 Version 1.7.2

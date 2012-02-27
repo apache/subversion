@@ -1570,8 +1570,6 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
   apr_hash_index_t *hi;
-  svn_delta_shim_callbacks_t *shim_callbacks =
-                                svn_delta_shim_callbacks_default(pool);
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1622,7 +1620,7 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   *edit_baton = cc;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks, pool, pool));
+                                   ras->shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }

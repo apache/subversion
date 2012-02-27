@@ -1023,7 +1023,6 @@ def replace_symlinks(sbox):
   sbox.simple_update()
 
 
-@XFail()
 @Issue(4102)
 @SkipUnless(svntest.main.is_posix_os)
 def externals_as_symlink_targets(sbox):
@@ -1054,6 +1053,19 @@ def externals_as_symlink_targets(sbox):
 
   sbox.simple_commit()
     
+@XFail()
+@Issue(4119)
+@SkipUnless(svntest.main.is_posix_os)
+def cat_added_symlink(sbox):
+  "cat added symlink"
+
+  sbox.build(read_only = True)
+
+  kappa_path = sbox.ospath('kappa')
+  os.symlink('iota', kappa_path)
+  sbox.simple_add('kappa')
+  svntest.actions.run_and_verify_svn(None, "link iota", [],
+                                     "cat", kappa_path)
 
 ########################################################################
 # Run the tests
@@ -1084,6 +1096,7 @@ test_list = [ None,
               update_symlink,
               replace_symlinks,
               externals_as_symlink_targets,
+              cat_added_symlink,
              ]
 
 if __name__ == '__main__':

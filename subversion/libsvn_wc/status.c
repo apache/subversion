@@ -1318,13 +1318,37 @@ get_dir_status(const struct walk_status_baton *wb,
 
   /* Handle "this-dir" first. */
   if (! skip_this_dir)
-    SVN_ERR(send_status_structure(wb, local_abspath,
-                                  parent_repos_root_url,
-                                  parent_repos_relpath,
-                                  parent_repos_uuid,
-                                  dir_info, dirent, get_all,
-                                  status_func, status_baton,
-                                  iterpool));
+    {
+#ifdef HAVE_SYMLINK
+      if (dirent->special)
+        {
+          svn_io_dirent2_t *this_dirent = svn_io_dirent2_dup(dirent, iterpool);
+
+          /* We're being pointed to "this-dir" via a symlink.
+           * Get the real node kind and pretend the path is not a symlink.
+           * This prevents send_status_structure() from treating this-dir
+           * as a directory obstructed by a file. */
+          SVN_ERR(svn_io_check_resolved_path(local_abspath,
+                                             &this_dirent->kind, iterpool));
+          this_dirent->special = FALSE;
+          SVN_ERR(send_status_structure(wb, local_abspath,
+                                        parent_repos_root_url,
+                                        parent_repos_relpath,
+                                        parent_repos_uuid,
+                                        dir_info, this_dirent, get_all,
+                                        status_func, status_baton,
+                                        iterpool));
+        }
+     else
+#endif
+        SVN_ERR(send_status_structure(wb, local_abspath,
+                                      parent_repos_root_url,
+                                      parent_repos_relpath,
+                                      parent_repos_uuid,
+                                      dir_info, dirent, get_all,
+                                      status_func, status_baton,
+                                      iterpool));
+    }
 
   /* If the requested depth is empty, we only need status on this-dir. */
   if (depth == svn_depth_empty)
@@ -2425,7 +2449,7 @@ close_edit(void *edit_baton,
 /*** Public API ***/
 
 svn_error_t *
-svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
+svn_wc__get_status_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           void **set_locks_baton,
                           svn_revnum_t *edit_revision,
