@@ -352,6 +352,65 @@ is_within_base_path(const char *path, const char *base_path,
   return FALSE;
 }
 
+/* Given PATH deleted under ROOT, return in READABLE whether the path was
+   readable prior to the deletion.  Consult COPIES (a stack of 'struct
+   copy_info') and AUTHZ_READ_FUNC. */
+static svn_error_t *
+was_readable(svn_boolean_t *readable,
+             svn_fs_root_t *root,
+             const char *path,
+             apr_array_header_t *copies,
+             svn_repos_authz_func_t authz_read_func,
+             void *authz_read_baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  svn_fs_root_t *inquire_root;
+  const char *inquire_path;
+  struct copy_info *info;
+  const char *relpath;
+
+  /* Short circuit. */
+  if (! authz_read_func)
+    {
+      *readable = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  if (copies->nelts != 0)
+    info = &APR_ARRAY_IDX(copies, copies->nelts - 1, struct copy_info);
+
+  /* Are we under a copy? */
+  if (info && (relpath = svn_relpath_skip_ancestor(info->path, path)))
+    {
+      SVN_ERR(svn_fs_revision_root(&inquire_root, svn_fs_root_fs(root),
+                                   info->copyfrom_rev, scratch_pool));
+      inquire_path = svn_fspath__join(info->copyfrom_path, relpath,
+                                      scratch_pool);
+    }
+  else
+    {
+      /* Compute the revision that ROOT is based on.  (Note that ROOT is not
+         r0's root, since this function is only called for deletions.)
+         ### Need a more succinct way to express this */
+      svn_revnum_t inquire_rev = SVN_INVALID_REVNUM;
+      if (svn_fs_is_txn_root(root))
+        inquire_rev = svn_fs_txn_root_base_revision(root);
+      if (svn_fs_is_revision_root(root))
+        inquire_rev =  svn_fs_revision_root_revision(root)-1;
+      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(inquire_rev));
+
+      SVN_ERR(svn_fs_revision_root(&inquire_root, svn_fs_root_fs(root),
+                                   inquire_rev, scratch_pool));
+      inquire_path = path;
+    }
+
+  SVN_ERR(authz_read_func(readable, inquire_root, inquire_path,
+                          authz_read_baton, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Initialize COPYFROM_ROOT, COPYFROM_PATH, and COPYFROM_REV with the
    revision root, fspath, and revnum of the copyfrom of CHANGE, which
    corresponds to PATH under ROOT.  If the copyfrom info is valid
@@ -469,8 +528,18 @@ path_driver_cb_func(void **dir_baton,
 
   /* Handle any deletions. */
   if (do_delete)
-    SVN_ERR(editor->delete_entry(edit_path, SVN_INVALID_REVNUM,
-                                 parent_baton, pool));
+    {
+      svn_boolean_t readable;
+
+      /* Issue #4121: delete under under a copy, of a path that was unreadable
+         at its pre-copy location. */
+      SVN_ERR(was_readable(&readable, root, edit_path, cb->copies,
+                            cb->authz_read_func, cb->authz_read_baton,
+                            pool, pool));
+      if (readable)
+        SVN_ERR(editor->delete_entry(edit_path, SVN_INVALID_REVNUM,
+                                     parent_baton, pool));
+    }
 
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
