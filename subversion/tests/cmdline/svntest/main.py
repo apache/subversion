@@ -804,6 +804,9 @@ def create_repos(path, minor_version = None):
                 "realm = svntest\n[sasl]\nuse-sasl = true\n")
   else:
     file_append(get_svnserve_conf_file_path(path), "password-db = passwd\n")
+    # This actually creates TWO [users] sections in the file (one of them is
+    # uncommented in `svnadmin create`'s template), so we exercise the .ini
+    # files reading code's handling of duplicates, too. :-)
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
