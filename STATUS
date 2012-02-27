@@ -60,12 +60,21 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1293998
+ * r1294134, r1294147
+   Fix svn:// authz in Python tests.
+   Justification:
+     Tests are broken.
+   Votes:
+     +1: danielsh
+
+ * r1293998, r1294136
    Fix issue #4121: copy followed by delete of unreadable child.
    Justification:
      User resorted to patching the commit editor to work around this.
+   Notes:
+     Depends on the r1294134 group.
    Votes:
-     +0: danielsh (pending regression test; see dev@)
+     +0: danielsh (pending investigation of buildbot failures; see dev@)
 
 Veto-blocked changes:
 =====================
