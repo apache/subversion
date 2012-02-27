@@ -610,8 +610,8 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_kind_t kind;
-  svn_boolean_t conflicted;
-  const apr_array_header_t *conflicts;
+  svn_boolean_t conflicted = FALSE;
+  const apr_array_header_t *conflicts = NULL;
   apr_array_header_t *versioned_targets;
   const char *local_abspath;
   int i;
