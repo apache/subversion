@@ -610,7 +610,6 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_kind_t kind;
-  svn_boolean_t conflicted = FALSE;
   const apr_array_header_t *conflicts = NULL;
   apr_array_header_t *versioned_targets;
   const char *local_abspath;
@@ -622,6 +621,8 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                      sizeof(const char *));
   for (i = 0; i < targets->nelts; i++)
     {
+      svn_boolean_t conflicted = FALSE;
+
       svn_pool_clear(iterpool);
 
       local_abspath = APR_ARRAY_IDX(targets, i, const char *);
@@ -699,7 +700,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
                                     cancel_func, cancel_baton,
                                     notify_func, notify_baton, scratch_pool));
 
-  if (!keep_local && conflicted && conflicts != NULL)
+  if (!keep_local && conflicts != NULL)
     {
       svn_pool_clear(iterpool);
 
