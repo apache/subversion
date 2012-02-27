@@ -60,6 +60,13 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1293998
+   Fix issue #4121: copy followed by delete of unreadable child.
+   Justification:
+     User resorted to patching the commit editor to work around this.
+   Votes:
+     +0: danielsh (pending regression test; see dev@)
+
 Veto-blocked changes:
 =====================
 
