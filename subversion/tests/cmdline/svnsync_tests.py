@@ -385,7 +385,6 @@ def detect_meddling(sbox):
 
 #----------------------------------------------------------------------
 @Skip(svntest.main.is_ra_type_file)
-@XFail(svntest.main.is_ra_type_svn)
 def basic_authz(sbox):
   "verify that unreadable content is not synced"
 
@@ -400,15 +399,16 @@ def basic_authz(sbox):
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
+  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
   svntest.main.file_write(sbox.authz_file,
-                          "[svnsync-basic-authz:/]\n"
+                          "[%s:/]\n"
                           "* = r\n"
                           "\n"
-                          "[svnsync-basic-authz:/A/B]\n"
+                          "[%s:/A/B]\n"
                           "* = \n"
                           "\n"
-                          "[svnsync-basic-authz-1:/]\n"
-                          "* = rw\n")
+                          "[%s:/]\n"
+                          "* = rw\n" % tuple(args))
 
   run_sync(dest_sbox.repo_url)
 
@@ -477,29 +477,17 @@ def copy_from_unreadable_dir(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  fp = open(sbox.authz_file, 'w')
-
-  # For mod_dav_svn's parent path setup we need per-repos permissions in
-  # the authz file...
-  if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-from-unreadable-dir:/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[svnsync-copy-from-unreadable-dir:/A/B]\n" +
-             "* = \n" +
-             "\n" +
-             "[svnsync-copy-from-unreadable-dir-1:/]\n" +
-             "* = rw")
-
-  # Otherwise we can just go with the permissions needed for the source
-  # repository.
-  else:
-    fp.write("[/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[/A/B]\n" +
-             "* =\n")
-  fp.close()
+  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  open(sbox.authz_file, 'w').write(
+             "[%s:/]\n"
+             "* = r\n"
+             "\n"
+             "[%s:/A/B]\n"
+             "* = \n"
+             "\n"
+             "[%s:/]\n"
+             "* = rw"
+             % tuple(args))
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -603,29 +591,17 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  fp = open(sbox.authz_file, 'w')
-
-  # For mod_dav_svn's parent path setup we need per-repos permissions in
-  # the authz file...
-  if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-with-mod-from-unreadable-dir:/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir:/A/B]\n" +
-             "* = \n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir-1:/]\n" +
-             "* = rw")
-
-  # Otherwise we can just go with the permissions needed for the source
-  # repository.
-  else:
-    fp.write("[/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[/A/B]\n" +
-             "* =\n")
-  fp.close()
+  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  open(sbox.authz_file, 'w').write(
+             "[%s:/]\n"
+             "* = r\n"
+             "\n"
+             "[%s:/A/B]\n"
+             "* = \n"
+             "\n"
+             "[%s:/]\n"
+             "* = rw"
+             % tuple(args))
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -707,29 +683,17 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  fp = open(sbox.authz_file, 'w')
-
-  # For mod_dav_svn's parent path setup we need per-repos permissions in
-  # the authz file...
-  if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-with-mod-from-unreadable-dir-and-copy:/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir-and-copy:/A/B]\n" +
-             "* = \n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir-and-copy-1:/]\n" +
-             "* = rw")
-
-  # Otherwise we can just go with the permissions needed for the source
-  # repository.
-  else:
-    fp.write("[/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[/A/B]\n" +
-             "* =\n")
-  fp.close()
+  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  open(sbox.authz_file, 'w').write(
+             "[%s:/]\n"
+             "* = r\n"
+             "\n"
+             "[%s:/A/B]\n"
+             "* = \n"
+             "\n"
+             "[%s:/]\n"
+             "* = rw"
+             % tuple(args))
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -1038,7 +1002,6 @@ def fd_leak_sync_from_serf_to_local(sbox):
 
 @Issue(4121)
 @Skip(svntest.main.is_ra_type_file)
-@XFail(svntest.main.is_ra_type_svn)
 def copy_delete_unreadable_child(sbox):
   "copy, then rm at-src-unreadable child"
 
@@ -1056,12 +1019,14 @@ def copy_delete_unreadable_child(sbox):
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   ## Lock down the source.
+  args = map(lambda x: x.authz_name(), [sbox, sbox])
   write_restrictive_svnserve_conf(sbox.repo_dir, anon_access='read')
   svntest.main.file_write(sbox.authz_file,
-      "[copy-delete-unreadable-child:/]\n"
+      "[%s:/]\n"
       "* = r\n"
-      "[copy-delete-unreadable-child:/A]\n"
+      "[%s:/A]\n"
       "* =  \n"
+      % tuple(args)
   )
 
   dest_url = svntest.main.file_scheme_prefix \
