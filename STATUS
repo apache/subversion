@@ -67,14 +67,17 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1293998, r1294136
+ * r1293998, r1294136, r1294236
    Fix issue #4121: copy followed by delete of unreadable child.
    Justification:
      User resorted to patching the commit editor to work around this.
    Notes:
      Depends on the r1294134 group.
+     r1293998 is the fix.
+     r1294136 is a test.
+     r1294236 fixes an uninitialized variable.
    Votes:
-     +0: danielsh (pending investigation of buildbot failures; see dev@)
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
