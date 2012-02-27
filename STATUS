@@ -82,9 +82,6 @@ Veto-blocked changes:
                    backports. Should be part of the backport change when
                    needed)
 
-Approved changes:
-=================
-
  * r1235831, r1236099
    Tweak the parsing of the ssl-authority-files config option to make it
    easier for users to configure.
@@ -94,5 +91,8 @@ Approved changes:
      Both r1235831 and r1236099 conflict and will need a branch.
    Votes:
      +1: gstein, rhuijben, steveking
-     -1: julianfoad (not forward-compatible within 1.7.x; discussing in email)
+     -1: julianfoad, stsp (not forward-compatible within 1.7.x; discussing in email)
+
+Approved changes:
+=================
 
