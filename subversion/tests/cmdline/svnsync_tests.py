@@ -385,6 +385,7 @@ def detect_meddling(sbox):
 
 #----------------------------------------------------------------------
 @Skip(svntest.main.is_ra_type_file)
+@XFail(svntest.main.is_ra_type_svn)
 def basic_authz(sbox):
   "verify that unreadable content is not synced"
 
@@ -412,12 +413,18 @@ def basic_authz(sbox):
   run_sync(dest_sbox.repo_url)
 
   lambda_url = dest_sbox.repo_url + '/A/B/lambda'
+  iota_url = dest_sbox.repo_url + '/iota'
 
   # this file should have been blocked by authz
   svntest.actions.run_and_verify_svn(None,
                                      [], svntest.verify.AnyOutput,
                                      'cat',
                                      lambda_url)
+  # this file should have been synced
+  svntest.actions.run_and_verify_svn(None,
+                                     svntest.verify.AnyOutput, [],
+                                     'cat',
+                                     iota_url)
 
 #----------------------------------------------------------------------
 @Skip(svntest.main.is_ra_type_file)
