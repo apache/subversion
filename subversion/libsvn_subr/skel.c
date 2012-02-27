@@ -157,7 +157,7 @@ putsize(char *data, apr_size_t len, apr_size_t value)
 
   /* Put the digits in most-significant-first order.  */
   {
-    int left, right;
+    apr_size_t left, right;
 
     for (left = 0, right = i-1; left < right; left++, right--)
       {
