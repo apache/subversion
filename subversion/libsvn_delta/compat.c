@@ -281,7 +281,7 @@ process_actions(void *edit_baton,
   svn_boolean_t need_copy = FALSE;
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
-  apr_array_header_t *children;
+  apr_array_header_t *children = NULL;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
   svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
