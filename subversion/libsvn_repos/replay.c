@@ -495,7 +495,7 @@ path_driver_cb_func(void **dir_baton,
                                                    cb->copies->nelts - 1,
                                                    struct copy_info).path,
                                      edit_path))
-    cb->copies->nelts--;
+    apr_array_pop(cb->copies);
 
   change = apr_hash_get(cb->changed_paths, edit_path, APR_HASH_KEY_STRING);
   if (! change)
