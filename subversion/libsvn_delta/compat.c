@@ -372,7 +372,7 @@ process_actions(void *edit_baton,
               struct path_checksum_args *pca = action->args;
 
               /* We can only set text on files. */
-              kind = svn_node_file;
+              kind = svn_kind_file;
 
               SVN_ERR(svn_io_file_checksum2(&checksum, pca->path,
                                             svn_checksum_sha1, scratch_pool));
