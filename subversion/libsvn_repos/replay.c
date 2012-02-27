@@ -367,7 +367,7 @@ was_readable(svn_boolean_t *readable,
 {
   svn_fs_root_t *inquire_root;
   const char *inquire_path;
-  struct copy_info *info;
+  struct copy_info *info = NULL;
   const char *relpath;
 
   /* Short circuit. */
