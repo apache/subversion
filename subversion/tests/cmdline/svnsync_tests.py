@@ -1028,6 +1028,7 @@ def fd_leak_sync_from_serf_to_local(sbox):
   import resource
   resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
   run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
+
 ########################################################################
 # Run the tests
 
@@ -1068,7 +1069,7 @@ test_list = [ None,
               specific_deny_authz,
               descend_into_replace,
               delete_revprops,
-              fd_leak_sync_from_serf_to_local,
+              fd_leak_sync_from_serf_to_local, # calls setrlimit
              ]
 serial_only = True
 
