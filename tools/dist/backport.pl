@@ -36,7 +36,7 @@ my $DEBUG = qw[false true][0]; # 'set -x', etc
 # derived values
 my $SVNq;
 
-$SVN .= " --non-interactive" unless defined ctermid;
+$SVN .= " --non-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG eq 'true';
 
