@@ -1036,6 +1036,45 @@ def fd_leak_sync_from_serf_to_local(sbox):
   resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
   run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
 
+@Issue(4121)
+@Skip(svntest.main.is_ra_type_file)
+@XFail(svntest.main.is_ra_type_svn)
+def copy_delete_unreadable_child(sbox):
+  "copy, then rm at-src-unreadable child"
+
+  ## Prepare the source: Greek tree (r1), cp+rm (r2).
+  sbox.build("copy-delete-unreadable-child")
+  svntest.actions.run_and_verify_svnmucc(None, None, [], 
+                                         '-m', 'r2',
+                                         '-U', sbox.repo_url,
+                                         'cp', 'HEAD', '/', 'branch',
+                                         'rm', 'branch/A')
+
+  ## Create the destination.
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  ## Lock down the source.
+  write_restrictive_svnserve_conf(sbox.repo_dir, anon_access='read')
+  svntest.main.file_write(sbox.authz_file,
+      "[copy-delete-unreadable-child:/]\n"
+      "* = r\n"
+      "[copy-delete-unreadable-child:/A]\n"
+      "* =  \n"
+  )
+
+  dest_url = svntest.main.file_scheme_prefix \
+             + svntest.main.pathname2url(os.path.abspath(dest_sbox.repo_dir))
+  run_init(dest_url, sbox.repo_url)
+  run_sync(dest_url)
+
+  # sanity check
+  svntest.actions.run_and_verify_svn(None, 
+                                     ["iota\n"], [],
+                                     'ls', dest_url+'/branch@2')
+
+
 ########################################################################
 # Run the tests
 
@@ -1077,6 +1116,7 @@ test_list = [ None,
               descend_into_replace,
               delete_revprops,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
+              copy_delete_unreadable_child,
              ]
 serial_only = True
 
