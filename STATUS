@@ -94,4 +94,5 @@ Approved changes:
      Both r1235831 and r1236099 conflict and will need a branch.
    Votes:
      +1: gstein, rhuijben, steveking
+     -1: julianfoad (not forward-compatible within 1.7.x; discussing in email)
 
