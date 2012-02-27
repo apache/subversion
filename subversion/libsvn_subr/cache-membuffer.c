@@ -304,7 +304,7 @@ typedef struct entry_t
   /* Size of the serialized item data. May be 0.
    * Only valid for used entries.
    */
-  apr_uint32_t size;
+  apr_size_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
