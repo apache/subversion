@@ -224,7 +224,8 @@ typedef struct fs_fs_data_t
      (svn_fs_id_t *).  (Not threadsafe.) */
   svn_cache__t *rev_root_id_cache;
 
-  /* DAG node cache for immutable nodes */
+  /* DAG node cache for immutable nodes.  Maps (revision, fspath)
+     to (dag_node_t *). */
   svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
@@ -232,7 +233,7 @@ typedef struct fs_fs_data_t
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
-     rep key to svn_string_t. */
+     rep key (revision/offset) to svn_string_t. */
   svn_cache__t *fulltext_cache;
 
   /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to

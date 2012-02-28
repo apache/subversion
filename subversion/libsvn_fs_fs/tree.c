@@ -115,7 +115,7 @@ typedef struct fs_rev_root_data_t
 typedef struct fs_txn_root_data_t
 {
   /* Cache of txn DAG nodes (without their nested noderevs, because
-   * it's mutable). */
+   * it's mutable). Same keys/values as ffd->rev_node_cache. */
   svn_cache__t *txn_node_cache;
 } fs_txn_root_data_t;
 
