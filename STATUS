@@ -60,23 +60,22 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1294134, r1294147
+ * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
+   r1294134, r1294147
+   Two interdependent changes:
+   Fix issue #4121: copy followed by delete of unreadable child.
    Fix svn:// authz in Python tests.
    Justification:
-     Tests are broken.
-   Votes:
-     +1: danielsh
-
- * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236
-   Fix issue #4121: copy followed by delete of unreadable child.
-   Justification:
      User resorted to patching the commit editor to work around this.
+     Tests are broken.
    Notes:
-     Depends on the r1294134 group.
      r1293945,r1293972,r1293976 are cosmetics.
      r1293998 is the fix.
      r1294136 is a test.
      r1294236 fixes an uninitialized variable.
+   Notes:
+     r1294134 extends a test to demonstrate its brokenness.
+     r1294147 fixes said brokenness.
    Votes:
      +1: danielsh
 
