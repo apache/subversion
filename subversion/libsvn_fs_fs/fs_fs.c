@@ -7904,6 +7904,8 @@ svn_error_t *
 svn_fs_fs__verify(svn_fs_t *fs,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
+                  svn_revnum_t start,
+                  svn_revnum_t end,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -7913,6 +7915,14 @@ svn_fs_fs__verify(svn_fs_t *fs,
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
+
+  /* Input validation. */
+  if (! SVN_IS_VALID_REVNUM(start))
+    start = 0;
+  if (! SVN_IS_VALID_REVNUM(end))
+    end = youngest;
+  SVN_ERR(ensure_revision_exists(fs, start, iterpool));
+  SVN_ERR(ensure_revision_exists(fs, end, iterpool));
 
   /* Do not attempt to walk the rep-cache database if its file does not exists,
      since doing so would create it --- which may confuse the administrator. */
@@ -7926,9 +7936,23 @@ svn_fs_fs__verify(svn_fs_t *fs,
   /* Issue #4129: bogus pred-counts on the root node-rev. */
   {
     svn_revnum_t i;
-    int predecessor_predecessor_count = -1;
+    int predecessor_predecessor_count;
+    
+    /* Compute PREDECESSOR_PREDECESSOR_COUNT. */
+    if (start == 0)
+      /* The value that passes the if() at the end of the loop. */
+      predecessor_predecessor_count = -1;
+    else
+      {
+        svn_fs_id_t *root_id;
+        node_revision_t *root_noderev;
+        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, start-1, iterpool));
+        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
+                                             iterpool));
+        predecessor_predecessor_count = root_noderev->predecessor_count;
+      }
 
-    for (i = 0; i <= youngest; i++)
+    for (i = start; i <= end; i++)
       {
         /* ### Caching.
 
