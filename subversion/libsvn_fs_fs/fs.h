@@ -229,7 +229,8 @@ typedef struct fs_fs_data_t
   svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
-     unparsed FS ID to ###x. */
+     unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
+     names to (svn_fs_dirent_t *). */
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
