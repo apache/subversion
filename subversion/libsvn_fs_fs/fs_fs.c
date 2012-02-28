@@ -5865,6 +5865,8 @@ write_hash_delta_rep(representation_t *rep,
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
    of (not yet committed) revision REV in FS.  Use POOL for temporary
    allocations.
+
+   If you change this function, consider updating svn_fs_fs__verify() too.
  */
 static svn_error_t *
 validate_root_noderev(svn_fs_t *fs,
@@ -7881,7 +7883,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
 /** Verifying. **/
 
-/* Body of svn_fs_fs__verify().
+/* Used by svn_fs_fs__verify().
    Implements svn_fs_fs__walk_rep_reference().walker.  */
 static svn_error_t *
 verify_walker(representation_t *rep,
@@ -7906,6 +7908,8 @@ svn_fs_fs__verify(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t exists;
+  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     return SVN_NO_ERROR;
@@ -7919,6 +7923,48 @@ svn_fs_fs__verify(svn_fs_t *fs,
                                           cancel_func, cancel_baton,
                                           pool));
 
+  /* Issue #4129: bogus pred-counts on the root node-rev. */
+  {
+    svn_revnum_t i;
+    int predecessor_predecessor_count = -1;
+
+    for (i = 0; i <= youngest; i++)
+      {
+        /* ### Caching.
+
+           svn_fs_fs__rev_get_root() consults caches, which in verify we
+           don't want.  But we can't easily bypass that, as
+           svn_fs_revision_root()+svn_fs_node_id()'s implementation uses
+           svn_fs_fs__rev_get_root() too.
+
+           ### A future revision will make fs_verify() disable caches when it
+           ### opens ffd.
+         */
+        svn_fs_id_t *root_id;
+        node_revision_t *root_noderev;
+
+        if ((i % 100) == 0) /* uneducated guess */
+          svn_pool_clear(iterpool);
+
+        /* Fetch ROOT_NODEREV. */
+        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, i, iterpool));
+        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
+                                             iterpool));
+
+        /* Check correctness. (Compare validate_root_noderev().) */
+        if (1+predecessor_predecessor_count != root_noderev->predecessor_count)
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("predecessor count for "
+                                     "the root node-revision is wrong: "
+                                     "r%ld has %d, but r%ld has %d"),
+                                   i, root_noderev->predecessor_count,
+                                   i-1, predecessor_predecessor_count);
+
+        predecessor_predecessor_count = root_noderev->predecessor_count;
+      }
+  }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
