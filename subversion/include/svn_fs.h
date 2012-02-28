@@ -251,7 +251,8 @@ svn_fs_upgrade(const char *path,
  * Use @a pool for necessary allocations.
  *
  * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
- * svn_repos_verify_fs2()'s semantics apply.
+ * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
+ * verified, global invariants may be verified as well.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific

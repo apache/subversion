@@ -148,6 +148,20 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
   if (! ffd->rep_cache_db)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
 
+  /* Check global invariants. */
+  if (start == 0)
+    {
+      svn_sqlite__stmt_t *stmt2;
+      svn_revnum_t max;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt2, ffd->rep_cache_db,
+                                        STMT_GET_MAX_REV));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt2));
+      max = svn_sqlite__column_revnum(stmt2, 0);
+      SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
+      SVN_ERR(svn_sqlite__reset(stmt2));
+    }
+
   /* Get the statement. (There are no arguments to bind.) */
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
                                     STMT_GET_REPS_FOR_RANGE));
@@ -179,10 +193,6 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       rep->offset = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
       rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
-
-      /* Sanity check. */
-      if (rep)
-        SVN_ERR(rep_has_been_born(rep, fs, iterpool));
 
       /* Walk. */
       SVN_ERR(walker(rep, walker_baton, fs, iterpool));
