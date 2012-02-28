@@ -108,7 +108,7 @@ class Sandbox:
     if self.repo_url.startswith("http"):
       return os.path.basename(repo_dir)
     else:
-      return repo_dir
+      return repo_dir.replace('\\', '/')
 
   def add_test_path(self, path, remove=True):
     self.test_paths.append(path)
