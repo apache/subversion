@@ -1548,6 +1548,16 @@ ensure_revision_exists(svn_fs_t *fs,
                            _("No such revision %ld"), rev);
 }
 
+svn_error_t *
+svn_fs_fs__revision_exists(svn_revnum_t rev,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool)
+{
+  /* Different order of parameters. */
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+  return SVN_NO_ERROR;
+}
+
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the

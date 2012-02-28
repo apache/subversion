@@ -56,24 +56,9 @@ rep_has_been_born(representation_t *rep,
                   svn_fs_t *fs,
                   apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_revnum_t youngest;
-
   SVN_ERR_ASSERT(rep);
 
-  youngest = ffd->youngest_rev_cache;
-  if (youngest < rep->revision)
-  {
-    /* Stale cache. */
-    SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, pool));
-
-    /* Fresh cache. */
-    if (youngest < rep->revision)
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Youngest revision is r%ld, but "
-                                 "rep-cache contains r%ld"),
-                               youngest, rep->revision);
-  }
+  SVN_ERR(svn_fs_fs__revision_exists(rep->revision, fs, pool));
 
   return SVN_NO_ERROR;
 }

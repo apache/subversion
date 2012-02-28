@@ -108,6 +108,12 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
+/* Return an error iff REV does not exist in FS. */
+svn_error_t *
+svn_fs_fs__revision_exists(svn_revnum_t rev,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool);
+
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */
 svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
