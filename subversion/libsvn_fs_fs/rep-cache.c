@@ -146,6 +146,8 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
+                              svn_revnum_t start,
+                              svn_revnum_t end,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -163,7 +165,9 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
 
   /* Get the statement. (There are no arguments to bind.) */
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,
-                                    STMT_GET_ALL_REPS));
+                                    STMT_GET_REPS_FOR_RANGE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "rr",
+                            start, end));
 
   /* Walk the cache entries. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));

@@ -7932,6 +7932,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
        Don't take any lock. */
     SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
                                           cancel_func, cancel_baton,
+                                          start, end,
                                           pool));
 
   /* Issue #4129: bogus pred-counts on the root node-rev. */
