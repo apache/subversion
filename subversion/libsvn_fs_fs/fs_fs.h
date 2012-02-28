@@ -42,6 +42,8 @@ svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
                                apr_pool_t *pool);
 
 /* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at

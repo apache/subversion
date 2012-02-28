@@ -243,6 +243,8 @@ static svn_error_t *
 fs_verify(svn_fs_t *fs, const char *path,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
+          svn_revnum_t start,
+          svn_revnum_t end,
           apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
@@ -251,7 +253,7 @@ fs_verify(svn_fs_t *fs, const char *path,
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   SVN_ERR(fs_serialized_init(fs, common_pool, pool));
-  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, pool);
+  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, start, end, pool);
 }
 
 static svn_error_t *

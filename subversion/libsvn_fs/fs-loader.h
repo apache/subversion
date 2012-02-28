@@ -90,6 +90,8 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
                             /* ### notification? */
                             svn_cancel_func_t cancel_func, void *cancel_baton,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
                             apr_pool_t *pool,
                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
