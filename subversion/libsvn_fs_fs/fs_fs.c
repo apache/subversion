@@ -7968,7 +7968,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
         svn_fs_id_t *root_id;
         node_revision_t *root_noderev;
 
-        if ((i % 100) == 0) /* uneducated guess */
+        if ((i % 128) == 0) /* uneducated guess */
           svn_pool_clear(iterpool);
 
         /* Fetch ROOT_NODEREV. */
