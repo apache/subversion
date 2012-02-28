@@ -81,15 +81,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1294470
-   Include more information in the FSFS node-revision predecessors count sanity
-   check.
-   Justification:
-     Will make chasing down the bug easier.  (I mean, asking users to run a
-     Perl script that dumps node-revisions? Really?)
-   Votes:
-     +1: danielsh, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -119,3 +110,11 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1294470
+   Include more information in the FSFS node-revision predecessors count sanity
+   check.
+   Justification:
+     Will make chasing down the bug easier.  (I mean, asking users to run a
+     Perl script that dumps node-revisions? Really?)
+   Votes:
+     +1: danielsh, stsp, philip
