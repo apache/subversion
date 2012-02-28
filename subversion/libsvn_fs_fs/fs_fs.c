@@ -3529,7 +3529,7 @@ read_representation(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      const char *fulltext_key = NULL;
+      const char *fulltext_cache_key = NULL;
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
@@ -3538,10 +3538,11 @@ read_representation(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          fulltext_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
+          fulltext_cache_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
                                       rep->revision, rep->offset);
           SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
-                                 ffd->fulltext_cache, fulltext_key, pool));
+                                 ffd->fulltext_cache, fulltext_cache_key,
+                                 pool));
           if (is_cached)
             {
               *contents_p = svn_stream_from_stringbuf(fulltext, pool);
@@ -3549,7 +3550,7 @@ read_representation(svn_stream_t **contents_p,
             }
         }
 
-      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_key, pool));
+      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
 
       *contents_p = svn_stream_create(rb, pool);
       svn_stream_set_read(*contents_p, rep_read_contents);
