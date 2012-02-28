@@ -61,7 +61,7 @@ Candidate changes:
      +1: stsp, rhuijben
 
  * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
-   r1294134, r1294147
+   r1294134, r1294147, r1294364, rXXX
    Two interdependent changes:
    Fix issue #4121: copy followed by delete of unreadable child.
    Fix svn:// authz in Python tests.
@@ -76,6 +76,8 @@ Candidate changes:
    Notes:
      r1294134 extends a test to demonstrate its brokenness.
      r1294147 fixes said brokenness.
+     r1294364 is included to avoid conflicts with rXXX.
+     rXXX fixes r1294147 for Windows.
    Votes:
      +1: danielsh
 
