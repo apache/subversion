@@ -647,7 +647,7 @@ def match_empty_prefix(sbox):
   # Note: We also ought to test the '--pattern' option, including or
   # excluding a pattern of '*'.  However, passing a wildcard parameter
   # is troublesome on Windows: it may be expanded, depending on whether
-  # the svndumpfilter executable was linked with 'setarg.obj', and there
+  # the svndumpfilter executable was linked with 'setargv.obj', and there
   # doesn't seem to be a consistent way to quote such an argument to
   # prevent expansion.
 
