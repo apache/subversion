@@ -7924,11 +7924,12 @@ svn_fs_fs__verify(svn_fs_t *fs,
   SVN_ERR(ensure_revision_exists(fs, start, iterpool));
   SVN_ERR(ensure_revision_exists(fs, end, iterpool));
 
-  /* Do not attempt to walk the rep-cache database if its file does not exists,
-     since doing so would create it --- which may confuse the administrator. */
+  /* rep-cache verification. */
   SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
   if (exists)
-    /* Don't take any lock. */
+    /* Do not attempt to walk the rep-cache database if its file does not exist,
+       since doing so would create it --- which may confuse the administrator.
+       Don't take any lock. */
     SVN_ERR(svn_fs_fs__walk_rep_reference(fs, verify_walker, NULL,
                                           cancel_func, cancel_baton,
                                           pool));
