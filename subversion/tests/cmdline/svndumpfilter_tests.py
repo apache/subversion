@@ -600,8 +600,8 @@ def dropped_but_not_renumbered_empty_revs(sbox):
                                      sbox.repo_url)
 
 #----------------------------------------------------------------------
-def match_empty_prefix_or_pattern(sbox):
-  "svndumpfilter with an empty prefix or pattern"
+def match_empty_prefix(sbox):
+  "svndumpfilter with an empty prefix"
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
@@ -636,7 +636,6 @@ def match_empty_prefix_or_pattern(sbox):
                       '': Item(status='  ', wc_rev=1) })
 
   test(sbox, dumpfile, 'exclude', '')
-  test(sbox, dumpfile, 'exclude', '--pattern', '/A/D/G*', '*')
 
   # Test including everything
   expected_disk = svntest.main.greek_state.copy()
@@ -644,7 +643,13 @@ def match_empty_prefix_or_pattern(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
 
   test(sbox, dumpfile, 'include', '', '/A/D/G')
-  test(sbox, dumpfile, 'include', '--pattern', '*')
+
+  # Note: We also ought to test the '--pattern' option, including or
+  # excluding a pattern of '*'.  However, passing a wildcard parameter
+  # is troublesome on Windows: it may be expanded, depending on whether
+  # the svndumpfilter executable was linked with 'setarg.obj', and there
+  # doesn't seem to be a consistent way to quote such an argument to
+  # prevent expansion.
 
 ########################################################################
 # Run the tests
@@ -658,7 +663,7 @@ test_list = [ None,
               dumpfilter_with_patterns,
               filter_mergeinfo_revs_outside_of_dump_stream,
               dropped_but_not_renumbered_empty_revs,
-              match_empty_prefix_or_pattern,
+              match_empty_prefix,
               ]
 
 if __name__ == '__main__':
