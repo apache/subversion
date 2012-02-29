@@ -872,3 +872,9 @@ extraclean-ctypes-python: clean-ctypes-python
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-checks.sql
+
+# Compatibility symlink.
+# This runs after the target of the same name in build-outputs.mk.
+INSTALL_EXTRA_TOOLS=\
+  $(MKDIR) $(DESTDIR)$(bindir); \
+  ln -s $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT)
