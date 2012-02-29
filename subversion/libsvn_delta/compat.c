@@ -129,7 +129,10 @@ struct extra_baton
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
+
   apr_hash_t *paths;
+  apr_array_header_t *path_order;
+
   apr_pool_t *edit_pool;
   struct extra_baton *exb;
   svn_boolean_t closed;
@@ -221,10 +224,12 @@ add_action(struct ev2_edit_baton *eb,
 
   if (action_list == NULL)
     {
+      const char *path_dup = apr_pstrdup(eb->edit_pool, path);
+
       action_list = apr_array_make(eb->edit_pool, 1,
                                    sizeof(struct path_action *));
-      apr_hash_set(eb->paths, apr_pstrdup(eb->edit_pool, path),
-                   APR_HASH_KEY_STRING, action_list);
+      apr_hash_set(eb->paths, path_dup, APR_HASH_KEY_STRING, action_list);
+      APR_ARRAY_PUSH(eb->path_order, const char *) = path_dup;
     }
 
   APR_ARRAY_PUSH(action_list, struct path_action *) = p_action;
@@ -484,30 +489,28 @@ run_ev2_actions(void *edit_baton,
                 apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
-  apr_array_header_t *sorted_hash;
   apr_pool_t *iterpool;
-  int i;
-
-  /* Sort the paths touched by this edit.
-   * Ev2 doesn't really have any particular need for depth-first-ness, but
-   * we want to ensure all parent directories are handled before children in
-   * the case of adds (which does introduce an element of depth-first-ness). */
-  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
-                               scratch_pool);
 
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < sorted_hash->nelts; i++)
+  while (eb->path_order->nelts > 0)
     {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i,
-                                              svn_sort__item_t);
-      apr_array_header_t *actions = item->value;
-      const char *path = item->key;
+      const char *path = APR_ARRAY_IDX(eb->path_order, 0, const char *);
+      apr_array_header_t *actions = apr_hash_get(eb->paths, path,
+                                                 APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
       SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
 
-      /* Remove this item from the hash. */
+      /* Remove this item from the hash... */
       apr_hash_set(eb->paths, path, APR_HASH_KEY_STRING, NULL);
+
+      /* ...and from the front of the path_order list.
+
+         ### This is wrong on so many levels, but since APR doesn't support
+         proper queue operations, it'll have to do. */
+      eb->path_order->nelts--;
+      eb->path_order->nalloc--;
+      eb->path_order->elts += eb->path_order->elt_size;
     }
   svn_pool_destroy(iterpool);
 
@@ -964,6 +967,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
+  eb->path_order = apr_array_make(pool, 1, sizeof(const char *));
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
   *eb->found_abs_paths = FALSE;
