@@ -304,6 +304,8 @@ class BigDoEverythingClasss(object):
         self.urls = [s.strip() for s in config.get_value('streams').split()]
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
+        self.worker = BackgroundWorker(self.svnbin, self.env)
+        self.worker.start()
         self.service = service
         self.failures = 0
         self.alive = time.time()
@@ -363,21 +365,18 @@ class BigDoEverythingClasss(object):
         logging.info("Stream disconnected, trying again in %d seconds.... %s" % (backoff, s.url))
         reactor.callLater(backoff, self._restartStream, url)
 
-    @defer.inlineCallbacks
     def wc_ready(self, wc):
         # called when a working copy object has its basic info/url,
         # Add it to our watchers, and trigger an svn update.
         logging.info("Watching WC at %s <-> %s" % (wc.path, wc.url))
         self.watch.append(wc)
-        rev = yield wc.update()
-        logging.info("wc update: %s is at r%d" % (wc.path, rev))
+        self.worker.add_work(OP_UPDATE, wc)
 
     def _normalize_path(self, path):
         if path[0] != '/':
             return "/" + path
         return os.path.abspath(path)
 
-    @defer.inlineCallbacks
     def commit(self, stream, rev):
         logging.info("COMMIT r%d (%d paths) via %s" % (rev.rev, len(rev.dirs_changed), stream.url))
         paths = map(self._normalize_path, rev.dirs_changed)
@@ -396,8 +395,7 @@ class BigDoEverythingClasss(object):
             wcs = [wc for wc in self.watch if wc.update_applies(rev.repos, pre)]
             logging.info("Updating %d WC for r%d" % (len(wcs), rev.rev))
             for wc in wcs:
-                rev = yield wc.update()
-                logging.info("wc update: %s is at r%d" % (wc.path, rev))
+                self.worker.add_work(OP_UPDATE, wc)
 
 
 # Start logging warnings if the work backlog reaches this many items
