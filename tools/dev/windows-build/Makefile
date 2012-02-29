@@ -107,7 +107,7 @@ config: targetdir
 libsvn_auth_gnome_keyring libsvn_auth_kwallet libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_fs_base libsvn_fs_fs libsvn_fs_util libsvn_ra libsvn_ra_local libsvn_ra_neon libsvn_ra_serf libsvn_ra_svn libsvn_repos libsvn_subr libsvn_wc: targetdir
 	$(MSBUILD) /t:Libraries\$@
 	$(MAKE) package
-svn svnadmin svndumpfilter svnlook svnmucc svnserve svnsync svnversion entries-dump: targetdir
+svn svnadmin svndumpfilter svnlook svnmucc svnserve svnsync svnversion svnrdump entries-dump: targetdir
 	$(MSBUILD) /t:Programs\$@
 	$(MAKE) package
 auth-test cache-test changes-test checksum-test client-test compat-test config-test db-test diff-diff3-test dir-delta-editor dirent_uri-test error-test fs-base-test fs-pack-test fs-test hashdump-test key-test locks-test mergeinfo-test opt-test path-test ra-local-test random-test repos-test revision-test skel-test stream-test string-test strings-reps-test svn_test_fs svn_test_main svndiff-test target-test time-test translate-test tree-conflict-data-test utf-test vdelta-test window-test: targetdir
@@ -128,7 +128,7 @@ all2: targetdir
 package:
 	test -d $(SVNDIR)\$(CONFIG)\Subversion\tests\cmdline || mkdir $(SVNDIR)\$(CONFIG)\Subversion\tests\cmdline
 	test -d $(TARGETDIR)\bin || mkdir $(TARGETDIR)\bin
-	for %%i in (svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion) do @$(CP) $(CONFIG)\subversion\%%i\%%i.exe $(TARGETDIR)\bin
+	for %%i in (svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion svnrdump) do @$(CP) $(CONFIG)\subversion\%%i\%%i.exe $(TARGETDIR)\bin
 	for %%i in (diff diff3 diff4) do @if exist $(CONFIG)\tools\diff\%%i.exe $(CP) $(CONFIG)\tools\diff\%%i.exe $(TARGETDIR)\bin
 	$(CP) $(APRDIR)\$(CONFIG)/*.dll $(TARGETDIR)\bin
 	$(CP) $(APRUTILDIR)\$(CONFIG)/*.dll $(TARGETDIR)\bin
