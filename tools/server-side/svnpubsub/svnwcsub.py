@@ -62,11 +62,6 @@ class SvnClient(object):
         self.url = url
         self.info = {}
 
-    def cleanup(self):
-        # despite the name, this just deletes the client context ---
-        # which is a no-op for svn(1) wrappers.
-        pass
-
     def _run_info(self):
         "run `svn info` and return the output"
         argv = [self.svnbin, "info", "--non-interactive", "--", self.path]
@@ -187,7 +182,6 @@ class WorkingCopy(object):
     def update(self):
         c = ProcSvnClient(self.path, self.bdec.svnbin, self.bdec.env, self.url)
         rev = yield c.update()
-        c.cleanup()
         defer.returnValue(rev)
 
     def _get_match(self):
@@ -198,7 +192,6 @@ class WorkingCopy(object):
             url = c.get_url()
             uuid = c.get_uuid()
             match  = url[len(repos):]
-            c.cleanup()
             return [match, url, repos, uuid]
         finally:
             self.lock.release()
