@@ -39,7 +39,7 @@ import time
 import logging
 import Queue
 
-from twisted.internet import defer, reactor, task, threads
+from twisted.internet import reactor, task, threads
 from twisted.internet.utils import getProcessOutput
 from twisted.application import internet
 from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
@@ -61,66 +61,6 @@ except AttributeError:
         return output
 
 
-"""
-Wrapper around svn(1), just to keep it from spreading everywhere, incase
-we ever convert to another python-subversion bridge api.  (This has happened;
-this class used to wrap pysvn.)
-
-Yes, this exposes accessors for each piece of info we need, but it keeps it
-simpler.
-"""
-class SvnClient(object):
-    def __init__(self, svnbin, path, url):
-        self.svnbin = svnbin
-        self.path = path
-        self.url = url
-        self.info = {}
-
-    def _get_info(self, force=False):
-        "run `svn info` and parse that info self.info"
-        if force or not self.info:
-
-            ### quick little hack to auto-checkout missing working copies
-            if not os.path.isdir(self.path):
-                logging.info("autopopulate %s from %s" % (self.path, self.url))
-                subprocess.check_call([self.svnbin, 'co', '-q',
-                                       '--non-interactive',
-                                       '--config-dir',
-                                       '/home/svnwc/.subversion',
-                                       '--', self.url, self.path])
-
-            raw = svn_info(self.svnbin, self.path)
-            self.info = {
-              'repos': raw.get('Repository Root'),
-              'url': raw.get('URL'),
-              'uuid': raw.get('Repository UUID'),
-              'revision': raw.get('Revision'),
-              }
-
-    def get_repos(self):
-        self._get_info()
-        return unicode(self.info['repos'])
-
-    def get_url(self):
-        self._get_info()
-        return unicode(self.info['url'])
-
-    def get_uuid(self):
-        self._get_info()
-        return unicode(self.info['uuid'])
-
-    def update(self):
-        subprocess.check_call(
-            [self.svnbin, "update", "--non-interactive", "-q", "--", self.path]
-        )
-        self._get_info(True)
-        return int(self.info['revision'])
-
-    # TODO: Wrap status
-    def status(self):
-        return None
-
-
 ### note: this runs synchronously. within the current Twisted environment,
 ### it is called from ._get_match() which is run on a thread so it won't
 ### block the Twisted main loop.
@@ -134,25 +74,6 @@ def svn_info(svnbin, path):
         info[line[:idx]] = line[idx+1:].strip()
     return info
 
-
-"""This has been historically implemented via svn(1) even when SvnClient
-used pysvn."""
-class ProcSvnClient(SvnClient):
-  def __init__(self, path, svnbin="svn", env=None, url=None):
-    super(ProcSvnClient, self).__init__(svnbin, path, url)
-    self.env = env
-
-  @defer.inlineCallbacks
-  def update(self):
-    # removed since this breaks when the SSL certificate names are mismatched, even
-    # if we marked them as trust worthy
-    # '--trust-server-cert', 
-    cmd = [self.svnbin, '--config-dir', '/home/svnwc/.subversion', '--trust-server-cert', '--non-interactive', 'cleanup', self.path]
-    output = yield getProcessOutput(cmd[0], args=cmd[1:], env=self.env)
-    cmd = [self.svnbin, '--config-dir', '/home/svnwc/.subversion', '--trust-server-cert', '--non-interactive', 'update', '--ignore-externals', self.path]
-    output = yield getProcessOutput(cmd[0], args=cmd[1:], env=self.env)
-    rev = int(output[output.rfind("revision ")+len("revision "):].replace('.', ''))
-    defer.returnValue(rev)
 
 class WorkingCopy(object):
     def __init__(self, bdec, path, url):
@@ -192,19 +113,23 @@ class WorkingCopy(object):
                 return True
         return False
 
-    @defer.inlineCallbacks
-    def update(self):
-        c = ProcSvnClient(self.path, self.bdec.svnbin, self.bdec.env, self.url)
-        rev = yield c.update()
-        defer.returnValue(rev)
-
     def _get_match(self):
-        c = SvnClient(self.bdec.svnbin, self.path, self.url)
-        repos = c.get_repos()
-        url = c.get_url()
-        uuid = c.get_uuid()
-        match  = url[len(repos):]
-        return [match, url, repos, uuid]
+        ### quick little hack to auto-checkout missing working copies
+        if not os.path.isdir(self.path):
+            logging.info("autopopulate %s from %s" % (self.path, self.url))
+            subprocess.check_call([self.bdec.svnbin, 'co', '-q',
+                                   '--non-interactive',
+                                   '--config-dir',
+                                   '/home/svnwc/.subversion',
+                                   '--', self.url, self.path])
+
+        # Fetch the info for matching dirs_changed against this WC
+        info = svn_info(self.bdec.svnbin, self.path)
+        url = info['URL']
+        repos = info['Repository Root']
+        uuid = info['Repository UUID']
+        relpath = url[len(repos):]  # also has leading '/'
+        return [relpath, url, repos, uuid]
         
 
 class HTTPStream(HTTPClientFactory):
