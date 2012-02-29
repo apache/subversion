@@ -56,7 +56,8 @@ Yes, this exposes accessors for each piece of info we need, but it keeps it
 simpler.
 """
 class SvnClient(object):
-    def __init__(self, path, url):
+    def __init__(self, svnbin, path, url):
+        self.svnbin = svnbin
         self.path = path
         self.url = url
         self.info = {}
@@ -68,12 +69,12 @@ class SvnClient(object):
 
     def _run_info(self):
         "run `svn info` and return the output"
-        argv = ["svn", "info", "--non-interactive", "--", self.path]
+        argv = [self.svnbin, "info", "--non-interactive", "--", self.path]
         output = None
 
         if not os.path.isdir(self.path):
             log.msg("autopopulate %s from %s" % ( self.path, self.url))
-            subprocess.check_call(['svn', 'co', '-q', '--non-interactive', '--config-dir', '/home/svnwc/.subversion', '--', self.url, self.path])
+            subprocess.check_call([self.svnbin, 'co', '-q', '--non-interactive', '--config-dir', '/home/svnwc/.subversion', '--', self.url, self.path])
 
         if hasattr(subprocess, 'check_output'):
             output = subprocess.check_output(argv)
@@ -115,7 +116,7 @@ class SvnClient(object):
 
     def update(self):
         subprocess.check_call(
-            ["svn", "update", "--non-interactive", "-q", "--", self.path]
+            [self.svnbin, "update", "--non-interactive", "-q", "--", self.path]
         )
         self._get_info(True)
         return int(self.info['revision'])
@@ -128,8 +129,7 @@ class SvnClient(object):
 used pysvn."""
 class ProcSvnClient(SvnClient):
   def __init__(self, path, svnbin="svn", env=None, url=None):
-    super(ProcSvnClient, self).__init__(path, url)
-    self.svnbin = svnbin
+    super(ProcSvnClient, self).__init__(svnbin, path, url)
     self.env = env
 
   @defer.inlineCallbacks
@@ -204,7 +204,7 @@ class WorkingCopy(object):
     def _get_match(self):
         self.lock.acquire()
         try:
-            c = SvnClient(self.path, self.url)
+            c = SvnClient(self.bdec.svnbin, self.path, self.url)
             repos = c.get_repos()
             url = c.get_url()
             uuid = c.get_uuid()
