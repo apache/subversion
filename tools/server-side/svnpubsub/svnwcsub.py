@@ -141,7 +141,6 @@ class ProcSvnClient(SvnClient):
 
 class WorkingCopy(object):
     def __init__(self, bdec, path, url):
-        self.lock = threading.Lock()
         self.bdec = bdec
         self.path = path
         self.url = url
@@ -185,16 +184,12 @@ class WorkingCopy(object):
         defer.returnValue(rev)
 
     def _get_match(self):
-        self.lock.acquire()
-        try:
-            c = SvnClient(self.bdec.svnbin, self.path, self.url)
-            repos = c.get_repos()
-            url = c.get_url()
-            uuid = c.get_uuid()
-            match  = url[len(repos):]
-            return [match, url, repos, uuid]
-        finally:
-            self.lock.release()
+        c = SvnClient(self.bdec.svnbin, self.path, self.url)
+        repos = c.get_repos()
+        url = c.get_url()
+        uuid = c.get_uuid()
+        match  = url[len(repos):]
+        return [match, url, repos, uuid]
         
 
 class HTTPStream(HTTPClientFactory):
