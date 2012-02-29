@@ -251,7 +251,7 @@ or another dump file."""
   # file.
   if exp_dump_file_name:
     build_repos(sbox)
-    svntest.actions.run_and_verify_load(sbox.repo_dir, 
+    svntest.actions.run_and_verify_load(sbox.repo_dir,
                                         open(os.path.join(svnsync_tests_dir,
                                                           exp_dump_file_name),
                                              'rb').readlines())
@@ -1007,7 +1007,7 @@ def copy_delete_unreadable_child(sbox):
 
   # Prepare the source: Greek tree (r1), cp+rm (r2).
   sbox.build("copy-delete-unreadable-child")
-  svntest.actions.run_and_verify_svnmucc(None, None, [], 
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
                                          '-m', 'r2',
                                          '-U', sbox.repo_url,
                                          'cp', 'HEAD', '/', 'branch',
@@ -1034,7 +1034,7 @@ def copy_delete_unreadable_child(sbox):
   run_sync(dest_url)
 
   # sanity check
-  svntest.actions.run_and_verify_svn(None, 
+  svntest.actions.run_and_verify_svn(None,
                                      ["iota\n"], [],
                                      'ls', dest_url+'/branch@2')
 

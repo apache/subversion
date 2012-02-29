@@ -469,7 +469,7 @@ def info_show_exclude(sbox):
 
   sbox.simple_rm('iota')
   sbox.simple_commit()
-  
+
   expected_error = 'svn: E200009: Could not display info for all targets.*'
 
   # Expect error on iota (status = not-present)

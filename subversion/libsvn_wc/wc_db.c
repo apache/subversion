@@ -3672,7 +3672,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                   dst_wcroot->wc_id,
                   dst_relpath,
                   copyfrom_id,
-                  copyfrom_relpath, 
+                  copyfrom_relpath,
                   copyfrom_rev,
                   children,
                   dst_op_depth,
@@ -6600,7 +6600,7 @@ op_delete_many_txn(void *baton,
       const char *target_relpath = APR_ARRAY_IDX(odmb->rel_targets, i,
                                                  const char *);
       struct op_delete_baton_t odb;
-      
+
       svn_pool_clear(iterpool);
       odb.delete_depth = relpath_depth(target_relpath);
       odb.moved_to_relpath = NULL;
@@ -6686,7 +6686,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                                 db, local_abspath,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-  
+
   if (moved_to_abspath)
     {
       SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&moved_to_wcroot,
@@ -6774,7 +6774,7 @@ svn_wc__db_op_delete_many(svn_wc__db_t *db,
 
     }
   svn_pool_destroy(iterpool);
-  
+
   /* Perform the deletion operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
   return svn_error_trace(with_finalization(wcroot, wcroot->abspath,
@@ -7120,7 +7120,7 @@ read_info(svn_wc__db_status_t *status,
     err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
 
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    err = svn_error_quick_wrap(err, 
+    err = svn_error_quick_wrap(err,
                                apr_psprintf(scratch_pool,
                                             "Error reading node '%s'",
                                             local_relpath));
@@ -7428,7 +7428,7 @@ read_children_info(void *baton,
                                                     result_pool);
 
           /* Moved-to is only stored at op_depth 0. */
-          moved_to_relpath = svn_sqlite__column_text(stmt, 21, NULL); 
+          moved_to_relpath = svn_sqlite__column_text(stmt, 21, NULL);
           if (moved_to_relpath)
             child_item->info.moved_to_abspath =
               svn_dirent_join(wcroot->abspath, moved_to_relpath, result_pool);
@@ -10229,9 +10229,9 @@ scan_deletion_txn(void *baton,
               moved_to_relpath = svn_relpath_join(moved_to_op_root_relpath,
                                                   moved_child_relpath,
                                                   scratch_pool);
-              
+
               if (sd_baton->moved_to_relpath)
-                *sd_baton->moved_to_relpath = moved_to_relpath ? 
+                *sd_baton->moved_to_relpath = moved_to_relpath ?
                   apr_pstrdup(sd_baton->result_pool, moved_to_relpath) : NULL;
             }
 

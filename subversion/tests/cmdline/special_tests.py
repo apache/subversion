@@ -998,7 +998,7 @@ def replace_symlinks(sbox):
   os.symlink('../iota', wc('A/mu.sh'))
   sbox.simple_add('A/mu',
                   'A/mu.sh')
- 
+
   # Ditto, without the Subversion replacement.  Failing git-svn test
   # 'executable file becomes a symlink to bar/zzz (file)'.
   os.remove(wc('Ax/mu'))
@@ -1009,7 +1009,7 @@ def replace_symlinks(sbox):
                       'Ax/mu',
                       'Ax/mu.sh')
   sbox.simple_propdel('svn:executable', 'Ax/mu.sh')
-  
+
   ### TODO Replace a normal {file, exec, dir, dir} with a symlink to
   ### {dir, dir, file, exec}.  And the same symlink-to-normal.
 
@@ -1052,7 +1052,7 @@ def externals_as_symlink_targets(sbox):
   sbox.simple_add('sym_ext_E')
 
   sbox.simple_commit()
-    
+
 @XFail()
 @Issue(4119)
 @SkipUnless(svntest.main.is_posix_os)

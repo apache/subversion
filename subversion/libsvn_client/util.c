@@ -325,7 +325,7 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
                                const char *anchor_abspath,
                                apr_pool_t *result_pool)
 {
-  svn_delta_shim_callbacks_t *callbacks = 
+  svn_delta_shim_callbacks_t *callbacks =
                             svn_delta_shim_callbacks_default(result_pool);
   struct shim_callbacks_baton *scb = apr_pcalloc(result_pool, sizeof(*scb));
 

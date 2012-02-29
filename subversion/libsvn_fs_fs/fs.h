@@ -246,7 +246,7 @@ typedef struct fs_fs_data_t
   /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
   svn_cache__t *txdelta_window_cache;
 
-  /* Cache for combined windows as svn_stringbuf_t objects; 
+  /* Cache for combined windows as svn_stringbuf_t objects;
      the key is (revFilePath, offset) */
   svn_cache__t *combined_window_cache;
 

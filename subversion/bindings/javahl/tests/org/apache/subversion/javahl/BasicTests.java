@@ -148,10 +148,10 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.Add);
         Set<String> urls = new HashSet<String>(1);
         urls.add(thisTest.getUrl() + "/Y");
-        try 
+        try
         {
             tempclient.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
-        } 
+        }
         catch(JNIError e)
         {
 	        return; // Test passes!
@@ -3142,12 +3142,12 @@ public class BasicTests extends SVNTests
 
         // check the status of the working copy
         thisTest.checkStatus();
-        
+
         // now edit the propval directly in the repository
         long baseRev = 2L;
         client.propertySetRemote(thisTest.getUrl()+"/A/D/G/rho", baseRev, PROP, NEWVALUE,
                                  new ConstMsg("edit prop"), false, null, null);
-        
+
         // update the WC and verify that the property was changed
         client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity, false, false,
                       false, false);

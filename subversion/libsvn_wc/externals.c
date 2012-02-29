@@ -1181,7 +1181,7 @@ svn_wc__committable_externals_below(apr_array_header_t **externals,
                                                  local_abspath,
                                                  depth != svn_depth_infinity,
                                                  result_pool, scratch_pool));
-  
+
   if (orig_externals == NULL)
     return SVN_NO_ERROR;
 

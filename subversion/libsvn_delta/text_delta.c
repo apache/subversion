@@ -291,7 +291,7 @@ svn_txdelta__remove_copy(svn_txdelta__ops_baton_t *build_baton,
       /*  we can't modify svn_txdelta_target ops -> stop there */
       if (op->action_code == svn_txdelta_target)
         break;
-      
+
       /*  handle the case that we cannot remove the op entirely */
       if (op->length + len > max_len)
         {
@@ -303,18 +303,18 @@ svn_txdelta__remove_copy(svn_txdelta__ops_baton_t *build_baton,
                op->length -= max_len - len;
                len = max_len;
             }
-          
+
           break;
         }
-        
+
       /* drop the op entirely */
       if (op->action_code == svn_txdelta_new)
         build_baton->new_data->len -= op->length;
-      
+
       len += op->length;
       --build_baton->num_ops;
     }
-    
+
   return len;
 }
 

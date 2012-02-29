@@ -1535,7 +1535,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
  * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
  * files, or NULL if the names are not stored.
- * 
+ *
  * Set *COPIED_HERE if the reverted node was copied here and is the
  * operation root of the copy.
  * Set *KIND to the node kind of the reverted node.

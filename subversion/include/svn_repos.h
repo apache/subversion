@@ -532,7 +532,7 @@ svn_repos_hotcopy2(const char *src_path,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
-/** 
+/**
  * Like svn_repos_hotcopy2(), but without the @a incremental parameter
  * and without cancellation support.
  *

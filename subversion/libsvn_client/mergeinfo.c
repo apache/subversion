@@ -1147,7 +1147,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_catalog_t mergeinfo_catalog,
           const char *top;
           const char *path_suffix;
           svn_boolean_t elides = FALSE;
-          
+
           svn_pool_clear(iterpool);
 
           /* Pop off any paths which are not ancestors of PATH. */

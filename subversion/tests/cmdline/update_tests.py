@@ -359,7 +359,7 @@ def update_binary_file_3(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Now we locally modify the file back to the old version.  
+  # Now we locally modify the file back to the old version.
   svntest.main.file_write(theta_path, theta_contents, 'wb')
 
   # Create expected output tree for an update to rev 2.

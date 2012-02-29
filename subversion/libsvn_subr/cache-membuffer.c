@@ -591,7 +591,7 @@ get_group_index(svn_membuffer_t **cache,
 
   if (key == NULL)
     return NO_INDEX;
-  
+
   err = svn_checksum(&checksum, svn_checksum_md5, key, len, pool);
   if (err != NULL)
   {
@@ -1055,14 +1055,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
 
 /* Try to insert the serialized item given in BUFFER with SIZE into
- * the group GROUP_INDEX of CACHE and uniquely identify it by hash 
- * value TO_FIND. 
- * 
+ * the group GROUP_INDEX of CACHE and uniquely identify it by hash
+ * value TO_FIND.
+ *
  * However, there is no guarantee that it will actually be put into
  * the cache. If there is already some data associated with TO_FIND,
  * it will be removed from the cache even if the new data cannot
  * be inserted.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_get_partial instead.
  */
@@ -1165,11 +1165,11 @@ membuffer_cache_set(svn_membuffer_t *cache,
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
- * by the hash value TO_FIND. If no item has been stored for KEY, 
+ * by the hash value TO_FIND. If no item has been stored for KEY,
  * *BUFFER will be NULL. Otherwise, return a copy of the serialized
- * data in *BUFFER and return its size in *ITEM_SIZE. Allocations will 
+ * data in *BUFFER and return its size in *ITEM_SIZE. Allocations will
  * be done in POOL.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_get_partial instead.
  */
@@ -1195,10 +1195,10 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
        */
       *buffer = NULL;
       *item_size = 0;
-  
+
       return SVN_NO_ERROR;
     }
-    
+
   size = ALIGN_VALUE(entry->size);
   *buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
   memcpy(*buffer, (const char*)cache->data + entry->offset, size);
@@ -1225,7 +1225,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
   cache->total_hits++;
 
   *item_size = entry->size;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1275,18 +1275,18 @@ membuffer_cache_get(svn_membuffer_t *cache,
       *item = NULL;
       return SVN_NO_ERROR;
     }
-    
+
   return deserializer(item, buffer, size, result_pool);
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. FOUND indicates whether that entry exists.
  * If not found, *ITEM will be NULL.
- * 
- * Otherwise, the DESERIALIZER is called with that entry and the BATON 
+ *
+ * Otherwise, the DESERIALIZER is called with that entry and the BATON
  * provided and will extract the desired information. The result is set
  * in *ITEM. Allocations will be done in POOL.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_get_partial instead.
  */
@@ -1307,7 +1307,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     {
       *item = NULL;
       *found = FALSE;
-      
+
       return SVN_NO_ERROR;
     }
   else
@@ -1379,10 +1379,10 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. If no entry has been found, the function
  * returns without modifying the cache.
- * 
+ *
  * Otherwise, FUNC is called with that entry and the BATON provided
  * and may modify the cache entry. Allocations will be done in POOL.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_set_partial instead.
  */
@@ -1872,7 +1872,7 @@ svn_membuffer_cache_get_info(void *cache_void,
   for (i = 0; i < cache->membuffer->segment_count; ++i)
     {
       svn_membuffer_t *segment = cache->membuffer + i;
-      SVN_MUTEX__WITH_LOCK(segment->mutex, 
+      SVN_MUTEX__WITH_LOCK(segment->mutex,
                            svn_membuffer_get_segment_info(segment, info));
     }
 
@@ -1902,13 +1902,13 @@ svn_membuffer_cache_get_synced(void **value_p,
                                apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_get(value_p,
                                                found,
                                                cache_void,
                                                key,
                                                result_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1921,12 +1921,12 @@ svn_membuffer_cache_set_synced(void *cache_void,
                                apr_pool_t *scratch_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_set(cache_void,
                                                key,
                                                value,
                                                scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1942,7 +1942,7 @@ svn_membuffer_cache_get_partial_synced(void **value_p,
                                        apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_get_partial(value_p,
                                                        found,
                                                        cache_void,
@@ -1950,7 +1950,7 @@ svn_membuffer_cache_get_partial_synced(void **value_p,
                                                        func,
                                                        baton,
                                                        result_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1964,13 +1964,13 @@ svn_membuffer_cache_set_partial_synced(void *cache_void,
                                        apr_pool_t *scratch_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_set_partial(cache_void,
                                                        key,
                                                        func,
                                                        baton,
                                                        scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2057,7 +2057,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->alloc_counter = 0;
 
   SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
-  
+
   /* for performance reasons, we don't actually store the full prefix but a
    * hash value of it
    */
@@ -2078,7 +2078,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
 
   /* initialize the generic cache wrapper
    */
-  wrapper->vtable = thread_safe ? &membuffer_cache_synced_vtable 
+  wrapper->vtable = thread_safe ? &membuffer_cache_synced_vtable
                                 : &membuffer_cache_vtable;
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;

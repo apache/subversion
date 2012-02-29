@@ -296,7 +296,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * assumed to be an svn_stringbuf_t.
  *
  * If @a thread_safe is true, and APR is compiled with threads, all
- * accesses to the cache will be protected with a mutex, if the shared 
+ * accesses to the cache will be protected with a mutex, if the shared
  * @a memcache has also been created with thread_safe flag set.
  *
  * These caches do not support svn_cache__iter.
