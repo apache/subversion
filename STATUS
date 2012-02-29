@@ -80,31 +80,10 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+
 Veto-blocked changes:
 =====================
 
- * r1147540, r1147541
-   Remove unused variables in build system.
-   Justification:
-     Backporting of future changes will be easier.
-   Votes:
-     +1: arfrever
-     -0: stsp (we can backport these when we need to)
-     -0: gstein
-     -1: rhuijben (Keep the candidate list readable, by removing unneeded
-                   backports. Should be part of the backport change when
-                   needed)
-
- * r1235831, r1236099
-   Tweak the parsing of the ssl-authority-files config option to make it
-   easier for users to configure.
-   Justification:
-     Low impact change to help users.
-   Notes:
-     Both r1235831 and r1236099 conflict and will need a branch.
-   Votes:
-     +1: gstein, rhuijben, steveking
-     -1: julianfoad, stsp (not forward-compatible within 1.7.x; discussing in email)
 
 Approved changes:
 =================
