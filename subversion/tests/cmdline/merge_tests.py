@@ -17357,6 +17357,55 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
                                        None, None, None, None, None, 1, 1,
                                        '--depth', 'immediates', B_branch_path)
 
+#----------------------------------------------------------------------
+# Test for issue #4132, "merge of replaced source asserts".
+# The original use-case is the following merges, which both asserted:
+#    svn merge -cr1295005 ^/subversion/trunk@1295000 ../src
+#    svn merge -cr1295004 ^/subversion/trunk/@r1295004 ../src
+@Issue(4132)
+@XFail()
+def svnmucc_abuse_1(sbox):
+  "svnmucc: merge a replacement"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  ## Using A/ as our trunk, since one cannot replace the root.
+
+  ## r2: open a branch
+  sbox.simple_repo_copy('A', 'A_COPY')
+
+  ## r3: padding (to make the revnums-mod-10 match)
+  sbox.simple_repo_copy('iota', 'padding')
+
+  ## r4: trunk: accidental change
+  sbox.simple_append('A/mu', 'accidental change')
+  sbox.simple_commit()
+
+  ## r5: fail to revert it
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'r5',
+                                         '-U', sbox.repo_url,
+                                         'rm', 'A',
+                                         'cp', 'HEAD', 'A', 'A')
+
+  ## r6: really revert it
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'r6',
+                                         '-U', sbox.repo_url,
+                                         'rm', 'A',
+                                         'cp', '3', 'A', 'A')
+
+  ## Attempt to merge that.
+  # This used to assert:
+  #   --- Recording mergeinfo for merge of r5 into 'svn-test-work/working_copies/merge_tests-125/A_COPY':
+  #   subversion/libsvn_subr/mergeinfo.c:1172: (apr_err=235000)
+  #   svn: E235000: In file 'subversion/libsvn_subr/mergeinfo.c' line 1172: assertion failed (IS_VALID_FORWARD_RANGE(first))
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '-c', 'r5', '^/A@r5',
+                             sbox.ospath('A_COPY'))
+
+
 ########################################################################
 # Run the tests
 
@@ -17487,6 +17536,7 @@ test_list = [ None,
               record_only_merge_adds_new_subtree_mergeinfo,
               unnecessary_noninheritable_mergeinfo_missing_subtrees,
               unnecessary_noninheritable_mergeinfo_shallow_merge,
+              svnmucc_abuse_1,
              ]
 
 if __name__ == '__main__':
