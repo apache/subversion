@@ -161,13 +161,12 @@ svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
+svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
-svnmucc_binary=os.path.abspath('../../../tools/client-side/svnmucc/svnmucc' + \
-                               _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
