@@ -189,17 +189,6 @@ class WorkingCopy(object):
         rev = yield c.update()
         c.cleanup()
         defer.returnValue(rev)
-#        return threads.deferToThread(self._update)
-
-    def _update(self):
-        self.lock.acquire()
-        try:
-            c = ProcSvnClient(self.path, self.bdec.svnbin, self.bdec.env, self.url)
-            rev = c.update()
-            c.cleanup()
-            return rev
-        finally:
-            self.lock.release()
 
     def _get_match(self):
         self.lock.acquire()
