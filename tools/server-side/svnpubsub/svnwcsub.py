@@ -425,7 +425,6 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
         env = os.environ.copy()
         default_options = self.defaults().keys()
         for name, value in self.items('env'):
-            print name, value
             if name not in default_options:
                 env[name] = value
         return env
