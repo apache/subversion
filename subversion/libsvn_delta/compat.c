@@ -498,7 +498,8 @@ run_ev2_actions(void *edit_baton,
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < sorted_hash->nelts; i++)
     {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
+      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i,
+                                              svn_sort__item_t);
       apr_array_header_t *actions = item->value;
       const char *path = item->key;
 
@@ -1572,7 +1573,8 @@ drive_tree(struct operation *op,
     {
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
-        SVN_ERR(editor->open_directory(path, parent_op->baton, op->base_revision,
+        SVN_ERR(editor->open_directory(path, parent_op->baton,
+                                       op->base_revision,
                                        scratch_pool, &op->baton));
 
       else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
