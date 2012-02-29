@@ -37,6 +37,7 @@ import re
 import ConfigParser
 import time
 import logging
+import Queue
 
 from twisted.internet import defer, reactor, task, threads
 from twisted.internet.utils import getProcessOutput
