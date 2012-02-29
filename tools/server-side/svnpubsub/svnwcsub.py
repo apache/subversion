@@ -36,11 +36,11 @@ import os
 import re
 import ConfigParser
 import time
+import logging
 
 from twisted.internet import defer, reactor, task, threads
 from twisted.internet.utils import getProcessOutput
 from twisted.application import internet
-from twisted.python import failure, log
 from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
 from urlparse import urlparse
 from xml.sax import handler, make_parser
@@ -68,7 +68,7 @@ class SvnClient(object):
         output = None
 
         if not os.path.isdir(self.path):
-            log.msg("autopopulate %s from %s" % ( self.path, self.url))
+            logging.info("autopopulate %s from %s" % ( self.path, self.url))
             subprocess.check_call([self.svnbin, 'co', '-q', '--non-interactive', '--config-dir', '/home/svnwc/.subversion', '--', self.url, self.path])
 
         if hasattr(subprocess, 'check_output'):
@@ -304,11 +304,11 @@ class BigDoEverythingClasss(object):
         self.checker.start(CHECKBEAT_TIME)
 
     def pageStart(self, stream):
-        log.msg("Stream %s Connection Established" % (stream.url))
+        logging.info("Stream %s Connection Established" % (stream.url))
         self.failures = 0
 
     def pageEnd(self, stream):
-        log.msg("Stream %s Connection Dead" % (stream.url))
+        logging.info("Stream %s Connection Dead" % (stream.url))
         self.streamDead(stream.url)
 
     def _restartStream(self, url):
@@ -321,7 +321,7 @@ class BigDoEverythingClasss(object):
         for k in self.streams.keys():
           s = self.streams[k]
           if n - s.alive > CHECKBEAT_TIME:
-            log.msg("Stream %s is dead, reconnecting" % (s.url))
+            logging.info("Stream %s is dead, reconnecting" % (s.url))
             #self.transports[s.url].disconnect()
             self.streamDead(self, s.url)
 
@@ -335,7 +335,7 @@ class BigDoEverythingClasss(object):
     def streamDead(self, url, result=None):
         s = self.streams.get(url)
         if not s:
-          log.msg("Stream %s is messed up" % (url))
+          logging.info("Stream %s is messed up" % (url))
           return
         BACKOFF_SECS = 5
         BACKOFF_MAX = 60
@@ -345,17 +345,17 @@ class BigDoEverythingClasss(object):
         self.transports[url] = None
         self.failures += 1
         backoff = min(self.failures * BACKOFF_SECS, BACKOFF_MAX)
-        log.msg("Stream disconnected, trying again in %d seconds.... %s" % (backoff, s.url))
+        logging.info("Stream disconnected, trying again in %d seconds.... %s" % (backoff, s.url))
         reactor.callLater(backoff, self._restartStream, url)
 
     @defer.inlineCallbacks
     def wc_ready(self, wc):
         # called when a working copy object has its basic info/url,
         # Add it to our watchers, and trigger an svn update.
-        log.msg("Watching WC at %s <-> %s" % (wc.path, wc.url))
+        logging.info("Watching WC at %s <-> %s" % (wc.path, wc.url))
         self.watch.append(wc)
         rev = yield wc.update()
-        log.msg("wc update: %s is at r%d" % (wc.path, rev))
+        logging.info("wc update: %s is at r%d" % (wc.path, rev))
 
     def _normalize_path(self, path):
         if path[0] != '/':
@@ -364,7 +364,7 @@ class BigDoEverythingClasss(object):
 
     @defer.inlineCallbacks
     def commit(self, stream, rev):
-        log.msg("COMMIT r%d (%d paths) via %s" % (rev.rev, len(rev.dirs_changed), stream.url))
+        logging.info("COMMIT r%d (%d paths) via %s" % (rev.rev, len(rev.dirs_changed), stream.url))
         paths = map(self._normalize_path, rev.dirs_changed)
         if len(paths):
             pre = os.path.commonprefix(paths)
@@ -379,10 +379,10 @@ class BigDoEverythingClasss(object):
 
             #print "Common Prefix: %s" % (pre)
             wcs = [wc for wc in self.watch if wc.update_applies(rev.repos, pre)]
-            log.msg("Updating %d WC for r%d" % (len(wcs), rev.rev))
+            logging.info("Updating %d WC for r%d" % (len(wcs), rev.rev))
             for wc in wcs:
                 rev = yield wc.update()
-                log.msg("wc update: %s is at r%d" % (wc.path, rev))
+                logging.info("wc update: %s is at r%d" % (wc.path, rev))
 
 
 class ReloadableConfig(ConfigParser.SafeConfigParser):
@@ -434,9 +434,16 @@ def main(config_file):
     big = BigDoEverythingClasss(c)
     reactor.run()
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print "invalid args, read source code"
-        sys.exit(0) 
-    log.startLogging(sys.stdout)
+        sys.exit(0)
+
+    ### use logging.INFO for now. review/adjust the calls above for the
+    ### proper logging level. then remove the level (to return to default).
+    ### future: switch to config for logfile and loglevel.
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout,
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        format='%(asctime)s [%(levelname)s] %(message)s')
     main(sys.argv[1])
