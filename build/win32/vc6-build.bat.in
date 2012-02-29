@@ -136,7 +136,6 @@ copy src-%DIR%\Release\subversion\svndumpfilter\svndumpfilter.exe svn-win32-%VER
 copy src-%DIR%\Release\subversion\svnlook\svnlook.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnserve\svnserve.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\svnversion\svnversion.exe svn-win32-%VER%\bin
-copy src-%DIR%\Release\subversion\svnrdump\svnrdump.exe svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\mod_authz_svn\mod_authz_svn.so svn-win32-%VER%\httpd
 copy src-%DIR%\Release\subversion\mod_dav_svn\mod_dav_svn.so svn-win32-%VER%\httpd
 copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
