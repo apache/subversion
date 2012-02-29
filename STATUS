@@ -80,6 +80,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1295007
+   Include svnrdump in the Windows build.
+   Justification:
+     I do not know for sure, but I assume that either make-dist.py or
+     vc6-build.bat.in is actually used by some people --- and if I'm wrong,
+     this would be harmless.
+   Votes:
+     +1: danielsh
+
 
 Veto-blocked changes:
 =====================
