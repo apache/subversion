@@ -47,6 +47,19 @@ from xml.sax import handler, make_parser
 from twisted.internet import protocol
 
 
+# check_output() is only available in Python 2.7. Allow us to run with
+# earlier versions
+try:
+    check_output = subprocess.check_output
+except AttributeError:
+    def check_output(args):  # note: we don't use anything beyond args
+        pipe = subprocess.Popen(args, stdout=subprocess.PIPE)
+        output, _ = pipe.communicate()
+        if pipe.returncode:
+            raise subprocess.CalledProcessError(pipe.returncode, args)
+        return output
+
+
 """
 Wrapper around svn(1), just to keep it from spreading everywhere, incase
 we ever convert to another python-subversion bridge api.  (This has happened;
@@ -62,40 +75,26 @@ class SvnClient(object):
         self.url = url
         self.info = {}
 
-    def _run_info(self):
-        "run `svn info` and return the output"
-        argv = [self.svnbin, "info", "--non-interactive", "--", self.path]
-        output = None
-
-        if not os.path.isdir(self.path):
-            logging.info("autopopulate %s from %s" % ( self.path, self.url))
-            subprocess.check_call([self.svnbin, 'co', '-q', '--non-interactive', '--config-dir', '/home/svnwc/.subversion', '--', self.url, self.path])
-
-        if hasattr(subprocess, 'check_output'):
-            output = subprocess.check_output(argv)
-        else:
-            pipe = subprocess.Popen(argv, stdout=subprocess.PIPE)
-            output, _ = pipe.communicate()
-            if pipe.returncode:
-                raise subprocess.CalledProcessError(pipe.returncode, argv)
-        return output
-  
     def _get_info(self, force=False):
         "run `svn info` and parse that info self.info"
         if force or not self.info:
-            info = {}
-            for line in self._run_info().split("\n"):
-                # Ensure there's at least one colon-space in the line, to avoid
-                # unpack errors.
-                name, value = ("%s: " % line).split(': ', 1)
-                # Canonicalize the key names.
-                info[{
-                  "Repository Root": 'repos',
-                  "URL": 'url',
-                  "Repository UUID": 'uuid',
-                  "Revision": 'revision',
-                }.get(name, None)] = value[:-2] # unadd the colon-space
-            self.info = info
+
+            ### quick little hack to auto-checkout missing working copies
+            if not os.path.isdir(self.path):
+                logging.info("autopopulate %s from %s" % (self.path, self.url))
+                subprocess.check_call([self.svnbin, 'co', '-q',
+                                       '--non-interactive',
+                                       '--config-dir',
+                                       '/home/svnwc/.subversion',
+                                       '--', self.url, self.path])
+
+            raw = svn_info(self.svnbin, self.path)
+            self.info = {
+              'repos': raw.get('Repository Root'),
+              'url': raw.get('URL'),
+              'uuid': raw.get('Repository UUID'),
+              'revision': raw.get('Revision'),
+              }
 
     def get_repos(self):
         self._get_info()
@@ -119,6 +118,21 @@ class SvnClient(object):
     # TODO: Wrap status
     def status(self):
         return None
+
+
+### note: this runs synchronously. within the current Twisted environment,
+### it is called from ._get_match() which is run on a thread so it won't
+### block the Twisted main loop.
+def svn_info(svnbin, path):
+    "Run 'svn info' on the target path, returning a dict of info data."
+    args = [svnbin, "info", "--non-interactive", "--", path]
+    output = check_output(args).strip()
+    info = { }
+    for line in output.split('\n'):
+        idx = line.index(':')
+        info[line[:idx]] = line[idx+1:].strip()
+    return info
+
 
 """This has been historically implemented via svn(1) even when SvnClient
 used pysvn."""
@@ -383,6 +397,82 @@ class BigDoEverythingClasss(object):
             for wc in wcs:
                 rev = yield wc.update()
                 logging.info("wc update: %s is at r%d" % (wc.path, rev))
+
+
+# Start logging warnings if the work backlog reaches this many items
+BACKLOG_TOO_HIGH = 20
+OP_UPDATE = 'update'
+OP_CLEANUP = 'cleanup'
+
+class BackgroundWorker(threading.Thread):
+    def __init__(self, svnbin, env):
+        threading.Thread.__init__(self)
+
+        # The main thread/process should not wait for this thread to exit.
+        self.daemon = True
+
+        self.svnbin = svnbin
+        self.env = env
+        self.q = Queue.Queue()
+
+    def run(self):
+        while True:
+            if self.q.qsize() > BACKLOG_TOO_HIGH:
+                logging.warn('worker backlog is at %d', self.q.qsize())
+
+            # This will block until something arrives
+            operation, wc = self.q.get()
+            try:
+                if operation == OP_UPDATE:
+                    self._update(wc)
+                elif operation == OP_CLEANUP:
+                    self._cleanup(wc)
+                else:
+                    logging.critical('unknown operation: %s', operation)
+            except:
+                logging.exception('exception in worker')
+
+            # In case we ever want to .join() against the work queue
+            self.q.task_done()
+
+    def add_work(self, operation, wc):
+        self.q.put((operation, wc))
+
+    def _update(self, wc):
+        "Update the specified working copy."
+
+        # For giggles, let's clean up the working copy in case something
+        # happened earlier.
+        self._cleanup(wc)
+
+        logging.info("updating: %s", wc.path)
+
+        ### we need to move some of these args into the config. these are
+        ### still specific to the ASF setup.
+        args = [self.svnbin, 'update',
+                '--quiet',
+                '--config-dir', '/home/svnwc/.subversion',
+                '--non-interactive',
+                '--trust-server-cert',
+                '--ignore-externals',
+                wc.path]
+        subprocess.check_call(args, env=self.env)
+
+        ### check the loglevel before running 'svn info'?
+        info = svn_info(self.svnbin, wc.path)
+        logging.info("updated: %s now at r%s", wc.path, info['Revision'])
+
+    def _cleanup(self, wc):
+        "Run a cleanup on the specified working copy."
+
+        ### we need to move some of these args into the config. these are
+        ### still specific to the ASF setup.
+        args = [self.svnbin, 'cleanup',
+                '--config-dir', '/home/svnwc/.subversion',
+                '--non-interactive',
+                '--trust-server-cert',
+                wc.path]
+        subprocess.check_call(args, env=self.env)
 
 
 class ReloadableConfig(ConfigParser.SafeConfigParser):
