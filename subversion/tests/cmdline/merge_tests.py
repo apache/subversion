@@ -14124,11 +14124,13 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                      'move', sbox.repo_url + '/A/D/H/nu',
                                      sbox.repo_url + '/A/D/H/nu_moved',
                                      '-m', 'Move nu to nu_moved')
-  svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (wc_dir),
-                                      "D    " + nu_path + "\n",
-                                      "A    " + nu_moved_path + "\n",
-                                      "Updated to revision 12.\n"],
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '%s':\n" % (wc_dir),
+     "D    " + nu_path + "\n",
+     "A    " + nu_moved_path + "\n",
+     "Updated to revision 12.\n"],
+    )
+  svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'up', wc_dir)
 
   # Now merge -r7:12 from A to A_COPY.
