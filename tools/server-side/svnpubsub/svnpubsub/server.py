@@ -37,7 +37,7 @@
 #   URL is built into 3 parts:
 #       /${type}/${optional_repo_uuid}/${format}
 #
-#   If the repository UUID is included in the URl, you will only recieve 
+#   If the repository UUID is included in the URl, you will only receive 
 #   messages about that repository.
 #
 # Example Pub clients:
