@@ -92,7 +92,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock,
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,

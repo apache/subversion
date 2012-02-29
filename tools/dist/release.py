@@ -396,9 +396,9 @@ def roll_tarballs(args):
            raise RuntimeError('Cannot find usable %s' % dep.label)
 
     if branch != 'trunk':
-        # Make sure CHANGES is sync'd.    
+        # Make sure CHANGES is sync'd.
         compare_changes(repos, branch, args.revnum)
-    
+
     # Ensure the output directory doesn't already exist
     if os.path.exists(get_deploydir(args.base_dir)):
         raise RuntimeError('output directory \'%s\' already exists'

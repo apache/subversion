@@ -3264,7 +3264,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               if (dirent->kind == svn_node_file && dirent->special)
                 {
                   svn_node_kind_t resolved_kind;
-                  const char *link_path = 
+                  const char *link_path =
                     svn_dirent_join(fs_parent_path, key, resource->pool);
 
                   serr = svn_io_check_resolved_path(link_path, &resolved_kind,
@@ -3277,7 +3277,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                                 resource->pool);
                   if (resolved_kind != svn_node_dir)
                     continue;
-                  
+
                   dirent->kind = svn_node_dir;
                 }
               else if (dirent->kind != svn_node_dir)

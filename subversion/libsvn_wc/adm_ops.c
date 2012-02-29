@@ -1712,7 +1712,7 @@ revert_restore(svn_wc__db_t *db,
           svn_boolean_t removed;
 
           SVN_ERR(revert_restore_handle_copied_dirs(&removed, db,
-                                                    local_abspath, TRUE, 
+                                                    local_abspath, TRUE,
                                                     cancel_func, cancel_baton,
                                                     scratch_pool));
           if (removed)

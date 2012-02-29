@@ -130,7 +130,7 @@ class WorkingCopy(object):
         uuid = info['Repository UUID']
         relpath = url[len(repos):]  # also has leading '/'
         return [relpath, url, repos, uuid]
-        
+
 
 class HTTPStream(HTTPClientFactory):
     protocol = HTTPPageDownloader
@@ -154,9 +154,9 @@ class Revision:
         self.rev = rev
         self.dirs_changed = []
 
-class StreamHandler(handler.ContentHandler):   
+class StreamHandler(handler.ContentHandler):
     def __init__(self, stream, bdec):
-        handler.ContentHandler.__init__(self) 
+        handler.ContentHandler.__init__(self)
         self.stream = stream
         self.bdec =  bdec
         self.rev = None
@@ -167,7 +167,7 @@ class StreamHandler(handler.ContentHandler):
         """
         <commit revision="7">
                         <dirs_changed><path>/</path></dirs_changed>
-                      </commit> 
+                      </commit>
         """
         if name == "commit":
             self.rev = Revision(attrs['repository'], int(attrs['revision']))
@@ -175,7 +175,7 @@ class StreamHandler(handler.ContentHandler):
             self.bdec.stillalive(self.stream)
     def characters(self, data):
         if self.text_value is not None:
-            self.text_value = self.text_value + data 
+            self.text_value = self.text_value + data
         else:
             self.text_value = data
 

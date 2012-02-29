@@ -1923,7 +1923,7 @@ def file_externals_different_url(sbox):
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
     actions.run_and_verify_info([{'Repository Root' : r1_url}],
                                 os.path.join(sbox.wc_dir, e))
-    
+
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'relocate', r1_url, r2_url, wc_dir)
@@ -2554,10 +2554,10 @@ def include_immediate_dir_externals(sbox):
   #     svn ps svn:externals "^/A/B/E X/XE" wc_dir
   #     svn ci
   #     svn up
-  # 
+  #
   #     svn ps some change X/XE
   #     echo mod >> X/XE/alpha
-  # 
+  #
   #     svn st X/XE
   #     # Expect only the propset on X/XE to be committed.
   #     # Should be like 'svn commit --include-externals --depth=empty X/XE'.
@@ -2808,7 +2808,7 @@ def url_to_wc_copy_of_externals(sbox):
   # Previously this failed with:
   #   >svn copy ^^/A/C External-WC-to-URL-Copy
   #    U   External-WC-to-URL-Copy
-  #   
+  #
   #   Fetching external item into 'External-WC-to-URL-Copy\external':
   #   A    External-WC-to-URL-Copy\external\pi
   #   A    External-WC-to-URL-Copy\external\rho

@@ -201,7 +201,7 @@ inprocess_cache_get_internal(char **buffer,
 
       *size = entry->size;
     }
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -223,7 +223,7 @@ inprocess_cache_get(void **value_p,
                                                       cache,
                                                       key,
                                                       result_pool));
-    
+
   /* deserialize the buffer content. Usually, this will directly
      modify the buffer content directly.
    */
@@ -445,7 +445,7 @@ inprocess_cache_iter(svn_boolean_t *completed,
   b.user_baton = user_baton;
 
   SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       svn_iter_apr_hash(completed, cache->hash, 
+                       svn_iter_apr_hash(completed, cache->hash,
                                          iter_cb, &b, scratch_pool));
 
   return SVN_NO_ERROR;

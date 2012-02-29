@@ -161,7 +161,7 @@ def make_diff_prop_val(plus_minus, pval):
   if len(pval) > 0 and pval[-1] != '\n':
     return [plus_minus + pval + "\n","\\ No newline at end of property\n"]
   return [plus_minus + pval]
-  
+
 def make_diff_prop_deleted(pname, pval):
   """Return a property diff for deletion of property PNAME, old value PVAL.
      PVAL is a single string with no embedded newlines.  Return the result

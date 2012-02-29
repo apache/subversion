@@ -257,13 +257,13 @@ reverse_match_length(const char *a, const char *b, apr_size_t max_len)
       break;
 
   pos -= sizeof(apr_size_t);
-    
+
 #endif
 
   while (++pos <= max_len)
     if (a[-pos] != b[-pos])
       break;
-    
+
   return pos-1;
 }
 
@@ -390,7 +390,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   apr_size_t lo = 0, pending_insert_start = 0;
 
   /* Optimization: directly compare window starts. If more than 4
-   * bytes match, we can immediately create a matching windows. 
+   * bytes match, we can immediately create a matching windows.
    * Shorter sequences result in a net data increase. */
   lo = match_length(a, b, asize > bsize ? bsize : asize);
   if ((lo > 4) || (lo == bsize))
@@ -442,7 +442,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
             svn_txdelta__insert_op(build_baton, svn_txdelta_new,
                                    0, lo - pending_insert_start,
                                    b + pending_insert_start, pool);
-          else 
+          else
             {
               /* the match borders on the previous op. Maybe, we found a
                * match that is better than / overlapping the previous one. */

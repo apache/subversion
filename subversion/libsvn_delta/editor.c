@@ -33,7 +33,7 @@
 /* This enables runtime checks of the editor API constraints.  This may
    introduce additional memory and runtime overhead, and should not be used
    in production builds.
-   
+
    ### Remove before release? */
 #define ENABLE_ORDERING_CHECK
 #endif

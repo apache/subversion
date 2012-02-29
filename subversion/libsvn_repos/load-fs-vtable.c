@@ -506,7 +506,7 @@ new_revision_record(void **revision_baton,
       if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
         pb->oldest_old_rev = rb->rev;
     }
-  
+
   /* If we're skipping this revision, try to notify someone. */
   if (rb->skipped && pb->notify_func)
     {

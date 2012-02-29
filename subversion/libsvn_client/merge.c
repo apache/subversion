@@ -1394,7 +1394,7 @@ check_moved_away(svn_boolean_t *moved_away,
 {
   const char *moved_to_abspath;
   svn_error_t *err;
-  
+
   *moved_away = FALSE;
 
   err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
@@ -1424,7 +1424,7 @@ check_moved_here(svn_boolean_t *moved_here,
 {
   const char *moved_from_abspath;
   svn_error_t *err;
-  
+
   *moved_here = FALSE;
 
   err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
@@ -7545,7 +7545,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                      operational depth is empty or files, then the mere
                      existence of operative immediate children means we
                      must record non-inheritable mergeinfo.
-                     
+
                      ### What about svn_depth_immediates?  In that case
                      ### the merge target needs only normal inheritable
                      ### mergeinfo and the target's immediate children will

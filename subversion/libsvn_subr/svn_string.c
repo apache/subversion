@@ -133,7 +133,7 @@ create_string(const char *data, apr_size_t size,
 }
 
 static char empty_buffer[1] = {0};
-  
+
 svn_string_t *
 svn_string_create_empty(apr_pool_t *pool)
 {
@@ -302,7 +302,7 @@ svn_stringbuf_create_empty(apr_pool_t *pool)
 {
   /* All instances share the same zero-length buffer.
    * Some algorithms, however, assume that they may write
-   * the terminating zero. So, empty_buffer must be writable 
+   * the terminating zero. So, empty_buffer must be writable
    * (a simple (char *)"" will cause SEGFAULTs). */
 
   return create_stringbuf(empty_buffer, 0, 0, pool);
@@ -717,7 +717,7 @@ svn_cstring_match_list(const char *str, const apr_array_header_t *list)
   return FALSE;
 }
 
-char * 
+char *
 svn_cstring_tokenize(const char *sep, char **str)
 {
     char *token;
@@ -742,7 +742,7 @@ svn_cstring_tokenize(const char *sep, char **str)
         return NULL;
 
     /* skip valid token characters to terminate token and
-     * prepare for the next call (will terminate at '\0) 
+     * prepare for the next call (will terminate at '\0)
      */
     next = strchr(token, csep);
     if (next == NULL)

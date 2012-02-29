@@ -1391,7 +1391,7 @@ fetch_base_func(const char **filename,
     }
   else if (err)
     return svn_error_trace(err);
-  
+
   SVN_ERR(svn_stream_close(fstream));
 
   return SVN_NO_ERROR;

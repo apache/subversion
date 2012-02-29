@@ -126,7 +126,7 @@ svn_error_t *
 svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
                               svn_error_t *(*walker)(representation_t *,
                                                      void *,
-                                                     svn_fs_t *, 
+                                                     svn_fs_t *,
                                                      apr_pool_t *),
                               void *walker_baton,
                               svn_cancel_func_t cancel_func,
@@ -174,7 +174,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
     {
       representation_t *rep;
       const char *sha1_digest;
-      
+
       /* Clear ITERPOOL occasionally. */
       if (iterations++ % 16 == 0)
         svn_pool_clear(iterpool);

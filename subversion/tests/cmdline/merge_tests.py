@@ -17018,7 +17018,7 @@ def merged_deletion_causes_tree_conflict(sbox):
                                      '-m', 'Copy ^/A to ^/branch')
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  # r4 - Delete A/D/H/psi 
+  # r4 - Delete A/D/H/psi
   svntest.actions.run_and_verify_svn(None, None, [], 'delete', psi_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Delete a a path with native eol-style',
@@ -17213,7 +17213,7 @@ def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
 
   B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
 
-  # Setup a simple branch to which 
+  # Setup a simple branch to which
   expected_output, expected_mergeinfo_output, expected_elision_output, \
     expected_status, expected_disk, expected_skip = \
     noninheritable_mergeinfo_test_set_up(sbox)
@@ -17258,7 +17258,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
   E_path        = os.path.join(sbox.wc_dir, 'A', 'B', 'E')
 
-  # Setup a simple branch to which 
+  # Setup a simple branch to which
   expected_output, expected_mergeinfo_output, expected_elision_output, \
     expected_status, expected_disk, expected_skip = \
     noninheritable_mergeinfo_test_set_up(sbox)
@@ -17316,7 +17316,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   #       /A/B:4* <-- Should be inheritable
   #   Properties on 'branch\B\E':
   #     svn:mergeinfo
-  #       /A/B/E:4 <-- Not necessary 
+  #       /A/B/E:4 <-- Not necessary
   expected_output = wc.State(B_branch_path, {
     'E' : Item(status=' U'),
     })

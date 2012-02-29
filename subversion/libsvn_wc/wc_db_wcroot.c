@@ -624,7 +624,7 @@ try_symlink_as_dir:
        * in this DB -- in that case, use this wcroot. Else, if the symlink
        * points to a directory, try to find a wcroot in that directory
        * instead. */
-      
+
       err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
                                           NULL, NULL, NULL, NULL, NULL, NULL,
                                           NULL, NULL, NULL, NULL, NULL, NULL,
@@ -666,7 +666,7 @@ try_symlink_as_dir:
               goto try_symlink_as_dir;
             }
         }
-    } 
+    }
 
   /* We've found the appropriate WCROOT for the requested path. Stash
      it into that path's directory.  */

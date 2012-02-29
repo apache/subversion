@@ -155,7 +155,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
 
     /* Invoke the FS module's initfunc function with the common
        pool protected by a lock. */
-    SVN_MUTEX__WITH_LOCK(common_pool_lock, 
+    SVN_MUTEX__WITH_LOCK(common_pool_lock,
                          initfunc(my_version, vtable, common_pool));
   }
   fs_version = (*vtable)->get_version();
@@ -357,7 +357,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   /* Perform the actual creation. */
   *fs_p = fs_new(fs_config, pool);
-  
+
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->create(*fs_p, path, pool, common_pool));
   return SVN_NO_ERROR;
