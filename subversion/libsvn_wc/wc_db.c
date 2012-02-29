@@ -782,7 +782,6 @@ insert_base_node(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_filesize_t recorded_size = SVN_INVALID_FILESIZE;
   apr_int64_t recorded_mod_time;
-  const char *moved_to_relpath = NULL;
   svn_boolean_t have_row;
 
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
@@ -814,15 +813,13 @@ insert_base_node(void *baton,
           recorded_size = get_recorded_size(stmt, 6);
           recorded_mod_time = svn_sqlite__column_int64(stmt, 12);
         }
-      /* Always preserve moved-to info. */
-      moved_to_relpath = svn_sqlite__column_text(stmt, 15, scratch_pool);
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisisr"
                             "tstr"               /* 8 - 11 */
-                            "isnnnnnsss",          /* 12 - 21 */
+                            "isnnnnns",          /* 12 - 19 */
                             wcroot->wc_id,       /* 1 */
                             local_relpath,       /* 2 */
                             (apr_int64_t)0, /* op_depth is 0 for base */
@@ -838,9 +835,7 @@ insert_base_node(void *baton,
                             pibb->changed_date,   /* 12 */
                             pibb->changed_author, /* 13 */
                             (pibb->kind == svn_kind_symlink) ?
-                                pibb->target : NULL, /* 19 */
-                            NULL /* 20 */,
-                            moved_to_relpath /* 21 */));
+                                pibb->target : NULL)); /* 19 */
   if (pibb->kind == svn_kind_file)
     {
       if (!pibb->checksum
