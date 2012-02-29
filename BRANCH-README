@@ -1,0 +1,8 @@
+Branch that promotes svnmucc to subversion/svnmucc/.
+
+TODO: Write a manpage
+
+TODO: Make 'make install-tools' install a compatibility symlink:
+        $(DESTDIR)/bin/svn-tools/svnmucc -> $(DESTDIR)/bin/svnmucc
+
+TODO: Determine whether there is consensus to merge this to trunk
