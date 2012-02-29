@@ -1317,7 +1317,10 @@ fetch_kind_func(svn_kind_t *kind,
   struct edit_baton *eb = baton;
   svn_node_kind_t node_kind;
 
-  SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &node_kind,
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->revision;
+
+  SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, &node_kind,
                             scratch_pool));
 
   *kind = svn__kind_from_node_kind(node_kind, FALSE);
@@ -1335,12 +1338,15 @@ fetch_props_func(apr_hash_t **props,
   struct edit_baton *eb = baton;
   svn_node_kind_t node_kind;
 
-  SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &node_kind,
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->revision;
+
+  SVN_ERR(svn_ra_check_path(eb->ra_session, path, base_revision, &node_kind,
                             scratch_pool));
 
   if (node_kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file(eb->ra_session, path, eb->revision,
+      SVN_ERR(svn_ra_get_file(eb->ra_session, path, base_revision,
                               NULL, NULL, props, result_pool));
     }
   else if (node_kind == svn_node_dir)
@@ -1348,7 +1354,7 @@ fetch_props_func(apr_hash_t **props,
       apr_array_header_t *tmp_props;
 
       SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, props, path,
-                              eb->revision, 0 /* Dirent fields */,
+                              base_revision, 0 /* Dirent fields */,
                               result_pool));
       tmp_props = svn_prop_hash_to_array(*props, result_pool);
       SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
@@ -1375,11 +1381,14 @@ fetch_base_func(const char **filename,
   svn_stream_t *fstream;
   svn_error_t *err;
 
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->revision;
+
   SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  result_pool, scratch_pool));
 
-  err = svn_ra_get_file(eb->ra_session, path, eb->revision,
+  err = svn_ra_get_file(eb->ra_session, path, base_revision,
                         fstream, NULL, NULL, scratch_pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
