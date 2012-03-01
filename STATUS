@@ -91,6 +91,14 @@ Candidate changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
+ * r1295671
+   Fix ordering of "svn log --diff" output on Windows.
+   Branch:
+     ^/subversion/branches/1.7.x-log-diff
+   Notes:
+     Untried on Windows, doesn't break Linux.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
