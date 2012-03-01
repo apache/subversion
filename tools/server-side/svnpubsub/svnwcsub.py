@@ -36,8 +36,9 @@ import os
 import re
 import ConfigParser
 import time
-import logging
+import logging.handlers
 import Queue
+import optparse
 
 from twisted.internet import reactor, task, threads
 from twisted.internet.utils import getProcessOutput
@@ -443,21 +444,93 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
         return str(option)
 
 
-def main(config_file):
+def prepare_logging(logfile):
+    "Log to the specified file, or to stdout if None."
+
+    if logfile:
+        # Rotate logs daily, keeping 7 days worth.
+        handler = logging.handlers.TimedRotatingFileHandler(
+          logfile, when='midnight', backupCount=7,
+          )
+    else:
+        handler = logging.StreamHandler(sys.stdout)
+
+    # Add a timestamp to the log records
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
+                                  '%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+
+    # Apply the handler to the root logger
+    root = logging.getLogger()
+    root.addHandler(handler)
+    
+    ### use logging.INFO for now. switch to cmdline option or a config?
+    root.setLevel(logging.INFO)
+
+
+def handle_options(options):
+    # Set up the logging, then process the rest of the options.
+    prepare_logging(options.logfile)
+
+    if options.pidfile:
+        pid = os.getpid()
+        open(options.pidfile, 'w').write('%s\n' % pid)
+        logging.info('pid %d written to %s', pid, options.pidfile)
+
+    if options.uid:
+        try:
+            uid = int(options.uid)
+        except ValueError:
+            import pwd
+            uid = pwd.getpwnam(options.uid)[2]
+        logging.info('setting uid %d', uid)
+        os.setuid(uid)
+
+    if options.gid:
+        try:
+            gid = int(options.gid)
+        except ValueError:
+            import grp
+            gid = grp.getgrnam(options.gid)[2]
+        logging.info('setting gid %d', gid)
+        os.setgid(gid)
+
+    if options.umask:
+        umask = int(options.umask, 8)
+        os.umask(umask)
+        logging.info('umask set to %03o', umask)
+
+
+def main(args):
+    parser = optparse.OptionParser(
+        description='An SvnPubSub client to keep working copies synchronized '
+                    'with a repository.',
+        usage='Usage: %prog [options] CONFIG_FILE',
+        )
+    parser.add_option('--logfile',
+                      help='filename for logging')
+    parser.add_option('--pidfile',
+                      help="the process' PID will be written to this file")
+    parser.add_option('--uid',
+                      help='switch to this UID before running')
+    parser.add_option('--gid',
+                      help='switch to this GID before running')
+    parser.add_option('--umask',
+                      help='set this (octal) umask before running')
+
+    options, extra = parser.parse_args(args)
+
+    if len(extra) != 1:
+        parser.error('CONFIG_FILE is required')
+    config_file = extra[0]
+
+    # Process any provided options.
+    handle_options(options)
+
     c = ReloadableConfig(config_file)
     big = BigDoEverythingClasss(c)
     reactor.run()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print "invalid args, read source code"
-        sys.exit(0)
-
-    ### use logging.INFO for now. review/adjust the calls above for the
-    ### proper logging level. then remove the level (to return to default).
-    ### future: switch to config for logfile and loglevel.
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout,
-                        datefmt='%Y-%m-%d %H:%M:%S',
-                        format='%(asctime)s [%(levelname)s] %(message)s')
-    main(sys.argv[1])
+    main(sys.argv[1:])
