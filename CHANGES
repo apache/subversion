@@ -54,6 +54,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.4
     * fix spurious conflict when merging deleted symbolic link (issue #4052)
     * fix URL-to-WC copy of externals on Windows (issue #4123)
     * improve an FSFS sanity-check error message (r1294470)
+    * fix regressions with symlinks pointing at externals (issue #4102)
 
   Developer-visible changes:
     * don't build mod_dontdothat if not building with httpd (r1243976)
