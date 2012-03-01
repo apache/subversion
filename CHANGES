@@ -1,3 +1,22 @@
+Version 1.7.4
+(?? ??? 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.4
+
+  User-visible changes:
+    * fix 'svn log --diff' for moved paths (r1210147, et al)
+    * fix ra_serf problem with reading directory entries via HTTPv2 (r1238121)
+    * prepend "sqlite:" to error messages from SQLite (r1245738, -817)
+    * fix randomly missing "Merged via" notifications in 'svn log -g' (r1293229)
+    * fix spurious conflict when merging deleted symbolic link (issue #4052)
+    * fix URL-to-WC copy of externals on Windows (issue #4123)
+    * improve an FSFS sanity-check error message (r1294470)
+    * fix regressions with symlinks pointing at externals (issue #4102)
+
+  Developer-visible changes:
+    * don't build mod_dontdothat if not building with httpd (r1243976)
+    * fix the testsuite to avoid FAILs on APR hash order (r1230714, et al)
+
+
 Version 1.7.3
 (14 Feb 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.3
