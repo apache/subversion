@@ -870,6 +870,17 @@ handle_external_item_change(const struct external_change_baton_t *eb,
      the global case is hard, and it should be pretty obvious to a
      user when it happens.  Worst case: your disk fills up :-). */
 
+  /* First notify that we're about to handle an external. */
+  if (eb->ctx->notify_func2)
+    {
+      (*eb->ctx->notify_func2)(
+         eb->ctx->notify_baton2,
+         svn_wc_create_notify(local_abspath,
+                              svn_wc_notify_update_external,
+                              scratch_pool),
+         scratch_pool);
+    }
+
   if (! old_defining_abspath)
     {
       /* The target dir might have multiple components.  Guarantee the path
