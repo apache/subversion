@@ -906,6 +906,37 @@ def update_symlink(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@Issue(4102)
+@SkipUnless(svntest.main.is_posix_os)
+def externals_as_symlink_targets(sbox):
+  "externals as symlink targets"
+  sbox.build()
+  wc = sbox.ospath
+
+  # Control: symlink to normal dir and file.
+  os.symlink('E', wc('sym_E'))
+  os.symlink('mu', wc('sym_mu'))
+
+  # Test case: symlink to external dir and file.
+  sbox.simple_propset("svn:externals",
+                      '^/A/B/E ext_E\n'
+                      '^/A/mu ext_mu',
+                      '')
+  sbox.simple_update()
+  os.symlink('ext_E', wc('sym_ext_E'))
+  os.symlink('ext_mu', wc('sym_ext_mu'))
+
+  # Adding symlinks to normal items and to a file external is OK.
+  sbox.simple_add('sym_E', 'sym_mu', 'sym_ext_mu')
+
+  ### Adding a symlink to an external dir failed with
+  ###   svn: E200009: Could not add all targets because some targets are
+  ###   already versioned
+  sbox.simple_add('sym_ext_E')
+
+  sbox.simple_commit()
+    
+
 ########################################################################
 # Run the tests
 
@@ -933,6 +964,7 @@ test_list = [ None,
               symlink_to_wc_basic,
               symlink_to_wc_svnversion,
               update_symlink,
+              externals_as_symlink_targets,
              ]
 
 if __name__ == '__main__':

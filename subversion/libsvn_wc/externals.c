@@ -1253,3 +1253,13 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
       return SVN_NO_ERROR;
     }
 }
+
+svn_error_t *
+svn_wc__close_db(const char *external_abspath,
+                 svn_wc_context_t *wc_ctx,
+                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_drop_root(wc_ctx->db, external_abspath,
+                               scratch_pool));
+  return SVN_NO_ERROR;
+}

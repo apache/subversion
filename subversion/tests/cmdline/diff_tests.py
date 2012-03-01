@@ -57,6 +57,16 @@ def make_diff_header(path, old_tag, new_tag):
     "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
     ]
 
+def make_no_diff_deleted_header(path, old_tag, new_tag):
+  """Generate the expected diff header for a deleted file PATH when in
+  'no-diff-deleted' mode. (In that mode, no further details appear after the
+  header.) Return the header as an array of newline-terminated strings."""
+  path_as_shown = path.replace('\\', '/')
+  return [
+    "Index: " + path_as_shown + " (deleted)\n",
+    "===================================================================\n",
+    ]
+
 def make_git_diff_header(target_path, repos_relpath,
                          old_tag, new_tag, add=False, src_label=None,
                          dst_label=None, delete=False, text_changes=True,
@@ -1165,8 +1175,10 @@ def diff_base_to_repos(sbox):
     if not re_infoline.match(line):
       list2.append(line)
 
-  if list1 != list2:
-    raise svntest.Failure
+  # Two files in diff may be in any order.
+  list1 = svntest.verify.UnorderedOutput(list1)
+
+  svntest.verify.compare_and_display_lines('', '', list1, list2)
 
 
 #----------------------------------------------------------------------
@@ -3590,6 +3602,9 @@ def diff_git_empty_files(sbox):
   ] + make_git_diff_header(iota_path, "iota", "revision 2", "working copy",
                            delete=True, text_changes=False)
 
+  # Two files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
 
@@ -3629,6 +3644,9 @@ def diff_git_with_props(sbox):
                                          text_changes=False) + \
                     make_diff_prop_header("iota") + \
                     make_diff_prop_added("svn:keywords", "Id")
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)

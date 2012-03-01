@@ -15,91 +15,75 @@ Status of 1.7.4:
 Candidate changes:
 ==================
 
- * r1147540, r1147541
-   Remove unused variables in build system.
+ * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551, r1295372
+   Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
    Justification:
-     Backporting of future changes will be easier.
-   Votes:
-     +1: arfrever
-     -0: stsp (we can backport these when we need to)
-     -0: gstein
-
- * r1210147, r1202132, r1202333, r1220740
-   Fix the 'svn log --diff' code so that it correctly shows a diff of a
-   target file (or directory) that was at a different path in the past.
-   Previously it would error out. A test is included.
+     Regression from 1.6. Some repositories with file externals cannot be
+     checked out with 1.7. Users complained.
+     See http://svn.haxx.se/users/archive-2011-12/0299.shtml
    Branch:
-     ^/subversion/branches/1.7.x-r1210147
+     ^/subversion/branches/1.7.x-issue4087
    Notes:
-    Depends on the r1220783 bug fix, otherwise the test will fail on Windows.
-    r1210147 is the actual fix.
-    r1202132 and r1202333 were merged for conflict resolution. These revisions
-    depend on the issue #2873 fix which has been backported in 1.7.2
-    r1220740 expands the test so that it would fail without r1210147 applied.
+     r1200277 was merged to simplify conflict resolution
+     r1243694 implements the workaround
+     r1243840 is a cosmetic follow-up treak
+     r1243920 was merged for conflict resolution for r1244466
+     r1244466 eliminates an unneccesary RA round-trip from r1243694
+     r1244551 uses a better API to query the local repos root and uuid
+     r1295372 improves test coverage
    Votes:
-     +1: stsp (without r1220740 -- r1220740 depends on r1220783 which
-               in turn needs new-in-1.8 APIs. Are there test failures
-               on Windows without it that cannot be fixed some other way?)
-     +1: julianfoad
+     +1: stsp
 
- * r1235831, r1236099
-   Tweak the parsing of the ssl-authority-files config option to make it
-   easier for users to configure.
+ * r1291594
+   Support httpd-2.4 in davautocheck.
    Justification:
-     Low impact change to help users.
+     Allow testing against imminently current stable httpd.
+   Votes:
+     +1: danielsh
+
+ * r1291797, r1291810
+   On Windows detect where perl is installed and add this information to the
+   include and lib directory settings of the swig-perl projects.
+   Justification:
+     Allows building swig-perl without copying perl libraries manually.
+     Somehow required on the Windows buildbot since the last library version
+     bump.
+   Votes:
+     +1: rhuijben
+
+ * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
+   r1294134, r1294147, r1294586
+   Two interdependent changes:
+   Fix issue #4121: copy followed by delete of unreadable child.
+   Fix svn:// authz in Python tests.
+   Justification:
+     User resorted to patching the commit editor to work around this.
+     Tests are broken.
    Notes:
-     Both r1235831 and r1236099 conflict and will need a branch.
+     r1293945,r1293972,r1293976 are cosmetics.
+     r1293998 is the fix.
+     r1294136 is a test.
+     r1294236 fixes an uninitialized variable.
+   Notes:
+     r1294134 extends a test to demonstrate its brokenness.
+     r1294147 fixes said brokenness.
+     r1294586 fixes r1294147 for Windows.
    Votes:
-     +1: gstein, rhuijben
+     +1: danielsh
 
- * r1238121
-   Fix incorrect url construction in libsvn_ra_serf when svn_ra_get_dir2() is
-   called against a HTTPv2 server with a SVN_INVALID_REVNUM revision.
+ * r1295007
+   Include svnrdump in the Windows build.
    Justification:
-     Privately reported as AnkhSVN issue.
+     I do not know for sure, but I assume that either make-dist.py or
+     vc6-build.bat.in is actually used by some people --- and if I'm wrong,
+     this would be harmless.
    Votes:
-     +1: rhuijben, philip
+     +1: danielsh
+
 
 Veto-blocked changes:
 =====================
 
- * r1146131 and followups
-   Add svn_fs_verify() and implement rep-cache verification in FSFS using it.
-   Branch:
-     1.7.x-fs-verify
-   Justification:
-     Would be nice to extend verify already in 1.7.x.
-   Notes:
-     This does not include progress reporting; that has been postponed to 1.8.
-   Conflicts:
-     On fs_fs.c.  Resolve with 'theirs-conflict'.
-   Votes:
-     +1: danielsh, rhuijben
-     +0: gstein (progress would be nice) (without r1161164, r1161180)
-     -0: cmpilato (For a function with this name, the implementation is far
-         too anemic. I'd prefer this be a private function in 1.7.x, leaving
-         room for a future public API that really does full verification.)
-         (without r1161164, r1161180)
-     -1: danielsh (invasive, new feature)
-
- * r1220783
-   Fix mis-ordered text output of 'svn log --diff' on Windows.
-   Justification:
-     Badness within 'svn', fixed within 'svn'. Needed for r1210147 group.
-   Notes:
-     Doesn't compile on 1.7.x.
-   Votes:
-     +1: julianfoad, rhuijben
-     -1: stsp (doesn't compile and would need new-in-1.8 public APIs).
-
- * r1221463
-   Allow leading "r" in ?p= query string arguments.
-   Justification:
-     Same as for allowing '-r r42' in svn(1).
-   Votes:
-     -0: rhuijben (Behavior change without positive votes? 1.8?)
-     -1: cmpilato (a rollback to an earlier patch release would break any
-                   bookmarks saved for URLs using the new syntax)
 
 Approved changes:
 =================
