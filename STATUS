@@ -15,7 +15,7 @@ Status of 1.7.4:
 Candidate changes:
 ==================
 
- * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551
+ * r1200277, r1243694, r1243840, r1243920, r1244466, r1244551, r1295372
    Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
    Justification:
      Regression from 1.6. Some repositories with file externals cannot be
@@ -30,6 +30,7 @@ Candidate changes:
      r1243920 was merged for conflict resolution for r1244466
      r1244466 eliminates an unneccesary RA round-trip from r1243694
      r1244551 uses a better API to query the local repos root and uuid
+     r1295372 improves test coverage
    Votes:
      +1: stsp
 
