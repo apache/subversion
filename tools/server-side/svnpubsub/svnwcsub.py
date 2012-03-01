@@ -334,7 +334,8 @@ class BackgroundWorker(threading.Thread):
         threading.Thread.__init__(self)
 
         # The main thread/process should not wait for this thread to exit.
-        self.daemon = True
+        ### compat with Python 2.5
+        self.setDaemon(True)
 
         self.svnbin = svnbin
         self.env = env
