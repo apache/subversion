@@ -99,6 +99,7 @@ Candidate changes:
      Untried on Windows, doesn't break Linux.
    Votes:
      +1: philip
+     +1: danielsh (r1220783 would be nice, but harder to backport)
 
 Veto-blocked changes:
 =====================
