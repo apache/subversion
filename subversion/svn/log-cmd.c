@@ -303,6 +303,7 @@ log_entry_receiver(void *baton,
       end_revision.value.number = log_entry->revision;
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
+      SVN_ERR(svn_cmdline_fflush(stdout));
       SVN_ERR(svn_client_diff_peg5(diff_options,
                                    lb->target_path_or_url,
                                    &lb->target_peg_revision,

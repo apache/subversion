@@ -97,13 +97,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1295671
-   Fix ordering of "svn log --diff" output on Windows.
-   Branch:
-     ^/subversion/branches/1.7.x-log-diff
-   Notes:
-     Untried on Windows, doesn't break Linux.
-   Votes:
-     +1: philip, stsp
-     +1: danielsh (r1220783 would be nice, but harder to backport)
