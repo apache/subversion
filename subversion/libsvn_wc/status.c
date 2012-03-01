@@ -2383,6 +2383,28 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
 
+#ifdef HAVE_SYMLINK
+  if (dirent->special && !skip_root)
+    {
+      svn_io_dirent2_t *this_dirent = svn_io_dirent2_dup(dirent,
+                                                         scratch_pool);
+
+      /* We're being pointed to the status root via a symlink.
+       * Get the real node kind and pretend the path is not a symlink.
+       * This prevents send_status_structure() from treating the root
+       * as a directory obstructed by a file. */
+      SVN_ERR(svn_io_check_resolved_path(local_abspath,
+                                         &this_dirent->kind, scratch_pool));
+      this_dirent->special = FALSE;
+      SVN_ERR(send_status_structure(&wb, local_abspath,
+                                    NULL, NULL, NULL,
+                                    dir_info, this_dirent, get_all,
+                                    status_func, status_baton,
+                                    scratch_pool));
+      skip_root = TRUE;
+    }
+#endif
+
   SVN_ERR(get_dir_status(&wb,
                          anchor_abspath,
                          target_name,
