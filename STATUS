@@ -91,6 +91,13 @@ Candidate changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
+Veto-blocked changes:
+=====================
+
+
+Approved changes:
+=================
+
  * r1295671
    Fix ordering of "svn log --diff" output on Windows.
    Branch:
@@ -98,12 +105,5 @@ Candidate changes:
    Notes:
      Untried on Windows, doesn't break Linux.
    Votes:
-     +1: philip
+     +1: philip, stsp
      +1: danielsh (r1220783 would be nice, but harder to backport)
-
-Veto-blocked changes:
-=====================
-
-
-Approved changes:
-=================
