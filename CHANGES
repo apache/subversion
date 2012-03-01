@@ -43,7 +43,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.4
-(?? ??? 2012, from /branches/1.7.x)
+(08 Mar 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.4
 
   User-visible changes:
@@ -55,6 +55,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.4
     * fix URL-to-WC copy of externals on Windows (issue #4123)
     * improve an FSFS sanity-check error message (r1294470)
     * fix regressions with symlinks pointing at externals (issue #4102)
+    * fix 'svn log --diff' output ordering issue on Windows (r1295671)
 
   Developer-visible changes:
     * don't build mod_dontdothat if not building with httpd (r1243976)
