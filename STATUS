@@ -80,6 +80,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1210913, r1211048
+   Fix issue 4073, assert on svn:externals path with drive letter on Windows.
+   Justification:
+     Avoid client asserting.
+   Notes:
+     Merge with '--accept mc' to resolve r1210913 conflict.
+   Votes:
+     +1: philip
+
 
 Veto-blocked changes:
 =====================
