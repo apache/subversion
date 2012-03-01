@@ -32,7 +32,7 @@ Candidate changes:
      r1244551 uses a better API to query the local repos root and uuid
      r1295372 improves test coverage
    Votes:
-     +1: stsp
+     +1: stsp, neels
 
  * r1291594
    Support httpd-2.4 in davautocheck.
