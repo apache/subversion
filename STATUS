@@ -69,7 +69,7 @@ Candidate changes:
      r1294147 fixes said brokenness.
      r1294586 fixes r1294147 for Windows.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1295007
    Include svnrdump in the Windows build.
