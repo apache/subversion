@@ -2394,7 +2394,10 @@ merge_adjacent_changes(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Issue #4133, '"diff -x -w" showing wrong change'. */
+/* Issue #4133, '"diff -x -w" showing wrong change'.
+   The magic number used in this test, 1<<17, is
+   CHUNK_SIZE from ../../libsvn_diff/diff_file.c
+ */
 static svn_error_t *
 test_wrap(apr_pool_t *pool)
 {
