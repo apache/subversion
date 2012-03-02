@@ -22,15 +22,48 @@ from twisted.application import service, internet
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from svnwcsub import ReloadableConfig, BigDoEverythingClasss
+import svnwcsub
 
 application = service.Application("SvnWcSub")
 
 def get_service():
     m = service.MultiService()
-    c = ReloadableConfig("/etc/svnwcsub.conf")
-    big = BigDoEverythingClasss(c, service=m)
+    c = svnwcsub.ReloadableConfig("/etc/svnwcsub.conf")
+    big = svnwcsub.BigDoEverythingClasss(c, service=m)
     return m
 
 service = get_service()
 service.setServiceParent(application)
+
+
+### crazy hack. the first time Twisted logs something, we will track down
+### the logfile it is using, then use that for the Python logging framework
+from twisted.python import log
+import logging
+
+def capture_log(unused_msg):
+    for ob in log.theLogPublisher.observers:
+        if hasattr(ob, 'im_class') and ob.im_class is log.FileLogObserver:
+            flo = ob.im_self
+            logfile = flo.write.im_self
+            stream = logfile._file
+
+            ### the follow is similar to svnwcsub.prepare_logging()
+            handler = logging.StreamHandler(stream)
+            formatter = logging.Formatter(
+                            '%(asctime)s [%(levelname)s] %(message)s',
+                            '%Y-%m-%d %H:%M:%S')
+            handler.setFormatter(formatter)
+
+            # Apply the handler to the root logger
+            root = logging.getLogger()
+            root.addHandler(handler)
+
+            ### use logging.INFO for now
+            root.setLevel(logging.INFO)
+
+            # okay. remove our capture function.
+            log.removeObserver(capture_log)
+
+# hook in the capturing...
+log.addObserver(capture_log)
