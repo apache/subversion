@@ -686,8 +686,8 @@ get_ra_editor(svn_ra_session_t **ra_session,
       anchor_abspath = svn_dirent_join(wcroot_abspath, relpath, pool);
     }
   else
-    anchor_abspath = NULL;
 #endif
+    anchor_abspath = NULL;
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
