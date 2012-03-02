@@ -262,7 +262,7 @@ fetch_props_func(apr_hash_t **props,
      working copy, and hence no method of fetching the requisite information. */
   if (!scb->anchor_abspath)
     {
-      *props = NULL;
+      *props = apr_hash_make(result_pool);
       return SVN_NO_ERROR;
     }
 
