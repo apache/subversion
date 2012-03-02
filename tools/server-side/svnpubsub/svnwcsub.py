@@ -231,7 +231,6 @@ class BigDoEverythingClasss(object):
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.worker = BackgroundWorker(self.svnbin, self.env)
-        self.worker.start()
         self.service = service
         self.failures = 0
         self.alive = time.time()
