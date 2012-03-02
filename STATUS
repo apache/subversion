@@ -91,11 +91,6 @@ Candidate changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
- * r1292248
-   APR hash ordering fixes for the swig-py tests.
-   Votes:
-     +1: danielsh, jorton
-
  * r1296369
    Fix an off-by-one memory access.
    Votes:
@@ -107,3 +102,8 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1292248
+   APR hash ordering fixes for the swig-py tests.
+   Votes:
+     +1: danielsh, jorton
