@@ -420,7 +420,8 @@ svn_editor_add_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(checksum != NULL
+                    && checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
@@ -539,6 +540,8 @@ svn_editor_alter_file(svn_editor_t *editor,
   SVN_ERR_ASSERT((checksum != NULL && contents != NULL)
                  || (checksum == NULL && contents == NULL));
   SVN_ERR_ASSERT(props != NULL || checksum != NULL);
+  if (checksum)
+    SVN_ERR_ASSERT(checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
 
