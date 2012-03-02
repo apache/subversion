@@ -287,6 +287,9 @@ fetch_props_func(apr_hash_t **props,
   SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
                                     result_pool, scratch_pool));
 
+  if (!*props)
+    *props = apr_hash_make(result_pool);
+
   return SVN_NO_ERROR;
 }
 
