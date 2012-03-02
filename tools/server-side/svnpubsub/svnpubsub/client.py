@@ -145,8 +145,8 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
 
 
 class Revision(object):
-  def __init__(self, repos, rev):
-    self.repos = repos
+  def __init__(self, uuid, rev):
+    self.uuid = uuid
     self.rev = rev
     self.dirs_changed = [ ]
     self.author = None
