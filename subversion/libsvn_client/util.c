@@ -256,8 +256,25 @@ fetch_props_func(apr_hash_t **props,
                  apr_pool_t *scratch_pool)
 {
   struct shim_callbacks_baton *scb = baton;
-  const char *local_abspath = svn_dirent_join(scb->anchor_abspath, path,
-                                              scratch_pool);
+  const char *local_abspath;
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL */
+      const char *wcroot_abspath;
+      const char *wcroot_url;
+      const char *relpath;
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
+                                  scb->anchor_abspath,
+                                  scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
+                                   scratch_pool, scratch_pool));
+      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
+      local_abspath = svn_dirent_join(wcroot_abspath, relpath, scratch_pool);
+    }
+  else
+    local_abspath = svn_dirent_join(scb->anchor_abspath, path, scratch_pool);
 
   SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
                                     result_pool, scratch_pool));
@@ -274,8 +291,25 @@ fetch_kind_func(svn_kind_t *kind,
 {
   struct shim_callbacks_baton *scb = baton;
   svn_node_kind_t node_kind;
-  const char *local_abspath = svn_dirent_join(scb->anchor_abspath, path,
-                                              scratch_pool);
+  const char *local_abspath;
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL */
+      const char *wcroot_abspath;
+      const char *wcroot_url;
+      const char *relpath;
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
+                                  scb->anchor_abspath,
+                                  scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
+                                   scratch_pool, scratch_pool));
+      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
+      local_abspath = svn_dirent_join(wcroot_abspath, relpath, scratch_pool);
+    }
+  else
+    local_abspath = svn_dirent_join(scb->anchor_abspath, path, scratch_pool);
 
   SVN_ERR(svn_wc_read_kind(&node_kind, scb->wc_ctx, local_abspath, FALSE,
                            scratch_pool));
@@ -293,11 +327,28 @@ fetch_base_func(const char **filename,
                 apr_pool_t *scratch_pool)
 {
   struct shim_callbacks_baton *scb = baton;
-  const char *local_abspath = svn_dirent_join(scb->anchor_abspath, path,
-                                              scratch_pool);
+  const char *local_abspath;
   svn_stream_t *pristine_stream;
   svn_stream_t *temp_stream;
   svn_error_t *err;
+
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL */
+      const char *wcroot_abspath;
+      const char *wcroot_url;
+      const char *relpath;
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
+                                  scb->anchor_abspath,
+                                  scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
+                                   scratch_pool, scratch_pool));
+      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
+      local_abspath = svn_dirent_join(wcroot_abspath, relpath, scratch_pool);
+    }
+  else
+    local_abspath = svn_dirent_join(scb->anchor_abspath, path, scratch_pool);
 
   err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
                                       local_abspath, scratch_pool,
