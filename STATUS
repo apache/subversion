@@ -96,6 +96,11 @@ Candidate changes:
    Votes:
      +1: danielsh, jorton
 
+ * r1296369
+   Fix an off-by-one memory access.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
