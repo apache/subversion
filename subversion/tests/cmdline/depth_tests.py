@@ -2872,6 +2872,7 @@ def commit_then_immediates_update(sbox):
   expected_disk.tweak('A/mu', contents="modified mu\n")
   expected_status = svntest.wc.State(wc_dir, { '' : svntest.wc.StateItem() })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('',     wc_rev=2, status='  ')
   expected_status.tweak('A',    wc_rev=2, status='  ')
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
   expected_status.tweak('iota', wc_rev=2, status='  ')
