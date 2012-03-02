@@ -258,6 +258,14 @@ fetch_props_func(apr_hash_t **props,
   struct shim_callbacks_baton *scb = baton;
   const char *local_abspath;
 
+  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
+     working copy, and hence no method of fetching the requisite information. */
+  if (!scb->anchor_abspath)
+    {
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
   if (svn_path_is_url(path))
     {
       /* This is a copyfrom URL */
@@ -292,6 +300,14 @@ fetch_kind_func(svn_kind_t *kind,
   struct shim_callbacks_baton *scb = baton;
   svn_node_kind_t node_kind;
   const char *local_abspath;
+
+  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
+     working copy, and hence no method of fetching the requisite information. */
+  if (!scb->anchor_abspath)
+    {
+      *kind = svn_kind_unknown;
+      return SVN_NO_ERROR;
+    }
 
   if (svn_path_is_url(path))
     {
@@ -331,6 +347,14 @@ fetch_base_func(const char **filename,
   svn_stream_t *pristine_stream;
   svn_stream_t *temp_stream;
   svn_error_t *err;
+
+  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
+     working copy, and hence no method of fetching the requisite information. */
+  if (!scb->anchor_abspath)
+    {
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
 
   if (svn_path_is_url(path))
     {
