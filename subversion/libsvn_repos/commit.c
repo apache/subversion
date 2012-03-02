@@ -783,12 +783,12 @@ abort_edit(void *edit_baton,
 
 
 static svn_error_t *
-prop_fetch_func(apr_hash_t **props,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   svn_fs_root_t *fs_root;
@@ -825,7 +825,7 @@ prop_fetch_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-kind_fetch_func(svn_kind_t *kind,
+fetch_kind_func(svn_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
@@ -987,8 +987,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *edit_baton = eb;
   *editor = e;
 
-  shim_callbacks->fetch_props_func = prop_fetch_func;
-  shim_callbacks->fetch_kind_func = kind_fetch_func;
+  shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
   shim_callbacks->fetch_base_func = fetch_base_func;
   shim_callbacks->fetch_baton = eb;
 
