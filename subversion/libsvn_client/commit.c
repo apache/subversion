@@ -675,10 +675,14 @@ get_ra_editor(svn_ra_session_t **ra_session,
   if (base_dir_abspath)
     {
       const char *relpath;
+      const char *wcroot_abspath;
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
+                                  base_dir_abspath, pool, pool));
 
       SVN_ERR(svn_ra_get_path_relative_to_root(*ra_session, &relpath, base_url,
                                                pool));
-      anchor_abspath = svn_dirent_join(base_dir_abspath, relpath, pool);
+      anchor_abspath = svn_dirent_join(wcroot_abspath, relpath, pool);
     }
   else
     anchor_abspath = NULL;
