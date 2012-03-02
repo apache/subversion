@@ -783,6 +783,33 @@ abort_edit(void *edit_baton,
 
 
 static svn_error_t *
+rationalize_shim_path(const char **fs_path,
+                      struct edit_baton *eb,
+                      const char *path,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL. */
+      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
+      *fs_path = svn_fspath__canonicalize(path, scratch_pool);
+    }
+  else
+    {
+      /* This is a base-relative path. */
+      if (path[0] != '/')
+        /* Get an absolute path for use in the FS. */
+        *fs_path = svn_fspath__join(eb->base_path, path, scratch_pool);
+      else
+        *fs_path = path;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 fetch_props_func(apr_hash_t **props,
                  void *baton,
                  const char *path,
@@ -794,20 +821,7 @@ fetch_props_func(apr_hash_t **props,
   svn_fs_root_t *fs_root;
   svn_error_t *err;
 
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(eb->base_path, path, scratch_pool);
-    }
-
+  SVN_ERR(rationalize_shim_path(&path, eb, path, scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs,
                                svn_fs_txn_base_revision(eb->txn),
                                scratch_pool));
@@ -838,20 +852,7 @@ fetch_kind_func(svn_kind_t *kind,
   if (!SVN_IS_VALID_REVNUM(base_revision))
     base_revision = svn_fs_txn_base_revision(eb->txn);
 
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(eb->base_path, path, scratch_pool);
-    }
-
+  SVN_ERR(rationalize_shim_path(&path, eb, path, scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
   SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
@@ -878,20 +879,7 @@ fetch_base_func(const char **filename,
   if (!SVN_IS_VALID_REVNUM(base_revision))
     base_revision = svn_fs_txn_base_revision(eb->txn);
 
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL. */
-      path = svn_uri_skip_ancestor(eb->repos_url, path, scratch_pool);
-      path = svn_fspath__canonicalize(path, scratch_pool);
-    }
-  else
-    {
-      /* This is a base-relative path. */
-      if (path[0] != '/')
-        /* Get an absolute path for use in the FS. */
-        path = svn_fspath__join(eb->base_path, path, scratch_pool);
-    }
-
+  SVN_ERR(rationalize_shim_path(&path, eb, path, scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
   err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
