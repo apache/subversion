@@ -383,7 +383,7 @@ extern "C" {
  */
 typedef struct svn_editor_t svn_editor_t;
 
-/** The kind of the checksum to be used throughout the 
+/** The kind of the checksum to be used throughout the #svn_editor_t APIs.
  *
  * @note ### This may change before Ev2 is official released, so just like
  * everything else in this file, please don't rely upon it until then.
