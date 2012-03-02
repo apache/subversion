@@ -341,6 +341,8 @@ class BackgroundWorker(threading.Thread):
         self.env = env
         self.q = Queue.Queue()
 
+        self.has_started = False
+
     def run(self):
         while True:
             if self.q.qsize() > BACKLOG_TOO_HIGH:
@@ -362,6 +364,12 @@ class BackgroundWorker(threading.Thread):
             self.q.task_done()
 
     def add_work(self, operation, wc):
+        # Start the thread when work first arrives. Thread-start needs to
+        # be delayed in case the process forks itself to become a daemon.
+        if not self.has_started:
+            self.start()
+            self.has_started = True
+
         self.q.put((operation, wc))
 
     def _update(self, wc):
