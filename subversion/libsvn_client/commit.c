@@ -671,6 +671,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
+#ifdef ENABLE_EDITOR_SHIMS
   /* We need this for the shims. */
   if (base_dir_abspath)
     {
@@ -686,6 +687,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
     }
   else
     anchor_abspath = NULL;
+#endif
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
