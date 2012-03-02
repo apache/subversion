@@ -132,6 +132,7 @@ struct ev2_edit_baton
 
   apr_hash_t *paths;
   apr_array_header_t *path_order;
+  int paths_processed;
 
   apr_pool_t *edit_pool;
   struct extra_baton *exb;
@@ -492,25 +493,18 @@ run_ev2_actions(void *edit_baton,
   apr_pool_t *iterpool;
 
   iterpool = svn_pool_create(scratch_pool);
-  while (eb->path_order->nelts > 0)
+
+  /* Possibly pick up where we left off. Ocassionally, we do some of these
+     as part of close_edit() and then some more as part of abort_edit()  */
+  for (; eb->paths_processed < eb->path_order->nelts; ++eb->paths_processed)
     {
-      const char *path = APR_ARRAY_IDX(eb->path_order, 0, const char *);
+      const char *path = APR_ARRAY_IDX(eb->path_order, eb->paths_processed,
+                                       const char *);
       apr_array_header_t *actions = apr_hash_get(eb->paths, path,
                                                  APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
       SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
-
-      /* Remove this item from the hash... */
-      apr_hash_set(eb->paths, path, APR_HASH_KEY_STRING, NULL);
-
-      /* ...and from the front of the path_order list.
-
-         ### This is wrong on so many levels, but since APR doesn't support
-         proper queue operations, it'll have to do. */
-      eb->path_order->nelts--;
-      eb->path_order->nalloc--;
-      eb->path_order->elts += eb->path_order->elt_size;
     }
   svn_pool_destroy(iterpool);
 
