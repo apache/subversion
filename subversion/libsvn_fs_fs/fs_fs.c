@@ -2786,11 +2786,11 @@ increment_revprop_generation(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   
-  SVN_ERR(read_revprop_generation(fs, pool));
-
   const char *path = path_revprop_generation(fs, pool);
   const char *tmp_filename;
   svn_string_t *generation;
+
+  SVN_ERR(read_revprop_generation(fs, pool));
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
