@@ -136,7 +136,7 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
    * Thus, we cannot use svn_temp_serializer__add_string. */
   svn_temp_serializer__push(context,
                             (const void * const *)&string->data,
-                            string->len);
+                            string->len + 1);
 
   /* back to the caller's nesting level */
   svn_temp_serializer__pop(context);
