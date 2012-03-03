@@ -781,10 +781,6 @@ wrap_external_error(const struct external_change_baton_t *eb,
   return err;
 }
 
-/* This implements the 'svn_hash_diff_func_t' interface.
-   BATON is of type 'struct handle_externals_desc_change_baton *'.
-   KEY is a 'const char *'.
-*/
 static svn_error_t *
 handle_externals_change(const struct external_change_baton_t *eb,
                         const char *local_abspath,
