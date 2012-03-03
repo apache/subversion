@@ -260,11 +260,15 @@ reverse_match_length(const char *a, const char *b, apr_size_t max_len)
 
 #endif
 
+  /* If we find a mismatch at -pos, pos-1 characters matched.
+   */
   while (++pos <= max_len)
     if (a[0-pos] != b[0-pos])
-      break;
+      return pos - 1;
 
-  return pos-1;
+  /* No mismatch found -> at least MAX_LEN machting chars.
+   */
+  return max_len;
 }
 
 
