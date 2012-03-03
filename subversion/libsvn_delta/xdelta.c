@@ -261,7 +261,7 @@ reverse_match_length(const char *a, const char *b, apr_size_t max_len)
 #endif
 
   while (++pos <= max_len)
-    if (a[-pos] != b[-pos])
+    if (a[0-pos] != b[0-pos])
       break;
 
   return pos-1;
