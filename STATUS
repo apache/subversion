@@ -102,8 +102,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1292248
-   APR hash ordering fixes for the swig-py tests.
-   Votes:
-     +1: danielsh, jorton
