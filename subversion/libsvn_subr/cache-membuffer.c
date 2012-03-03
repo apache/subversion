@@ -136,6 +136,13 @@
  */
 #define NO_OFFSET APR_UINT64_MAX
 
+/* To save space in our group structure, we only use 32 bit size values
+ * and, therefore, limit the size of each entry to just below 4GB.
+ * Supporting larger items is not a good idea as the data transfer
+ * to and from the cache would block other threads for a very long time.
+ */
+#define MAX_ITEM_SIZE ((apr_uint32_t)(0 - ITEM_ALIGNMENT))
+
 /* Debugging / corruption detection support.
  * If you define this macro, the getter functions will performed expensive
  * checks on the item data, requested keys and entry types. If there is
@@ -304,7 +311,7 @@ typedef struct entry_t
   /* Size of the serialized item data. May be 0.
    * Only valid for used entries.
    */
-  apr_size_t size;
+  apr_uint32_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
@@ -394,6 +401,11 @@ struct svn_membuffer_t
   /* Total number of data buffer bytes in use. This is for statistics only.
    */
   apr_uint64_t data_used;
+
+  /* Largest entry size that we would accept.  For total cache sizes
+   * less than 4TB (sic!), this is determined by the total cache size.
+   */
+  apr_uint64_t max_entry_size;
 
 
   /* Number of used dictionary entries, i.e. number of cached items.
@@ -949,6 +961,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint32_t group_count;
   apr_uint32_t group_init_size;
   apr_uint64_t data_size;
+  apr_uint64_t max_entry_size;
 
   /* Determine a reasonable number of cache segments. Segmentation is
    * only useful for multi-threaded / multi-core servers as it reduces
@@ -992,8 +1005,19 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
    */
   data_size = total_size - directory_size;
 
+  /* For cache sizes > 4TB, individual cache segments will be larger
+   * than 16GB allowing for >4GB entries.  But caching chunks larger
+   * than 4GB is simply not supported.
+   */
+  max_entry_size = data_size / 4 > MAX_ITEM_SIZE
+                 ? MAX_ITEM_SIZE
+                 : data_size / 4;
+  
   /* to keep the entries small, we use 32 bit indices only
-   * -> we need to ensure that no more then 4G entries exist
+   * -> we need to ensure that no more then 4G entries exist.
+   * 
+   * Note, that this limit could only be exceeded in a very
+   * theoretical setup with about 1EB of cache.
    */
   group_count = directory_size / sizeof(entry_group_t);
   if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
@@ -1024,6 +1048,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].data = secure_aligned_alloc(pool, (apr_size_t)data_size, FALSE);
       c[seg].current_data = 0;
       c[seg].data_used = 0;
+      c[seg].max_entry_size = max_entry_size;
 
       c[seg].used_entries = 0;
       c[seg].hit_count = 0;
@@ -1078,7 +1103,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   /* if necessary, enlarge the insertion window.
    */
   if (   buffer != NULL
-      && cache->data_size / 4 > size
+      && cache->max_entry_size >= size
       && ensure_data_insertable(cache, size))
     {
       /* Remove old data for this key, if that exists.
@@ -1452,7 +1477,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
               /* Remove the old entry and try to make space for the new one.
                */
               drop_entry(cache, entry);
-              if (   (cache->data_size / 4 > size)
+              if (   (cache->max_entry_size >= size)
                   && ensure_data_insertable(cache, size))
                 {
                   /* Write the new entry.
@@ -1823,8 +1848,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return (size < cache->membuffer->data_size / 4)
-      && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
+  return size <= cache->membuffer->max_entry_size;
 }
 
 /* Add statistics of SEGMENT to INFO.
