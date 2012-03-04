@@ -96,6 +96,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1296868
+   Add an index to rep-cache.db.
+   Justification:
+     Improves performance, bidirectionally compatible (only performance will
+     be impacted).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
