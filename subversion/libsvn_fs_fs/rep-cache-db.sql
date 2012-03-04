@@ -33,6 +33,11 @@ CREATE TABLE rep_cache (
   expanded_size INTEGER NOT NULL
   );
 
+/* There isn't an implicit index on a TEXT column, so create an explicit one. */
+CREATE INDEX I_HASH on REP_CACHE (hash);
+
+/* The index didn't exist until 1.7.5; therefore, some USER_VERSION=1
+   rep-cache.db files out there DO NOT contain an I_HASH index. */
 PRAGMA USER_VERSION = 1;
 
 
