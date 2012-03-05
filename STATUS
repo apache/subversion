@@ -37,7 +37,14 @@ Candidate changes:
  * r1291594
    Support httpd-2.4 in davautocheck.
    Justification:
-     Allow testing against imminently current stable httpd.
+     Allow testing against current stable httpd.
+   Votes:
+     +1: danielsh
+
+ * r1232267
+   Allow building mod_dav_svn against httpd-2.4.
+   Justification:
+     Support current stable httpd.
    Votes:
      +1: danielsh
 
