@@ -84,6 +84,9 @@ def _get_term_width():
       return None
     return cr
 
+  if os.path.exists('../.width'):
+    return int(open('../.width').readline())
+
   cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
   if not cr:
     try:
