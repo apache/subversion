@@ -780,8 +780,9 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
                   apr_file_t *errfile,
                   apr_pool_t *pool)
 {
-  return svn_io_start_cmd3(cmd_proc, path, cmd, args, NULL, inherit, FALSE,
-                           infile, FALSE, outfile, FALSE, errfile, pool);
+  return svn_io_start_cmd3(cmd_proc, path, cmd, args, NULL, inherit,
+                           infile_pipe, infile, outfile_pipe, outfile,
+                           errfile_pipe, errfile, pool);
 }
 
 svn_error_t *

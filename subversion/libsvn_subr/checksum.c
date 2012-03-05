@@ -423,3 +423,27 @@ svn_checksum_mismatch_err(const svn_checksum_t *expected,
                 svn_checksum_to_cstring_display(expected, scratch_pool),
                 svn_checksum_to_cstring_display(actual, scratch_pool));
 }
+
+svn_boolean_t
+svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
+{
+  /* By definition, the NULL checksum matches all others, including the
+     empty one. */
+  if (!checksum)
+    return TRUE;
+
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        return svn_md5__digests_match(checksum->digest,
+                                      svn_md5__empty_string_digest());
+
+      case svn_checksum_sha1:
+        return svn_sha1__digests_match(checksum->digest,
+                                       svn_sha1__empty_string_digest());
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return FALSE;
+    }
+}

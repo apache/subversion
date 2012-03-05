@@ -2822,12 +2822,13 @@ def patch_prop_offset(sbox):
 
   os.chdir(wc_dir)
 
-  expected_output = [
+  # Changing two properties so output order not well defined.
+  expected_output = svntest.verify.UnorderedOutput([
     ' U        iota\n',
     '>         applied hunk ## -6,6 +6,9 ## with offset -1 (prop1)\n',
     '>         applied hunk ## -14,11 +17,8 ## with offset 4 (prop1)\n',
     '>         applied hunk ## -5,6 +5,7 ## with offset -3 (prop2)\n',
-  ]
+  ])
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', props = {'prop1' : prop1_content,
@@ -3726,7 +3727,7 @@ def patch_deletes_prop(sbox):
   # *adds* the property.
   svntest.main.run_svn(None, 'revert', iota_path)
 
-  # Apply patch 
+  # Apply patch
   unidiff_patch = [
     "Index: iota\n",
     "===================================================================\n",
@@ -3749,7 +3750,7 @@ def patch_deletes_prop(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff') 
+                                       '--reverse-diff')
 
 @Issue(4004)
 def patch_reversed_add_with_props(sbox):
@@ -3798,7 +3799,7 @@ def patch_reversed_add_with_props(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff') 
+                                       '--reverse-diff')
 
 @Issue(4004)
 def patch_reversed_add_with_props2(sbox):
@@ -3853,7 +3854,7 @@ def patch_reversed_add_with_props2(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff') 
+                                       '--reverse-diff')
 
 def patch_dev_null(sbox):
   "patch with /dev/null filenames"

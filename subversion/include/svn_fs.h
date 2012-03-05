@@ -257,6 +257,10 @@ svn_fs_upgrade(const char *path,
  * to the Subversion filesystem located in the directory @a path.
  * Use @a pool for necessary allocations.
  *
+ * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
+ * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
+ * verified, global invariants may be verified as well.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
@@ -267,7 +271,9 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool);
+              svn_revnum_t start,
+              svn_revnum_t end,
+              apr_pool_t *scratch_pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of

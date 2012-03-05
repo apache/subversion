@@ -177,7 +177,7 @@ def sanitize_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
   for entry in parsed_original_mergeinfo:
     get_new_location_segments(parsed_original_mergeinfo[entry], repo_root, wcpath, ctx)
     full_mergeinfo.update(parsed_original_mergeinfo[entry])
-    
+
   hasher(hash_file, newmergeinfo_file)
   diff_mergeinfo = core.svn_mergeinfo_diff(full_mergeinfo,
                                            mergeinfo, 1, temp_pool)
@@ -200,7 +200,7 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
                             ctx, hash_file, newmergeinfo_file, temp_pool):
   has_local_modification = check_local_modifications(wcpath, temp_pool)
   old_hash = ''
-  new_hash = '' 
+  new_hash = ''
   try:
     with open(hash_file, "r") as f:
       old_hash = pickle.load(f)
@@ -248,7 +248,7 @@ the working copy before running the script."""
     sys.exit(1)
 
 def get_original_mergeinfo(wcpath, revision, depth, ctx, temp_pool):
-  propget_list = client.svn_client_propget3("svn:mergeinfo", wcpath, 
+  propget_list = client.svn_client_propget3("svn:mergeinfo", wcpath,
                                             revision, revision, depth, None,
                                             ctx, temp_pool)
 

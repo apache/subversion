@@ -25,8 +25,8 @@
 #include "private/svn_mutex.h"
 
 svn_error_t *
-svn_mutex__init(svn_mutex__t **mutex_p, 
-                svn_boolean_t mutex_required, 
+svn_mutex__init(svn_mutex__t **mutex_p,
+                svn_boolean_t mutex_required,
                 apr_pool_t *result_pool)
 {
   /* always initialize the mutex pointer, even though it is not
@@ -47,7 +47,7 @@ svn_mutex__init(svn_mutex__t **mutex_p,
       *mutex_p = apr_mutex;
     }
 #endif
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -67,7 +67,7 @@ svn_mutex__lock(svn_mutex__t *mutex)
 }
 
 svn_error_t *
-svn_mutex__unlock(svn_mutex__t *mutex, 
+svn_mutex__unlock(svn_mutex__t *mutex,
                   svn_error_t *err)
 {
 #if APR_HAS_THREADS

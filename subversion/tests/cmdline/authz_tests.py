@@ -1383,7 +1383,7 @@ def upgrade_absent(sbox):
   # Relocate to allow finding the repository
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'svn://127.0.0.1/authz_tests-2',
-                                     sbox.repo_url, sbox.wc_dir)  
+                                     sbox.repo_url, sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
   })

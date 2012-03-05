@@ -53,6 +53,7 @@
 # property     Eigenschaft
 # PROPNAME     PROPNAME
 # PROPVAL      PROPWERT
+# reintegrate  wiedereingliedern
 # relocate     umplatzieren
 # REPOS        PA
 # REPOS_PATH   ARCHIV_PFAD
@@ -482,9 +483,8 @@ msgid "The specified path has an unexpected status"
 msgstr "Der angegebene Pfad hat einen unerwarteten Status"
 
 #: ../include/svn_error_codes.h:508
-#, fuzzy
 msgid "The working copy needs to be upgraded"
-msgstr "Die Arbeitskopie fehlt"
+msgstr "Die Arbeitskopie muss in ein neueres Format gebracht werden"
 
 #: ../include/svn_error_codes.h:513
 msgid "Previous operation was interrupted; run 'svn cleanup'"
@@ -775,9 +775,8 @@ msgid "Repository root URL does not match expected root URL"
 msgstr "Die URL der Projektarchivwurzel entspricht nicht der erwarteten Wurzel-URL"
 
 #: ../include/svn_error_codes.h:854
-#, fuzzy
 msgid "Session URL does not match expected session URL"
-msgstr "Die URL der Projektarchivwurzel entspricht nicht der erwarteten Wurzel-URL"
+msgstr "Die Sitzungs-URL entspricht nicht der erwarteten Sitzungs-URL"
 
 #: ../include/svn_error_codes.h:860
 msgid "RA layer failed to init socket layer"
@@ -1699,13 +1698,13 @@ msgid "'%s' already exists"
 msgstr "»%s« existiert bereits"
 
 #: ../libsvn_client/export.c:866 ../libsvn_wc/update_editor.c:4161
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Prüfsummenfehler, Datei »%s«:\n"
+"Prüfsummenfehler für Datei »%s«:\n"
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
@@ -1912,32 +1911,30 @@ msgstr "Die Zusammenführung aus fremdem Projektarchiv ist nicht kompatibel mit 
 
 #: ../libsvn_client/merge.c:8522 ../libsvn_client/merge.c:9021
 #: ../libsvn_client/merge.c:10523
-#, fuzzy, c-format
+#, c-format
 msgid "Merge target '%s' does not exist in the working copy"
-msgstr "Pfad »%s« ist nicht in der Arbeitskopie enthalten"
+msgstr "Zusammenführungsziel »%s« ist nicht in der Arbeitskopie enthalten"
 
 #: ../libsvn_client/merge.c:8896
-#, fuzzy
 msgid "Cannot merge into a working copy with a switched subtree"
-msgstr "Kann nicht zurück in eine Arbeitskopie mit umgestelltem Unterbaum integrieren"
+msgstr "Kann nicht in eine Arbeitskopie mit umgestelltem Unterbaum zusammenführen"
 
 #: ../libsvn_client/merge.c:8901
-#, fuzzy
 msgid "Cannot merge into a working copy that has local modifications"
-msgstr "Kann nicht zurück in eine Arbeitskopie integrieren, die lokale Änderungen hat"
+msgstr "Kann nicht in eine Arbeitskopie mit lokalen Änderungen zusammenführen"
 
 #: ../libsvn_client/merge.c:8918
 msgid "Cannot determine revision of working copy"
 msgstr "Die Revision der Arbeitskopie kann nicht bestimmt werden"
 
 #: ../libsvn_client/merge.c:8924
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot merge into mixed-revision working copy [%lu:%lu]; try updating first"
-msgstr "Kann nicht zurück in eine Arbeitskopie mit verschiedenen Revisionen integrieren, versuchen Sie erst zu aktualisieren"
+msgstr "Kann nicht in eine Arbeitskopie mit verschiedenen Revisionen zusammenführen [%lu:%lu], versuchen Sie erst zu aktualisieren"
 
 #: ../libsvn_client/merge.c:8987 ../svn/merge-cmd.c:348
 msgid "Merge sources must both be either paths or URLs"
-msgstr ""
+msgstr "Zusammenführungsquellen müssen beide Pfade oder URLs sein"
 
 #: ../libsvn_client/merge.c:9059 ../libsvn_ra/ra_loader.c:539
 #, c-format
@@ -1955,9 +1952,9 @@ msgid "'%s' must be from the same repository as '%s'"
 msgstr "»%s« muss aus dem selben Projektarchiv wie »%s« stammen"
 
 #: ../libsvn_client/merge.c:10290
-#, fuzzy, c-format
+#, c-format
 msgid "Neither the reintegrate source nor target can be the root of the repository"
-msgstr "»%s« ist nicht die Basis des Projektarchivs"
+msgstr "Weder die Quelle noch das Ziel der Wiedereingliederung darf Wurzel des Projektarchivs sein"
 
 #: ../libsvn_client/merge.c:10376
 #, c-format
@@ -2186,13 +2183,12 @@ msgid "Svndiff has invalid header"
 msgstr "Svndiff-Daten enthalten ungültigen Kopf"
 
 #: ../libsvn_delta/svndiff.c:744 ../libsvn_delta/svndiff.c:908
-#, fuzzy
 msgid "Svndiff contains a too-large window"
-msgstr "Svndiff-Daten enthalten defektes Fenster"
+msgstr "Svndiff-Daten enthalten ein zu großes Fenster"
 
 #: ../libsvn_delta/svndiff.c:751 ../libsvn_delta/svndiff.c:915
 msgid "Svndiff contains corrupt window header"
-msgstr "Svndiff-Daten enthalten defektes Fenster"
+msgstr "Svndiff-Daten enthalten defekte Fenster-Kopfdaten"
 
 #: ../libsvn_delta/svndiff.c:760
 msgid "Svndiff has backwards-sliding source views"
@@ -2209,9 +2205,8 @@ msgid "The file '%s' changed unexpectedly during diff"
 msgstr "Die Datei »%s« veränderte sich unerwartet während des Vergleichs"
 
 #: ../libsvn_diff/diff_file.c:630
-#, fuzzy
 msgid "Error in options to internal diff"
-msgstr "Fehler beim Normalisieren des bearbeiteten Inhalts ins interne Format"
+msgstr "Fehler in Optionen für internes Vergleichsprogramm"
 
 #: ../libsvn_diff/diff_file.c:656
 #, c-format
@@ -2313,9 +2308,8 @@ msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "Ungültige Reihenfolge bei Änderung: Nicht-hinzufügende Änderung auf gelöschtem Pfad"
 
 #: ../libsvn_fs_base/bdb/changes-table.c:178 ../libsvn_fs_fs/fs_fs.c:4042
-#, fuzzy
 msgid "Invalid change ordering: add change on preexisting path"
-msgstr "Ungültige Reihenfolge bei Änderung: Nicht-hinzufügende Änderung auf gelöschtem Pfad"
+msgstr "Ungültige Reihenfolge bei Änderung: Hinzufügende Änderung auf schon vorhandenem Pfad"
 
 #: ../libsvn_fs_base/bdb/changes-table.c:270
 #: ../libsvn_fs_base/bdb/changes-table.c:393
@@ -2353,16 +2347,13 @@ msgstr "Repräsentationsschlüssel für Prüfsumme »%s« existiert im Dateisyst
 msgid "storing checksum-reps record"
 msgstr "Speichere »checksum-reps«-Datensatz"
 
-# CHECKME: missing comma in msgstr? Two meanings are possible!?
-# "Allokiere neuen Darstellungswiederverwendungsschlüssel (hole »next-key«)"
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:186
 msgid "allocating new representation reuse ID (getting 'next-key')"
-msgstr "Allokiere neue Darstellung, verwende ID weiter (hole »next-key«)"
+msgstr "Allokiere neuen Wiederverwendungsschlüssel für Darstellung (hole »next-key«)"
 
 #: ../libsvn_fs_base/bdb/checksum-reps-table.c:207
-#, fuzzy
 msgid "bumping next representation reuse ID"
-msgstr "Erzeuge nächsten Darstellungsschlüssel"
+msgstr "Erzeuge nächsten Wiederverwendungsschlüssel für Darstellung"
 
 #: ../libsvn_fs_base/bdb/copies-table.c:92
 msgid "storing copy record"
@@ -2484,9 +2475,8 @@ msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr "DB beschädigt: Erste Revision ist nicht »0« in Dateisystem »%s«"
 
 #: ../libsvn_fs_base/dag.c:293
-#, fuzzy
 msgid "Attempted to get entries of a non-directory node"
-msgstr "Versuchte, Eintrag in einem *nicht* Verzeichnisknoten zu setzen"
+msgstr "Versuchte, Einträge eines *nicht* Verzeichnisknotens zu holen"
 
 #: ../libsvn_fs_base/dag.c:460 ../libsvn_fs_fs/dag.c:380
 #, c-format
@@ -2578,9 +2568,9 @@ msgid "Attempted to set textual contents of an immutable node"
 msgstr "Versuchte, den Textinhalt eines nicht-veränderlichen Knotens zu setzen"
 
 #: ../libsvn_fs_base/dag.c:1280 ../libsvn_fs_base/reps-strings.c:829
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch on representation '%s'"
-msgstr "Eine solche Darstellung »%s« existiert nicht"
+msgstr "Prüfsummenfehler in Darstellung »%s«"
 
 #: ../libsvn_fs_base/dag.c:1281 ../libsvn_fs_base/reps-strings.c:830
 #: ../libsvn_fs_base/reps-strings.c:926 ../libsvn_fs_base/reps-strings.c:941
@@ -2772,9 +2762,9 @@ msgid "Cannot verify lock on path '%s'; no username available"
 msgstr "Kann Sperre für Pfad »%s« nicht prüfen; keine Benutzername verfügbar"
 
 #: ../libsvn_fs_base/lock.c:463 ../libsvn_fs_fs/lock.c:658
-#, fuzzy, c-format
+#, c-format
 msgid "User '%s' does not own lock on path '%s' (currently locked by '%s')"
-msgstr "Benutzer %s besitzt die Sperre für Pfad »%s« nicht (derzeit gesperrt durch %s)"
+msgstr "Benutzer »%s« besitzt die Sperre für Pfad »%s« nicht (derzeit gesperrt durch »%s«)"
 
 #: ../libsvn_fs_base/lock.c:470 ../libsvn_fs_fs/lock.c:665
 #, c-format
@@ -2870,9 +2860,9 @@ msgid "Transaction is dead: '%s'"
 msgstr "Transaktion ist tot: »%s«"
 
 #: ../libsvn_fs_base/revs-txns.c:274 ../libsvn_fs_fs/fs_fs.c:7358
-#, fuzzy, c-format
+#, c-format
 msgid "revprop '%s' has unexpected value in filesystem"
-msgstr "»%s« ist im Dateisystem »%s« keine Datei"
+msgstr "Revisionseigenschaft »%s« hat einen unerwarteten Wert im Dateisystem"
 
 #: ../libsvn_fs_base/revs-txns.c:1231
 msgid "Transaction aborted, but cleanup failed"
@@ -2941,9 +2931,9 @@ msgid "Copy from mutable tree not currently supported"
 msgstr "Kopieren eines veränderlichen Baumes wird derzeit nicht unterstützt"
 
 #: ../libsvn_fs_base/tree.c:3881 ../libsvn_fs_fs/tree.c:2462
-#, fuzzy, c-format
+#, c-format
 msgid "Base checksum mismatch on '%s'"
-msgstr "Ein Prüfsummenfehler ist aufgetreten"
+msgstr "Basis-Prüfsummenfehler bei »%s«"
 
 #: ../libsvn_fs_base/tree.c:4130 ../libsvn_fs_fs/tree.c:2694
 msgid "Cannot compare file contents between two different filesystems"
@@ -2987,9 +2977,9 @@ msgstr "Kann Zusammenführungsinformationszähler für Datei-Knotenrevision %%s 
 
 #: ../libsvn_fs_fs/dag.c:1026 ../libsvn_ra_neon/fetch.c:749
 #: ../libsvn_ra_svn/client.c:1072
-#, fuzzy, c-format
+#, c-format
 msgid "Checksum mismatch for '%s'"
-msgstr "Ein Prüfsummenfehler ist aufgetreten"
+msgstr "Prüfsummenfehler für »%s«"
 
 #: ../libsvn_fs_fs/dag.c:1131
 msgid "Empty noderev in cache"
@@ -3119,9 +3109,9 @@ msgid "Can't get exclusive lock on file '%s'"
 msgstr "Kann keinen exklusiven Zugriff auf Datei »%s« erlangen"
 
 #: ../libsvn_fs_fs/fs_fs.c:928
-#, fuzzy, c-format
+#, c-format
 msgid "Format file '%s' contains unexpected non-digit '%c' within '%s'"
-msgstr "Die Formatdatei »%s« enthält eine unerwartete Nicht-Ziffer"
+msgstr "Die Formatdatei »%s« enthält eine unerwartete Nicht-Ziffer »%c« innerhalb »%s«"
 
 #: ../libsvn_fs_fs/fs_fs.c:977
 #, c-format
@@ -3306,9 +3296,8 @@ msgstr "Kann Textinhalt im Verzeichnis nicht erzeugen"
 
 #: ../libsvn_fs_fs/fs_fs.c:5575 ../libsvn_fs_fs/fs_fs.c:5580
 #: ../libsvn_fs_fs/fs_fs.c:5587
-#, fuzzy
 msgid "Corrupt 'current' file"
-msgstr "Aktuelle Datei beschädigt"
+msgstr "Beschädigte Datei »current«"
 
 #: ../libsvn_fs_fs/fs_fs.c:6058
 msgid "Transaction out of date"
@@ -3460,20 +3449,20 @@ msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 msgstr "UUID des Projektarchivs »%s« entspricht nicht der erwarteten UUID »%s«"
 
 #: ../libsvn_ra/ra_loader.c:568
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' isn't a child of session URL '%s'"
-msgstr "Die URL »%s« ist kein Kind der Projektarchivwurzel-URL »%s«"
+msgstr "»%s« ist kein Kind der Sitzungs-URL »%s«"
 
 #: ../libsvn_ra/ra_loader.c:591 ../libsvn_ra_neon/session.c:1155
 #: ../libsvn_ra_svn/client.c:2271
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' isn't a child of repository root URL '%s'"
-msgstr "Die URL »%s« ist kein Kind der Projektarchivwurzel-URL »%s«"
+msgstr "»%s« ist kein Kind der Projektarchivwurzel-URL »%s«"
 
 #: ../libsvn_ra/ra_loader.c:638
-#, fuzzy, c-format
+#, c-format
 msgid "Specifying 'old_value_p' is not allowed when the '%s' capability is not advertised, and could indicate a bug in your client"
-msgstr "Das Speichern der speziellen Eigenschaft »%s« wird vom Projektarchiv verhindert und könnte auf einen Bug in Ihrem Client hindeuten"
+msgstr "Die Angabe von »old_value_p« is nicht erlaubt, wenn die Fähigkeit »%s« nicht bekanntgemacht wurde, und könnte auf einen Bug in Ihrem Client hindeuten"
 
 #: ../libsvn_ra/ra_loader.c:1238
 msgid "Obliterate is not supported by this Repository Access method"
@@ -3805,9 +3794,9 @@ msgid "Failed to find label '%s' for URL '%s'"
 msgstr "Marke »%s« für URL »%s« nicht gefunden"
 
 #: ../libsvn_ra_neon/props.c:636
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' was not present on the resource '%s'"
-msgstr "»%s« existierte nicht für die Ressource"
+msgstr "»%s« existierte nicht für die Ressource »%s«"
 
 #: ../libsvn_ra_neon/props.c:703
 #, c-format
@@ -4026,12 +4015,15 @@ msgid "Incorrect response-digest in Authentication-Info header."
 msgstr "Falsche Antwortnummer im Header der Authentifizierungs-Informationen."
 
 #: ../libsvn_ra_serf/auth_kerb.c:160
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Initialization of the GSSAPI context failed.\n"
 " %s\n"
 " %s\n"
-msgstr "Initialisierung der SSPI-Bibliothek schlug fehl"
+msgstr ""
+"Initialisierung des GSSAPI-Kontextes schlug fehl.\n"
+" %s\n"
+" %s\n"
 
 #: ../libsvn_ra_serf/commit.c:307
 msgid "No Location header received"
@@ -4168,9 +4160,9 @@ msgid "Error retrieving REPORT (%d)"
 msgstr "Fehler beim Holen von REPORT (%d)"
 
 #: ../libsvn_ra_serf/util.c:699 ../libsvn_ra_serf/util.c:702
-#, fuzzy, c-format
+#, c-format
 msgid "Error running context"
-msgstr "Fehler beim Ausführen des Editors."
+msgstr "Fehler beim Ausführen des Kontextes"
 
 #: ../libsvn_ra_serf/util.c:1398
 msgid ""
@@ -4397,9 +4389,8 @@ msgid "Expected 'revprops', found '%s'"
 msgstr "Erwartete »revprops«, fand »%s«"
 
 #: ../libsvn_ra_svn/client.c:2424
-#, fuzzy
 msgid "Error while replaying commit"
-msgstr "Beim Vorbereiten von »%s« für die Übertragung"
+msgstr "Fehler beim Wiederholen der Übertragung"
 
 #: ../libsvn_ra_svn/client.c:2488
 msgid "'get-deleted-rev' not implemented"
@@ -4527,15 +4518,13 @@ msgid "Source url '%s' is from different repository"
 msgstr "Quell URL »%s« stammt aus einem fremden Projektarchiv"
 
 #: ../libsvn_repos/commit.c:606
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
 "(%s)"
 msgstr ""
-"Prüfsummenfehler für Volltextergebnis:\n"
-"(%s):\n"
-"   Erwartet:    %s\n"
-"   Tatsächlich: %s\n"
+"Prüfsummenfehler für Volltextergebnis\n"
+"(%s)"
 
 #: ../libsvn_repos/delta.c:191
 msgid "Unable to open root of edit"
@@ -5695,9 +5684,9 @@ msgid "Invalid character '%c' found in revision list"
 msgstr "Ungültiges Zeichen »%c« in Revisionsliste gefunden"
 
 #: ../libsvn_subr/mergeinfo.c:512
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision number '0' found in range list"
-msgstr "Ungültige Revisionsnummer beim Einlesen von »%s« gefunden"
+msgstr "Ungültige Revisionsnummer '0' in Revisionsbereichsliste gefunden"
 
 #: ../libsvn_subr/mergeinfo.c:523
 #, c-format
@@ -6069,9 +6058,9 @@ msgid "File '%s' has inconsistent newlines"
 msgstr "Datei »%s« hat inkonsistente Zeilenenden"
 
 #: ../libsvn_subr/svn_string.c:706 ../libsvn_subr/svn_string.c:750
-#, fuzzy, c-format
+#, c-format
 msgid "Could not convert '%s' into a number"
-msgstr "Konnte keine Verbindung zum Server herstellen"
+msgstr "Konnte »%s« nicht in Zahl umwandeln"
 
 #: ../libsvn_subr/svn_string.c:712
 #, c-format
@@ -6884,13 +6873,13 @@ msgid "Attempt to add tree conflict that already exists at '%s'"
 msgstr "Es wurde versucht, einen Baumkonflikt hinzuzufügen, den es bereits gibt"
 
 #: ../libsvn_wc/update_editor.c:1051
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch while updating '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Prüfsummenfehler, Datei »%s«:\n"
+"Prüfsummenfehler beim Aktualisieren von »%s«:\n"
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
@@ -10163,9 +10152,9 @@ msgid "Upgraded '%s'.\n"
 msgstr "Überspringe »%s«\n"
 
 #: ../svn/notify.c:885
-#, fuzzy, c-format
+#, c-format
 msgid "Redirecting to URL '%s'\n"
-msgstr "Umleitung zur URL »%s«"
+msgstr "Umleitung zur URL »%s«\n"
 
 #: ../svn/obliterate-cmd.c:60
 #, c-format
@@ -10177,9 +10166,8 @@ msgid "Wrong number of arguments"
 msgstr "Falsche Anzahl von Argumenten"
 
 #: ../svn/obliterate-cmd.c:116
-#, fuzzy
 msgid "Target must specify the revision as a number"
-msgstr "Revisionsnummer PAR angegeben"
+msgstr "Ziel muss die Revision als Zahl angegeben"
 
 #: ../svn/obliterate-cmd.c:119
 msgid "Target must specify a URL"
@@ -10458,9 +10446,8 @@ msgstr ""
 "(A)bbrechen, Weiterma(c)hen, (E)ditieren:\n"
 
 #: ../svn/util.c:903
-#, fuzzy
 msgid "Use --force to override this restriction (local modifications may be lost)"
-msgstr "Benutzen Sie »--force«, um diese Einschränkung aufzuheben"
+msgstr "Benutzen Sie »--force«, um diese Einschränkung aufzuheben (lokale Änderungen könnten verloren gehen)"
 
 # CHECKME! Here used beside "dir" and "file".
 #: ../svn/util.c:1050 ../svn/util.c:1083
@@ -10935,17 +10922,15 @@ msgstr "Bilde Deltas für Revision %ld ..."
 msgid "done.\n"
 msgstr "erledigt.\n"
 
-# shard ???? Teil(stück)?
 #: ../svnadmin/main.c:687
-#, fuzzy, c-format
+#, c-format
 msgid "Packing revisions in shard %s..."
-msgstr "Packe %s ..."
+msgstr "Packe Revisionen in Fragment %s ..."
 
-# shard ???? Teil(stück)?
 #: ../svnadmin/main.c:703
-#, fuzzy, c-format
+#, c-format
 msgid "Packing revprops in shard %s..."
-msgstr "Packe %s ..."
+msgstr "Packe Revisionseigenschaften in Fragment %s ..."
 
 #: ../svnadmin/main.c:792
 #, c-format
@@ -11267,24 +11252,24 @@ msgid "Including prefixes:\n"
 msgstr "Präfixe einschließen:\n"
 
 #: ../svndumpfilter/main.c:1116
-#, fuzzy, c-format
+#, c-format
 msgid "Excluding (and dropping empty revisions for) prefix patterns:\n"
-msgstr "Präfixe ausschließen (und leere Revisionen verwerfen):\n"
+msgstr "Präfixmuster ausschließen (und leere Revisionen verwerfen):\n"
 
 #: ../svndumpfilter/main.c:1118
-#, fuzzy, c-format
+#, c-format
 msgid "Excluding prefix patterns:\n"
-msgstr "Präfixe ausschließen:\n"
+msgstr "Präfixmuster ausschließen:\n"
 
 #: ../svndumpfilter/main.c:1120
-#, fuzzy, c-format
+#, c-format
 msgid "Including (and dropping empty revisions for) prefix patterns:\n"
-msgstr "Präfixe einschließen (und leere Revisionen verwerfen):\n"
+msgstr "Präfixmuster einschließen (und leere Revisionen verwerfen):\n"
 
 #: ../svndumpfilter/main.c:1122
-#, fuzzy, c-format
+#, c-format
 msgid "Including prefix patterns:\n"
-msgstr "Präfixe einschließen:\n"
+msgstr "Präfixmuster einschließen:\n"
 
 #: ../svndumpfilter/main.c:1150
 #, c-format
@@ -11482,17 +11467,16 @@ msgstr ""
 "bzw. deren Dateien geändert wurden.\n"
 
 #: ../svnlook/main.c:221
-#, fuzzy
 msgid ""
 "usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
 "it is represented in the repository.\n"
 msgstr ""
-"Aufruf: svnadmin lslocks ARCHIV_PFAD [PFAD-IN-ARCHIV]\n"
+"Aufruf: svnlook filesize ARCHIV_PFAD PFAD_IN_ARCHIV\n"
 "\n"
-"Gibt Beschreibungen aller Sperren auf oder unter PFAD-IN-ARCHIV aus (was,\n"
-"falls nicht angegeben, die Wurzel des Projektarchivs ist).\n"
+"Gibt die Größe (in Bytes) der in PFAD_IN_ARCHIV befindlichen Datei\n"
+"aus, wie sie im Projektarchiv vorliegt.\n"
 
 #: ../svnlook/main.c:227
 msgid ""
@@ -11799,11 +11783,9 @@ msgstr ""
 "»%s« gehalten wird\n"
 
 #: ../svnrdump/load_editor.c:167 ../svnsync/main.c:430
-#, fuzzy, c-format
+#, c-format
 msgid "Couldn't get lock on destination repos after %d attempts"
-msgstr ""
-"Konnte Sperre für Zielprojektarchiv nicht erhalten, die zurzeit von\n"
-"»%s« gehalten wird\n"
+msgstr "Konnte Sperre für Zielprojektarchiv nach %d Versuchen nicht erhalten"
 
 #: ../svnrdump/load_editor.c:684
 msgid "\"svnrdump load\"'s lock was stolen; can't remove it"
@@ -11825,13 +11807,12 @@ msgid ""
 msgstr ""
 
 #: ../svnrdump/svnrdump.c:69
-#, fuzzy
 msgid ""
 "usage: svnrdump help [SUBCOMMAND...]\n"
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"Aufruf: svnadmin help [UNTERBEFEHL...]\n"
+"Aufruf: svnrdump help [UNTERBEFEHL...]\n"
 "\n"
 "Beschreibt die Anwendung dieses Programms und seiner Unterbefehle.\n"
 
@@ -11840,30 +11821,27 @@ msgid "display this help"
 msgstr "Hilfe anzeigen"
 
 #: ../svnrdump/svnrdump.c:91 ../svnsync/main.c:196
-#, fuzzy
 msgid ""
 "set user configuration option in the format:\n"
 "                                 FILE:SECTION:OPTION=[VALUE]\n"
 "                             For example:\n"
 "                                 servers:global:http-library=serf"
 msgstr ""
-"Setze Benutzerkonfigurationsoption im Format:\n"
+"Setzt Benutzerkonfigurationsoption im Format:\n"
 "                                 DATEI:ABSCHNITT:OPTION=[WERT]\n"
 "                             Zum Beispiel:\n"
-"                                 servers:global:http-library=serf\n"
+"                                 servers:global:http-library=serf"
 
 #: ../svnrdump/svnrdump.c:405
-#, fuzzy
 msgid ""
 "general usage: svnrdump SUBCOMMAND URL [-r LOWER[:UPPER]]\n"
 "Type 'svnrdump help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"Aufruf: svndumpfilter UNTERBEFEHL [Optionen & Parameter ...]\n"
-"Geben Sie »svndumpfilter help <Unterbefehl>« ein, um Hilfe zu einem\n"
+"Aufruf: svnrdump UNTERBEFEHL URL [-r [ VON[:BIS]]\n"
+"Geben Sie »svnrdump help <Unterbefehl>« ein, um Hilfe zu einem\n"
 "          Unterbefehl zu erhalten.\n"
-"Geben Sie »svndumpfilter --version« ein, um die Programmversion zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 

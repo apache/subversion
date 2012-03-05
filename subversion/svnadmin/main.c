@@ -368,7 +368,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
-  
+
   {"lock", subcommand_lock, {0}, N_
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
     "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
@@ -1038,7 +1038,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       lower = upper;
     }
-  
+
   /* Ensure correct range ordering. */
   if (lower > upper)
     {
@@ -1494,7 +1494,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     lock_token = APR_ARRAY_IDX(args, 3, const char *);
 
   SVN_ERR(target_arg_to_dirent(&comment_file_name, comment_file_name, pool));
-  
+
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
 
@@ -1507,10 +1507,10 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, comment_file_name, pool));
 
   SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, pool));
-  
+
   if (opt_state->bypass_hooks)
     SVN_ERR(svn_fs_lock(&lock, fs, lock_path_utf8,
-                        lock_token,          
+                        lock_token,
                         file_contents->data, /* comment */
                         0,                   /* is_dav_comment */
                         0,                   /* no expiration time. */
@@ -1518,7 +1518,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         FALSE, pool));
   else
     SVN_ERR(svn_repos_fs_lock(&lock, repos, lock_path_utf8,
-                              lock_token,          
+                              lock_token,
                               file_contents->data, /* comment */
                               0,                   /* is_dav_comment */
                               0,                   /* no expiration time. */

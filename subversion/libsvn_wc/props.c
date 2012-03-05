@@ -2546,7 +2546,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
            || strcmp(propname, SVN_PROP_EXTERNALS) == 0)
     {
       /* Make sure that the last line ends in a newline */
-      if (propval->data[propval->len - 1] != '\n')
+      if (propval->len == 0
+          || propval->data[propval->len - 1] != '\n')
         {
           new_value = svn_stringbuf_create_from_string(propval, pool);
           svn_stringbuf_appendbyte(new_value, '\n');

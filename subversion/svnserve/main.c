@@ -147,6 +147,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_LOG_FILE        264
 #define SVNSERVE_OPT_CACHE_TXDELTAS  265
 #define SVNSERVE_OPT_CACHE_FULLTEXTS 266
+#define SVNSERVE_OPT_SINGLE_CONN     267
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -231,6 +232,10 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("run in foreground (useful for debugging)\n"
         "                             "
         "[mode: daemon]")},
+    {"single-thread",    SVNSERVE_OPT_SINGLE_CONN, 0,
+     N_("handle one connection at a time in the parent process\n"
+        "                             "
+        "(useful for debugging)")},
     {"log-file",         SVNSERVE_OPT_LOG_FILE, 1,
      N_("svnserve log file")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
@@ -428,10 +433,13 @@ int main(int argc, const char *argv[])
   const char *host = NULL;
   int family = APR_INET;
   apr_int32_t sockaddr_info_flags = 0;
+#if APR_HAVE_IPV6
   svn_boolean_t prefer_v6 = FALSE;
+#endif
   svn_boolean_t quiet = FALSE;
   svn_boolean_t is_version = FALSE;
   int mode_opt_count = 0;
+  int handling_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
   const char *log_filename = NULL;
@@ -486,7 +494,10 @@ int main(int argc, const char *argv[])
       switch (opt)
         {
         case '6':
+#if APR_HAVE_IPV6
           prefer_v6 = TRUE;
+#endif
+          /* ### Maybe error here if we don't have IPV6 support? */
           break;
 
         case 'h':
@@ -511,6 +522,11 @@ int main(int argc, const char *argv[])
 
         case SVNSERVE_OPT_FOREGROUND:
           foreground = TRUE;
+          break;
+
+        case SVNSERVE_OPT_SINGLE_CONN:
+          handling_mode = connection_mode_single;
+          handling_opt_count++;
           break;
 
         case 'i':
@@ -585,6 +601,7 @@ int main(int argc, const char *argv[])
 
         case 'T':
           handling_mode = connection_mode_thread;
+          handling_opt_count++;
           break;
 
         case 'c':
@@ -662,6 +679,14 @@ int main(int argc, const char *argv[])
                       _("You must specify exactly one of -d, -i, -t or -X.\n"),
 #endif
                        stderr, pool));
+      usage(argv[0], pool);
+    }
+
+  if (handling_opt_count > 1)
+    {
+      svn_error_clear(svn_cmdline_fputs(
+                      _("You may only specify one of -T or --single-thread\n"),
+                      stderr, pool));
       usage(argv[0], pool);
     }
 

@@ -1247,7 +1247,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     complete old and new URLs if you wish.)  Use 'svn info' to determine\n"
      "     the current working copy URL.\n"
      "\n"
-     "  2. TO-URL is the (complete) new repository URL to use for for PATH.\n"
+     "  2. TO-URL is the (complete) new repository URL to use for PATH.\n"
      "\n"
      "  Examples:\n"
      "    svn relocate http:// svn:// project1 project2\n"
@@ -2276,7 +2276,7 @@ main(int argc, const char *argv[])
 
   /* Disallow simultaneous use of both -m and -F, when they are
      both used to pass a commit message or lock comment.  ('propset'
-     takes the property value, not a commit message, from -F.) 
+     takes the property value, not a commit message, from -F.)
    */
   if (opt_state.filedata && opt_state.message
       && subcommand->cmd_func != svn_cl__propset)

@@ -38,6 +38,7 @@
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_xml.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 
@@ -2464,5 +2465,15 @@ svn_ra_serf__error_on_status(int status_code,
                                  _("'%s': no lock token available"), path);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
+                                    svn_delta_shim_callbacks_t *callbacks)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+
+  session->shim_callbacks = callbacks;
   return SVN_NO_ERROR;
 }

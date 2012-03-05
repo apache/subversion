@@ -130,10 +130,10 @@ generate_status_desc(enum svn_wc_status_kind status)
    RELATIVE_TO_PATH and TARGET_PATH must be based on the same parent path,
    i.e. they can either both be absolute or they can both be relative to the
    same parent directory. Both paths are expected to be canonical.
-   
+
    If above conditions are met, a relative path that leads to TARGET_ABSPATH
    from RELATIVE_TO_PATH is returned, but there is no error checking involved.
-   
+
    The returned path is allocated from RESULT_POOL, all other allocations are
    made in SCRATCH_POOL. */
 static const char *
@@ -148,7 +148,7 @@ make_relpath(const char *relative_to_path,
   /* An example:
    *  relative_to_path = /a/b/c
    *  target_path      = /a/x/y/z
-   *  result           = ../../x/y/z 
+   *  result           = ../../x/y/z
    *
    * Another example (Windows specific):
    *  relative_to_path = F:/wc

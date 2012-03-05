@@ -1856,7 +1856,7 @@ close_edit(void *edit_baton,
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
+svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         void **edit_baton,
                         svn_wc_context_t *wc_ctx,
                         const char *anchor_abspath,

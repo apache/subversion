@@ -377,7 +377,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
       {
         /* Append the next chunk to the string read so far.
          */
-        svn_stringbuf_ensure(str, str->len + LINE_CHUNK_SIZE);
+        svn_stringbuf_ensure(str, str->len + LINE_CHUNK_SIZE + 1);
         numbytes = LINE_CHUNK_SIZE;
         SVN_ERR(svn_stream_read(stream, str->data + str->len, &numbytes));
         str->len += numbytes;
@@ -1031,7 +1031,7 @@ read_handler_gz(void *baton, char *buffer, apr_size_t *len)
     }
 
   btn->in->next_out = (Bytef *) buffer;
-  btn->in->avail_out = *len;
+  btn->in->avail_out = (uInt) *len;
 
   while (btn->in->avail_out > 0)
     {
@@ -1090,12 +1090,12 @@ write_handler_gz(void *baton, const char *buffer, apr_size_t *len)
   write_buf = apr_palloc(subpool, buf_size);
 
   btn->out->next_in = (Bytef *) buffer;  /* Casting away const! */
-  btn->out->avail_in = *len;
+  btn->out->avail_in = (uInt) *len;
 
   while (btn->out->avail_in > 0)
     {
       btn->out->next_out = write_buf;
-      btn->out->avail_out = buf_size;
+      btn->out->avail_out = (uInt) buf_size;
 
       zerr = deflate(btn->out, Z_NO_FLUSH);
       SVN_ERR(svn_error__wrap_zlib(zerr, "deflate", btn->out->msg));

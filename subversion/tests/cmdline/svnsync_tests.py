@@ -223,7 +223,7 @@ def verify_mirror(dest_sbox, src_sbox):
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
   src_dump = svntest.actions.run_and_verify_dump(src_sbox.repo_dir)
 
-  svntest.verify.compare_and_display_lines(
+  svntest.verify.compare_dump_files(
     "Dump files", "DUMP", src_dump, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
@@ -251,7 +251,7 @@ or another dump file."""
   # file.
   if exp_dump_file_name:
     build_repos(sbox)
-    svntest.actions.run_and_verify_load(sbox.repo_dir, 
+    svntest.actions.run_and_verify_load(sbox.repo_dir,
                                         open(os.path.join(svnsync_tests_dir,
                                                           exp_dump_file_name),
                                              'rb').readlines())
@@ -399,25 +399,32 @@ def basic_authz(sbox):
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
   svntest.main.file_write(sbox.authz_file,
-                          "[svnsync-basic-authz:/]\n"
+                          "[%s:/]\n"
                           "* = r\n"
                           "\n"
-                          "[svnsync-basic-authz:/A/B]\n"
+                          "[%s:/A/B]\n"
                           "* = \n"
                           "\n"
-                          "[svnsync-basic-authz-1:/]\n"
-                          "* = rw\n")
+                          "[%s:/]\n"
+                          "* = rw\n" % args)
 
   run_sync(dest_sbox.repo_url)
 
   lambda_url = dest_sbox.repo_url + '/A/B/lambda'
+  iota_url = dest_sbox.repo_url + '/iota'
 
   # this file should have been blocked by authz
   svntest.actions.run_and_verify_svn(None,
                                      [], svntest.verify.AnyOutput,
                                      'cat',
                                      lambda_url)
+  # this file should have been synced
+  svntest.actions.run_and_verify_svn(None,
+                                     svntest.verify.AnyOutput, [],
+                                     'cat',
+                                     iota_url)
 
 #----------------------------------------------------------------------
 @Skip(svntest.main.is_ra_type_file)
@@ -470,29 +477,17 @@ def copy_from_unreadable_dir(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  fp = open(sbox.authz_file, 'w')
-
-  # For mod_dav_svn's parent path setup we need per-repos permissions in
-  # the authz file...
-  if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-from-unreadable-dir:/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[svnsync-copy-from-unreadable-dir:/A/B]\n" +
-             "* = \n" +
-             "\n" +
-             "[svnsync-copy-from-unreadable-dir-1:/]\n" +
-             "* = rw")
-
-  # Otherwise we can just go with the permissions needed for the source
-  # repository.
-  else:
-    fp.write("[/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[/A/B]\n" +
-             "* =\n")
-  fp.close()
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
+  open(sbox.authz_file, 'w').write(
+             "[%s:/]\n"
+             "* = r\n"
+             "\n"
+             "[%s:/A/B]\n"
+             "* = \n"
+             "\n"
+             "[%s:/]\n"
+             "* = rw"
+             % args)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -596,29 +591,17 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  fp = open(sbox.authz_file, 'w')
-
-  # For mod_dav_svn's parent path setup we need per-repos permissions in
-  # the authz file...
-  if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-with-mod-from-unreadable-dir:/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir:/A/B]\n" +
-             "* = \n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir-1:/]\n" +
-             "* = rw")
-
-  # Otherwise we can just go with the permissions needed for the source
-  # repository.
-  else:
-    fp.write("[/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[/A/B]\n" +
-             "* =\n")
-  fp.close()
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
+  open(sbox.authz_file, 'w').write(
+             "[%s:/]\n"
+             "* = r\n"
+             "\n"
+             "[%s:/A/B]\n"
+             "* = \n"
+             "\n"
+             "[%s:/]\n"
+             "* = rw"
+             % args)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -700,29 +683,17 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  fp = open(sbox.authz_file, 'w')
-
-  # For mod_dav_svn's parent path setup we need per-repos permissions in
-  # the authz file...
-  if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-with-mod-from-unreadable-dir-and-copy:/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir-and-copy:/A/B]\n" +
-             "* = \n" +
-             "\n" +
-             "[svnsync-copy-with-mod-from-unreadable-dir-and-copy-1:/]\n" +
-             "* = rw")
-
-  # Otherwise we can just go with the permissions needed for the source
-  # repository.
-  else:
-    fp.write("[/]\n" +
-             "* = r\n" +
-             "\n" +
-             "[/A/B]\n" +
-             "* =\n")
-  fp.close()
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
+  open(sbox.authz_file, 'w').write(
+             "[%s:/]\n"
+             "* = r\n"
+             "\n"
+             "[%s:/A/B]\n"
+             "* = \n"
+             "\n"
+             "[%s:/]\n"
+             "* = rw"
+             % args)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -1028,6 +999,46 @@ def fd_leak_sync_from_serf_to_local(sbox):
   import resource
   resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
   run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
+
+@Issue(4121)
+@Skip(svntest.main.is_ra_type_file)
+def copy_delete_unreadable_child(sbox):
+  "copy, then rm at-src-unreadable child"
+
+  # Prepare the source: Greek tree (r1), cp+rm (r2).
+  sbox.build("copy-delete-unreadable-child")
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'r2',
+                                         '-U', sbox.repo_url,
+                                         'cp', 'HEAD', '/', 'branch',
+                                         'rm', 'branch/A')
+
+  # Create the destination.
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  # Lock down the source.
+  authz = sbox.authz_name()
+  write_restrictive_svnserve_conf(sbox.repo_dir, anon_access='read')
+  svntest.main.file_write(sbox.authz_file,
+      "[%s:/]\n"
+      "* = r\n"
+      "[%s:/A]\n"
+      "* =  \n"
+      % (authz, authz))
+
+  dest_url = svntest.main.file_scheme_prefix \
+             + svntest.main.pathname2url(os.path.abspath(dest_sbox.repo_dir))
+  run_init(dest_url, sbox.repo_url)
+  run_sync(dest_url)
+
+  # sanity check
+  svntest.actions.run_and_verify_svn(None,
+                                     ["iota\n"], [],
+                                     'ls', dest_url+'/branch@2')
+
+
 ########################################################################
 # Run the tests
 
@@ -1068,7 +1079,8 @@ test_list = [ None,
               specific_deny_authz,
               descend_into_replace,
               delete_revprops,
-              fd_leak_sync_from_serf_to_local,
+              fd_leak_sync_from_serf_to_local, # calls setrlimit
+              copy_delete_unreadable_child,
              ]
 serial_only = True
 

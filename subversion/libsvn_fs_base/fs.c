@@ -333,9 +333,10 @@ bdb_write_config(svn_fs_t *fs)
     "#\n"
     "# Make sure you read the documentation at:\n"
     "#\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/lock/max.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/lock_max.html\n"
     "#\n"
     "# before tweaking these values.\n"
+    "#\n"
     "set_lk_max_locks   2000\n"
     "set_lk_max_lockers 2000\n"
     "set_lk_max_objects 2000\n"
@@ -344,9 +345,9 @@ bdb_write_config(svn_fs_t *fs)
     "#\n"
     "# Make sure you read the documentation at:\n"
     "#\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_lg_bsize.html\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_lg_max.html\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/limits.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/api_reference/C/envset_lg_bsize.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/api_reference/C/envset_lg_max.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_limits.html\n"
     "#\n"
     "# Increase the size of the in-memory log buffer from the default\n"
     "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
@@ -354,24 +355,28 @@ bdb_write_config(svn_fs_t *fs)
     "# space required for hot backups.  The size of the log file must be\n"
     "# at least four times the size of the in-memory log buffer.\n"
     "#\n"
-    "# Note: Decreasing the in-memory buffer size below 256 Kbytes\n"
-    "# will hurt commit performance. For details, see this post from\n"
-    "# Daniel Berlin <dan@dberlin.org>:\n"
+    "# Note: Decreasing the in-memory buffer size below 256 Kbytes will hurt\n"
+    "# hurt commit performance. For details, see:\n"
     "#\n"
-    "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
+    "#   http://svn.haxx.se/dev/archive-2002-02/0141.shtml\n"
+    "#\n"
     "set_lg_bsize     262144\n"
     "set_lg_max      1048576\n"
     "#\n"
     "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
-    "# See http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
-    "# and http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
+    "# For more information, see:\n"
+    "#\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_config.html\n"
+    "#   http://svn.haxx.se/users/archive-2004-10/1000.shtml\n"
+    "#\n"
     "set_lg_regionmax 131072\n"
     "#\n"
     /* ### Configure this with "svnadmin create --bdb-cache-size" */
     "# The default cache size in BDB is only 256k. As explained in\n"
-    "# http://svn.haxx.se/dev/archive-2004-12/0369.shtml, this is too\n"
+    "# http://svn.haxx.se/dev/archive-2004-12/0368.shtml, this is too\n"
     "# small for most applications. Bump this number if \"db_stat -m\"\n"
     "# shows too many cache misses.\n"
+    "#\n"
     "set_cachesize    0 1048576 1\n";
 
   /* Run-time configurable options.
@@ -397,11 +402,12 @@ bdb_write_config(svn_fs_t *fs)
       "# Disable fsync of log files on transaction commit. Read the\n"
       "# documentation about DB_TXN_NOSYNC at:\n"
       "#\n"
-      "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
+      "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_config.html\n"
       "#\n"
-      "# [requires Berkeley DB 4.0]\n",
+      "# [requires Berkeley DB 4.0]\n"
+      "#\n",
       /* inactive */
-      "# set_flags DB_TXN_NOSYNC\n",
+      "#set_flags DB_TXN_NOSYNC\n",
       /* active */
       "set_flags DB_TXN_NOSYNC\n" },
     /* Controlled by "svnadmin create --bdb-log-keep" */
@@ -411,11 +417,12 @@ bdb_write_config(svn_fs_t *fs)
       "# Enable automatic removal of unused transaction log files.\n"
       "# Read the documentation about DB_LOG_AUTOREMOVE at:\n"
       "#\n"
-      "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
+      "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_config.html\n"
       "#\n"
-      "# [requires Berkeley DB 4.2]\n",
+      "# [requires Berkeley DB 4.2]\n"
+      "#\n",
       /* inactive */
-      "# set_flags DB_LOG_AUTOREMOVE\n",
+      "#set_flags DB_LOG_AUTOREMOVE\n",
       /* active */
       "set_flags DB_LOG_AUTOREMOVE\n" },
   };
@@ -883,6 +890,8 @@ static svn_error_t *
 base_verify(svn_fs_t *fs, const char *path,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
+            svn_revnum_t start,
+            svn_revnum_t end,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
