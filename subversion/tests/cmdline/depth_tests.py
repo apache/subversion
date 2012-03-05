@@ -2842,6 +2842,49 @@ def update_below_depth_empty(sbox):
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
                                         None, None)
 
+# Test for issue #4136.
+@XFail()
+@Issue(4136)
+def commit_then_immediates_update(sbox):
+  "deep commit followed by update --depth immediates"
+  sbox.build()
+
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+  mu_path = sbox.ospath('A/mu')
+
+  # Modify A/mu and commit the changes.
+  svntest.main.file_write(mu_path, "modified mu\n")
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'        : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Now, update --depth immediates in the root of the working copy.
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents="modified mu\n")
+  expected_status = svntest.wc.State(wc_dir, { '' : svntest.wc.StateItem() })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('',     wc_rev=2, status='  ')
+  expected_status.tweak('A',    wc_rev=2, status='  ')
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--depth=immediates", wc_dir)
+  
+
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2889,6 +2932,7 @@ test_list = [ None,
               update_depth_empty_root_of_infinite_children,
               sparse_update_with_dash_dash_parents,
               update_below_depth_empty,
+              commit_then_immediates_update,
               ]
 
 if __name__ == "__main__":

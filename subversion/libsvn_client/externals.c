@@ -299,6 +299,9 @@ switch_dir_external(const char *local_abspath,
                                       external_peg_rev,
                                       external_rev,
                                       pool));
+    /* Issue #4123: We don't need to keep the newly checked out external's
+       DB open. */
+    SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
   }
 
   return SVN_NO_ERROR;
@@ -693,8 +696,8 @@ handle_external_item_change(const struct external_change_baton_t *eb,
             const char *local_repos_root_url;
             const char *local_repos_uuid;
             const char *ext_repos_relpath;
-            
-            /* 
+
+            /*
              * The working copy library currently requires that all files
              * in the working copy have the same repository root URL.
              * The URL from the file external's definition differs from the
@@ -778,10 +781,6 @@ wrap_external_error(const struct external_change_baton_t *eb,
   return err;
 }
 
-/* This implements the 'svn_hash_diff_func_t' interface.
-   BATON is of type 'struct handle_externals_desc_change_baton *'.
-   KEY is a 'const char *'.
-*/
 static svn_error_t *
 handle_externals_change(const struct external_change_baton_t *eb,
                         const char *local_abspath,

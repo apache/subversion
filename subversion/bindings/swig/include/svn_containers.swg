@@ -482,6 +482,16 @@
    svn_wc_parse_externals_description3()
 */
 
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **externals_p {
+  %append_output
+    (svn_swig_py_pointerlist_to_list(*$1, $descriptor(svn_wc_external_item2_t *),
+                                     _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **externals_p {
   %append_output(svn_swig_rb_apr_array_to_array_external_item2(*$1));

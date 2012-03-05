@@ -1112,12 +1112,12 @@ svn_rangelist_merge2(apr_array_header_t *rangelist,
                           j++;
                         }
                     }
-                  else 
+                  else
                     {
                       /* CHANGE and RANGE share the same start rev, but
                          CHANGE is considered older because its end rev
                          is older.
-                         
+
                          Insert the intersection of RANGE and CHANGE into
                          RANGELIST and then set RANGE to the non-intersecting
                          portion of RANGE. */

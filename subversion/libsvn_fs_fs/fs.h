@@ -60,6 +60,8 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
+#define PATH_REVPROP_GEN      "revprop-gen"      /* File containing the
+                                                    revprop change counter */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -198,7 +200,8 @@ typedef struct fs_fs_shared_data_t
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
-/* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
+/* Private (non-shared) FSFS-specific data for each svn_fs_t object.
+   Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
 {
   /* The format number of this FS. */
@@ -224,16 +227,27 @@ typedef struct fs_fs_data_t
      (svn_fs_id_t *).  (Not threadsafe.) */
   svn_cache__t *rev_root_id_cache;
 
-  /* DAG node cache for immutable nodes */
+  /* DAG node cache for immutable nodes.  Maps (revision, fspath)
+     to (dag_node_t *). */
   svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
-     unparsed FS ID to ###x. */
+     unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
+     names to (svn_fs_dirent_t *). */
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
-     rep key to svn_string_t. */
+     rep key (revision/offset) to svn_string_t. */
   svn_cache__t *fulltext_cache;
+
+  /* Revprop "generation" that is valid for this svn_fs_t.
+     It is the revprop change counter read once from "revprop-gen".
+     Will be read upon first access.  0 means that the value has not
+     been read from disk, yet. */
+  apr_int64_t revprop_generation;
+  
+  /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
+  svn_cache__t *revprop_cache;
 
   /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
      a manifest; and a manifest is a mapping from (svn_revnum_t) revision
@@ -244,7 +258,7 @@ typedef struct fs_fs_data_t
   /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
   svn_cache__t *txdelta_window_cache;
 
-  /* Cache for combined windows as svn_stringbuf_t objects; 
+  /* Cache for combined windows as svn_stringbuf_t objects;
      the key is (revFilePath, offset) */
   svn_cache__t *combined_window_cache;
 

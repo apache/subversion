@@ -20,7 +20,7 @@
 #
 #
 
-use Test::More tests => 120;
+use Test::More tests => 121;
 use strict;
 
 # shut up about variables that are only used once.
@@ -46,6 +46,11 @@ my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')
 my $wcpath = catdir($testpath,'wc');
 my $importpath = catdir($testpath,'import');
 
+# Use internal style paths on Windows
+$reposurl =~ s/\\/\//g;
+$wcpath =~ s/\\/\//g;
+$importpath =~ s/\\/\//g;
+
 # track current rev ourselves to test against
 my $current_rev = 0;
 
@@ -53,7 +58,7 @@ my $current_rev = 0;
 $SVN::Error::handler = undef;
 
 # Get username we are running as
-my $username = getpwuid($>);
+my $username = getlogin() || getpwuid($>);
 
 # This is ugly to create the test repo with SVN::Repos, but
 # it seems to be the most reliable way.
@@ -86,36 +91,32 @@ my ($rpgval,$rpgrev) = $ctx->revprop_get('svn:author',$reposurl,$current_rev);
 is($rpgval,$username,'svn:author set to expected username from revprop_get');
 is($rpgrev,$current_rev,'Returned revnum of current rev from revprop_get');
 
-SKIP: {
-    skip 'Difficult to test on Win32', 3 if $^O eq 'MSWin32';
-
+if ($^O eq 'MSWin32') {
+    ok(open(NEW, ">$repospath/hooks/pre-revprop-change.bat"),
+       'Open pre-revprop-change hook for writing');
+    ok(print(NEW 'exit 0'), 'Print to hook');
+    ok(close(NEW), 'Close hook');
+} else {
     ok(rename("$repospath/hooks/pre-revprop-change.tmpl",
               "$repospath/hooks/pre-revprop-change"),
        'Rename pre-revprop-change hook');
     ok(chmod(0700,"$repospath/hooks/pre-revprop-change"),
        'Change permissions on pre-revprop-change hook');
-
-    my ($rps_rev) = $ctx->revprop_set('svn:log','mkdir dir1',
-                                      $reposurl, $current_rev, 0);
-    is($rps_rev,$current_rev,
-       'Returned revnum of current rev from revprop_set');
-
+    is(1, 1, '-')
 }
+my ($rps_rev) = $ctx->revprop_set('svn:log','mkdir dir1',
+                                  $reposurl, $current_rev, 0);
+is($rps_rev,$current_rev,
+   'Returned revnum of current rev from revprop_set');
 
 my ($rph, $rplrev) = $ctx->revprop_list($reposurl,$current_rev);
 isa_ok($rph,'HASH','Returned hash reference form revprop_list');
 is($rplrev,$current_rev,'Returned current rev from revprop_list');
 is($rph->{'svn:author'},$username,
    'svn:author is expected user from revprop_list');
-if ($^O eq 'MSWin32') {
-    # we skip the log change test on win32 so we have to test
-    # for a different var here
-    is($rph->{'svn:log'},'Make dir1',
-       'svn:log is expected value from revprop_list');
-} else {
-    is($rph->{'svn:log'},'mkdir dir1',
-       'svn:log is expected value from revprop_list');
-}
+is($rph->{'svn:log'},'mkdir dir1',
+   'svn:log is expected value from revprop_list');
+
 ok($rph->{'svn:date'},'svn:date is set from revprop_list');
 
 is($ctx->checkout($reposurl,$wcpath,'HEAD',1),$current_rev,

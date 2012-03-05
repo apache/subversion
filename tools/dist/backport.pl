@@ -24,21 +24,19 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid/;
 
-$/ = ""; # paragraph mode
-
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
-my $YES = $ENV{YES}; # batch mode: assume 'yes' without asking
+my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $WET_RUN = qw[false true][1]; # don't commit
 my $DEBUG = qw[false true][0]; # 'set -x', etc
 
 # derived values
 my $SVNq;
 
-$SVN .= " --non-interactive" unless defined ctermid;
+$SVN .= " --non-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG eq 'true';
 
@@ -127,7 +125,10 @@ EOF
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
+  # Sleep to avoid out-of-order commit notifications
+  if [ -n "$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  if [ -n "$YES" ]; then sleep 1; fi
 else
   echo "Removing reintegrated '$entry{branch}' branch"
 fi
@@ -162,7 +163,7 @@ sub parse_entry {
   # revisions
   $branch = sanitize_branch $1 if $_[0] =~ /^(\S*) branch$/;
   while ($_[0] =~ /^r/) {
-    while ($_[0] =~ s/^r(\d+)(?:,\s*)?//) {
+    while ($_[0] =~ s/^r(\d+)(?:$|[,; ]+)//) {
       push @revisions, $1;
     }
     shift;
@@ -228,22 +229,32 @@ sub main {
   usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
 
-  my $sawapproved;
   @ARGV = $STATUS;
+
+  # Skip most of the file
+  while (<>) {
+    last if /^Approved changes/;
+  }
+  while (<>) {
+    last unless /^=+$/;
+  }
+  $/ = ""; # paragraph mode
+
   while (<>) {
     my @lines = split /\n/;
-
-    # Skip most of the file
-    next unless $sawapproved ||= /^Approved changes/;
 
     given ($lines[0]) {
       # Section header
       when (/^[A-Z].*:$/i) {
         print "\n\n=== $lines[0]" unless $YES;
       }
+      # Separator after section header
+      when (/^=+$/i) {
+        break;
+      }
       # Backport entry?
       when (/^ \*/) {
-        handle_entry @lines if $sawapproved;
+        handle_entry @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at $ARGV:$.\n";

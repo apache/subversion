@@ -92,7 +92,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       /* ... not to mention locking the txn-current file. */
-      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock, 
+      SVN_ERR(svn_mutex__init(&ffsd->txn_current_lock,
                               SVN_FS_FS__USE_LOCK_MUTEX, common_pool));
 
       SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
@@ -243,6 +243,8 @@ static svn_error_t *
 fs_verify(svn_fs_t *fs, const char *path,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
+          svn_revnum_t start,
+          svn_revnum_t end,
           apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
@@ -251,7 +253,7 @@ fs_verify(svn_fs_t *fs, const char *path,
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   SVN_ERR(fs_serialized_init(fs, common_pool, pool));
-  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, pool);
+  return svn_fs_fs__verify(fs, cancel_func, cancel_baton, start, end, pool);
 }
 
 static svn_error_t *

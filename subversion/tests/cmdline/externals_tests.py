@@ -1916,14 +1916,25 @@ def file_externals_different_url(sbox):
     'rr-e-1'            : Item(status='A '),
   })
 
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+  expected_status.add({
+    'r2-e-1'            : Item(status='  ', wc_rev='1', switched='X'),
+    'r1-e-1'            : Item(status='  ', wc_rev='1', switched='X'),
+    'r1-e-2'            : Item(status='  ', wc_rev='1', switched='X'),
+    'rr-e-1'            : Item(status='  ', wc_rev='1', switched='X'),
+    'r2-e-2'            : Item(status='  ', wc_rev='1', switched='X'),
+  })
+
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output, None, None, None)
+                                        expected_output, None,
+                                        expected_status, None)
 
   # Verify that all file external URLs are descendants of r1_url
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
     actions.run_and_verify_info([{'Repository Root' : r1_url}],
                                 os.path.join(sbox.wc_dir, e))
-    
+
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'relocate', r1_url, r2_url, wc_dir)
@@ -1934,7 +1945,8 @@ def file_externals_different_url(sbox):
   })
 
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output, None, None, None)
+                                        expected_output, None,
+                                        expected_status, None)
 
   # Verify that all file external URLs are descendants of r2_url
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
@@ -2554,10 +2566,10 @@ def include_immediate_dir_externals(sbox):
   #     svn ps svn:externals "^/A/B/E X/XE" wc_dir
   #     svn ci
   #     svn up
-  # 
+  #
   #     svn ps some change X/XE
   #     echo mod >> X/XE/alpha
-  # 
+  #
   #     svn st X/XE
   #     # Expect only the propset on X/XE to be committed.
   #     # Should be like 'svn commit --include-externals --depth=empty X/XE'.
@@ -2785,6 +2797,73 @@ def dir_external_with_dash_r_only(sbox):
   expected_info = { 'Revision': '1' }
   actions.run_and_verify_info([expected_info], E_ext)
 
+# Test for issue #4123 'URL-to-WC copy of externals fails on Windows'
+@Issue(4123)
+def url_to_wc_copy_of_externals(sbox):
+  "url-to-wc copy of externals"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Create an external A/C/external pointing to ^/A/D/G.
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     'svn:externals', '^/A/D/G external',
+                                     os.path.join(wc_dir, 'A', 'C'))
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'create an external', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Copy ^/A/C to External-WC-to-URL-Copy.
+  #
+  # Previously this failed with:
+  #   >svn copy ^^/A/C External-WC-to-URL-Copy
+  #    U   External-WC-to-URL-Copy
+  #
+  #   Fetching external item into 'External-WC-to-URL-Copy\external':
+  #   A    External-WC-to-URL-Copy\external\pi
+  #   A    External-WC-to-URL-Copy\external\rho
+  #   A    External-WC-to-URL-Copy\external\tau
+  #   Checked out external at revision 2.
+  #
+  #   Checked out revision 2.
+  #   ..\..\..\subversion\libsvn_client\copy.c:2249: (apr_err=720005)
+  #   ..\..\..\subversion\libsvn_client\copy.c:1857: (apr_err=720005)
+  #   ..\..\..\subversion\libsvn_client\copy.c:1857: (apr_err=720005)
+  #   ..\..\..\subversion\libsvn_client\copy.c:1737: (apr_err=720005)
+  #   ..\..\..\subversion\libsvn_client\copy.c:1737: (apr_err=720005)
+  #   ..\..\..\subversion\libsvn_client\copy.c:1537: (apr_err=720005)
+  #   ..\..\..\subversion\libsvn_subr\io.c:3416: (apr_err=720005)
+  #   svn: E720005: Can't move 'C:\SVN\src-trunk-3\Debug\subversion\tests\
+  #   cmdline\svn-test-work\working_copies\externals_tests-41\.svn\tmp\
+  #   svn-F9E2C0EC' to 'C:\SVN\src-trunk-3\Debug\subversion\tests\cmdline\
+  #   svn-test-work\working_copies\externals_tests-41\External-WC-to-URL-Copy':
+  #   Access is denied.
+  external_root_path = os.path.join(wc_dir, "External-WC-to-URL-Copy")
+  external_ex_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
+                                  "external")
+  external_pi_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
+                                  "external", "pi")
+  external_rho_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
+                                   "external", "rho")
+  external_tau_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
+                                   "external", "tau")
+  expected_stdout = verify.UnorderedOutput([
+    "\n",
+    " U   " + external_root_path + "\n",
+    "Fetching external item into '" + external_ex_path + "':\n",
+    "A    " + external_pi_path + "\n",
+    "A    " + external_rho_path + "\n",
+    "A    " + external_tau_path + "\n",
+    "Checked out external at revision 2.\n",
+    "Checked out revision 2.\n",
+    "A         " + external_root_path + "\n"
+  ])
+  exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
+    "OUTPUT", expected_stdout, [], 0, 'copy', repo_url + '/A/C',
+    os.path.join(wc_dir, 'External-WC-to-URL-Copy'))
+
 ########################################################################
 # Run the tests
 
@@ -2831,6 +2910,7 @@ test_list = [ None,
               shadowing,
               remap_file_external_with_prop_del,
               dir_external_with_dash_r_only,
+              url_to_wc_copy_of_externals,
              ]
 
 if __name__ == '__main__':

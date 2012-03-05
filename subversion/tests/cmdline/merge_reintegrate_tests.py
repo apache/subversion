@@ -2430,7 +2430,7 @@ def reintegrate_replaced_source(sbox):
   A_path         = os.path.join(sbox.wc_dir, "A")
   A_COPY_path    = os.path.join(sbox.wc_dir, "A_COPY")
   beta_COPY_path = os.path.join(sbox.wc_dir, "A_COPY", "B", "E", "beta")
-  mu_COPY_path   = os.path.join(sbox.wc_dir, "A_COPY", "mu")  
+  mu_COPY_path   = os.path.join(sbox.wc_dir, "A_COPY", "mu")
 
   # Using cherrypick merges, simulate a series of sync merges from A to
   # A_COPY with a replace of A_COPY along the way.
@@ -2470,7 +2470,7 @@ def reintegrate_replaced_source(sbox):
                        wc_dir)
 
   # r12 - Do a final sync merge of A to A_COPY in preparation for
-  # reintegration.  
+  # reintegration.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
   svntest.main.run_svn(None, 'ci', '-m', 'Sycn A_COPY with A', wc_dir)
@@ -2541,10 +2541,9 @@ def reintegrate_replaced_source(sbox):
                                        expected_skip,
                                        [], None, None, None, None, True, True,
                                        '--reintegrate', A_path)
-  
+
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_posix_os)
-@XFail()
 @Issue(4052)
 def reintegrate_symlink_deletion(sbox):
   "reintegrate symlink deletion"

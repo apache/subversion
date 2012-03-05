@@ -5559,10 +5559,17 @@ def wc_wc_copy_incomplete(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  # We don't know what order the copy will do children of A/B so
+  # remove files so that only subdirs remain then all children can be
+  # marked incomplete.
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_commit()
+  sbox.simple_update()
+
   # We don't know whether copy will do E or F first, so make both
   # incomplete
-  svntest.actions.set_incomplete(sbox.ospath('A/B/E'), 1)
-  svntest.actions.set_incomplete(sbox.ospath('A/B/F'), 1)
+  svntest.actions.set_incomplete(sbox.ospath('A/B/E'), 2)
+  svntest.actions.set_incomplete(sbox.ospath('A/B/F'), 2)
 
   # Copy fails with no changes to wc
   svntest.actions.run_and_verify_svn(None, None,
@@ -5570,7 +5577,8 @@ def wc_wc_copy_incomplete(sbox):
                                      'copy',
                                      sbox.ospath('A/B/E'),
                                      sbox.ospath('A/B/E2'))
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/B/lambda')
   expected_status.tweak('A/B/E', 'A/B/F', status='! ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -5585,7 +5593,6 @@ def wc_wc_copy_incomplete(sbox):
       'A/B2'        : Item(status='A ', copied='+', wc_rev='-'),
       'A/B2/E'      : Item(status='! ', wc_rev='-'),
       'A/B2/F'      : Item(status='! ', wc_rev='-'),
-      'A/B2/lambda' : Item(status='  ', copied='+', wc_rev='-'),
       })
   ### Can't get this to work as copied status of E and F in 1.6
   ### entries tree doesn't match 1.7 status tree
@@ -5595,10 +5602,10 @@ def wc_wc_copy_incomplete(sbox):
   expected_output = svntest.wc.State(wc_dir, {
       'A/B2': Item(verb='Adding'),
       })
-  expected_status.tweak('A/B2', 'A/B2/lambda',
-                        status='  ', copied=None, wc_rev=2)
+  expected_status.tweak('A/B2',
+                        status='  ', copied=None, wc_rev=3)
   expected_status.tweak('A/B2/E', 'A/B2/F',
-                        status='! ', copied=None, wc_rev=2)
+                        status='! ', copied=None, wc_rev=3)
   ### E and F are status '!' but the test code ignores them?
   expected_status.remove('A/B2/E', 'A/B2/F')
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -5606,8 +5613,8 @@ def wc_wc_copy_incomplete(sbox):
                                         expected_status,
                                         None, wc_dir)
   expected_status.add({
-      'A/B2/E'       : Item(status='! ', wc_rev=2),
-      'A/B2/F'       : Item(status='! ', wc_rev=2),
+      'A/B2/E'       : Item(status='! ', wc_rev=3),
+      'A/B2/F'       : Item(status='! ', wc_rev=3),
       })
 
   # Update makes things complete
@@ -5617,10 +5624,10 @@ def wc_wc_copy_incomplete(sbox):
       'A/B2/E/beta'  : Item(status='A '),
       'A/B2/F'       : Item(status='A '),
       })
-  expected_status.tweak(wc_rev=2, status='  ')
+  expected_status.tweak(wc_rev=3, status='  ')
   expected_status.add({
-      'A/B2/E/alpha' : Item(status='  ', wc_rev=2),
-      'A/B2/E/beta'  : Item(status='  ', wc_rev=2),
+      'A/B2/E/alpha' : Item(status='  ', wc_rev=3),
+      'A/B2/E/beta'  : Item(status='  ', wc_rev=3),
       })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,

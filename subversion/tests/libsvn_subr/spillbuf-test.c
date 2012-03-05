@@ -112,7 +112,7 @@ test_spillbuf_callback(apr_pool_t *pool)
   SVN_ERR(svn_spillbuf__process(&exhausted, buf, read_callback, &counter,
                                 pool));
   SVN_TEST_ASSERT(!exhausted);
-  
+
   SVN_ERR(svn_spillbuf__process(&exhausted, buf, read_callback, &counter,
                                 pool));
   SVN_TEST_ASSERT(exhausted);

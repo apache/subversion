@@ -101,6 +101,8 @@
   svn_auth_provider_object_t **,
   svn_config_t **,
   svn_diff_t **,
+  svn_patch_file_t **,
+  svn_patch_t **,
   void **credentials,
   void **iter_baton,
   void **token,

@@ -113,6 +113,26 @@ svn_fs_fs__deserialize_manifest(void **out,
                                 apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__serialize_func_t for a properties hash
+ * (@a in is an #apr_hash_t of svn_string_t elements, keyed by const char*).
+ */
+svn_error_t *
+svn_fs_fs__serialize_properties(char **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool);
+
+/**
+ * Implements #svn_cache__deserialize_func_t for a properties hash
+ * (@a *out is an #apr_hash_t of svn_string_t elements, keyed by const char*).
+ */
+svn_error_t *
+svn_fs_fs__deserialize_properties(void **out,
+                                  char *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__serialize_func_t for #svn_fs_id_t
  */
 svn_error_t *

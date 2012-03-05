@@ -1897,7 +1897,7 @@ write_entry(struct write_baton **entry_node,
         }
       else if (entry->absent)
         {
-          SVN_ERR_ASSERT(base_node->presence 
+          SVN_ERR_ASSERT(base_node->presence
                                 == svn_wc__db_status_server_excluded);
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;

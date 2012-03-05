@@ -559,7 +559,7 @@ SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
             {
               svn_stringbuf_appendbyte(buf, '=');
               svn_stringbuf_appendcstr(buf, APR_ARRAY_IDX(var, i, const char *));
-            } 
+            }
 
           val = apr_pstrdup(apr_hash_pool_get(conf->hooks_env), buf->data);
         }

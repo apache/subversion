@@ -161,7 +161,7 @@ def make_diff_prop_val(plus_minus, pval):
   if len(pval) > 0 and pval[-1] != '\n':
     return [plus_minus + pval + "\n","\\ No newline at end of property\n"]
   return [plus_minus + pval]
-  
+
 def make_diff_prop_deleted(pname, pval):
   """Return a property diff for deletion of property PNAME, old value PVAL.
      PVAL is a single string with no embedded newlines.  Return the result
@@ -1169,8 +1169,10 @@ def diff_base_to_repos(sbox):
     if not re_infoline.match(line):
       list2.append(line)
 
-  if list1 != list2:
-    raise svntest.Failure
+  # Two files in diff may be in any order.
+  list1 = svntest.verify.UnorderedOutput(list1)
+
+  svntest.verify.compare_and_display_lines('', '', list1, list2)
 
 
 #----------------------------------------------------------------------
@@ -3588,6 +3590,9 @@ def diff_git_empty_files(sbox):
   ] + make_git_diff_header(iota_path, "iota", "revision 2", "working copy",
                            delete=True, text_changes=False)
 
+  # Two files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
 
@@ -3627,6 +3632,9 @@ def diff_git_with_props(sbox):
                                          text_changes=False) + \
                     make_diff_prop_header("iota") + \
                     make_diff_prop_added("svn:keywords", "Id")
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
