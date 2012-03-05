@@ -65,6 +65,9 @@ Wishlist or out-of-scope:
 * finer-grained (two-staged) locks for other operations
   (eg, packing revision shards)
 
+* cache some/all revprops in a pack file when reading it
+  (see r1296604 thread)
+
 
 Not a problem:
 
