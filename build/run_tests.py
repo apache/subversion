@@ -72,7 +72,15 @@ class TextColors:
 
 
 def _get_term_width():
-  'Attempt to discern the width of the terminal'
+  '''Attempt to discern the width of the terminal
+  
+  Consults:
+    ../.width,
+    TIOCGWINSZ ioctl on stdin/stdout/stderr,
+    getenv("COLUMNS"),
+  in this order.  Falls back to the constant "80".
+  '''
+
   # This may not work on all platforms, in which case the default of 80
   # characters is used.  Improvements welcomed.
 
