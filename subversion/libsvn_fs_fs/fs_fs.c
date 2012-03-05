@@ -2795,7 +2795,8 @@ increment_revprop_generation(svn_fs_t *fs,
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
   ++ffd->revprop_generation;
-  generation = svn_string_createf(pool, "%ld\n", ffd->revprop_generation);
+  generation = svn_string_createf(pool, "%" APR_INT64_T_FMT "\n",
+                                  ffd->revprop_generation);
 
   SVN_ERR(svn_io_write_unique(&tmp_filename,
                               svn_dirent_dirname(path, pool),
