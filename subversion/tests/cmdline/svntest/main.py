@@ -132,23 +132,6 @@ wc_author2 = 'jconstant' # use the same password as wc_author
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
 
-# This function mimics the Python 2.3 urllib function of the same name.
-def pathname2url(path):
-  """Convert the pathname PATH from the local syntax for a path to the form
-  used in the path component of a URL. This does not produce a complete URL.
-  The return value will already be quoted using the quote() function."""
-
-  # Don't leave ':' in file://C%3A/ escaped as our canonicalization
-  # rules will replace this with a ':' on input.
-  return urllib_parse_quote(path.replace('\\', '/')).replace('%3A', ':')
-
-# This function mimics the Python 2.3 urllib function of the same name.
-def url2pathname(path):
-  """Convert the path component PATH from an encoded URL to the local syntax
-  for a path. This does not accept a complete URL. This function uses
-  unquote() to decode PATH."""
-  return os.path.normpath(urllib_parse_unquote(path))
-
 ######################################################################
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
@@ -1551,7 +1534,8 @@ def _create_parser():
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
-        url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
+        url=file_scheme_prefix + \
+                        urllib.pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
   return parser
@@ -1719,7 +1703,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                    "or function '%s'\n" % arg)
 
   # Calculate pristine_greek_repos_url from test_area_url.
-  pristine_greek_repos_url = options.test_area_url + '/' + pathname2url(pristine_greek_repos_dir)
+  pristine_greek_repos_url = options.test_area_url + '/' + \
+                                urllib.pathname2url(pristine_greek_repos_dir)
 
   if options.use_jsvn:
     if options.svn_bin is None:
