@@ -532,7 +532,7 @@ svn_repos_hotcopy2(const char *src_path,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
-/** 
+/**
  * Like svn_repos_hotcopy2(), but without the @a incremental parameter
  * and without cancellation support.
  *
@@ -763,6 +763,17 @@ svn_repos_pre_unlock_hook(svn_repos_t *repos,
 const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
+
+/** Set the environment that @a repos's hooks will inherit to @a hooks_env,
+ * a hash table where keys and values represent names and values of environment
+ * variables. @a hooks_env must live at least as long as @a repos.
+ *
+ * If this function is not called, hooks will run in an empty environment.
+ *
+ * @since New in 1.8. */
+void
+svn_repos_hooks_setenv(svn_repos_t *repos,
+                       apr_hash_t *hooks_env);
 
 /** @} */
 
@@ -3015,6 +3026,10 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  *
  * For compatibility with 1.6, and earlier, @a repos_name can be NULL
  * in which case it is equivalent to a @a repos_name of "".
+ *
+ * @note Presently, @a repos_name must byte-for-byte match the repos_name
+ * specified in the authz file; it is treated as an opaque string, and not
+ * as a dirent.
  *
  * @since New in 1.3.
  */

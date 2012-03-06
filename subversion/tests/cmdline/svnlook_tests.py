@@ -117,35 +117,39 @@ def test_misc(sbox):
   # the 'svnlook tree --full-paths' output if demanding the whole repository
   treelist = run_svnlook('tree', repo_dir)
   treelistfull = run_svnlook('tree', '--full-paths', repo_dir)
+
   path = ''
-  n = 0
+  treelistexpand = []
   for entry in treelist:
     len1 = len(entry)
     len2 = len(entry.lstrip())
-    path = path[0:2*(len1-len2)-1] + entry.strip()
-    test = treelistfull[n].rstrip()
-    if n != 0:
-      test = "/" + test
-    if not path == test:
-      print("Unexpected result from tree with --full-paths:")
-      print("  entry            : %s" % entry.rstrip())
-      print("  with --full-paths: %s" % treelistfull[n].rstrip())
-      raise svntest.Failure
-    n = n + 1
+    path = path[0:2*(len1-len2)-1] + entry.strip() + '\n'
+    if path == '/\n':
+      treelistexpand.append(path)
+    else:
+      treelistexpand.append(path[1:])
+
+  treelistexpand = svntest.verify.UnorderedOutput(treelistexpand)
+  svntest.verify.compare_and_display_lines('Unexpected result from tree', '',
+                                           treelistexpand, treelistfull)
 
   # check if the 'svnlook tree' output is the ending of
   # the 'svnlook tree --full-paths' output if demanding
   # any part of the repository
-  n = 0
   treelist = run_svnlook('tree', repo_dir, '/A/B')
   treelistfull = run_svnlook('tree', '--full-paths', repo_dir, '/A/B')
+
+  path = ''
+  treelistexpand = []
   for entry in treelist:
-    if not treelistfull[n].endswith(entry.lstrip()):
-      print("Unexpected result from tree with --full-paths:")
-      print("  entry            : %s" % entry.rstrip())
-      print("  with --full-paths: %s" % treelistfull[n].rstrip())
-      raise svntest.Failure
-    n = n + 1
+    len1 = len(entry)
+    len2 = len(entry.lstrip())
+    path = path[0:2*(len1-len2)] + entry.strip() + '\n'
+    treelistexpand.append('/A/' + path)
+
+  treelistexpand = svntest.verify.UnorderedOutput(treelistexpand)
+  svntest.verify.compare_and_display_lines('Unexpected result from tree', '',
+                                           treelistexpand, treelistfull)
 
   treelist = run_svnlook('tree', repo_dir, '/')
   if treelist[0] != '/\n':
@@ -695,7 +699,7 @@ fp.close()"""
                     #  internal property, not really expected
                     '  svn:check-locks\n',
                     '  bogus_rev_prop\n', '  svn:date\n']
-  verify_logfile(logfilepath, expected_data)
+  verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
 ########################################################################
 # Run the tests

@@ -61,7 +61,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
     return err;
 
   /* Run post-commit hooks. */
-  if ((err2 = svn_repos__hooks_post_commit(repos, *new_rev, pool)))
+  if ((err2 = svn_repos__hooks_post_commit(repos, *new_rev, txn_name, pool)))
     {
       err2 = svn_error_create
                (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err2,

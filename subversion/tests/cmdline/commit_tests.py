@@ -1140,7 +1140,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   mu_path = os.path.join(wc_dir, 'Z', 'mu')
 
   svntest.main.run_svn(None, 'move', A_path, Z_path)
-  
+
   # Make sure mu is a committable
   svntest.main.file_write(mu_path, "xxxx")
 
@@ -1183,7 +1183,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
                                         "svn: E200009: '" +
                                         re.escape(Z_abspath) +
                                         "' is not known to exist in the.*",
-                                        R_path)                                        
+                                        R_path)
 
 #----------------------------------------------------------------------
 
@@ -2846,7 +2846,7 @@ def commit_incomplete(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  
+
 #----------------------------------------------------------------------
 # Reported here:
 #   Message-ID: <4EBF0FC9.300@gmail.com>

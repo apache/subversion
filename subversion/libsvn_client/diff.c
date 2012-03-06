@@ -678,9 +678,9 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
         /* The last character in a property is often not a newline.
            An eol character is appended to prevent the diff API to add a
-           ' \ No newline at end of file' line. We add 
+           ' \ No newline at end of file' line. We add
            ' \ No newline at end of property' manually if needed. */
-        tmp = original_value ? original_value 
+        tmp = original_value ? original_value
                              : svn_string_create_empty(iterpool);
         orig = maybe_append_eol(tmp, NULL, iterpool);
 
@@ -777,6 +777,9 @@ struct diff_cmd_baton {
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
 
+  /* Whether property differences are ignored. */
+  svn_boolean_t ignore_prop_diff;
+
   /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
 
@@ -816,6 +819,10 @@ diff_props_changed(svn_wc_notify_state_t *state,
 {
   apr_array_header_t *props;
   svn_boolean_t show_diff_header;
+
+  /* If property differences are ignored, there's nothing to do. */
+  if (diff_cmd_baton->ignore_prop_diff)
+    return SVN_NO_ERROR;
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
                                scratch_pool));
@@ -1329,7 +1336,7 @@ static const svn_wc_diff_callbacks4_t diff_callbacks =
   diff_dir_opened,
   diff_dir_added,
   diff_dir_props_changed,
-  diff_dir_closed    
+  diff_dir_closed
 };
 
 /*-----------------------------------------------------------------*/
@@ -2003,7 +2010,7 @@ diff_repos_wc(const char *path_or_url1,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
-  SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
+  SVN_ERR(svn_wc__get_diff_editor(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
                                   target,
@@ -2413,6 +2420,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t ignore_prop_diff,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2442,6 +2450,7 @@ svn_client_diff6(const apr_array_header_t *options,
 
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.ignore_prop_diff = ignore_prop_diff;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
@@ -2470,6 +2479,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t ignore_prop_diff,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -2495,6 +2505,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
 
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.ignore_prop_diff = ignore_prop_diff;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;

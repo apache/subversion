@@ -279,6 +279,10 @@ module Svn
         add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)
       end
 
+      def add_platform_specific_client_providers(config=nil)
+        add_providers(Core.auth_get_platform_specific_client_providers(config))
+      end
+
       private
       def add_prompt_provider(name, args, prompt, credential_class)
         real_prompt = Proc.new do |*prompt_args|
@@ -294,6 +298,10 @@ module Svn
       end
 
       def add_provider(provider)
+        add_providers([provider])
+      end
+
+      def add_providers(new_providers)
         if auth_baton
           providers = auth_baton.providers
           parameters = auth_baton.parameters
@@ -301,7 +309,7 @@ module Svn
           providers = []
           parameters = {}
         end
-        self.auth_baton = AuthBaton.new(providers + [provider], parameters)
+        self.auth_baton = AuthBaton.new(providers + new_providers, parameters)
       end
     end
 

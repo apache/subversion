@@ -4581,7 +4581,7 @@ close_file(void *file_baton,
 
       /* If the file was moved-away, notify for the moved-away node.
        * The original location only had its BASE info changed and
-       * we don't usually notify about such changes. */ 
+       * we don't usually notify about such changes. */
       notify = svn_wc_create_notify(working_abspath, action, scratch_pool);
       notify->kind = svn_node_file;
       notify->content_state = content_state;
@@ -5003,7 +5003,7 @@ make_editor(svn_revnum_t *target_revision,
 
 
 svn_error_t *
-svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
@@ -5046,7 +5046,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 }
 
 svn_error_t *
-svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
+svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,

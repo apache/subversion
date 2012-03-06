@@ -312,6 +312,7 @@ log_entry_receiver(void *baton,
                                    TRUE, /* no diff deleted */
                                    FALSE, /* show copies as adds */
                                    FALSE, /* ignore content type */
+                                   FALSE, /* ignore prop diff */
                                    FALSE, /* use git diff format */
                                    svn_cmdline_output_encoding(pool),
                                    outstream,

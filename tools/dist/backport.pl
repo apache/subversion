@@ -1,6 +1,7 @@
 #!/usr/bin/perl -l
 use warnings;
 use strict;
+use feature qw/switch say/;
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -21,14 +22,23 @@ use strict;
 
 use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Temp qw/tempfile/;
-
-$/ = ""; # paragraph mode
+use POSIX qw/ctermid/;
 
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
+
+my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $WET_RUN = qw[false true][1]; # don't commit
+my $DEBUG = qw[false true][0]; # 'set -x', etc
+
+# derived values
+my $SVNq;
+
+$SVN .= " --non-interactive" if $YES or not defined ctermid;
+$SVNq = "$SVN -q ";
+$SVNq =~ s/-q// if $DEBUG eq 'true';
 
 sub usage {
   my $basename = $0;
@@ -70,7 +80,7 @@ sub merge {
     # NOTE: This doesn't escape the branch into the pattern.
     $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch(es)?:\n *%s\)', $entry{branch}, $entry{branch}, $entry{branch};
     $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-    print $logmsg_fh "Reintergrate the $entry{header}:";
+    print $logmsg_fh "Reintegrate the $entry{header}:";
     print $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
@@ -91,13 +101,20 @@ sub merge {
   my $script = <<"EOF";
 #!/bin/sh
 set -e
+if $DEBUG; then
+  set -x
+fi
 $SVN diff > $backupfile
-$SVN revert -R .
-$SVN up
-$SVN merge $mergeargs
+$SVNq revert -R .
+$SVNq up
+$SVNq merge $mergeargs
 $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
 if $WET_RUN; then
-  $SVN commit -F $logmsg_filename
+  if [ -n "\$PRINT_SOMETHING_BETWEEN_PROMPTS" ]; then
+    # hack for pw-driver.pl to see some output between prompts
+    head -n1 $logmsg_filename
+  fi
+  $SVNq commit -F $logmsg_filename
 else
   echo "Committing:"
   $SVN status -q
@@ -108,13 +125,16 @@ EOF
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $WET_RUN; then
-  $SVN rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  # Sleep to avoid out-of-order commit notifications
+  if [ -n "$YES" ]; then sleep 15; fi
+  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, reintegrated in r\$reinteg_rev."
+  if [ -n "$YES" ]; then sleep 1; fi
 else
   echo "Removing reintegrated '$entry{branch}' branch"
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh -x# or die $!;
+  open SHELL, '|-', qw#/bin/sh# or die $!;
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $!";
 
@@ -143,7 +163,7 @@ sub parse_entry {
   # revisions
   $branch = sanitize_branch $1 if $_[0] =~ /^(\S*) branch$/;
   while ($_[0] =~ /^r/) {
-    while ($_[0] =~ s/^r(\d+)(?:,\s*)?//) {
+    while ($_[0] =~ s/^r(\d+)(?:$|[,; ]+)//) {
       push @revisions, $1;
     }
     shift;
@@ -180,21 +200,27 @@ sub parse_entry {
 
 sub handle_entry {
   my %entry = parse_entry @_;
+  my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
-  print "";
-  print "\n>>> The $entry{header}:";
-  print join ", ", map { "r$_" } @{$entry{revisions}};
-  print "$BRANCHES/$entry{branch}" if $entry{branch};
-  print "";
-  print for @{$entry{logsummary}};
-  print "";
-  print for @{$entry{votes}};
-  print "";
-  print "Vetoes found!" if grep { /^  -1:/ } @{$entry{votes}};
+  if ($YES) {
+    merge %entry unless @vetoes;
+  } else {
+    print "";
+    print "\n>>> The $entry{header}:";
+    print join ", ", map { "r$_" } @{$entry{revisions}};
+    print "$BRANCHES/$entry{branch}" if $entry{branch};
+    print "";
+    print for @{$entry{logsummary}};
+    print "";
+    print for @{$entry{votes}};
+    print "";
+    print "Vetoes found!" if @vetoes;
 
-  # TODO: this changes ./STATUS, which we're reading below, but
+    merge %entry if prompt;
+  }
+
+  # TODO: merge() changes ./STATUS, which we're reading below, but
   #       on my system the loop in main() doesn't seem to care.
-  merge %entry if $ENV{YES} or prompt;
 
   1;
 }
@@ -203,19 +229,37 @@ sub main {
   usage, exit 0 if @ARGV;
   usage, exit 1 unless -r $STATUS;
 
-  my $sawapproved;
   @ARGV = $STATUS;
+
+  # Skip most of the file
+  while (<>) {
+    last if /^Approved changes/;
+  }
+  while (<>) {
+    last unless /^=+$/;
+  }
+  $/ = ""; # paragraph mode
+
   while (<>) {
     my @lines = split /\n/;
 
-    # Section header?
-    next unless $sawapproved ||= /^Approved changes/;
-    print "\n\n=== $lines[0]" and next if $lines[0] =~ /^[A-Z].*:$/i;
-
-    # Backport entry?
-    handle_entry @lines and next if $lines[0] =~ /^ \*/ and $sawapproved;
-
-    warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
+    given ($lines[0]) {
+      # Section header
+      when (/^[A-Z].*:$/i) {
+        print "\n\n=== $lines[0]" unless $YES;
+      }
+      # Separator after section header
+      when (/^=+$/i) {
+        break;
+      }
+      # Backport entry?
+      when (/^ \*/) {
+        handle_entry @lines;
+      }
+      default {
+        warn "Unknown entry '$lines[0]' at $ARGV:$.\n";
+      }
+    }
   }
 }
 

@@ -111,10 +111,10 @@ def check_hotcopy_fsfs(src, dst):
               # both at EOF
               break
             elif buf1:
-              raise svntest.Failure("%s differs at offset %i" % 
+              raise svntest.Failure("%s differs at offset %i" %
                                     (dst_path, offset))
             elif buf2:
-              raise svntest.Failure("%s differs at offset %i" % 
+              raise svntest.Failure("%s differs at offset %i" %
                                     (dst_path, offset))
           if len(buf1) != len(buf2):
             raise svntest.Failure("%s differs in length" % dst_path)
@@ -1422,9 +1422,12 @@ def verify_non_utf8_paths(sbox):
     if line == "A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write("\xE6\n")
-    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
       # fix up the representation checksum
-      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+      fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
     elif line == "cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")
@@ -1463,7 +1466,7 @@ def verify_non_utf8_paths(sbox):
 
 def test_lslocks_and_rmlocks(sbox):
   "test 'svnadmin lslocks' and 'svnadmin rmlocks'"
-  
+
   sbox.build(create_wc=False)
   iota_url = sbox.repo_url + '/iota'
   lambda_url = sbox.repo_url + '/A/B/lambda'
@@ -1477,7 +1480,7 @@ def test_lslocks_and_rmlocks(sbox):
   expected_output = UnorderedOutput(
     ["'A/B/lambda' locked by user 'jrandom'.\n",
      "'iota' locked by user 'jrandom'.\n"])
-  
+
   # Lock iota and A/B/lambda using svn client
   svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], "lock", "-m", "Locking files",
@@ -1492,18 +1495,18 @@ def test_lslocks_and_rmlocks(sbox):
       "Comment \(1 line\):",
       "Locking files",
       "Path: /iota",
-      "UUID Token: opaquelocktoken.*",      
-      "\n", # empty line    
+      "UUID Token: opaquelocktoken.*",
+      "\n", # empty line
       ]
 
   # List all locks
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
                                                         sbox.repo_dir)
-  
+
   if errput:
     raise SVNUnexpectedStderr(errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
-    
+
   try:
     expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
     svntest.verify.compare_and_display_lines('lslocks output mismatch',
@@ -1537,7 +1540,7 @@ def test_lslocks_and_rmlocks(sbox):
     "Expires:",
     "Comment \(1 line\):",
     "Locking files",
-    "\n", # empty line    
+    "\n", # empty line
     ])
 
   svntest.verify.compare_and_display_lines('message', 'label',
@@ -1551,7 +1554,7 @@ def test_lslocks_and_rmlocks(sbox):
                                                         "A/B/lambda")
   expected_output = UnorderedOutput(["Removed lock on '/iota'.\n",
                                      "Removed lock on '/A/B/lambda'.\n"])
-  
+
   svntest.verify.verify_outputs(
     "Unexpected output while running 'svnadmin rmlocks'.",
     output, [], expected_output, None)
@@ -1649,7 +1652,7 @@ def hotcopy_incremental_packed(sbox):
 def locking(sbox):
   "svnadmin lock tests"
   sbox.build(create_wc=False)
-  
+
   comment_path = os.path.join(svntest.main.temp_dir, "comment")
   svntest.main.file_write(comment_path, "dummy comment")
 
@@ -1659,15 +1662,15 @@ def locking(sbox):
   # Test illegal character in comment file.
   expected_error = ".*svnadmin: E130004:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           invalid_comment_path)
-  
+
   # Test locking path with --bypass-hooks
   expected_output = "'iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
-                                          None, "lock", 
+                                          None, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path,
@@ -1675,13 +1678,13 @@ def locking(sbox):
 
   # Remove lock
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          None, "rmlocks", 
+                                          None, "rmlocks",
                                           sbox.repo_dir, "iota")
-  
+
   # Test locking path without --bypass-hooks
   expected_output = "'iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
-                                          None, "lock", 
+                                          None, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
@@ -1689,7 +1692,7 @@ def locking(sbox):
   # Test locking already locked path.
   expected_error = ".*svnadmin: E160035:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
@@ -1697,7 +1700,7 @@ def locking(sbox):
   # Test locking non-existent path.
   expected_error = ".*svnadmin: E160013:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "non-existent", "jrandom",
                                           comment_path)
@@ -1706,7 +1709,7 @@ def locking(sbox):
   expected_output = "'A/D/G/rho' locked by user 'jrandom'."
   lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
   svntest.actions.run_and_verify_svnadmin(None, expected_output,
-                                          None, "lock", 
+                                          None, "lock",
                                           sbox.repo_dir,
                                           "A/D/G/rho", "jrandom",
                                           comment_path, lock_token)
@@ -1715,11 +1718,11 @@ def locking(sbox):
   expected_error = ".*svnadmin: E160040:.*"
   wrong_lock_token = "opaquelocktoken:12345670-9ab8-defc-9ab8-def01234567c"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "unlock", 
+                                          expected_error, "unlock",
                                           sbox.repo_dir,
                                           "A/D/G/rho", "jrandom",
                                           wrong_lock_token)
-  
+
   # Test unlocking the path again, but this time provide the correct
   # lock token.
   expected_output = "'A/D/G/rho' unlocked."
@@ -1734,12 +1737,12 @@ def locking(sbox):
   svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
   hook_path = svntest.main.get_pre_unlock_hook_path(sbox.repo_dir)
   svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
-  
+
   # Test locking a path.  Don't use --bypass-hooks, though, as we wish
   # to verify that hook script is really getting executed.
   expected_error = ".*svnadmin: E165001:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "lock", 
+                                          expected_error, "lock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           comment_path)
@@ -1761,7 +1764,7 @@ def locking(sbox):
   # with a preventative hook in place.
   expected_error = ".*svnadmin: E165001:.*"
   svntest.actions.run_and_verify_svnadmin(None, None,
-                                          expected_error, "unlock", 
+                                          expected_error, "unlock",
                                           sbox.repo_dir,
                                           "iota", "jrandom",
                                           iota_token)

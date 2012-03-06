@@ -48,6 +48,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_subst.h"
 #include "svn_ra.h"
 #include "client.h"
 #include "mergeinfo.h"
@@ -1393,7 +1394,7 @@ check_moved_away(svn_boolean_t *moved_away,
 {
   const char *moved_to_abspath;
   svn_error_t *err;
-  
+
   *moved_away = FALSE;
 
   err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
@@ -1423,7 +1424,7 @@ check_moved_here(svn_boolean_t *moved_here,
 {
   const char *moved_from_abspath;
   svn_error_t *err;
-  
+
   *moved_here = FALSE;
 
   err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
@@ -1995,10 +1996,14 @@ files_same_p(svn_boolean_t *same,
       svn_opt_revision_t working_rev = { svn_opt_revision_working, { 0 } };
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
-      SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
-                                                mine_abspath, &working_rev,
-                                                FALSE, TRUE, NULL, NULL,
-                                                scratch_pool, scratch_pool));
+      if (svn_prop_get_value(working_props, SVN_PROP_SPECIAL) != NULL)
+        SVN_ERR(svn_subst_read_specialfile(&mine_stream, mine_abspath,
+                                           scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
+                                                  mine_abspath, &working_rev,
+                                                  FALSE, TRUE, NULL, NULL,
+                                                  scratch_pool, scratch_pool));
 
       SVN_ERR(svn_stream_open_readonly(&older_stream, older_abspath,
                                        scratch_pool, scratch_pool));
@@ -7540,7 +7545,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                      operational depth is empty or files, then the mere
                      existence of operative immediate children means we
                      must record non-inheritable mergeinfo.
-                     
+
                      ### What about svn_depth_immediates?  In that case
                      ### the merge target needs only normal inheritable
                      ### mergeinfo and the target's immediate children will

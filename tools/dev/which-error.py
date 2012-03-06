@@ -81,7 +81,10 @@ def print_error(code):
   try:
     print('%08d  %s' % (code, __svn_error_codes[code]))
   except KeyError:
-    print('%08d  *** UNKNOWN ERROR CODE ***' % (code))
+    if code == -41:
+      print("Sit by a lake.")
+    else:
+      print('%08d  *** UNKNOWN ERROR CODE ***' % (code))
 
 if __name__ == "__main__":
   global __svn_error_codes

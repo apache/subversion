@@ -136,6 +136,13 @@
  */
 #define NO_OFFSET APR_UINT64_MAX
 
+/* To save space in our group structure, we only use 32 bit size values
+ * and, therefore, limit the size of each entry to just below 4GB.
+ * Supporting larger items is not a good idea as the data transfer
+ * to and from the cache would block other threads for a very long time.
+ */
+#define MAX_ITEM_SIZE ((apr_uint32_t)(0 - ITEM_ALIGNMENT))
+
 /* Debugging / corruption detection support.
  * If you define this macro, the getter functions will performed expensive
  * checks on the item data, requested keys and entry types. If there is
@@ -395,6 +402,11 @@ struct svn_membuffer_t
    */
   apr_uint64_t data_used;
 
+  /* Largest entry size that we would accept.  For total cache sizes
+   * less than 4TB (sic!), this is determined by the total cache size.
+   */
+  apr_uint64_t max_entry_size;
+
 
   /* Number of used dictionary entries, i.e. number of cached items.
    * In conjunction with hit_count, this is used calculate the average
@@ -588,6 +600,9 @@ get_group_index(svn_membuffer_t **cache,
   /* calculate a hash value for the key */
   svn_checksum_t *checksum;
   svn_error_t *err;
+
+  if (key == NULL)
+    return NO_INDEX;
 
   err = svn_checksum(&checksum, svn_checksum_md5, key, len, pool);
   if (err != NULL)
@@ -946,6 +961,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint32_t group_count;
   apr_uint32_t group_init_size;
   apr_uint64_t data_size;
+  apr_uint64_t max_entry_size;
 
   /* Determine a reasonable number of cache segments. Segmentation is
    * only useful for multi-threaded / multi-core servers as it reduces
@@ -989,8 +1005,19 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
    */
   data_size = total_size - directory_size;
 
+  /* For cache sizes > 4TB, individual cache segments will be larger
+   * than 16GB allowing for >4GB entries.  But caching chunks larger
+   * than 4GB is simply not supported.
+   */
+  max_entry_size = data_size / 4 > MAX_ITEM_SIZE
+                 ? MAX_ITEM_SIZE
+                 : data_size / 4;
+  
   /* to keep the entries small, we use 32 bit indices only
-   * -> we need to ensure that no more then 4G entries exist
+   * -> we need to ensure that no more then 4G entries exist.
+   * 
+   * Note, that this limit could only be exceeded in a very
+   * theoretical setup with about 1EB of cache.
    */
   group_count = directory_size / sizeof(entry_group_t);
   if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
@@ -1021,6 +1048,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].data = secure_aligned_alloc(pool, (apr_size_t)data_size, FALSE);
       c[seg].current_data = 0;
       c[seg].data_used = 0;
+      c[seg].max_entry_size = max_entry_size;
 
       c[seg].used_entries = 0;
       c[seg].hit_count = 0;
@@ -1052,14 +1080,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
 
 /* Try to insert the serialized item given in BUFFER with SIZE into
- * the group GROUP_INDEX of CACHE and uniquely identify it by hash 
- * value TO_FIND. 
- * 
+ * the group GROUP_INDEX of CACHE and uniquely identify it by hash
+ * value TO_FIND.
+ *
  * However, there is no guarantee that it will actually be put into
  * the cache. If there is already some data associated with TO_FIND,
  * it will be removed from the cache even if the new data cannot
  * be inserted.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_get_partial instead.
  */
@@ -1075,7 +1103,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   /* if necessary, enlarge the insertion window.
    */
   if (   buffer != NULL
-      && cache->data_size / 4 > size
+      && cache->max_entry_size >= size
       && ensure_data_insertable(cache, size))
     {
       /* Remove old data for this key, if that exists.
@@ -1162,11 +1190,11 @@ membuffer_cache_set(svn_membuffer_t *cache,
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
- * by the hash value TO_FIND. If no item has been stored for KEY, 
+ * by the hash value TO_FIND. If no item has been stored for KEY,
  * *BUFFER will be NULL. Otherwise, return a copy of the serialized
- * data in *BUFFER and return its size in *ITEM_SIZE. Allocations will 
+ * data in *BUFFER and return its size in *ITEM_SIZE. Allocations will
  * be done in POOL.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_get_partial instead.
  */
@@ -1192,10 +1220,10 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
        */
       *buffer = NULL;
       *item_size = 0;
-  
+
       return SVN_NO_ERROR;
     }
-    
+
   size = ALIGN_VALUE(entry->size);
   *buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
   memcpy(*buffer, (const char*)cache->data + entry->offset, size);
@@ -1222,7 +1250,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
   cache->total_hits++;
 
   *item_size = entry->size;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1272,18 +1300,18 @@ membuffer_cache_get(svn_membuffer_t *cache,
       *item = NULL;
       return SVN_NO_ERROR;
     }
-    
+
   return deserializer(item, buffer, size, result_pool);
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. FOUND indicates whether that entry exists.
  * If not found, *ITEM will be NULL.
- * 
- * Otherwise, the DESERIALIZER is called with that entry and the BATON 
+ *
+ * Otherwise, the DESERIALIZER is called with that entry and the BATON
  * provided and will extract the desired information. The result is set
  * in *ITEM. Allocations will be done in POOL.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_get_partial instead.
  */
@@ -1304,7 +1332,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     {
       *item = NULL;
       *found = FALSE;
-      
+
       return SVN_NO_ERROR;
     }
   else
@@ -1363,11 +1391,12 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 
   group_index = get_group_index(&cache, key, key_len, to_find, result_pool);
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_get_partial_internal
-                           (cache, group_index, to_find, item, found,
-                            deserializer, baton, DEBUG_CACHE_MEMBUFFER_TAG
-                            result_pool));
+  if (group_index != NO_INDEX)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         membuffer_cache_get_partial_internal
+                             (cache, group_index, to_find, item, found,
+                              deserializer, baton, DEBUG_CACHE_MEMBUFFER_TAG
+                              result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1375,10 +1404,10 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. If no entry has been found, the function
  * returns without modifying the cache.
- * 
+ *
  * Otherwise, FUNC is called with that entry and the BATON provided
  * and may modify the cache entry. Allocations will be done in POOL.
- * 
+ *
  * Note: This function requires the caller to serialization access.
  * Don't call it directly, call membuffer_cache_set_partial instead.
  */
@@ -1448,7 +1477,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
               /* Remove the old entry and try to make space for the new one.
                */
               drop_entry(cache, entry);
-              if (   (cache->data_size / 4 > size)
+              if (   (cache->max_entry_size >= size)
                   && ensure_data_insertable(cache, size))
                 {
                   /* Write the new entry.
@@ -1499,11 +1528,12 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
    */
   group_index = get_group_index(&cache, key, key_len, to_find, scratch_pool);
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_set_partial_internal
-                           (cache, group_index, to_find, func, baton,
-                            DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                            scratch_pool));
+  if (group_index != NO_INDEX)
+    SVN_MUTEX__WITH_LOCK(cache->mutex,
+                         membuffer_cache_set_partial_internal
+                             (cache, group_index, to_find, func, baton,
+                              DEBUG_CACHE_MEMBUFFER_TAG_ARG
+                              scratch_pool));
 
   /* done here -> unlock the cache
    */
@@ -1597,14 +1627,22 @@ combine_key(const void *prefix,
             apr_size_t *full_key_len,
             apr_pool_t *pool)
 {
-  if (key_len == APR_HASH_KEY_STRING)
-    key_len = strlen((const char *) key);
+  if (key == NULL)
+    {
+      *full_key = NULL;
+      *full_key_len = 0;
+    }
+  else
+    {
+      if (key_len == APR_HASH_KEY_STRING)
+        key_len = strlen((const char *) key);
 
-  *full_key_len = prefix_len + key_len;
-  *full_key = apr_palloc(pool, *full_key_len);
+      *full_key_len = prefix_len + key_len;
+      *full_key = apr_palloc(pool, *full_key_len);
 
-  memcpy(*full_key, prefix, prefix_len);
-  memcpy((char *)*full_key + prefix_len, key, key_len);
+      memcpy(*full_key, prefix, prefix_len);
+      memcpy((char *)*full_key + prefix_len, key, key_len);
+    }
 }
 
 /* Implement svn_cache__vtable_t.get (not thread-safe)
@@ -1810,8 +1848,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return (size < cache->membuffer->data_size / 4)
-      && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
+  return size <= cache->membuffer->max_entry_size;
 }
 
 /* Add statistics of SEGMENT to INFO.
@@ -1859,7 +1896,7 @@ svn_membuffer_cache_get_info(void *cache_void,
   for (i = 0; i < cache->membuffer->segment_count; ++i)
     {
       svn_membuffer_t *segment = cache->membuffer + i;
-      SVN_MUTEX__WITH_LOCK(segment->mutex, 
+      SVN_MUTEX__WITH_LOCK(segment->mutex,
                            svn_membuffer_get_segment_info(segment, info));
     }
 
@@ -1889,13 +1926,13 @@ svn_membuffer_cache_get_synced(void **value_p,
                                apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_get(value_p,
                                                found,
                                                cache_void,
                                                key,
                                                result_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1908,12 +1945,12 @@ svn_membuffer_cache_set_synced(void *cache_void,
                                apr_pool_t *scratch_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_set(cache_void,
                                                key,
                                                value,
                                                scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1929,7 +1966,7 @@ svn_membuffer_cache_get_partial_synced(void **value_p,
                                        apr_pool_t *result_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_get_partial(value_p,
                                                        found,
                                                        cache_void,
@@ -1937,7 +1974,7 @@ svn_membuffer_cache_get_partial_synced(void **value_p,
                                                        func,
                                                        baton,
                                                        result_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1951,13 +1988,13 @@ svn_membuffer_cache_set_partial_synced(void *cache_void,
                                        apr_pool_t *scratch_pool)
 {
   svn_membuffer_cache_t *cache = cache_void;
-  SVN_MUTEX__WITH_LOCK(cache->mutex, 
+  SVN_MUTEX__WITH_LOCK(cache->mutex,
                        svn_membuffer_cache_set_partial(cache_void,
                                                        key,
                                                        func,
                                                        baton,
                                                        scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1999,8 +2036,10 @@ deserialize_svn_stringbuf(void **item,
                           apr_size_t buffer_size,
                           apr_pool_t *result_pool)
 {
-  svn_string_t *value_str = apr_palloc(result_pool, sizeof(svn_string_t));
+  svn_stringbuf_t *value_str = apr_palloc(result_pool, sizeof(svn_stringbuf_t));
 
+  value_str->pool = result_pool;
+  value_str->blocksize = buffer_size;
   value_str->data = buffer;
   value_str->len = buffer_size-1;
   *item = value_str;
@@ -2042,7 +2081,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->alloc_counter = 0;
 
   SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
-  
+
   /* for performance reasons, we don't actually store the full prefix but a
    * hash value of it
    */
@@ -2063,7 +2102,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
 
   /* initialize the generic cache wrapper
    */
-  wrapper->vtable = thread_safe ? &membuffer_cache_synced_vtable 
+  wrapper->vtable = thread_safe ? &membuffer_cache_synced_vtable
                                 : &membuffer_cache_vtable;
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;

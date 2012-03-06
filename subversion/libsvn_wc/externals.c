@@ -1181,7 +1181,7 @@ svn_wc__committable_externals_below(apr_array_header_t **externals,
                                                  local_abspath,
                                                  depth != svn_depth_infinity,
                                                  result_pool, scratch_pool));
-  
+
   if (orig_externals == NULL)
     return SVN_NO_ERROR;
 
@@ -1361,6 +1361,16 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
 
       return SVN_NO_ERROR;
     }
+}
+
+svn_error_t *
+svn_wc__close_db(const char *external_abspath,
+                 svn_wc_context_t *wc_ctx,
+                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_drop_root(wc_ctx->db, external_abspath,
+                               scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.

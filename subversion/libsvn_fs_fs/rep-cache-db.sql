@@ -33,6 +33,11 @@ CREATE TABLE rep_cache (
   expanded_size INTEGER NOT NULL
   );
 
+/* There isn't an implicit index on a TEXT column, so create an explicit one. */
+CREATE INDEX I_HASH on REP_CACHE (hash);
+
+/* The index didn't exist until 1.7.5; therefore, some USER_VERSION=1
+   rep-cache.db files out there DO NOT contain an I_HASH index. */
 PRAGMA USER_VERSION = 1;
 
 
@@ -47,8 +52,14 @@ INSERT OR FAIL INTO rep_cache (hash, revision, offset, size, expanded_size)
 VALUES (?1, ?2, ?3, ?4, ?5)
 
 
--- STMT_GET_ALL_REPS
+-- STMT_GET_REPS_FOR_RANGE
 SELECT hash, revision, offset, size, expanded_size
+FROM rep_cache
+WHERE revision >= ?1 AND revision <= ?2
+
+
+-- STMT_GET_MAX_REV
+SELECT MAX(revision)
 FROM rep_cache
 
 

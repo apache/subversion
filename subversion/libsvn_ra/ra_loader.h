@@ -293,6 +293,8 @@ typedef struct svn_ra__vtable_t {
                                   svn_revnum_t end_revision,
                                   svn_revnum_t *revision_deleted,
                                   apr_pool_t *pool);
+  svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks);
 
 } svn_ra__vtable_t;
 

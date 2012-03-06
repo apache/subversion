@@ -85,8 +85,8 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
 /* The following code maps the calls to a traditional delta editor to an
  * Editorv2 editor.  It does this by keeping track of a lot of state, and
  * then communicating that state to Ev2 upon closure of the file or dir (or
- * edit).  Note that Ev2 calls add_symlink() and set_target() are not present
- * in the delta editor paradigm, so we never call them.
+ * edit).  Note that Ev2 calls add_symlink() and alter_symlink() are not
+ * present in the delta editor paradigm, so we never call them.
  *
  * The general idea here is that we have to see *all* the actions on a node's
  * parent before we can process that node, which means we need to buffer a
@@ -118,7 +118,7 @@ typedef svn_error_t *(*unlock_func_t)(
     const char *path,
     apr_pool_t *scratch_pool);
 
-/* svn_editor__See insert_shims() for more information. */
+/* See svn_editor__insert_shims() for more information. */
 struct extra_baton
 {
   start_edit_func_t start_edit;
@@ -129,9 +129,14 @@ struct extra_baton
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
+
   apr_hash_t *paths;
+  apr_array_header_t *path_order;
+  int paths_processed;
+
   apr_pool_t *edit_pool;
   struct extra_baton *exb;
+  svn_boolean_t closed;
 
   svn_boolean_t *found_abs_paths; /* Did we strip an incoming '/' from the
                                      paths?  */
@@ -189,6 +194,7 @@ struct prop_args
   const char *name;
   svn_revnum_t base_revision;
   const svn_string_t *value;
+  svn_kind_t kind;
 };
 
 struct copy_args
@@ -201,7 +207,6 @@ struct path_checksum_args
 {
   const char *path;
   svn_revnum_t base_revision;
-  svn_checksum_t *checksum;
 };
 
 static svn_error_t *
@@ -220,16 +225,54 @@ add_action(struct ev2_edit_baton *eb,
 
   if (action_list == NULL)
     {
+      const char *path_dup = apr_pstrdup(eb->edit_pool, path);
+
       action_list = apr_array_make(eb->edit_pool, 1,
                                    sizeof(struct path_action *));
-      apr_hash_set(eb->paths, apr_pstrdup(eb->edit_pool, path),
-                   APR_HASH_KEY_STRING, action_list);
+      apr_hash_set(eb->paths, path_dup, APR_HASH_KEY_STRING, action_list);
+      APR_ARRAY_PUSH(eb->path_order, const char *) = path_dup;
     }
 
   APR_ARRAY_PUSH(action_list, struct path_action *) = p_action;
 
   return SVN_NO_ERROR;
 }
+
+/* Find all the paths which are immediate children of PATH and return their
+   basenames in a list. */
+static apr_array_header_t *
+get_children(struct ev2_edit_baton *eb,
+             const char *path,
+             apr_pool_t *pool)
+{
+  apr_array_header_t *children = apr_array_make(pool, 1, sizeof(const char *));
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, eb->paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *p = svn__apr_hash_index_key(hi);
+      const char *child;
+
+      /* Sanitize our paths. */
+      if (*p == '/')
+        p++;
+
+      /* Find potential children. */
+      child = svn_relpath_skip_ancestor(path, p);
+      if (!child || !*child)
+        continue;
+
+      /* If we have a path separator, it's a deep child, so just ignore it.
+         ### Is there an API we should be using for this? */
+      if (strchr(child, '/') != NULL)
+        continue;
+
+      APR_ARRAY_PUSH(children, const char *) = child;
+    }
+
+  return children;
+}
+
 
 static svn_error_t *
 process_actions(void *edit_baton,
@@ -244,13 +287,13 @@ process_actions(void *edit_baton,
   svn_boolean_t need_copy = FALSE;
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
-  apr_array_header_t *children;
+  apr_array_header_t *children = NULL;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
   svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t props_base_revision = SVN_INVALID_REVNUM;
   svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
-  svn_kind_t kind;
+  svn_kind_t kind = svn_kind_unknown;
   int i;
 
   if (*path == '/')
@@ -272,6 +315,8 @@ process_actions(void *edit_baton,
             {
               const struct prop_args *p_args = action->args;
 
+              kind = p_args->kind;
+
               if (!SVN_IS_VALID_REVNUM(props_base_revision))
                 props_base_revision = p_args->base_revision;
               else
@@ -283,6 +328,12 @@ process_actions(void *edit_baton,
                      the modifications to it.  */
                   if (need_delete && need_add)
                     props = apr_hash_make(scratch_pool);
+                  else if (need_copy)
+                    SVN_ERR(eb->fetch_props_func(&props,
+                                                 eb->fetch_props_baton,
+                                                 copyfrom_path,
+                                                 copyfrom_rev,
+                                                 scratch_pool, scratch_pool));
                   else
                     SVN_ERR(eb->fetch_props_func(&props,
                                                  eb->fetch_props_baton,
@@ -310,8 +361,7 @@ process_actions(void *edit_baton,
 
               if (kind == svn_kind_dir)
                 {
-                  children = apr_array_make(scratch_pool, 1,
-                                            sizeof(const char *));
+                  children = get_children(eb, path, scratch_pool);
                 }
               else
                 {
@@ -327,9 +377,13 @@ process_actions(void *edit_baton,
             {
               struct path_checksum_args *pca = action->args;
 
+              /* We can only set text on files. */
+              kind = svn_kind_file;
+
+              SVN_ERR(svn_io_file_checksum2(&checksum, pca->path,
+                                            svn_checksum_sha1, scratch_pool));
               SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
                                                scratch_pool, scratch_pool));
-              checksum = pca->checksum;
 
               if (!SVN_IS_VALID_REVNUM(text_base_revision))
                 text_base_revision = pca->base_revision;
@@ -375,10 +429,14 @@ process_actions(void *edit_baton,
     {
       /* If we're only doing a delete, do it here. */
       SVN_ERR(svn_editor_delete(eb->editor, path, delete_revnum));
+      return SVN_NO_ERROR;
     }
 
   if (need_add)
     {
+      if (props == NULL)
+        props = apr_hash_make(scratch_pool);
+
       if (kind == svn_kind_dir)
         {
           SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
@@ -399,19 +457,29 @@ process_actions(void *edit_baton,
                               delete_revnum));
     }
 
-  if (props)
+  if (props || contents)
     {
-      /* We fetched and modified the props in some way. Apply 'em now that
-         we have the new set.  */
-      SVN_ERR(svn_editor_set_props(eb->editor, path, props_base_revision,
-                                   props, contents == NULL));
-    }
+      /* We fetched and modified the props or content in some way. Apply 'em
+         now.  */
+      svn_revnum_t base_revision;
 
-  if (contents)
-    {
-      /* If we have an content for this node, set it now. */
-      SVN_ERR(svn_editor_set_text(eb->editor, path, text_base_revision,
-                                  checksum, contents));
+      if (SVN_IS_VALID_REVNUM(props_base_revision)
+            && SVN_IS_VALID_REVNUM(text_base_revision))
+        SVN_ERR_ASSERT(props_base_revision == text_base_revision);
+
+      if (SVN_IS_VALID_REVNUM(props_base_revision))
+        base_revision = props_base_revision;
+      else if (SVN_IS_VALID_REVNUM(text_base_revision))
+        base_revision = text_base_revision;
+      else
+        base_revision = SVN_INVALID_REVNUM;
+
+      if (kind == svn_kind_dir)
+        SVN_ERR(svn_editor_alter_directory(eb->editor, path, base_revision,
+                                           props));
+      else
+        SVN_ERR(svn_editor_alter_file(eb->editor, path, base_revision, props,
+                                      checksum, contents));
     }
 
   return SVN_NO_ERROR;
@@ -422,29 +490,21 @@ run_ev2_actions(void *edit_baton,
                 apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
-  apr_array_header_t *sorted_hash;
   apr_pool_t *iterpool;
-  int i;
-
-  /* Sort the paths touched by this edit.
-   * Ev2 doesn't really have any particular need for depth-first-ness, but
-   * we want to ensure all parent directories are handled before children in
-   * the case of adds (which does introduce an element of depth-first-ness). */
-  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
-                               scratch_pool);
 
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < sorted_hash->nelts; i++)
+
+  /* Possibly pick up where we left off. Ocassionally, we do some of these
+     as part of close_edit() and then some more as part of abort_edit()  */
+  for (; eb->paths_processed < eb->path_order->nelts; ++eb->paths_processed)
     {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
-      apr_array_header_t *actions = item->value;
-      const char *path = item->key;
+      const char *path = APR_ARRAY_IDX(eb->path_order, eb->paths_processed,
+                                       const char *);
+      apr_array_header_t *actions = apr_hash_get(eb->paths, path,
+                                                 APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
       SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
-
-      /* Remove this item from the hash. */
-      apr_hash_set(eb->paths, path, APR_HASH_KEY_STRING, NULL);
     }
   svn_pool_destroy(iterpool);
 
@@ -589,6 +649,7 @@ ev2_change_dir_prop(void *dir_baton,
   p_args->name = apr_pstrdup(db->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
   p_args->base_revision = db->base_revision;
+  p_args->kind = svn_kind_dir;
 
   SVN_ERR(add_action(db->eb, db->path, ACTION_PROPSET, p_args));
 
@@ -609,7 +670,7 @@ ev2_absent_directory(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-  
+
   *kind = svn_kind_dir;
   SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
 
@@ -705,6 +766,8 @@ struct handler_baton
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
 
+  svn_stream_t *source;
+
   apr_pool_t *pool;
 };
 
@@ -717,6 +780,8 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   err = hb->apply_handler(window, hb->apply_baton);
   if (window != NULL && !err)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_stream_close(hb->source));
 
   svn_pool_destroy(hb->pool);
 
@@ -734,7 +799,6 @@ ev2_apply_textdelta(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
-  svn_stream_t *source;
   svn_stream_t *target;
   struct path_checksum_args *pca = apr_pcalloc(fb->eb->edit_pool,
                                                sizeof(*pca));
@@ -742,27 +806,22 @@ ev2_apply_textdelta(void *file_baton,
   pca->base_revision = fb->base_revision;
 
   if (! fb->delta_base)
-    source = svn_stream_empty(handler_pool);
+    hb->source = svn_stream_empty(handler_pool);
   else
-    SVN_ERR(svn_stream_open_readonly(&source, fb->delta_base, handler_pool,
+    SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
                                      result_pool));
 
   SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
 
-  /* Wrap our target with a checksum'ing stream. */
-  target = svn_stream_checksummed2(target, NULL, &pca->checksum,
-                                   svn_checksum_sha1, TRUE,
-                                   fb->eb->edit_pool);
-
-  svn_txdelta_apply(source, target,
+  svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
                     handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = handler_pool;
-                    
+
   *handler_baton = hb;
   *handler = window_handler;
 
@@ -792,6 +851,7 @@ ev2_change_file_prop(void *file_baton,
   p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
   p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
   p_args->base_revision = fb->base_revision;
+  p_args->kind = svn_kind_file;
 
   SVN_ERR(add_action(fb->eb, fb->path, ACTION_PROPSET, p_args));
 
@@ -813,7 +873,7 @@ ev2_absent_file(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-  
+
   *kind = svn_kind_file;
   SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
 
@@ -827,6 +887,7 @@ ev2_close_edit(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
+  eb->closed = TRUE;
   return svn_error_trace(svn_editor_complete(eb->editor));
 }
 
@@ -837,7 +898,10 @@ ev2_abort_edit(void *edit_baton,
   struct ev2_edit_baton *eb = edit_baton;
 
   SVN_ERR(run_ev2_actions(edit_baton, scratch_pool));
-  return svn_error_trace(svn_editor_abort(eb->editor));
+  if (!eb->closed)
+    return svn_error_trace(svn_editor_abort(eb->editor));
+  else
+    return SVN_NO_ERROR;
 }
 
 /* Return a svn_delta_editor_t * in DEDITOR, with an accompanying baton in
@@ -859,7 +923,7 @@ ev2_abort_edit(void *edit_baton,
  *  - EXB: An 'extra baton' which is used to communicate between the shims.
  *         Its callbacks should be invoked at the appropriate time by this
  *         shim.
- */ 
+ */
 static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
@@ -897,6 +961,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
+  eb->path_order = apr_array_make(pool, 1, sizeof(const char *));
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
   *eb->found_abs_paths = FALSE;
@@ -1055,19 +1120,15 @@ build(struct editor_baton *eb,
       apr_hash_t *current_props;
       apr_array_header_t *propdiffs;
 
-      /* Only fetch the kind if operating on something other than the root,
-         as we already know the kind on the root. */
-      if (operation->path)
-        {
-          if (kind == svn_kind_unknown)
-            SVN_ERR(eb->fetch_kind_func(&operation->kind, eb->fetch_kind_baton,
-                                        relpath, rev, scratch_pool));
-          else
-            operation->kind = kind;
-        }
+      operation->kind = kind;
 
       if (operation->operation == OP_REPLACE)
         current_props = apr_hash_make(scratch_pool);
+      else if (operation->copyfrom_url)
+        SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                     operation->copyfrom_url,
+                                     operation->copyfrom_revision,
+                                     scratch_pool, scratch_pool));
       else
         SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
                                      relpath, rev, scratch_pool,
@@ -1081,7 +1142,7 @@ build(struct editor_baton *eb,
              actual structures, not pointers to them. */
           svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
           if (!prop->value)
-            APR_ARRAY_PUSH(operation->prop_dels, const char *) = 
+            APR_ARRAY_PUSH(operation->prop_dels, const char *) =
                                         apr_pstrdup(eb->edit_pool, prop->name);
           else
             apr_hash_set(operation->prop_mods,
@@ -1285,67 +1346,88 @@ add_absent_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_set_props_t */
+/* This implements svn_editor_cb_alter_directory_t */
 static svn_error_t *
-set_props_cb(void *baton,
-             const char *relpath,
-             svn_revnum_t revision,
-             apr_hash_t *props,
-             svn_boolean_t complete,
-             apr_pool_t *scratch_pool)
+alter_directory_cb(void *baton,
+                   const char *relpath,
+                   svn_revnum_t revision,
+                   apr_hash_t *props,
+                   apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
 
-  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_unknown,
+  /* ### should we verify the kind is truly a directory?  */
+
+  SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_dir,
                 NULL, SVN_INVALID_REVNUM,
                 props, NULL, NULL, revision, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_set_text_t */
+/* This implements svn_editor_cb_alter_file_t */
 static svn_error_t *
-set_text_cb(void *baton,
-            const char *relpath,
-            svn_revnum_t revision,
-            const svn_checksum_t *checksum,
-            svn_stream_t *contents,
-            apr_pool_t *scratch_pool)
+alter_file_cb(void *baton,
+              const char *relpath,
+              svn_revnum_t revision,
+              apr_hash_t *props,
+              const svn_checksum_t *checksum,
+              svn_stream_t *contents,
+              apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
   svn_checksum_t *md5_checksum;
 
-  /* We may need to re-checksum these contents */
-  if (!(checksum && checksum->kind == svn_checksum_md5))
-    contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
-                                       svn_checksum_md5, TRUE, scratch_pool);
-  else
-    md5_checksum = (svn_checksum_t *)checksum;
+  /* ### should we verify the kind is truly a file?  */
 
-  /* Spool the contents to a tempfile, and provide that to the driver. */
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 eb->edit_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
+  if (contents)
+    {
+      /* We may need to re-checksum these contents */
+      if (!(checksum && checksum->kind == svn_checksum_md5))
+        contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
+                                           svn_checksum_md5, TRUE,
+                                           scratch_pool);
+      else
+        md5_checksum = (svn_checksum_t *)checksum;
 
-  SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
-                NULL, SVN_INVALID_REVNUM,
-                NULL, tmp_filename, md5_checksum, revision, scratch_pool));
+      /* Spool the contents to a tempfile, and provide that to the driver. */
+      SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     eb->edit_pool, scratch_pool));
+      SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL,
+                               scratch_pool));
+
+      SVN_ERR(build(eb, ACTION_PUT, relpath, svn_kind_file,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, tmp_filename, md5_checksum, revision, scratch_pool));
+    }
+
+  if (props)
+    {
+      SVN_ERR(build(eb, ACTION_PROPSET, relpath, svn_kind_file,
+                    NULL, SVN_INVALID_REVNUM,
+                    props, NULL, NULL, revision, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_set_target_t */
+/* This implements svn_editor_cb_alter_symlink_t */
 static svn_error_t *
-set_target_cb(void *baton,
-              const char *relpath,
-              svn_revnum_t revision,
-              const char *target,
-              apr_pool_t *scratch_pool)
+alter_symlink_cb(void *baton,
+                 const char *relpath,
+                 svn_revnum_t revision,
+                 apr_hash_t *props,
+                 const char *target,
+                 apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+
+  /* ### should we verify the kind is truly a symlink?  */
+
+  /* ### do something  */
 
   return SVN_NO_ERROR;
 }
@@ -1489,7 +1571,8 @@ drive_tree(struct operation *op,
     {
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
-        SVN_ERR(editor->open_directory(path, parent_op->baton, op->base_revision,
+        SVN_ERR(editor->open_directory(path, parent_op->baton,
+                                       op->base_revision,
                                        scratch_pool, &op->baton));
 
       else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
@@ -1529,7 +1612,7 @@ drive_tree(struct operation *op,
          I don't know that that's a valid assumption... */
 
       void *file_baton = NULL;
-      
+
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
         SVN_ERR(editor->open_file(path, parent_op->baton, op->base_revision,
@@ -1604,7 +1687,7 @@ drive_root(struct operation *root,
       svn_pool_clear(iterpool);
       SVN_ERR(drive_tree(child, root, editor, make_abs_paths, iterpool));
     }
-  
+
   /* We need to close the root directory, but leave it to our caller to call
      close_ or abort_edit(). */
   SVN_ERR(editor->close_directory(root->baton, scratch_pool));
@@ -1767,9 +1850,9 @@ editor_from_delta(svn_editor_t **editor_p,
       add_file_cb,
       add_symlink_cb,
       add_absent_cb,
-      set_props_cb,
-      set_text_cb,
-      set_target_cb,
+      alter_directory_cb,
+      alter_file_cb,
+      alter_symlink_cb,
       delete_cb,
       copy_cb,
       move_cb,
@@ -1864,6 +1947,10 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
 
   unlock_func_t unlock_func;
   void *unlock_baton;
+
+  SVN_ERR_ASSERT(shim_callbacks->fetch_kind_func != NULL);
+  SVN_ERR_ASSERT(shim_callbacks->fetch_props_func != NULL);
+  SVN_ERR_ASSERT(shim_callbacks->fetch_base_func != NULL);
 
   SVN_ERR(editor_from_delta(&editor, &exb, &unlock_func, &unlock_baton,
                             deditor_in, dedit_baton_in,

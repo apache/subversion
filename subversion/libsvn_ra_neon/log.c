@@ -166,7 +166,7 @@ log_start_element(int *elem, void *baton, int parent,
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
       lb->cdata_encoding = NULL;
-          
+
       /* Some tags might contain encoded CDATA. */
       if ((elm->id == ELEM_comment) ||
           (elm->id == ELEM_creator_displayname) ||
@@ -280,7 +280,7 @@ maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
   return SVN_NO_ERROR;
 }
 
-                       
+
 
 /*
  * This implements the `svn_ra_neon__xml_endelm_cb' prototype.

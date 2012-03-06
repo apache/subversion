@@ -1,0 +1,54 @@
+#!/usr/bin/bash
+#
+# a dumb init script for twistd on solaris. cus like, writing XML for SMF is f'ing lame.
+#
+
+svnwcsub_user=${svnwcsub_user-"svnwc"}
+svnwcsub_group=${svnwcsub_group-"other"}
+svnwcsub_reactor=${svnwcsub_reactor-"poll"}
+svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub/svnwcsub.pid"}
+pidfile="${svnwcsub_pidfile}"
+
+TWSITD_CMD="/opt/python/2.6.2/bin/twistd -y /usr/local/svnpubsub/svnwcsub.tac \
+            --logfile=/x1/log/svnwcsub.log \
+            --pidfile=${pidfile} \
+            --umask=002 \
+            --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+            -r${svnwcsub_reactor}"
+
+RETVAL=0
+ 
+start() {
+    echo "Starting SvnWcSub Server: "
+    $TWSITD_CMD
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
+    return $RETVAL
+}
+ 
+stop() {
+    echo "Stopping SvnWcSub Server: "
+    THE_PID=`cat ${pidfile}`
+    kill $THE_PID
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $RETVAL
