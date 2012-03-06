@@ -81,7 +81,12 @@ default_num_threads = 5
 
 # Set up logging
 logger = logging.getLogger()
-logger.addHandler(logging.StreamHandler(sys.stdout))
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
+                              '%Y-%m-%d %H:%M:%S')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
