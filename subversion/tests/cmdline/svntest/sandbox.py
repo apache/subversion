@@ -29,7 +29,7 @@ import logging
 
 import svntest
 
-logger = logging.getLogger('svntest')
+logger = logging.getLogger()
 
 
 class Sandbox:
