@@ -35,6 +35,7 @@ import threading
 import optparse # for argument parsing
 import xml
 import urllib
+import logging
 
 try:
   # Python >=3.0
@@ -77,6 +78,10 @@ SVN_VER_MINOR = 8
 # Global stuff
 
 default_num_threads = 5
+
+# Set up logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
@@ -427,22 +432,17 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       exit_signal = exit_code
 
     if stdout_lines is not None:
-      sys.stdout.write("".join(stdout_lines))
-      sys.stdout.flush()
+      logger.info("".join(stdout_lines))
     if stderr_lines is not None:
-      sys.stderr.write("".join(stderr_lines))
-      sys.stderr.flush()
+      logger.warning("".join(stderr_lines))
     if options.verbose:
       # show the whole path to make it easier to start a debugger
-      sys.stderr.write("CMD: %s terminated by signal %d\n"
+      logger.warning("CMD: %s terminated by signal %d"
                        % (command_string, exit_signal))
-      sys.stderr.flush()
     raise SVNProcessTerminatedBySignal
   else:
-    if exit_code and options.verbose:
-      sys.stderr.write("CMD: %s exited with %d\n"
-                       % (command_string, exit_code))
-      sys.stderr.flush()
+    if exit_code:
+      logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
@@ -460,10 +460,9 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
     raise TypeError("stdin_lines should have list type")
 
   # Log the command line
-  if options.verbose and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s\n' % (os.path.basename(command),
-                                      ' '.join([_quote_arg(x) for x in varargs])))
-    sys.stdout.flush()
+  if not command.endswith('.py'):
+    logger.info('CMD: %s %s' % (os.path.basename(command),
+                                  ' '.join([_quote_arg(x) for x in varargs])))
 
   infile, outfile, errfile, kid = open_pipe([command] + list(varargs), bufsize)
 
@@ -494,8 +493,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   If ERROR_EXPECTED is None, any stderr output will be printed and any
   stderr output or a non-zero exit code will raise an exception."""
 
-  if options.verbose:
-    start = time.time()
+  start = time.time()
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
@@ -503,18 +501,17 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  if options.verbose:
-    stop = time.time()
-    print('<TIME = %.6f>' % (stop - start))
-    for x in stdout_lines:
-      sys.stdout.write(x)
-    for x in stderr_lines:
-      sys.stdout.write(x)
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
+  for x in stdout_lines:
+    logger.info(x[:-1])
+  for x in stderr_lines:
+    logger.info(x)
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     if not options.verbose:
       for x in stderr_lines:
-        sys.stdout.write(x)
+        logger.warning(x[:-1])
     raise Failure
 
   return exit_code, \
@@ -856,11 +853,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
 
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
-  if options.verbose:
-    sys.stdout.write('CMD: %s %s | %s %s\n' %
+
+  logger.info('CMD: %s %s | %s %s' %
                      (os.path.basename(svnadmin_binary), ' '.join(dump_args),
                       os.path.basename(svnadmin_binary), ' '.join(load_args)))
-    sys.stdout.flush()
   start = time.time()
 
   dump_in, dump_out, dump_err, dump_kid = open_pipe(
@@ -1473,6 +1469,9 @@ def create_default_options():
 
 def _create_parser():
   """Return a parser for our test suite."""
+  def set_log_debug(option, opt, value, parser):
+    logger.setLevel(logging.DEBUG)
+
   # set up the parser
   _default_http_library = 'serf'
   usage = 'usage: %prog [options] [<test> ...]'
@@ -1481,7 +1480,8 @@ def _create_parser():
                     help='Print test doc strings instead of running them')
   parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
                     help='Limit --list to those with target milestone specified')
-  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+  parser.add_option('-v', '--verbose', action='callback',
+                    callback=set_log_debug,
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
@@ -1551,8 +1551,6 @@ def _parse_options(arglist=sys.argv[1:]):
   (options, args) = parser.parse_args(arglist)
 
   # some sanity checking
-  if options.verbose and options.quiet:
-    parser.error("'verbose' and 'quiet' are incompatible")
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
 
