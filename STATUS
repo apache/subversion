@@ -111,6 +111,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1297522
+   Resolve issue 4136, "Deep commit followed by --depth immediates update
+   triggers checksum failure"
+   Justification:
+     User reported regression since 1.7.0
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
