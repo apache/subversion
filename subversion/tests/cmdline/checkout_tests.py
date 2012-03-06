@@ -55,7 +55,7 @@ def test_stderr(re_string, stderr):
       return
   for x in stderr:
     logger.debug(x[:-1])
-    logger.info("Expected stderr reg-ex: '" + re_string + "'")
+  logger.info("Expected stderr reg-ex: '" + re_string + "'")
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------
