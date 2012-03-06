@@ -435,10 +435,9 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       logger.info("".join(stdout_lines))
     if stderr_lines is not None:
       logger.warning("".join(stderr_lines))
-    if options.verbose:
-      # show the whole path to make it easier to start a debugger
-      logger.warning("CMD: %s terminated by signal %d"
-                       % (command_string, exit_signal))
+    # show the whole path to make it easier to start a debugger
+    logger.warning("CMD: %s terminated by signal %d"
+                     % (command_string, exit_signal))
     raise SVNProcessTerminatedBySignal
   else:
     if exit_code:
@@ -509,9 +508,8 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
     logger.info(x)
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
-    if not options.verbose:
-      for x in stderr_lines:
-        logger.warning(x[:-1])
+    for x in stderr_lines:
+      logger.warning(x[:-1])
     raise Failure
 
   return exit_code, \
@@ -866,8 +864,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     stdin=dump_out) # Attached to dump_kid
 
   stop = time.time()
-  if options.verbose:
-    print('<TIME = %.6f>' % (stop - start))
+  logger.info('<TIME = %.6f>' % (stop - start))
 
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
   dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
@@ -1180,7 +1177,7 @@ class TestSpawningThread(threading.Thread):
       args.append('--fs-type=' + options.fs_type)
     if options.test_area_url:
       args.append('--url=' + options.test_area_url)
-    if options.verbose:
+    if logger.getEffectiveLevel() <= logging.DEBUG:
       args.append('-v')
     if options.cleanup:
       args.append('--cleanup')
@@ -1332,25 +1329,23 @@ class TestRunner:
       # *is* information in the exception's arguments, then print it.
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
-        print('CWD: %s' % os.getcwd())
+        logger.warn('CWD: %s' % os.getcwd())
         if ex_args:
-          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
+          logger.exception('EXCEPTION: %s: %s' % (ex.__class__.__name__,
+                                                  ex_args))
         else:
-          print('EXCEPTION: %s' % ex.__class__.__name__)
-      traceback.print_exc(file=sys.stdout)
-      sys.stdout.flush()
+          logger.exception('EXCEPTION: %s' % ex.__class__.__name__)
     except KeyboardInterrupt:
-      print('Interrupted')
+      logger.error('Interrupted')
       sys.exit(0)
     except SystemExit, ex:
-      print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
+      logger.error('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
     except:
       result = svntest.testcase.RESULT_FAIL
-      print('CWD: %s' % os.getcwd())
-      print('UNEXPECTED EXCEPTION:')
-      traceback.print_exc(file=sys.stdout)
+      logger.warn('CWD: %s' % os.getcwd())
+      logger.exception('UNEXPECTED EXCEPTION:')
       sys.stdout.flush()
 
     os.chdir(saved_dir)
