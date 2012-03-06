@@ -19,6 +19,7 @@
 import sys
 import os
 from twisted.application import service, internet
+from twisted.internet import threads
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -29,7 +30,9 @@ application = service.Application("SvnWcSub")
 def get_service():
     m = service.MultiService()
     c = svnwcsub.ReloadableConfig("/etc/svnwcsub.conf")
-    big = svnwcsub.BigDoEverythingClasss(c, service=m)
+    bdec = svnwcsub.BigDoEverythingClasss(c, service=m)
+    # Start the BDEC on a background thread, after twisted is up and running
+    threads.deferToThread(bdec.start)
     return m
 
 service = get_service()

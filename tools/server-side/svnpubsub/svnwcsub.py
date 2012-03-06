@@ -54,8 +54,8 @@ from twisted.internet import protocol
 try:
     check_output = subprocess.check_output
 except AttributeError:
-    def check_output(args):  # note: we don't use anything beyond args
-        pipe = subprocess.Popen(args, stdout=subprocess.PIPE)
+    def check_output(args, env):  # note: we only use these two args
+        pipe = subprocess.Popen(args, stdout=subprocess.PIPE, env=env)
         output, _ = pipe.communicate()
         if pipe.returncode:
             raise subprocess.CalledProcessError(pipe.returncode, args)
@@ -65,10 +65,10 @@ except AttributeError:
 ### note: this runs synchronously. within the current Twisted environment,
 ### it is called from ._get_match() which is run on a thread so it won't
 ### block the Twisted main loop.
-def svn_info(svnbin, path):
+def svn_info(svnbin, env, path):
     "Run 'svn info' on the target path, returning a dict of info data."
     args = [svnbin, "info", "--non-interactive", "--", path]
-    output = check_output(args).strip()
+    output = check_output(args, env=env).strip()
     info = { }
     for line in output.split('\n'):
         idx = line.index(':')
@@ -78,20 +78,14 @@ def svn_info(svnbin, path):
 
 class WorkingCopy(object):
     def __init__(self, bdec, path, url):
-        self.bdec = bdec
         self.path = path
         self.url = url
-        self.repos = None
-        self.match = None
-        d = threads.deferToThread(self._get_match)
-        d.addCallback(self._set_match)
 
-    def _set_match(self, value):
-        self.match = str(value[0])
-        self.url = value[1]
-        self.repos = value[2]
-        self.uuid = value[3]
-        self.bdec.wc_ready(self)
+        try:
+            self.match, self.uuid = self._get_match(bdec.svnbin, bdec.env)
+            bdec.wc_ready(self)
+        except:
+            logging.exception('problem with working copy: %s', path)
 
     def update_applies(self, uuid, path):
         if self.uuid != uuid:
@@ -114,23 +108,24 @@ class WorkingCopy(object):
                 return True
         return False
 
-    def _get_match(self):
+    def _get_match(self, svnbin, env):
         ### quick little hack to auto-checkout missing working copies
         if not os.path.isdir(self.path):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
-            subprocess.check_call([self.bdec.svnbin, 'co', '-q',
+            subprocess.check_call([svnbin, 'co', '-q',
                                    '--non-interactive',
                                    '--config-dir',
                                    '/home/svnwc/.subversion',
-                                   '--', self.url, self.path])
+                                   '--', self.url, self.path],
+                                  env=env)
 
         # Fetch the info for matching dirs_changed against this WC
-        info = svn_info(self.bdec.svnbin, self.path)
+        info = svn_info(svnbin, env, self.path)
+        root = info['Repository Root']
         url = info['URL']
-        repos = info['Repository Root']
+        relpath = url[len(root):]  # also has leading '/'
         uuid = info['Repository UUID']
-        relpath = url[len(repos):]  # also has leading '/'
-        return [relpath, url, repos, uuid]
+        return str(relpath), uuid
 
 
 class HTTPStream(HTTPClientFactory):
@@ -230,6 +225,7 @@ class BigDoEverythingClasss(object):
         self.urls = [s.strip() for s in config.get_value('streams').split()]
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
+        self.tracking = config.get_track()
         self.worker = BackgroundWorker(self.svnbin, self.env)
         self.service = service
         self.failures = 0
@@ -240,10 +236,12 @@ class BigDoEverythingClasss(object):
         for u in self.urls:
           self._restartStream(u)
         self.watch = []
-        for path, url in config.get_track().items():
+        self.checker.start(CHECKBEAT_TIME)
+
+    def start(self):
+        for path, url in self.tracking.items():
             # working copies auto-register with the BDEC when they are ready.
             WorkingCopy(self, path, url)
-        self.checker.start(CHECKBEAT_TIME)
 
     def pageStart(self, stream):
         logging.info("Stream %s Connection Established" % (stream.url))
@@ -392,7 +390,7 @@ class BackgroundWorker(threading.Thread):
         subprocess.check_call(args, env=self.env)
 
         ### check the loglevel before running 'svn info'?
-        info = svn_info(self.svnbin, wc.path)
+        info = svn_info(self.svnbin, self.env, wc.path)
         logging.info("updated: %s now at r%s", wc.path, info['Revision'])
 
     def _cleanup(self, wc):
@@ -536,7 +534,10 @@ def main(args):
     handle_options(options)
 
     c = ReloadableConfig(config_file)
-    big = BigDoEverythingClasss(c)
+    bdec = BigDoEverythingClasss(c)
+
+    # Start the BDEC on the main thread, then start up twisted
+    bdec.start()
     reactor.run()
 
 
