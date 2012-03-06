@@ -1251,7 +1251,7 @@ class TestRunner:
       # If there is no filter or this test made if through
       # the filter then print it!
       if options.milestone_filter is None or len(issues):
-        if options.verbose and self.pred.inprogress:
+        if self.pred.inprogress:
           tail += " [[%s]]" % self.pred.inprogress
         else:
           print(" %3d    %-5s  %s%s" % (self.index,
