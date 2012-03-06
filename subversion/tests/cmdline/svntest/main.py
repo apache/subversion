@@ -80,7 +80,7 @@ SVN_VER_MINOR = 8
 default_num_threads = 5
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 class SVNProcessTerminatedBySignal(Failure):
