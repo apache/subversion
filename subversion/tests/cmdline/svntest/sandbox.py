@@ -25,8 +25,11 @@ import os
 import shutil
 import copy
 import urllib
+import logging
 
 import svntest
+
+logger = logging.getLogger('svntest')
 
 
 class Sandbox:
@@ -307,14 +310,13 @@ def cleanup_deferred_test_paths():
 
 
 def _cleanup_test_path(path, retrying=False):
-  if svntest.main.options.verbose:
-    if retrying:
-      print("CLEANUP: RETRY: %s" % path)
-    else:
-      print("CLEANUP: %s" % path)
+  if retrying:
+    logger.info("CLEANUP: RETRY: %s", path)
+  else:
+    logger.info("CLEANUP: %s", path)
+
   try:
     svntest.main.safe_rmtree(path)
   except:
-    if svntest.main.options.verbose:
-      print("WARNING: cleanup failed, will try again later")
+    logger.info("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)
