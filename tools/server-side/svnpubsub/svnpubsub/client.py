@@ -117,7 +117,7 @@ class XMLStreamHandler(xml.sax.handler.ContentHandler):
 
   def startElement(self, name, attrs):
     if name == 'commit':
-      self.rev = Revision(attrs['repository'], attrs['revision'])
+      self.rev = Revision(attrs['repository'], int(attrs['revision']))
     # No other elements to worry about.
 
   def characters(self, data):
