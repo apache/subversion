@@ -6,14 +6,17 @@
 svnwcsub_user=${svnwcsub_user-"svnwc"}
 svnwcsub_group=${svnwcsub_group-"other"}
 svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub/svnwcsub.pid"}
+svnwcsub_config=${svnwcsub_config-"/etc/svnwcsub.conf"}
+svnwcsub_logfile=${svnwcsub_logfile-"/x1/log/svnwcsub.log"}
 pidfile="${svnwcsub_pidfile}"
 
 SVNWCSUB_CMD="/usr/local/svnpubsub/svnwcsub.py \
               --daemon \
-              --logfile=/x1/log/svnwcsub.log \
+              --logfile=${svnwcsub_logfile} \
               --pidfile=${pidfile} \
               --umask=002 \
-              --uid=${svnwcsub_user} --gid=${svnwcsub_group} /etc/svnwcsub.conf"
+              --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+              ${svnwcsub_config}"
 
 RETVAL=0
  
