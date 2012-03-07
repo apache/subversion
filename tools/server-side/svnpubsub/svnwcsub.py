@@ -46,6 +46,7 @@ from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
 from urlparse import urlparse
 from xml.sax import handler, make_parser
 
+import daemonize
 
 # check_output() is only available in Python 2.7. Allow us to run with
 # earlier versions
@@ -392,6 +393,22 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
         return str(option)
 
 
+class Daemon(daemonize.Daemon):
+    def __init__(self, logfile, pidfile, bdec):
+        daemonize.Daemon.__init__(self, logfile, pidfile)
+
+        self.bdec = bdec
+
+    def setup(self):
+        # There is no setup which the parent needs to wait for.
+        pass
+
+    def run(self):
+        # Start the BDEC (on the main thread), then start up twisted
+        self.bdec.start()
+        reactor.run()
+
+
 def prepare_logging(logfile):
     "Log to the specified file, or to stdout if None."
 
@@ -420,7 +437,9 @@ def handle_options(options):
     # Set up the logging, then process the rest of the options.
     prepare_logging(options.logfile)
 
-    if options.pidfile:
+    # In daemon mode, we let the daemonize module handle the pidfile.
+    # Otherwise, we should write this (foreground) PID into the file.
+    if options.pidfile and not options.daemon:
         pid = os.getpid()
         open(options.pidfile, 'w').write('%s\n' % pid)
         logging.info('pid %d written to %s', pid, options.pidfile)
@@ -465,6 +484,8 @@ def main(args):
                       help='switch to this GID before running')
     parser.add_option('--umask',
                       help='set this (octal) umask before running')
+    parser.add_option('--daemon', action='store_true',
+                      help='run as a background daemon')
 
     options, extra = parser.parse_args(args)
 
@@ -472,15 +493,26 @@ def main(args):
         parser.error('CONFIG_FILE is required')
     config_file = extra[0]
 
+    if options.daemon and not options.logfile:
+        parser.error('LOGFILE is required when running as a daemon')
+    if options.daemon and not options.pidfile:
+        parser.error('PIDFILE is required when running as a daemon')
+
     # Process any provided options.
     handle_options(options)
 
     c = ReloadableConfig(config_file)
     bdec = BigDoEverythingClasss(c)
 
-    # Start the BDEC on the main thread, then start up twisted
-    bdec.start()
-    reactor.run()
+    # We manage the logfile ourselves (along with possible rotation). The
+    # daemon process can just drop stdout/stderr into /dev/null.
+    d = Daemon('/dev/null', options.pidfile, bdec)
+    if options.daemon:
+        # Daemonize the process and call sys.exit() with appropriate code
+        d.daemonize_exit()
+    else:
+        # Just run in the foreground (the default)
+        d.foreground()
 
 
 if __name__ == "__main__":
