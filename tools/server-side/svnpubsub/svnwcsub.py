@@ -40,13 +40,7 @@ import logging.handlers
 import Queue
 import optparse
 import functools
-
-### these will go away shortly
-from twisted.internet import reactor
-from twisted.application import internet
-from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
-from urlparse import urlparse
-from xml.sax import handler, make_parser
+import urlparse
 
 import daemonize
 import svnpubsub.client
@@ -130,110 +124,21 @@ class WorkingCopy(object):
         return str(relpath), uuid
 
 
-class HTTPStream(HTTPClientFactory):
-    protocol = HTTPPageDownloader
-
-    def __init__(self, url):
-        self.url = url
-        HTTPClientFactory.__init__(self, url, method="GET", agent="SvnWcSub/0.1.0")
-
-    def pageStart(self, partial):
-        pass
-
-    def pagePart(self, data):
-        pass
-
-    def pageEnd(self):
-        pass
-
-class Revision:
-    def __init__(self, repos, rev):
-        self.repos = repos
-        self.rev = rev
-        self.dirs_changed = []
-
-class StreamHandler(handler.ContentHandler):
-    def __init__(self, stream, bdec):
-        handler.ContentHandler.__init__(self)
-        self.stream = stream
-        self.bdec =  bdec
-        self.rev = None
-        self.text_value = None
-
-    def startElement(self, name, attrs):
-        """
-        <commit revision="7">
-                        <dirs_changed><path>/</path></dirs_changed>
-                      </commit>
-        """
-        if name == "commit":
-            self.rev = Revision(attrs['repository'], int(attrs['revision']))
-
-    def characters(self, data):
-        if self.text_value is not None:
-            self.text_value = self.text_value + data
-        else:
-            self.text_value = data
-
-    def endElement(self, name):
-        if name == "commit":
-            self.bdec.commit(self.stream, self.rev)
-            self.rev = None
-        if name == "path" and self.text_value is not None and self.rev is not None:
-            self.rev.dirs_changed.append(self.text_value.strip())
-        self.text_value = None
-
-
-class XMLHTTPStream(HTTPStream):
-    def __init__(self, url, bdec):
-        HTTPStream.__init__(self, url)
-        self.parser = make_parser(['xml.sax.expatreader'])
-        self.handler = StreamHandler(self, bdec)
-        self.parser.setContentHandler(self.handler)
-
-    def pagePart(self, data):
-        self.parser.feed(data)
-
-
-def connectTo(url, bdec):
-    u = urlparse(url)
-    port = u.port
-    if not port:
-        port = 80
-    s = XMLHTTPStream(url, bdec)
-    if bdec.service:
-      conn = internet.TCPClient(u.hostname, u.port, s)
-      conn.setServiceParent(bdec.service)
-    else:
-      conn = reactor.connectTCP(u.hostname, u.port, s)
-    return [s, conn]
-
-
-CHECKBEAT_TIME = 60
 PRODUCTION_RE_FILTER = re.compile("/websites/production/[^/]+/")
 
 class BigDoEverythingClasss(object):
-    def __init__(self, config, service = None):
+    def __init__(self, config):
         self.urls = [s.strip() for s in config.get_value('streams').split()]
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.tracking = config.get_track()
         self.worker = BackgroundWorker(self.svnbin, self.env)
-        self.service = service
-        self.transports = {}
-        self.streams = {}
-        for u in self.urls:
-          self._restartStream(u)
         self.watch = []
 
     def start(self):
         for path, url in self.tracking.items():
             # working copies auto-register with the BDEC when they are ready.
             WorkingCopy(self, path, url)
-
-    def _restartStream(self, url):
-        return
-        (self.streams[url], self.transports[url]) = connectTo(url, self)
 
     def wc_ready(self, wc):
         # called when a working copy object has its basic info/url,
@@ -272,7 +177,7 @@ class BigDoEverythingClasss(object):
 def run_client(bdec):
     hostports = [ ]
     for url in bdec.urls:
-        parsed = urlparse(url)
+        parsed = urlparse.urlparse(url)
         hostports.append((parsed.hostname, parsed.port))
 
     mc = svnpubsub.client.MultiClient(hostports,
@@ -437,7 +342,6 @@ class Daemon(daemonize.Daemon):
     def run(self):
         # Start the BDEC (on the main thread), then start up twisted
         self.bdec.start()
-        #reactor.run()
         run_client(self.bdec)
 
 
