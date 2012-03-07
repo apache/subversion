@@ -110,8 +110,6 @@ class WorkingCopy(object):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
             subprocess.check_call([svnbin, 'co', '-q',
                                    '--non-interactive',
-                                   '--config-dir',
-                                   '/home/svnwc/.subversion',
                                    '--', self.url, self.path],
                                   env=env)
 
@@ -261,7 +259,6 @@ class BackgroundWorker(threading.Thread):
         ### still specific to the ASF setup.
         args = [self.svnbin, 'update',
                 '--quiet',
-                '--config-dir', '/home/svnwc/.subversion',
                 '--non-interactive',
                 '--trust-server-cert',
                 '--ignore-externals',
@@ -278,7 +275,6 @@ class BackgroundWorker(threading.Thread):
         ### we need to move some of these args into the config. these are
         ### still specific to the ASF setup.
         args = [self.svnbin, 'cleanup',
-                '--config-dir', '/home/svnwc/.subversion',
                 '--non-interactive',
                 '--trust-server-cert',
                 wc.path]
