@@ -6365,6 +6365,7 @@ delete_node(void *baton,
 
   if (b->moved_to_relpath)
     {
+      const char *moved_from_op_root_relpath;
       struct moved_node_t *moved_node
         = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
 
@@ -6373,14 +6374,17 @@ delete_node(void *baton,
        * is the first time the node is moved. */
       if (status == svn_wc__db_status_added)
         SVN_ERR(scan_addition(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                              &moved_node->local_relpath, NULL,
+                              &moved_node->local_relpath,
+                              &moved_from_op_root_relpath,
                               &moved_node->op_depth,
                               wcroot, local_relpath,
                               scratch_pool, scratch_pool));
 
-      if (status != svn_wc__db_status_moved_here)
+      if (status != svn_wc__db_status_moved_here ||
+          strcmp(moved_from_op_root_relpath, moved_node->local_relpath) != 0)
         {
-          /* The node is being moved for the first time. */
+          /* The node is becoming a move-root for the first time,
+           * possibly because of a nested move operation. */
           moved_node->local_relpath = local_relpath;
           moved_node->op_depth = b->delete_depth;
         }
