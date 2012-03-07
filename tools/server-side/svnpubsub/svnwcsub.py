@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -380,15 +380,6 @@ def handle_options(options):
         open(options.pidfile, 'w').write('%s\n' % pid)
         logging.info('pid %d written to %s', pid, options.pidfile)
 
-    if options.uid:
-        try:
-            uid = int(options.uid)
-        except ValueError:
-            import pwd
-            uid = pwd.getpwnam(options.uid)[2]
-        logging.info('setting uid %d', uid)
-        os.setuid(uid)
-
     if options.gid:
         try:
             gid = int(options.gid)
@@ -397,6 +388,15 @@ def handle_options(options):
             gid = grp.getgrnam(options.gid)[2]
         logging.info('setting gid %d', gid)
         os.setgid(gid)
+
+    if options.uid:
+        try:
+            uid = int(options.uid)
+        except ValueError:
+            import pwd
+            uid = pwd.getpwnam(options.uid)[2]
+        logging.info('setting uid %d', uid)
+        os.setuid(uid)
 
     if options.umask:
         umask = int(options.umask, 8)
