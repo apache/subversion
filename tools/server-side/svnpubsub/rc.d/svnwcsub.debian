@@ -14,21 +14,20 @@
 
 svnwcsub_user=${svnwcsub_user-"svnwc"}
 svnwcsub_group=${svnwcsub_group-"svnwc"}
-svnwcsub_reactor=${svnwcsub_reactor-"poll"}
 svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub.pid"}
 pidfile="${svnwcsub_pidfile}"
 
-TWSITD_CMD="/usr/bin/twistd -y /opt/svnpubsub/svnwcsub.tac \
-            --logfile=/var/bwlog/svnpubsub/svnwcsub.log \
-            --pidfile=${pidfile} \
-            --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
-            -r${svnwcsub_reactor}"
+SVNWCSUB_CMD="/opt/svnpubsub/svnwcsub.py \
+              --daemon \
+              --logfile=/var/bwlog/svnpubsub/svnwcsub.log \
+              --pidfile=${pidfile} \
+              --uid=${svnwcsub_user} --gid=${svnwcsub_group}"
 
 RETVAL=0
  
 start() {
     echo "Starting SvnWcSub Server: "
-    $TWSITD_CMD
+    $SVNWCSUB_CMD
     RETVAL=$?
     [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
     return $RETVAL
