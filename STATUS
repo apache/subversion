@@ -101,15 +101,7 @@ Candidate changes:
  * r1296369
    Fix an off-by-one memory access.
    Votes:
-     +1: danielsh
-
- * r1296868
-   Add an index to rep-cache.db.
-   Justification:
-     Improves performance, bidirectionally compatible (only performance will
-     be impacted).
-   Votes:
-     +1: danielsh
+     +1: danielsh, philip
 
  * r1297522
    Resolve issue 4136, "Deep commit followed by --depth immediates update
@@ -122,6 +114,14 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+ * r1296868
+   Add an index to rep-cache.db.
+   Justification:
+     Improves performance, bidirectionally compatible (only performance will
+     be impacted).
+   Votes:
+     +1: danielsh
+     -1: philip (I believe there is an autoindex on the PRIMARY KEY)
 
 Approved changes:
 =================
