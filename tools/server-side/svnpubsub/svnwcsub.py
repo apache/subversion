@@ -39,7 +39,9 @@ import time
 import logging.handlers
 import Queue
 import optparse
+import functools
 
+### these will go away shortly
 from twisted.internet import reactor
 from twisted.application import internet
 from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
@@ -47,6 +49,7 @@ from urlparse import urlparse
 from xml.sax import handler, make_parser
 
 import daemonize
+import svnpubsub.client
 
 # check_output() is only available in Python 2.7. Allow us to run with
 # earlier versions
@@ -229,6 +232,7 @@ class BigDoEverythingClasss(object):
             WorkingCopy(self, path, url)
 
     def _restartStream(self, url):
+        return
         (self.streams[url], self.transports[url]) = connectTo(url, self)
 
     def wc_ready(self, wc):
@@ -262,6 +266,33 @@ class BigDoEverythingClasss(object):
             logging.info("Updating %d WC for r%d" % (len(wcs), rev.rev))
             for wc in wcs:
                 self.worker.add_work(OP_UPDATE, wc)
+
+
+### hack in support for the MultiClient.
+def run_client(bdec):
+    hostports = [ ]
+    for url in bdec.urls:
+        parsed = urlparse(url)
+        hostports.append((parsed.hostname, parsed.port))
+
+    mc = svnpubsub.client.MultiClient(hostports,
+                                      functools.partial(_commit, bdec),
+                                      _event)
+    mc.run_forever()
+
+def _commit(bdec, host, port, rev):
+    class _stream(object):
+        url = '%s:%s' % (host, port)
+    rev.repos = rev.uuid  ### quick little hack
+    bdec.commit(_stream, rev)
+
+def _event(host, port, event_name):
+    if event_name == 'error':
+        logging.exception('from %s:%s', host, port)
+    elif event_name == 'ping':
+        logging.debug('ping from %s:%s', host, port)
+    else:
+        logging.info('"%s" from %s:%s', event_name, host, port)
 
 
 # Start logging warnings if the work backlog reaches this many items
@@ -406,7 +437,8 @@ class Daemon(daemonize.Daemon):
     def run(self):
         # Start the BDEC (on the main thread), then start up twisted
         self.bdec.start()
-        reactor.run()
+        #reactor.run()
+        run_client(self.bdec)
 
 
 def prepare_logging(logfile):
