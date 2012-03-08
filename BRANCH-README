@@ -1,0 +1,26 @@
+Purpose
+-------
+
+The goal of this branch is to (re-)implement revprop caching
+for FSFS.  This will require some additional infrastructure
+to communicate changes to all server processes:
+
+	http://svn.haxx.se/dev/archive-2012-03/0161.shtml
+
+There has been an attempt to implement this feature directly
+on /trunk but further investigation identified various issues
+with it, see this thread:
+
+	http://svn.haxx.se/dev/archive-2012-03/0081.shtml
+
+
+ToDo List
+---------
+
+* re-apply original patches (done)
+* implement svn_named_atomic API (in progress)
+* provide tests for the new API
+* switch revprop generation storage from file to new API
+* introduce new option to enable revprop caching selectively
+  (instead of piggybacking it onto the fulltext caching option)
+
