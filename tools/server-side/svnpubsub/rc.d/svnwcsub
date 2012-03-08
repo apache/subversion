@@ -22,7 +22,7 @@ svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub/svnwcsub.pub"}
 svnwcsub_env="PYTHON_EGG_CACHE"
 svnwcsub_cmd_int=${svnwcsub_cmd_int-"python"}
 svnwcsub_config=${svnwcsub_config-"/etc/svnwcsub.conf"}
-svnwcsub_logfile=${svnwcsub_logfile-"/var/log/svnwcsub.log"}
+svnwcsub_logfile=${svnwcsub_logfile-"/var/log/svnwcsub/svnwcsub.log"}
 pidfile="${svnwcsub_pidfile}"
 
 export PYTHON_EGG_CACHE="/var/run/svnwcsub"
