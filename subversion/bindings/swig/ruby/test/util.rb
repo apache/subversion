@@ -41,14 +41,13 @@ module SvnTestUtil
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
 
-    @test_tmp_dir = Dir.mktmpdir
-    @wc_path = File.join(@test_tmp_dir, "wc")
+    @tmp_path = Dir.mktmpdir
+    @wc_path = File.join(@tmp_path, "wc")
     @full_wc_path = File.expand_path(@wc_path)
-    @repos_path = File.join(@test_tmp_dir, "repos")
+    @repos_path = File.join(@tmp_path, "repos")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
 
-    @tmp_path = "tmp"
     @config_path = "config"
     @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
   end
