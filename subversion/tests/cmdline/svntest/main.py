@@ -23,16 +23,16 @@
 #    under the License.
 ######################################################################
 
-import sys     # for argv[]
+import sys
 import os
-import shutil  # for rmtree()
+import shutil
 import re
-import stat    # for ST_MODE
+import stat
 import subprocess
-import time    # for time()
-import traceback # for print_exc()
+import time
+import traceback
 import threading
-import optparse # for argument parsing
+import optparse
 import xml
 import urllib
 import logging
