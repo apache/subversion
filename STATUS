@@ -121,8 +121,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1296369
-   Fix an off-by-one memory access.
-   Votes:
-     +1: danielsh, philip, rhuijben
-
