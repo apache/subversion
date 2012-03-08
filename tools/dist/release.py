@@ -630,7 +630,8 @@ def check_sigs(args):
 
     good_sigs = {}
 
-    for filename in glob.glob(os.path.join(target, 'subversion-*.asc')):
+    glob_pattern = os.path.join(target, 'subversion-%s*.asc' % args.version)
+    for filename in glob.glob(glob_pattern):
         text = open(filename).read()
         keys = text.split(key_start)
 
