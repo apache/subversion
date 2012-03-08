@@ -115,7 +115,7 @@ Veto-blocked changes:
      Improves performance, bidirectionally compatible (only performance will
      be impacted).
    Votes:
-     +1: danielsh
+     -0: danielsh (+1 to revert on trunk if Philip is right)
      -1: philip (I believe there is an autoindex on the PRIMARY KEY)
 
 Approved changes:
