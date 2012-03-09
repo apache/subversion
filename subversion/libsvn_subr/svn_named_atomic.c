@@ -428,7 +428,7 @@ svn_named_atomic__add(apr_int64_t *new_value,
   apr_int64_t temp;
 
   SVN_ERR(validate(atomic));
-  SYNCHRONIZE(temp = synched_write(&atomic->value, delta));
+  SYNCHRONIZE(temp = synched_add(&atomic->value, delta));
   
   if (new_value)
     *new_value = temp;
