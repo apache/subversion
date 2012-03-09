@@ -341,7 +341,7 @@ class Daemon(daemonize.Daemon):
         # daemonized processes. Foreground processes simply inherit
         # the value from the parent process.
         if self.umask is not None:
-            umask = int(options.umask, 8)
+            umask = int(self.umask, 8)
             os.umask(umask)
             logging.info('umask set to %03o', umask)
 
