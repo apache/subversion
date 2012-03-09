@@ -205,7 +205,7 @@ AC_DEFUN([SVN_REMOVE_STANDARD_LIB_DIRS],
 
 AC_DEFUN([SVN_CHECK_FOR_ATOMIC_BUILTINS],
 [
-  AC_CACHE_CHECK([whether the compiler provides atomic builtins], [ap_cv_atomic_builtins],
+  AC_CACHE_CHECK([whether the compiler provides atomic builtins], [svn_cv_atomic_builtins],
   [AC_TRY_RUN([
   int main()
   {
@@ -241,5 +241,5 @@ AC_DEFUN([SVN_CHECK_FOR_ATOMIC_BUILTINS],
           return 1;
 
       return 0;
-  }], [ap_cv_atomic_builtins=yes], [ap_cv_atomic_builtins=no], [ap_cv_atomic_builtins=no])])
+  }], [svn_cv_atomic_builtins=yes], [svn_cv_atomic_builtins=no], [svn_cv_atomic_builtins=no])])
 ])
