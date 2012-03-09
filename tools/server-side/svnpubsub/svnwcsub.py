@@ -326,9 +326,10 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
 
 
 class Daemon(daemonize.Daemon):
-    def __init__(self, logfile, pidfile, bdec):
+    def __init__(self, logfile, pidfile, umask, bdec):
         daemonize.Daemon.__init__(self, logfile, pidfile)
 
+        self.umask = umask
         self.bdec = bdec
 
     def setup(self):
@@ -336,7 +337,15 @@ class Daemon(daemonize.Daemon):
         pass
 
     def run(self):
-        # Start the BDEC (on the main thread), then start up twisted
+        # Set the umask in the daemon process. Defaults to 000 for
+        # daemonized processes. Foreground processes simply inherit
+        # the value from the parent process.
+        if self.umask is not None:
+            umask = int(options.umask, 8)
+            os.umask(umask)
+            logging.info('umask set to %03o', umask)
+
+        # Start the BDEC (on the main thread), then start the client
         self.bdec.start()
         run_client(self.bdec)
 
@@ -394,11 +403,6 @@ def handle_options(options):
         logging.info('setting uid %d', uid)
         os.setuid(uid)
 
-    if options.umask:
-        umask = int(options.umask, 8)
-        os.umask(umask)
-        logging.info('umask set to %03o', umask)
-
 
 def main(args):
     parser = optparse.OptionParser(
@@ -438,7 +442,7 @@ def main(args):
 
     # We manage the logfile ourselves (along with possible rotation). The
     # daemon process can just drop stdout/stderr into /dev/null.
-    d = Daemon('/dev/null', options.pidfile, bdec)
+    d = Daemon('/dev/null', options.pidfile, options.umask, bdec)
     if options.daemon:
         # Daemonize the process and call sys.exit() with appropriate code
         d.daemonize_exit()
