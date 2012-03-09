@@ -9286,6 +9286,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
 
       /* Don't merge any revision that represents a reflected merge (a merge
          of a change that was earlier merged *from* the current target). */
+      /* ### WILL NEVER EXECUTE -- outer "if" contradicts this one */
       if (merge_b->reintegrate_merge)
         {
           SVN_ERR(get_full_mergeinfo(
