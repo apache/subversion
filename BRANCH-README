@@ -18,9 +18,9 @@ ToDo List
 ---------
 
 * re-apply original patches (done)
-* implement svn_named_atomic API (in progress)
+* implement svn_named_atomic API (done)
 * provide tests for the new API
-* switch revprop generation storage from file to new API
-* introduce new option to enable revprop caching selectively
+* switch revprop generation storage from file to new API (done)
+* introduce new option to enable revprop caching selectively (done)
   (instead of piggybacking it onto the fulltext caching option)
 
