@@ -55,7 +55,7 @@ CREATE INDEX dirindex_successor_list ON dirindex(origin);
 -- repository root
 INSERT INTO revision (version, created, author, log)
 VALUES (0, 'EPOCH', NULL, NULL);
-INSERT INTO dirindex (abspath, version, deleted, kind, origin, copied, implied)
+INSERT INTO dirindex (abspath, version, deleted, kind, origin, copied, subtree)
 VALUES ('/', 0, 0, 0, NULL, 0, 0);
 
 
