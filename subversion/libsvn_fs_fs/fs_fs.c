@@ -2737,6 +2737,33 @@ ensure_revprop_timeout(svn_fs_t *fs)
     : SVN_NO_ERROR;
 }
 
+/* Test whether revprop cache and necessary infrastructure are
+   available in FS. */
+static svn_boolean_t
+has_revprop_cache(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_error_t *error;
+
+  /* is the cache (still) enabled? */
+  if (ffd->revprop_cache == NULL)
+    return FALSE;
+
+  /* try to access our SHM-backed infrastructure */
+  error = ensure_revprop_generation(fs);
+  if (error)
+    {
+      /* failure -> disable revprop cache for good */
+
+      svn_error_clear(error);
+      ffd->revprop_cache = NULL;
+
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 /* Read the current revprop generation and return it in *GENERATION.
    Also, detect aborted / crashed writers and recover from that.
    Use the access object in FS to set the shared mem values. */
@@ -2853,10 +2880,9 @@ set_revision_proplist(svn_fs_t *fs,
       const char *perms_reference;
       svn_stream_t *stream;
       svn_node_kind_t kind = svn_node_none;
-      fs_fs_data_t *ffd = fs->fsap_data;
 
       /* test whether revprops already exist for this revision */
-      if (ffd->revprop_cache)
+      if (has_revprop_cache(fs))
         SVN_ERR(svn_io_check_path(final_path, &kind, pool));
 
       /* ### do we have a directory sitting around already? we really shouldn't
@@ -2903,7 +2929,7 @@ revision_proplist(apr_hash_t **proplist_p,
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   /* Try cache lookup first. */
-  if (ffd->revprop_cache)
+  if (has_revprop_cache(fs))
     {
       apr_int64_t generation;
       svn_boolean_t is_cached;
@@ -2972,7 +2998,7 @@ revision_proplist(apr_hash_t **proplist_p,
     }
 
   /* Cache the result, if caching has been activated. */
-  if (ffd->revprop_cache)
+  if (has_revprop_cache(fs))
     SVN_ERR(svn_cache__set(ffd->revprop_cache, key, proplist, pool));
 
   *proplist_p = proplist;
