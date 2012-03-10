@@ -82,10 +82,10 @@ class Index(object):
     def execute(self, statement, parameters=None):
         if parameters is not None:
             fmt = statement.replace("%", "%%").replace("?", "%r")
-            logging.debug("EXECUTE\n" + fmt, *parameters)
+            logging.log(logging.DEBUG//2, "EXECUTE: " + fmt, *parameters)
             return self.cursor.execute(statement, parameters)
         else:
-            logging.debug("EXECUTE\n%s", statement)
+            logging.log(logging.DEBUG//2, "EXECUTE: %s", statement)
             return self.cursor.execute(statement)
 
     __initialize = (
@@ -132,16 +132,16 @@ INSERT INTO dirindex (abspath, version, deleted, kind, origin, copied, subtree)
             self.rollback()
 
     def commit(self):
-        logging.debug("COMMIT")
+        logging.log(logging.DEBUG//2, "COMMIT")
         return self.conn.commit()
 
     def rollback(self):
-        logging.debug("ROLLBACK")
+        logging.log(logging.DEBUG//2, "ROLLBACK")
         return self.conn.rollback()
 
     def close(self):
         self.rollback()
-        logging.debug("CLOSE")
+        logging.log(logging.DEBUG//2, "CLOSE")
         return self.conn.close()
 
     __get_revision = """\
@@ -244,7 +244,7 @@ class Revision(object):
     def __enter__(self):
         if self.revent is not None:
             raise Error("revision is read-only")
-        logging.debug("BEGIN")
+        logging.log(logging.DEBUG//2, "BEGIN")
         self.revent = self.index.new_revision(
             self.version, self.__created, self.__author, self.__log)
         self.__context = {}
