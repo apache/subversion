@@ -126,12 +126,17 @@ PRODUCTION_RE_FILTER = re.compile("/websites/production/[^/]+/")
 
 class BigDoEverythingClasss(object):
     def __init__(self, config):
-        self.urls = [s.strip() for s in config.get_value('streams').split()]
         self.svnbin = config.get_value('svnbin')
         self.env = config.get_env()
         self.tracking = config.get_track()
         self.worker = BackgroundWorker(self.svnbin, self.env)
-        self.watch = []
+        self.watch = [ ]
+
+        self.hostports = [ ]
+        ### switch from URLs in the config to just host:port pairs
+        for url in config.get_value('streams').split():
+            parsed = urlparse.urlparse(url.strip())
+            self.hostports.append((parsed.hostname, parsed.port))
 
     def start(self):
         for path, url in self.tracking.items():
@@ -150,8 +155,10 @@ class BigDoEverythingClasss(object):
             return "/" + path
         return os.path.abspath(path)
 
-    def commit(self, stream, rev):
-        logging.info("COMMIT r%d (%d paths) via %s" % (rev.rev, len(rev.dirs_changed), stream.url))
+    def commit(self, host, port, rev):
+        logging.info("COMMIT r%d (%d paths) from %s:%d"
+                     % (rev.rev, len(rev.dirs_changed), host, port))
+
         paths = map(self._normalize_path, rev.dirs_changed)
         if len(paths):
             pre = os.path.commonprefix(paths)
@@ -165,37 +172,10 @@ class BigDoEverythingClasss(object):
                         break
 
             #print "Common Prefix: %s" % (pre)
-            wcs = [wc for wc in self.watch if wc.update_applies(rev.repos, pre)]
+            wcs = [wc for wc in self.watch if wc.update_applies(rev.uuid, pre)]
             logging.info("Updating %d WC for r%d" % (len(wcs), rev.rev))
             for wc in wcs:
                 self.worker.add_work(OP_UPDATE, wc)
-
-
-### hack in support for the MultiClient.
-def run_client(bdec):
-    hostports = [ ]
-    for url in bdec.urls:
-        parsed = urlparse.urlparse(url)
-        hostports.append((parsed.hostname, parsed.port))
-
-    mc = svnpubsub.client.MultiClient(hostports,
-                                      functools.partial(_commit, bdec),
-                                      _event)
-    mc.run_forever()
-
-def _commit(bdec, host, port, rev):
-    class _stream(object):
-        url = '%s:%s' % (host, port)
-    rev.repos = rev.uuid  ### quick little hack
-    bdec.commit(_stream, rev)
-
-def _event(host, port, event_name):
-    if event_name == 'error':
-        logging.exception('from %s:%s', host, port)
-    elif event_name == 'ping':
-        logging.debug('ping from %s:%s', host, port)
-    else:
-        logging.info('"%s" from %s:%s', event_name, host, port)
 
 
 # Start logging warnings if the work backlog reaches this many items
@@ -337,6 +317,8 @@ class Daemon(daemonize.Daemon):
         pass
 
     def run(self):
+        logging.info('svnwcsub started, pid=%d', os.getpid())
+
         # Set the umask in the daemon process. Defaults to 000 for
         # daemonized processes. Foreground processes simply inherit
         # the value from the parent process.
@@ -347,7 +329,19 @@ class Daemon(daemonize.Daemon):
 
         # Start the BDEC (on the main thread), then start the client
         self.bdec.start()
-        run_client(self.bdec)
+
+        mc = svnpubsub.client.MultiClient(self.bdec.hostports,
+                                          self.bdec.commit,
+                                          self._event)
+        mc.run_forever()
+
+    def _event(self, host, port, event_name):
+        if event_name == 'error':
+            logging.exception('from %s:%s', host, port)
+        elif event_name == 'ping':
+            logging.debug('ping from %s:%s', host, port)
+        else:
+            logging.info('"%s" from %s:%s', event_name, host, port)
 
 
 def prepare_logging(logfile):
