@@ -108,12 +108,14 @@ open_repos(svn_repos_t **repos,
            const char *path,
            apr_pool_t *pool)
 {
-  /* construct FS configuration parameters: enable all available caches */
+  /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
                APR_HASH_KEY_STRING, "1");
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, "1");
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+               APR_HASH_KEY_STRING, "0");
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
