@@ -3236,6 +3236,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
   apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+               APR_HASH_KEY_STRING, params->cache_revprops ? "1" : "0");
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
