@@ -8998,7 +8998,6 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 {
   fs_fs_data_t *src_ffd = src_fs->fsap_data;
   fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
-  svn_node_kind_t kind;
 
   dst_fs->path = apr_pstrdup(pool, dst_path);
 
