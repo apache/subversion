@@ -83,7 +83,7 @@ read_config(svn_memcache_t **memcache_p,
   *cache_revprops
     = svn_hash__get_bool(fs->config,
                          SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                         TRUE);
+                         FALSE);
 
   return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
