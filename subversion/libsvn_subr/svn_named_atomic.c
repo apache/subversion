@@ -29,6 +29,8 @@
 #include "svn_private_config.h"
 #include "private/svn_atomic.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
+#include "svn_io.h"
 
 /* Implementation aspects.
  * 
@@ -241,6 +243,7 @@ static svn_error_t *
 initialize(void *baton, apr_pool_t *pool)
 {
   apr_status_t apr_err;
+  const char *temp_dir, *shm_name;
   struct shared_mem_access_t *access = baton;
 
   /* Since this function will be called through svn_atomic__init_once,
@@ -248,6 +251,10 @@ initialize(void *baton, apr_pool_t *pool)
    * -> Create our own root pool here.
    */
   access->pool = svn_pool_create(NULL);
+
+  /* construct the name of the SHM file */
+  SVN_ERR(svn_io_temp_dir(&temp_dir, access->pool));
+  shm_name = svn_dirent_join(temp_dir, SHM_NAME, access->pool);
 
   /* Next, we must ensure that no-one else tries to initialize the shared
    * memory while we are about to do the same.
@@ -265,12 +272,12 @@ initialize(void *baton, apr_pool_t *pool)
   /* First, look for an existing shared memory object.  If it doesn't
    * exist, create one.
    */
-  apr_err = apr_shm_attach(&access->shared_mem, SHM_NAME, access->pool);
+  apr_err = apr_shm_attach(&access->shared_mem, shm_name, access->pool);
   if (apr_err)
     {
       apr_err = apr_shm_create(&access->shared_mem,
                                sizeof(*access->data),
-                               SHM_NAME,
+                               shm_name,
                                access->pool);
       if (apr_err)
         return unlock(access, svn_error_wrap_apr(apr_err,
