@@ -25,7 +25,12 @@
 import logging
 import subprocess
 import sys
-from xml.etree import ElementTree
+
+try:
+    from lxml.etree import iterparse
+except ImportError:
+    from xml.etree.ElementTree import iterparse
+
 from dirindex import Index, Revision
 
 
@@ -34,7 +39,7 @@ def parse(index, stream):
 
     version = None
     revcount = 0
-    for event, logentry in ElementTree.iterparse(stream):
+    for event, logentry in iterparse(stream):
         if logentry.tag != "logentry":
             continue
 
