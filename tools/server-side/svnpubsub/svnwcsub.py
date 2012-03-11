@@ -29,6 +29,7 @@
 # See svnwcsub.conf for more information on its contents.
 #
 
+import signal
 import subprocess
 import threading
 import sys
@@ -139,6 +140,7 @@ class BigDoEverythingClasss(object):
             self.hostports.append((parsed.hostname, parsed.port))
 
     def start(self):
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
         for path, url in self.tracking.items():
             # working copies auto-register with the BDEC when they are ready.
             WorkingCopy(self, path, url)
