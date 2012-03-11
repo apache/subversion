@@ -78,6 +78,8 @@ class Index(object):
         self.conn = sqlite3.connect(database, isolation_level = "IMMEDIATE")
         self.cursor = self.conn.cursor()
         self.cursor.execute("PRAGMA foreign_keys = ON")
+        self.cursor.execute("PRAGMA case_sensitive_like = ON")
+        self.cursor.execute("PRAGMA encoding = 'UTF-8'")
 
     def execute(self, statement, parameters=None):
         if parameters is not None:
