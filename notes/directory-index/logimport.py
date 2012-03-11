@@ -32,15 +32,20 @@ from dirindex import Index, Revision
 def parse(index, stream):
     kindmap = {"dir": 0, "file": 1}
 
+    version = None
+    revcount = 0
     for event, logentry in ElementTree.iterparse(stream):
         if logentry.tag != "logentry":
             continue
 
         version = int(logentry.get("revision"))
-        if version == 1 or not version % 1000:
-            logging.info("r%d", version)
+
+        revcount += 1
+        if revcount == 1 or not revcount % 1000:
+            revlogger = logging.info
         else:
-            logging.debug("r%d", version)
+            revlogger = logging.debug
+        revlogger("%d: r%d", revcount, version)
 
         created = logentry.find("date")
         if created is not None:
@@ -83,7 +88,8 @@ def parse(index, stream):
                 else:
                     logging.debug("  %s %-4s %s", action, kindstr, abspath)
                     handler(abspath, kind)
-    pass
+    if version is not None:
+        logging.info("final: r%d", version)
 
 
 def logimport(database, url, svn):
