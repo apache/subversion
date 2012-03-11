@@ -262,6 +262,14 @@ class Revision(object):
         finally:
             self.__context = None
 
+    def __record(self, dirent, action):
+        self.__context[dirent.abspath] = dirent
+        if dirent.subtree:
+            action = "(%s)" % action
+        else:
+            action = " %s " % action
+        logging.debug(" %-9s %s", action, dirent)
+
     def __check_writable(self, action):
         if self.__context is None:
             raise Error(action + " requires a transaction")
@@ -271,7 +279,11 @@ class Revision(object):
             raise Error(action + " not allowed on /")
 
     def __find_target(self, abspath, action):
-        target = self.index.lookup(abspath, self.version - 1)
+        target = self.__context.get(abspath)
+        if target is not None and not target.subtree:
+            raise Error(action + " overrides explicit " + abspath)
+        if target is None:
+            target = self.index.lookup(abspath, self.version - 1)
         if target is None:
             raise Error(action + " target does not exist: " + abspath)
         return target
@@ -300,12 +312,12 @@ class Revision(object):
                         origin = origin,
                         copied = int(origin is not None),
                         subtree = 0)
-        self.__context[dirent.abspath] = dirent
+        self.__record(dirent, action)
         if frompath is not None:
             offset = len(frompath.rstrip("/"))
             prefix = abspath.rstrip("/")
             for source in self.index.subtree(frompath, fromver):
-                dirent = Dirent(rowid = None,
+                dirent = Dirent(rowid = source.rowid,
                                 abspath = prefix + source.abspath[offset:],
                                 version = self.version,
                                 deleted = 0,
@@ -313,22 +325,25 @@ class Revision(object):
                                 origin = source.rowid,
                                 copied = 1,
                                 subtree = 1)
-                self.__context[dirent.abspath] = dirent
+                self.__record(dirent, action)
 
     def add(self, abspath, kind, frompath=None, fromver=None):
-        self.__check_writable("add")
-        self.__check_not_root(abspath, "add")
-        return self.__add("add", abspath, kind, frompath, fromver)
+        action = "add"
+        self.__check_writable(action)
+        self.__check_not_root(abspath, action)
+        return self.__add(action, abspath, kind, frompath, fromver)
 
     def replace(self, abspath, kind, frompath=None, fromver=None):
-        self.__check_writable("replace")
-        self.__check_not_root(abspath, "replace")
-        self.__find_target(abspath, "replace")
-        return self.__add("replace", abspath, kind, frompath, fromver)
+        action = "replace"
+        self.__check_writable(action)
+        self.__check_not_root(abspath, action)
+        self.__find_target(abspath, action)
+        return self.__add(action, abspath, kind, frompath, fromver)
 
     def modify(self, abspath):
-        self.__check_writable("modify")
-        target = self.__find_target(abspath, "modify")
+        action = "modify"
+        self.__check_writable(action)
+        target = self.__find_target(abspath, action)
         dirent = Dirent(rowid = None,
                         abspath = abspath,
                         version = self.version,
@@ -337,12 +352,13 @@ class Revision(object):
                         origin = target.rowid,
                         copied = 0,
                         subtree = 0)
-        self.__context[dirent.abspath] = dirent
+        self.__record(dirent, action)
 
     def delete(self, abspath):
-        self.__check_writable("delete")
-        self.__check_not_root(abspath, "delete")
-        target = self.__find_target(abspath, "delete")
+        action = "replace"
+        self.__check_writable(action)
+        self.__check_not_root(abspath, action)
+        target = self.__find_target(abspath, action)
         dirent = Dirent(rowid = None,
                         abspath = abspath,
                         version = self.version,
@@ -351,9 +367,9 @@ class Revision(object):
                         origin = target.rowid,
                         copied = 0,
                         subtree = 0)
-        self.__context[dirent.abspath] = dirent
+        self.__record(dirent, action)
         for source in self.index.subtree(abspath, self.version - 1):
-            dirent = Dirent(rowid = None,
+            dirent = Dirent(rowid = source.rowid,
                             abspath = source.abspath,
                             version = self.version,
                             deleted = 1,
@@ -361,7 +377,7 @@ class Revision(object):
                             origin = source.rowid,
                             copied = 0,
                             subtree = 1)
-            self.__context[dirent.abspath] = dirent
+            self.__record(dirent, action)
 
 
 def simpletest(database):
