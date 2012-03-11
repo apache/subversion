@@ -39,14 +39,14 @@ Candidate changes:
    Justification:
      Allow testing against current stable httpd.
    Votes:
-     +1: danielsh
+     +0: danielsh (+1 once I re-run tests on both FS backends)
 
  * r1232267
    Allow building mod_dav_svn against httpd-2.4.
    Justification:
      Support current stable httpd.
    Votes:
-     +1: danielsh
+     +0: danielsh (+1 once I re-run tests on both FS backends)
 
  * r1291797, r1291810
    On Windows detect where perl is installed and add this information to the
