@@ -26,44 +26,93 @@ class Error(Exception):
     pass
 
 
-class _SQLObjectMixin(object):
-    @classmethod
-    def _columns(cls):
-        return ", ".join(cls._fields)
+class SQLobject(object):
+    __slots__ = ()
+    def __init__(self, **kwargs):
+        for name, val in kwargs.items():
+            setattr(self, name, val)
+        for name in self.__slots__:
+            if not hasattr(self, name):
+                setattr(self, name, None)
+
+    def _put(self, cursor):
+        raise NotImplementedError("SQLobject._insert")
 
     @classmethod
-    def _qualified_columns(cls):
-        return ", ".join("%s.%s" % (cls._table, f) for f in cls._fields)
+    def _get(self, cursor, pkey):
+        raise NotImplementedError("SQLobject._insert")
 
     @classmethod
-    def _vars(cls):
-        return ", ".join("?" * len(cls._fields))
+    def _from_row(cls, row):
+        if row is not None:
+            return cls(**dict((col, row[col]) for col in row.keys()))
+        return None
+
+    LOGLEVEL = (logging.NOTSET + logging.DEBUG) // 2
+    if logging.getLevelName(LOGLEVEL) == 'Level %s' % LOGLEVEL:
+        logging.addLevelName(LOGLEVEL, 'SQL')
 
     @classmethod
-    def _columns_nokey(cls):
-        return ", ".join(cls._fields[1:])
+    def _log(cls, *args, **kwargs):
+        return logging.log(cls.LOGLEVEL, *args, **kwargs)
 
     @classmethod
-    def _vars_nokey(cls):
-        return ", ".join("?" * (len(cls._fields) - 1))
-
-    def _nokey(self):
-        return self[1:]
-
-
-class Revent(
-        collections.namedtuple("ReventBase", [
-            "version", "created", "author", "log"]),
-        _SQLObjectMixin):
-    _table = "revision"
+    def _execute(cls, cursor, statement, parameters=None):
+        if parameters is not None:
+            fmt = statement.replace("%", "%%").replace("?", "%r")
+            cls._log("EXECUTE: " + fmt, *parameters)
+            return cursor.execute(statement, parameters)
+        else:
+            cls._log("EXECUTE: %s", statement)
+            return cursor.execute(statement)
 
 
-class Dirent(
-        collections.namedtuple("DirentBase", [
-            "rowid", "abspath", "version", "deleted",
-            "kind", "origin", "copied", "subtree"]),
-        _SQLObjectMixin):
-    _table = "dirindex"
+class Revent(SQLobject):
+    __slots__ = ("version", "created", "author", "log")
+
+    def _put(self, cursor):
+        if self.created is None:
+            now = datetime.datetime.utcnow()
+            self.created = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        self._execute(cursor,
+                      "INSERT INTO revision (version, created, author, log)"
+                      " VALUES (?, ?, ?, ?)",
+                      [self.version, self.created, self.author, self.log])
+
+    @classmethod
+    def _get(cls, cursor, pkey):
+        cursor.execute("SELECT * FROM revision WHERE version = ?", [pkey])
+        return cls._from_row(cursor.fetchone())
+
+
+class Pathent(SQLobject):
+    __slots__ = ("pathid", "abspath")
+
+    def _put(self, cursor):
+        self._execute(cursor,
+                      "INSERT INTO pathindex (abspath) VALUES (?)",
+                      [self.abspath])
+        self.pathid = cursor.lastrowid
+
+    @classmethod
+    def _get(cls, cursor, pkey):
+        cls._execute(cursor,
+                     "SELECT * FROM pathindex WHERE pathid = ?",
+                     [pkey])
+        return cls._from_row(cursor.fetchone())
+
+    @classmethod
+    def _find(cls, cursor, abspath):
+        cls._execute(cursor,
+                     "SELECT * FROM pathindex WHERE abspath = ?",
+                     [abspath])
+        return cls._from_row(cursor.fetchone())
+
+
+class Dirent(SQLobject):
+    __slots__ = ("rowid", "pathid", "version", "deleted",
+                 "kind", "origin", "copied", "subtree",
+                 "abspath")
 
     def __str__(self):
         return "%3d %c%c %s" % (
@@ -72,163 +121,178 @@ class Dirent(
             self.kind and "f" or "d",
             self.abspath)
 
+    def _put(self, cursor):
+        pathent = Pathent._find(cursor, self.abspath)
+        if pathent is None:
+            pathent = Pathent(abspath = self.abspath)
+            pathent._put(cursor)
+        self._execute(cursor,
+                      "INSERT INTO dirindex"
+                      " (pathid, version, deleted,"
+                      " kind, origin, copied, subtree)"
+                      " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                      [pathent.pathid, self.version, self.deleted,
+                       self.kind, self.origin, self.copied, self.subtree])
+        self.rowid = cursor.lastrowid
+        self.pathid = pathent.pathid
+
+    @classmethod
+    def _get(cls, cursor, pkey):
+        cls._execute(cursor,
+                     "SELECT dirindex.*, pathindex.abspath"
+                     " FROM dirindex JOIN pathindex"
+                     " ON dirindex.pathid = pathindex.pathid"
+                     " WHERE dirindex.rowid = ?", [pkey])
+        return cls._from_row(cursor.fetchone())
+
+    @classmethod
+    def _find(cls, cursor, abspath, version):
+        cls._execute(cursor,
+                     "SELECT dirindex.*, pathindex.abspath"
+                     " FROM dirindex JOIN pathindex"
+                     " ON dirindex.pathid = pathindex.pathid"
+                     " WHERE pathindex.abspath = ?"
+                     " AND dirindex.version = ?",
+                     [abspath, version])
+        return cls._from_row(cursor.fetchone())
+
 
 class Index(object):
     def __init__(self, database):
         self.conn = sqlite3.connect(database, isolation_level = "IMMEDIATE")
+        self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         self.cursor.execute("PRAGMA foreign_keys = ON")
         self.cursor.execute("PRAGMA case_sensitive_like = ON")
         self.cursor.execute("PRAGMA encoding = 'UTF-8'")
 
-    def execute(self, statement, parameters=None):
-        if parameters is not None:
-            fmt = statement.replace("%", "%%").replace("?", "%r")
-            logging.log(logging.DEBUG//2, "EXECUTE: " + fmt, *parameters)
-            return self.cursor.execute(statement, parameters)
-        else:
-            logging.log(logging.DEBUG//2, "EXECUTE: %s", statement)
-            return self.cursor.execute(statement)
+    __schema = """
+DROP TABLE IF EXISTS dirindex;
+DROP TABLE IF EXISTS pathindex;
+DROP TABLE IF EXISTS revision;
 
-    __initialize = (
-        """\
-DROP TABLE IF EXISTS dirindex""",
-        """\
-DROP TABLE IF EXISTS revision""",
-        """\
 CREATE TABLE revision (
   version integer NOT NULL PRIMARY KEY,
   created timestamp NOT NULL,
   author  varchar NULL,
   log     varchar NULL
-)""",
-        """\
+);
+
+CREATE TABLE pathindex (
+  pathid  integer NOT NULL PRIMARY KEY,
+  abspath varchar NOT NULL UNIQUE
+);
+
 CREATE TABLE dirindex (
-  rowid   integer PRIMARY KEY,
-  abspath varchar NOT NULL,
+  rowid   integer NOT NULL PRIMARY KEY,
+  pathid  integer NOT NULL REFERENCES pathindex(pathid),
   version integer NOT NULL REFERENCES revision(version),
   deleted boolean NOT NULL,
   kind    integer NOT NULL,
   origin  integer NULL REFERENCES dirindex(rowid),
   copied  boolean NOT NULL,
   subtree boolean NOT NULL
-)""",
-        """\
-CREATE UNIQUE INDEX dirindex_versioned_tree
-  ON dirindex(abspath ASC, version DESC)""",
-        """\
-CREATE INDEX dirindex_successor_list
-  ON dirindex(origin)""",
-        """\
+);
+CREATE UNIQUE INDEX dirindex_versioned_tree ON dirindex(pathid, version DESC);
+CREATE INDEX dirindex_successor_list ON dirindex(origin);
+CREATE INDEX dirindex_deleted ON dirindex(deleted);
+
 INSERT INTO revision (version, created, author, log)
-  VALUES (0, 'EPOCH', NULL, NULL)""",
-        """\
-INSERT INTO dirindex (abspath, version, deleted, kind, origin, copied, subtree)
-  VALUES ('/', 0, 0, 0, NULL, 0, 0)""")
+  VALUES (0, 'EPOCH', NULL, NULL);
+INSERT INTO pathindex (pathid, abspath) VALUES (0, '/');
+INSERT INTO dirindex (rowid, pathid, version, deleted,
+                      kind, origin, copied, subtree)
+  VALUES (0, 0, 0, 0, 0, NULL, 0, 0);
+"""
+
     def initialize(self):
         try:
-            for statement in self.__initialize:
-                self.execute(statement)
+            SQLobject._log("%s", self.__schema)
+            self.cursor.executescript(self.__schema)
             self.commit()
         finally:
             self.rollback()
 
     def commit(self):
-        logging.log(logging.DEBUG//2, "COMMIT")
+        SQLobject._log("COMMIT")
         return self.conn.commit()
 
     def rollback(self):
-        logging.log(logging.DEBUG//2, "ROLLBACK")
+        SQLobject._log("ROLLBACK")
         return self.conn.rollback()
 
     def close(self):
         self.rollback()
-        logging.log(logging.DEBUG//2, "CLOSE")
+        SQLobject._log("CLOSE")
         return self.conn.close()
 
-    __get_revision = """\
-SELECT %s FROM revision
-WHERE version = ?""" % Revent._qualified_columns()
     def get_revision(self, version):
-        self.execute(self.__get_revision, [version])
-        row = self.cursor.fetchone()
-        if row is not None:
-            return Revent._make(row)
-        return None
+        return Revent._get(self.cursor, version)
 
-    __new_revision = """\
-INSERT INTO revision (%s)
-  VALUES (%s)""" % (Revent._columns(), Revent._vars())
     def new_revision(self, version, created=None, author=None, log=None):
-        if created is None:
-            created = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         revent = Revent(version = version,
                         created = created,
                         author = author,
                         log = log)
-        self.execute(self.__new_revision, revent)
+        revent._put(self.cursor)
         return revent
 
-    __insert = """\
-INSERT INTO dirindex (%s)
-  VALUES (%s)""" % (
-    Dirent._columns_nokey(), Dirent._vars_nokey())
     def insert(self, dirent):
         assert isinstance(dirent, Dirent)
-        self.execute(self.__insert, dirent._nokey())
-        return Dirent(self.cursor.lastrowid, *dirent._nokey())
+        dirent._put(self.cursor)
+        return dirent
 
-    __lookup = """\
-SELECT %s FROM dirindex
-WHERE abspath = ? AND version <= ?
-ORDER BY abspath ASC, version DESC
-LIMIT 1""" % Dirent._qualified_columns()
     def lookup(self, abspath, version):
-        self.execute(self.__lookup, [abspath, version])
+        SQLobject._execute(
+            self.cursor,
+            "SELECT dirindex.*, pathindex.abspath FROM dirindex"
+            " JOIN pathindex ON dirindex.pathid = pathindex.pathid"
+            " WHERE pathindex.abspath = ? AND dirindex.version <= ?"
+            " ORDER BY pathindex.abspath ASC, dirindex.version DESC"
+            " LIMIT 1",
+            [abspath, version])
         row = self.cursor.fetchone()
-        if row is not None:
-            dirent = Dirent._make(row)
-            if not dirent.deleted:
-                return dirent
+        if row is not None and not row["deleted"]:
+            return Dirent._from_row(row)
         return None
 
-    __subtree = """\
-SELECT %s FROM dirindex
-  JOIN (SELECT abspath, MAX(version) AS maxver FROM dirindex
-        WHERE version <= ? GROUP BY abspath) AS filtered
-  ON dirindex.abspath == filtered.abspath
-     AND dirindex.version == filtered.maxver
-WHERE dirindex.abspath LIKE ? ESCAPE '#'
-      AND NOT dirindex.deleted
-ORDER BY dirindex.abspath ASC""" % Dirent._qualified_columns()
     def subtree(self, abspath, version):
         pattern = (abspath.rstrip("/")
                    .replace("#", "##")
                    .replace("%", "#%")
                    .replace("_", "#_")) + "/%"
-        self.execute(self.__subtree, [version, pattern])
+        SQLobject._execute(
+            self.cursor,
+            "SELECT dirindex.*, pathindex.abspath FROM dirindex"
+            " JOIN pathindex ON dirindex.pathid = pathindex.pathid"
+            " JOIN (SELECT pathid, MAX(version) AS maxver FROM dirindex"
+            " WHERE version <= ? GROUP BY pathid) AS filtered"
+            " ON dirindex.pathid == filtered.pathid"
+            " AND dirindex.version == filtered.maxver"
+            " WHERE pathindex.abspath LIKE ? ESCAPE '#'"
+            " AND NOT dirindex.deleted"
+            " ORDER BY pathindex.abspath ASC",
+            [version, pattern])
         for row in self.cursor:
-            yield Dirent._make(row)
+            yield Dirent._from_row(row)
 
-    __predecessor = """\
-SELECT %s FROM dirindex
-WHERE rowid = ?"""  % Dirent._qualified_columns()
     def predecessor(self, dirent):
         assert isinstance(dirent, Dirent)
         if dirent.origin is None:
             return None
-        self.execute(self.__predecessor, [dirent.origin])
-        return Dirent._make(self.cursor.fetchone())
+        return Dirent._get(self.cursor, dirent.origin)
 
-    __successors = """\
-SELECT %s FROM dirindex
-where origin = ?
-ORDER BY abspath ASC, version ASC""" % Dirent._qualified_columns()
     def successors(self, dirent):
         assert isinstance(dirent, Dirent)
-        self.execute(self.__successors, [dirent.rowid])
+        SQLobject._execute(
+            self.cursor,
+            "SELECT dirindex.*, pathindex.abspath FROM dirindex"
+            " JOIN pathindex ON dirindex.pathid = pathindex.pathid"
+            " WHERE dirindex.origin = ?"
+            " ORDER BY pathindex.abspath ASC, dirindex.version ASC",
+            [dirent.rowid])
         for row in self.cursor:
-            yield Dirent._make(row)
+            yield Dirent._from_row(row)
 
 
 class Revision(object):
@@ -246,7 +310,7 @@ class Revision(object):
     def __enter__(self):
         if self.revent is not None:
             raise Error("revision is read-only")
-        logging.log(logging.DEBUG//2, "BEGIN")
+        SQLobject._log("BEGIN")
         self.revent = self.index.new_revision(
             self.version, self.__created, self.__author, self.__log)
         self.__context = {}
@@ -306,8 +370,7 @@ class Revision(object):
             if origin.kind != kind:
                 raise Error(action + " changes the source object kind")
             origin = origin.rowid
-        dirent = Dirent(rowid = None,
-                        abspath = abspath,
+        dirent = Dirent(abspath = abspath,
                         version = self.version,
                         deleted = 0,
                         kind = kind,
@@ -346,8 +409,7 @@ class Revision(object):
         action = "modify"
         self.__check_writable(action)
         target = self.__find_target(abspath, action)
-        dirent = Dirent(rowid = None,
-                        abspath = abspath,
+        dirent = Dirent(abspath = abspath,
                         version = self.version,
                         deleted = 0,
                         kind = target.kind,
@@ -361,8 +423,7 @@ class Revision(object):
         self.__check_writable(action)
         self.__check_not_root(abspath, action)
         target = self.__find_target(abspath, action)
-        dirent = Dirent(rowid = None,
-                        abspath = abspath,
+        dirent = Dirent(abspath = abspath,
                         version = self.version,
                         deleted = 1,
                         kind = target.kind,
@@ -420,5 +481,5 @@ def simpletest(database):
 
 def loggedsimpletest(database):
     import sys
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stderr)
+    logging.basicConfig(level=SQLobject.LOGLEVEL, stream=sys.stderr)
     simpletest(database)

@@ -23,13 +23,18 @@ CREATE TABLE revision (
   log     varchar NULL
 );
 
+CREATE TABLE pathindex (
+  pathid  integer NOT NULL PRIMARY KEY,
+  abspath varchar NOT NULL UNIQUE
+);
+
 CREATE TABLE dirindex (
   -- unique id of this node revision, used for
   -- predecessor/successor links
-  rowid   integer PRIMARY KEY,
+  rowid   integer NOT NULL PRIMARY KEY,
 
   -- absolute (repository) path
-  abspath varchar NOT NULL,
+  pathid  integer NOT NULL REFERENCES pathindex(pathid),
 
   -- revision number
   version integer NOT NULL REFERENCES revision(version),
@@ -49,33 +54,42 @@ CREATE TABLE dirindex (
   -- the index entry is the result of an implicit subtree operation
   subtree boolean NOT NULL
 );
-CREATE UNIQUE INDEX dirindex_versioned_tree ON dirindex(abspath ASC, version DESC);
+CREATE UNIQUE INDEX dirindex_versioned_tree ON dirindex(pathid, version DESC);
 CREATE INDEX dirindex_successor_list ON dirindex(origin);
+CREATE INDEX dirindex_deleted ON dirindex(deleted);
 
 -- repository root
 INSERT INTO revision (version, created, author, log)
-VALUES (0, 'EPOCH', NULL, NULL);
-INSERT INTO dirindex (abspath, version, deleted, kind, origin, copied, subtree)
-VALUES ('/', 0, 0, 0, NULL, 0, 0);
+  VALUES (0, 'EPOCH', NULL, NULL);
+INSERT INTO pathindex (pathid, abspath) VALUES (0, '/');
+INSERT INTO dirindex (rowid, pathid, version, deleted,
+                      kind, origin, copied, subtree)
+  VALUES (0, 0, 0, 0, 0, NULL, 0, 0);
 
 
 -- lookup PATH@REVISION
 
-SELECT * FROM dirindex
+SELECT
+  dirindex.*, pathindex.abspath
+FROM dirindex JOIN pathindex
+  ON dirindex.pathid = pathindex.pathid
 WHERE
-  abspath = '' -- $PATH
-  AND version <= 0 -- $REVISION
-ORDER BY abspath ASC, version DESC
-LIMIT 1;  -- then check .deleted
+  pathindex.abspath = '' -- $PATH
+  AND dirindex.version <= 0 -- $REVISION
+ORDER BY pathindex.abspath ASC, dirindex.version DESC
+LIMIT 1;  -- then check dirindex.deleted
 
 -- single-revision tree for REVISION
 
-SELECT dirindex.* FROM dirindex
-  JOIN (SELECT abspath, MAX(version) AS maxver FROM dirindex
+SELECT
+  dirindex.*, pathindex.abspath
+FROM dirindex JOIN pathindex
+    ON dirindex.pathid = pathindex.pathid
+  JOIN (SELECT pathid, MAX(version) AS maxver FROM dirindex
         WHERE version <= 0 -- $REVISION
-        GROUP BY abspath)
+        GROUP BY pathid)
       AS filtered
-    ON dirindex.abspath == filtered.abspath
+    ON dirindex.pathid == filtered.pathid
        AND dirindex.version == filtered.maxver
 WHERE NOT dirindex.deleted
-ORDER BY dirindex.abspath ASC;
+ORDER BY pathindex.abspath ASC;
