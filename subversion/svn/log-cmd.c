@@ -423,18 +423,23 @@ log_entry_receiver_xml(void *baton,
 
   if (log_entry->changed_paths2)
     {
-      apr_hash_index_t *hi;
+      apr_array_header_t *sorted_paths;
+      int i;
 
       /* <paths> */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
                             NULL);
 
-      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
-           hi != NULL;
-           hi = apr_hash_next(hi))
+      /* Get an array of sorted hash keys. */
+      sorted_paths = svn_sort__hash(log_entry->changed_paths2,
+                                    svn_sort_compare_items_as_paths, pool);
+
+      for (i = 0; i < sorted_paths->nelts; i++)
         {
-          const char *path = svn__apr_hash_index_key(hi);
-          svn_log_changed_path2_t *log_item = svn__apr_hash_index_val(hi);
+          svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
+                                                   svn_sort__item_t));
+          const char *path = item->key;
+          svn_log_changed_path2_t *log_item = item->value;
           char action[2];
 
           action[0] = log_item->action;
