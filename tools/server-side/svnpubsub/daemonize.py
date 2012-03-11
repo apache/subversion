@@ -151,6 +151,9 @@ class Daemon(object):
       raise ChildResumedIncorrectly()
 
     # we're a deamon now. get rid of the final remnants of the parent.
+    # start by restoring default signal handlers
+    signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     sys.stdout.flush()
     sys.stderr.flush()
     si = open('/dev/null', 'r')
