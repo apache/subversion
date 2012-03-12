@@ -967,10 +967,38 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
   int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *moved_to_relpaths = apr_hash_make(scratch_pool);
 
   SVN_ERR_ASSERT(repos_path != NULL || op_depth > 0);
   SVN_ERR_ASSERT((repos_id != INVALID_REPOS_ID)
                  == (repos_path != NULL));
+
+  /* If we're inserting WORKING nodes, we might be replacing existing
+   * nodes which were moved-away. We need to retain the moved-to relpath of
+   * such nodes in order not to lose move information during replace. */
+  if (op_depth > 0)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
+
+      for (i = children->nelts; i--; )
+        {
+          const char *name = APR_ARRAY_IDX(children, i, const char *);
+          svn_boolean_t have_row;
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id,
+                                    svn_relpath_join(local_relpath, name,
+                                                     iterpool)));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          if (have_row && !svn_sqlite__column_is_null(stmt, 14))
+            apr_hash_set(moved_to_relpaths, name, APR_HASH_KEY_STRING,
+              svn_sqlite__column_text(stmt, 14, scratch_pool));
+        }
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
 
@@ -978,26 +1006,32 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isisnnrsns",
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isisnnrsnsnnnnnnnnnnsn",
                                 wc_id,
                                 svn_relpath_join(local_relpath, name,
-                                                 scratch_pool),
+                                                 iterpool),
                                 op_depth,
                                 local_relpath,
                                 revision,
                                 "incomplete", /* 8, presence */
-                                "unknown"));  /* 10, kind */
-
+                                "unknown",    /* 10, kind */
+                                /* 21, moved_to */
+                                apr_hash_get(moved_to_relpaths, name,
+                                             APR_HASH_KEY_STRING)));
       if (repos_id != INVALID_REPOS_ID)
         {
           SVN_ERR(svn_sqlite__bind_int64(stmt, 5, repos_id));
           SVN_ERR(svn_sqlite__bind_text(stmt, 6,
                                         svn_relpath_join(repos_path, name,
-                                                         scratch_pool)));
+                                                         iterpool)));
         }
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
