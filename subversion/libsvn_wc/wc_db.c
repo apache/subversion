@@ -979,8 +979,6 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
    * such nodes in order not to lose move information during replace. */
   if (op_depth > 0)
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
-
       for (i = children->nelts; i--; )
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -988,6 +986,8 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
 
           svn_pool_clear(iterpool);
 
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                            STMT_SELECT_WORKING_NODE));
           SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id,
                                     svn_relpath_join(local_relpath, name,
                                                      iterpool)));
@@ -995,9 +995,9 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
           if (have_row && !svn_sqlite__column_is_null(stmt, 14))
             apr_hash_set(moved_to_relpaths, name, APR_HASH_KEY_STRING,
               svn_sqlite__column_text(stmt, 14, scratch_pool));
-        }
 
-      SVN_ERR(svn_sqlite__reset(stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+        }
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
