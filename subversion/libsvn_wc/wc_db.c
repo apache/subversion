@@ -6430,21 +6430,21 @@ delete_node(void *baton,
       APR_ARRAY_PUSH(moved_nodes, const struct moved_node_t *) = moved_node;
 
       /* If a subtree is being moved-away, we need to update moved-to
-       * information for all children that were moved into this subtree. */
+       * information for all children that were moved into, or within,
+       * this subtree. */
       if (kind == svn_kind_dir)
         {
-          apr_pool_t *iterpool;
-
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                             STMT_SELECT_MOVED_PAIR));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
-                                    b->delete_depth));
-
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-          iterpool = svn_pool_create(scratch_pool);
           while (have_row)
             {
+              const char *move_relpath
+                = svn_sqlite__column_text(stmt, 0, NULL);
+              const char *move_subtree_relpath
+                = svn_relpath_skip_ancestor(local_relpath, move_relpath);
               const char *child_moved_to
                 = svn_sqlite__column_text(stmt, 1, NULL);
               const char *child_moved_to_subtree_relpath
@@ -6453,8 +6453,13 @@ delete_node(void *baton,
 
               moved_node = apr_palloc(scratch_pool,
                                       sizeof(struct moved_node_t));
-              moved_node->local_relpath
-                = svn_sqlite__column_text(stmt, 0, scratch_pool);
+              if (move_subtree_relpath)
+                moved_node->local_relpath
+                  = svn_relpath_join(b->moved_to_relpath,
+                                     move_subtree_relpath, scratch_pool);
+              else
+                moved_node->local_relpath
+                  = apr_pstrdup(scratch_pool, move_relpath);
 
               if (child_moved_to_subtree_relpath)
                 moved_node->moved_to_relpath
@@ -6477,8 +6482,6 @@ delete_node(void *baton,
 
               SVN_ERR(svn_sqlite__step(&have_row, stmt));
             }
-          svn_pool_destroy(iterpool);
-
           SVN_ERR(svn_sqlite__reset(stmt));
         }
     }
