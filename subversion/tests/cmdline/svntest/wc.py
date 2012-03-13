@@ -27,8 +27,12 @@ import os
 import sys
 import re
 import urllib
+import logging
+import pprint
 
 import svntest
+
+logger = logging.getLogger()
 
 
 #
@@ -362,9 +366,8 @@ class State:
     if 0:
       check = tree.as_state()
       if self != check:
-        import pprint
-        pprint.pprint(self.desc)
-        pprint.pprint(check.desc)
+        logger.warn(pprint.pformat(self.desc))
+        logger.warn(pprint.pformat(check.desc))
         # STATE -> TREE -> STATE is lossy.
         # In many cases, TREE -> STATE -> TREE is not.
         # Even though our conversion from a TREE has lost some information, we
@@ -894,21 +897,25 @@ def display_nodes(label, path, expected, actual):
   'Display two nodes, expected and actual.'
   expected = item_to_node(path, expected)
   actual = item_to_node(path, actual)
-  print("=============================================================")
-  print("Expected '%s' and actual '%s' in %s tree are different!"
-        % (expected.name, actual.name, label))
-  print("=============================================================")
-  print("EXPECTED NODE TO BE:")
-  print("=============================================================")
-  expected.pprint()
-  print("=============================================================")
-  print("ACTUAL NODE FOUND:")
-  print("=============================================================")
-  actual.pprint()
+
+  output = [
+        "=============================================================\n",
+        "Expected '%s' and actual '%s' in %s tree are different!\n"
+                % (expected.name, actual.name, label),
+        "=============================================================\n",
+        "EXPECTED NODE TO BE:\n",
+        "=============================================================\n",
+        pprint.pformat(expected), '\n',
+        "=============================================================\n",
+        "ACTUAL NODE FOUND:\n",
+        "=============================================================\n",
+        pprint.pformat(actual), '\n',
+    ]
+  logger.warn(''.join(output))
 
 ### yanked from tree.py
 def default_singleton_handler(description, path, item):
   node = item_to_node(path, item)
-  print("Couldn't find node '%s' in %s tree" % (node.name, description))
-  node.pprint()
+  logger.warn("Couldn't find node '%s' in %s tree" % (node.name, description))
+  logger.warn(pprint.pformat(node))
   raise svntest.tree.SVNTreeUnequal
