@@ -77,7 +77,7 @@ class Client(asynchat.async_chat):
     try:
       self.connect((host, port))
     except:
-      self.event_callback('error')
+      self.handle_error()
       return
         
     ### should we allow for repository restrictions?
