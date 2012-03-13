@@ -117,7 +117,7 @@ svn_client__check_branch_root_marker(const char **marker,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
-/* Set *MERGEINFO to describe the merges into TARGET from paths in
+/* Set *MERGEINFO_CAT to describe the merges into TARGET from paths in
  * SOURCE_LOCATIONS which is an array of (svn_location_segment_t *)
  * elements describing the history of the source branch over the
  * revision range of interest. */
