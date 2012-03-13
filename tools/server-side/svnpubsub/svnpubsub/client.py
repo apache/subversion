@@ -74,14 +74,11 @@ class Client(asynchat.async_chat):
     self.skipping_headers = True
 
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-    while True:
-      try:
-        self.connect((host, port))
-        break
-      except:
-        self.event_callback('connect failed, reconnecting in %d seconds'
-                            % (RECONNECT_DELAY))
-        time.sleep(RECONNECT_DELAY)
+    try:
+      self.connect((host, port))
+    except:
+      self.event_callback('error')
+      return
         
     ### should we allow for repository restrictions?
     self.push('GET /commits/xml HTTP/1.0\r\n\r\n')
