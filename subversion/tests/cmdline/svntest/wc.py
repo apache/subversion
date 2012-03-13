@@ -912,7 +912,7 @@ def display_nodes(label, path, expected, actual):
   o.write("=============================================================\n")
   actual.pprint(o)
 
-  logger.warn(o.getValue())
+  logger.warn(o.getvalue())
   o.close()
 
 ### yanked from tree.py
@@ -921,6 +921,6 @@ def default_singleton_handler(description, path, item):
   logger.warn("Couldn't find node '%s' in %s tree" % (node.name, description))
   o = StringIO()
   node.pprint(o)
-  logger.warn(o.getValue())
+  logger.warn(o.getvalue())
   o.close()
   raise svntest.tree.SVNTreeUnequal
