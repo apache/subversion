@@ -29,6 +29,7 @@ import re
 import urllib
 import logging
 import pprint
+import cStringIO as StringIO
 
 import svntest
 
@@ -898,24 +899,28 @@ def display_nodes(label, path, expected, actual):
   expected = item_to_node(path, expected)
   actual = item_to_node(path, actual)
 
-  output = [
-        "=============================================================\n",
-        "Expected '%s' and actual '%s' in %s tree are different!\n"
-                % (expected.name, actual.name, label),
-        "=============================================================\n",
-        "EXPECTED NODE TO BE:\n",
-        "=============================================================\n",
-        pprint.pformat(expected), '\n',
-        "=============================================================\n",
-        "ACTUAL NODE FOUND:\n",
-        "=============================================================\n",
-        pprint.pformat(actual), '\n',
-    ]
-  logger.warn(''.join(output))
+  o = StringIO()
+  o.write("=============================================================\n")
+  o.write("Expected '%s' and actual '%s' in %s tree are different!\n"
+                % (expected.name, actual.name, label))
+  o.write("=============================================================\n")
+  o.write("EXPECTED NODE TO BE:\n")
+  o.write("=============================================================\n")
+  expected.pprint(o)
+  o.write("=============================================================\n")
+  o.write("ACTUAL NODE FOUND:\n")
+  o.write("=============================================================\n")
+  actual.pprint(o)
+
+  logger.warn(o.getValue())
+  o.close()
 
 ### yanked from tree.py
 def default_singleton_handler(description, path, item):
   node = item_to_node(path, item)
   logger.warn("Couldn't find node '%s' in %s tree" % (node.name, description))
-  logger.warn(pprint.pformat(node))
+  o = StringIO()
+  node.pprint(o)
+  logger.warn(o.getValue())
+  o.close()
   raise svntest.tree.SVNTreeUnequal
