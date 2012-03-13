@@ -106,6 +106,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1300265
+   Resolve issue #4130, "poor memory and file handle management when
+   updating w/ externals definitions".
+   Justification:
+     Simple fix with noticeable scalability returns.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
