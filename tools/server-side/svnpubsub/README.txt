@@ -14,7 +14,7 @@ TODO:
 - ensure the reconnection logic is robust enough for the ASF to disable daily
   restarts
   (currently we think our network interfaces occasionally stall for a minute or
-  two)
+  two and it has something to do with our switches)
 - add support for SIGHUP to reread the config and reinitialize working copies
 - joes will write documentation for svnpubsub as these items become fulfilled
 - make LOGLEVEL configurable
