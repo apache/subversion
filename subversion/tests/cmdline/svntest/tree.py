@@ -34,8 +34,11 @@ else:
   from StringIO import StringIO
 from xml.dom.minidom import parseString
 import base64
+import logging
 
 import svntest
+
+logger = logging.getLogger()
 
 # Tree Exceptions.
 
@@ -569,7 +572,7 @@ def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
   else, return None. If SVNTreeNode is not a directory, exit completely."""
   if node.children == None:
-    print("Error: Foolish call to get_child.")
+    logger.error("Foolish call to get_child.")
     sys.exit(1)
   for n in node.children:
     if name == n.name:
@@ -581,8 +584,8 @@ def get_child(node, name):
 def default_singleton_handler(node, description):
   """Print SVNTreeNode NODE's name, describing it with the string
   DESCRIPTION, then raise SVNTreeUnequal."""
-  print("Couldn't find node '%s' in %s tree" % (node.name, description))
-  node.pprint()
+  logger.warn("Couldn't find node '%s' in %s tree" % (node.name, description))
+  logger.warn(str(node))
   raise SVNTreeUnequal
 
 # A test helper function implementing the singleton_handler_a API.
@@ -599,8 +602,8 @@ def detect_conflict_files(node, extra_files):
       break
   else:
     msg = "Encountered unexpected disk path '" + node.name + "'"
-    print(msg)
-    node.pprint()
+    logger.warn(msg)
+    logger.warn(str(node))
     raise SVNTreeUnequal(msg)
 
 ###########################################################################
@@ -634,17 +637,20 @@ def compare_trees(label,
 
   def display_nodes(a, b):
     'Display two nodes, expected and actual.'
-    print("=============================================================")
-    print("Expected '%s' and actual '%s' in %s tree are different!"
-          % (b.name, a.name, label))
-    print("=============================================================")
-    print("EXPECTED NODE TO BE:")
-    print("=============================================================")
-    b.pprint()
-    print("=============================================================")
-    print("ACTUAL NODE FOUND:")
-    print("=============================================================")
-    a.pprint()
+    o = StringIO()
+    o.write("=============================================================\n")
+    o.write("Expected '%s' and actual '%s' in %s tree are different!\n"
+                % (b.name, a.name, label))
+    o.write("=============================================================\n")
+    o.write("EXPECTED NODE TO BE:\n")
+    o.write("=============================================================\n")
+    b.pprint(o)
+    o.write("=============================================================\n")
+    o.write("ACTUAL NODE FOUND:\n")
+    o.write("=============================================================\n")
+    a.pprint(o)
+    logger.warn(o.getvalue())
+    o.close()
 
   # Setup singleton handlers
   if singleton_handler_a is None:
@@ -690,14 +696,14 @@ def compare_trees(label,
         if b_child not in accounted_for:
           singleton_handler_b(b_child, b_baton)
   except SVNTypeMismatch:
-    print('Unequal Types: one Node is a file, the other is a directory')
+    logger.warn('Unequal Types: one Node is a file, the other is a directory')
     raise SVNTreeUnequal
   except IndexError:
-    print("Error: unequal number of children")
+    logger.warn("Error: unequal number of children")
     raise SVNTreeUnequal
   except SVNTreeUnequal:
     if a.name != root_node_name:
-      print("Unequal at node %s" % a.name)
+      logger.warn("Unequal at node %s" % a.name)
     raise
 
 
