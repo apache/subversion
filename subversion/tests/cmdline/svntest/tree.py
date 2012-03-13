@@ -31,7 +31,7 @@ if sys.version_info[0] >= 3:
   from io import StringIO
 else:
   # Python <3.0
-  from StringIO import StringIO
+  from cStringIO import StringIO
 from xml.dom.minidom import parseString
 import base64
 import logging
