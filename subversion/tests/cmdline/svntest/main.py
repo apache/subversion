@@ -1473,8 +1473,11 @@ def create_default_options():
 
 def _create_parser():
   """Return a parser for our test suite."""
-  def set_log_debug(option, opt, value, parser):
-    logger.setLevel(logging.DEBUG)
+  def set_log_level(option, opt, value, parser, level=None):
+    if level:
+      logger.setLevel(level)
+    else:
+      logger.setLevel(value)
 
   # set up the parser
   _default_http_library = 'serf'
@@ -1485,8 +1488,9 @@ def _create_parser():
   parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
                     help='Limit --list to those with target milestone specified')
   parser.add_option('-v', '--verbose', action='callback',
-                    callback=set_log_debug,
-                    help='Print binary command-lines (not with --quiet)')
+                    callback=set_log_level, callback_args=(logging.DEBUG, ),
+                    help='Print binary command-lines (same as ' +
+                         '"--set-log-level logging.DEBUG")')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
   parser.add_option('-p', '--parallel', action='store_const',
@@ -1524,6 +1528,8 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
+  parser.add_option('--set-log-level', action='callback', type='int',
+                    callback=set_log_level)
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
