@@ -36,6 +36,7 @@ import optparse
 import xml
 import urllib
 import logging
+import cStringIO as StringIO
 
 try:
   # Python >=3.0
@@ -993,6 +994,15 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
+def _log_exception():
+  import traceback
+
+  o = StringIO.StringIO()
+  ei = sys.exc_info()
+  traceback.print_exception(ei[0], ei[1], ei[2], None, o)
+  logger.warn(o.getvalue())
+  o.close()
+
 def mergeinfo_notify_line(revstart, revend, target=None):
   """Return an expected output line that describes the beginning of a
   mergeinfo recording notification on revisions REVSTART through REVEND."""
@@ -1336,10 +1346,10 @@ class TestRunner:
         ex_args = str(ex)
         logger.warn('CWD: %s' % os.getcwd())
         if ex_args:
-          logger.exception('EXCEPTION: %s: %s' % (ex.__class__.__name__,
-                                                  ex_args))
+          logger.warn('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
-          logger.exception('EXCEPTION: %s' % ex.__class__.__name__)
+          logger.warn('EXCEPTION: %s' % ex.__class__.__name__)
+        _log_exception()
     except KeyboardInterrupt:
       logger.error('Interrupted')
       sys.exit(0)
@@ -1350,8 +1360,8 @@ class TestRunner:
     except:
       result = svntest.testcase.RESULT_FAIL
       logger.warn('CWD: %s' % os.getcwd())
-      logger.exception('UNEXPECTED EXCEPTION:')
-      sys.stdout.flush()
+      logger.warn('UNEXPECTED EXCEPTION:')
+      _log_exception()
 
     os.chdir(saved_dir)
     exit_code, result_text, result_benignity = self.pred.results(result)
