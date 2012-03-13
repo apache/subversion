@@ -899,7 +899,7 @@ def display_nodes(label, path, expected, actual):
   expected = item_to_node(path, expected)
   actual = item_to_node(path, actual)
 
-  o = StringIO()
+  o = StringIO.StringIO()
   o.write("=============================================================\n")
   o.write("Expected '%s' and actual '%s' in %s tree are different!\n"
                 % (expected.name, actual.name, label))
@@ -919,7 +919,7 @@ def display_nodes(label, path, expected, actual):
 def default_singleton_handler(description, path, item):
   node = item_to_node(path, item)
   logger.warn("Couldn't find node '%s' in %s tree" % (node.name, description))
-  o = StringIO()
+  o = StringIO.StringIO()
   node.pprint(o)
   logger.warn(o.getvalue())
   o.close()
