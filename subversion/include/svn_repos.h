@@ -1780,6 +1780,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
  * never be @c NULL but may be empty.
  *
+ * The paths in @a paths, and the keys of @a catalog, start with '/'.
+ *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
