@@ -10,7 +10,7 @@ TODO:
   place the instances into .watch at creation. the .update_applies()
   just returns if the wc is disabled (eg. could not find wc dir)
 - figure out way to avoid the ASF-specific PRODUCTION_RE_FILTER
-  (a path exclusion list should work for the ASF)
+  (a base path exclusion list should work for the ASF)
 - ensure the reconnection logic is robust enough for the ASF to disable daily
   restarts
   (currently we think our network interfaces occasionally stall for a minute or
