@@ -27,8 +27,11 @@
 import re, sys
 from difflib import unified_diff, ndiff
 import pprint
+import logging
 
 import svntest
+
+logger = logging.getLogger()
 
 
 ######################################################################
@@ -230,7 +233,7 @@ class AnyOutput(ExpectedOutput):
 
   def display_differences(self, message, label, actual):
     if message:
-      print(message)
+      logger.warn(message)
 
 
 class RegexOutput(ExpectedOutput):
@@ -296,12 +299,12 @@ class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
 def display_trees(message, label, expected, actual):
   'Print two trees, expected and actual.'
   if message is not None:
-    print(message)
+    logger.warn(message)
   if expected is not None:
-    print('EXPECTED %s:' % label)
+    logger.warn('EXPECTED %s:', label)
     svntest.tree.dump_tree(expected)
   if actual is not None:
-    print('ACTUAL %s:' % label)
+    logger.warn('ACTUAL %s:', label)
     svntest.tree.dump_tree(actual)
 
 
@@ -311,7 +314,7 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
   with LABEL) followed by ACTUAL (also labeled with LABEL).
   Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
-    print(message)
+    logger.warn(message)
   if expected is not None:
     output = 'EXPECTED %s' % label
     if expected_is_regexp:
@@ -320,17 +323,17 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
     if expected_is_unordered:
       output += ' (unordered)'
     output += ':'
-    print(output)
+    logger.warn(output)
     for x in expected:
       sys.stdout.write(x)
   if actual is not None:
-    print('ACTUAL %s:' % label)
+    logger.warn('ACTUAL %s:', label)
     for x in actual:
       sys.stdout.write(x)
 
   # Additionally print unified diff
   if not expected_is_regexp:
-    print('DIFF ' + ' '.join(output.split(' ')[1:]))
+    logger.warn('DIFF ' + ' '.join(output.split(' ')[1:]))
 
     if type(expected) is str:
       expected = [expected]
