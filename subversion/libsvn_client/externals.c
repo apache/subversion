@@ -138,6 +138,8 @@ switch_dir_external(const char *local_abspath,
   svn_revnum_t external_peg_rev = SVN_INVALID_REVNUM;
   svn_revnum_t external_rev = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *repos_root_url;
+  const char *repos_uuid;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -168,9 +170,6 @@ switch_dir_external(const char *local_abspath,
 
       if (node_url)
         {
-          const char *repos_root_url;
-          const char *repos_uuid;
-
           /* If we have what appears to be a version controlled
              subdir, and its top-level URL matches that of our
              externals definition, perform an update. */
@@ -183,9 +182,7 @@ switch_dir_external(const char *local_abspath,
                                                   timestamp_sleep,
                                                   ctx, subpool));
               svn_pool_destroy(subpool);
-              /* Issue #4130: We don't need to keep the external's DB open. */
-              SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
-              return SVN_NO_ERROR;
+              goto cleanup;
             }
 
           SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
@@ -245,9 +242,7 @@ switch_dir_external(const char *local_abspath,
                                                 subpool));
 
               svn_pool_destroy(subpool);
-              /* Issue #4130: We don't need to keep the external's DB open. */
-              SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
-              return SVN_NO_ERROR;
+              goto cleanup;
             }
         }
     }
@@ -285,28 +280,25 @@ switch_dir_external(const char *local_abspath,
                                         FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
-  {
-    const char *repos_root_url;
-    const char *repos_uuid;
+  SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
+                                      &repos_uuid,
+                                      ctx->wc_ctx, local_abspath,
+                                      pool, pool));
 
-    SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url,
-                                        &repos_uuid,
-                                        ctx->wc_ctx, local_abspath,
-                                        pool, pool));
+  SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
+                                    defining_abspath,
+                                    local_abspath, svn_node_dir,
+                                    repos_root_url, repos_uuid,
+                                    svn_uri_skip_ancestor(repos_root_url,
+                                                          url, pool),
+                                    external_peg_rev,
+                                    external_rev,
+                                    pool));
 
-    SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
-                                      defining_abspath,
-                                      local_abspath, svn_node_dir,
-                                      repos_root_url, repos_uuid,
-                                      svn_uri_skip_ancestor(repos_root_url,
-                                                            url, pool),
-                                      external_peg_rev,
-                                      external_rev,
-                                      pool));
-    /* Issue #4123: We don't need to keep the newly checked out external's
-       DB open. */
-    SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
-  }
+ cleanup:
+  /* Issues #4123 and #4130: We don't need to keep the newly checked
+     out external's DB open. */
+  SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
 
   return SVN_NO_ERROR;
 }
