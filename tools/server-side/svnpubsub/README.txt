@@ -17,3 +17,4 @@ TODO:
   two)
 - add support for SIGHUP to reread the config and reinitialize working copies
 - joes will write documentation for svnpubsub as these items become fulfilled
+- make LOGLEVEL configurable
