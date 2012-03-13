@@ -710,7 +710,7 @@ def compare_trees(label,
 
 # Visually show a tree's structure
 
-def dump_tree(n,indent=""):
+def _dump_tree(n,indent="",stream=sys.stdout):
   """Print out a nice representation of the structure of the tree in
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
@@ -718,18 +718,25 @@ def dump_tree(n,indent=""):
   tmp_children = sorted(n.children or [])
 
   if n.name == root_node_name:
-    print("%s%s" % (indent, "ROOT"))
+    stream.write("%s%s\n" % (indent, "ROOT"))
   else:
-    print("%s%s" % (indent, n.name))
+    stream.write("%s%s\n" % (indent, n.name))
 
   indent = indent.replace("-", " ")
   indent = indent.replace("+", " ")
   for i in range(len(tmp_children)):
     c = tmp_children[i]
     if i == len(tmp_children)-1:
-      dump_tree(c,indent + "  +-- ")
+      _dump_tree(c,indent + "  +-- ",stream)
     else:
-      dump_tree(c,indent + "  |-- ")
+      _dump_tree(c,indent + "  |-- ",stream)
+
+
+def dump_tree(n):
+    output = StringIO()
+    _dump_tree(n,stream=output)
+    logger.warn(output.getvalue())
+    output.close()
 
 
 def dump_tree_script__crawler(n, subtree="", stream=sys.stdout):
