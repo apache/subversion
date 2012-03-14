@@ -4385,7 +4385,7 @@ move_on_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "X/B",      "normal",       1, "X/B"},
       {1, "B2",       "normal",       1, "A/B", MOVED_HERE},
       {1, "A",        "normal",       1, "X"},
-      {1, "A/B",      "normal",       1, "X/B"},
+      {1, "A/B",      "normal",       1, "X/B", FALSE, "B2"},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -4402,7 +4402,7 @@ move_on_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "B2",       "normal",       1, "A/B",   MOVED_HERE},
       {1, "B3",       "normal",       1, "X/B",   MOVED_HERE},
       {1, "A",        "normal",       1, "X"},
-      {1, "A/B",      "normal",       1, "X/B"},         /* moved_to=B3? */
+      {1, "A/B",      "normal",       1, "X/B", FALSE, "B2"},
       {2, "A/B",      "base-deleted", NO_COPY_FROM, "B3"},
       {0}
     };
