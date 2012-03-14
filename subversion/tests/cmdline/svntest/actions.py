@@ -24,13 +24,21 @@
 ######################################################################
 
 import os, shutil, re, sys, errno
-import difflib, pprint
+import difflib, pprint, logging
 import xml.parsers.expat
 from xml.dom.minidom import parseString
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 
 import svntest
 from svntest import main, verify, tree, wc
 from svntest import Failure
+
+logger = logging.getLogger()
 
 def no_sleep_for_timestamps():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'yes'
@@ -84,9 +92,9 @@ def setup_pristine_greek_repository():
     lastline = output.pop().strip()
     match = re.search("(Committed|Imported) revision [0-9]+.", lastline)
     if not match:
-      print("ERROR:  import did not succeed, while creating greek repos.")
-      print("The final line from 'svn import' was:")
-      print(lastline)
+      logger.error("import did not succeed, while creating greek repos.")
+      logger.error("The final line from 'svn import' was:")
+      logger.error(lastline)
       sys.exit(1)
     output_tree = wc.State.from_commit(output)
 
@@ -117,7 +125,7 @@ def guarantee_empty_repository(path):
   nothing."""
 
   if path == main.pristine_greek_repos_dir:
-    print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
+    logger.error("attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # create an empty repository at PATH.
@@ -134,13 +142,13 @@ def guarantee_greek_repository(path, minor_version):
   nothing but the greek-tree at revision 1."""
 
   if path == main.pristine_greek_repos_dir:
-    print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
+    logger.error("attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
   if main.copy_repos(main.pristine_greek_repos_dir, path, 1, 1, minor_version):
-    print("ERROR:  copying repository failed.")
+    logger.error("copying repository failed.")
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
