@@ -9267,7 +9267,7 @@ target_node_location(merge_target_t **target_p,
   merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
   const char *relpath;
 
-  target->abspath = wc_abspath;
+  target->abspath = apr_pstrdup(result_pool, wc_abspath);
   SVN_ERR(svn_wc_read_kind(&target->kind, ctx->wc_ctx, wc_abspath, FALSE,
                            scratch_pool));
   SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */,
@@ -10509,7 +10509,7 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
   SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, NULL,
                                                target->url,
                                                NULL, NULL, FALSE, FALSE,
-                                               ctx, scratch_pool));
+                                               ctx, result_pool));
 
   SVN_ERR(calculate_left_hand_side(&source.url1, &source.rev1,
                                    &merged_to_source_mergeinfo_catalog,
