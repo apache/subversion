@@ -7522,15 +7522,6 @@ read_children_info(void *baton,
 
           /* Moved-here can only exist at op_depth > 0. */
           child_item->info.moved_here = svn_sqlite__column_boolean(stmt, 20);
-
-          /* Sanity check: A child is either moved-here, or moved-away. */
-          if (child_item->info.moved_here && moved_to_relpath)
-            return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                     _("The node '%s' has ambiguous move information"),
-                     svn_dirent_local_style(svn_dirent_join(wcroot->abspath,
-                                                            child_relpath,
-                                                            scratch_pool),
-                                            scratch_pool));
         }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
