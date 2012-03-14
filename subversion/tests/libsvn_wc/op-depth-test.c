@@ -4439,17 +4439,13 @@ move_on_move2(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "X/B",      "normal",       1, "X/B"},
       {1, "A2",       "normal",       1, "A",   MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
-      {1, "A",        "normal",       1, "X"},
+      {1, "A",        "normal",       1, "X", FALSE, "A2"},
       {1, "A/B",      "normal",       1, "X/B"},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  /* A/B is already moved to A2/B but there is no explicit moved_to,
-     we derive it from A.  The copy has given us another A/B that we
-     can move doing so stores explicit moved_to in A/B that breaks the
-     recording of the first move to A2/B. */
   SVN_ERR(wc_move(&b, "A/B", "B3"));
   {
     nodes_row_t nodes[] = {
@@ -4461,7 +4457,7 @@ move_on_move2(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A2",       "normal",       1, "A",   MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
       {1, "B3",       "normal",       1, "X/B", MOVED_HERE},
-      {1, "A",        "normal",       1, "X"},
+      {1, "A",        "normal",       1, "X", FALSE, "A2"},
       {1, "A/B",      "normal",       1, "X/B"},
       {2, "A/B",      "base-deleted", NO_COPY_FROM, "B3"},
       {0}
@@ -4595,7 +4591,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "revert_nested_move"),
     SVN_TEST_OPTS_PASS(move_on_move,
                        "move_on_move"),
-    SVN_TEST_OPTS_XFAIL(move_on_move2,
+    SVN_TEST_OPTS_PASS(move_on_move2,
                        "move_on_move2"),
     SVN_TEST_OPTS_XFAIL(move_added,
                        "move_added"),
