@@ -2069,7 +2069,7 @@ base_get_info(svn_wc__db_status_t *status,
       SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
       if (lock)
         {
-          *lock = lock_from_columns(stmt, 16, 17, 18, 19, result_pool);
+          *lock = lock_from_columns(stmt, 15, 16, 17, 18, result_pool);
         }
       if (changed_rev)
         {
