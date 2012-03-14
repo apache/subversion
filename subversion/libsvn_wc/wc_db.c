@@ -6489,7 +6489,7 @@ delete_node(void *baton,
   /* Find children that were moved out of the subtree rooted at this node.
    * We'll need to update their op-depth columns because their deletion
    * is now implied by the deletion of their parent (i.e. this node). */
-  if (kind == svn_kind_dir)
+  if (kind == svn_kind_dir && !b->moved_to_relpath)
     {
       apr_pool_t *iterpool;
 
@@ -6622,22 +6622,22 @@ delete_node(void *baton,
                                 wcroot->wc_id, local_relpath,
                                 select_depth, b->delete_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
-      if (moved_nodes)
+  if (moved_nodes)
+    {
+      int i;
+
+      for (i = 0; i < moved_nodes->nelts; ++i)
         {
-          int i;
+          const struct moved_node_t *moved_node
+            = APR_ARRAY_IDX(moved_nodes, i, void *);
 
-          for (i = 0; i < moved_nodes->nelts; ++i)
-            {
-              const struct moved_node_t *moved_node
-                = APR_ARRAY_IDX(moved_nodes, i, void *);
-
-              SVN_ERR(delete_update_movedto(wcroot,
-                                            moved_node->local_relpath,
-                                            moved_node->op_depth,
-                                            moved_node->moved_to_relpath,
-                                            scratch_pool));
-            }
+          SVN_ERR(delete_update_movedto(wcroot,
+                                        moved_node->local_relpath,
+                                        moved_node->op_depth,
+                                        moved_node->moved_to_relpath,
+                                        scratch_pool));
         }
     }
 
