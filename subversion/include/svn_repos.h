@@ -532,7 +532,7 @@ svn_repos_hotcopy2(const char *src_path,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
-/** 
+/**
  * Like svn_repos_hotcopy2(), but without the @a incremental parameter
  * and without cancellation support.
  *
@@ -1779,6 +1779,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  * Fetch the mergeinfo for @a paths at @a revision in @a repos, and
  * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
  * never be @c NULL but may be empty.
+ *
+ * The paths in @a paths, and the keys of @a catalog, start with '/'.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.

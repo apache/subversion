@@ -37,15 +37,17 @@ module SvnTestUtil
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @repos_path = "repos"
-    @full_repos_path = File.expand_path(@repos_path)
-    @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
+
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join(Dir.tmpdir, "wc-tmp")
-    @wc_path = File.join(@wc_base_dir, "wc")
+
+    @tmp_path = Dir.mktmpdir
+    @wc_path = File.join(@tmp_path, "wc")
     @full_wc_path = File.expand_path(@wc_path)
-    @tmp_path = "tmp"
+    @repos_path = File.join(@tmp_path, "repos")
+    @full_repos_path = File.expand_path(@repos_path)
+    @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
+
     @config_path = "config"
     @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
   end
@@ -140,7 +142,7 @@ module SvnTestUtil
   end
 
   def teardown_wc
-    remove_recursively_with_retry(@wc_base_dir)
+    remove_recursively_with_retry(@wc_path)
   end
 
   def setup_config

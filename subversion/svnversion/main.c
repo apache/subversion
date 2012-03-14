@@ -225,7 +225,7 @@ main(int argc, const char *argv[])
     }
 
   SVN_INT_ERR(svn_utf_cstring_to_utf8(&wc_path,
-                                      (os->ind < argc) ? os->argv[os->ind] 
+                                      (os->ind < argc) ? os->argv[os->ind]
                                                        : ".",
                                       pool));
 

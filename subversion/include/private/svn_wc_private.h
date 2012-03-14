@@ -549,7 +549,7 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
  * set @a *deleted_ancestor_abspath to @c NULL.
  * @a *deleted_ancestor_abspath is allocated in @a result_pool.
  * Use @a scratch_pool for all temporary allocations.
- */ 
+ */
 svn_error_t *
 svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
                                   svn_wc_context_t *wc_ctx,

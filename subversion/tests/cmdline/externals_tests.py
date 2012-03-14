@@ -1916,14 +1916,25 @@ def file_externals_different_url(sbox):
     'rr-e-1'            : Item(status='A '),
   })
 
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+  expected_status.add({
+    'r2-e-1'            : Item(status='  ', wc_rev='1', switched='X'),
+    'r1-e-1'            : Item(status='  ', wc_rev='1', switched='X'),
+    'r1-e-2'            : Item(status='  ', wc_rev='1', switched='X'),
+    'rr-e-1'            : Item(status='  ', wc_rev='1', switched='X'),
+    'r2-e-2'            : Item(status='  ', wc_rev='1', switched='X'),
+  })
+
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output, None, None, None)
+                                        expected_output, None,
+                                        expected_status, None)
 
   # Verify that all file external URLs are descendants of r1_url
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
     actions.run_and_verify_info([{'Repository Root' : r1_url}],
                                 os.path.join(sbox.wc_dir, e))
-    
+
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'relocate', r1_url, r2_url, wc_dir)
@@ -1934,7 +1945,8 @@ def file_externals_different_url(sbox):
   })
 
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output, None, None, None)
+                                        expected_output, None,
+                                        expected_status, None)
 
   # Verify that all file external URLs are descendants of r2_url
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
@@ -2554,10 +2566,10 @@ def include_immediate_dir_externals(sbox):
   #     svn ps svn:externals "^/A/B/E X/XE" wc_dir
   #     svn ci
   #     svn up
-  # 
+  #
   #     svn ps some change X/XE
   #     echo mod >> X/XE/alpha
-  # 
+  #
   #     svn st X/XE
   #     # Expect only the propset on X/XE to be committed.
   #     # Should be like 'svn commit --include-externals --depth=empty X/XE'.
@@ -2808,7 +2820,7 @@ def url_to_wc_copy_of_externals(sbox):
   # Previously this failed with:
   #   >svn copy ^^/A/C External-WC-to-URL-Copy
   #    U   External-WC-to-URL-Copy
-  #   
+  #
   #   Fetching external item into 'External-WC-to-URL-Copy\external':
   #   A    External-WC-to-URL-Copy\external\pi
   #   A    External-WC-to-URL-Copy\external\rho

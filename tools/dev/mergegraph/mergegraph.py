@@ -136,7 +136,7 @@ class MergeGraph(pydot.Graph):
              label='"' + label + '"',
              color=color, fontcolor=color,
              style='bold')
-    if kind == 'cherry':
+    if kind.startswith('cherry'):
       e.set_style('dashed')
     graph.add_edge(e)
 
@@ -158,7 +158,7 @@ class MergeGraph(pydot.Graph):
     """Add a merge"""
     base_node, src_node, tgt_node, kind = merge
 
-    if base_node and src_node:  # and kind != 'cherry':
+    if base_node and src_node:  # and not kind.startwith('cherry'):
       graph.mk_mergeinfo_edge(base_node, src_node, important)
 
     # Merge target node

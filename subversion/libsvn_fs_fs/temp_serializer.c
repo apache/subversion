@@ -136,7 +136,7 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
    * Thus, we cannot use svn_temp_serializer__add_string. */
   svn_temp_serializer__push(context,
                             (const void * const *)&string->data,
-                            string->len);
+                            string->len + 1);
 
   /* back to the caller's nesting level */
   svn_temp_serializer__pop(context);
@@ -575,6 +575,142 @@ svn_fs_fs__deserialize_manifest(void **out,
   manifest->elts = (char*)data;
 
   *out = manifest;
+
+  return SVN_NO_ERROR;
+}
+
+/* Auxilliary structure representing the content of a properties hash.
+   This structure is much easier to (de-)serialize than an apr_hash.
+ */
+typedef struct properties_data_t
+{
+  /* number of entries in the hash */
+  apr_size_t count;
+
+  /* reference to the keys */
+  const char **keys;
+
+  /* reference to the values */
+  const svn_string_t **values;
+} properties_data_t;
+
+/* Serialize COUNT C-style strings from *STRINGS into CONTEXT. */
+static void
+serialize_cstring_array(svn_temp_serializer__context_t *context,
+                        const char ***strings,
+                        apr_size_t count)
+{
+  apr_size_t i;
+  const char **entries = *strings;
+  
+  /* serialize COUNT entries pointers (the array) */
+  svn_temp_serializer__push(context,
+                            (const void * const *)strings,
+                            count * sizeof(const char*));
+
+  /* serialize array elements */
+  for (i = 0; i < count; ++i)
+    svn_temp_serializer__add_string(context, &entries[i]);
+
+  svn_temp_serializer__pop(context);
+}
+
+/* Serialize COUNT svn_string_t* items from *STRINGS into CONTEXT. */
+static void
+serialize_svn_string_array(svn_temp_serializer__context_t *context,
+                           const svn_string_t ***strings,
+                           apr_size_t count)
+{
+  apr_size_t i;
+  const svn_string_t **entries = *strings;
+  
+  /* serialize COUNT entries pointers (the array) */
+  svn_temp_serializer__push(context,
+                            (const void * const *)strings,
+                            count * sizeof(const char*));
+
+  /* serialize array elements */
+  for (i = 0; i < count; ++i)
+    serialize_svn_string(context, &entries[i]);
+
+  svn_temp_serializer__pop(context);
+}
+
+svn_error_t *
+svn_fs_fs__serialize_properties(char **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *hash = in;
+  properties_data_t properties;
+  svn_temp_serializer__context_t *context;
+  apr_hash_index_t *hi;
+  svn_stringbuf_t *serialized;
+  apr_size_t i;
+
+  /* create our auxilliary data structure */
+  properties.count = apr_hash_count(hash);
+  properties.keys = apr_palloc(pool, sizeof(const char*) * (properties.count + 1));
+  properties.values = apr_palloc(pool, sizeof(const char*) * properties.count);
+  
+  /* populate it with the hash entries */
+  for (hi = apr_hash_first(pool, hash), i=0; hi; hi = apr_hash_next(hi), ++i)
+    {
+      properties.keys[i] = svn__apr_hash_index_key(hi);
+      properties.values[i] = svn__apr_hash_index_val(hi);
+    }
+  
+  /* serialize it */
+  context = svn_temp_serializer__init(&properties,
+                                      sizeof(properties),
+                                      properties.count * 100,
+                                      pool);
+
+  properties.keys[i] = "";
+  serialize_cstring_array(context, &properties.keys, properties.count + 1);
+  serialize_svn_string_array(context, &properties.values, properties.count);
+
+  /* return the serialized result */
+  serialized = svn_temp_serializer__get(context);
+
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_properties(void **out,
+                                  char *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool)
+{
+  apr_hash_t *hash = apr_hash_make(pool);
+  properties_data_t *properties = (properties_data_t *)data;
+  size_t i;
+
+  /* de-serialize our auxilliary data structure */
+  svn_temp_deserializer__resolve(properties, (void**)&properties->keys);
+  svn_temp_deserializer__resolve(properties, (void**)&properties->values);
+  
+  /* de-serialize each entry and put it into the hash */
+  for (i = 0; i < properties->count; ++i)
+    {
+      apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
+      svn_temp_deserializer__resolve(properties->keys, 
+                                     (void**)&properties->keys[i]);
+      
+      deserialize_svn_string(properties->values, 
+                             (svn_string_t **)&properties->values[i]);
+      
+      apr_hash_set(hash, 
+                   properties->keys[i], len, 
+                   properties->values[i]);
+    }
+
+  /* done */
+  *out = hash;
 
   return SVN_NO_ERROR;
 }

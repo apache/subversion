@@ -651,7 +651,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * Each of these takes a directory baton, indicating the directory
  * in which the change takes place, and a @a path argument, giving the
  * path of the file, subdirectory, or directory entry to change.
- * 
+ *
  * The @a path argument to each of the callbacks is relative to the
  * root of the edit.  Editors will usually want to join this relative
  * path with some base stored in the edit baton (e.g. a URL, or a

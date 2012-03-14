@@ -716,8 +716,6 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
           token = existing_lock->token;
           if (!token)
             {
-              svn_error_t *err;
-
               err = svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
                                       _("'%s' is not locked in the repository"),
                                       path);
@@ -728,11 +726,15 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
                   err2 = lock_func(lock_baton, path, FALSE, NULL, err,
                                    iterpool);
                   svn_error_clear(err);
+                  err = NULL;
                   if (err2)
                     return svn_error_trace(err2);
                 }
               else
-                svn_error_clear(err);
+                {
+                  svn_error_clear(err);
+                  err = NULL;
+                }
               continue;
             }
         }

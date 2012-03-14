@@ -328,7 +328,7 @@ checkout_dir(dir_context_t *dir)
       return SVN_NO_ERROR;
     }
 
-  /* Is this directory or one of our parent dirs newly added? 
+  /* Is this directory or one of our parent dirs newly added?
    * If so, we're already implicitly checked out. */
   while (p_dir)
     {

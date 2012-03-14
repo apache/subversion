@@ -171,7 +171,7 @@ env_from_env_hash(apr_hash_t *env_hash,
   apr_hash_index_t *hi;
   const char **env;
   const char **envp;
-  
+
   if (!env_hash || apr_hash_count(env_hash) == 0)
     return NULL;
 

@@ -367,7 +367,7 @@ was_readable(svn_boolean_t *readable,
 {
   svn_fs_root_t *inquire_root;
   const char *inquire_path;
-  struct copy_info *info;
+  struct copy_info *info = NULL;
   const char *relpath;
 
   /* Short circuit. */
@@ -378,7 +378,7 @@ was_readable(svn_boolean_t *readable,
     }
 
   if (copies->nelts != 0)
-    info = &APR_ARRAY_IDX(copies, copies->nelts - 1, struct copy_info);
+    info = APR_ARRAY_IDX(copies, copies->nelts - 1, struct copy_info *);
 
   /* Are we under a copy? */
   if (info && (relpath = svn_relpath_skip_ancestor(info->path, path)))
@@ -493,9 +493,9 @@ path_driver_cb_func(void **dir_baton,
   while (cb->copies->nelts > 0
          && ! svn_dirent_is_ancestor(APR_ARRAY_IDX(cb->copies,
                                                    cb->copies->nelts - 1,
-                                                   struct copy_info).path,
+                                                   struct copy_info *)->path,
                                      edit_path))
-    cb->copies->nelts--;
+    apr_array_pop(cb->copies);
 
   change = apr_hash_get(cb->changed_paths, edit_path, APR_HASH_KEY_STRING);
   if (! change)
@@ -613,11 +613,13 @@ path_driver_cb_func(void **dir_baton,
              (possibly nested) copy operation. */
           if (change->node_kind == svn_node_dir)
             {
-              struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
-                                                       struct copy_info);
+              struct copy_info *info = apr_pcalloc(cb->pool, sizeof(*info));
+
               info->path = apr_pstrdup(cb->pool, edit_path);
               info->copyfrom_path = apr_pstrdup(cb->pool, copyfrom_path);
               info->copyfrom_rev = copyfrom_rev;
+
+              APR_ARRAY_PUSH(cb->copies, struct copy_info *) = info;
             }
 
           /* Save the source so that we can use it later, when we
@@ -633,11 +635,13 @@ path_driver_cb_func(void **dir_baton,
              past... */
           if (change->node_kind == svn_node_dir && cb->copies->nelts > 0)
             {
-              struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
-                                                       struct copy_info);
+              struct copy_info *info = apr_pcalloc(cb->pool, sizeof(*info));
+
               info->path = apr_pstrdup(cb->pool, edit_path);
               info->copyfrom_path = NULL;
               info->copyfrom_rev = SVN_INVALID_REVNUM;
+
+              APR_ARRAY_PUSH(cb->copies, struct copy_info *) = info;
             }
           source_root = NULL;
           source_fspath = NULL;
@@ -670,9 +674,9 @@ path_driver_cb_func(void **dir_baton,
          delta source. */
       if (cb->copies->nelts > 0)
         {
-          struct copy_info *info = &APR_ARRAY_IDX(cb->copies,
-                                                  cb->copies->nelts - 1,
-                                                  struct copy_info);
+          struct copy_info *info = APR_ARRAY_IDX(cb->copies,
+                                                 cb->copies->nelts - 1,
+                                                 struct copy_info *);
           if (info->copyfrom_path)
             {
               const char *relpath = svn_relpath_skip_ancestor(info->path,
@@ -894,7 +898,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                                    pool));
     }
 
-  cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info));
+  cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info *));
   cb_baton.pool = pool;
 
   /* Determine the revision to use throughout the edit, and call

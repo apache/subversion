@@ -226,7 +226,7 @@ get_props_content(svn_stringbuf_t **header,
   svn_stream_t *content_stream;
   apr_hash_t *normal_props;
   const char *buf;
-  
+
   *content = svn_stringbuf_create_empty(result_pool);
   *header = svn_stringbuf_create_empty(result_pool);
 
@@ -866,7 +866,7 @@ fetch_base_func(const char **filename,
     }
   else if (err)
     return svn_error_trace(err);
-  
+
   SVN_ERR(svn_stream_close(fstream));
 
   return SVN_NO_ERROR;

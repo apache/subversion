@@ -671,16 +671,22 @@ get_ra_editor(svn_ra_session_t **ra_session,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
+#ifdef ENABLE_EDITOR_SHIMS
   /* We need this for the shims. */
   if (base_dir_abspath)
     {
       const char *relpath;
+      const char *wcroot_abspath;
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
+                                  base_dir_abspath, pool, pool));
 
       SVN_ERR(svn_ra_get_path_relative_to_root(*ra_session, &relpath, base_url,
                                                pool));
-      anchor_abspath = svn_dirent_join(base_dir_abspath, relpath, pool);
+      anchor_abspath = svn_dirent_join(wcroot_abspath, relpath, pool);
     }
   else
+#endif
     anchor_abspath = NULL;
 
   /* Fetch RA commit editor. */
@@ -1273,7 +1279,7 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
 
               rel_target = svn_dirent_skip_ancestor(base_abspath,
                                                     xinfo->local_abspath);
-              
+
               SVN_ERR_ASSERT(rel_target != NULL && *rel_target != '\0');
 
               APR_ARRAY_PUSH(rel_targets, const char *) =
@@ -1509,7 +1515,7 @@ svn_client_commit6(const apr_array_header_t *targets,
               svn_boolean_t found_delete_half =
                 (apr_hash_get(committables->by_path, delete_op_root_abspath,
                                APR_HASH_KEY_STRING) != NULL);
-              
+
               if (!found_delete_half)
                 {
                   const char *delete_half_parent_abspath;

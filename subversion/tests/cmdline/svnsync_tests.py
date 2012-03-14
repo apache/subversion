@@ -28,7 +28,7 @@
 import sys, os
 
 # Test suite-specific modules
-import locale, re
+import locale, re, urllib
 
 # Our testing module
 import svntest
@@ -191,14 +191,16 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   repo_url = sbox.repo_url
   cwd = os.getcwd()
   if is_src_ra_local:
-    repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, sbox.repo_dir))
+    repo_url = svntest.main.file_scheme_prefix + \
+                        urllib.pathname2url(os.path.join(cwd, sbox.repo_dir))
 
   if subdir:
     repo_url = repo_url + subdir
 
   dest_repo_url = dest_sbox.repo_url
   if is_dest_ra_local:
-    dest_repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
+    dest_repo_url = svntest.main.file_scheme_prefix + \
+                    urllib.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
   run_init(dest_repo_url, repo_url, source_prop_encoding)
 
   run_sync(dest_repo_url, repo_url,
@@ -251,7 +253,7 @@ or another dump file."""
   # file.
   if exp_dump_file_name:
     build_repos(sbox)
-    svntest.actions.run_and_verify_load(sbox.repo_dir, 
+    svntest.actions.run_and_verify_load(sbox.repo_dir,
                                         open(os.path.join(svnsync_tests_dir,
                                                           exp_dump_file_name),
                                              'rb').readlines())
@@ -399,7 +401,7 @@ def basic_authz(sbox):
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
   svntest.main.file_write(sbox.authz_file,
                           "[%s:/]\n"
                           "* = r\n"
@@ -408,7 +410,7 @@ def basic_authz(sbox):
                           "* = \n"
                           "\n"
                           "[%s:/]\n"
-                          "* = rw\n" % tuple(args))
+                          "* = rw\n" % args)
 
   run_sync(dest_sbox.repo_url)
 
@@ -477,7 +479,7 @@ def copy_from_unreadable_dir(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
   open(sbox.authz_file, 'w').write(
              "[%s:/]\n"
              "* = r\n"
@@ -487,7 +489,7 @@ def copy_from_unreadable_dir(sbox):
              "\n"
              "[%s:/]\n"
              "* = rw"
-             % tuple(args))
+             % args)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -591,7 +593,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
   open(sbox.authz_file, 'w').write(
              "[%s:/]\n"
              "* = r\n"
@@ -601,7 +603,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
              "\n"
              "[%s:/]\n"
              "* = rw"
-             % tuple(args))
+             % args)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -683,7 +685,7 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  args = map(lambda x: x.authz_name(), [sbox, sbox, dest_sbox])
+  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
   open(sbox.authz_file, 'w').write(
              "[%s:/]\n"
              "* = r\n"
@@ -693,7 +695,7 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
              "\n"
              "[%s:/]\n"
              "* = rw"
-             % tuple(args))
+             % args)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -1005,37 +1007,36 @@ def fd_leak_sync_from_serf_to_local(sbox):
 def copy_delete_unreadable_child(sbox):
   "copy, then rm at-src-unreadable child"
 
-  ## Prepare the source: Greek tree (r1), cp+rm (r2).
+  # Prepare the source: Greek tree (r1), cp+rm (r2).
   sbox.build("copy-delete-unreadable-child")
-  svntest.actions.run_and_verify_svnmucc(None, None, [], 
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
                                          '-m', 'r2',
                                          '-U', sbox.repo_url,
                                          'cp', 'HEAD', '/', 'branch',
                                          'rm', 'branch/A')
 
-  ## Create the destination.
+  # Create the destination.
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  ## Lock down the source.
-  args = map(lambda x: x.authz_name(), [sbox, sbox])
+  # Lock down the source.
+  authz = sbox.authz_name()
   write_restrictive_svnserve_conf(sbox.repo_dir, anon_access='read')
   svntest.main.file_write(sbox.authz_file,
       "[%s:/]\n"
       "* = r\n"
       "[%s:/A]\n"
       "* =  \n"
-      % tuple(args)
-  )
+      % (authz, authz))
 
   dest_url = svntest.main.file_scheme_prefix \
-             + svntest.main.pathname2url(os.path.abspath(dest_sbox.repo_dir))
+                    + urllib.pathname2url(os.path.abspath(dest_sbox.repo_dir))
   run_init(dest_url, sbox.repo_url)
   run_sync(dest_url)
 
   # sanity check
-  svntest.actions.run_and_verify_svn(None, 
+  svntest.actions.run_and_verify_svn(None,
                                      ["iota\n"], [],
                                      'ls', dest_url+'/branch@2')
 

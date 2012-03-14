@@ -153,7 +153,7 @@ cache_init(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_error_quick_wrap(svn_cstring_atoui64(&memory_cache_size,
                                                        memory_cache_size_str),
                                    _("memory-cache-size invalid")));
-      settings.cache_size = 1024 * 1024 * memory_cache_size; 
+      settings.cache_size = 1024 * 1024 * memory_cache_size;
       svn_cache_config_set(&settings);
     }
 
