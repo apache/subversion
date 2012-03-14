@@ -48,6 +48,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_subst.h"
 #include "svn_ra.h"
 #include "client.h"
 #include "mergeinfo.h"
@@ -1393,7 +1394,7 @@ check_moved_away(svn_boolean_t *moved_away,
 {
   const char *moved_to_abspath;
   svn_error_t *err;
-  
+
   *moved_away = FALSE;
 
   err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
@@ -1423,7 +1424,7 @@ check_moved_here(svn_boolean_t *moved_here,
 {
   const char *moved_from_abspath;
   svn_error_t *err;
-  
+
   *moved_here = FALSE;
 
   err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
@@ -1995,10 +1996,14 @@ files_same_p(svn_boolean_t *same,
       svn_opt_revision_t working_rev = { svn_opt_revision_working, { 0 } };
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
-      SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
-                                                mine_abspath, &working_rev,
-                                                FALSE, TRUE, NULL, NULL,
-                                                scratch_pool, scratch_pool));
+      if (svn_prop_get_value(working_props, SVN_PROP_SPECIAL) != NULL)
+        SVN_ERR(svn_subst_read_specialfile(&mine_stream, mine_abspath,
+                                           scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
+                                                  mine_abspath, &working_rev,
+                                                  FALSE, TRUE, NULL, NULL,
+                                                  scratch_pool, scratch_pool));
 
       SVN_ERR(svn_stream_open_readonly(&older_stream, older_abspath,
                                        scratch_pool, scratch_pool));
@@ -3471,8 +3476,8 @@ fix_deleted_subtree_ranges(const merge_source_t *source,
    is older than START, then the base revision is used as the younger
    bound in place of START.
 
-   RA_SESSION is an open RA session to the repository in which SOURCE lives.
-   It may be temporarily reparented as needed by this function.
+   RA_SESSION is an RA session open to the repository in which TARGET_ABSPATH
+   lives.  It may be temporarily reparented as needed by this function.
 
    Allocate *RECORDED_MERGEINFO and *IMPLICIT_MERGEINFO in RESULT_POOL.
    Use SCRATCH_POOL for any temporary allocations. */
@@ -3565,7 +3570,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
 /* Helper for ensure_implicit_mergeinfo().
 
-   PARENT, CHILD, REVISION1, REVISION2, RA_SESSION, and CTX
+   PARENT, CHILD, REVISION1, REVISION2 and CTX
    are all cascaded from the arguments of the same names in
    ensure_implicit_mergeinfo().  PARENT and CHILD must both exist, i.e.
    this function should never be called where CHILD is the merge target.
@@ -3575,6 +3580,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
    Set CHILD->IMPLICIT_MERGEINFO to the mergeinfo inherited from
    PARENT->IMPLICIT_MERGEINFO.  CHILD->IMPLICIT_MERGEINFO is allocated
    in RESULT_POOL.
+
+   RA_SESSION is an RA session open to the repository that contains CHILD.
+   It may be temporarily reparented by this function.
    */
 static svn_error_t *
 inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
@@ -3625,7 +3633,10 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
    PARENT->IMPLICIT_MERGEINFO, otherwise contact the repository.  Use
    SCRATCH_POOL for all temporary allocations.
 
-   PARENT, CHILD, REVISION1, REVISION2, RA_SESSION, and
+   RA_SESSION is an RA session open to the repository that contains CHILD.
+   It may be temporarily reparented by this function.
+
+   PARENT, CHILD, REVISION1, REVISION2 and
    CTX are all cascaded from the arguments of the same name in
    filter_merged_revisions() and the same conditions for that function
    hold here. */
@@ -7540,7 +7551,7 @@ flag_subtrees_needing_mergeinfo(svn_boolean_t operative_merge,
                      operational depth is empty or files, then the mere
                      existence of operative immediate children means we
                      must record non-inheritable mergeinfo.
-                     
+
                      ### What about svn_depth_immediates?  In that case
                      ### the merge target needs only normal inheritable
                      ### mergeinfo and the target's immediate children will

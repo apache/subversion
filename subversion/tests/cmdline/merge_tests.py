@@ -14124,11 +14124,13 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                      'move', sbox.repo_url + '/A/D/H/nu',
                                      sbox.repo_url + '/A/D/H/nu_moved',
                                      '-m', 'Move nu to nu_moved')
-  svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s':\n" % (wc_dir),
-                                      "D    " + nu_path + "\n",
-                                      "A    " + nu_moved_path + "\n",
-                                      "Updated to revision 12.\n"],
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '%s':\n" % (wc_dir),
+     "D    " + nu_path + "\n",
+     "A    " + nu_moved_path + "\n",
+     "Updated to revision 12.\n"],
+    )
+  svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'up', wc_dir)
 
   # Now merge -r7:12 from A to A_COPY.
@@ -17018,7 +17020,7 @@ def merged_deletion_causes_tree_conflict(sbox):
                                      '-m', 'Copy ^/A to ^/branch')
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  # r4 - Delete A/D/H/psi 
+  # r4 - Delete A/D/H/psi
   svntest.actions.run_and_verify_svn(None, None, [], 'delete', psi_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Delete a a path with native eol-style',
@@ -17213,7 +17215,7 @@ def unnecessary_noninheritable_mergeinfo_missing_subtrees(sbox):
 
   B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
 
-  # Setup a simple branch to which 
+  # Setup a simple branch to which
   expected_output, expected_mergeinfo_output, expected_elision_output, \
     expected_status, expected_disk, expected_skip = \
     noninheritable_mergeinfo_test_set_up(sbox)
@@ -17258,7 +17260,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   B_branch_path = os.path.join(sbox.wc_dir, 'branch', 'B')
   E_path        = os.path.join(sbox.wc_dir, 'A', 'B', 'E')
 
-  # Setup a simple branch to which 
+  # Setup a simple branch to which
   expected_output, expected_mergeinfo_output, expected_elision_output, \
     expected_status, expected_disk, expected_skip = \
     noninheritable_mergeinfo_test_set_up(sbox)
@@ -17316,7 +17318,7 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
   #       /A/B:4* <-- Should be inheritable
   #   Properties on 'branch\B\E':
   #     svn:mergeinfo
-  #       /A/B/E:4 <-- Not necessary 
+  #       /A/B/E:4 <-- Not necessary
   expected_output = wc.State(B_branch_path, {
     'E' : Item(status=' U'),
     })
@@ -17354,6 +17356,116 @@ def unnecessary_noninheritable_mergeinfo_shallow_merge(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1, 1,
                                        '--depth', 'immediates', B_branch_path)
+
+#----------------------------------------------------------------------
+# Test for issue #4132, "merge of replaced source asserts".
+# The original use-case is the following merges, which both asserted:
+#    svn merge -cr1295005 ^/subversion/trunk@1295000 ../src
+#    svn merge -cr1295004 ^/subversion/trunk/@r1295004 ../src
+@Issue(4132)
+@XFail()
+def svnmucc_abuse_1(sbox):
+  "svnmucc: merge a replacement"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  ## Using A/ as our trunk, since one cannot replace the root.
+
+  ## r2: open a branch
+  sbox.simple_repo_copy('A', 'A_COPY')
+
+  ## r3: padding (to make the revnums-mod-10 match)
+  sbox.simple_repo_copy('iota', 'padding')
+
+  ## r4: trunk: accidental change
+  sbox.simple_append('A/mu', 'accidental change')
+  sbox.simple_commit()
+
+  ## r5: fail to revert it
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'r5',
+                                         '-U', sbox.repo_url,
+                                         'rm', 'A',
+                                         'cp', 'HEAD', 'A', 'A')
+
+  ## r6: really revert it
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-m', 'r6',
+                                         '-U', sbox.repo_url,
+                                         'rm', 'A',
+                                         'cp', '3', 'A', 'A')
+
+  ## Attempt to merge that.
+  # This used to assert:
+  #   --- Recording mergeinfo for merge of r5 into 'svn-test-work/working_copies/merge_tests-125/A_COPY':
+  #   subversion/libsvn_subr/mergeinfo.c:1172: (apr_err=235000)
+  #   svn: E235000: In file 'subversion/libsvn_subr/mergeinfo.c' line 1172: assertion failed (IS_VALID_FORWARD_RANGE(first))
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '-c', 'r5', '^/A@r5',
+                             sbox.ospath('A_COPY'))
+
+#----------------------------------------------------------------------
+# Test for issue #4138 'replacement in merge source not notified correctly'.
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+@Issue(4138)
+def merge_source_with_replacement(sbox):
+  "replacement in merge source not notified correctly"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about.
+  A_path          = os.path.join(sbox.wc_dir, 'A')
+  omega_path      = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'omega')
+  A_COPY_path     = os.path.join(sbox.wc_dir, 'A_COPY')
+  beta_COPY_path  = os.path.join(sbox.wc_dir, 'A_COPY', 'B', 'E', 'beta')
+  psi_COPY_path   = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  rho_COPY_path   = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'G', 'rho')
+  omega_COPY_path = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'H', 'omega')
+  
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # r7 Delete A, replace it with A@5, effectively reverting the change
+  # made to A/D/H/omega in r6:
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'del', A_path)
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A@5', A_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Replace A with older version of itself', wc_dir)
+
+  # r8: Make an edit to A/D/H/omega:
+  svntest.main.file_write(omega_path, "New content for 'omega'.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'file edit', wc_dir)
+
+  # Update and sync merge ^/A to A_COPY.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  # This currently fails because the merge notifications make it look like
+  # r6 from ^/A was merged and recorded:
+  #
+  #   >svn merge ^^/A A_COPY
+  #   --- Merging r2 through r5 into 'A_COPY':
+  #   U    A_COPY\B\E\beta
+  #   U    A_COPY\D\G\rho
+  #   U    A_COPY\D\H\psi
+  #   --- Recording mergeinfo for merge of r2 through r5 into 'A_COPY':
+  #    U   A_COPY
+  #   --- Merging r6 through r8 into 'A_COPY':
+  #   U    A_COPY\D\H\omega
+  #   --- Recording mergeinfo for merge of r6 through r8 into 'A_COPY':
+  #   G   A_COPY
+  expected_output = expected_merge_output([[2,5],[7,8]],
+                          ['U    ' + beta_COPY_path  + '\n',
+                           'U    ' + rho_COPY_path   + '\n',
+                           'U    ' + omega_COPY_path + '\n',
+                           'U    ' + psi_COPY_path   + '\n',
+                           ' U   ' + A_COPY_path     + '\n',
+                           ' G   ' + A_COPY_path     + '\n',])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_path)
 
 ########################################################################
 # Run the tests
@@ -17485,6 +17597,8 @@ test_list = [ None,
               record_only_merge_adds_new_subtree_mergeinfo,
               unnecessary_noninheritable_mergeinfo_missing_subtrees,
               unnecessary_noninheritable_mergeinfo_shallow_merge,
+              svnmucc_abuse_1,
+              merge_source_with_replacement,
              ]
 
 if __name__ == '__main__':

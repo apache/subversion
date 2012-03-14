@@ -532,7 +532,7 @@ svn_repos_hotcopy2(const char *src_path,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
-/** 
+/**
  * Like svn_repos_hotcopy2(), but without the @a incremental parameter
  * and without cancellation support.
  *
@@ -1780,6 +1780,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
  * never be @c NULL but may be empty.
  *
+ * The paths in @a paths, and the keys of @a catalog, start with '/'.
+ *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
@@ -3026,6 +3028,10 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  *
  * For compatibility with 1.6, and earlier, @a repos_name can be NULL
  * in which case it is equivalent to a @a repos_name of "".
+ *
+ * @note Presently, @a repos_name must byte-for-byte match the repos_name
+ * specified in the authz file; it is treated as an opaque string, and not
+ * as a dirent.
  *
  * @since New in 1.3.
  */

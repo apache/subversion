@@ -2255,7 +2255,7 @@ typedef struct svn_client_status_t
    * This will be NULL for moved-here nodes that are just part of a subtree
    * that was moved along (and are not themselves a root of a different move
    * operation).
-   * 
+   *
    * @since New in 1.8. */
   const char *moved_from_abspath;
 

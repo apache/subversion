@@ -31,6 +31,7 @@ import sys, re, os, time, subprocess
 # Our testing module
 import svntest
 from svntest import wc, actions
+import logging
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -41,6 +42,8 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
+logger = logging.getLogger()
+
 #----------------------------------------------------------------------
 # Helper function for testing stderr from co.
 # If none of the strings in STDERR list matches the regular expression
@@ -50,10 +53,9 @@ def test_stderr(re_string, stderr):
   for line in stderr:
     if exp_err_re.search(line):
       return
-  if svntest.main.options.verbose:
-    for x in stderr:
-      sys.stdout.write(x)
-    print("Expected stderr reg-ex: '" + re_string + "'")
+  for x in stderr:
+    logger.debug(x[:-1])
+  logger.info("Expected stderr reg-ex: '" + re_string + "'")
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------

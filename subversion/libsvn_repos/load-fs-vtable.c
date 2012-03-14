@@ -487,7 +487,7 @@ new_revision_record(void **revision_baton,
      several separate operations. It is highly susceptible to race conditions.
      Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
-  rb->rev_offset = (apr_int32_t) (rb->rev) - (head_rev + 1);
+  rb->rev_offset = (apr_int32_t) ((rb->rev) - (head_rev + 1));
 
   if ((rb->rev > 0) && (! rb->skipped))
     {
@@ -506,7 +506,7 @@ new_revision_record(void **revision_baton,
       if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
         pb->oldest_old_rev = rb->rev;
     }
-  
+
   /* If we're skipping this revision, try to notify someone. */
   if (rb->skipped && pb->notify_func)
     {

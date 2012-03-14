@@ -352,6 +352,116 @@ is_within_base_path(const char *path, const char *base_path,
   return FALSE;
 }
 
+/* Given PATH deleted under ROOT, return in READABLE whether the path was
+   readable prior to the deletion.  Consult COPIES (a stack of 'struct
+   copy_info') and AUTHZ_READ_FUNC. */
+static svn_error_t *
+was_readable(svn_boolean_t *readable,
+             svn_fs_root_t *root,
+             const char *path,
+             apr_array_header_t *copies,
+             svn_repos_authz_func_t authz_read_func,
+             void *authz_read_baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  svn_fs_root_t *inquire_root;
+  const char *inquire_path;
+  struct copy_info *info = NULL;
+  const char *relpath;
+
+  /* Short circuit. */
+  if (! authz_read_func)
+    {
+      *readable = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  if (copies->nelts != 0)
+    info = APR_ARRAY_IDX(copies, copies->nelts - 1, struct copy_info *);
+
+  /* Are we under a copy? */
+  if (info && (relpath = svn_relpath_skip_ancestor(info->path, path)))
+    {
+      SVN_ERR(svn_fs_revision_root(&inquire_root, svn_fs_root_fs(root),
+                                   info->copyfrom_rev, scratch_pool));
+      inquire_path = svn_fspath__join(info->copyfrom_path, relpath,
+                                      scratch_pool);
+    }
+  else
+    {
+      /* Compute the revision that ROOT is based on.  (Note that ROOT is not
+         r0's root, since this function is only called for deletions.)
+         ### Need a more succinct way to express this */
+      svn_revnum_t inquire_rev = SVN_INVALID_REVNUM;
+      if (svn_fs_is_txn_root(root))
+        inquire_rev = svn_fs_txn_root_base_revision(root);
+      if (svn_fs_is_revision_root(root))
+        inquire_rev =  svn_fs_revision_root_revision(root)-1;
+      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(inquire_rev));
+
+      SVN_ERR(svn_fs_revision_root(&inquire_root, svn_fs_root_fs(root),
+                                   inquire_rev, scratch_pool));
+      inquire_path = path;
+    }
+
+  SVN_ERR(authz_read_func(readable, inquire_root, inquire_path,
+                          authz_read_baton, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Initialize COPYFROM_ROOT, COPYFROM_PATH, and COPYFROM_REV with the
+   revision root, fspath, and revnum of the copyfrom of CHANGE, which
+   corresponds to PATH under ROOT.  If the copyfrom info is valid
+   (i.e., is not (NULL, SVN_INVALID_REVNUM)), then initialize SRC_READABLE
+   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided. */
+static svn_error_t *
+fill_copyfrom(svn_fs_root_t **copyfrom_root,
+              const char **copyfrom_path,
+              svn_revnum_t *copyfrom_rev,
+              svn_boolean_t *src_readable,
+              svn_fs_root_t *root,
+              svn_fs_path_change2_t *change,
+              svn_repos_authz_func_t authz_read_func,
+              void *authz_read_baton,
+              const char *path,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  if (! change->copyfrom_known)
+    {
+      SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
+                                 &(change->copyfrom_path),
+                                 root, path, result_pool));
+      change->copyfrom_known = TRUE;
+    }
+  *copyfrom_rev = change->copyfrom_rev;
+  *copyfrom_path = change->copyfrom_path;
+
+  if (*copyfrom_path && SVN_IS_VALID_REVNUM(*copyfrom_rev))
+    {
+      SVN_ERR(svn_fs_revision_root(copyfrom_root,
+                                   svn_fs_root_fs(root),
+                                   *copyfrom_rev, result_pool));
+
+      if (authz_read_func)
+        {
+          SVN_ERR(authz_read_func(src_readable, *copyfrom_root,
+                                  *copyfrom_path,
+                                  authz_read_baton, result_pool));
+        }
+      else
+        *src_readable = TRUE;
+    }
+  else
+    {
+      *copyfrom_root = NULL;
+      /* SRC_READABLE left uninitialized */
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
@@ -368,7 +478,6 @@ path_driver_cb_func(void **dir_baton,
   void *file_baton = NULL;
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
-  svn_boolean_t src_readable = TRUE;
   svn_fs_root_t *source_root = cb->compare_root;
   const char *source_fspath = NULL;
   const char *base_path = cb->base_path;
@@ -384,9 +493,9 @@ path_driver_cb_func(void **dir_baton,
   while (cb->copies->nelts > 0
          && ! svn_dirent_is_ancestor(APR_ARRAY_IDX(cb->copies,
                                                    cb->copies->nelts - 1,
-                                                   struct copy_info).path,
+                                                   struct copy_info *)->path,
                                      edit_path))
-    cb->copies->nelts--;
+    apr_array_pop(cb->copies);
 
   change = apr_hash_get(cb->changed_paths, edit_path, APR_HASH_KEY_STRING);
   if (! change)
@@ -419,8 +528,18 @@ path_driver_cb_func(void **dir_baton,
 
   /* Handle any deletions. */
   if (do_delete)
-    SVN_ERR(editor->delete_entry(edit_path, SVN_INVALID_REVNUM,
-                                 parent_baton, pool));
+    {
+      svn_boolean_t readable;
+
+      /* Issue #4121: delete under under a copy, of a path that was unreadable
+         at its pre-copy location. */
+      SVN_ERR(was_readable(&readable, root, edit_path, cb->copies,
+                            cb->authz_read_func, cb->authz_read_baton,
+                            pool, pool));
+      if (readable)
+        SVN_ERR(editor->delete_entry(edit_path, SVN_INVALID_REVNUM,
+                                     parent_baton, pool));
+    }
 
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
@@ -437,31 +556,14 @@ path_driver_cb_func(void **dir_baton,
   /* Handle any adds/opens. */
   if (do_add)
     {
-      svn_fs_root_t *copyfrom_root = NULL;
+      svn_boolean_t src_readable;
+      svn_fs_root_t *copyfrom_root;
+
       /* Was this node copied? */
-      if (! change->copyfrom_known)
-        {
-          SVN_ERR(svn_fs_copied_from(&(change->copyfrom_rev),
-                                     &(change->copyfrom_path),
-                                     root, edit_path, pool));
-          change->copyfrom_known = TRUE;
-        }
-      copyfrom_rev = change->copyfrom_rev;
-      copyfrom_path = change->copyfrom_path;
-
-      if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
-        {
-          SVN_ERR(svn_fs_revision_root(&copyfrom_root,
-                                       svn_fs_root_fs(root),
-                                       copyfrom_rev, pool));
-
-          if (cb->authz_read_func)
-            {
-              SVN_ERR(cb->authz_read_func(&src_readable, copyfrom_root,
-                                          copyfrom_path,
-                                          cb->authz_read_baton, pool));
-            }
-        }
+      SVN_ERR(fill_copyfrom(&copyfrom_root, &copyfrom_path, &copyfrom_rev,
+                            &src_readable, root, change,
+                            cb->authz_read_func, cb->authz_read_baton,
+                            edit_path, pool, pool));
 
       /* If we have a copyfrom path, and we can't read it or we're just
          ignoring it, or the copyfrom rev is prior to the low water mark
@@ -511,11 +613,13 @@ path_driver_cb_func(void **dir_baton,
              (possibly nested) copy operation. */
           if (change->node_kind == svn_node_dir)
             {
-              struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
-                                                       struct copy_info);
+              struct copy_info *info = apr_pcalloc(cb->pool, sizeof(*info));
+
               info->path = apr_pstrdup(cb->pool, edit_path);
               info->copyfrom_path = apr_pstrdup(cb->pool, copyfrom_path);
               info->copyfrom_rev = copyfrom_rev;
+
+              APR_ARRAY_PUSH(cb->copies, struct copy_info *) = info;
             }
 
           /* Save the source so that we can use it later, when we
@@ -531,11 +635,13 @@ path_driver_cb_func(void **dir_baton,
              past... */
           if (change->node_kind == svn_node_dir && cb->copies->nelts > 0)
             {
-              struct copy_info *info = &APR_ARRAY_PUSH(cb->copies,
-                                                       struct copy_info);
+              struct copy_info *info = apr_pcalloc(cb->pool, sizeof(*info));
+
               info->path = apr_pstrdup(cb->pool, edit_path);
               info->copyfrom_path = NULL;
               info->copyfrom_rev = SVN_INVALID_REVNUM;
+
+              APR_ARRAY_PUSH(cb->copies, struct copy_info *) = info;
             }
           source_root = NULL;
           source_fspath = NULL;
@@ -568,9 +674,9 @@ path_driver_cb_func(void **dir_baton,
          delta source. */
       if (cb->copies->nelts > 0)
         {
-          struct copy_info *info = &APR_ARRAY_IDX(cb->copies,
-                                                  cb->copies->nelts - 1,
-                                                  struct copy_info);
+          struct copy_info *info = APR_ARRAY_IDX(cb->copies,
+                                                 cb->copies->nelts - 1,
+                                                 struct copy_info *);
           if (info->copyfrom_path)
             {
               const char *relpath = svn_relpath_skip_ancestor(info->path,
@@ -597,45 +703,31 @@ path_driver_cb_func(void **dir_baton,
     {
       if (change->prop_mod)
         {
-          if (cb->compare_root)
-            {
-              apr_array_header_t *prop_diffs;
-              apr_hash_t *old_props;
-              apr_hash_t *new_props;
-              int i;
+          apr_array_header_t *prop_diffs;
+          apr_hash_t *old_props;
+          apr_hash_t *new_props;
+          int i;
 
-              if (source_root)
-                SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
-                                             source_fspath, pool));
-              else
-                old_props = apr_hash_make(pool);
-
-              SVN_ERR(svn_fs_node_proplist(&new_props, root, edit_path, pool));
-
-              SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
-                                     pool));
-
-              for (i = 0; i < prop_diffs->nelts; ++i)
-                {
-                  svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-                   if (change->node_kind == svn_node_dir)
-                     SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
-                                                     pc->value, pool));
-                   else if (change->node_kind == svn_node_file)
-                     SVN_ERR(editor->change_file_prop(file_baton, pc->name,
-                                                      pc->value, pool));
-                }
-            }
+          if (source_root)
+            SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
+                                         source_fspath, pool));
           else
+            old_props = apr_hash_make(pool);
+
+          SVN_ERR(svn_fs_node_proplist(&new_props, root, edit_path, pool));
+
+          SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
+                                 pool));
+
+          for (i = 0; i < prop_diffs->nelts; ++i)
             {
-              /* Just do a dummy prop change to signal that there are *any*
-                 propmods. */
-              if (change->node_kind == svn_node_dir)
-                SVN_ERR(editor->change_dir_prop(*dir_baton, "", NULL,
-                                                pool));
-              else if (change->node_kind == svn_node_file)
-                SVN_ERR(editor->change_file_prop(file_baton, "", NULL,
-                                                 pool));
+              svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+               if (change->node_kind == svn_node_dir)
+                 SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
+                                                 pc->value, pool));
+               else if (change->node_kind == svn_node_file)
+                 SVN_ERR(editor->change_file_prop(file_baton, pc->name,
+                                                  pc->value, pool));
             }
         }
 
@@ -806,7 +898,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                                    pool));
     }
 
-  cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info));
+  cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info *));
   cb_baton.pool = pool;
 
   /* Determine the revision to use throughout the edit, and call

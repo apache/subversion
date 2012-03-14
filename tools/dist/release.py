@@ -396,9 +396,9 @@ def roll_tarballs(args):
            raise RuntimeError('Cannot find usable %s' % dep.label)
 
     if branch != 'trunk':
-        # Make sure CHANGES is sync'd.    
+        # Make sure CHANGES is sync'd.
         compare_changes(repos, branch, args.revnum)
-    
+
     # Ensure the output directory doesn't already exist
     if os.path.exists(get_deploydir(args.base_dir)):
         raise RuntimeError('output directory \'%s\' already exists'
@@ -485,8 +485,6 @@ def post_candidates(args):
 def clean_dist(args):
     'Clean the distribution directory of all but the most recent artifacts.'
 
-    regex = re.compile('subversion-(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
-
     if not args.dist_dir:
         assert_people()
         args.dist_dir = people_dist_dir
@@ -556,7 +554,7 @@ def write_news(args):
     template.generate(sys.stdout, data)
 
 
-def get_sha1info(args):
+def get_sha1info(args, replace=False):
     'Return a list of sha1 info for the release'
     sha1s = glob.glob(os.path.join(get_deploydir(args.base_dir), '*.sha1'))
 
@@ -566,7 +564,13 @@ def get_sha1info(args):
     sha1info = []
     for s in sha1s:
         i = info()
-        i.filename = os.path.basename(s)[:-5]
+        # strip ".sha1"
+        fname = os.path.basename(s)[:-5]
+        if replace:
+            # replace the version number with the [version] reference
+            i.filename = Version.regex.sub('[version]', fname)
+        else:
+            i.filename = fname
         i.sha1 = open(s, 'r').read()
         sha1info.append(i)
 
@@ -596,7 +600,7 @@ def write_announcement(args):
 
 def write_downloads(args):
     'Output the download section of the website.'
-    sha1info = get_sha1info(args)
+    sha1info = get_sha1info(args, replace=True)
 
     data = { 'version'              : str(args.version),
              'fileinfo'             : sha1info,
@@ -630,7 +634,8 @@ def check_sigs(args):
 
     good_sigs = {}
 
-    for filename in glob.glob(os.path.join(target, 'subversion-*.asc')):
+    glob_pattern = os.path.join(target, 'subversion-%s*.asc' % args.version)
+    for filename in glob.glob(glob_pattern):
         text = open(filename).read()
         keys = text.split(key_start)
 

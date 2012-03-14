@@ -73,7 +73,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
-                              const svn_client__ra_session_from_path_results *ra_cache,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
@@ -88,6 +87,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   const char *session_url;
   svn_node_kind_t kind;
   const char *uuid, *repos_root;
+  apr_pool_t *session_pool = svn_pool_create(pool);
+  svn_ra_session_t *ra_session;
+  svn_revnum_t tmp_revnum;
+  const char *tmp_session_url;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(local_abspath != NULL);
@@ -100,60 +103,19 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  {
-    svn_boolean_t have_repos_root_url;
-    svn_boolean_t have_repos_uuid;
-    svn_boolean_t have_session_url;
-    svn_boolean_t have_revnum;
-    svn_boolean_t have_kind;
+  /* Get the RA connection. */
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &tmp_revnum,
+                                           &tmp_session_url, url, NULL,
+                                           peg_revision, revision, ctx,
+                                           session_pool));
 
-    if ((have_repos_root_url = (ra_cache && ra_cache->repos_root_url)))
-      repos_root = ra_cache->repos_root_url;
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &uuid, pool));
+  session_url = apr_pstrdup(pool, tmp_session_url);
+  revnum = tmp_revnum;
+  SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
 
-    if ((have_repos_uuid = (ra_cache && ra_cache->repos_uuid)))
-      uuid = ra_cache->repos_uuid;
-
-    if ((have_session_url = (ra_cache && ra_cache->ra_session_url)))
-      session_url = ra_cache->ra_session_url;
-
-    if ((have_revnum = (ra_cache && SVN_IS_VALID_REVNUM(ra_cache->ra_revnum))))
-      revnum = ra_cache->ra_revnum;
-
-    if ((have_kind = (ra_cache && ra_cache->kind != svn_node_unknown)))
-      kind = ra_cache->kind;
-
-    if (! have_repos_root_url || ! have_repos_uuid || ! have_session_url ||
-        ! have_revnum || ! have_kind)
-      {
-        apr_pool_t *session_pool = svn_pool_create(pool);
-        svn_ra_session_t *ra_session;
-        svn_revnum_t tmp_revnum;
-        const char *tmp_session_url;
-
-        /* Get the RA connection. */
-        SVN_ERR(svn_client__ra_session_from_path(&ra_session, &tmp_revnum,
-                                                 &tmp_session_url, url, NULL,
-                                                 peg_revision, revision, ctx,
-                                                 session_pool));
-
-        if (! have_repos_root_url)
-          SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-
-        if (! have_repos_uuid)
-          SVN_ERR(svn_ra_get_uuid2(ra_session, &uuid, pool));
-
-        if (! have_session_url)
-          session_url = apr_pstrdup(pool, tmp_session_url);
-
-        if (! have_revnum)
-          revnum = tmp_revnum;
-
-        if (! have_kind)
-          SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
-
-        svn_pool_destroy(session_pool);
-      }
-  }
+  svn_pool_destroy(session_pool);
 
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -253,7 +215,7 @@ svn_client_checkout3(svn_revnum_t *result_rev,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   return svn_client__checkout_internal(result_rev, URL, local_abspath,
-                                       peg_revision, revision, NULL, depth,
+                                       peg_revision, revision, depth,
                                        ignore_externals,
                                        allow_unver_obstructions, NULL,
                                        ctx, pool);

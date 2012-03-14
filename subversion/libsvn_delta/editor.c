@@ -33,7 +33,7 @@
 /* This enables runtime checks of the editor API constraints.  This may
    introduce additional memory and runtime overhead, and should not be used
    in production builds.
-   
+
    ### Remove before release? */
 #define ENABLE_ORDERING_CHECK
 #endif
@@ -420,7 +420,8 @@ svn_editor_add_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(checksum != NULL
+                    && checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
@@ -539,6 +540,8 @@ svn_editor_alter_file(svn_editor_t *editor,
   SVN_ERR_ASSERT((checksum != NULL && contents != NULL)
                  || (checksum == NULL && contents == NULL));
   SVN_ERR_ASSERT(props != NULL || checksum != NULL);
+  if (checksum)
+    SVN_ERR_ASSERT(checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
 
@@ -632,6 +635,7 @@ svn_editor_copy(svn_editor_t *editor,
                                 editor->scratch_pool);
 
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
   return err;
@@ -661,6 +665,7 @@ svn_editor_move(svn_editor_t *editor,
 
   MARK_ALLOW_ADD(editor, src_relpath);
   MARK_ALLOW_ALTER(editor, dst_relpath);
+  CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
   return err;

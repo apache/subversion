@@ -991,7 +991,7 @@ def verify_file_deleted(message, path):
   if message is not None:
     print(message)
   ###TODO We should raise a less generic error here. which?
-  raise Failure
+  raise svntest.Failure
 
 def verify_dir_deleted(path):
   if not os.path.isdir(path):
@@ -2898,17 +2898,17 @@ def rm_missing_with_case_clashing_ondisk_item(sbox):
 
   iota_path = os.path.join(wc_dir, 'iota')
   IOTA_path = os.path.join(wc_dir, 'IOTA')
-  
+
   # Out-of-svn move, to make iota missing, while IOTA appears as unversioned.
   os.rename(iota_path, IOTA_path)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'iota'              : Item(status='! ', wc_rev='1'),
     'IOTA'              : Item(status='? '),
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
-    
+
   # 'svn rm' iota, should leave IOTA alone.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', iota_path)
@@ -2922,6 +2922,29 @@ def rm_missing_with_case_clashing_ondisk_item(sbox):
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
 
+def delete_conflicts_one_of_many(sbox):
+  """delete multiple targets one conflict"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'new rho')
+  sbox.simple_commit()
+  svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'conflict rho')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r1', '--accept', 'postpone',
+                                     wc_dir)
+
+  if not os.path.exists(sbox.ospath('A/D/G/rho.mine')):
+    raise svntest.Failure("conflict file rho.mine missing")
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--force',
+                                     sbox.ospath('A/D/G/rho'),
+                                     sbox.ospath('A/D/G/tau'))
+
+  verify_file_deleted("failed to remove conflict file",
+                      sbox.ospath('A/D/G/rho.mine'))
 
 ########################################################################
 # Run the tests
@@ -2988,6 +3011,7 @@ test_list = [ None,
               add_multiple_targets,
               quiet_commits,
               rm_missing_with_case_clashing_ondisk_item,
+              delete_conflicts_one_of_many,
              ]
 
 if __name__ == '__main__':

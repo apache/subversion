@@ -104,8 +104,8 @@ structure summary" section of this document.
 NODE-REVISION: how we represent a node revision
 
 We represent a given revision of a file or directory node using a list
-skel (see skel.h for an explanation of skels).  A node revision skel
-has the form:
+skel (see include/private/svn_skel.h for an explanation of skels).
+A node revision skel has the form:
 
     (HEADER PROP-KEY KIND-SPECIFIC ...)
 
