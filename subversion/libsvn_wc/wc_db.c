@@ -7356,13 +7356,16 @@ read_children_info(void *baton,
               /* Assume working copy is all one repos_id so that a
                  single cached value is sufficient. */
               if (repos_id != last_repos_id)
-                return svn_error_createf(
+                {
+                  err= svn_error_createf(
                          SVN_ERR_WC_DB_ERROR, NULL,
                          _("The node '%s' comes from unexpected repository "
                            "'%s', expected '%s'; if this node is a file "
                            "external using the correct URL in the external "
                            "definition can fix the problem, see issue #4087"),
                          child_relpath, repos_root_url, last_repos_root_url);
+                  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+                }
               child->repos_root_url = repos_root_url;
               child->repos_uuid = repos_uuid;
             }
