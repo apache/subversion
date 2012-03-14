@@ -30,13 +30,11 @@ import re
 import stat
 import subprocess
 import time
-import traceback
 import threading
 import optparse
 import xml
 import urllib
 import logging
-import traceback
 
 try:
   # Python >=3.0
@@ -994,10 +992,6 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
-def _log_exception(fmt='', *args):
-  logger.warn(fmt, *args)
-  logger.warn(traceback.format_exc())
-
 def mergeinfo_notify_line(revstart, revend, target=None):
   """Return an expected output line that describes the beginning of a
   mergeinfo recording notification on revisions REVSTART through REVEND."""
@@ -1333,6 +1327,7 @@ class TestRunner:
       result = svntest.testcase.RESULT_SKIP
     except Failure, ex:
       result = svntest.testcase.RESULT_FAIL
+      msg = ''
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
       # failure, rather than relevant information. However, if there
@@ -1341,12 +1336,10 @@ class TestRunner:
         ex_args = str(ex)
         logger.warn('CWD: %s' % os.getcwd())
         if ex_args:
-          _log_exception('EXCEPTION: %s: %s',
-                          ex.__class__.__name__, ex_args)
+          msg = 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
         else:
-          _log_exception('EXCEPTION: %s', ex.__class__.__name__)
-      else:
-        _log_exception()
+          msg = 'EXCEPTION: %s' % ex.__class__.__name__
+      logger.warn(msg, exc_info=True)
     except KeyboardInterrupt:
       logger.error('Interrupted')
       sys.exit(0)
@@ -1356,8 +1349,7 @@ class TestRunner:
       raise
     except:
       result = svntest.testcase.RESULT_FAIL
-      logger.warn('CWD: %s' % os.getcwd())
-      _log_exception('UNEXPECTED EXCEPTION:')
+      logger.warn('CWD: %s' % os.getcwd(), exc_info=True)
 
     os.chdir(saved_dir)
     exit_code, result_text, result_benignity = self.pred.results(result)
