@@ -1290,7 +1290,8 @@ def wc_commit_error_handling(sbox):
   # Allow the informative error for dav and the ra_svn specific one that is
   # returned on editor->edit_close().
   expected_err = "(svn: E195023: Changing directory '.*Z' is forbidden)|" + \
-                 "(svn: E220004: Access denied)"
+                 "(svn: E220004: Access denied)|" + \
+                 "(svn: E175013: Access to '.*Z' forbidden)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
 
@@ -1302,7 +1303,8 @@ def wc_commit_error_handling(sbox):
   # Allow the informative error for dav and the ra_svn specific one that is
   # returned on editor->edit_close().
   expected_err = "(svn: E195023: Changing file '.*zeta' is forbidden)|" + \
-                 "(svn: E220004: Access denied)"
+                 "(svn: E220004: Access denied)|" + \
+                 "(svn: E175013: Access to '.*zeta' forbidden)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
   sbox.simple_revert('A/zeta')
@@ -1323,7 +1325,8 @@ def wc_commit_error_handling(sbox):
   # Allow the informative error for dav and the ra_svn specific one that is
   # returned on editor->edit_close().
   expected_err = "(svn: E195023: Changing file '.*lambda' is forbidden.*)|" + \
-                 "(svn: E220004: Access denied)"
+                 "(svn: E220004: Access denied)|" + \
+                 "(svn: E175013: Access to '.*lambda' forbidden)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
 
@@ -1333,7 +1336,8 @@ def wc_commit_error_handling(sbox):
   # Allow the informative error for dav and the ra_svn specific one that is
   # returned on editor->edit_close().
   expected_err = "(svn: E195023: Changing file '.*lambda' is forbidden.*)|" + \
-                 "(svn: E220004: Access denied)"
+                 "(svn: E220004: Access denied)|" + \
+                 "(svn: E175013: Access to '.*lambda' forbidden)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
 
@@ -1343,7 +1347,8 @@ def wc_commit_error_handling(sbox):
   # Allow the informative error for dav and the ra_svn specific one that is
   # returned on editor->edit_close().
   expected_err = "(svn: E195023: Changing directory '.*F' is forbidden.*)|" + \
-                 "(svn: E220004: Access denied)"
+                 "(svn: E220004: Access denied)|" + \
+                 "(svn: E175013: Access to '.*F' forbidden)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
   sbox.simple_revert('A/B/F')
@@ -1352,7 +1357,8 @@ def wc_commit_error_handling(sbox):
   # Allow the informative error for dav and the ra_svn specific one that is
   # returned on editor->edit_close().
   expected_err = "(svn: E195023: Changing file '.*mu' is forbidden.*)|" + \
-                 "(svn: E220004: Access denied)"
+                 "(svn: E220004: Access denied)|" + \
+                 "(svn: E175013: Access to '.*mu' forbidden)"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'ci', wc_dir, '-m', '')
 
@@ -1383,7 +1389,7 @@ def upgrade_absent(sbox):
   # Relocate to allow finding the repository
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'svn://127.0.0.1/authz_tests-2',
-                                     sbox.repo_url, sbox.wc_dir)  
+                                     sbox.repo_url, sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
   })

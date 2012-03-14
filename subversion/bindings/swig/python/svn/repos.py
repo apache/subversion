@@ -88,7 +88,7 @@ class ChangeCollector(_svndelta.Editor):
 
     At this time, two ChangedPath objects will be passed for a path that had
     been replaced in the revision/transaction.  This may change in the future.
-  
+
     ### Can't we deduce FS_PTR from ROOT?
 
     ### POOL is unused

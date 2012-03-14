@@ -3703,7 +3703,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                   dst_wcroot->wc_id,
                   dst_relpath,
                   copyfrom_id,
-                  copyfrom_relpath, 
+                  copyfrom_relpath,
                   copyfrom_rev,
                   children,
                   dst_op_depth,
@@ -6678,7 +6678,7 @@ op_delete_many_txn(void *baton,
       const char *target_relpath = APR_ARRAY_IDX(odmb->rel_targets, i,
                                                  const char *);
       struct op_delete_baton_t odb;
-      
+
       svn_pool_clear(iterpool);
       odb.delete_depth = relpath_depth(target_relpath);
       odb.moved_to_relpath = NULL;
@@ -6764,7 +6764,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                                 db, local_abspath,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-  
+
   if (moved_to_abspath)
     {
       SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&moved_to_wcroot,
@@ -6852,7 +6852,7 @@ svn_wc__db_op_delete_many(svn_wc__db_t *db,
 
     }
   svn_pool_destroy(iterpool);
-  
+
   /* Perform the deletion operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
   return svn_error_trace(with_finalization(wcroot, wcroot->abspath,
@@ -7198,7 +7198,7 @@ read_info(svn_wc__db_status_t *status,
     err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
 
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    err = svn_error_quick_wrap(err, 
+    err = svn_error_quick_wrap(err,
                                apr_psprintf(scratch_pool,
                                             "Error reading node '%s'",
                                             local_relpath));
@@ -7206,6 +7206,49 @@ read_info(svn_wc__db_status_t *status,
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
+                              svn_kind_t *kind,
+                              svn_revnum_t *revision,
+                              const char **repos_relpath,
+                              apr_int64_t *repos_id,
+                              svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_depth_t *depth,
+                              const svn_checksum_t **checksum,
+                              const char **target,
+                              const char **original_repos_relpath,
+                              apr_int64_t *original_repos_id,
+                              svn_revnum_t *original_revision,
+                              svn_wc__db_lock_t **lock,
+                              svn_filesize_t *recorded_size,
+                              apr_time_t *recorded_mod_time,
+                              const char **changelist,
+                              svn_boolean_t *conflicted,
+                              svn_boolean_t *op_root,
+                              svn_boolean_t *had_props,
+                              svn_boolean_t *props_mod,
+                              svn_boolean_t *have_base,
+                              svn_boolean_t *have_more_work,
+                              svn_boolean_t *have_work,
+                              svn_wc__db_wcroot_t *wcroot,
+                              const char *local_relpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+           read_info(status, kind, revision, repos_relpath, repos_id,
+                     changed_rev, changed_date, changed_author,
+                     depth, checksum, target, original_repos_relpath,
+                     original_repos_id, original_revision, lock,
+                     recorded_size, recorded_mod_time, changelist, conflicted,
+                     op_root, had_props, props_mod,
+                     have_base, have_more_work, have_work,
+                     wcroot, local_relpath, result_pool, scratch_pool));
 }
 
 
@@ -7506,7 +7549,6 @@ read_children_info(void *baton,
       struct svn_wc__db_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 7, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
-      svn_error_t *err;
 
       child_item = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
       if (!child_item)
@@ -7523,6 +7565,7 @@ read_children_info(void *baton,
 #ifdef HAVE_SYMLINK
       if (child->props_mod)
         {
+          svn_error_t *err;
           apr_hash_t *properties;
 
           err = svn_sqlite__column_properties(&properties, stmt, 6,
@@ -10284,9 +10327,9 @@ scan_deletion_txn(void *baton,
               moved_to_relpath = svn_relpath_join(moved_to_op_root_relpath,
                                                   moved_child_relpath,
                                                   scratch_pool);
-              
+
               if (sd_baton->moved_to_relpath)
-                *sd_baton->moved_to_relpath = moved_to_relpath ? 
+                *sd_baton->moved_to_relpath = moved_to_relpath ?
                   apr_pstrdup(sd_baton->result_pool, moved_to_relpath) : NULL;
             }
 

@@ -129,7 +129,11 @@ struct extra_baton
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
+
   apr_hash_t *paths;
+  apr_array_header_t *path_order;
+  int paths_processed;
+
   apr_pool_t *edit_pool;
   struct extra_baton *exb;
   svn_boolean_t closed;
@@ -221,16 +225,54 @@ add_action(struct ev2_edit_baton *eb,
 
   if (action_list == NULL)
     {
+      const char *path_dup = apr_pstrdup(eb->edit_pool, path);
+
       action_list = apr_array_make(eb->edit_pool, 1,
                                    sizeof(struct path_action *));
-      apr_hash_set(eb->paths, apr_pstrdup(eb->edit_pool, path),
-                   APR_HASH_KEY_STRING, action_list);
+      apr_hash_set(eb->paths, path_dup, APR_HASH_KEY_STRING, action_list);
+      APR_ARRAY_PUSH(eb->path_order, const char *) = path_dup;
     }
 
   APR_ARRAY_PUSH(action_list, struct path_action *) = p_action;
 
   return SVN_NO_ERROR;
 }
+
+/* Find all the paths which are immediate children of PATH and return their
+   basenames in a list. */
+static apr_array_header_t *
+get_children(struct ev2_edit_baton *eb,
+             const char *path,
+             apr_pool_t *pool)
+{
+  apr_array_header_t *children = apr_array_make(pool, 1, sizeof(const char *));
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, eb->paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *p = svn__apr_hash_index_key(hi);
+      const char *child;
+
+      /* Sanitize our paths. */
+      if (*p == '/')
+        p++;
+
+      /* Find potential children. */
+      child = svn_relpath_skip_ancestor(path, p);
+      if (!child || !*child)
+        continue;
+
+      /* If we have a path separator, it's a deep child, so just ignore it.
+         ### Is there an API we should be using for this? */
+      if (strchr(child, '/') != NULL)
+        continue;
+
+      APR_ARRAY_PUSH(children, const char *) = child;
+    }
+
+  return children;
+}
+
 
 static svn_error_t *
 process_actions(void *edit_baton,
@@ -245,7 +287,7 @@ process_actions(void *edit_baton,
   svn_boolean_t need_copy = FALSE;
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
-  apr_array_header_t *children;
+  apr_array_header_t *children = NULL;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
   svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
@@ -319,8 +361,7 @@ process_actions(void *edit_baton,
 
               if (kind == svn_kind_dir)
                 {
-                  children = apr_array_make(scratch_pool, 1,
-                                            sizeof(const char *));
+                  children = get_children(eb, path, scratch_pool);
                 }
               else
                 {
@@ -337,7 +378,7 @@ process_actions(void *edit_baton,
               struct path_checksum_args *pca = action->args;
 
               /* We can only set text on files. */
-              kind = svn_node_file;
+              kind = svn_kind_file;
 
               SVN_ERR(svn_io_file_checksum2(&checksum, pca->path,
                                             svn_checksum_sha1, scratch_pool));
@@ -449,29 +490,21 @@ run_ev2_actions(void *edit_baton,
                 apr_pool_t *scratch_pool)
 {
   struct ev2_edit_baton *eb = edit_baton;
-  apr_array_header_t *sorted_hash;
   apr_pool_t *iterpool;
-  int i;
-
-  /* Sort the paths touched by this edit.
-   * Ev2 doesn't really have any particular need for depth-first-ness, but
-   * we want to ensure all parent directories are handled before children in
-   * the case of adds (which does introduce an element of depth-first-ness). */
-  sorted_hash = svn_sort__hash(eb->paths, svn_sort_compare_items_as_paths,
-                               scratch_pool);
 
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < sorted_hash->nelts; i++)
+
+  /* Possibly pick up where we left off. Ocassionally, we do some of these
+     as part of close_edit() and then some more as part of abort_edit()  */
+  for (; eb->paths_processed < eb->path_order->nelts; ++eb->paths_processed)
     {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_hash, i, svn_sort__item_t);
-      apr_array_header_t *actions = item->value;
-      const char *path = item->key;
+      const char *path = APR_ARRAY_IDX(eb->path_order, eb->paths_processed,
+                                       const char *);
+      apr_array_header_t *actions = apr_hash_get(eb->paths, path,
+                                                 APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
       SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
-
-      /* Remove this item from the hash. */
-      apr_hash_set(eb->paths, path, APR_HASH_KEY_STRING, NULL);
     }
   svn_pool_destroy(iterpool);
 
@@ -637,7 +670,7 @@ ev2_absent_directory(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-  
+
   *kind = svn_kind_dir;
   SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
 
@@ -788,7 +821,7 @@ ev2_apply_textdelta(void *file_baton,
                     &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = handler_pool;
-                    
+
   *handler_baton = hb;
   *handler = window_handler;
 
@@ -840,7 +873,7 @@ ev2_absent_file(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-  
+
   *kind = svn_kind_file;
   SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
 
@@ -890,7 +923,7 @@ ev2_abort_edit(void *edit_baton,
  *  - EXB: An 'extra baton' which is used to communicate between the shims.
  *         Its callbacks should be invoked at the appropriate time by this
  *         shim.
- */ 
+ */
 static svn_error_t *
 delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
@@ -928,6 +961,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->editor = editor;
   eb->paths = apr_hash_make(pool);
+  eb->path_order = apr_array_make(pool, 1, sizeof(const char *));
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
   *eb->found_abs_paths = FALSE;
@@ -1108,7 +1142,7 @@ build(struct editor_baton *eb,
              actual structures, not pointers to them. */
           svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
           if (!prop->value)
-            APR_ARRAY_PUSH(operation->prop_dels, const char *) = 
+            APR_ARRAY_PUSH(operation->prop_dels, const char *) =
                                         apr_pstrdup(eb->edit_pool, prop->name);
           else
             apr_hash_set(operation->prop_mods,
@@ -1537,7 +1571,8 @@ drive_tree(struct operation *op,
     {
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
-        SVN_ERR(editor->open_directory(path, parent_op->baton, op->base_revision,
+        SVN_ERR(editor->open_directory(path, parent_op->baton,
+                                       op->base_revision,
                                        scratch_pool, &op->baton));
 
       else if (op->operation == OP_ADD || op->operation == OP_REPLACE)
@@ -1577,7 +1612,7 @@ drive_tree(struct operation *op,
          I don't know that that's a valid assumption... */
 
       void *file_baton = NULL;
-      
+
       /* Open or create our baton. */
       if (op->operation == OP_OPEN || op->operation == OP_PROPSET)
         SVN_ERR(editor->open_file(path, parent_op->baton, op->base_revision,
@@ -1652,7 +1687,7 @@ drive_root(struct operation *root,
       svn_pool_clear(iterpool);
       SVN_ERR(drive_tree(child, root, editor, make_abs_paths, iterpool));
     }
-  
+
   /* We need to close the root directory, but leave it to our caller to call
      close_ or abort_edit(). */
   SVN_ERR(editor->close_directory(root->baton, scratch_pool));

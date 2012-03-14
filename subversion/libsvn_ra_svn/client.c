@@ -2496,6 +2496,18 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   return svn_ra_svn_read_cmd_response(conn, pool, "r", revision_deleted);
 }
 
+static svn_error_t *
+ra_svn_register_editor_shim_callbacks(svn_ra_session_t *session,
+                                      svn_delta_shim_callbacks_t *callbacks)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+
+  conn->shim_callbacks = callbacks;
+
+  return SVN_NO_ERROR;
+}
+
 
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
@@ -2532,7 +2544,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
-  ra_svn_get_deleted_rev
+  ra_svn_get_deleted_rev,
+  ra_svn_register_editor_shim_callbacks
 };
 
 svn_error_t *

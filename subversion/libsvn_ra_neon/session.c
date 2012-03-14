@@ -1229,7 +1229,8 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__replay,
   svn_ra_neon__has_capability,
   svn_ra_neon__replay_range,
-  svn_ra_neon__get_deleted_rev
+  svn_ra_neon__get_deleted_rev,
+  svn_ra_neon__register_editor_shim_callbacks
 };
 
 svn_error_t *

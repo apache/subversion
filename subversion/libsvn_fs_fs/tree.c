@@ -115,7 +115,7 @@ typedef struct fs_rev_root_data_t
 typedef struct fs_txn_root_data_t
 {
   /* Cache of txn DAG nodes (without their nested noderevs, because
-   * it's mutable). */
+   * it's mutable). Same keys/values as ffd->rev_node_cache. */
   svn_cache__t *txn_node_cache;
 } fs_txn_root_data_t;
 
@@ -2807,8 +2807,10 @@ find_youngest_copyroot(svn_revnum_t *rev_p,
                        parent_path_t *parent_path,
                        apr_pool_t *pool)
 {
-  svn_revnum_t rev_mine, rev_parent = -1;
-  const char *path_mine, *path_parent;
+  svn_revnum_t rev_mine;
+  svn_revnum_t rev_parent = SVN_INVALID_REVNUM;
+  const char *path_mine;
+  const char *path_parent = NULL;
 
   /* First find our parent's youngest copyroot. */
   if (parent_path->parent)

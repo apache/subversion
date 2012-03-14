@@ -51,7 +51,7 @@ extern "C" {
  * repository via tools that use the svn_fs_* API directly (possibly
  * including svnadmin and svnlook).  This has happened before and there
  * are known (documented, but unsupported) upgrade paths in some cases.
- * 
+ *
  * @since New in 1.7.
  */
 svn_error_t *

@@ -83,7 +83,7 @@ def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
 
   if not dir:
     dir = tar_filename.split('.')[0]
-    
+
   tarpath = os.path.join(os.path.dirname(sys.argv[0]), 'upgrade_tests_data',
                          tar_filename)
   t = tarfile.open(tarpath, 'r:bz2')
@@ -1079,7 +1079,7 @@ def upgrade_with_missing_subdir(sbox):
   svntest.main.safe_rmtree(sbox.ospath('A/B'))
 
   # Now upgrade the working copy and expect a missing subdir
-  expected_output = [
+  expected_output = svntest.verify.UnorderedOutput([
     "Upgraded '%s'\n" % sbox.wc_dir,
     "Upgraded '%s'\n" % sbox.ospath('A'),
     "Skipped '%s'\n" % sbox.ospath('A/B'),
@@ -1087,7 +1087,7 @@ def upgrade_with_missing_subdir(sbox):
     "Upgraded '%s'\n" % sbox.ospath('A/D'),
     "Upgraded '%s'\n" % sbox.ospath('A/D/G'),
     "Upgraded '%s'\n" % sbox.ospath('A/D/H'),
-  ]
+  ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'upgrade', sbox.wc_dir)
 
@@ -1163,7 +1163,7 @@ def upgrade_file_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
                                      'file:///tmp/repo', sbox.repo_url,
                                      sbox.wc_dir)
-  
+
   expected_output = svntest.wc.State(sbox.wc_dir, {
       'A/mu'            : Item(status=' U'),
       'A/B/lambda'      : Item(status=' U'),

@@ -2276,7 +2276,7 @@ main(int argc, const char *argv[])
 
   /* Disallow simultaneous use of both -m and -F, when they are
      both used to pass a commit message or lock comment.  ('propset'
-     takes the property value, not a commit message, from -F.) 
+     takes the property value, not a commit message, from -F.)
    */
   if (opt_state.filedata && opt_state.message
       && subcommand->cmd_func != svn_cl__propset)

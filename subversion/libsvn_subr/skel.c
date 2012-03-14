@@ -138,7 +138,7 @@ getsize(const char *data, apr_size_t len,
 /* Store the ASCII decimal representation of VALUE at DATA.  Return
    the length of the representation if all goes well; return zero if
    the result doesn't fit in LEN bytes.  */
-static int
+static apr_size_t
 putsize(char *data, apr_size_t len, apr_size_t value)
 {
   apr_size_t i = 0;
@@ -157,7 +157,7 @@ putsize(char *data, apr_size_t len, apr_size_t value)
 
   /* Put the digits in most-significant-first order.  */
   {
-    int left, right;
+    apr_size_t left, right;
 
     for (left = 0, right = i-1; left < right; left++, right--)
       {
@@ -492,7 +492,7 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str)
         {
           /* Append the length to STR.  */
           char buf[200];
-          int length_len;
+          apr_size_t length_len;
 
           length_len = putsize(buf, sizeof(buf), skel->len);
 

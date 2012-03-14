@@ -263,6 +263,15 @@ svn_wc__externals_gather_definitions(apr_hash_t **externals,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
+/* Close the DB for LOCAL_ABSPATH.  Perform temporary allocations in
+   SCRATCH_POOL.
+
+   Wraps svn_wc__db_drop_root(). */
+svn_error_t *
+svn_wc__close_db(const char *external_abspath,
+                 svn_wc_context_t *wc_ctx,
+                 apr_pool_t *scratch_pool);
+
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
  * conflict state of @a victim_abspath, or to @c NULL if @a victim_abspath
@@ -540,7 +549,7 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
  * set @a *deleted_ancestor_abspath to @c NULL.
  * @a *deleted_ancestor_abspath is allocated in @a result_pool.
  * Use @a scratch_pool for all temporary allocations.
- */ 
+ */
 svn_error_t *
 svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
                                   svn_wc_context_t *wc_ctx,

@@ -125,6 +125,14 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
+                               svn_delta_shim_callbacks_t *shim_callbacks)
+{
+  conn->shim_callbacks = shim_callbacks;
+  return SVN_NO_ERROR;
+}
+
 svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                                         const char *capability)
 {

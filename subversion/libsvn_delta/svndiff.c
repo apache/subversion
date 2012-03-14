@@ -645,7 +645,7 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
       /* these may in fact simply return references to insend */
-      
+
       SVN_ERR(zlib_decode(insend, newlen, ndout,
                           SVN_DELTA_WINDOW_SIZE));
       SVN_ERR(zlib_decode(data, insend - data, instout,

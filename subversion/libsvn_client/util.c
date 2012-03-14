@@ -240,3 +240,163 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
 
   return SVN_NO_ERROR;
 }
+
+struct shim_callbacks_baton
+{
+  svn_wc_context_t *wc_ctx;
+  const char *anchor_abspath;
+};
+
+static svn_error_t *
+rationalize_shim_path(const char **local_abspath,
+                      struct shim_callbacks_baton *scb,
+                      const char *path,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  if (svn_path_is_url(path))
+    {
+      /* This is a copyfrom URL */
+      const char *wcroot_abspath;
+      const char *wcroot_url;
+      const char *relpath;
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
+                                  scb->anchor_abspath,
+                                  scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
+                                   scratch_pool, scratch_pool));
+      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
+      *local_abspath = svn_dirent_join(wcroot_abspath, relpath, result_pool);
+    }
+  else
+    *local_abspath = svn_dirent_join(scb->anchor_abspath, path, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct shim_callbacks_baton *scb = baton;
+  const char *local_abspath;
+
+  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
+     working copy, and hence no method of fetching the requisite information. */
+  if (!scb->anchor_abspath)
+    {
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
+                                scratch_pool));
+
+  SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
+                                    result_pool, scratch_pool));
+
+  if (!*props)
+    *props = apr_hash_make(result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct shim_callbacks_baton *scb = baton;
+  svn_node_kind_t node_kind;
+  const char *local_abspath;
+
+  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
+     working copy, and hence no method of fetching the requisite information. */
+  if (!scb->anchor_abspath)
+    {
+      *kind = svn_kind_unknown;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
+                                scratch_pool));
+
+  SVN_ERR(svn_wc_read_kind(&node_kind, scb->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct shim_callbacks_baton *scb = baton;
+  const char *local_abspath;
+  svn_stream_t *pristine_stream;
+  svn_stream_t *temp_stream;
+  svn_error_t *err;
+
+  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
+     working copy, and hence no method of fetching the requisite information. */
+  if (!scb->anchor_abspath)
+    {
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
+                                scratch_pool));
+
+  err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
+                                      local_abspath, scratch_pool,
+                                      scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_stream_open_unique(&temp_stream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(pristine_stream, temp_stream, NULL, NULL,
+                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_delta_shim_callbacks_t *
+svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
+                               const char *anchor_abspath,
+                               apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                            svn_delta_shim_callbacks_default(result_pool);
+  struct shim_callbacks_baton *scb = apr_pcalloc(result_pool, sizeof(*scb));
+
+  scb->wc_ctx = wc_ctx;
+  scb->anchor_abspath = apr_pstrdup(result_pool, anchor_abspath);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_baton = scb;
+
+  return callbacks;
+}

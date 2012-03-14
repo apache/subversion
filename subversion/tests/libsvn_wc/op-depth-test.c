@@ -350,12 +350,12 @@ print_row(const nodes_row_t *row,
     moved_here_str = ", here";
   else
     moved_here_str = "";
-      
+
   if (row->file_external)
     file_external_str = ", file-external";
   else
     file_external_str = "";
-      
+
   if (row->repo_revnum == SVN_INVALID_REVNUM)
     return apr_psprintf(result_pool, "%d, %s, %s%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
@@ -3727,7 +3727,7 @@ incomplete_switch(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
 
-    nodes_row_t after_update[] = { 
+    nodes_row_t after_update[] = {
       {0, "",      "normal", 4, "X"},
       {0, "B",     "normal", 4, "A/B"},
       {0, "B/C",   "normal", 4, "A/B/C"},
@@ -4235,7 +4235,7 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(wc_move(&b, "A/Y", "X/Y"));
   SVN_ERR(wc_move(&b, "X/B", "A/B"));
-  
+
   {
     nodes_row_t nodes[] = {
       {0, "",    "normal",       1, ""},
