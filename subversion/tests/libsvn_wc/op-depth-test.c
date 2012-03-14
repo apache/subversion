@@ -4138,11 +4138,54 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(wc_move(&b, "A", "A2"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",     "normal",       1, ""},
+      {0, "A",    "normal",       1, "A"},
+      {0, "A/B",  "normal",       1, "A/B"},
+      {0, "X",    "normal",       1, "X"},
+      {0, "X/Y",  "normal",       1, "X/Y"},
+      {1, "A",    "base-deleted", NO_COPY_FROM, FALSE, "A2"},
+      {1, "A/B",  "base-deleted", NO_COPY_FROM},
+      {1, "A2",   "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B", "normal",       1, "A/B", MOVED_HERE},
+      {2, "A2/B", "base-deleted", NO_COPY_FROM, FALSE, "X/B"},
+      {2, "A2/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {2, "X/Y",  "base-deleted", NO_COPY_FROM, FALSE, "A2/Y"},
+      {2, "X/B",  "normal",       1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   SVN_ERR(wc_move(&b, "X", "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",     "normal",       1, ""},
+      {0, "A",    "normal",       1, "A"},
+      {0, "A/B",  "normal",       1, "A/B"},
+      {0, "X",    "normal",       1, "X"},
+      {0, "X/Y",  "normal",       1, "X/Y"},
+      {1, "A",    "normal",       1, "X", FALSE, "A2", TRUE},
+      {1, "A/B",  "base-deleted", NO_COPY_FROM},
+      {1, "A/Y",  "normal",       1, "X/Y", MOVED_HERE},
+      {1, "A2",   "normal",       1, "A", MOVED_HERE},
+      {1, "A2/B", "normal",       1, "A/B", MOVED_HERE},
+      {1, "X",    "base-deleted", NO_COPY_FROM, FALSE, "A"},
+      {1, "X/Y",  "base-deleted", NO_COPY_FROM},
+      {2, "A/B",  "normal",       1, "A/B", MOVED_HERE},
+      {2, "A/Y",  "base-deleted", NO_COPY_FROM, FALSE, "A2/Y"},
+      {2, "A2/B", "base-deleted", NO_COPY_FROM, FALSE, "A/B"},
+      {2, "A2/Y", "normal",       1, "X/Y", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   SVN_ERR(wc_move(&b, "A2", "X"));
 
-  /* Is this correct or should A/Y and X/B at op-depth=1 be marked
-     moved-here? */
   {
     nodes_row_t nodes[] = {
       {0, "",    "normal",       1, ""},
@@ -4152,12 +4195,12 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "X/Y", "normal",       1, "X/Y"},
       {1, "A",   "normal",       1, "X",   FALSE, "X", TRUE},
       {1, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
-      {1, "A/B", "base-deleted", NO_COPY_FROM, FALSE, "A/B"},
+      {1, "A/B", "base-deleted", NO_COPY_FROM},
       {1, "X",   "normal",       1, "A",   FALSE, "A", TRUE},
       {1, "X/B", "normal",       1, "A/B", MOVED_HERE},
-      {1, "X/Y", "base-deleted", NO_COPY_FROM, FALSE, "X/Y"},
-      {2, "A/Y", "base-deleted", NO_COPY_FROM},
-      {2, "X/B", "base-deleted", NO_COPY_FROM},
+      {1, "X/Y", "base-deleted", NO_COPY_FROM},
+      {2, "A/Y", "base-deleted", NO_COPY_FROM, FALSE, "X/Y"},
+      {2, "X/B", "base-deleted", NO_COPY_FROM, FALSE, "A/B"},
       {2, "A/B", "normal",       1, "A/B", MOVED_HERE},
       {2, "X/Y", "normal",       1, "X/Y", MOVED_HERE},
       {0}
@@ -4179,10 +4222,10 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/B", "normal",       1, "A/B"},
       {0, "X",   "normal",       1, "X"},
       {0, "X/Y", "normal",       1, "X/Y"},
-      {1, "A",   "normal",       1, "X",   MOVED_HERE},
+      {1, "A",   "normal",       1, "X",   FALSE, "X", TRUE},
       {1, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
       {1, "A/B", "base-deleted", NO_COPY_FROM},
-      {1, "X",   "normal",       1, "A",   MOVED_HERE},
+      {1, "X",   "normal",       1, "A",   FALSE, "A", TRUE},
       {1, "X/B", "normal",       1, "A/B", MOVED_HERE},
       {1, "X/Y", "base-deleted", NO_COPY_FROM},
       {0}
@@ -4196,18 +4239,18 @@ move_to_swap(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     nodes_row_t nodes[] = {
       {0, "",    "normal",       1, ""},
-      {0, "A",   "normal",       1, "A",   FALSE, "X"},
-      {0, "A/B", "normal",       1, "A/B", FALSE, "A/B"},
-      {0, "X",   "normal",       1, "X",   FALSE, "A"},
-      {0, "X/Y", "normal",       1, "X/Y", FALSE, "X/Y"},
-      {1, "A",   "normal",       1, "X",   MOVED_HERE},
+      {0, "A",   "normal",       1, "A"},
+      {0, "A/B", "normal",       1, "A/B"},
+      {0, "X",   "normal",       1, "X"},
+      {0, "X/Y", "normal",       1, "X/Y"},
+      {1, "A",   "normal",       1, "X",   FALSE, "X", TRUE},
       {1, "A/Y", "normal",       1, "X/Y", MOVED_HERE},
       {1, "A/B", "base-deleted", NO_COPY_FROM},
-      {1, "X",   "normal",       1, "A",   MOVED_HERE},
+      {1, "X",   "normal",       1, "A",   FALSE, "A", TRUE},
       {1, "X/B", "normal",       1, "A/B", MOVED_HERE},
       {1, "X/Y", "base-deleted", NO_COPY_FROM},
-      {2, "A/Y", "base-deleted", NO_COPY_FROM},
-      {2, "X/B", "base-deleted", NO_COPY_FROM},
+      {2, "A/Y", "base-deleted", NO_COPY_FROM, FALSE, "X/Y"},
+      {2, "X/B", "base-deleted", NO_COPY_FROM, FALSE, "A/B"},
       {2, "A/B", "normal",       1, "A/B", MOVED_HERE},
       {2, "X/Y", "normal",       1, "X/Y", MOVED_HERE},
       {0}
