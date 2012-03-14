@@ -10402,7 +10402,17 @@ calculate_left_hand_side(const char **url_left,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_client_find_reintegrate_merge(), which see for details. */
+/* Determine the URLs and revisions needed to perform a reintegrate merge
+ * from SOURCE_PATH_OR_URL at SOURCE_PEG_REVISION into the working
+ * copy at TARGET_ABSPATH.
+ *
+ * Set *TARGET_RA_SESSION_P and *SOURCE_RA_SESSION_P to new RA sessions
+ * opened to the target and source branches respectively.  Set *SOURCE_P to
+ * the source-left and source-right locations of the required merge.  Set
+ * *YC_ANCESTOR_REV_P to the revision number of the youngest ancestor.
+ *
+ * See svn_client_find_reintegrate_merge() for other details.
+ */
 static svn_error_t *
 find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
                        svn_ra_session_t **source_ra_session_p,
