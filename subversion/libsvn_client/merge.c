@@ -10410,6 +10410,7 @@ calculate_left_hand_side(const char **url_left,
  * opened to the target and source branches respectively.  Set *SOURCE_P to
  * the source-left and source-right locations of the required merge.  Set
  * *YC_ANCESTOR_REV_P to the revision number of the youngest ancestor.
+ * Any of these output pointers may be NULL if not wanted.
  *
  * See svn_client_find_reintegrate_merge() for other details.
  */
