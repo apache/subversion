@@ -40,6 +40,15 @@ from svntest import Failure
 
 logger = logging.getLogger()
 
+def _log_tree_state(msg, actual, subtree=""):
+  if subtree:
+    subtree += os.sep
+  o = StringIO()
+  o.write(msg + '\n')
+  tree.dump_tree_script(actual, subtree, stream=o)
+  logger.warn(o.getvalue())
+  o.close()
+
 def no_sleep_for_timestamps():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
@@ -466,8 +475,7 @@ def run_and_verify_checkout2(do_remove,
   try:
     tree.compare_trees("output", actual, output_tree)
   except tree.SVNTreeUnequal:
-    print("ACTUAL OUTPUT TREE:")
-    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
     raise
 
   # Create a tree by scanning the working copy
@@ -479,8 +487,7 @@ def run_and_verify_checkout2(do_remove,
                        singleton_handler_a, a_baton,
                        singleton_handler_b, b_baton)
   except tree.SVNTreeUnequal:
-    print("ACTUAL DISK TREE:")
-    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    _log_tree_state("ACTUAL DISK TREE:", actual, wc_dir_name)
     raise
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
@@ -531,8 +538,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   try:
     tree.compare_trees("output", actual, output_tree)
   except tree.SVNTreeUnequal:
-    print("ACTUAL OUTPUT TREE:")
-    tree.dump_tree_script(actual, export_dir_name + os.sep)
+    _log_tree_state("ACTUAL OUTPUT TREE:", actual, export_dir_name)
     raise
 
   # Create a tree by scanning the working copy.  Don't ignore
@@ -544,8 +550,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   try:
     tree.compare_trees("disk", actual, disk_tree)
   except tree.SVNTreeUnequal:
-    print("ACTUAL DISK TREE:")
-    tree.dump_tree_script(actual, export_dir_name + os.sep)
+    _log_tree_state("ACTUAL DISK TREE:", actual, export_dir_name)
     raise
 
 
@@ -764,8 +769,7 @@ def verify_update(actual_output,
     try:
       tree.compare_trees("output", actual_output, output_tree)
     except tree.SVNTreeUnequal:
-      print("ACTUAL OUTPUT TREE:")
-      tree.dump_tree_script(actual_output, wc_dir_name + os.sep)
+      _log_tree_state("ACTUAL OUTPUT TREE:", actual_output, wc_dir_name)
       raise
 
   # Verify actual mergeinfo recording output against expected output.
@@ -774,9 +778,8 @@ def verify_update(actual_output,
       tree.compare_trees("mergeinfo_output", actual_mergeinfo_output,
                          mergeinfo_output_tree)
     except tree.SVNTreeUnequal:
-      print("ACTUAL MERGEINFO OUTPUT TREE:")
-      tree.dump_tree_script(actual_mergeinfo_output,
-                            wc_dir_name + os.sep)
+      _log_tree_state("ACTUAL MERGEINFO OUTPUT TREE:", actual_mergeinfo_output,
+                      wc_dir_name)
       raise
 
   # Verify actual mergeinfo elision output against expected output.
@@ -785,9 +788,8 @@ def verify_update(actual_output,
       tree.compare_trees("elision_output", actual_elision_output,
                          elision_output_tree)
     except tree.SVNTreeUnequal:
-      print("ACTUAL ELISION OUTPUT TREE:")
-      tree.dump_tree_script(actual_elision_output,
-                            wc_dir_name + os.sep)
+      _log_tree_state("ACTUAL ELISION OUTPUT TREE:", actual_elision_output,
+                      wc_dir_name)
       raise
 
   # Create a tree by scanning the working copy, and verify it
@@ -798,10 +800,8 @@ def verify_update(actual_output,
                          singleton_handler_a, a_baton,
                          singleton_handler_b, b_baton)
     except tree.SVNTreeUnequal:
-      print("EXPECTED DISK TREE:")
-      tree.dump_tree_script(disk_tree)
-      print("ACTUAL DISK TREE:")
-      tree.dump_tree_script(actual_disk)
+      _log_tree_state("EXPECTED DISK TREE:", disk_tree)
+      _log_tree_state("ACTUAL DISK TREE:", actual_disk)
       raise
 
   # Verify via 'status' command too, if possible.
@@ -1144,8 +1144,7 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
     tree.compare_trees("skip", myskiptree, skip_tree,
                        extra_skip, None, missing_skip, None)
   except tree.SVNTreeUnequal:
-    print("ACTUAL SKIP TREE:")
-    tree.dump_tree_script(myskiptree, dir + os.sep)
+    _log_tree_state("ACTUAL SKIP TREE:", myskiptree, dir)
     raise
 
   actual_diff = svntest.wc.State.from_checkout(merge_diff_out, False)
@@ -1446,8 +1445,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   except tree.SVNTreeError:
       verify.display_trees("Output of commit is unexpected",
                            "OUTPUT TREE", output_tree, actual)
-      print("ACTUAL OUTPUT TREE:")
-      tree.dump_tree_script(actual, wc_dir_name + os.sep)
+      _log_tree_state("ACTUAL OUTPUT TREE:", actual, wc_dir_name)
       raise
 
   # Verify via 'status' command too, if possible.
@@ -1486,8 +1484,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
                        singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
-    print("ACTUAL STATUS TREE:")
-    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    _log_tree_state("ACTUAL STATUS TREE:", actual, wc_dir_name)
     raise
 
   # if we have an output State, and we can/are-allowed to create an
@@ -1523,8 +1520,7 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree):
   try:
     tree.compare_trees("UNQUIET STATUS", actual, status_tree)
   except tree.SVNTreeError:
-    print("ACTUAL UNQUIET STATUS TREE:")
-    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    _log_tree_state("ACTUAL UNQUIET STATUS TREE:", actual, wc_dir_name)
     raise
 
 def run_and_verify_status_xml(expected_entries = [],
@@ -1672,8 +1668,7 @@ def run_and_verify_diff_summarize(output_tree, *args):
     tree.compare_trees("output", actual, output_tree)
   except tree.SVNTreeError:
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
-    print("ACTUAL DIFF OUTPUT TREE:")
-    tree.dump_tree_script(actual)
+    _log_tree_state("ACTUAL DIFF OUTPUT TREE:", actual)
     raise
 
 def run_and_validate_lock(path, username):
