@@ -994,7 +994,7 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
-def _log_exception(fmt, *args):
+def _log_exception(fmt='', *args):
   logger.warn(fmt, *args)
   logger.warn(traceback.format_exc())
 
@@ -1345,6 +1345,8 @@ class TestRunner:
                           ex.__class__.__name__, ex_args)
         else:
           _log_exception('EXCEPTION: %s', ex.__class__.__name__)
+      else:
+        _log_exception()
     except KeyboardInterrupt:
       logger.error('Interrupted')
       sys.exit(0)
