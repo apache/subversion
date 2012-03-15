@@ -255,8 +255,3 @@ Approved changes:
      (Which then fixes building 1.6.x on the Windows buildbots)
    Votes:
      +1: rhuijben, pburba, stsp
-
- * r1151911
-   Fix description of svndumpfilter's --targets option.
-   Votes:
-     +1: cmpilato, rhuijben, stsp
