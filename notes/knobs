@@ -457,5 +457,10 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
              advertisement of HTTPv2 protocol support (if any), effectively
              causing them to only speak our original HTTP protocol.
 
+7.7 SVN_TRY_THIS_AT_HOME
+
+  Scope:     
+  Purpose:   
+
 * (TODO: others)
 

@@ -877,4 +877,6 @@ subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-checks.
 # This runs after the target of the same name in build-outputs.mk.
 INSTALL_EXTRA_TOOLS=\
   $(MKDIR) $(DESTDIR)$(bindir); \
+  test -z "$$SVN_TRY_THIS_AT_HOME" && \
+  ln -s svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
   ln -s $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT)
