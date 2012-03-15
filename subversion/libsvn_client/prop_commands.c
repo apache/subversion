@@ -598,17 +598,24 @@ pristine_or_working_props(apr_hash_t **props,
  * SESSION.  Store the value ('svn_string_t *') in PROPS, under the
  * path key "TARGET_PREFIX/TARGET_RELATIVE" ('const char *').
  *
+ * If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a
+ * depth-first ordered array of svn_prop_inherited_item_t * structures
+ * representing the PROPNAME properties inherited by the target.  If
+ * INHERITABLE_PROPS in not null and no inheritable properties are found,
+ * then set *INHERITED_PROPS to an empty array.
+ *
  * Recurse according to DEPTH, similarly to svn_client_propget3().
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
  * Yes, caller passes this; it makes the recursion more efficient :-).
  *
- * Allocate the keys and values in PERM_POOL, but do all temporary
- * work in WORK_POOL.  The two pools can be the same; recursive
- * calls may use a different WORK_POOL, however.
+ * Allocate PROPS and *INHERITED_PROPS in RESULT_POOL, but do all temporary
+ * work in SCRATCH_POOL.  The two pools can be the same; recursive
+ * calls may use a different SCRATCH_POOL, however.
  */
 static svn_error_t *
 remote_propget(apr_hash_t *props,
+               apr_array_header_t **inherited_props,
                const char *propname,
                const char *target_prefix,
                const char *target_relative,
@@ -616,26 +623,29 @@ remote_propget(apr_hash_t *props,
                svn_revnum_t revnum,
                svn_ra_session_t *ra_session,
                svn_depth_t depth,
-               apr_pool_t *perm_pool,
-               apr_pool_t *work_pool)
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash;
   const svn_string_t *val;
   const char *target_full_url =
-    svn_path_url_add_component2(target_prefix, target_relative, work_pool);
+    svn_path_url_add_component2(target_prefix, target_relative,
+                                scratch_pool);
 
   if (kind == svn_node_dir)
     {
-      SVN_ERR(svn_ra_get_dir2(ra_session,
+      SVN_ERR(svn_ra_get_dir3(ra_session,
                               (depth >= svn_depth_files ? &dirents : NULL),
-                              NULL, &prop_hash, target_relative, revnum,
-                              SVN_DIRENT_KIND, work_pool));
+                              NULL, &prop_hash, inherited_props,
+                              target_relative, revnum, SVN_DIRENT_KIND,
+                              scratch_pool));
     }
   else if (kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file(ra_session, target_relative, revnum,
-                              NULL, NULL, &prop_hash, work_pool));
+      SVN_ERR(svn_ra_get_file2(ra_session, target_relative, revnum,
+                               NULL, NULL, &prop_hash, inherited_props,
+                               scratch_pool));
     }
   else if (kind == svn_node_none)
     {
@@ -650,10 +660,42 @@ remote_propget(apr_hash_t *props,
                                target_full_url);
     }
 
+  /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
+  if (inherited_props)
+    {
+      int i;
+      apr_array_header_t *final_iprops =
+        apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
+
+      for (i = 0; i < (*inherited_props)->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX((*inherited_props), i, svn_prop_inherited_item_t *);
+          svn_string_t *iprop_val = apr_hash_get(iprop->prop_hash, propname,
+                                                 APR_HASH_KEY_STRING);
+
+          if (iprop_val)
+            {
+              svn_prop_inherited_item_t *new_iprop =
+                apr_palloc(result_pool, sizeof(*new_iprop));
+              new_iprop->path_or_url =
+                apr_pstrdup(result_pool, iprop->path_or_url);
+              new_iprop->prop_hash = apr_hash_make(result_pool);
+              apr_hash_set(new_iprop->prop_hash,
+                           apr_pstrdup(result_pool, propname),
+                           APR_HASH_KEY_STRING,
+                           svn_string_dup(iprop_val, result_pool));
+              APR_ARRAY_PUSH(final_iprops, svn_prop_inherited_item_t *) =
+                new_iprop;
+            }
+        }
+      *inherited_props = final_iprops;
+    }
+
   if ((val = apr_hash_get(prop_hash, propname, APR_HASH_KEY_STRING)))
     {
-      apr_hash_set(props, apr_pstrdup(perm_pool, target_full_url),
-                   APR_HASH_KEY_STRING, svn_string_dup(val, perm_pool));
+      apr_hash_set(props, apr_pstrdup(result_pool, target_full_url),
+                   APR_HASH_KEY_STRING, svn_string_dup(val, result_pool));
     }
 
   if (depth >= svn_depth_files
@@ -661,9 +703,9 @@ remote_propget(apr_hash_t *props,
       && apr_hash_count(dirents) > 0)
     {
       apr_hash_index_t *hi;
-      apr_pool_t *iterpool = svn_pool_create(work_pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(work_pool, dirents);
+      for (hi = apr_hash_first(scratch_pool, dirents);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -683,7 +725,7 @@ remote_propget(apr_hash_t *props,
           new_target_relative = svn_relpath_join(target_relative, this_name,
                                                  iterpool);
 
-          SVN_ERR(remote_propget(props,
+          SVN_ERR(remote_propget(props, NULL,
                                  propname,
                                  target_prefix,
                                  new_target_relative,
@@ -691,7 +733,7 @@ remote_propget(apr_hash_t *props,
                                  revnum,
                                  ra_session,
                                  depth_below_here,
-                                 perm_pool, iterpool));
+                                 result_pool, iterpool));
         }
 
       svn_pool_destroy(iterpool);
@@ -780,7 +822,8 @@ get_prop_from_wc(apr_hash_t *props,
 
 /* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
-svn_client_propget4(apr_hash_t **props,
+svn_client_propget5(apr_hash_t **props,
+                    apr_array_header_t **inherited_props,
                     const char *propname,
                     const char *target,
                     const svn_opt_revision_t *peg_revision,
@@ -859,7 +902,7 @@ svn_client_propget4(apr_hash_t **props,
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, scratch_pool));
 
-      SVN_ERR(remote_propget(*props, propname, url, "",
+      SVN_ERR(remote_propget(*props, inherited_props, propname, url, "",
                              kind, revnum, ra_session,
                              depth, result_pool, scratch_pool));
     }
@@ -895,19 +938,24 @@ svn_client_revprop_get(const char *propname,
 }
 
 
-/* Call RECEIVER for the given PATH and PROP_HASH.
+/* Call RECEIVER for the given PATH and its PROP_HASH and/or
+ * INHERITED_PROPERTIES.
  *
- * If PROP_HASH is null or has zero count, do nothing.
+ * If PROP_HASH is null or has zero count or INHERITED_PROPERTIES is null,
+ * then do nothing.
  */
 static svn_error_t*
 call_receiver(const char *path,
               apr_hash_t *prop_hash,
-              svn_proplist_receiver_t receiver,
+              apr_array_header_t *inherited_properties,
+              svn_proplist_receiver2_t receiver,
               void *receiver_baton,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
-  if (prop_hash && apr_hash_count(prop_hash))
-    SVN_ERR(receiver(receiver_baton, path, prop_hash, pool));
+  if ((prop_hash && apr_hash_count(prop_hash))
+      || inherited_properties)
+    SVN_ERR(receiver(receiver_baton, path, prop_hash, inherited_properties,
+                     scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -915,20 +963,23 @@ call_receiver(const char *path,
 
 /* Helper for the remote case of svn_client_proplist.
  *
- * Push a new 'svn_client_proplist_item_t *' item onto PROPLIST,
- * containing the properties for "TARGET_PREFIX/TARGET_RELATIVE" in
- * REVNUM, obtained using RA_LIB and SESSION.  The item->node_name
- * will be "TARGET_PREFIX/TARGET_RELATIVE", and the value will be a
- * hash mapping 'const char *' property names onto 'svn_string_t *'
- * property values.
+ * Call RECEIVER for paths at or under "TARGET_PREFIX/TARGET_RELATIVE@REVNUM"
+ * (obtained using RA_SESSION) which have regular properties.  If
+ * GET_TARGET_INHERITED_PROPS is true, then also send the target's inherited
+ * properties to the callback.
  *
- * Allocate the new item and its contents in POOL.
- * Do all looping, recursion, and temporary work in SCRATCHPOOL.
+ * The 'path' and keys for 'prop_hash' and 'inherited_prop' arguments to
+ * RECEIVER are all URLs.
+ * 
+ * RESULT_POOL is used to allocated the 'path', 'prop_hash', and
+ * 'inherited_prop' arguments to RECEIVER.  SCRATCH_POOL is used for all
+ * other (temporary) allocations.
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
  *
  * If the target is a directory, only fetch properties for the files
- * and directories at depth DEPTH.
+ * and directories at depth DEPTH.  DEPTH has not effect on inherited
+ * properties.
  */
 static svn_error_t *
 remote_proplist(const char *target_prefix,
@@ -936,29 +987,37 @@ remote_proplist(const char *target_prefix,
                 svn_node_kind_t kind,
                 svn_revnum_t revnum,
                 svn_ra_session_t *ra_session,
+                svn_boolean_t get_target_inherited_props,
                 svn_depth_t depth,
-                svn_proplist_receiver_t receiver,
+                svn_proplist_receiver2_t receiver,
                 void *receiver_baton,
-                apr_pool_t *pool,
-                apr_pool_t *scratchpool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash, *final_hash;
   apr_hash_index_t *hi;
   const char *target_full_url =
-    svn_path_url_add_component2(target_prefix, target_relative, scratchpool);
+    svn_path_url_add_component2(target_prefix, target_relative, scratch_pool);
+  apr_array_header_t *inherited_props;
 
   if (kind == svn_node_dir)
     {
-      SVN_ERR(svn_ra_get_dir2(ra_session,
-                              (depth > svn_depth_empty) ? &dirents : NULL,
-                              NULL, &prop_hash, target_relative, revnum,
-                              SVN_DIRENT_KIND, scratchpool));
+      SVN_ERR(svn_ra_get_dir3(
+        ra_session,
+        (depth > svn_depth_empty) ? &dirents : NULL,
+        NULL, &prop_hash,
+        get_target_inherited_props ? &inherited_props : NULL,
+        target_relative, revnum,
+        SVN_DIRENT_KIND, scratch_pool));
     }
   else if (kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file(ra_session, target_relative, revnum,
-                              NULL, NULL, &prop_hash, scratchpool));
+      SVN_ERR(svn_ra_get_file2(
+        ra_session, target_relative, revnum,
+        NULL, NULL, &prop_hash,
+        get_target_inherited_props ? &inherited_props : NULL,
+        scratch_pool));
     }
   else
     {
@@ -969,9 +1028,9 @@ remote_proplist(const char *target_prefix,
 
   /* Filter out non-regular properties, since the RA layer returns all
      kinds.  Copy regular properties keys/vals from the prop_hash
-     allocated in SCRATCHPOOL to the "final" hash allocated in POOL. */
-  final_hash = apr_hash_make(pool);
-  for (hi = apr_hash_first(scratchpool, prop_hash);
+     allocated in SCRATCH_POOL to the "final" hash allocated in POOL. */
+  final_hash = apr_hash_make(result_pool);
+  for (hi = apr_hash_first(scratch_pool, prop_hash);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -984,21 +1043,30 @@ remote_proplist(const char *target_prefix,
 
       if (prop_kind == svn_prop_regular_kind)
         {
-          name = apr_pstrdup(pool, name);
-          value = svn_string_dup(value, pool);
+          name = apr_pstrdup(result_pool, name);
+          value = svn_string_dup(value, result_pool);
           apr_hash_set(final_hash, name, klen, value);
         }
     }
 
-  SVN_ERR(call_receiver(target_full_url, final_hash, receiver, receiver_baton,
-                        pool));
+
+  if (get_target_inherited_props)
+    {
+      inherited_props = svn_prop_inherited_array_dup(inherited_props,
+                                                     result_pool,
+                                                     scratch_pool);
+    }
+
+  SVN_ERR(call_receiver(target_full_url, final_hash,
+                        get_target_inherited_props ? inherited_props : NULL,
+                        receiver, receiver_baton, result_pool));
 
   if (depth > svn_depth_empty
       && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
     {
-      apr_pool_t *subpool = svn_pool_create(scratchpool);
+      apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(scratchpool, dirents);
+      for (hi = apr_hash_first(scratch_pool, dirents);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -1024,10 +1092,11 @@ remote_proplist(const char *target_prefix,
                                       this_ent->kind,
                                       revnum,
                                       ra_session,
+                                      FALSE,
                                       depth_below_here,
                                       receiver,
                                       receiver_baton,
-                                      pool,
+                                      result_pool,
                                       subpool));
             }
         }
@@ -1043,7 +1112,7 @@ remote_proplist(const char *target_prefix,
 struct recursive_proplist_receiver_baton
 {
   svn_wc_context_t *wc_ctx;  /* Working copy context. */
-  svn_proplist_receiver_t wrapped_receiver;  /* Proplist receiver to call. */
+  svn_proplist_receiver2_t wrapped_receiver;  /* Proplist receiver to call. */
   void *wrapped_receiver_baton;    /* Baton for the proplist receiver. */
 
   /* Anchor, anchor_abspath pair for converting to relative paths */
@@ -1074,19 +1143,22 @@ recursive_proplist_receiver(void *baton,
     path = local_abspath;
 
   return svn_error_trace(b->wrapped_receiver(b->wrapped_receiver_baton,
-                                             path, props, scratch_pool));
+                                             path, props, NULL,
+                                             scratch_pool));
 }
 
 svn_error_t *
-svn_client_proplist3(const char *path_or_url,
+svn_client_proplist4(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_depth_t depth,
                      const apr_array_header_t *changelists,
-                     svn_proplist_receiver_t receiver,
+                     svn_boolean_t get_target_inherited_props,
+                     svn_proplist_receiver2_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   const char *url;
 
@@ -1106,13 +1178,14 @@ svn_client_proplist3(const char *path_or_url,
       apr_hash_t *changelist_hash = NULL;
       const char *local_abspath;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
+                                      scratch_pool));
 
       pristine = ((revision->kind == svn_opt_revision_committed)
                   || (revision->kind == svn_opt_revision_base));
 
       SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                               pool));
+                               scratch_pool));
 
       if (kind == svn_node_unknown || kind == svn_node_none)
         {
@@ -1121,12 +1194,12 @@ svn_client_proplist3(const char *path_or_url,
           return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                    _("'%s' is not under version control"),
                                    svn_dirent_local_style(local_abspath,
-                                                          pool));
+                                                          scratch_pool));
         }
 
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                           changelists, pool));
+                                           changelists, scratch_pool));
 
       /* Fetch, recursively or not. */
       if (kind == svn_node_dir)
@@ -1153,17 +1226,18 @@ svn_client_proplist3(const char *path_or_url,
                                               FALSE, pristine, changelists,
                                               recursive_proplist_receiver, &rb,
                                               ctx->cancel_func,
-                                              ctx->cancel_baton, pool));
+                                              ctx->cancel_baton, result_pool));
         }
       else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
-                                        changelist_hash, pool))
+                                        changelist_hash, scratch_pool))
         {
           apr_hash_t *hash;
 
           SVN_ERR(pristine_or_working_props(&hash, ctx->wc_ctx, local_abspath,
-                                            pristine, pool, pool));
-          SVN_ERR(call_receiver(path_or_url, hash,
-                                receiver, receiver_baton, pool));
+                                            pristine, result_pool,
+                                            scratch_pool));
+          SVN_ERR(call_receiver(path_or_url, hash, NULL,
+                                receiver, receiver_baton, scratch_pool));
 
         }
     }
@@ -1171,20 +1245,20 @@ svn_client_proplist3(const char *path_or_url,
     {
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
-      apr_pool_t *subpool = svn_pool_create(pool);
       svn_revnum_t revnum;
 
       /* Get an RA session for this URL. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                                &url, path_or_url, NULL,
                                                peg_revision,
-                                               revision, ctx, pool));
+                                               revision, ctx, result_pool));
 
-      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, result_pool));
 
-      SVN_ERR(remote_proplist(url, "", kind, revnum, ra_session, depth,
-                              receiver, receiver_baton, pool, subpool));
-      svn_pool_destroy(subpool);
+      SVN_ERR(remote_proplist(url, "", kind, revnum, ra_session,
+                              get_target_inherited_props, depth,
+                              receiver, receiver_baton, result_pool,
+                              scratch_pool));
     }
 
   return SVN_NO_ERROR;

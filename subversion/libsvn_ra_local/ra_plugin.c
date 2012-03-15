@@ -1011,6 +1011,7 @@ svn_ra_local__stat(svn_ra_session_t *session,
 
 static svn_error_t *
 get_node_props(apr_hash_t **props,
+               apr_array_header_t **inherited_props,
                svn_ra_local__session_baton_t *sess,
                svn_fs_root_t *root,
                const char *path,
@@ -1020,7 +1021,22 @@ get_node_props(apr_hash_t **props,
   const char *cmt_date, *cmt_author;
 
   /* Create a hash with props attached to the fs node. */
-  SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
+  SVN_ERR(svn_fs_node_proplist2(props, inherited_props, root, path, pool,
+                                pool));
+
+  /* Turn FS-path keys into URLs. */
+  if (inherited_props)
+    {
+      int i;
+
+      for (i = 0; i < (*inherited_props)->nelts; i++)
+        {
+          svn_prop_inherited_item_t *i_props =
+            APR_ARRAY_IDX(*inherited_props, i, svn_prop_inherited_item_t *);
+          i_props->path_or_url = svn_path_url_add_component2(
+            sess->repos_url, i_props->path_or_url, pool);
+        }
+    }
 
   /* Now add some non-tweakable metadata to the hash as well... */
 
@@ -1059,6 +1075,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
                        svn_stream_t *stream,
                        svn_revnum_t *fetched_rev,
                        apr_hash_t **props,
+                       apr_array_header_t **inherited_props,
                        apr_pool_t *pool)
 {
   svn_fs_root_t *root;
@@ -1116,8 +1133,9 @@ svn_ra_local__get_file(svn_ra_session_t *session,
     }
 
   /* Handle props if requested. */
-  if (props)
-    SVN_ERR(get_node_props(props, sess, root, abs_path, pool));
+  if (props || inherited_props)
+    SVN_ERR(get_node_props(props, inherited_props, sess, root, abs_path,
+                           pool));
 
   return SVN_NO_ERROR;
 }
@@ -1130,6 +1148,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
                       apr_hash_t **dirents,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
+                      apr_array_header_t **inherited_props,
                       const char *path,
                       svn_revnum_t revision,
                       apr_uint32_t dirent_fields,
@@ -1227,8 +1246,9 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
     }
 
   /* Handle props if requested. */
-  if (props)
-    SVN_ERR(get_node_props(props, sess, root, abs_path, pool));
+  if (props || inherited_props)
+    SVN_ERR(get_node_props(props, inherited_props, sess, root, abs_path,
+                           pool));
 
   return SVN_NO_ERROR;
 }

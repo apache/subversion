@@ -127,6 +127,7 @@ typedef enum svn_cl__longopt_t {
   opt_use_patch_diff_format,
   opt_allow_mixed_revisions,
   opt_include_externals,
+  opt_show_inherited_props,
 } svn_cl__longopt_t;
 
 
@@ -366,6 +367,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "recursion. This does not include externals with a\n"
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
+  {"show-inherited-props", opt_show_inherited_props, 0,
+                       N_("retrieve target's inherited properties")},
 
   /* Long-opt Aliases
    *
@@ -1148,7 +1151,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  redirecting a binary property value to a file, but available only\n"
      "  if you supply a single TARGET to a non-recursive propget operation).\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
-     opt_changelist } },
+     opt_changelist, opt_show_inherited_props } },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -1159,7 +1162,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     revision the target is first looked up.\n"
      "  2. Lists unversioned remote props on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
-    {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist } },
+    {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist,
+     opt_show_inherited_props} },
 
   { "propset", svn_cl__propset, {"pset", "ps"}, N_
     ("Set the value of a property on files, dirs, or revisions.\n"
@@ -2113,6 +2117,9 @@ main(int argc, const char *argv[])
         break;
       case opt_include_externals:
         opt_state.include_externals = TRUE;
+        break;
+      case opt_show_inherited_props:
+        opt_state.show_inherited_props = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

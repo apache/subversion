@@ -1013,6 +1013,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                     svn_revnum_t rev, svn_stream_t *stream,
                                     svn_revnum_t *fetched_rev,
                                     apr_hash_t **props,
+                                    apr_array_header_t **inherited_props,
                                     apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -1089,6 +1090,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
                                    apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
                                    apr_hash_t **props,
+                                   apr_array_header_t **inherited_props,
                                    const char *path,
                                    svn_revnum_t rev,
                                    apr_uint32_t dirent_fields,
