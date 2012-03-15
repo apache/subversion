@@ -44,6 +44,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 /*** Uncomment this to turn on commit driver debugging. ***/
 /*
@@ -426,8 +427,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    Any items added to COMMITTABLES are allocated from the COMITTABLES
    hash pool, not POOL.  SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
-harvest_committables(svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
+harvest_committables(const char *local_abspath,
                      svn_client__committables_t *committables,
                      apr_hash_t *lock_tokens,
                      const char *repos_root_url,
@@ -446,9 +446,11 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
+  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
   svn_boolean_t text_mod = FALSE;
   svn_boolean_t prop_mod = FALSE;
   apr_byte_t state_flags = 0;
@@ -627,26 +629,21 @@ harvest_committables(svn_wc_context_t *wc_ctx,
       if (check_url_func)
         {
           svn_revnum_t revision;
-          const char *repos_relpath;
+          const char *repos_url;
           svn_node_kind_t kind;
 
           /* Determine from what parent we would be the deleted child */
-          SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
-                                          NULL, NULL, NULL, wc_ctx,
-                                          svn_dirent_dirname(local_abspath,
-                                                             scratch_pool),
-                                          FALSE, scratch_pool, scratch_pool));
+          SVN_ERR(svn_client__wc_node_get_origin(
+                    NULL, NULL, &revision, &repos_url,
+                    svn_dirent_dirname(local_abspath, scratch_pool),
+                    ctx, scratch_pool, scratch_pool));
 
-          repos_relpath = svn_relpath_join(repos_relpath,
-                                           svn_dirent_basename(local_abspath,
-                                                               NULL),
-                                           scratch_pool);
+          repos_url = svn_path_url_add_component2(
+                        repos_url, svn_dirent_basename(local_abspath, NULL),
+                        scratch_pool);
 
-          SVN_ERR(check_url_func(check_url_baton, &kind,
-                                 svn_path_url_add_component2(repos_root_url,
-                                                             repos_relpath,
-                                                             scratch_pool),
-                                 revision, scratch_pool));
+          SVN_ERR(check_url_func(check_url_baton, &kind, repos_url, revision,
+                                 scratch_pool));
 
           if (kind == svn_node_none)
             return SVN_NO_ERROR; /* This node can't be deleted */
@@ -896,7 +893,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
             this_commit_relpath = svn_relpath_join(commit_relpath, name,
                                                    iterpool);
 
-          SVN_ERR(harvest_committables(wc_ctx, this_abspath,
+          SVN_ERR(harvest_committables(this_abspath,
                                        committables, lock_tokens,
                                        repos_root_url,
                                        this_commit_relpath,
@@ -911,8 +908,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                        check_url_func, check_url_baton,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton,
-                                       result_pool,
-                                       iterpool));
+                                       ctx, result_pool, iterpool));
         }
 
       svn_pool_destroy(iterpool);
@@ -1154,7 +1150,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                                ctx->notify_baton2,
                                                iterpool));
 
-      SVN_ERR(harvest_committables(ctx->wc_ctx, target_abspath,
+      SVN_ERR(harvest_committables(target_abspath,
                                    *committables, *lock_tokens,
                                    repos_root_url,
                                    NULL /* COMMIT_RELPATH */,
@@ -1166,7 +1162,7 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
                                    check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    ctx->notify_func2, ctx->notify_baton2,
-                                   result_pool, iterpool));
+                                   ctx, result_pool, iterpool));
     }
 
   hdb.wc_ctx = ctx->wc_ctx;
@@ -1246,8 +1242,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                          pair->dst_abspath_or_url, pool);
 
   /* Handle this SRC. */
-  SVN_ERR(harvest_committables(btn->ctx->wc_ctx,
-                               pair->src_abspath_or_url,
+  SVN_ERR(harvest_committables(pair->src_abspath_or_url,
                                btn->committables, NULL,
                                repos_root_url,
                                commit_relpath,
@@ -1264,7 +1259,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                btn->ctx->cancel_baton,
                                btn->ctx->notify_func2,
                                btn->ctx->notify_baton2,
-                               btn->result_pool, pool));
+                               btn->ctx, btn->result_pool, pool));
 
   hdb.wc_ctx = btn->ctx->wc_ctx;
   hdb.cancel_func = btn->ctx->cancel_func;

@@ -526,9 +526,17 @@ assemble_status(svn_wc_status3_t **status,
           if (!info->have_base)
             copied = TRUE;
           else
-            SVN_ERR(svn_wc__internal_node_get_schedule(NULL, &copied,
-                                                       db, local_abspath,
-                                                       scratch_pool));
+            {
+              const char *work_del_abspath;
+
+              /* Find out details of our deletion.  */
+              SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+                                               &work_del_abspath, NULL,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
+              if (work_del_abspath)
+                copied = TRUE; /* Working deletion */
+            }
         }
       else if (!dirent || dirent->kind != svn_node_dir)
         {
@@ -544,11 +552,17 @@ assemble_status(svn_wc_status3_t **status,
     {
       if (info->status == svn_wc__db_status_deleted)
         {
+          const char *work_del_abspath;
+
           node_status = svn_wc_status_deleted;
 
-          SVN_ERR(svn_wc__internal_node_get_schedule(NULL, &copied,
-                                                     db, local_abspath,
-                                                     scratch_pool));
+          /* Find out details of our deletion.  */
+          SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+                                           &work_del_abspath, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+          if (work_del_abspath)
+            copied = TRUE; /* Working deletion */
         }
       else if (!dirent || dirent->kind != svn_node_file)
         {

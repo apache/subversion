@@ -225,12 +225,6 @@ path_lock(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 static const char *
-path_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_REVPROP_GEN, pool);
-}
-
-static const char *
 path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
                 apr_pool_t *pool)
 {
@@ -876,28 +870,6 @@ get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
 }
 
 
-/* Check that BUF, a nul-terminated buffer of text from file PATH,
-   contains only digits at OFFSET and beyond, raising an error if not.
-   TITLE contains a user-visible description of the file, usually the
-   short file name.
-
-   Uses POOL for temporary allocation. */
-static svn_error_t *
-check_file_buffer_numeric(const char *buf, apr_off_t offset,
-                          const char *path, const char *title,
-                          apr_pool_t *pool)
-{
-  const char *p;
-
-  for (p = buf + offset; *p; p++)
-    if (!svn_ctype_isdigit(*p))
-      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-        _("%s file '%s' contains unexpected non-digit '%c' within '%s'"),
-        title, svn_dirent_local_style(path, pool), *p, buf);
-
-  return SVN_NO_ERROR;
-}
-
 /* Check that BUF, a nul-terminated buffer of text from format file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.
 
@@ -906,7 +878,15 @@ static svn_error_t *
 check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
                                  const char *path, apr_pool_t *pool)
 {
-  return check_file_buffer_numeric(buf, offset, path, "Format", pool);
+  const char *p;
+
+  for (p = buf + offset; *p; p++)
+    if (!svn_ctype_isdigit(*p))
+      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
+        _("Format file '%s' contains unexpected non-digit '%c' within '%s'"),
+        svn_dirent_local_style(path, pool), *p, buf);
+
+  return SVN_NO_ERROR;
 }
 
 /* Read the format number and maximum number of files per directory
@@ -2707,104 +2687,6 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
-/* Reads the revprop_gen file and writes the content into the
-   REVPROP_GENERATION member of FS.  Use pool for allocations. */
-static svn_error_t *
-read_revprop_generation(svn_fs_t *fs,
-                        apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  
-  const char *path = path_revprop_generation(fs, pool);
-  svn_error_t *err;
-  char buf[80];
-  int i;
-
-  /* Read the raw data from the file, if it exists. If it does
-     not, set the generation to "1" and return.
-     We don't want to have this function fail.  So, patiently
-     retry a couple of times the case the OS denied us access. */
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  for (i = 0; i < RECOVERABLE_RETRY_COUNT; ++i)
-    {
-      apr_file_t *file;
-      apr_size_t len = sizeof(buf);
-      
-      svn_pool_clear(iterpool);
-
-      err = svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                            APR_OS_DEFAULT, iterpool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* No-one changed a revprop -> we are still at gen 1. */
-          ffd->revprop_generation = 1;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      svn_error_clear(err);
-
-      RETRY_RECOVERABLE(err, file,
-                        svn_io_read_length_line(file,
-                                                buf,
-                                                &len,
-                                                iterpool));
-      IGNORE_RECOVERABLE(err, svn_io_file_close(file,
-                                                iterpool));
-
-      break;
-    }
-  SVN_ERR(err);
-
-  svn_pool_destroy(iterpool);
-
-  /* Check that the first line contains only digits. */
-  SVN_ERR(check_file_buffer_numeric(buf, 0, path, 
-                                    "Revprop generations", pool));
-  SVN_ERR(svn_cstring_atoi64(&ffd->revprop_generation, buf));
-
-  /* Graceful behavior in case someone put a "0" in the file. */
-  if (ffd->revprop_generation <= 0)
-    ffd->revprop_generation = 1;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-check_revprop_generation(svn_fs_t *fs,
-                         apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  
-  return ffd->revprop_generation == 0
-    ? read_revprop_generation(fs, pool)
-    : SVN_NO_ERROR;
-}
-
-static svn_error_t *
-increment_revprop_generation(svn_fs_t *fs,
-                             apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  
-  const char *path = path_revprop_generation(fs, pool);
-  const char *tmp_filename;
-  svn_string_t *generation;
-
-  SVN_ERR(read_revprop_generation(fs, pool));
-
-  /* Increment the key and add a trailing \n to the string so the
-     txn-current file has a newline in it. */
-  ++ffd->revprop_generation;
-  generation = svn_string_createf(pool, "%ld\n", ffd->revprop_generation);
-
-  SVN_ERR(svn_io_write_unique(&tmp_filename,
-                              svn_dirent_dirname(path, pool),
-                              generation->data, generation->len,
-                              svn_io_file_del_none, pool));
-  return move_into_place(tmp_filename, path, 
-                         svn_fs_fs__path_current(fs, pool), pool);
-}
-
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
 static svn_error_t *
@@ -2821,10 +2703,6 @@ set_revision_proplist(svn_fs_t *fs,
       const char *tmp_path;
       const char *perms_reference;
       svn_stream_t *stream;
-      svn_node_kind_t kind;
-
-      /* test whether revprops already exist for this revision */
-      SVN_ERR(svn_io_check_path(final_path, &kind, pool));
 
       /* ### do we have a directory sitting around already? we really shouldn't
          ### have to get the dirname here. */
@@ -2841,12 +2719,6 @@ set_revision_proplist(svn_fs_t *fs,
       SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
       SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
 
-      /* Invalidate all cached revprops for this FS and for all other
-         users that haven't read any revprops, YET.  Since writing revprops
-         implies a write lock, there can be no races. */
-      if (kind != svn_node_none)
-        SVN_ERR(increment_revprop_generation(fs, pool));
-
       return SVN_NO_ERROR;
     }
 
@@ -2860,22 +2732,8 @@ revision_proplist(apr_hash_t **proplist_p,
                   apr_pool_t *pool)
 {
   apr_hash_t *proplist;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  const char *key;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
-  SVN_ERR(check_revprop_generation(fs, pool));
-
-  /* Try cache lookup first. */
-  key = svn_fs_fs__combine_two_numbers(rev, ffd->revprop_generation, pool);
-  if (ffd->revprop_cache)
-    {
-      svn_boolean_t is_cached;
-      SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
-                              ffd->revprop_cache, key, pool));
-      if (is_cached)
-        return SVN_NO_ERROR;
-    }
 
   /* if (1); null condition for easier merging to revprop-packing */
     {
@@ -2930,10 +2788,6 @@ revision_proplist(apr_hash_t **proplist_p,
         return svn_error_trace(err);
       svn_pool_destroy(iterpool);
     }
-
-  /* Cache the result, if caching has been activated. */
-  if (ffd->revprop_cache)
-    SVN_ERR(svn_cache__set(ffd->revprop_cache, key, proplist, pool));
 
   *proplist_p = proplist;
 
@@ -6908,9 +6762,6 @@ svn_fs_fs__create(svn_fs_t *fs,
                                  "", pool));
     }
 
-  /* Create the revprop generation tracking file. */
-  SVN_ERR(increment_revprop_generation(fs, pool));
-
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
                        ffd->format, ffd->max_files_per_dir, FALSE, pool));
@@ -8961,7 +8812,6 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 {
   fs_fs_data_t *src_ffd = src_fs->fsap_data;
   fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
-  svn_node_kind_t kind;
 
   dst_fs->path = apr_pstrdup(pool, dst_path);
 
@@ -9025,14 +8875,6 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                                  "", pool));
     }
 
-  /* Copy the revprop generation file if it exists in SRC_FS. */
-  SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
-                            &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_io_copy_file(path_revprop_generation(src_fs, pool),
-                             path_revprop_generation(dst_fs, pool),
-                             TRUE, pool));
-    
   dst_ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }

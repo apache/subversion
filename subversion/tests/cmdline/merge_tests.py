@@ -17405,6 +17405,67 @@ def svnmucc_abuse_1(sbox):
   svntest.main.run_svn(None, 'merge', '-c', 'r5', '^/A@r5',
                              sbox.ospath('A_COPY'))
 
+#----------------------------------------------------------------------
+# Test for issue #4138 'replacement in merge source not notified correctly'.
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+@Issue(4138)
+def merge_source_with_replacement(sbox):
+  "replacement in merge source not notified correctly"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about.
+  A_path          = os.path.join(sbox.wc_dir, 'A')
+  omega_path      = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'omega')
+  A_COPY_path     = os.path.join(sbox.wc_dir, 'A_COPY')
+  beta_COPY_path  = os.path.join(sbox.wc_dir, 'A_COPY', 'B', 'E', 'beta')
+  psi_COPY_path   = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  rho_COPY_path   = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'G', 'rho')
+  omega_COPY_path = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'H', 'omega')
+  
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # r7 Delete A, replace it with A@5, effectively reverting the change
+  # made to A/D/H/omega in r6:
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'del', A_path)
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A@5', A_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Replace A with older version of itself', wc_dir)
+
+  # r8: Make an edit to A/D/H/omega:
+  svntest.main.file_write(omega_path, "New content for 'omega'.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'file edit', wc_dir)
+
+  # Update and sync merge ^/A to A_COPY.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  # This currently fails because the merge notifications make it look like
+  # r6 from ^/A was merged and recorded:
+  #
+  #   >svn merge ^^/A A_COPY
+  #   --- Merging r2 through r5 into 'A_COPY':
+  #   U    A_COPY\B\E\beta
+  #   U    A_COPY\D\G\rho
+  #   U    A_COPY\D\H\psi
+  #   --- Recording mergeinfo for merge of r2 through r5 into 'A_COPY':
+  #    U   A_COPY
+  #   --- Merging r6 through r8 into 'A_COPY':
+  #   U    A_COPY\D\H\omega
+  #   --- Recording mergeinfo for merge of r6 through r8 into 'A_COPY':
+  #   G   A_COPY
+  expected_output = expected_merge_output([[2,5],[7,8]],
+                          ['U    ' + beta_COPY_path  + '\n',
+                           'U    ' + rho_COPY_path   + '\n',
+                           'U    ' + omega_COPY_path + '\n',
+                           'U    ' + psi_COPY_path   + '\n',
+                           ' U   ' + A_COPY_path     + '\n',
+                           ' G   ' + A_COPY_path     + '\n',])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_path)
 
 ########################################################################
 # Run the tests
@@ -17537,6 +17598,7 @@ test_list = [ None,
               unnecessary_noninheritable_mergeinfo_missing_subtrees,
               unnecessary_noninheritable_mergeinfo_shallow_merge,
               svnmucc_abuse_1,
+              merge_source_with_replacement,
              ]
 
 if __name__ == '__main__':
