@@ -260,12 +260,3 @@ Approved changes:
    Fix description of svndumpfilter's --targets option.
    Votes:
      +1: cmpilato, rhuijben, stsp
-
- * r1152282
-   Improve performance of "log -g".
-   Branch:
-     1.6.x-r1152282
-   Justification:
-     Can be too slow to be useable.
-   Votes:
-     +1: philip, rhuijben, stsp
