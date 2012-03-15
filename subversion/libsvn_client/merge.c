@@ -58,6 +58,7 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_client_private.h"
 
 #include "svn_private_config.h"
 
@@ -3508,9 +3509,8 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
   if (implicit_mergeinfo)
     {
-      const char *repos_root;
-      const char *repos_relpath;
       svn_revnum_t target_rev;
+      const char *target_url;
 
       /* Assert that we have sane input. */
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start) && SVN_IS_VALID_REVNUM(end)
@@ -3518,18 +3518,15 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       /* Retrieve the origin (original_*) of the node, or just the
          url if the node was not copied. */
-      SVN_ERR(svn_wc__node_get_origin(NULL, &target_rev, &repos_relpath,
-                                      &repos_root, NULL, NULL,
-                                      ctx->wc_ctx, target_abspath, FALSE,
-                                      scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL,
+                                             &target_rev, &target_url,
+                                             target_abspath, ctx,
+                                             scratch_pool, scratch_pool));
 
-      if (! repos_relpath)
+      if (! target_url)
         {
-          /* We've been asked to operate on a target which has no location
-           * in the repository. Either it's unversioned (but attempts to
-           * merge into unversioned targets should not get as far as here),
-           * or it is locally added, in which case the target's implicit
-           * mergeinfo is empty. */
+          /* We've been asked to operate on a locally added target, so its
+           * implicit mergeinfo is empty. */
           *implicit_mergeinfo = apr_hash_make(result_pool);
         }
       else if (target_rev <= end)
@@ -3540,11 +3537,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
         }
       else
         {
-          const char *url;
-
-          url = svn_path_url_add_component2(repos_root, repos_relpath,
-                                            scratch_pool);
-
           /* Fetch so-called "implicit mergeinfo" (that is, natural
              history). */
 
@@ -3558,7 +3550,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
           /* Fetch the implicit mergeinfo. */
           SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo,
                                                        NULL,
-                                                       url, target_rev,
+                                                       target_url, target_rev,
                                                        start, end,
                                                        ra_session, ctx,
                                                        result_pool));
@@ -9265,36 +9257,16 @@ target_node_location(merge_target_t **target_p,
                      apr_pool_t *scratch_pool)
 {
   merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
-  const char *relpath;
 
   target->abspath = apr_pstrdup(result_pool, wc_abspath);
   SVN_ERR(svn_wc_read_kind(&target->kind, ctx->wc_ctx, wc_abspath, FALSE,
                            scratch_pool));
-  SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */,
-                                  &target->rev, &relpath,
-                                  &target->repos_root.url,
-                                  &target->repos_root.uuid,
-                                  NULL, ctx->wc_ctx, wc_abspath,
-                                  FALSE /* scan_deleted */,
-                                  result_pool, scratch_pool));
-  if (target->repos_root.url && relpath)
-    {
-      target->url = svn_path_url_add_component2(target->repos_root.url,
-                                                relpath, result_pool);
-    }
-  else
-    {
-      /* It's probably a locally added node.  Find the repository root URL
-       * and UUID anyway, and leave the node URL and revision as NULL/INVALID.
-       * Some kinds of merge can use such a target; others can't. */
-      target->url = NULL;
-      SVN_ERR(svn_client_get_repos_root(&target->repos_root.url,
-                                        &target->repos_root.uuid,
-                                        wc_abspath,
-                                        ctx, result_pool, scratch_pool));
-    }
+  SVN_ERR(svn_client__wc_node_get_origin(&target->repos_root.url,
+                                         &target->repos_root.uuid,
+                                         &target->rev, &target->url,
+                                         wc_abspath, ctx,
+                                         result_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(target->repos_root.url && target->repos_root.uuid);
   *target_p = target;
   return SVN_NO_ERROR;
 }
