@@ -114,6 +114,13 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1298343
+   Return an error when attempting to MERGE a resource that does not exist.
+   Justification:
+     Avoid asserting.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
