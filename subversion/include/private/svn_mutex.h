@@ -103,13 +103,11 @@ svn_mutex__unlock(svn_mutex__t *mutex,
  * @note Prefer using this macro instead of explicit lock aquisition and
  * release.
  */
-#define SVN_MUTEX__WITH_LOCK(mutex, expr) \
-do {                                      \
-  svn_mutex__t *m = (mutex);              \
-  svn_error_t *e = svn_mutex__lock(m);    \
-  if (e) return svn_error_trace(e);       \
-  e = svn_mutex__unlock(m, (expr));       \
-  if (e) return svn_error_trace(e);       \
+#define SVN_MUTEX__WITH_LOCK(mutex, expr)               \
+do {                                                    \
+  svn_mutex__t *svn_mutex__m = (mutex);                 \
+  SVN_ERR(svn_mutex__lock(svn_mutex__m));               \
+  SVN_ERR(svn_mutex__unlock(svn_mutex__m, (expr)));     \
 } while (0)
 
 #ifdef __cplusplus
