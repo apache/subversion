@@ -3518,7 +3518,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       /* Retrieve the origin (original_*) of the node, or just the
          url if the node was not copied. */
-      SVN_ERR(svn_wc__node_get_origin(FALSE, &target_rev, &repos_relpath,
+      SVN_ERR(svn_wc__node_get_origin(NULL, &target_rev, &repos_relpath,
                                       &repos_root, NULL, NULL,
                                       ctx->wc_ctx, target_abspath, FALSE,
                                       scratch_pool, scratch_pool));
