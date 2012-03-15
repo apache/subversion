@@ -390,7 +390,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.18
 
   User-visible changes:
     * reject invalid svn:mergeinfo at commit time over DAV (issue #3953) 
-    * fixed: reintegrate fails with no subtree mergeinfo on source (issue #3957)
+    * fix reintegrate merge regression introduced in 1.6.13 (issue #3957)
     * make the stderr output of the post-commit hook XML-safe (r893478)
     * fix a rare source of FSFS corruption (r1240752)
     * plug a memory leak in the bdb backend (r1205726)
@@ -398,7 +398,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.18
     * fix description of svndumpfilter's --targets option (r1151911)
 
   Developer-visible changes:
-    * fix sqlite distfile retrieval in get-deps.sh
+    * fix sqlite distfile retrieval in get-deps.sh (r1134734)
     * fix swig-py memory leak (r1235264, -296, -302, -736)
     * allow passing --with-jdk to gen-make.py on Windows (r966167)
 
