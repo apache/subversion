@@ -1,2 +1,53 @@
 This branch exists to explore ways of detecting server-side renames
 by having the client scan the revision log.
+
+= What has been achieved here so far =
+
+A heuristic has been implemented that finds server-side moves
+in the revision log with a good amount of accuracy (see code
+addded to libsvn_client/update.c and libsvn_wc/update_editor.c)
+
+The command line client has been taught to invoke this heuristic
+and present the results (see changes made to svn/conflict-callbacks.c).
+
+= Problems blocking progress on this branch =
+
+There are limitations with the approach of implementing this functionality
+within the update editor. To see the problem, consider a directory involved
+in a rename vs. rename tree conflict during update.
+
+Say a directory was renamed in the repository from A to B and locally
+renamed from A to C. We'd like to offer the user the choice of either
+keeping the name B (incoming change) or the name C (local change).
+These options translate to the 'theirs-conflict' and 'mine-conflict'
+choices, respectively.
+
+Now imagine that, after renaming A to C and before running the update,
+the user also edited some files within C. While resolving the tree conflict
+the user decides to use the incoming name B.
+
+What needs to happen now is that the file edits within C must be
+merged into the new B directory added during the update, and the
+addition of C must be reverted. (Nothing special needs to be done
+for A -- it is now gone anyway since the BASE tree was updated to
+a revision in which A no longer exists).
+
+But there is no support in Subversion right now to run a merge from
+a working directory C to a working directory B (currently, users are
+left to manually editing files in this case). This limitation needs
+to be fixed. Fixing it by running a merge from within the update editor
+drive in process of bringing in new changes from the server is a rather
+insane approach. Not only because the final target state of the updated
+tree isn't known yet, but also because, in the general case, a merge
+from C to B might result in additional tree-conflicts which will need
+to be resolved recursively.
+
+So the conclusion of work done on this branch is that we need a different
+way of storing and resolving conflicts. The update (or merge) should record
+any conflicts while proceeding to bring in all changes (which may be stored
+somewhere in working copy meta data instead of the working tree).
+Then, if any conflicts were marked, a conflict resolver should be launched
+that concerns itself with resolving any conflicts recorded in the working copy,
+and operates primarily offline (though it might contact the server to obtain
+addtional information it needs -- e.g. it could try to find server-side
+renames by scanning the log).
