@@ -189,7 +189,7 @@ typedef struct merge_target_t
   /* URL of the node, or NULL if node is locally added */
   const char *url;
 
-  /* Revision of the node, or NULL if node is locally added */
+  /* Revision of the node, or SVN_INVALID_REVNUM if node is locally added */
   svn_revnum_t rev;
 
   /* Repository root URL and UUID, even if node is locally added */
@@ -9284,6 +9284,9 @@ target_node_location(merge_target_t **target_p,
     }
   else
     {
+      /* It's probably a locally added node.  Find the repository root URL
+       * and UUID anyway, and leave the node URL and revision as NULL/INVALID.
+       * Some kinds of merge can use such a target; others can't. */
       target->url = NULL;
       SVN_ERR(svn_client_get_repos_root(&target->repos_root.url,
                                         &target->repos_root.uuid,
@@ -9291,6 +9294,7 @@ target_node_location(merge_target_t **target_p,
                                         ctx, result_pool, scratch_pool));
     }
 
+  SVN_ERR_ASSERT(target->repos_root.url && target->repos_root.uuid);
   *target_p = target;
   return SVN_NO_ERROR;
 }
@@ -10437,6 +10441,14 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
   svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
   svn_error_t *err;
   apr_hash_t *subtrees_with_mergeinfo;
+
+  if (! target->url)
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("Can't reintegrate into '%s' because it is "
+                               "locally added and therefore not related to "
+                               "the merge source"),
+                             svn_dirent_local_style(target->abspath,
+                                                    scratch_pool));
 
   /* Make sure we're dealing with a real URL. */
   SVN_ERR(svn_client_url_from_path2(&source_url, source_path_or_url, ctx,
