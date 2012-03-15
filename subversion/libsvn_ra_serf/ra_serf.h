@@ -1330,6 +1330,7 @@ svn_ra_serf__get_file(svn_ra_session_t *session,
                       svn_stream_t *stream,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
+                      apr_array_header_t **inherited_props,
                       apr_pool_t *pool);
 
 svn_error_t *

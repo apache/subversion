@@ -938,11 +938,37 @@ svn_ra_get_commit_editor(svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are
  * <tt>@c svn_string_t *</tt>.
  *
+ * If @a inherited_props is not @c NULL, then set @a *inherited_props to a
+ * depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * representing the properties inherited by @a path at @a revision (or the
+ * 'head' revision if @a revision is @c SVN_INVALID_REVNUM.  If
+ * @a inherited_props is not @c NULL and no inheritable properties are found,
+ * then set @a *inherited_props to an empty array.
+ *
  * The stream handlers for @a stream may not perform any RA
  * operations using @a session.
  *
- * @since New in 1.2.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_get_file2(svn_ra_session_t *session,
+                 const char *path,
+                 svn_revnum_t revision,
+                 svn_stream_t *stream,
+                 svn_revnum_t *fetched_rev,
+                 apr_hash_t **props,
+                 apr_array_header_t **inherited_props,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_file2, but does not support the retrieval of
+ * inherited properties.
+ *
+ * @since New in 1.8.
+ *
+ * @deprecated Provided for compatibility with the 1.2 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_file(svn_ra_session_t *session,
                 const char *path,
@@ -977,8 +1003,35 @@ svn_ra_get_file(svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are
  * <tt>@c svn_string_t *</tt>.
  *
- * @since New in 1.4.
+ * If @a inherited_props is not @c NULL, then set @a *inherited_props to a
+ * depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * representing the properties inherited by @a path at @a revision (or the
+ * 'head' revision if @a revision is @c SVN_INVALID_REVNUM.  If
+ * @a inherited_props is not @c NULL and no inheritable properties are found,
+ * then set @a *inherited_props to an empty array.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_get_dir3(svn_ra_session_t *session,
+                apr_hash_t **dirents,
+                svn_revnum_t *fetched_rev,
+                apr_hash_t **props,
+                apr_array_header_t **inherited_props,
+                const char *path,
+                svn_revnum_t revision,
+                apr_uint32_t dirent_fields,
+                apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_dir3, but does not support the retrieval of
+ * inherited properties.
+ *
+ * @since New in 1.4.
+ *
+ * @deprecated Provided for compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_dir2(svn_ra_session_t *session,
                 apr_hash_t **dirents,

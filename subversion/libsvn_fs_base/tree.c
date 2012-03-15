@@ -1244,9 +1244,11 @@ txn_body_node_proplist(void *baton, trail_t *trail)
 
 static svn_error_t *
 base_node_proplist(apr_hash_t **table_p,
+                   apr_array_header_t **inherited_props,
                    svn_fs_root_t *root,
                    const char *path,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *table;
   struct node_proplist_args args;
@@ -1255,8 +1257,10 @@ base_node_proplist(apr_hash_t **table_p,
   args.root = root;
   args.path = path;
 
+  /* ### TODO: Get inherited props. */
+
   SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist, &args,
-                                 FALSE, pool));
+                                 FALSE, result_pool));
 
   *table_p = table;
   return SVN_NO_ERROR;

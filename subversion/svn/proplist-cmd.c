@@ -35,6 +35,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -48,12 +49,13 @@ typedef struct proplist_baton_t
 
 /*** Code. ***/
 
-/* This implements the svn_proplist_receiver_t interface, printing XML to
+/* This implements the svn_proplist_receiver2_t interface, printing XML to
    stdout. */
 static svn_error_t *
 proplist_receiver_xml(void *baton,
                       const char *path,
                       apr_hash_t *prop_hash,
+                      apr_array_header_t *inherited_props,
                       apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((proplist_baton_t *)baton)->opt_state;
@@ -80,11 +82,12 @@ proplist_receiver_xml(void *baton,
 }
 
 
-/* This implements the svn_proplist_receiver_t interface. */
+/* This implements the svn_proplist_receiver2_t interface. */
 static svn_error_t *
 proplist_receiver(void *baton,
                   const char *path,
                   apr_hash_t *prop_hash,
+                  apr_array_header_t *inherited_props,
                   apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((proplist_baton_t *)baton)->opt_state;
@@ -96,10 +99,33 @@ proplist_receiver(void *baton,
   else
     name_local = path;
 
-  if (!opt_state->quiet)
-    SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
-  return svn_cl__print_prop_hash(NULL, prop_hash, (! opt_state->verbose),
-                                 pool);
+  if (inherited_props)
+    {
+      int i;
+
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+          if (!opt_state->quiet)
+            SVN_ERR(svn_cmdline_printf(pool,
+                                       _("Properties inherited from '%s':\n"),
+                                       iprop->path_or_url));
+          SVN_ERR(svn_cl__print_prop_hash(NULL, iprop->prop_hash,
+                                          (! opt_state->verbose), pool));
+        }
+    }
+
+  if (prop_hash && apr_hash_count(prop_hash))
+    {
+      if (!opt_state->quiet)
+        SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"),
+                                   name_local));
+      SVN_ERR(svn_cl__print_prop_hash(NULL, prop_hash, (! opt_state->verbose),
+                                      pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -128,6 +154,11 @@ svn_cl__proplist(apr_getopt_t *os,
       svn_revnum_t rev;
       const char *URL;
       apr_hash_t *proplist;
+
+      if (opt_state->show_inherited_props)
+        return svn_error_create(
+          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+          _("--show-inherited-props can't be used with --revprop"));
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
                                       &URL, ctx, scratch_pool));
@@ -169,7 +200,7 @@ svn_cl__proplist(apr_getopt_t *os,
     {
       int i;
       apr_pool_t *iterpool;
-      svn_proplist_receiver_t pl_receiver;
+      svn_proplist_receiver2_t pl_receiver;
 
       if (opt_state->xml)
         {
@@ -203,12 +234,13 @@ svn_cl__proplist(apr_getopt_t *os,
                                      iterpool));
 
           SVN_ERR(svn_cl__try(
-                   svn_client_proplist3(truepath, &peg_revision,
+                   svn_client_proplist4(truepath, &peg_revision,
                                         &(opt_state->start_revision),
                                         opt_state->depth,
                                         opt_state->changelists,
+                                        opt_state->show_inherited_props,
                                         pl_receiver, &pl_baton,
-                                        ctx, iterpool),
+                                        ctx, iterpool, iterpool),
                    errors, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,

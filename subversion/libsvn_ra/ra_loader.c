@@ -733,44 +733,35 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                             lock_tokens, keep_locks, pool);
 }
 
-svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t revision,
-                             svn_stream_t *stream,
-                             svn_revnum_t *fetched_rev,
-                             apr_hash_t **props,
-                             apr_pool_t *pool)
+svn_error_t *svn_ra_get_file2(svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t revision,
+                              svn_stream_t *stream,
+                              svn_revnum_t *fetched_rev,
+                              apr_hash_t **props,
+                              apr_array_header_t **inherited_props,
+                              apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_file(session, path, revision, stream,
-                                   fetched_rev, props, pool);
+                                   fetched_rev, props, inherited_props, pool);
 }
 
-svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
-                            const char *path,
-                            svn_revnum_t revision,
-                            apr_hash_t **dirents,
-                            svn_revnum_t *fetched_rev,
-                            apr_hash_t **props,
-                            apr_pool_t *pool)
+svn_error_t *
+svn_ra_get_dir3(svn_ra_session_t *session,
+                apr_hash_t **dirents,
+                svn_revnum_t *fetched_rev,
+                apr_hash_t **props,
+                apr_array_header_t **inherited_props,
+                const char *path,
+                svn_revnum_t revision,
+                apr_uint32_t dirent_fields,
+                apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                  path, revision, SVN_DIRENT_ALL, pool);
-}
-
-svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
-                             apr_hash_t **dirents,
-                             svn_revnum_t *fetched_rev,
-                             apr_hash_t **props,
-                             const char *path,
-                             svn_revnum_t revision,
-                             apr_uint32_t dirent_fields,
-                             apr_pool_t *pool)
-{
-  SVN_ERR_ASSERT(*path != '/');
-  return session->vtable->get_dir(session, dirents, fetched_rev, props,
-                                  path, revision, dirent_fields, pool);
+                                  inherited_props, path, revision,
+                                  dirent_fields, pool);
 }
 
 svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
