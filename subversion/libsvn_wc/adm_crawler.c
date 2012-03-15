@@ -494,9 +494,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
         {
           svn_boolean_t is_incomplete;
           svn_boolean_t start_empty;
+          svn_depth_t report_depth = ths->depth;
 
           is_incomplete = (ths->status == svn_wc__db_status_incomplete);
           start_empty = is_incomplete;
+
+          if (!SVN_DEPTH_IS_RECURSIVE(depth))
+            report_depth = svn_depth_empty;
 
           /* When a <= 1.6 working copy is upgraded without some of its
              subdirectories we miss some information in the database. If we
@@ -525,7 +529,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                 dir_repos_root,
                                                 ths->repos_relpath, iterpool),
                                             ths->revnum,
-                                            ths->depth,
+                                            report_depth,
                                             start_empty,
                                             ths->lock ? ths->lock->token
                                                       : NULL,
@@ -534,7 +538,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                 SVN_ERR(reporter->set_path(report_baton,
                                            this_report_relpath,
                                            ths->revnum,
-                                           ths->depth,
+                                           report_depth,
                                            start_empty,
                                            ths->lock ? ths->lock->token : NULL,
                                            iterpool));
@@ -548,7 +552,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                               dir_repos_root,
                                               ths->repos_relpath, iterpool),
                                           ths->revnum,
-                                          ths->depth,
+                                          report_depth,
                                           start_empty,
                                           ths->lock ? ths->lock->token : NULL,
                                           iterpool));
@@ -572,7 +576,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               SVN_ERR(reporter->set_path(report_baton,
                                          this_report_relpath,
                                          ths->revnum,
-                                         ths->depth,
+                                         report_depth,
                                          start_empty,
                                          ths->lock ? ths->lock->token : NULL,
                                          iterpool));

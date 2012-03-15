@@ -39,29 +39,22 @@ The following columns in the NODES table are used to differentiate
 moves from copies:
 
   /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is implied by a different node with
-     a moved_to column pointing at this node. */
+     copied). This is set on all the nodes in the moved tree.  The source of
+     the move is implied by a different node with a moved_to column pointing
+     at the root node of the moved tree. */
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this
-     specifies the local_relpath of where the BASE node was moved to.
+     specifies the local_relpath of where the node was moved to.
      This is set only on the root of a move, and is NULL for all children.
 
-     Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node in the BASE tree. A non-NULL moved_to column
-     is only valid in rows where op_depth == 0. */
+     The op-depth of the moved-to node is not recorded. A moved_to path
+     always points at a node within the highest op-depth layer at the
+     destination. This invariant must be maintained by operations which
+     change existing move information. */
   moved_to  TEXT,
 
-Some new queries were added which use these columns:
-
-  STMT_SELECT_MOVED_FROM_RELPATH
-  STMT_UPDATE_MOVED_TO_RELPATH
-  STMT_CLEAR_MOVED_TO_RELPATH
-  STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE
-  STMT_SELECT_MOVED_HERE_CHILDREN
-
-More queries might be needed (TBD).
-
+Many queries were added or changed to use these columns.
 
 == libsvn_wc ==
 
@@ -81,6 +74,8 @@ private libsvn_wc API:
       the node at the moved_from abspath
 
 More API changes might be needed (TBD).
+In particular, scan_deletion may need to return a list of moves
+in the multi-layer case (http://wiki.apache.org/subversion/MultiLayerMoves)
 
 We might require a working copy upgrade when going from 1.7 to 1.8,
 and only allow new move functionality to be used with 1.8 working copies.

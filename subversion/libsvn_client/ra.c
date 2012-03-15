@@ -52,19 +52,12 @@ typedef struct callback_baton_t
      this base directory. */
   const char *base_dir_abspath;
 
-  /* When true, makes sure temporary files are created
-     outside the working copy. */
-  svn_boolean_t read_only_wc;
-
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
   const apr_array_header_t *commit_items;
 
   /* A client context. */
   svn_client_ctx_t *ctx;
-
-  /* The pool to use for session-related items. */
-  apr_pool_t *pool;
 
 } callback_baton_t;
 
@@ -293,8 +286,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->get_client_string = get_client_string;
 
   cb->base_dir_abspath = base_dir_abspath;
-  cb->read_only_wc = read_only_wc;
-  cb->pool = pool;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 

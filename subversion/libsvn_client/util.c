@@ -142,6 +142,50 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
+svn_client__wc_node_get_origin(const char **repos_root_url_p,
+                               const char **repos_uuid_p,
+                               svn_revnum_t *rev_p,
+                               const char **url_p,
+                               const char *wc_abspath,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url, *relpath;
+
+  SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */, rev_p, &relpath,
+                                  &repos_root_url, repos_uuid_p,
+                                  NULL, ctx->wc_ctx, wc_abspath,
+                                  FALSE /* scan_deleted */,
+                                  result_pool, scratch_pool));
+  if (repos_root_url && relpath)
+    {
+      *url_p = svn_path_url_add_component2(repos_root_url, relpath,
+                                           result_pool);
+    }
+  else
+    {
+      /* The node has no location in the repository. It's unversioned or
+       * locally added or locally deleted.
+       *
+       * If it's locally added or deleted, find the repository root
+       * URL and UUID anyway, and leave the node URL and revision as NULL
+       * and INVALID.  If it's unversioned, this will throw an error. */
+      *url_p = NULL;
+      SVN_ERR(svn_client_get_repos_root(&repos_root_url, repos_uuid_p,
+                                        wc_abspath,
+                                        ctx, result_pool, scratch_pool));
+    }
+
+  if (repos_root_url_p)
+    *repos_root_url_p = repos_root_url;
+
+  SVN_ERR_ASSERT(!repos_root_url_p || *repos_root_url_p);
+  SVN_ERR_ASSERT(!repos_uuid_p || *repos_uuid_p);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_get_repos_root(const char **repos_root,
                           const char **repos_uuid,
                           const char *abspath_or_url,

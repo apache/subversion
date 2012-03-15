@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
   for config_filename in sys.argv[1:]:
     print prog_name + ": reading '" + config_filename + "',",
-    graph = MergeDot(config_filename, rankdir='LR')
+    graph = MergeDot(config_filename, rankdir='LR', dpi='72')
     print "writing '" + graph.filename + "'"
     graph.write_png(graph.filename)
 

@@ -2843,7 +2843,6 @@ def update_below_depth_empty(sbox):
                                         None, None)
 
 # Test for issue #4136.
-@XFail()
 @Issue(4136)
 def commit_then_immediates_update(sbox):
   "deep commit followed by update --depth immediates"

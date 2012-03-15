@@ -46,6 +46,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_client_private.h"
 
 
 /*
@@ -92,23 +93,14 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
      bother checking. */
   if (local_abspath)
     {
-      const char *repos_root_url;
-      const char *repos_relpath;
-
       SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-      SVN_ERR(svn_wc__node_get_origin(NULL, &src_revnum,
-                                      &repos_relpath, &repos_root_url,
-                                      NULL, NULL,
-                                      ctx->wc_ctx, local_abspath, FALSE,
-                                      pool, pool));
+      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL,
+                                             &src_revnum, &src_url,
+                                             local_abspath, ctx,
+                                             pool, pool));
 
-      if (repos_relpath)
-        {
-          src_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                                pool);
-        }
-      else
+      if (! src_url)
         locally_added = TRUE;
     }
 
