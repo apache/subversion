@@ -477,8 +477,9 @@ svn_wc__node_get_url(const char **url,
 
 /**
  * Retrieves the origin of the node as it is known in the repository. For
- * added nodes this retrieves where the node is copied from, and the repository
- * location for other nodes.
+ * a copied node this retrieves where the node is copied from, for an added
+ * node this returns NULL/INVALID outputs, and for any other node this
+ * retrieves the repository location.
  *
  * All output arguments may be NULL.
  *
