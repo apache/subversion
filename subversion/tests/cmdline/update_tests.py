@@ -5770,7 +5770,7 @@ def update_nested_move_text_mod(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {
-    'A/E2/beta' : Item(status='U '),
+    'A/alpha2' : Item(status='U '),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
