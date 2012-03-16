@@ -5696,6 +5696,101 @@ def update_moved_dir_file_move(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
+def update_move_text_mod(sbox):
+  "text mod to moved files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.main.file_append(sbox.ospath('A/B/lambda'), "modified\n")
+  svntest.main.file_append(sbox.ospath('A/B/E/beta'), "modified\n")
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  sbox.simple_move("A/B/E", "A/E2")
+  sbox.simple_move("A/B/lambda", "A/lambda2")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/lambda',
+                        status='D ')
+  expected_status.add({
+      'A/E2'        : Item(status='A ', copied='+', wc_rev='-'),
+      'A/E2/alpha'  : Item(status='  ', copied='+', wc_rev='-'),
+      'A/E2/beta'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/lambda2'   : Item(status='A ', copied='+', wc_rev='-'),
+      })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/lambda2' : Item(status='U '),
+    'A/E2/beta' : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E', 'A/B/lambda')
+  expected_disk.add({
+    'A/E2'        : Item(),
+    'A/E2/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'A/E2/beta'   : Item(contents="This is the file 'beta'.\nmodified\n"),
+    'A/lambda2'   : Item(contents="This is the file 'lambda'.\nmodified\n"),
+  })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/E2', 'A/E2/alpha', 'A/E2/beta', 'A/lambda2',
+                        wc_rev='-')
+  ### XFAIL 'A/E2/beta' is status R but should be ' '
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+@XFail()
+def update_nested_move_text_mod(sbox):
+  "text mod to moved file in moved dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), "modified\n")
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  sbox.simple_move("A/B/E", "A/E2")
+  sbox.simple_move("A/E2/alpha", "A/alpha2")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+      'A/E2'        : Item(status='A ', copied='+', wc_rev='-'),
+      'A/E2/alpha'  : Item(status='D ', copied='+', wc_rev='-'),
+      'A/E2/beta'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/alpha2'    : Item(status='A ', copied='+', wc_rev='-'),
+      })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/E2/beta' : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/E2'        : Item(),
+    'A/E2/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'A/alpha2'    : Item(contents="This is the file 'alpha'.\nmodified\n"),
+  })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/E2', 'A/E2/alpha', 'A/E2/beta', 'A/alpha2',
+                        wc_rev='-')
+  ### XFAIL update fails 'No such file'
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+
 #######################################################################
 # Run the tests
 
@@ -5768,6 +5863,8 @@ test_list = [ None,
               update_moved_dir_dir_add,
               update_moved_dir_file_move,
               update_binary_file_3,
+              update_move_text_mod,
+              update_nested_move_text_mod,
              ]
 
 if __name__ == '__main__':
