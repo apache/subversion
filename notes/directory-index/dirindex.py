@@ -161,7 +161,7 @@ class Strent(SQLobject):
 
 class Dirent(SQLobject):
     """O/R mapping for a virtual non-materialized view representing
-    a natural join of the "dirindex" and "pathindex" tables."""
+    a join of the "dirindex" and "strindex" tables."""
 
     __slots__ = ("rowid", "origin", "pathid", "version",
                  "kind", "opcode", "subtree",
@@ -329,8 +329,7 @@ class Revision(object):
         self.__created = created
         self.__author = author
         self.__log = log
-        self.__txn = None
-        self.__deferred = None
+        self.__context = None
         index.rollback()
 
     class __Context(object):
