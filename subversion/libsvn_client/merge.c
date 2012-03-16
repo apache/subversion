@@ -9248,13 +9248,22 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-/* Set *TARGET to a new, fully initialized, target description structure. */
+/* "Open" the target WC for a merge.  That means:
+ *   - find out its node kind
+ *   - find out its exact repository location
+ *   - TODO: check the WC for suitability (throw an error if unsuitable)
+ *
+ * Set *TARGET_P to a new, fully initialized, target description structure.
+ *
+ * If the node is locally added, the rev and URL will be null/invalid. Some
+ * kinds of merge can use such a target; others can't.
+ */
 static svn_error_t *
-target_node_location(merge_target_t **target_p,
-                     const char *wc_abspath,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+open_target_wc(merge_target_t **target_p,
+               const char *wc_abspath,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
 
@@ -9311,8 +9320,8 @@ merge_locked(const char *source1,
      ancestor of the other -- just call svn_client_merge_peg3() with
      the appropriate args. */
 
-  SVN_ERR(target_node_location(&target, target_abspath,
-                               ctx, scratch_pool, scratch_pool));
+  SVN_ERR(open_target_wc(&target, target_abspath,
+                         ctx, scratch_pool, scratch_pool));
 
   /* Do not allow merges into mixed-revision working copies. */
   SVN_ERR(ensure_wc_is_suitable_merge_target(target->abspath, ctx,
@@ -10608,8 +10617,8 @@ svn_client_find_reintegrate_merge(const char **url1_p,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath,
                                   scratch_pool));
-  SVN_ERR(target_node_location(&target, target_abspath,
-                               ctx, scratch_pool, scratch_pool));
+  SVN_ERR(open_target_wc(&target, target_abspath,
+                         ctx, scratch_pool, scratch_pool));
   SVN_ERR(find_reintegrate_merge(NULL, NULL, &source, NULL,
                                  source_path_or_url, source_peg_revision,
                                  target,
@@ -10648,8 +10657,8 @@ merge_reintegrate_locked(const char *source_path_or_url,
   svn_boolean_t use_sleep;
   svn_error_t *err;
 
-  SVN_ERR(target_node_location(&target, target_abspath,
-                               ctx, scratch_pool, scratch_pool));
+  SVN_ERR(open_target_wc(&target, target_abspath,
+                         ctx, scratch_pool, scratch_pool));
 
   SVN_ERR(find_reintegrate_merge(&target_ra_session, &source_ra_session,
                                  &source, &yc_ancestor_rev,
@@ -10746,8 +10755,8 @@ merge_peg_locked(const char *source_path_or_url,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
-  SVN_ERR(target_node_location(&target, target_abspath,
-                               ctx, scratch_pool, scratch_pool));
+  SVN_ERR(open_target_wc(&target, target_abspath,
+                         ctx, scratch_pool, scratch_pool));
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
                                              allow_mixed_rev, TRUE, TRUE,
                                              scratch_pool));
