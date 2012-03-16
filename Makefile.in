@@ -736,7 +736,8 @@ extraclean-bindings: extraclean-swig extraclean-ctypes-python extraclean-javahl
 
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 	@rm -f .swig_checked
-extraclean-swig: extraclean-swig-headers extraclean-swig-py \
+
+extraclean-swig: clean-swig extraclean-swig-headers extraclean-swig-py \
                  extraclean-swig-rb extraclean-swig-pl
 
 EXTRACLEAN_SWIG_HEADERS=rm -f $(SWIG_SRC_DIR)/proxy/*.swg
