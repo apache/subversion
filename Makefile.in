@@ -384,13 +384,14 @@ fast-clean: doc-clean
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
 fast-distclean: fast-clean
-	rm -fr Makefile config.cache config.log config.nice config.status \
+	rm -fr config.cache config.log config.nice config.status \
 	libtool mkmf.log subversion/svn_private_config.h \
 	subversion/bindings/javahl/classes subversion/bindings/javahl/include \
 	$(SVN_CONFIG_SCRIPT_FILES)
+	rm -f Makefile
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extraclean-javahl
+local-extraclean: extraclean-swig extraclean-ctypes-python extraclean-javahl local-distclean
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -408,10 +409,10 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extra
 
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig clean-ctypes-python clean-javahl
+local-clean: check-clean clean-swig clean-ctypes-python clean-javahl fast-clean
 
 # clean everything, including test output.
-local-distclean: fast-distclean check-clean
+local-distclean: check-clean fast-distclean
 
 local-install: @INSTALL_RULES@
 
