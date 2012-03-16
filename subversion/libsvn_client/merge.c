@@ -9251,9 +9251,13 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
 /* "Open" the target WC for a merge.  That means:
  *   - find out its node kind
  *   - find out its exact repository location
- *   - TODO: check the WC for suitability (throw an error if unsuitable)
+ *   - check the WC for suitability (throw an error if unsuitable)
  *
  * Set *TARGET_P to a new, fully initialized, target description structure.
+ *
+ * ALLOW_MIXED_REV, ALLOW_LOCAL_MODS, ALLOW_SWITCHED_SUBTREES determine
+ * whether the WC is deemed suitable; see ensure_wc_is_suitable_merge_target()
+ * for details.
  *
  * If the node is locally added, the rev and URL will be null/invalid. Some
  * kinds of merge can use such a target; others can't.
@@ -9261,6 +9265,9 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
 static svn_error_t *
 open_target_wc(merge_target_t **target_p,
                const char *wc_abspath,
+               svn_boolean_t allow_mixed_rev,
+               svn_boolean_t allow_local_mods,
+               svn_boolean_t allow_switched_subtrees,
                svn_client_ctx_t *ctx,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
@@ -9268,13 +9275,20 @@ open_target_wc(merge_target_t **target_p,
   merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
 
   target->abspath = apr_pstrdup(result_pool, wc_abspath);
+
   SVN_ERR(svn_wc_read_kind(&target->kind, ctx->wc_ctx, wc_abspath, FALSE,
                            scratch_pool));
+
   SVN_ERR(svn_client__wc_node_get_origin(&target->repos_root.url,
                                          &target->repos_root.uuid,
                                          &target->rev, &target->url,
                                          wc_abspath, ctx,
                                          result_pool, scratch_pool));
+
+  SVN_ERR(ensure_wc_is_suitable_merge_target(
+            wc_abspath, ctx,
+            allow_mixed_rev, allow_local_mods, allow_switched_subtrees,
+            scratch_pool));
 
   *target_p = target;
   return SVN_NO_ERROR;
@@ -9321,12 +9335,8 @@ merge_locked(const char *source1,
      the appropriate args. */
 
   SVN_ERR(open_target_wc(&target, target_abspath,
+                         allow_mixed_rev, TRUE, TRUE,
                          ctx, scratch_pool, scratch_pool));
-
-  /* Do not allow merges into mixed-revision working copies. */
-  SVN_ERR(ensure_wc_is_suitable_merge_target(target->abspath, ctx,
-                                             allow_mixed_rev, TRUE, TRUE,
-                                             scratch_pool));
 
   /* Open RA sessions to both sides of our merge source, and resolve URLs
    * and revisions. */
@@ -10455,12 +10465,6 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
                                                   scratch_pool),
                            TRUE /* strict_urls */, scratch_pool));
 
-  /* A reintegrate merge requires the merge target to reflect a subtree
-   * of the repository as found at a single revision. */
-  SVN_ERR(ensure_wc_is_suitable_merge_target(target->abspath, ctx,
-                                             FALSE, FALSE, FALSE,
-                                             scratch_pool));
-
   /* As the WC tree is "pure", use its last-updated-to revision as
      the default revision for the left side of our merge, since that's
      what the repository sub-tree is required to be up to date with
@@ -10617,7 +10621,11 @@ svn_client_find_reintegrate_merge(const char **url1_p,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath,
                                   scratch_pool));
+
+  /* Open the target WC.  A reintegrate merge requires the merge target to
+   * reflect a subtree of the repository as found at a single revision. */
   SVN_ERR(open_target_wc(&target, target_abspath,
+                         FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
   SVN_ERR(find_reintegrate_merge(NULL, NULL, &source, NULL,
                                  source_path_or_url, source_peg_revision,
@@ -10657,7 +10665,10 @@ merge_reintegrate_locked(const char *source_path_or_url,
   svn_boolean_t use_sleep;
   svn_error_t *err;
 
+  /* Open the target WC.  A reintegrate merge requires the merge target to
+   * reflect a subtree of the repository as found at a single revision. */
   SVN_ERR(open_target_wc(&target, target_abspath,
+                         FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
 
   SVN_ERR(find_reintegrate_merge(&target_ra_session, &source_ra_session,
@@ -10756,10 +10767,8 @@ merge_peg_locked(const char *source_path_or_url,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
   SVN_ERR(open_target_wc(&target, target_abspath,
+                         allow_mixed_rev, TRUE, TRUE,
                          ctx, scratch_pool, scratch_pool));
-  SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
-                                             allow_mixed_rev, TRUE, TRUE,
-                                             scratch_pool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(scratch_pool);
