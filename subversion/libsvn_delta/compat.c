@@ -130,6 +130,8 @@ struct ev2_edit_baton
 {
   svn_editor_t *editor;
 
+  /* ### need to ensure we understand the proper root for these relpaths  */
+  apr_hash_t *changes;  /* RELPATH -> struct change_node  */
   apr_hash_t *paths;
   apr_array_header_t *path_order;
   int paths_processed;
@@ -179,7 +181,6 @@ enum action_code_t
   ACTION_ADD,
   ACTION_DELETE,
   ACTION_ADD_ABSENT,
-  ACTION_SET_TEXT,
   ACTION_UNLOCK
 };
 
@@ -203,11 +204,36 @@ struct copy_args
   svn_revnum_t copyfrom_rev;
 };
 
-struct path_checksum_args
+enum restructure_action_t
 {
-  const char *path;
-  svn_revnum_t base_revision;
+  RESTRUCTURE_NONE = 0,
+  RESTRUCTURE_ADD,         /* add the node, maybe replacing. maybe copy  */
+  RESTRUCTURE_ADD_ABSENT,  /* add an absent node, possibly replacing  */
+  RESTRUCTURE_DELETE,      /* delete this node  */
 };
+
+/* Records everything about how this node is to be changed.  */
+struct change_node
+{
+  /* what kind of (tree) restructure is occurring at this node?  */
+  enum restructure_action_t action;
+
+  svn_kind_t kind;  /* the NEW kind of this node  */
+
+  /* The revision we're trying to change. Replace it, modify it, etc.  */
+  svn_revnum_t base_revision;
+
+  apr_hash_t *props;  /* new/final set of props to apply  */
+
+  const char *contents_abspath;  /* file containing new fulltext  */
+  svn_checksum_t *checksum;  /* checksum of new fulltext  */
+
+  /* If COPYFROM_PATH is not NULL, then copy PATH@REV to this node.
+     RESTRUCTURE must be RESTRUCTURE_ADD.  */
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_rev;
+};
+
 
 static svn_error_t *
 add_action(struct ev2_edit_baton *eb,
@@ -238,6 +264,43 @@ add_action(struct ev2_edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+
+static struct change_node *
+locate_change(struct ev2_edit_baton *eb,
+              const char *relpath)
+{
+  struct change_node *change = apr_hash_get(eb->changes, relpath,
+                                            APR_HASH_KEY_STRING);
+  apr_array_header_t *action_list;
+
+  if (change != NULL)
+    return change;
+
+  /* Shift RELPATH into the proper pool.  */
+  relpath = apr_pstrdup(eb->edit_pool, relpath);
+
+  /* Investigate whether there is an action in PATHS. Any presence there
+     will determine whether we need to update PATH_ORDER.  */
+  action_list = apr_hash_get(eb->paths, relpath, APR_HASH_KEY_STRING);
+  if (action_list == NULL)
+    {
+      /* Store an empty ACTION_LIST into PATHS.  */
+      action_list = apr_array_make(eb->edit_pool, 1,
+                                   sizeof(struct path_action *));
+      apr_hash_set(eb->paths, relpath, APR_HASH_KEY_STRING, action_list);
+      APR_ARRAY_PUSH(eb->path_order, const char *) = relpath;
+    }
+
+  /* Return an empty change. Callers will tweak as needed.  */
+  change = apr_pcalloc(eb->edit_pool, sizeof(*change));
+  change->base_revision = SVN_INVALID_REVNUM;
+
+  apr_hash_set(eb->changes, relpath, APR_HASH_KEY_STRING, change);
+
+  return change;
+}
+
+           
 /* Find all the paths which are immediate children of PATH and return their
    basenames in a list. */
 static apr_array_header_t *
@@ -275,12 +338,12 @@ get_children(struct ev2_edit_baton *eb,
 
 
 static svn_error_t *
-process_actions(void *edit_baton,
+process_actions(struct ev2_edit_baton *eb,
                 const char *path,
                 apr_array_header_t *actions,
+                const struct change_node *change,
                 apr_pool_t *scratch_pool)
 {
-  struct ev2_edit_baton *eb = edit_baton;
   apr_hash_t *props = NULL;
   svn_boolean_t need_add = FALSE;
   svn_boolean_t need_delete = FALSE;
@@ -373,26 +436,6 @@ process_actions(void *edit_baton,
               break;
             }
 
-          case ACTION_SET_TEXT:
-            {
-              struct path_checksum_args *pca = action->args;
-
-              /* We can only set text on files. */
-              kind = svn_kind_file;
-
-              SVN_ERR(svn_io_file_checksum2(&checksum, pca->path,
-                                            svn_checksum_sha1, scratch_pool));
-              SVN_ERR(svn_stream_open_readonly(&contents, pca->path,
-                                               scratch_pool, scratch_pool));
-
-              if (!SVN_IS_VALID_REVNUM(text_base_revision))
-                text_base_revision = pca->base_revision;
-              else
-                SVN_ERR_ASSERT(pca->base_revision == text_base_revision);
-
-              break;
-            }
-
           case ACTION_COPY:
             {
               struct copy_args *c_args = action->args;
@@ -419,6 +462,23 @@ process_actions(void *edit_baton,
 
           default:
             SVN_ERR_MALFUNCTION();
+        }
+    }
+
+  if (change != NULL)
+    {
+      if (change->contents_abspath != NULL)
+        {
+          /* We can only set text on files. */
+          kind = svn_kind_file;
+
+          /* ### the checksum might be in CHANGE->CHECKSUM  */
+          SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
+                                        svn_checksum_sha1, scratch_pool));
+          SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
+                                           scratch_pool, scratch_pool));
+
+          text_base_revision = change->base_revision;
         }
     }
 
@@ -486,10 +546,9 @@ process_actions(void *edit_baton,
 }
 
 static svn_error_t *
-run_ev2_actions(void *edit_baton,
+run_ev2_actions(struct ev2_edit_baton *eb,
                 apr_pool_t *scratch_pool)
 {
-  struct ev2_edit_baton *eb = edit_baton;
   apr_pool_t *iterpool;
 
   iterpool = svn_pool_create(scratch_pool);
@@ -502,9 +561,12 @@ run_ev2_actions(void *edit_baton,
                                        const char *);
       apr_array_header_t *actions = apr_hash_get(eb->paths, path,
                                                  APR_HASH_KEY_STRING);
+      struct change_node *change = apr_hash_get(eb->changes, path,
+                                                APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(process_actions(edit_baton, path, actions, iterpool));
+
+      SVN_ERR(process_actions(eb, path, actions, change, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -799,11 +861,14 @@ ev2_apply_textdelta(void *file_baton,
   struct ev2_file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->eb->edit_pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
+  struct change_node *change;
   svn_stream_t *target;
-  struct path_checksum_args *pca = apr_pcalloc(fb->eb->edit_pool,
-                                               sizeof(*pca));
 
-  pca->base_revision = fb->base_revision;
+  change = locate_change(fb->eb, fb->path);
+  SVN_ERR_ASSERT(change->contents_abspath == NULL);
+  SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->base_revision)
+                 || change->base_revision == fb->base_revision);
+  change->base_revision = fb->base_revision;
 
   if (! fb->delta_base)
     hb->source = svn_stream_empty(handler_pool);
@@ -811,7 +876,7 @@ ev2_apply_textdelta(void *file_baton,
     SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
                                      result_pool));
 
-  SVN_ERR(svn_stream_open_unique(&target, &pca->path, NULL,
+  SVN_ERR(svn_stream_open_unique(&target, &change->contents_abspath, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->eb->edit_pool, result_pool));
 
@@ -824,8 +889,6 @@ ev2_apply_textdelta(void *file_baton,
 
   *handler_baton = hb;
   *handler = window_handler;
-
-  SVN_ERR(add_action(fb->eb, fb->path, ACTION_SET_TEXT, pca));
 
   return SVN_NO_ERROR;
 }
@@ -960,6 +1023,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   struct ev2_edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
 
   eb->editor = editor;
+  eb->changes = apr_hash_make(pool);
   eb->paths = apr_hash_make(pool);
   eb->path_order = apr_array_make(pool, 1, sizeof(const char *));
   eb->edit_pool = pool;
@@ -982,10 +1046,9 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   return SVN_NO_ERROR;
 }
 
-
 
-
-
+/* ### note the similarity to struct change_node. these structures will
+   ### be combined in the future.  */
 struct operation {
   enum {
     OP_OPEN,
