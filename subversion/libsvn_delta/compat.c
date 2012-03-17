@@ -31,7 +31,7 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
-
+
 struct file_rev_handler_wrapper_baton {
   void *baton;
   svn_file_rev_handler_old_t handler;
@@ -300,7 +300,46 @@ locate_change(struct ev2_edit_baton *eb,
   return change;
 }
 
-           
+
+/* ### rejigger this. the caller typically needs CHANGE before calling this
+   ### function, in order to set BASE_REVISION. thus, we can take it as a
+   ### input parameter.  */
+static svn_error_t *
+prepare_propedit(struct change_node **change,
+                 struct ev2_edit_baton *eb,
+                 const char *relpath,
+                 apr_pool_t *scratch_pool)
+{
+  *change = locate_change(eb, relpath);
+
+  if ((*change)->props != NULL)
+    return SVN_NO_ERROR;
+
+  /* Fetch the original set of properties. These will be edited by the
+     caller to create the new/target set of properties.
+
+     If this is a copied/moved now, then the original properties come
+     from there. If the node has been added, it starts with empty props.
+     Otherwise, we get the properties from BASE.  */
+
+  if ((*change)->copyfrom_path)
+    SVN_ERR(eb->fetch_props_func(&(*change)->props,
+                                 eb->fetch_props_baton,
+                                 (*change)->copyfrom_path,
+                                 (*change)->copyfrom_rev,
+                                 eb->edit_pool, scratch_pool));
+  else if ((*change)->action == RESTRUCTURE_ADD)
+    (*change)->props = apr_hash_make(eb->edit_pool);
+  else
+    SVN_ERR(eb->fetch_props_func(&(*change)->props,
+                                 eb->fetch_props_baton,
+                                 relpath, (*change)->base_revision,
+                                 eb->edit_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Find all the paths which are immediate children of PATH and return their
    basenames in a list. */
 static apr_array_header_t *
@@ -480,6 +519,14 @@ process_actions(struct ev2_edit_baton *eb,
 
           text_base_revision = change->base_revision;
         }
+
+      if (change->props != NULL)
+        {
+          /* ### we know it is just a directory for now  */
+          kind = svn_kind_dir;
+          props = change->props;
+          props_base_revision = change->base_revision;
+        }
     }
 
   /* We've now got a wholistic view of what has happened to this node,
@@ -616,9 +663,20 @@ ev2_delete_entry(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_revnum_t *revnum = apr_palloc(pb->eb->edit_pool, sizeof(*revnum));
+  struct change_node *change = locate_change(pb->eb, path);
 
   *revnum = revision;
   SVN_ERR(add_action(pb->eb, path, ACTION_DELETE, revnum));
+
+  /* ### note: cannot switch to CHANGES just yet. the action loop needs
+     ### to see a delete action, and set NEED_DELETE. that is used for
+     ### the file properties. once fileprops are converted, then we
+     ### can fully switch over.  */
+
+  /* ### assert that RESTRUCTURE is NONE?  */
+  change->action = RESTRUCTURE_DELETE;
+
+  /* ### anything else to do in CHANGE? set BASE_REVISION?  */
 
   return SVN_NO_ERROR;
 }
@@ -633,6 +691,10 @@ ev2_add_directory(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   struct ev2_dir_baton *cb = apr_pcalloc(result_pool, sizeof(*cb));
+  struct change_node *change = locate_change(pb->eb, path);
+
+  /* ### assert that RESTRUCTURE is NONE or DELETE?  */
+  change->action = RESTRUCTURE_ADD;
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, path);
@@ -666,6 +728,9 @@ ev2_add_directory(const char *path,
 
       cb->copyfrom_path = args->copyfrom_path;
       cb->copyfrom_rev = args->copyfrom_rev;
+
+      change->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
+      change->copyfrom_rev = copyfrom_revision;
     }
 
   return SVN_NO_ERROR;
@@ -706,14 +771,21 @@ ev2_change_dir_prop(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *db = dir_baton;
-  struct prop_args *p_args = apr_palloc(db->eb->edit_pool, sizeof(*p_args));
+  struct change_node *change;
 
-  p_args->name = apr_pstrdup(db->eb->edit_pool, name);
-  p_args->value = value ? svn_string_dup(value, db->eb->edit_pool) : NULL;
-  p_args->base_revision = db->base_revision;
-  p_args->kind = svn_kind_dir;
+  change = locate_change(db->eb, db->path);
 
-  SVN_ERR(add_action(db->eb, db->path, ACTION_PROPSET, p_args));
+  SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->base_revision)
+                 || change->base_revision == db->base_revision);
+  change->base_revision = db->base_revision;
+
+  SVN_ERR(prepare_propedit(&change, db->eb, db->path, scratch_pool));
+  if (value == NULL)
+    apr_hash_set(change->props, name, APR_HASH_KEY_STRING, NULL);
+  else
+    apr_hash_set(change->props,
+                 apr_pstrdup(db->eb->edit_pool, name), APR_HASH_KEY_STRING,
+                 svn_string_dup(value, db->eb->edit_pool));
 
   return SVN_NO_ERROR;
 }
@@ -749,6 +821,10 @@ ev2_add_file(const char *path,
 {
   struct ev2_file_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
+  struct change_node *change = locate_change(pb->eb, path);
+
+  /* ### assert that RESTRUCTURE is NONE or DELETE?  */
+  change->action = RESTRUCTURE_ADD;
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, path);
@@ -779,6 +855,9 @@ ev2_add_file(const char *path,
       args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
       args->copyfrom_rev = copyfrom_revision;
       SVN_ERR(add_action(pb->eb, path, ACTION_COPY, args));
+
+      change->copyfrom_path = apr_pstrdup(fb->eb->edit_pool, copyfrom_path);
+      change->copyfrom_rev = copyfrom_revision;
     }
 
   return SVN_NO_ERROR;
