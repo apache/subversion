@@ -20,6 +20,7 @@
 import os
 import shutil
 import sys
+import threading
 
 # Our testing module
 import svntest
@@ -951,6 +952,45 @@ def verify_with_invalid_revprops(sbox):
     raise svntest.Failure
 
 
+def mergeinfo_race(sbox):
+  "concurrent mergeinfo commits invalidate pred-count"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  ## Create wc2.
+  svntest.main.run_svn(None, 'checkout', '-q', sbox.repo_url, wc2_dir)
+
+  ## Some random edits.
+  svntest.main.run_svn(None, 'mkdir', os.path.join(wc_dir, 'd1'))
+  svntest.main.run_svn(None, 'mkdir', os.path.join(wc2_dir, 'd2'))
+
+  ## Set random mergeinfo properties.
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/P:42', os.path.join(wc_dir, 'A'))
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/Q:42', os.path.join(wc2_dir, 'iota'))
+
+  def makethread(some_wc_dir):
+    def worker():
+      svntest.main.run_svn(None, 'commit', '-mm', some_wc_dir)
+    return worker
+
+  t1 = threading.Thread(None, makethread(wc_dir))
+  t2 = threading.Thread(None, makethread(wc2_dir))
+
+  # t2 will trigger the issue #4129 sanity check in fs_fs.c
+  t1.start(); t2.start();
+
+  t1.join(); t2.join();
+
+  # Crude attempt to make sure everything worked.
+  # TODO: better way to catch exceptions in the thread
+  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != '3':
+    raise svntest.Failure("one or both commits failed")
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -978,6 +1018,8 @@ test_list = [ None,
               create_in_repo_subdir,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
+              SkipUnless(mergeinfo_race,
+                         svntest.main.is_threaded_python),
              ]
 
 if __name__ == '__main__':
