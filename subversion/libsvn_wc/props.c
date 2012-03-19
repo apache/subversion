@@ -1988,7 +1988,7 @@ svn_wc_prop_get2(const svn_string_t **value,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  enum svn_prop_kind kind = svn_property_kind(NULL, name);
+  enum svn_prop_kind kind = svn_property_kind2(name);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2014,7 +2014,7 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *scratch_pool)
 {
   apr_hash_t *prophash = NULL;
-  enum svn_prop_kind kind = svn_property_kind(NULL, name);
+  enum svn_prop_kind kind = svn_property_kind2(name);
   svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -2429,7 +2429,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
 {
-  enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
+  enum svn_prop_kind prop_kind = svn_property_kind2(name);
   svn_kind_t kind;
   const char *dir_abspath;
 
@@ -2609,7 +2609,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 svn_boolean_t
 svn_wc_is_normal_prop(const char *name)
 {
-  enum svn_prop_kind kind = svn_property_kind(NULL, name);
+  enum svn_prop_kind kind = svn_property_kind2(name);
   return (kind == svn_prop_regular_kind);
 }
 
@@ -2617,7 +2617,7 @@ svn_wc_is_normal_prop(const char *name)
 svn_boolean_t
 svn_wc_is_wc_prop(const char *name)
 {
-  enum svn_prop_kind kind = svn_property_kind(NULL, name);
+  enum svn_prop_kind kind = svn_property_kind2(name);
   return (kind == svn_prop_wc_kind);
 }
 
@@ -2625,7 +2625,7 @@ svn_wc_is_wc_prop(const char *name)
 svn_boolean_t
 svn_wc_is_entry_prop(const char *name)
 {
-  enum svn_prop_kind kind = svn_property_kind(NULL, name);
+  enum svn_prop_kind kind = svn_property_kind2(name);
   return (kind == svn_prop_entry_kind);
 }
 
