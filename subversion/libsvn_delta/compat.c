@@ -190,14 +190,6 @@ struct path_action
   void *args;
 };
 
-struct prop_args
-{
-  const char *name;
-  svn_revnum_t base_revision;
-  const svn_string_t *value;
-  svn_kind_t kind;
-};
-
 struct copy_args
 {
   const char *copyfrom_path;
@@ -301,40 +293,54 @@ locate_change(struct ev2_edit_baton *eb,
 }
 
 
-/* ### rejigger this. the caller typically needs CHANGE before calling this
-   ### function, in order to set BASE_REVISION. thus, we can take it as a
-   ### input parameter.  */
 static svn_error_t *
-prepare_propedit(struct change_node **change,
-                 struct ev2_edit_baton *eb,
-                 const char *relpath,
-                 apr_pool_t *scratch_pool)
+apply_propedit(struct ev2_edit_baton *eb,
+               const char *relpath,
+               svn_kind_t kind,
+               svn_revnum_t base_revision,
+               const char *name,
+               const svn_string_t *value,
+               apr_pool_t *scratch_pool)
 {
-  *change = locate_change(eb, relpath);
+  struct change_node *change = locate_change(eb, relpath);
 
-  if ((*change)->props != NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR_ASSERT(change->kind == svn_kind_unknown || change->kind == kind);
+  change->kind = kind;
 
-  /* Fetch the original set of properties. These will be edited by the
-     caller to create the new/target set of properties.
+  SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->base_revision)
+                 || change->base_revision == base_revision);
+  change->base_revision = base_revision;
 
-     If this is a copied/moved now, then the original properties come
-     from there. If the node has been added, it starts with empty props.
-     Otherwise, we get the properties from BASE.  */
+  if (change->props == NULL)
+    {
+      /* Fetch the original set of properties. We'll apply edits to create
+         the new/target set of properties.
 
-  if ((*change)->copyfrom_path)
-    SVN_ERR(eb->fetch_props_func(&(*change)->props,
-                                 eb->fetch_props_baton,
-                                 (*change)->copyfrom_path,
-                                 (*change)->copyfrom_rev,
-                                 eb->edit_pool, scratch_pool));
-  else if ((*change)->action == RESTRUCTURE_ADD)
-    (*change)->props = apr_hash_make(eb->edit_pool);
+         If this is a copied/moved now, then the original properties come
+         from there. If the node has been added, it starts with empty props.
+         Otherwise, we get the properties from BASE.  */
+
+      if (change->copyfrom_path)
+        SVN_ERR(eb->fetch_props_func(&change->props,
+                                     eb->fetch_props_baton,
+                                     change->copyfrom_path,
+                                     change->copyfrom_rev,
+                                     eb->edit_pool, scratch_pool));
+      else if (change->action == RESTRUCTURE_ADD)
+        change->props = apr_hash_make(eb->edit_pool);
+      else
+        SVN_ERR(eb->fetch_props_func(&change->props,
+                                     eb->fetch_props_baton,
+                                     relpath, base_revision,
+                                     eb->edit_pool, scratch_pool));
+    }
+
+  if (value == NULL)
+    apr_hash_set(change->props, name, APR_HASH_KEY_STRING, NULL);
   else
-    SVN_ERR(eb->fetch_props_func(&(*change)->props,
-                                 eb->fetch_props_baton,
-                                 relpath, (*change)->base_revision,
-                                 eb->edit_pool, scratch_pool));
+    apr_hash_set(change->props,
+                 apr_pstrdup(eb->edit_pool, name), APR_HASH_KEY_STRING,
+                 svn_string_dup(value, eb->edit_pool));
 
   return SVN_NO_ERROR;
 }
@@ -413,42 +419,6 @@ process_actions(struct ev2_edit_baton *eb,
 
       switch (action->action)
         {
-          case ACTION_PROPSET:
-            {
-              const struct prop_args *p_args = action->args;
-
-              kind = p_args->kind;
-
-              if (!SVN_IS_VALID_REVNUM(props_base_revision))
-                props_base_revision = p_args->base_revision;
-              else
-                SVN_ERR_ASSERT(p_args->base_revision == props_base_revision);
-
-              if (!props)
-                {
-                  /* Fetch the original props. We can then apply each of
-                     the modifications to it.  */
-                  if (need_delete && need_add)
-                    props = apr_hash_make(scratch_pool);
-                  else if (need_copy)
-                    SVN_ERR(eb->fetch_props_func(&props,
-                                                 eb->fetch_props_baton,
-                                                 copyfrom_path,
-                                                 copyfrom_rev,
-                                                 scratch_pool, scratch_pool));
-                  else
-                    SVN_ERR(eb->fetch_props_func(&props,
-                                                 eb->fetch_props_baton,
-                                                 path, props_base_revision,
-                                                 scratch_pool, scratch_pool));
-                }
-
-              /* Note that p_args->value may be NULL.  */
-              apr_hash_set(props, p_args->name, APR_HASH_KEY_STRING,
-                           p_args->value);
-              break;
-            }
-
           case ACTION_DELETE:
             {
               delete_revnum = *((svn_revnum_t *) action->args);
@@ -509,6 +479,7 @@ process_actions(struct ev2_edit_baton *eb,
       if (change->contents_abspath != NULL)
         {
           /* We can only set text on files. */
+          /* ### validate we aren't overwriting KIND?  */
           kind = svn_kind_file;
 
           /* ### the checksum might be in CHANGE->CHECKSUM  */
@@ -522,8 +493,8 @@ process_actions(struct ev2_edit_baton *eb,
 
       if (change->props != NULL)
         {
-          /* ### we know it is just a directory for now  */
-          kind = svn_kind_dir;
+          /* ### validate we aren't overwriting KIND?  */
+          kind = change->kind;
           props = change->props;
           props_base_revision = change->base_revision;
         }
@@ -676,7 +647,11 @@ ev2_delete_entry(const char *path,
   /* ### assert that RESTRUCTURE is NONE?  */
   change->action = RESTRUCTURE_DELETE;
 
-  /* ### anything else to do in CHANGE? set BASE_REVISION?  */
+#if 0
+  SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->base_revision)
+                 || change->base_revision == revision);
+  change->base_revision = revision;
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -771,21 +746,9 @@ ev2_change_dir_prop(void *dir_baton,
                     apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *db = dir_baton;
-  struct change_node *change;
 
-  change = locate_change(db->eb, db->path);
-
-  SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->base_revision)
-                 || change->base_revision == db->base_revision);
-  change->base_revision = db->base_revision;
-
-  SVN_ERR(prepare_propedit(&change, db->eb, db->path, scratch_pool));
-  if (value == NULL)
-    apr_hash_set(change->props, name, APR_HASH_KEY_STRING, NULL);
-  else
-    apr_hash_set(change->props,
-                 apr_pstrdup(db->eb->edit_pool, name), APR_HASH_KEY_STRING,
-                 svn_string_dup(value, db->eb->edit_pool));
+  SVN_ERR(apply_propedit(db->eb, db->path, svn_kind_dir, db->base_revision,
+                         name, value, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -979,7 +942,6 @@ ev2_change_file_prop(void *file_baton,
                      apr_pool_t *scratch_pool)
 {
   struct ev2_file_baton *fb = file_baton;
-  struct prop_args *p_args = apr_palloc(fb->eb->edit_pool, sizeof(*p_args));
 
   if (!strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) && value == NULL)
     {
@@ -988,14 +950,8 @@ ev2_change_file_prop(void *file_baton,
       SVN_ERR(add_action(fb->eb, fb->path, ACTION_UNLOCK, NULL));
     }
 
-  /* We also pass through the deletion, since there may actually exist such
-     a property we want to get rid of.   In the worse case, this is a no-op. */
-  p_args->name = apr_pstrdup(fb->eb->edit_pool, name);
-  p_args->value = value ? svn_string_dup(value, fb->eb->edit_pool) : NULL;
-  p_args->base_revision = fb->base_revision;
-  p_args->kind = svn_kind_file;
-
-  SVN_ERR(add_action(fb->eb, fb->path, ACTION_PROPSET, p_args));
+  SVN_ERR(apply_propedit(fb->eb, fb->path, svn_kind_file, fb->base_revision,
+                         name, value, scratch_pool));
 
   return SVN_NO_ERROR;
 }
