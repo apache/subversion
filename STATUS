@@ -99,6 +99,15 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
+ *  r1302399, r1302539, r1302591, r1302613
+   Fix issue 4129, wrong predecessor count in FSFS revision files
+   Justification:
+     Repository corruption.
+   Branch:
+     ^/subversion/1.6.x-issue4129
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
