@@ -1142,6 +1142,8 @@ get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 }
 
 
+/* Teach node-revision TARGET_ID that node-revision SOURCE_ID is its
+   predecessor.  TARGET_PATH is used for error messages only. */
 static svn_error_t *
 update_ancestry(svn_fs_t *fs,
                 const svn_fs_id_t *source_id,
