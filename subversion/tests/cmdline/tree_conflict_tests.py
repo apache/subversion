@@ -1216,7 +1216,7 @@ def actual_only_node_behaviour(sbox):
                      "export", foo_path, sbox.get_tempname())
   # import
   expected_stdout = None
-  expected_stderr = ".*foo.*does not exist.*"
+  expected_stderr = ".*(foo.*does not exist|Can't stat.*foo).*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "import", '-m', svntest.main.make_log_msg(),
                      foo_path, sbox.repo_url + '/foo_imported')
