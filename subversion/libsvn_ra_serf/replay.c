@@ -40,6 +40,8 @@
 #include "svn_path.h"
 #include "svn_private_config.h"
 
+#include "private/svn_string_private.h"
+
 #include "ra_serf.h"
 
 
@@ -83,8 +85,7 @@ typedef struct prop_info_t {
   const char *name;
   svn_boolean_t del_prop;
 
-  const char *data;
-  apr_size_t len;
+  svn_stringbuf_t *prop_value;
 
   replay_info_t *parent;
 } prop_info_t;
@@ -165,6 +166,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       info->pool = replay_ctx->dst_rev_pool;
       info->parent = parser->state->private;
+      info->prop_value = svn_stringbuf_create_empty(info->pool);
 
       parser->state->private = info;
     }
@@ -533,15 +535,14 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          svn_string_t tmp_prop;
+          const svn_string_t *morph;
 
-          tmp_prop.data = info->data;
-          tmp_prop.len = info->len;
+          morph = svn_stringbuf__morph_into_string(info->prop_value);
 
           if (strcmp(name.name, "change-file-prop") == 0)
-            prop_val = svn_base64_decode_string(&tmp_prop, ctx->file_pool);
+            prop_val = svn_base64_decode_string(morph, ctx->file_pool);
           else
-            prop_val = svn_base64_decode_string(&tmp_prop, ctx->dst_rev_pool);
+            prop_val = svn_base64_decode_string(morph, ctx->dst_rev_pool);
         }
 
       SVN_ERR(info->change(info->parent->baton, info->name, prop_val,
@@ -582,8 +583,7 @@ cdata_replay(svn_ra_serf__xml_parser_t *parser,
     {
       prop_info_t *info = parser->state->private;
 
-      svn_ra_serf__expand_string(&info->data, &info->len,
-                                 data, len, parser->state->pool);
+      svn_stringbuf_appendbytes(info->prop_value, data, len);
     }
 
   return SVN_NO_ERROR;
