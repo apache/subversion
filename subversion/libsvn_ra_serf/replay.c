@@ -477,8 +477,6 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
   replay_context_t *ctx = userData;
   replay_state_e state;
 
-  UNUSED_CTX(ctx);
-
   state = parser->state->current_state;
 
   if (state == REPORT &&
@@ -845,7 +843,26 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
       /* Run the serf loop, send outgoing and process incoming requests.
          This request will block when there are no more requests to send or
-         responses to receive, so we have to be careful on our bookkeeping. */
+         responses to receive, so we have to be careful on our bookkeeping.
+
+         ### we should probably adjust this timeout. if we get (say) 3
+         ### requests completed, then we want to exit immediately rather
+         ### than block for a few seconds. that will allow us to clear up
+         ### those 3 requests. if we have queued all of our revisions,
+         ### then we may want to block until timeout since we really don't
+         ### have much work other than destroying memory. (though that
+         ### is important, as we could end up with 50 src_rev_pool pools)
+
+         ### idea: when a revision is marked DONE, we can probably destroy
+         ### most of the memory. that will reduce pressue to have serf
+         ### return control to us, to complete the major memory disposal.
+
+         ### theoretically, we should use an iterpool here, but it turns
+         ### out that serf doesn't even use the pool param. if we grow
+         ### an iterpool in this loop for other purposes, then yeah: go
+         ### ahead and apply it here, too, in case serf eventually uses
+         ### that parameter.
+      */
       status = serf_context_run(session->context, session->timeout,
                                 pool);
 
