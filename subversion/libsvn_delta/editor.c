@@ -55,6 +55,8 @@ struct svn_editor_t
   apr_pool_t *scratch_pool;
 
 #ifdef ENABLE_ORDERING_CHECK
+  svn_boolean_t within_callback;
+
   apr_hash_t *pending_incomplete_children;
   apr_hash_t *completed_nodes;
   svn_boolean_t finished;
@@ -63,7 +65,16 @@ struct svn_editor_t
 #endif
 };
 
+
 #ifdef ENABLE_ORDERING_CHECK
+
+#define START_CALLBACK(editor)                       \
+  do {                                               \
+    svn_editor_t *editor__tmp_e = (editor);          \
+    SVN_ERR_ASSERT(!editor__tmp_e->within_callback); \
+    editor__tmp_e->within_callback = TRUE;           \
+  } while (0)
+#define END_CALLBACK(editor) ((editor)->within_callback = FALSE)
 
 /* Marker to indicate no further changes are allowed on this node.  */
 static const int marker_done;
@@ -160,6 +171,9 @@ check_unknown_child(const svn_editor_t *editor,
 /* Be wary with the definition of these macros so that we don't
    end up with "statement with no effect" warnings. Obviously, this
    depends upon particular usage, which is easy to verify.  */
+
+#define START_CALLBACK(editor)  /* empty */
+#define END_CALLBACK(editor)  /* empty */
 
 #define MARK_FINISHED(editor)  /* empty */
 #define SHOULD_NOT_BE_FINISHED(editor)  /* empty */
@@ -364,6 +378,22 @@ svn_editor_setcb_many(svn_editor_t *editor,
 }
 
 
+static svn_error_t *
+check_cancel(svn_editor_t *editor)
+{
+  svn_error_t *err = NULL;
+
+  if (editor->cancel_func)
+    {
+      START_CALLBACK(editor);
+      err = editor->cancel_func(editor->cancel_baton);
+      END_CALLBACK(editor);
+    }
+
+  return err;
+}
+
+
 svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
                          const char *relpath,
@@ -379,13 +409,16 @@ svn_editor_add_directory(svn_editor_t *editor,
   SHOULD_ALLOW_ADD(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_directory)
-    err = editor->funcs.cb_add_directory(editor->baton, relpath, children,
-                                         props, replaces_rev,
-                                         editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_directory(editor->baton, relpath, children,
+                                           props, replaces_rev,
+                                           editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_ADDED_DIR(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
@@ -428,13 +461,16 @@ svn_editor_add_file(svn_editor_t *editor,
   SHOULD_ALLOW_ADD(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_file)
-    err = editor->funcs.cb_add_file(editor->baton, relpath,
-                                    checksum, contents, props,
-                                    replaces_rev, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_file(editor->baton, relpath,
+                                      checksum, contents, props,
+                                      replaces_rev, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
@@ -458,12 +494,15 @@ svn_editor_add_symlink(svn_editor_t *editor,
   SHOULD_ALLOW_ADD(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_symlink)
-    err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
-                                       replaces_rev, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
+                                         replaces_rev, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
@@ -485,12 +524,15 @@ svn_editor_add_absent(svn_editor_t *editor,
   SHOULD_ALLOW_ADD(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_add_absent)
-    err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
-                                      replaces_rev, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
+                                        replaces_rev, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
   CLEAR_INCOMPLETE(editor, relpath);
@@ -512,13 +554,16 @@ svn_editor_alter_directory(svn_editor_t *editor,
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_alter_directory)
-    err = editor->funcs.cb_alter_directory(editor->baton,
-                                           relpath, revision, props,
-                                           editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_alter_directory(editor->baton,
+                                             relpath, revision, props,
+                                             editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
 
@@ -545,14 +590,17 @@ svn_editor_alter_file(svn_editor_t *editor,
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_alter_file)
-    err = editor->funcs.cb_alter_file(editor->baton,
-                                      relpath, revision, props,
-                                      checksum, contents,
-                                      editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_alter_file(editor->baton,
+                                        relpath, revision, props,
+                                        checksum, contents,
+                                        editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
 
@@ -574,14 +622,17 @@ svn_editor_alter_symlink(svn_editor_t *editor,
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_alter_symlink)
-    err = editor->funcs.cb_alter_symlink(editor->baton,
-                                         relpath, revision, props,
-                                         target,
-                                         editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_alter_symlink(editor->baton,
+                                           relpath, revision, props,
+                                           target,
+                                           editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
 
@@ -600,12 +651,15 @@ svn_editor_delete(svn_editor_t *editor,
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_delete)
-    err = editor->funcs.cb_delete(editor->baton, relpath, revision,
-                                  editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_delete(editor->baton, relpath, revision,
+                                    editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_COMPLETED(editor, relpath);
 
@@ -626,13 +680,16 @@ svn_editor_copy(svn_editor_t *editor,
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_copy)
-    err = editor->funcs.cb_copy(editor->baton, src_relpath, src_revision,
-                                dst_relpath, replaces_rev,
-                                editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_copy(editor->baton, src_relpath, src_revision,
+                                  dst_relpath, replaces_rev,
+                                  editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_ALLOW_ALTER(editor, dst_relpath);
   CLEAR_INCOMPLETE(editor, dst_relpath);
@@ -655,13 +712,16 @@ svn_editor_move(svn_editor_t *editor,
   SHOULD_NOT_BE_COMPLETED(editor, src_relpath);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_move)
-    err = editor->funcs.cb_move(editor->baton, src_relpath, src_revision,
-                                dst_relpath, replaces_rev,
-                                editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_move(editor->baton, src_relpath, src_revision,
+                                  dst_relpath, replaces_rev,
+                                  editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_ALLOW_ADD(editor, src_relpath);
   MARK_ALLOW_ALTER(editor, dst_relpath);
@@ -691,12 +751,15 @@ svn_editor_rotate(svn_editor_t *editor,
   }
 #endif
 
-  if (editor->cancel_func)
-    SVN_ERR(editor->cancel_func(editor->cancel_baton));
+  SVN_ERR(check_cancel(editor));
 
   if (editor->funcs.cb_rotate)
-    err = editor->funcs.cb_rotate(editor->baton, relpaths, revisions,
-                                  editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_rotate(editor->baton, relpaths, revisions,
+                                    editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
 #ifdef ENABLE_ORDERING_CHECK
   {
@@ -725,7 +788,11 @@ svn_editor_complete(svn_editor_t *editor)
 #endif
 
   if (editor->funcs.cb_complete)
-    err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_FINISHED(editor);
 
@@ -742,7 +809,11 @@ svn_editor_abort(svn_editor_t *editor)
   SHOULD_NOT_BE_FINISHED(editor);
 
   if (editor->funcs.cb_abort)
-    err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
+    {
+      START_CALLBACK(editor);
+      err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
+      END_CALLBACK(editor);
+    }
 
   MARK_FINISHED(editor);
 
