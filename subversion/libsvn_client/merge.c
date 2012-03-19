@@ -10202,8 +10202,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
    TARGET->abspath is the absolute working copy path of the reintegrate
    merge.
 
-   SOURCE_REPOS_REL_PATH is the path of the
-   reintegrate source relative to the root of the repository.
+   SOURCE_LOC is the reintegrate source.
 
    SUBTREES_WITH_MERGEINFO is a hash of (const char *) absolute paths mapped
    to (svn_mergeinfo_t *) mergeinfo values for each working copy path with
@@ -10211,16 +10210,14 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
    paths, not the mergeinfo.
 
    TARGET->loc.rev is the working revision the entire WC tree rooted at
-   TARGET is at.  SOURCE_REV is the peg revision of the
-   reintegrate source.
+   TARGET is at.
 
    Populate *UNMERGED_TO_SOURCE_CATALOG with the mergeinfo describing what
-   parts of TARGET->loc have not been merged to
-   SOURCE_REPOS_REL_PATH@SOURCE_REV, up to the youngest revision ever merged
-   from the TARGET->abspath to the source if such exists, see doc string for
-   find_unmerged_mergeinfo().
+   parts of TARGET->loc have not been merged to SOURCE_LOC, up to the
+   youngest revision ever merged from the TARGET->abspath to the source if
+   such exists, see doc string for find_unmerged_mergeinfo().
 
-   SOURCE_RA_SESSION is a session opened to the SOURCE_REPOS_REL_PATH
+   SOURCE_RA_SESSION is a session opened to the SOURCE_LOC
    and TARGET_RA_SESSION is open to TARGET->loc.url.
 
    *URL_LEFT, *MERGED_TO_SOURCE_CATALOG , and *UNMERGED_TO_SOURCE_CATALOG are
@@ -10233,9 +10230,7 @@ calculate_left_hand_side(const char **url_left,
                          svn_mergeinfo_t *unmerged_to_source_catalog,
                          const merge_target_t *target,
                          apr_hash_t *subtrees_with_mergeinfo,
-                         const char *source_repos_rel_path,
-                         const char *source_repos_root,
-                         svn_revnum_t source_rev,
+                         const repo_location_t *source_loc,
                          svn_ra_session_t *source_ra_session,
                          svn_ra_session_t *target_ra_session,
                          svn_client_ctx_t *ctx,
@@ -10252,7 +10247,7 @@ calculate_left_hand_side(const char **url_left,
   svn_revnum_t youngest_merged_rev;
   const char *yc_ancestor_url;
   svn_revnum_t yc_ancestor_rev;
-  const char *source_url;
+  const char *source_repos_rel_path;
 
   /* Initialize our return variables. */
   *url_left = NULL;
@@ -10305,24 +10300,21 @@ calculate_left_hand_side(const char **url_left,
   /* Check that SOURCE_URL@SOURCE_REV and TARGET_URL@TARGET_REV are
      actually related, we can't reintegrate if they are not.  Also
      get an initial value for YC_ANCESTOR_REV. */
-  source_url = svn_path_url_add_component2(source_repos_root,
-                                           source_repos_rel_path,
-                                           iterpool);
   SVN_ERR(svn_client__get_youngest_common_ancestor(NULL, &yc_ancestor_url,
                                                    &yc_ancestor_rev,
-                                                   source_url, source_rev,
+                                                   source_loc->url, source_loc->rev,
                                                    target->loc.url, target->loc.rev,
                                                    ctx, iterpool));
   if (!(yc_ancestor_url && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
-                               "'%s@%ld'"), source_url, source_rev,
+                               "'%s@%ld'"), source_loc->url, source_loc->rev,
                              target->loc.url, target->loc.rev);
 
   /* If the source revision is the same as the youngest common
      revision, then there can't possibly be any unmerged revisions
      that we need to apply to target. */
-  if (source_rev == yc_ancestor_rev)
+  if (source_loc->rev == yc_ancestor_rev)
     {
       svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
@@ -10332,10 +10324,12 @@ calculate_left_hand_side(const char **url_left,
      with differing explicit mergeinfo. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *) = "";
   SVN_ERR(svn_ra_get_mergeinfo(source_ra_session, &mergeinfo_catalog,
-                               source_repos_rel_path_as_array, source_rev,
+                               source_repos_rel_path_as_array, source_loc->rev,
                                svn_mergeinfo_inherited,
                                TRUE, iterpool));
 
+  source_repos_rel_path = svn_uri_skip_ancestor(source_loc->repo->url,
+                                                source_loc->url, scratch_pool);
   if (mergeinfo_catalog)
     SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(&mergeinfo_catalog,
                                                  mergeinfo_catalog,
@@ -10358,7 +10352,7 @@ calculate_left_hand_side(const char **url_left,
                                   target_history_hash,
                                   source_repos_rel_path,
                                   target,
-                                  source_rev,
+                                  source_loc->rev,
                                   source_ra_session,
                                   target_ra_session,
                                   ctx,
@@ -10416,10 +10410,9 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  url_uuid_t source_repos_root;
   svn_ra_session_t *target_ra_session;
   svn_ra_session_t *source_ra_session;
-  const char *source_url, *source_repos_rel_path, *target_repos_rel_path;
+  repo_location_t source_loc;
   const char *yc_ancestor_relpath;
   svn_revnum_t yc_ancestor_rev;
   merge_source_t source;
@@ -10436,23 +10429,20 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
                              svn_dirent_local_style(target->abspath,
                                                     scratch_pool));
 
-  /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path2(&source_url, source_path_or_url, ctx,
-                                    scratch_pool, scratch_pool));
-  if (! source_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(source_path_or_url,
-                                                    scratch_pool));
+  /* Open source session and determine its repository root. */
+  SVN_ERR(svn_client__ra_session_from_path(
+            &source_ra_session, &source_loc.rev, &source_loc.url,
+            source_path_or_url, NULL, source_peg_revision, source_peg_revision,
+            ctx, result_pool));
+  source_loc.repo = apr_palloc(scratch_pool, sizeof(*source_loc.repo));
+  SVN_ERR(svn_ra_get_repos_root2(source_ra_session, &source_loc.repo->url,
+                                 scratch_pool));
+  SVN_ERR(svn_ra_get_uuid2(source_ra_session, &source_loc.repo->uuid,
+                           scratch_pool));
 
-  /* Determine the source's repository root URL. */
-  SVN_ERR(svn_client_get_repos_root(&source_repos_root.url,
-                                    &source_repos_root.uuid, source_url,
-                                    ctx, scratch_pool, scratch_pool));
-
-  /* source_repos_root and target->loc.repo are required to be the same,
+  /* source_loc.repo and target->loc.repo are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
-  SVN_ERR(check_same_repos(&source_repos_root,
+  SVN_ERR(check_same_repos(source_loc.repo,
                            svn_dirent_local_style(source_path_or_url,
                                                   scratch_pool),
                            target->loc.repo,
@@ -10466,16 +10456,9 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
      (with regard to the WC). */
   /* ### Bogus/obsolete comment? */
 
-  source_repos_rel_path = svn_uri_skip_ancestor(target->loc.repo->url,
-                                                source_url, scratch_pool);
-  SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
-                                            ctx->wc_ctx, target->abspath,
-                                            NULL, FALSE, NULL,
-                                            scratch_pool, scratch_pool));
-
   /* Can't reintegrate to or from the root of the repository. */
-  if (svn_path_is_empty(source_repos_rel_path)
-      || svn_path_is_empty(target_repos_rel_path))
+  if (strcmp(source_loc.url, source_loc.repo->url) == 0
+      || strcmp(target->loc.url, target->loc.repo->url) == 0)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("Neither the reintegrate source nor target "
                                "can be the root of the repository"));
@@ -10490,11 +10473,6 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
     err = svn_error_quick_wrap(err, _("Reintegrate merge not possible"));
   SVN_ERR(err);
 
-  /* Open two RA sessions, one to our source and one to our target. */
-  SVN_ERR(svn_client__ra_session_from_path(&source_ra_session, &source.rev2, &source.url2,
-                                           source_url, NULL, source_peg_revision,
-                                           source_peg_revision,
-                                           ctx, result_pool));
   SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, NULL,
                                                target->loc.url,
                                                NULL, NULL, FALSE, FALSE,
@@ -10505,9 +10483,7 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
                                    &unmerged_to_source_mergeinfo_catalog,
                                    target,
                                    subtrees_with_mergeinfo,
-                                   source_repos_rel_path,
-                                   source_repos_root.url,
-                                   source.rev2,
+                                   &source_loc,
                                    source_ra_session,
                                    target_ra_session,
                                    ctx,
@@ -10527,6 +10503,9 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
         *yc_ancestor_rev_p = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
     }
+
+  source.rev2 = source_loc.rev;
+  source.url2 = source_loc.url;
 
   /* If the target was moved after the source was branched from it,
      it is possible that the left URL differs from the target's current
@@ -10553,6 +10532,9 @@ find_reintegrate_merge(svn_ra_session_t **target_ra_session_p,
          target?  If so, make sure we've merged a contiguous
          prefix. */
       svn_mergeinfo_t final_unmerged_catalog = apr_hash_make(scratch_pool);
+      const char *source_repos_rel_path
+        = svn_uri_skip_ancestor(source_loc.repo->url, source_loc.url,
+                                scratch_pool);
 
       SVN_ERR(find_unsynced_ranges(source_repos_rel_path,
                                    yc_ancestor_relpath,
