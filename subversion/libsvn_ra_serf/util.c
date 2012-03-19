@@ -103,75 +103,7 @@ struct svn_ra_serf__pending_t {
    into a temporary file.  */
 #define SPILL_SIZE 1000000
 
-/* See notes/ra-serf-testing.txt for some information on testing this
-   new "paused" feature (aka network pushback).
 
-   Define PBTEST_ACTIVE, if you would like to run the pushback tests.  */
-#undef PBTEST_ACTIVE
-#ifdef PBTEST_ACTIVE
-
-static int pbtest_step = 0;
-
-/* Note: this cannot resolve states 5 and 7.  */
-#define PBTEST_STATE(p) \
-  ((p) == NULL ? 1                                                 \
-               : ((p)->spill == NULL ? ((p)->head == NULL ? 2 : 3) \
-                                     : ((p)->head == NULL ? 6 : 4)))
-
-/* Note: INJECT and COMPLETED are only used for debug output.  */
-typedef struct {
-  svn_boolean_t paused;   /* pause the parser on this step?  */
-  svn_boolean_t inject;   /* inject pending content on this step?  */
-  int when_next;          /* when to move to the next step?  */
-  const char *completed;  /* what test was completed?  */
-} pbtest_desc_t;
-
-static const pbtest_desc_t pbtest_description[] = {
-  { 0 }, /* unused */
-  { TRUE,  FALSE, 3, "1.1" },
-  { TRUE,  FALSE, 3, "1.3" },
-  { FALSE, FALSE, 3, "2.3" },
-  { FALSE, TRUE,  2, "3.3" },  /* WHEN_NEXT is ignored due to INJECT  */
-  { TRUE,  FALSE, 3, "1.2" },
-  { TRUE,  FALSE, 4, NULL  },
-  { TRUE,  FALSE, 4, "1.4" },
-  { FALSE, FALSE, 4, "2.4" },
-  { FALSE, TRUE,  6, "3.4" },  /* WHEN_NEXT is ignored due to INJECT  */
-  { TRUE,  FALSE, 6, "1.6" },
-  { FALSE, FALSE, 6, "2.6" },
-  { FALSE, TRUE,  7, "3.6" },  /* WHEN_NEXT is ignored due to INJECT  */
-  { TRUE,  FALSE, 6, "1.7" },
-  { 0 } /* unused */
-};
-
-#define PBTEST_SET_PAUSED(ctx) \
-  (PBTEST_THIS_REQ(ctx) && pbtest_step < 14                  \
-   ? (ctx)->paused = pbtest_description[pbtest_step].paused  \
-   : FALSE)
-
-#define PBTEST_MAYBE_STEP(ctx, force) maybe_next_step(ctx, force)
-
-#define PBTEST_FORCE_SPILL(ctx) (PBTEST_THIS_REQ(ctx) && pbtest_step == 6)
-
-#define PBTEST_THIS_REQ(ctx) \
-  ((ctx)->response_type != NULL \
-   && strcmp((ctx)->response_type, "update-report") == 0)
-
-#else /* PBTEST_ACTIVE  */
-
-/* Be wary with the definition of these macros so that we don't
-   end up with "statement with no effect" warnings. Obviously, this
-   depends upon particular usage, which is easy to verify.  */
-#define PBTEST_SET_PAUSED(ctx)  /* empty */
-#define PBTEST_MAYBE_STEP(ctx, force)  /* empty */
-
-#define PBTEST_FORCE_SPILL(ctx) FALSE
-#define PBTEST_THIS_REQ(ctx) FALSE
-
-#endif /* PBTEST_ACTIVE  */
-
-
-
 static const apr_uint32_t serf_failure_map[][2] =
 {
   { SERF_SSL_CERT_NOTYETVALID,   SVN_AUTH_SSL_NOTYETVALID },
@@ -1319,54 +1251,6 @@ add_done_item(svn_ra_serf__xml_parser_t *ctx)
 }
 
 
-#ifdef PBTEST_ACTIVE
-
-/* Determine whether we should move to the next step. Print out the
-   transition for debugging purposes. If FORCE is TRUE, then we
-   definitely make a step (injection has completed).  */
-static void
-maybe_next_step(svn_ra_serf__xml_parser_t *parser, svn_boolean_t force)
-{
-  const pbtest_desc_t *desc;
-  int state;
-
-  /* This would fail the state transition, but for clarity... just return
-     when the testing has completed.  */
-  if (pbtest_step == 14)
-    return;
-
-  /* If this is not the request running the test, then exit.  */
-  if (!PBTEST_THIS_REQ(parser))
-    return;
-
-  desc = &pbtest_description[pbtest_step];
-  state = PBTEST_STATE(parser->pending);
-
-  /* Forced? ... or reached target state?  */
-  if (force || state == desc->when_next)
-    {
-      ++pbtest_step;
-
-      if (desc->completed != NULL)
-        SVN_DBG(("PBTEST: completed TEST %s\n", desc->completed));
-
-      /* Pause the parser based on the new step's config.  */
-      ++desc;
-      parser->paused = desc->paused;
-
-      SVN_DBG(("PBTEST: advanced: step=%d  paused=%d  inject=%d  state=%d\n",
-               pbtest_step, desc->paused, desc->inject, state));
-    }
-  else
-    {
-      SVN_DBG(("PBTEST: step[%d]: state=%d  waiting_for=%d\n",
-               pbtest_step, state, desc->when_next));
-    }
-}
-
-#endif /* PBTEST_ACTIVE  */
-
-
 /* Get a buffer from the parsing context. It will come from the free list,
    or allocated as necessary.  */
 static struct pending_buffer_t *
@@ -1410,18 +1294,10 @@ write_to_pending(svn_ra_serf__xml_parser_t *ctx,
 
   /* We do not (yet) have a spill file, but the amount stored in memory
      has grown too large. Create the file and place the pending data into
-     the temporary file.
-
-     For testing purposes, there are points when we may want to
-     create the spill file, regardless.  */
-  if (PBTEST_FORCE_SPILL(ctx)
-      || (ctx->pending->spill == NULL
-          && ctx->pending->memory_size > SPILL_SIZE))
+     the temporary file.  */
+  if (ctx->pending->spill == NULL
+      && ctx->pending->memory_size > SPILL_SIZE)
     {
-#ifdef PBTEST_ACTIVE
-      /* Only allow a spill file for steps 6 or later.  */
-      if (!PBTEST_THIS_REQ(ctx) || pbtest_step >= 6)
-#endif
       SVN_ERR(svn_io_open_unique_file3(&ctx->pending->spill,
                                        NULL /* temp_path */,
                                        NULL /* dirpath */,
@@ -1496,10 +1372,6 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   if (ctx->error && !ctx->ignore_errors)
     return svn_error_trace(ctx->error);
 
-  /* We may want to ignore the callbacks choice for the PAUSED flag.
-     Set this value, as appropriate.  */
-  PBTEST_SET_PAUSED(ctx);
-
   return SVN_NO_ERROR;
 }
 
@@ -1526,19 +1398,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   struct pending_buffer_t *pb;
   svn_error_t *err;
   apr_off_t output_unused;
-
-  /* We may need to repair the PAUSED state when testing.  */
-  PBTEST_SET_PAUSED(parser);
-
-#ifdef PBTEST_ACTIVE
-  /* If this step should not inject content, then fast-path exit.  */
-  if (PBTEST_THIS_REQ(parser)
-      && pbtest_step < 14 && !pbtest_description[pbtest_step].inject)
-    {
-      SVN_DBG(("PBTEST: process: injection disabled\n"));
-      return SVN_NO_ERROR;
-    }
-#endif
 
   /* Fast path exit: already paused, nothing to do, or already done.  */
   if (parser->paused || parser->pending == NULL || *parser->done)
@@ -1576,18 +1435,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       if (parser->paused)
         return SVN_NO_ERROR;
     }
-
-#ifdef PBTEST_ACTIVE
-  /* For steps 4 and 9, we wait until all of the memory content has been
-     injected. At that point, we can take another step which will pause
-     the parser, and we'll need to exit.  */
-  if (PBTEST_THIS_REQ(parser)
-      && (pbtest_step == 4 || pbtest_step == 9))
-    {
-      PBTEST_MAYBE_STEP(parser, TRUE);
-      return SVN_NO_ERROR;
-    }
-#endif
 
   /* If we don't have a spill file, then we've exhausted all
      pending content.  */
@@ -1643,11 +1490,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
      the network, then we're completely done with the parsing.  */
   if (parser->pending->network_eof)
     {
-#ifdef PBTEST_ACTIVE
-      if (PBTEST_THIS_REQ(parser))
-        SVN_DBG(("process: terminating parse.\n"));
-#endif
-
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
       /* Tell the parser that no more content will be parsed. Ignore the
@@ -1658,10 +1500,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       parser->xmlp = NULL;
       add_done_item(parser);
     }
-
-  /* For testing step 12, we have written all of the disk content. This
-     will advance to step 13 and pause the parser again.  */
-  PBTEST_MAYBE_STEP(parser, TRUE);
 
   return SVN_NO_ERROR;
 }
@@ -1738,13 +1576,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           XML_SetCharacterDataHandler(ctx->xmlp, cdata_xml);
         }
-
-      /* This is the first invocation. If we're looking at an update
-         report, then move to step 1 of the testing sequence.  */
-#ifdef PBTEST_ACTIVE
-      if (PBTEST_THIS_REQ(ctx))
-        PBTEST_MAYBE_STEP(ctx, TRUE);
-#endif
     }
 
   /* If we are storing content into a spill file, then move to the end of
@@ -1800,24 +1631,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           ctx->skip_size = 0;
         }
 
-      /* Ensure that the parser's PAUSED state is correct before we test
-         the flag.  */
-      PBTEST_SET_PAUSED(ctx);
-
-#ifdef PBTEST_ACTIVE
-      if (PBTEST_THIS_REQ(ctx))
-        {
-          SVN_DBG(("response: len=%d  paused=%d  status=%08x\n",
-                   (int)len, ctx->paused, status));
-#if 0
-          /* ### DATA is not necessarily NUL-terminated, but this
-             ### generally works. so if you want to see content... */
-          if (len > 0)
-            SVN_DBG(("content=%s\n", data));
-#endif
-        }
-#endif
-
       /* Note: once the callbacks invoked by inject_to_parser() sets the
          PAUSED flag, then it will not be cleared. write_to_pending() will
          only save the content. Logic outside of serf_context_run() will
@@ -1830,13 +1643,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
         {
           err = write_to_pending(ctx, data, len, pool);
-
-          /* We may have a transition to a next step.
-
-             Note: this only happens on writing to PENDING. If the
-             parser is unpaused, then we will never change state within
-             this network-reading loop.  */
-          PBTEST_MAYBE_STEP(ctx, FALSE);
         }
       else
         {
@@ -1866,20 +1672,10 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           if (ctx->pending != NULL)
             ctx->pending->network_eof = TRUE;
 
-#ifdef PBTEST_ACTIVE
-          if (PBTEST_THIS_REQ(ctx))
-            SVN_DBG(("network: reached EOF.\n"));
-#endif
-
           /* We just hit the end of the network content. If we have nothing
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
-#ifdef PBTEST_ACTIVE
-              if (PBTEST_THIS_REQ(ctx))
-                SVN_DBG(("network: terminating parse.\n"));
-#endif
-
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
               /* Ignore the return status. We just don't care.  */
