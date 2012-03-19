@@ -98,13 +98,14 @@ Candidate changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
- * r1297522
+ * r1296251, r1296303, r1297522
    Resolve issue 4136, "Deep commit followed by --depth immediates update
    triggers checksum failure"
    Justification:
      User reported regression since 1.7.0
    Votes:
-     +1: rhuijben, stsp
+     +1: rhuijben (r1297522 only)
+     +1: stsp
 
  * r1300265
    Resolve issue #4130, "poor memory and file handle management when
