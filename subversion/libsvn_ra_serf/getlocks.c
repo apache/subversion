@@ -101,7 +101,6 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       info->pool = lock_ctx->pool;
       info->lock = svn_lock_create(lock_ctx->pool);
-      info->lock->path =
 
       parser->state->private = info;
     }
