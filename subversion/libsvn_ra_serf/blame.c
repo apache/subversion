@@ -39,6 +39,8 @@
 
 #include "svn_private_config.h"
 
+#include "private/svn_string_private.h"
+
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
 
@@ -85,10 +87,7 @@ typedef struct blame_info_t {
 
   /* The currently collected value as we build it up */
   const char *prop_name;
-  const char *prop_attr;
-  apr_size_t prop_attr_len;
-
-  svn_string_t *prop_string;
+  svn_stringbuf_t *prop_value;
 
   /* Merged revision flag */
   svn_boolean_t merged_revision;
@@ -125,18 +124,16 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       blame_info_t *info;
 
-      info = apr_palloc(parser->state->pool, sizeof(*info));
+      info = apr_pcalloc(parser->state->pool, sizeof(*info));
 
       info->pool = parser->state->pool;
 
       info->rev = SVN_INVALID_REVNUM;
-      info->path = NULL;
 
       info->rev_props = apr_hash_make(info->pool);
       info->prop_diffs = apr_array_make(info->pool, 0, sizeof(svn_prop_t));
 
-      info->stream = NULL;
-      info->merged_revision = FALSE;
+      info->prop_value = svn_stringbuf_create_empty(info->pool);
 
       parser->state->private = info;
     }
@@ -147,24 +144,15 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 static const svn_string_t *
 create_propval(blame_info_t *info)
 {
-  const svn_string_t *s;
-
-  if (!info->prop_attr)
-    {
-      return svn_string_create_empty(info->pool);
-    }
-  else
-    {
-      info->prop_attr = apr_pmemdup(info->pool, info->prop_attr,
-                                    info->prop_attr_len + 1);
-    }
-
-  s = svn_string_ncreate(info->prop_attr, info->prop_attr_len, info->pool);
   if (info->prop_base64)
     {
-      s = svn_base64_decode_string(s, info->pool);
+      const svn_string_t *morph;
+
+      morph = svn_stringbuf__morph_into_string(info->prop_value);
+      return svn_base64_decode_string(morph, info->pool);
     }
-  return s;
+
+  return svn_string_create_from_buf(info->prop_value, info->pool);
 }
 
 static svn_error_t *
@@ -240,8 +228,7 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         case REMOVE_PROP:
           info->prop_name = apr_pstrdup(info->pool,
                                         svn_xml_get_attr_value("name", attrs));
-          info->prop_attr = NULL;
-          info->prop_attr_len = 0;
+          svn_stringbuf_setempty(info->prop_value);
 
           enc = svn_xml_get_attr_value("encoding", attrs);
           if (enc && strcmp(enc, "base64") == 0)
@@ -360,8 +347,7 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
     {
       case REV_PROP:
       case SET_PROP:
-        svn_ra_serf__expand_string(&info->prop_attr, &info->prop_attr_len,
-                                   data, len, parser->state->pool);
+        svn_stringbuf_appendbytes(info->prop_value, data, len);
         break;
       case TXDELTA:
         if (info->stream)
