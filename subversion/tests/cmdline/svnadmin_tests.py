@@ -1783,7 +1783,6 @@ def locking(sbox):
 
 @SkipUnless(svntest.main.is_threaded_python)
 @Issue(4129)
-@XFail(svntest.main.is_fs_type_fsfs)
 def mergeinfo_race(sbox):
   "concurrent mergeinfo commits invalidate pred-count"
   sbox.build()
