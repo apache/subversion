@@ -17467,6 +17467,90 @@ def merge_source_with_replacement(sbox):
                                      'merge', sbox.repo_url + '/A',
                                      A_COPY_path)
 
+#----------------------------------------------------------------------
+# Test for issue #4144 'Reverse merge with replace in source applies
+# diffs in forward order'.
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+@Issue(4144)
+def reverse_merge_with_rename(sbox):
+  "reverse merge applies revs in reverse order"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about.
+  A_path          = os.path.join(sbox.wc_dir, 'A')
+  omega_path      = os.path.join(sbox.wc_dir, 'trunk', 'D', 'H', 'omega')
+  A_COPY_path     = os.path.join(sbox.wc_dir, 'A_COPY')
+  beta_COPY_path  = os.path.join(sbox.wc_dir, 'A_COPY', 'B', 'E', 'beta')
+  psi_COPY_path   = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  rho_COPY_path   = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'G', 'rho')
+  omega_COPY_path = os.path.join(sbox.wc_dir, 'A_COPY', 'D', 'H', 'omega')
+
+  # branch A@1 to A_COPY in r2, then make a few edits under A in r3-6:  
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # r7 - Rename ^/A to ^/trunk.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 7.\n'],
+                                     [], 'move',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/trunk',
+                                     '-m', "Rename 'A' to 'trunk'")
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # r8 - Make and edit to trunk/D/H/omega (which was also edited in r6).
+  svntest.main.file_write(omega_path, "Edit 'omega' on trunk.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'Another omega edit', wc_dir)
+
+  # r9 - Sync merge ^/trunk to A_COPY.
+  svntest.actions.run_and_verify_svn(None,
+                                     None, # Don't check stdout, we test this
+                                           # type of merge to death elsewhere.
+                                     [], 'merge', sbox.repo_url + '/trunk',
+                                     A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Sync A_COPY with ^/trunk', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Reverse merge -r9:1 from ^/trunk to A_COPY.  This should return
+  # A_COPY to the same state it had prior to the sync merge in r2.
+  #
+  # This currently fails because the Subversion tries to reverse merge
+  # -r6:1 first, then -r8:6, causing a spurious conflict on omega:
+  #
+  #   >svn merge ^/trunk A_COPY -r9:1 --accept=postpone
+  #   --- Reverse-merging r6 through r2 into 'A_COPY':
+  #   U    A_COPY\B\E\beta
+  #   U    A_COPY\D\G\rho
+  #   C    A_COPY\D\H\omega
+  #   U    A_COPY\D\H\psi
+  #   --- Recording mergeinfo for reverse merge of r6 through r2 into 'A_COPY':
+  #    U   A_COPY
+  #   Summary of conflicts:
+  #     Text conflicts: 1
+  #   ..\..\..\subversion\svn\util.c:913: (apr_err=155015)
+  #   ..\..\..\subversion\libsvn_client\merge.c:10848: (apr_err=155015)
+  #   ..\..\..\subversion\libsvn_client\merge.c:10812: (apr_err=155015)
+  #   ..\..\..\subversion\libsvn_client\merge.c:8984: (apr_err=155015)
+  #   ..\..\..\subversion\libsvn_client\merge.c:4728: (apr_err=155015)
+  #   svn: E155015: One or more conflicts were produced while merging r6:1
+  #   into 'C:\SVN\src-trunk-4\Debug\subversion\tests\cmdline\svn-test-work
+  #   \working_copies\merge_tests-127\A_COPY' -- resolve all conflicts and
+  #   rerun the merge to apply the remaining unmerged revisions
+  expected_output = expected_merge_output(
+    [[8,7],[6,2]],
+    ['U    ' + beta_COPY_path  + '\n',
+    'U    ' + rho_COPY_path   + '\n',
+    'U    ' + omega_COPY_path + '\n',
+    'G    ' + omega_COPY_path + '\n',
+    'U    ' + psi_COPY_path   + '\n',
+    ' U   ' + A_COPY_path     + '\n',
+    ' G   ' + A_COPY_path     + '\n',], elides=True)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge', sbox.repo_url + '/trunk',
+                                     A_COPY_path, '-r9:1')
+
 ########################################################################
 # Run the tests
 
@@ -17599,6 +17683,7 @@ test_list = [ None,
               unnecessary_noninheritable_mergeinfo_shallow_merge,
               svnmucc_abuse_1,
               merge_source_with_replacement,
+              reverse_merge_with_rename,
              ]
 
 if __name__ == '__main__':
