@@ -638,13 +638,49 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
                             const char *method, const char *url,
                             serf_bucket_t *body_bkt, const char *content_type)
 {
+  serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
   serf_bucket_t *hdrs_bkt;
+  svn_spillbuf_t *buf;
+
+  /* ### this should be passed  */
+  apr_pool_t *scratch_pool = conn->session->pool;
+
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  if (conn->http10 && body_bkt != NULL)
+    {
+      /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
+         it speaks HTTP/1.1 (and thus, chunked requests), or because the
+         server actually responded as only supporting HTTP/1.0.
+
+         We'll take the existing body_bkt, spool it into a spillbuf, and
+         then wrap a bucket around that spillbuf. The spillbuf will give
+         us the Content-Length value.  */
+      SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
+                                              conn->session->pool,
+                                              scratch_pool));
+      body_bkt = svn_ra_serf__create_sb_bucket(buf, allocator,
+                                               conn->session->pool,
+                                               scratch_pool);
+    }
+#endif
 
   /* Create a request bucket.  Note that this sucker is kind enough to
      add a "Host" header for us.  */
   *req_bkt =
     serf_request_bucket_request_create(request, method, url, body_bkt,
-                                       serf_request_get_alloc(request));
+                                       allocator);
+
+  /* Set the Content-Length value. This will also trigger an HTTP/1.0
+     request (rather than the default chunked request).  */
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  if (conn->http10)
+    {
+      if (body_bkt == NULL)
+        serf_bucket_request_set_CL(*req_bkt, 0);
+      else
+        serf_bucket_request_set_CL(*req_bkt, svn_spillbuf__get_size(buf));
+    }
+#endif
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);

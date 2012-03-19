@@ -2226,16 +2226,17 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       int cur = sess->num_conns;
       apr_status_t status;
 
-      sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
+      sess->conns[cur] = apr_pcalloc(sess->pool, sizeof(*sess->conns[cur]));
+      sess->conns[cur]->http10 = TRUE;  /* until we confirm HTTP/1.1  */
+      sess->conns[cur]->http10 = FALSE; /* ### don't change behavior yet  */
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
       sess->conns[cur]->hostname  = sess->conns[0]->hostname;
       sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
-      sess->conns[cur]->useragent = sess->conns[0]->useragent;
       sess->conns[cur]->last_status_code = -1;
-      sess->conns[cur]->ssl_context = NULL;
       sess->conns[cur]->session = sess;
+      sess->conns[cur]->useragent = sess->conns[0]->useragent;
       status = serf_connection_create2(&sess->conns[cur]->conn,
                                        sess->context,
                                        sess->session_url,
