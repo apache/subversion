@@ -104,7 +104,7 @@ Candidate changes:
    Justification:
      User reported regression since 1.7.0
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1300265
    Resolve issue #4130, "poor memory and file handle management when
@@ -112,21 +112,21 @@ Candidate changes:
    Justification:
      Simple fix with noticeable scalability returns.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * r1298343
    Return an error when attempting to MERGE a resource that does not exist.
    Justification:
      Avoid asserting.
    Votes:
-     +1: philip
+     +1: philip, stsp
 
  * r1302417
    Fix another ra_serf assert (MERGE fails).
    Notes: 
      This revision r1300265 originates in #4129; r1298343 originates in #3696.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
 Veto-blocked changes:
 =====================
