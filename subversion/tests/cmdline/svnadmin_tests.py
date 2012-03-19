@@ -1783,7 +1783,7 @@ def locking(sbox):
 
 @SkipUnless(svntest.main.is_threaded_python)
 @Issue(4129)
-@XFail()
+@XFail(svntest.main.is_fs_type_fsfs)
 def mergeinfo_race(sbox):
   "concurrent mergeinfo commits invalidate pred-count"
   sbox.build()
@@ -1817,7 +1817,7 @@ def mergeinfo_race(sbox):
 
   # Crude attempt to make sure everything worked.
   # TODO: better way to catch exceptions in the thread
-  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != 3:
+  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != '3':
     raise svntest.Failure("one or both commits failed")
 
 
