@@ -1738,13 +1738,13 @@ merge_file_added(svn_wc_notify_state_t *content_state,
          merge-from-foreign-repository scenario) or wrong place in the
          right repository (in the same-repos scenario).  So we'll
          strip them.  (Is this a layering violation?)  */
-      if (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind)
+      if (svn_property_kind2(prop->name) == svn_prop_wc_kind)
         continue;
 
       /* And in the foreign repository merge case, we only want
          regular properties. */
       if ((! merge_b->same_repos)
-          && (svn_property_kind(NULL, prop->name) != svn_prop_regular_kind))
+          && (svn_property_kind2(prop->name) != svn_prop_regular_kind))
         continue;
 
       /* Issue #3383: We don't want mergeinfo from a foreign repository. */

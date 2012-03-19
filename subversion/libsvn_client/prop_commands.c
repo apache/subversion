@@ -75,7 +75,7 @@ is_revision_prop_name(const char *name)
 static svn_error_t *
 error_if_wcprop_name(const char *name)
 {
-  if (svn_property_kind(NULL, name) == svn_prop_wc_kind)
+  if (svn_property_kind2(name) == svn_prop_wc_kind)
     {
       return svn_error_createf
         (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
@@ -162,7 +162,7 @@ propset_on_url(const char *propname,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
-  enum svn_prop_kind prop_kind = svn_property_kind(NULL, propname);
+  enum svn_prop_kind prop_kind = svn_property_kind2(propname);
   svn_ra_session_t *ra_session;
   svn_node_kind_t node_kind;
   const char *message;
@@ -980,7 +980,7 @@ remote_proplist(const char *target_prefix,
       svn_string_t *value = svn__apr_hash_index_val(hi);
       svn_prop_kind_t prop_kind;
 
-      prop_kind = svn_property_kind(NULL, name);
+      prop_kind = svn_property_kind2(name);
 
       if (prop_kind == svn_prop_regular_kind)
         {
