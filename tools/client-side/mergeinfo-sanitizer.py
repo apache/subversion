@@ -25,7 +25,6 @@ import getopt
 import hashlib
 import pickle
 import getpass
-import re
 from svn import client, core, ra, wc
 
 ## This script first fetches the mergeinfo of the working copy and tries
@@ -42,7 +41,7 @@ except AttributeError:
 mergeinfo = {}
 
 def usage():
-  sys.stderr.write(""" Usage: %s WCPATH
+  sys.stderr.write(""" Usage: %s WCPATH [OPTION]
 
 Analyze the mergeinfo property of the given WCPATH.
 Look for the existence of merge_source's locations at their recorded
