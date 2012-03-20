@@ -980,6 +980,9 @@ def is_posix_os():
 def is_os_darwin():
   return sys.platform == 'darwin'
 
+def is_threaded_python():
+  return True
+
 def server_has_mergeinfo():
   _check_command_line_parsed()
   return server_minor_version >= 5

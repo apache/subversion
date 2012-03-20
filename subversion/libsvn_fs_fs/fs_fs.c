@@ -5345,6 +5345,65 @@ write_hash_rep(svn_filesize_t *size,
   return svn_stream_printf(whb->stream, pool, "ENDREP\n");
 }
 
+/* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
+   of (not yet committed) revision REV in FS.  Use POOL for temporary
+   allocations.
+ */
+static svn_error_t *
+validate_root_noderev(svn_fs_t *fs,
+                      node_revision_t *root_noderev,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  svn_revnum_t head_revnum = rev-1;
+  int head_predecessor_count;
+
+  SVN_ERR_ASSERT(rev > 0);
+
+  /* Compute HEAD_PREDECESSOR_COUNT. */
+  {
+    svn_fs_root_t *head_revision;
+    const svn_fs_id_t *head_root_id;
+    node_revision_t *head_root_noderev;
+
+    /* Get /@HEAD's noderev. */
+    SVN_ERR(svn_fs_fs__revision_root(&head_revision, fs, head_revnum, pool));
+    SVN_ERR(svn_fs_fs__node_id(&head_root_id, head_revision, "/", pool));
+    SVN_ERR(svn_fs_fs__get_node_revision(&head_root_noderev, fs, head_root_id,
+                                         pool));
+
+    head_predecessor_count = head_root_noderev->predecessor_count;
+  }
+
+  /* Check that the root noderev's predecessor count equals REV.
+
+     This kind of corruption was seen on svn.apache.org (both on
+     the root noderev and on other fspaths' noderevs); see
+       http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+
+     Normally (rev == root_noderev->predecessor_count), but here we
+     use a more roundabout check that should only trigger on new instances
+     of the corruption, rather then trigger on each and every new commit
+     to a repository that has triggered the bug somewhere in its root
+     noderev's history.
+   */
+  if (root_noderev->predecessor_count != -1
+      && (root_noderev->predecessor_count - head_predecessor_count)
+         != (rev - head_revnum))
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("predecessor count for "
+                                 "the root node-revision is wrong: "
+                                 "found (%d+%ld != %d), committing r%ld"),
+                                 head_predecessor_count,
+                                 rev - head_revnum, /* This is equal to 1. */
+                                 root_noderev->predecessor_count,
+                                 rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Copy a node-revision specified by id ID in fileystem FS from a
    transaction into the proto-rev-file FILE.  Return the offset of
    the new node-revision in *OFFSET.  If this is a directory, all
@@ -5360,7 +5419,11 @@ write_hash_rep(svn_filesize_t *size,
    If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
    REPS_POOL) of each data rep that is new in this revision.
 
-   Temporary allocations are from POOL.  */
+   AT_ROOT is true if the node revision being written is the root
+   node-revision.  It is only controls additional sanity checking
+   logic.
+
+   Temporary allocations are also from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_file_t *file,
@@ -5372,6 +5435,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_pool_t *reps_pool,
+                svn_boolean_t at_root,
                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -5410,7 +5474,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           dirent = val;
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id, initial_offset,
-                                  reps_to_cache, reps_pool,
+                                  reps_to_cache, reps_pool, FALSE,
                                   subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
@@ -5508,6 +5572,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   noderev->id = new_id;
 
   /* Write out our new node-revision. */
+  if (at_root)
+    SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
   SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
                                    noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
@@ -5818,7 +5884,7 @@ commit_body(void *baton, apr_pool_t *pool)
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id, initial_offset,
-                          cb->reps_to_cache, cb->reps_pool,
+                          cb->reps_to_cache, cb->reps_pool, TRUE,
                           pool));
 
   /* Write the changed-path information. */

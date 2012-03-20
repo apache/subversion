@@ -500,6 +500,12 @@ svn_error_t *svn_fs_fs__dag_get_copyfrom_path(const char **path,
                                               dag_node_t *node,
                                               apr_pool_t *pool);
 
+/* Update *TARGET so that SOURCE is it's predecessor.
+ */
+svn_error_t *
+svn_fs_fs__dag_update_ancestry(dag_node_t *target,
+                               dag_node_t *source,
+                               apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
