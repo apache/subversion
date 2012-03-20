@@ -100,6 +100,51 @@ svn_client__wc_node_get_origin(const char **repos_root_url_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* A macro to mark sections of code that belong to the 'symmetric merge'
+ * feature while it's still new. */
+#define SVN_WITH_SYMMETRIC_MERGE
+
+#ifdef SVN_WITH_SYMMETRIC_MERGE
+
+/* Details of a symmetric merge. */
+typedef struct svn_client__symmetric_merge_t svn_client__symmetric_merge_t;
+
+/* Find the information needed to merge all unmerged changes from a source
+ * branch into a target branch.  The information is the locations of the
+ * youngest common ancestor, merge base, and such like.
+ *
+ * Set *MERGE to the information needed to merge all unmerged changes
+ * (up to SOURCE_REVISION) from the source branch SOURCE_PATH_OR_URL @
+ * SOURCE_REVISION into the target WC at TARGET_WCPATH.
+ */
+svn_error_t *
+svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
+                                 const char *source_path_or_url,
+                                 const svn_opt_revision_t *source_revision,
+                                 const char *target_wcpath,
+                                 svn_boolean_t allow_mixed_rev,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Perform a symmetric merge.
+ *
+ * Merge according to MERGE into the WC at TARGET_WCPATH.
+ */
+svn_error_t *
+svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
+                               const char *target_wcpath,
+                               svn_depth_t depth,
+                               svn_boolean_t ignore_ancestry,
+                               svn_boolean_t force,
+                               svn_boolean_t record_only,
+                               svn_boolean_t dry_run,
+                               const apr_array_header_t *merge_options,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *scratch_pool);
+
+#endif /* SVN_WITH_SYMMETRIC_MERGE */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
