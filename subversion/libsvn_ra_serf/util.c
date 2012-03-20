@@ -640,12 +640,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 {
   serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
   serf_bucket_t *hdrs_bkt;
+
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
   svn_spillbuf_t *buf;
 
   /* ### this should be passed  */
   apr_pool_t *scratch_pool = conn->session->pool;
 
-#if SERF_VERSION_AT_LEAST(1, 1, 0)
   if (conn->http10 && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
