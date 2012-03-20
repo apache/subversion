@@ -55,7 +55,8 @@ Candidate changes:
      +1: lgo
      +0: gstein (haven't reviewed these specific revisions yet)
 
- * r1302399, r1302539, r1302591, r1302613
+ * r1302399, r1302539, r1302591, r1302613, r1178280, r1178282, r1186121,
+   r1186231, r1294470
    Fix issue 4129, wrong predecessor count in FSFS revision files
    Justification:
      Repository corruption.
@@ -63,10 +64,13 @@ Candidate changes:
      r1302399 is a comment change.
      r1302539 and r1302591 add a test.
      r1302613 is the fix.
+     r1178280, r1178282, r1186121, r1186231, and r1294470 implement
+     a sanity check at commit time that the test relies on.
    Branch:
      ^/subversion/branches/1.6.x-issue4129
    Votes:
-     +1: philip, danielsh
+     +1: philip, danielsh (r1302399, r1302539, r1302591, r1302613 only)
+     +1: stsp
 
 Veto-blocked changes:
 =====================
