@@ -234,13 +234,6 @@ Approved changes:
    Votes:
      +1: julianfoad, stsp, rhuijben
 
- * r1154733
-   Correctly position buffer pointer when resuming an aborted transfer in serf.
-   Justification:
-     Invalid pointer operation that causes at least datastream corruption.
-   Votes:
-     +1: rhuijben, stsp, philip
-
  * r1166555, r1166678
    Fix a crash in ra_svn SASL authentication.
    Justification:
