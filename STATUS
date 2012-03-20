@@ -55,34 +55,6 @@ Candidate changes:
      +1: lgo
      +0: gstein (haven't reviewed these specific revisions yet)
 
- * r896893, r896901, r915036(part)
-   Where references to the old subversion.tigris.org web site appear outside
-   the source tree, update them to refer to subversion.apache.org instead.
-   Justification:
-     Users should be directed to the current web site.
-   Branch:
-     ^/subversion/branches/1.6.x-r896893
-   Notes:
-     These references appear in
-     - the 'svn help' output;
-     - the HTTP GET response for a collection ("Powered by ..." for HTML
-       mode or "<svn href=...>" for XML mode);
-     - the 'README.txt' and 'conf/svnserve.conf' files of a newly created
-       repository;
-     - the man pages;
-     - the Doxygen front page;
-     - the 'psvn.el' emacs plug-in;
-     - the installed ctypes-python bindings 'egg-info' file.
-   Votes:
-     +1: julianfoad, stsp
-
- * r1166555, r1166678
-   Fix a crash in ra_svn SASL authentication.
-   Justification:
-     See http://svn.haxx.se/dev/archive-2011-09/0182.shtml
-   Votes:
-     +1: stsp, philip
-
  * r1230212
    Fix for large files on 32-bit systems.
    Justification:
@@ -250,9 +222,37 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r896893, r896901, r915036(part)
+   Where references to the old subversion.tigris.org web site appear outside
+   the source tree, update them to refer to subversion.apache.org instead.
+   Justification:
+     Users should be directed to the current web site.
+   Branch:
+     ^/subversion/branches/1.6.x-r896893
+   Notes:
+     These references appear in
+     - the 'svn help' output;
+     - the HTTP GET response for a collection ("Powered by ..." for HTML
+       mode or "<svn href=...>" for XML mode);
+     - the 'README.txt' and 'conf/svnserve.conf' files of a newly created
+       repository;
+     - the man pages;
+     - the Doxygen front page;
+     - the 'psvn.el' emacs plug-in;
+     - the installed ctypes-python bindings 'egg-info' file.
+   Votes:
+     +1: julianfoad, stsp, rhuijben
+
  * r1154733
    Correctly position buffer pointer when resuming an aborted transfer in serf.
    Justification:
      Invalid pointer operation that causes at least datastream corruption.
    Votes:
      +1: rhuijben, stsp, philip
+
+ * r1166555, r1166678
+   Fix a crash in ra_svn SASL authentication.
+   Justification:
+     See http://svn.haxx.se/dev/archive-2011-09/0182.shtml
+   Votes:
+     +1: stsp, philip, rhuijben
