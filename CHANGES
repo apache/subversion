@@ -400,6 +400,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.18
     * fix a crash in ra_svn SASL authentication (r1166555, -678)
     * fix potential corruption on 32-bit FSFS with large files (r1230212)
     * make website links point to subversion.apache.org (r896893, -901, r915036)
+    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
 
   Developer-visible changes:
     * fix sqlite distfile retrieval in get-deps.sh (r1134734)
