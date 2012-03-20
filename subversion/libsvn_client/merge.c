@@ -10867,7 +10867,7 @@ svn_client_merge_peg4(const char *source_path_or_url,
 
 #ifdef SVN_WITH_SYMMETRIC_MERGE
 
-/* Details of a merge. */
+/* Details of a symmetric merge. */
 struct svn_client__symmetric_merge_t
 {
   repo_location_t *yca, *base, *mid, *right;
@@ -11015,7 +11015,8 @@ find_base_on_target(repo_location_t **base_p,
   return SVN_NO_ERROR;
 }
 
-/* */
+/* The body of svn_client__find_symmetric_merge(), which see.
+ */
 static svn_error_t *
 find_symmetric_merge(repo_location_t **yca_p,
                      repo_location_t **base_p,
@@ -11104,27 +11105,6 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
                                ctx, result_pool, scratch_pool));
   merge->right = s_t->source;
 
-  /* Identify cherry-picks.
-   */
-
-  /* Break into 3-way merges, skipping the cherry-picks.
-   */
-
-  /* Mergeinfo addition.
-   */
-
-  /* Report a list of merge_souce_t merges.
-   * ### Just one, for now. */
-  /*
-  {
-    *merge_source = apr_palloc(result_pool, sizeof(**merge_source));
-    merge_source->url1 = base->url;
-    merge_source->rev1 = base->rev;
-    merge_source->url2 = s_t->source->url;
-    merge_source->rev2 = s_t->source->rev;
-  }
-  */
-
   *merge_p = merge;
 
   SVN_ERR(close_source_and_target(s_t, scratch_pool));
@@ -11156,7 +11136,8 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
  *          o-----------o-----------o
  *                                TARGET
  *
- *
+ * ### TODO: The reintegrate-type (MID!=NULL) code path does not yet
+ * eliminate already-cherry-picked revisions from the source.
  */
 static svn_error_t *
 do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
@@ -11178,12 +11159,6 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
   SVN_ERR(open_target_wc(&target, target_abspath, TRUE, TRUE, TRUE,
                          ctx, scratch_pool, scratch_pool));
 
-  /* Do the real merge.  We know the merge sources are in the same repos
-   * as the target, and are related, but not necessarily 'ancestral'. */
-  /* ### Using DO_MERGE at the moment, just because it's convenient.  In
-   *     fact it's overkill because it does merge tracking -- eliminating
-   *     already-merged changes -- which we've already done and don't need
-   *     here. */
   source->url1 = merge->base->url;
   source->rev1 = merge->base->rev;
   source->url2 = merge->right->url;
@@ -11205,10 +11180,8 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
                                                    ra_session, ra_session,
                                                    source, merge->yca->rev,
                                                    TRUE /* same_repos */,
-                                                   svn_depth_infinity,
-                                                   FALSE /* ignore_ancestry */,
-                                                   FALSE /* force */,
-                                                   FALSE /* record_only */,
+                                                   depth, ignore_ancestry,
+                                                   force, record_only,
                                                    dry_run,
                                                    merge_options, &use_sleep,
                                                    ctx, scratch_pool);
