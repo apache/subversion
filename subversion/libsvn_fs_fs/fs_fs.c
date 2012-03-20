@@ -5394,8 +5394,11 @@ validate_root_noderev(svn_fs_t *fs,
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("predecessor count for "
                                  "the root node-revision is wrong: "
-                                 "found %d, committing r%ld"),
-                                 root_noderev->predecessor_count, rev);
+                                 "found (%d+%ld != %d), committing r%ld"),
+                                 head_predecessor_count,
+                                 rev - head_revnum, /* This is equal to 1. */
+                                 root_noderev->predecessor_count,
+                                 rev);
     }
 
   return SVN_NO_ERROR;
