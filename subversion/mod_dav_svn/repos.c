@@ -2886,7 +2886,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         "]>\n";
 
       /* <svn version="1.3.0 (dev-build)"
-              href="http://subversion.tigris.org">
+              href="http://subversion.apache.org">
            <index name="[info->repos->repo_name]"
                   path="[info->repos_path]"
                   rev="[info->root.rev]">
@@ -2987,7 +2987,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           ap_fputs(output, bb, xml_index_dtd);
           ap_fputs(output, bb,
                    "<svn version=\"" SVN_VERSION "\"\n"
-                   "     href=\"http://subversion.tigris.org/\">\n");
+                   "     href=\"http://subversion.apache.org/\">\n");
           ap_fputs(output, bb, "  <index");
           if (name)
             ap_fprintf(output, bb, " name=\"%s\"",
@@ -3151,7 +3151,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               */
               ap_fputs(output, bb,
                        " </ul>\n <hr noshade><em>Powered by "
-                       "<a href=\"http://subversion.tigris.org/\">Subversion"
+                       "<a href=\"http://subversion.apache.org/\">Subversion"
                        "</a> version " SVN_VERSION "."
                        "</em>\n</body></html>");
             }
