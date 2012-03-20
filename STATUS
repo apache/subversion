@@ -69,7 +69,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue4129
    Votes:
-     +1: philip
+     +1: philip (r1302399, r1302539, r1302591, r1302613 only)
      +1: stsp, danielsh
 
 Veto-blocked changes:
