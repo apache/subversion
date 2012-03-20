@@ -636,7 +636,11 @@ ev2_delete_entry(const char *path,
   svn_revnum_t *revnum = apr_palloc(pb->eb->edit_pool, sizeof(*revnum));
   struct change_node *change = locate_change(pb->eb, path);
 
-  *revnum = revision;
+  if (SVN_IS_VALID_REVNUM(revision))
+    *revnum = revision;
+  else
+    *revnum = pb->base_revision;
+
   SVN_ERR(add_action(pb->eb, path, ACTION_DELETE, revnum));
 
   /* ### note: cannot switch to CHANGES just yet. the action loop needs
