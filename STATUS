@@ -233,12 +233,3 @@ Approved changes:
      - the installed ctypes-python bindings 'egg-info' file.
    Votes:
      +1: julianfoad, stsp, rhuijben
-
- * r1230212
-   Fix for large files on 32-bit systems.
-   Justification:
-     Can corrupt FSFS repositories.
-   Branch:
-     ^/subversion/branches/1.6.x-r1230212
-   Votes:
-     +1: philip, stsp, rhuijben
