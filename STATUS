@@ -34,20 +34,6 @@ Candidate changes:
    Votes:
      +1: stsp, neels
 
- * r1291594
-   Support httpd-2.4 in davautocheck.
-   Justification:
-     Allow testing against current stable httpd.
-   Votes:
-     +0: danielsh (+1 once I re-run tests on both FS backends)
-
- * r1232267
-   Allow building mod_dav_svn against httpd-2.4.
-   Justification:
-     Support current stable httpd.
-   Votes:
-     +0: danielsh (+1 once I re-run tests on both FS backends)
-
  * r1291797, r1291810
    On Windows detect where perl is installed and add this information to the
    include and lib directory settings of the swig-perl projects.
@@ -142,6 +128,20 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
+
+ * r1291594
+   Support httpd-2.4 in davautocheck.
+   Justification:
+     Allow testing against current stable httpd.
+   Votes:
+     -1: danielsh (hangs with bdb)
+
+ * r1232267
+   Allow building mod_dav_svn against httpd-2.4.
+   Justification:
+     Support current stable httpd.
+   Votes:
+     -1: danielsh (davautocheck hangs with bdb)
 
 Approved changes:
 =================
