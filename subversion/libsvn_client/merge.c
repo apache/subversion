@@ -10897,6 +10897,8 @@ open_source_and_target(source_and_target_t **source_and_target,
                        const svn_opt_revision_t *source_peg_revision,
                        const char *target_abspath,
                        svn_boolean_t allow_mixed_rev,
+                       svn_boolean_t allow_local_mods,
+                       svn_boolean_t allow_switched_subtrees,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *session_pool,
                        apr_pool_t *result_pool,
@@ -10906,7 +10908,7 @@ open_source_and_target(source_and_target_t **source_and_target,
 
   /* Target */
   SVN_ERR(open_target_wc(&s_t->target, target_abspath,
-                         allow_mixed_rev, TRUE, TRUE,
+                         allow_mixed_rev, allow_local_mods, allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
   SVN_ERR(svn_client_open_ra_session(&s_t->target_ra_session,
                                      s_t->target->loc.url,
@@ -11121,6 +11123,8 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
                                  const svn_opt_revision_t *source_revision,
                                  const char *target_wcpath,
                                  svn_boolean_t allow_mixed_rev,
+                                 svn_boolean_t allow_local_mods,
+                                 svn_boolean_t allow_switched_subtrees,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
@@ -11131,7 +11135,7 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge_p,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, scratch_pool));
   SVN_ERR(open_source_and_target(&s_t, source_path_or_url, source_revision,
-                                 target_abspath, allow_mixed_rev,
+                                 target_abspath, allow_mixed_rev, allow_local_mods, allow_switched_subtrees,
                                  ctx, result_pool, result_pool, scratch_pool));
 
   /* Check source is in same repos as target. */

@@ -110,6 +110,8 @@ symmetric_merge(const char *source_path_or_url,
                 svn_boolean_t record_only,
                 svn_boolean_t dry_run,
                 svn_boolean_t allow_mixed_rev,
+                svn_boolean_t allow_local_mods,
+                svn_boolean_t allow_switched_subtrees,
                 const apr_array_header_t *merge_options,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
@@ -120,6 +122,7 @@ symmetric_merge(const char *source_path_or_url,
   SVN_ERR(svn_client__find_symmetric_merge(&merge,
                                            source_path_or_url, source_revision,
                                            target_wcpath, allow_mixed_rev,
+                                           allow_local_mods, allow_switched_subtrees,
                                            ctx, scratch_pool, scratch_pool));
 
   /* Perform the 3-way merges */
@@ -384,10 +387,10 @@ svn_cl__merge(apr_getopt_t *os,
 #ifdef SVN_WITH_SYMMETRIC_MERGE
   if (opt_state->symmetric_merge)
     {
-      if (two_sources_specified || opt_state->reintegrate)
+      if (two_sources_specified)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--reintegrate and SOURCE2 can't be used "
-                                  "with --symmetric"));
+                                _("SOURCE2 can't be used with --symmetric"));
+
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
                   ctx, pool),
@@ -400,6 +403,8 @@ svn_cl__merge(apr_getopt_t *os,
                             opt_state->record_only,
                             opt_state->dry_run,
                             opt_state->allow_mixed_rev,
+                            ! opt_state->reintegrate,
+                            ! opt_state->reintegrate,
                             options, ctx, pool);
     }
   else
