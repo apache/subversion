@@ -10933,7 +10933,7 @@ close_source_and_target(source_and_target_t *s_t,
 /* Find a merge base location on the target branch, like in a sync
  * merge.
  *
- *          (Source-left) (Source-right)
+ *          (Source-left) (Source-right = S_T->source)
  *                BASE        RIGHT
  *          o-------o-----------o---
  *         /         \           \
@@ -10950,7 +10950,45 @@ find_base_on_source(repo_location_t **base_p,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  *base_p = NULL;
+  svn_mergeinfo_t target_mergeinfo;
+  svn_client__merge_path_t *merge_target;
+  svn_boolean_t inherited;
+  merge_source_t source;
+  svn_merge_range_t *r;
+  repo_location_t *base;
+
+  merge_target = svn_client__merge_path_create(s_t->target->abspath,
+                                               scratch_pool);
+
+  /* Fetch target mergeinfo (all the way back to revision 1). */
+  SVN_ERR(get_full_mergeinfo(&target_mergeinfo,
+                             &merge_target->implicit_mergeinfo,
+                             &inherited, svn_mergeinfo_inherited,
+                             s_t->target_ra_session, s_t->target->abspath,
+                             s_t->source->rev, 1,
+                             ctx, scratch_pool, scratch_pool));
+
+  /* In order to find the first unmerged change in the source, set
+   * MERGE_TARGET->remaining_ranges to the ranges left to merge,
+   * and look at the start revision of the first such range. */
+  source.url1 = s_t->source->url;  /* ### WRONG: need historical URL/REV */
+  source.rev1 = 1;
+  source.url2 = s_t->source->url;
+  source.rev2 = s_t->source->rev;
+  SVN_ERR(calculate_remaining_ranges(NULL, merge_target,
+                                     &source,
+                                     target_mergeinfo,
+                                     NULL /*merge_b->implicit_src_gap*/,
+                                     FALSE /*child_inherits_implicit*/,
+                                     s_t->source_ra_session,
+                                     ctx, scratch_pool, scratch_pool));
+
+  r = APR_ARRAY_IDX(merge_target->remaining_ranges, 0, svn_merge_range_t *);
+  base = apr_palloc(result_pool, sizeof(*base));
+  base->url = s_t->source->url;  /* ### WRONG: need historical URL */
+  base->rev = r->start;
+
+  *base_p = base;
   return SVN_NO_ERROR;
 }
 
