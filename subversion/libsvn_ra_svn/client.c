@@ -2465,6 +2465,9 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   else if (strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn,
                                      SVN_RA_SVN_CAP_ATOMIC_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_INHERITED_PROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn,
+                                     SVN_RA_SVN_CAP_INHERITED_PROPS);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf

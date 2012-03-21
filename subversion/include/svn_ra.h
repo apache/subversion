@@ -2013,6 +2013,13 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
 
+/**
+ * The capability to get inherited properties.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_RA_CAPABILITY_INHERITED_PROPS "inherited-props"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any
