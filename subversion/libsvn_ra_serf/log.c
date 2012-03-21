@@ -325,9 +325,12 @@ maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
 
   if (info->tmp_encoding)
     {
-      const svn_string_t *morph;
+      svn_string_t tmp;
 
-      morph = svn_stringbuf__morph_into_string(info->tmp);
+      /* Don't use morph_info_string cuz we need info->tmp to
+         remain usable.  */
+      tmp.data = info->tmp->data;
+      tmp.len = info->tmp->len;
 
       /* Check for a known encoding type.  This is easy -- there's
          only one.  */
@@ -338,7 +341,7 @@ maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
                                    info->tmp_encoding);
         }
 
-      *decoded_cdata = svn_base64_decode_string(morph, info->pool);
+      *decoded_cdata = svn_base64_decode_string(&tmp, info->pool);
     }
   else
     {

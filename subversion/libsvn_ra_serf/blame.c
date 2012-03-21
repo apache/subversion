@@ -141,6 +141,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   return parser->state->private;
 }
 
+
 static const svn_string_t *
 create_propval(blame_info_t *info)
 {
@@ -149,6 +150,9 @@ create_propval(blame_info_t *info)
       const svn_string_t *morph;
 
       morph = svn_stringbuf__morph_into_string(info->prop_value);
+#ifdef SVN_DEBUG
+      info->prop_value = NULL;  /* morph killed the stringbuf.  */
+#endif
       return svn_base64_decode_string(morph, info->pool);
     }
 
