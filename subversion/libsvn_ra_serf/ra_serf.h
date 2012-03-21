@@ -476,17 +476,17 @@ typedef struct svn_ra_serf__xml_parser_t svn_ra_serf__xml_parser_t;
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_start_element_t)(svn_ra_serf__xml_parser_t *parser,
-                                    void *baton,
                                     svn_ra_serf__dav_props_t name,
-                                    const char **attrs);
+                                    const char **attrs,
+                                    apr_pool_t *scratch_pool);
 
 /* Callback invoked with @a baton by our XML @a parser when an element with
  * the @a name is closed.
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_end_element_t)(svn_ra_serf__xml_parser_t *parser,
-                                  void *baton,
-                                  svn_ra_serf__dav_props_t name);
+                                  svn_ra_serf__dav_props_t name,
+                                  apr_pool_t *scratch_pool);
 
 /* Callback invoked with @a baton by our XML @a parser when a CDATA portion
  * of @a data with size @a len is encountered.
@@ -495,9 +495,9 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
-                                          void *baton,
                                           const char *data,
-                                          apr_size_t len);
+                                          apr_size_t len,
+                                          apr_pool_t *scratch_pool);
 
 /*
  * Helper structure associated with handle_xml_parser handler that will

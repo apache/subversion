@@ -786,11 +786,11 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
  */
 static svn_error_t *
 start_error(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             svn_ra_serf__dav_props_t name,
-            const char **attrs)
+            const char **attrs,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (!ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -828,10 +828,10 @@ start_error(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_error(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name)
+          svn_ra_serf__dav_props_t name,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -866,11 +866,11 @@ end_error(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 cdata_error(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             const char *data,
-            apr_size_t len)
+            apr_size_t len,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->collect_cdata)
     {
@@ -1053,11 +1053,11 @@ parse_dav_status(int *status_code_out, svn_stringbuf_t *buf,
  */
 static svn_error_t *
 start_207(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           svn_ra_serf__dav_props_t name,
-          const char **attrs)
+          const char **attrs,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (!ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -1088,10 +1088,10 @@ start_207(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_207(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
+        svn_ra_serf__dav_props_t name,
+        apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -1132,11 +1132,11 @@ end_207(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 cdata_207(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           const char *data,
-          apr_size_t len)
+          apr_size_t len,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->collect_cdata)
     {
@@ -1237,43 +1237,58 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
   return svn_error_trace(err);
 }
 
+
+/* Conforms to Expat's XML_StartElementHandler  */
 static void
 start_xml(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
+  apr_pool_t *scratch_pool;
 
   if (parser->error)
     return;
 
   if (!parser->state)
     svn_ra_serf__xml_push_state(parser, 0);
+
+  /* ### get a real scratch_pool  */
+  scratch_pool = parser->state->pool;
 
   svn_ra_serf__define_ns(&parser->state->ns_list, attrs, parser->state->pool);
 
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->start(parser, parser->user_data, name, attrs);
+  parser->error = parser->start(parser, name, attrs, scratch_pool);
 }
 
+
+/* Conforms to Expat's XML_EndElementHandler  */
 static void
 end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
+  apr_pool_t *scratch_pool;
 
   if (parser->error)
     return;
 
+  /* ### get a real scratch_pool  */
+  scratch_pool = parser->state->pool;
+
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->end(parser, parser->user_data, name);
+  parser->error = parser->end(parser, name, scratch_pool);
 }
 
+
+/* Conforms to Expat's XML_CharacterDataHandler  */
 static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+  apr_pool_t *scratch_pool;
 
   if (parser->error)
     return;
@@ -1281,7 +1296,10 @@ cdata_xml(void *userData, const char *data, int len)
   if (!parser->state)
     svn_ra_serf__xml_push_state(parser, 0);
 
-  parser->error = parser->cdata(parser, parser->user_data, data, len);
+  /* ### get a real scratch_pool  */
+  scratch_pool = parser->state->pool;
+
+  parser->error = parser->cdata(parser, data, len, scratch_pool);
 }
 
 /* Flip the requisite bits in CTX to indicate that processing of the

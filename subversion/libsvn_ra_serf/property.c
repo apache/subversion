@@ -254,11 +254,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 start_propfind(svn_ra_serf__xml_parser_t *parser,
-               void *userData,
                svn_ra_serf__dav_props_t name,
-               const char **attrs)
+               const char **attrs,
+               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
   prop_state_e state;
   prop_info_t *info;
 
@@ -295,10 +295,10 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_propfind(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
-             svn_ra_serf__dav_props_t name)
+             svn_ra_serf__dav_props_t name,
+             apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
   prop_state_e state;
   prop_info_t *info;
 
@@ -392,11 +392,11 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 cdata_propfind(svn_ra_serf__xml_parser_t *parser,
-               void *userData,
                const char *data,
-               apr_size_t len)
+               apr_size_t len,
+               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
   prop_state_e state;
   prop_info_t *info;
 
