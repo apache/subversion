@@ -701,13 +701,12 @@ fp.close()"""
                     '  bogus_rev_prop\n', '  svn:date\n']
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
-@XFail()
+@XFail()  # Revert r1302524 when this is fixed?
 def property_delete(sbox):
   "property delete"
 
   sbox.build()
   repo_dir = sbox.repo_dir
-  wc_dir = sbox.wc_dir
 
   sbox.simple_propset('foo', 'bar', 'A/mu')
   sbox.simple_commit()
