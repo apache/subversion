@@ -127,6 +127,7 @@ typedef enum svn_cl__longopt_t {
   opt_use_patch_diff_format,
   opt_allow_mixed_revisions,
   opt_include_externals,
+  opt_symmetric,
   opt_show_inherited_props,
 } svn_cl__longopt_t;
 
@@ -367,6 +368,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "recursion. This does not include externals with a\n"
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
+  {"symmetric", opt_symmetric, 0,
+                       N_("Symmetric merge")},
   {"show-inherited-props", opt_show_inherited_props, 0,
                        N_("retrieve target's inherited properties")},
 
@@ -1017,7 +1020,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions} },
+     opt_allow_mixed_revisions, opt_symmetric} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1954,6 +1957,9 @@ main(int argc, const char *argv[])
         break;
       case opt_record_only:
         opt_state.record_only = TRUE;
+        break;
+      case opt_symmetric:
+        opt_state.symmetric_merge = TRUE;
         break;
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);

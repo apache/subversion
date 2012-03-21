@@ -386,6 +386,27 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 /*** From commit.c ***/
 svn_error_t *
+svn_client_import4(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_import5(path, url, depth, no_ignore,
+                                            ignore_unknown_node_types,
+                                            revprop_table,
+                                            NULL, NULL,
+                                            commit_callback, commit_baton,
+                                            ctx, pool));
+}
+
+
+svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,
                    const char *url,

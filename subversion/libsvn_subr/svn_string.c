@@ -259,8 +259,8 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
 #endif
 
   /* Both, svn_string_t and svn_stringbuf_t are public API structures
-   * since a couple of releases now. Thus, we can rely on their precise
-   * layout not to change.
+   * since the svn epoch. Thus, we can rely on their precise layout not
+   * to change.
    *
    * It just so happens that svn_string_t is structurally equivalent
    * to the (data, len) sub-set of svn_stringbuf_t. There is also no

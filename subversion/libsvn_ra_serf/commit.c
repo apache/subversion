@@ -2217,7 +2217,10 @@ close_edit(void *edit_baton,
 
   if (svn_ra_serf__merge_get_status(merge_ctx) != 200)
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                               _("MERGE request failed: returned %d "
+                                 "(during commit)"),
+                               svn_ra_serf__merge_get_status(merge_ctx));
     }
 
   /* Inform the WC that we did a commit.  */

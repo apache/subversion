@@ -200,14 +200,14 @@ class Sandbox:
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
 
-  def simple_update(self, target=None):
+  def simple_update(self, target=None, revision='HEAD'):
     """Update the WC or TARGET.
        TARGET is a relpath relative to the WC."""
     if target is None:
       target = self.wc_dir
     else:
       target = self.ospath(target)
-    svntest.main.run_svn(False, 'update', target)
+    svntest.main.run_svn(False, 'update', target, '-r', revision)
 
   def simple_switch(self, url, target=None):
     """Switch the WC or TARGET to URL.
