@@ -151,7 +151,7 @@ class Sandbox:
     """Get a stable name for a temporary file that will be removed after
        running the test"""
 
-    dir = self.add_wc_path('tmp')
+    dir = self.add_wc_path('tmp', remove=False)
     if not os.path.exists(dir):
       os.mkdir(dir)
 
