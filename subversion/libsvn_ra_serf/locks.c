@@ -74,10 +74,6 @@ typedef struct lock_info_t {
   int status_code;
   const char *reason;
 
-  /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
-
   /* are we done? */
   svn_boolean_t done;
 } lock_info_t;
