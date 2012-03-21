@@ -27,6 +27,7 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 import sys
+# No need for __all__ here, since we don't export _unprefix_names()'d symbols.
 
 class SubversionException(Exception):
 
