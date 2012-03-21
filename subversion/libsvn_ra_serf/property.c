@@ -351,6 +351,9 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
               const svn_string_t *morph;
 
               morph = svn_stringbuf__morph_into_string(info->value);
+#ifdef SVN_DEBUG
+              info->value = NULL;  /* morph killed the stringbuf.  */
+#endif
               val_str = svn_base64_decode_string(morph, ctx->pool);
             }
           else

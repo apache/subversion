@@ -538,6 +538,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
           const svn_string_t *morph;
 
           morph = svn_stringbuf__morph_into_string(info->prop_value);
+#ifdef SVN_DEBUG
+          info->prop_value = NULL;  /* morph killed the stringbuf.  */
+#endif
 
           if (strcmp(name.name, "change-file-prop") == 0)
             prop_val = svn_base64_decode_string(morph, ctx->file_pool);
