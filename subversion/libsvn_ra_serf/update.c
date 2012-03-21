@@ -1329,11 +1329,11 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
 static svn_error_t *
 start_report(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              svn_ra_serf__dav_props_t name,
-             const char **attrs)
+             const char **attrs,
+             apr_pool_t *scratch_pool)
 {
-  report_context_t *ctx = userData;
+  report_context_t *ctx = parser->user_data;
   report_state_e state;
 
   state = parser->state->current_state;
@@ -1793,10 +1793,10 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_report(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
-           svn_ra_serf__dav_props_t name)
+           svn_ra_serf__dav_props_t name,
+           apr_pool_t *scratch_pool)
 {
-  report_context_t *ctx = userData;
+  report_context_t *ctx = parser->user_data;
   report_state_e state;
 
   state = parser->state->current_state;
@@ -2048,11 +2048,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_report(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              const char *data,
-             apr_size_t len)
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
 {
-  report_context_t *ctx = userData;
+  report_context_t *ctx = parser->user_data;
 
   UNUSED_CTX(ctx);
 

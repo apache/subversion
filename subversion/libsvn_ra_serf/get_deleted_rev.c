@@ -70,11 +70,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 start_getdrev(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               svn_ra_serf__dav_props_t name,
-              const char **attrs)
+              const char **attrs,
+              apr_pool_t *scratch_pool)
 {
-  drev_context_t *drev_ctx = userData;
+  drev_context_t *drev_ctx = parser->user_data;
   drev_state_e state;
 
   state = parser->state->current_state;
@@ -90,10 +90,10 @@ start_getdrev(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_getdrev(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
-            svn_ra_serf__dav_props_t name)
+            svn_ra_serf__dav_props_t name,
+            apr_pool_t *scratch_pool)
 {
-  drev_context_t *drev_ctx = userData;
+  drev_context_t *drev_ctx = parser->user_data;
   drev_state_e state;
   svn_string_t *info;
 
@@ -113,11 +113,11 @@ end_getdrev(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               const char *data,
-              apr_size_t len)
+              apr_size_t len,
+              apr_pool_t *scratch_pool)
 {
-  drev_context_t *drev_ctx = userData;
+  drev_context_t *drev_ctx = parser->user_data;
   drev_state_e state;
 
   UNUSED_CTX(drev_ctx);

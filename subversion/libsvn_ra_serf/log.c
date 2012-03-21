@@ -190,11 +190,11 @@ read_changed_path_attributes(svn_log_changed_path2_t *change, const char **attrs
 
 static svn_error_t *
 start_log(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           svn_ra_serf__dav_props_t name,
-          const char **attrs)
+          const char **attrs,
+          apr_pool_t *scratch_pool)
 {
-  log_context_t *log_ctx = userData;
+  log_context_t *log_ctx = parser->user_data;
   log_state_e state;
 
   state = parser->state->current_state;
@@ -352,10 +352,10 @@ maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
 
 static svn_error_t *
 end_log(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
+        svn_ra_serf__dav_props_t name,
+        apr_pool_t *scratch_pool)
 {
-  log_context_t *log_ctx = userData;
+  log_context_t *log_ctx = parser->user_data;
   log_state_e state;
   log_info_t *info;
 
@@ -485,11 +485,11 @@ end_log(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_log(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           const char *data,
-          apr_size_t len)
+          apr_size_t len,
+          apr_pool_t *scratch_pool)
 {
-  log_context_t *log_ctx = userData;
+  log_context_t *log_ctx = parser->user_data;
   log_state_e state;
   log_info_t *info;
 

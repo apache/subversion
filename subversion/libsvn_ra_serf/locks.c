@@ -108,11 +108,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 start_lock(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
            svn_ra_serf__dav_props_t name,
-           const char **attrs)
+           const char **attrs,
+           apr_pool_t *scratch_pool)
 {
-  lock_info_t *ctx = userData;
+  lock_info_t *ctx = parser->user_data;
   lock_state_e state;
 
   state = parser->state->current_state;
@@ -189,10 +189,10 @@ start_lock(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_lock(svn_ra_serf__xml_parser_t *parser,
-         void *userData,
-         svn_ra_serf__dav_props_t name)
+         svn_ra_serf__dav_props_t name,
+         apr_pool_t *scratch_pool)
 {
-  lock_info_t *ctx = userData;
+  lock_info_t *ctx = parser->user_data;
   lock_state_e state;
 
   state = parser->state->current_state;
@@ -274,11 +274,11 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_lock(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
            const char *data,
-           apr_size_t len)
+           apr_size_t len,
+           apr_pool_t *scratch_pool)
 {
-  lock_info_t *lock_ctx = userData;
+  lock_info_t *lock_ctx = parser->user_data;
   lock_state_e state;
   svn_stringbuf_t *info;
 
