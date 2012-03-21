@@ -66,8 +66,8 @@ struct svn_ra_serf__options_context_t {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 
-  const char *attr_val;
-  apr_size_t attr_val_len;
+  /* Buffer for the activity-collection  */
+  svn_stringbuf_t *acbuf;
   svn_boolean_t collect_cdata;
 
   /* Current state we're in */
@@ -187,7 +187,7 @@ end_options(svn_ra_serf__xml_parser_t *parser,
     {
       options_ctx->collect_cdata = FALSE;
       options_ctx->activity_collection =
-        svn_urlpath__canonicalize(options_ctx->attr_val, options_ctx->pool);
+        svn_urlpath__canonicalize(options_ctx->acbuf->data, options_ctx->pool);
       pop_state(options_ctx);
     }
 
@@ -201,11 +201,9 @@ cdata_options(svn_ra_serf__xml_parser_t *parser,
               apr_size_t len)
 {
   svn_ra_serf__options_context_t *ctx = userData;
+
   if (ctx->collect_cdata)
-    {
-      svn_ra_serf__expand_string(&ctx->attr_val, &ctx->attr_val_len,
-                                 data, len, ctx->pool);
-    }
+    svn_stringbuf_appendbytes(ctx->acbuf, data, len);
 
   return SVN_NO_ERROR;
 }
@@ -447,6 +445,8 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
 
   new_ctx->pool = pool;
+
+  new_ctx->acbuf = svn_stringbuf_create_empty(pool);
 
   new_ctx->path = path;
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;

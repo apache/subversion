@@ -65,8 +65,7 @@ typedef struct lock_info_t {
   svn_lock_t *lock;
 
   /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
+  svn_stringbuf_t *cdata;
 
 } lock_info_t;
 
@@ -101,7 +100,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       info->pool = lock_ctx->pool;
       info->lock = svn_lock_create(lock_ctx->pool);
-      info->lock->path =
+      info->cdata = svn_stringbuf_create_empty(info->pool);
 
       parser->state->private = info;
     }
@@ -212,46 +211,50 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
   else if (state == PATH &&
            strcmp(name.name, "path") == 0)
     {
-      info->lock->path = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
-      info->tmp_len = 0;
+      info->lock->path = apr_pstrmemdup(info->pool,
+                                        info->cdata->data, info->cdata->len);
+      svn_stringbuf_setempty(info->cdata);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == TOKEN &&
            strcmp(name.name, "token") == 0)
     {
-      info->lock->token = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
-      info->tmp_len = 0;
+      info->lock->token = apr_pstrmemdup(info->pool,
+                                         info->cdata->data, info->cdata->len);
+      svn_stringbuf_setempty(info->cdata);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == OWNER &&
            strcmp(name.name, "owner") == 0)
     {
-      info->lock->owner = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
-      info->tmp_len = 0;
+      info->lock->owner = apr_pstrmemdup(info->pool,
+                                         info->cdata->data, info->cdata->len);
+      svn_stringbuf_setempty(info->cdata);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == COMMENT &&
            strcmp(name.name, "comment") == 0)
     {
       info->lock->comment = apr_pstrmemdup(info->pool,
-                                           info->tmp, info->tmp_len);
-      info->tmp_len = 0;
+                                           info->cdata->data,
+                                           info->cdata->len);
+      svn_stringbuf_setempty(info->cdata);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == CREATION_DATE &&
            strcmp(name.name, SVN_DAV__CREATIONDATE) == 0)
     {
       SVN_ERR(svn_time_from_cstring(&info->lock->creation_date,
-                                    info->tmp, info->pool));
-      info->tmp_len = 0;
+                                    info->cdata->data, info->pool));
+      svn_stringbuf_setempty(info->cdata);
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == EXPIRATION_DATE &&
            strcmp(name.name, "expirationdate") == 0)
     {
       SVN_ERR(svn_time_from_cstring(&info->lock->expiration_date,
-                                    info->tmp, info->pool));
-      info->tmp_len = 0;
+                                    info->cdata->data, info->pool));
+      svn_stringbuf_setempty(info->cdata);
       svn_ra_serf__xml_pop_state(parser);
     }
 
@@ -281,8 +284,7 @@ cdata_getlocks(svn_ra_serf__xml_parser_t *parser,
     case COMMENT:
     case CREATION_DATE:
     case EXPIRATION_DATE:
-        svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
-                                   data, len, parser->state->pool);
+        svn_stringbuf_appendbytes(info->cdata, data, len);
         break;
       default:
         break;

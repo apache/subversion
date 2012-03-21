@@ -162,7 +162,7 @@ svn_repos__validate_prop(const char *name,
                          const svn_string_t *value,
                          apr_pool_t *pool)
 {
-  svn_prop_kind_t kind = svn_property_kind(NULL, name);
+  svn_prop_kind_t kind = svn_property_kind2(name);
 
   /* Disallow setting non-regular properties. */
   if (kind != svn_prop_regular_kind)

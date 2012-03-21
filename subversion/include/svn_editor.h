@@ -153,6 +153,13 @@ extern "C" {
  * "should", "should not", "recommended", "may", and "optional" in this
  * document are to be interpreted as described in RFC 2119.
  *
+ * @note The editor is *not* reentrant. The receiver should not directly
+ * or indirectly invoke an editor API unless it has been marked as
+ * explicitly supporting reentrancy during a receiver's callback. This
+ * limitation extends to the cancellation callback, too. (This limitation
+ * is due to the scratch_pool shared by all callbacks, and cleared after
+ * each callback; a reentrant call could clear the outer call's pool)
+ *
  * \n
  * <h3>Life-Cycle</h3>
  *

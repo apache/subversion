@@ -1296,3 +1296,27 @@ svn_fs_fs__dag_get_copyfrom_path(const char **path,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__dag_update_ancestry(dag_node_t *target,
+                               dag_node_t *source,
+                               apr_pool_t *pool)
+{
+  node_revision_t *source_noderev, *target_noderev;
+
+  if (! svn_fs_fs__dag_check_mutable(target))
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
+       _("Attempted to update ancestry of non-mutable node"));
+
+  SVN_ERR(get_node_revision(&source_noderev, source, pool));
+  SVN_ERR(get_node_revision(&target_noderev, target, pool));
+
+  target_noderev->predecessor_id = source->id;
+  target_noderev->predecessor_count = source_noderev->predecessor_count;
+  if (target_noderev->predecessor_count != -1)
+    target_noderev->predecessor_count++;
+
+  return svn_fs_fs__put_node_revision(target->fs, target->id, target_noderev,
+                                      FALSE, pool);
+}

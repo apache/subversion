@@ -2580,7 +2580,26 @@ def reintegrate_symlink_deletion(sbox):
   svntest.main.run_svn(None, 'merge', '--reintegrate',
                        A_COPY_url, A_path)
 
+#----------------------------------------------------------------------
+def no_op_reintegrate(sbox):
+  """no-op reintegrate"""
 
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Sync merge from trunk to branch
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate; there are no relevant changes on the branch.
+  # ### TODO: Check the result more carefully than merely that it completed.
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/A_COPY', A_path)
 
 ########################################################################
 # Run the tests
@@ -2606,6 +2625,7 @@ test_list = [ None,
               no_source_subtree_mergeinfo,
               reintegrate_replaced_source,
               reintegrate_symlink_deletion,
+              no_op_reintegrate,
              ]
 
 if __name__ == '__main__':

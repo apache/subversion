@@ -39,6 +39,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_subr_private.h"
 
 #include "blncache.h"
 
@@ -69,6 +70,10 @@ typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
   serf_connection_t *conn;
+
+  /* The server is not Apache/mod_dav_svn (directly) and only supports
+     HTTP/1.0. Thus, we cannot send chunked requests.  */
+  svn_boolean_t http10;
 
   /* Bucket allocator for this connection. */
   serf_bucket_alloc_t *bkt_alloc;
@@ -1461,6 +1466,18 @@ svn_ra_serf__error_on_status(int status_code,
 svn_error_t *
 svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
+
+
+svn_error_t *
+svn_ra_serf__copy_into_spillbuf(svn_spillbuf_t **spillbuf,
+                                serf_bucket_t *bkt,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+serf_bucket_t *
+svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
+                              serf_bucket_alloc_t *allocator,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

@@ -90,10 +90,7 @@ svn_client__path_relative_to_root(const char **rel_path,
   /* If we have a WC path... */
   if (! svn_path_is_url(abspath_or_url))
     {
-      /* ...fetch its entry, and attempt to get both its full URL and
-         repository root URL.  If we can't get REPOS_ROOT from the WC
-         entry, we'll get it from the RA layer.*/
-
+      /* ... query it directly. */
       SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
                                              wc_ctx,
                                              abspath_or_url,

@@ -397,16 +397,16 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
                                     sizeof(*serf_sess->conns[0]));
+  serf_sess->conns[0]->http10 = TRUE;  /* until we confirm HTTP/1.1  */
+  serf_sess->conns[0]->http10 = FALSE; /* ### don't change behavior yet  */
   serf_sess->conns[0]->bkt_alloc =
           serf_bucket_allocator_create(serf_sess->pool, NULL, NULL);
   serf_sess->conns[0]->session = serf_sess;
   serf_sess->conns[0]->last_status_code = -1;
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
-  serf_sess->conns[0]->server_cert_failures = 0;
   serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostname = url.hostname;
-  serf_sess->conns[0]->useragent = NULL;
 
   /* create the user agent string */
   if (callbacks->get_client_string)
@@ -1197,6 +1197,7 @@ svn_ra_serf__init(const svn_version_t *loader_version,
       || serf_minor < SERF_MINOR_VERSION)
     {
       return svn_error_createf(
+         /* ### should return a unique error  */
          SVN_ERR_VERSION_MISMATCH, NULL,
          _("ra_serf was compiled for serf %d.%d.%d but loaded "
            "an incompatible %d.%d.%d library"),

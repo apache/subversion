@@ -77,7 +77,7 @@ typedef struct import_ctx_t
 } import_ctx_t;
 
 
-/* Apply PATH's contents (as a delta against the empty string) to
+/* Apply LOCAL_ABSPATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
    PROPERTIES is the set of node properties set on this file.
 
@@ -87,7 +87,7 @@ typedef struct import_ctx_t
 /* ### how does this compare against svn_wc_transmit_text_deltas2() ??? */
 
 static svn_error_t *
-send_file_contents(const char *path,
+send_file_contents(const char *local_abspath,
                    void *file_baton,
                    const svn_delta_editor_t *editor,
                    apr_hash_t *properties,
@@ -135,12 +135,13 @@ send_file_contents(const char *path,
 
   if (special)
     {
-      SVN_ERR(svn_subst_read_specialfile(&contents, path, pool, pool));
+      SVN_ERR(svn_subst_read_specialfile(&contents, local_abspath,
+                                         pool, pool));
     }
   else
     {
       /* Open the working copy file. */
-      SVN_ERR(svn_stream_open_readonly(&contents, path, pool, pool));
+      SVN_ERR(svn_stream_open_readonly(&contents, local_abspath, pool, pool));
 
       /* If we have EOL styles or keywords, then detranslate the file. */
       if (svn_subst_translation_required(eol_style, eol, keywords,
@@ -150,7 +151,9 @@ send_file_contents(const char *path,
             return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
                                     _("%s property on '%s' contains "
                                       "unrecognized EOL-style '%s'"),
-                                    SVN_PROP_EOL_STYLE, path,
+                                    SVN_PROP_EOL_STYLE,
+                                    svn_dirent_local_style(local_abspath,
+                                                           pool),
                                     eol_style_val->data);
 
           /* We're importing, so translate files with 'native' eol-style to
@@ -189,8 +192,9 @@ send_file_contents(const char *path,
 static svn_error_t *
 import_file(const svn_delta_editor_t *editor,
             void *dir_baton,
-            const char *path,
+            const char *local_abspath,
             const char *edit_path,
+            const svn_io_dirent2_t *dirent,
             import_ctx_t *import_ctx,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -201,12 +205,8 @@ import_file(const svn_delta_editor_t *editor,
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
-  svn_node_kind_t kind;
-  svn_boolean_t is_special;
 
-  SVN_ERR(svn_path_check_valid(path, pool));
-
-  SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
+  SVN_ERR(svn_path_check_valid(local_abspath, pool));
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR(editor->add_file(edit_path, dir_baton, NULL, SVN_INVALID_REVNUM,
@@ -215,10 +215,10 @@ import_file(const svn_delta_editor_t *editor,
   /* Remember that the repository was modified */
   import_ctx->repos_changed = TRUE;
 
-  if (! is_special)
+  if (! dirent->special)
     {
       /* add automatic properties */
-      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path,
+      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, local_abspath,
                                          import_ctx->magic_cookie,
                                          ctx, pool));
     }
@@ -239,7 +239,8 @@ import_file(const svn_delta_editor_t *editor,
   if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_commit_added, pool);
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_commit_added,
+                               pool);
       notify->kind = svn_node_file;
       notify->mime_type = mimetype;
       notify->content_state = notify->prop_state
@@ -251,7 +252,7 @@ import_file(const svn_delta_editor_t *editor,
   /* If this is a special file, we need to set the svn:special
      property and create a temporary detranslated version in order to
      send to the server. */
-  if (is_special)
+  if (dirent->special)
     {
       apr_hash_set(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
                    svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
@@ -263,7 +264,7 @@ import_file(const svn_delta_editor_t *editor,
     }
 
   /* Now, transmit the file contents. */
-  SVN_ERR(send_file_contents(path, file_baton, editor,
+  SVN_ERR(send_file_contents(local_abspath, file_baton, editor,
                              properties, digest, pool));
 
   /* Finally, close the file. */
@@ -275,7 +276,7 @@ import_file(const svn_delta_editor_t *editor,
 }
 
 
-/* Import directory PATH into the repository directory indicated by
+/* Import directory LOCAL_ABSPATH into the repository directory indicated by
  * DIR_BATON in EDITOR.  EDIT_PATH is the path imported as the root
  * directory, so all edits are relative to that.
  *
@@ -291,6 +292,9 @@ import_file(const svn_delta_editor_t *editor,
  * If NO_IGNORE is FALSE, don't import files or directories that match
  * ignore patterns.
  *
+ * If FILTER_CALLBACK is not NULL, call it with FILTER_BATON on each to be
+ * imported node below LOCAL_ABSPATH to allow filtering nodes.
+ *
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
  * directory.
  *
@@ -298,12 +302,14 @@ import_file(const svn_delta_editor_t *editor,
 static svn_error_t *
 import_dir(const svn_delta_editor_t *editor,
            void *dir_baton,
-           const char *path,
+           const char *local_abspath,
            const char *edit_path,
            svn_depth_t depth,
            apr_hash_t *excludes,
            svn_boolean_t no_ignore,
            svn_boolean_t ignore_unknown_node_types,
+           svn_client_import_filter_func_t filter_callback,
+           void *filter_baton,
            import_ctx_t *import_ctx,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
@@ -313,18 +319,18 @@ import_dir(const svn_delta_editor_t *editor,
   apr_hash_index_t *hi;
   apr_array_header_t *ignores;
 
-  SVN_ERR(svn_path_check_valid(path, pool));
+  SVN_ERR(svn_path_check_valid(local_abspath, pool));
 
   if (!no_ignore)
     SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
 
-  SVN_ERR(svn_io_get_dirents3(&dirents, path, TRUE, pool, pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, local_abspath, TRUE, pool, pool));
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *this_path, *this_edit_path, *abs_path;
+      const char *this_abspath, *this_edit_path;
       const char *filename = svn__apr_hash_index_key(hi);
-      const svn_io_dirent_t *dirent = svn__apr_hash_index_val(hi);
+      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
@@ -342,7 +348,7 @@ import_dir(const svn_delta_editor_t *editor,
           if (ctx->notify_func2)
             {
               svn_wc_notify_t *notify
-                = svn_wc_create_notify(svn_dirent_join(path, filename,
+                = svn_wc_create_notify(svn_dirent_join(local_abspath, filename,
                                                        subpool),
                                        svn_wc_notify_skip, subpool);
               notify->kind = svn_node_dir;
@@ -357,17 +363,27 @@ import_dir(const svn_delta_editor_t *editor,
       /* Typically, we started importing from ".", in which case
          edit_path is "".  So below, this_path might become "./blah",
          and this_edit_path might become "blah", for example. */
-      this_path = svn_dirent_join(path, filename, subpool);
+      this_abspath = svn_dirent_join(local_abspath, filename, subpool);
       this_edit_path = svn_relpath_join(edit_path, filename, subpool);
 
       /* If this is an excluded path, exclude it. */
-      SVN_ERR(svn_dirent_get_absolute(&abs_path, this_path, subpool));
-      if (apr_hash_get(excludes, abs_path, APR_HASH_KEY_STRING))
+      if (apr_hash_get(excludes, this_abspath, APR_HASH_KEY_STRING))
         continue;
 
       if ((!no_ignore) && svn_wc_match_ignore_list(filename, ignores,
                                                    subpool))
         continue;
+
+      if (filter_callback != NULL)
+        {
+          svn_boolean_t filter = FALSE;
+
+          SVN_ERR(filter_callback(filter_baton, &filter, this_abspath,
+                                  dirent, subpool));
+
+          if (filter)
+            continue;
+        }
 
       if (dirent->kind == svn_node_dir && depth >= svn_depth_immediates)
         {
@@ -389,7 +405,8 @@ import_dir(const svn_delta_editor_t *editor,
           if (ctx->notify_func2)
             {
               svn_wc_notify_t *notify
-                = svn_wc_create_notify(this_path, svn_wc_notify_commit_added,
+                = svn_wc_create_notify(this_abspath,
+                                       svn_wc_notify_commit_added,
                                        subpool);
               notify->kind = svn_node_dir;
               notify->content_state = notify->prop_state
@@ -404,9 +421,10 @@ import_dir(const svn_delta_editor_t *editor,
             if (depth == svn_depth_immediates)
               depth_below_here = svn_depth_empty;
 
-            SVN_ERR(import_dir(editor, this_dir_baton, this_path,
+            SVN_ERR(import_dir(editor, this_dir_baton, this_abspath,
                                this_edit_path, depth_below_here, excludes,
                                no_ignore, ignore_unknown_node_types,
+                               filter_callback, filter_baton,
                                import_ctx, ctx,
                                subpool));
           }
@@ -416,8 +434,9 @@ import_dir(const svn_delta_editor_t *editor,
         }
       else if (dirent->kind == svn_node_file && depth >= svn_depth_files)
         {
-          SVN_ERR(import_file(editor, dir_baton, this_path,
-                              this_edit_path, import_ctx, ctx, subpool));
+          SVN_ERR(import_file(editor, dir_baton, this_abspath,
+                              this_edit_path, dirent,
+                              import_ctx, ctx, subpool));
         }
       else if (dirent->kind != svn_node_dir && dirent->kind != svn_node_file)
         {
@@ -427,7 +446,7 @@ import_dir(const svn_delta_editor_t *editor,
               if (ctx->notify_func2)
                 {
                   svn_wc_notify_t *notify
-                    = svn_wc_create_notify(this_path,
+                    = svn_wc_create_notify(this_abspath,
                                            svn_wc_notify_skip, subpool);
                   notify->kind = svn_node_dir;
                   notify->content_state = notify->prop_state
@@ -440,7 +459,7 @@ import_dir(const svn_delta_editor_t *editor,
             return svn_error_createf
               (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                _("Unknown or unversionable type for '%s'"),
-               svn_dirent_local_style(this_path, subpool));
+               svn_dirent_local_style(this_abspath, subpool));
         }
     }
 
@@ -485,7 +504,7 @@ import_dir(const svn_delta_editor_t *editor,
  * not necessarily the root.)
  */
 static svn_error_t *
-import(const char *path,
+import(const char *local_abspath,
        const apr_array_header_t *new_entries,
        const svn_delta_editor_t *editor,
        void *edit_baton,
@@ -493,15 +512,17 @@ import(const char *path,
        apr_hash_t *excludes,
        svn_boolean_t no_ignore,
        svn_boolean_t ignore_unknown_node_types,
+       svn_client_import_filter_func_t filter_callback,
+       void *filter_baton,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
   void *root_baton;
-  svn_node_kind_t kind;
   apr_array_header_t *ignores;
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
+  const svn_io_dirent2_t *dirent;
 
   svn_magic__init(&import_ctx->magic_cookie, pool);
 
@@ -512,7 +533,7 @@ import(const char *path,
                             pool, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, FALSE, pool, pool));
 
   /* Make the intermediate directory components necessary for properly
      rooting our import source tree.  */
@@ -529,7 +550,7 @@ import(const char *path,
           /* If this is the last path component, and we're importing a
              file, then this component is the name of the file, not an
              intermediate directory. */
-          if ((i == new_entries->nelts - 1) && (kind == svn_node_file))
+          if ((i == new_entries->nelts - 1) && (dirent->kind == svn_node_file))
             break;
 
           APR_ARRAY_PUSH(batons, void *) = root_baton;
@@ -542,7 +563,7 @@ import(const char *path,
           import_ctx->repos_changed = TRUE;
         }
     }
-  else if (kind == svn_node_file)
+  else if (dirent->kind == svn_node_file)
     {
       return svn_error_create
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
@@ -557,32 +578,37 @@ import(const char *path,
      if something underneath it also has our reserved name, then we'll
      error. */
 
-  if (kind == svn_node_file)
+  if (dirent->kind == svn_node_file)
     {
+      /* This code path ignores EXCLUDES and FILTER, but they don't make
+         much sense for a single file import anyway. */
       svn_boolean_t ignores_match = FALSE;
 
       if (!no_ignore)
         {
           SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-          ignores_match = svn_wc_match_ignore_list(path, ignores, pool);
+          ignores_match = svn_wc_match_ignore_list(local_abspath,
+                                                   ignores, pool);
         }
       if (!ignores_match)
-        SVN_ERR(import_file(editor, root_baton, path, edit_path,
-                            import_ctx, ctx, pool));
+        SVN_ERR(import_file(editor, root_baton, local_abspath, edit_path,
+                            dirent, import_ctx, ctx, pool));
     }
-  else if (kind == svn_node_dir)
+  else if (dirent->kind == svn_node_dir)
     {
-      SVN_ERR(import_dir(editor, root_baton, path, edit_path,
+      SVN_ERR(import_dir(editor, root_baton, local_abspath, edit_path,
                          depth, excludes, no_ignore,
-                         ignore_unknown_node_types, import_ctx, ctx, pool));
+                         ignore_unknown_node_types,
+                         filter_callback, filter_baton,
+                         import_ctx, ctx, pool));
 
     }
-  else if (kind == svn_node_none
-           || kind == svn_node_unknown)
+  else if (dirent->kind == svn_node_none
+           || dirent->kind == svn_node_unknown)
     {
       return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                _("'%s' does not exist"),
-                               svn_dirent_local_style(path, pool));
+                               svn_dirent_local_style(local_abspath, pool));
     }
 
   /* Close up shop; it's time to go home. */
@@ -705,26 +731,28 @@ get_ra_editor(svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import4(const char *path,
+svn_client_import5(const char *path,
                    const char *url,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
+                   svn_client_import_filter_func_t filter_callback,
+                   void *filter_baton,
                    svn_commit_callback2_t commit_callback,
                    void *commit_baton,
                    svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   const char *log_msg = "";
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_ra_session_t *ra_session;
-  apr_hash_t *excludes = apr_hash_make(pool);
+  apr_hash_t *excludes = apr_hash_make(scratch_pool);
   svn_node_kind_t kind;
   const char *local_abspath;
-  apr_array_header_t *new_entries = apr_array_make(pool, 4,
+  apr_array_header_t *new_entries = apr_array_make(scratch_pool, 4,
                                                    sizeof(const char *));
   const char *temp;
   const char *dir;
@@ -734,7 +762,7 @@ svn_client_import4(const char *path,
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a local path"), path);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -745,30 +773,30 @@ svn_client_import4(const char *path,
       svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items
-        = apr_array_make(pool, 1, sizeof(item));
+        = apr_array_make(scratch_pool, 1, sizeof(item));
 
-      item = svn_client_commit_item3_create(pool);
-      item->path = apr_pstrdup(pool, path);
+      item = svn_client_commit_item3_create(scratch_pool);
+      item->path = apr_pstrdup(scratch_pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
-                                      ctx, pool));
+                                      ctx, scratch_pool));
       if (! log_msg)
         return SVN_NO_ERROR;
       if (tmp_file)
         {
           const char *abs_path;
-          SVN_ERR(svn_dirent_get_absolute(&abs_path, tmp_file, pool));
+          SVN_ERR(svn_dirent_get_absolute(&abs_path, tmp_file, scratch_pool));
           apr_hash_set(excludes, abs_path, APR_HASH_KEY_STRING, (void *)1);
         }
     }
 
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
-  subpool = svn_pool_create(pool);
+  subpool = svn_pool_create(scratch_pool);
   do
     {
       svn_pool_clear(subpool);
@@ -788,7 +816,7 @@ svn_client_import4(const char *path,
           else
             svn_error_clear(err);
 
-          svn_uri_split(&temp, &dir, url, pool);
+          svn_uri_split(&temp, &dir, url, scratch_pool);
           APR_ARRAY_PUSH(new_entries, const char *) = dir;
           url = temp;
         }
@@ -833,19 +861,20 @@ svn_client_import4(const char *path,
       && svn_wc_is_adm_dir(temp = APR_ARRAY_IDX(new_entries,
                                                 new_entries->nelts - 1,
                                                 const char *),
-                           pool))
+                           scratch_pool))
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        _("'%s' is a reserved name and cannot be imported"),
-       /* ### Is svn_path_local_style() really necessary for this? */
-       svn_dirent_local_style(temp, pool));
+       svn_dirent_local_style(temp, scratch_pool));
 
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import(path, new_entries, editor, edit_baton,
+  if ((err = import(local_abspath, new_entries, editor, edit_baton,
                     depth, excludes, no_ignore,
-                    ignore_unknown_node_types, ctx, subpool)))
+                    ignore_unknown_node_types,
+                    filter_callback, filter_baton,
+                    ctx, subpool)))
     {
       svn_error_clear(editor->abort_edit(edit_baton, subpool));
       return svn_error_trace(err);
