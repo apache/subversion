@@ -436,11 +436,13 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
   return status;
 }
 
-serf_bucket_t*
-svn_ra_serf__accept_response(serf_request_t *request,
-                             serf_bucket_t *stream,
-                             void *acceptor_baton,
-                             apr_pool_t *pool)
+
+/* Our default serf response acceptor.  */
+static serf_bucket_t *
+accept_response(serf_request_t *request,
+                serf_bucket_t *stream,
+                void *acceptor_baton,
+                apr_pool_t *pool)
 {
   serf_bucket_t *c;
   serf_bucket_alloc_t *bkt_alloc;
@@ -451,7 +453,9 @@ svn_ra_serf__accept_response(serf_request_t *request,
   return serf_bucket_response_create(c, bkt_alloc);
 }
 
-static serf_bucket_t*
+
+/* Custom response acceptor for HEAD requests.  */
+static serf_bucket_t *
 accept_head(serf_request_t *request,
             serf_bucket_t *stream,
             void *acceptor_baton,
@@ -459,8 +463,7 @@ accept_head(serf_request_t *request,
 {
   serf_bucket_t *response;
 
-  response = svn_ra_serf__accept_response(request, stream, acceptor_baton,
-                                          pool);
+  response = accept_response(request, stream, acceptor_baton, pool);
 
   /* We know we shouldn't get a response body. */
   serf_bucket_response_set_head(response);
@@ -630,22 +633,37 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 }
 
 
-svn_error_t *
-svn_ra_serf__setup_serf_req(serf_request_t *request,
-                            serf_bucket_t **req_bkt,
-                            serf_bucket_t **ret_hdrs_bkt,
-                            svn_ra_serf__connection_t *conn,
-                            const char *method, const char *url,
-                            serf_bucket_t *body_bkt, const char *content_type)
+/*
+ * Given a REQUEST on connection CONN, construct a request bucket for it,
+ * returning the bucket in *REQ_BKT.
+ *
+ * If HDRS_BKT is not-NULL, it will be set to a headers_bucket that
+ * corresponds to the new request.
+ *
+ * The request will be METHOD at URL.
+ *
+ * If BODY_BKT is not-NULL, it will be sent as the request body.
+ *
+ * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
+ *
+ * REQUEST_POOL should live for the duration of the request. Serf will
+ * construct this and provide it to the request_setup callback, so we
+ * should just use that one.
+ */
+static svn_error_t *
+setup_serf_req(serf_request_t *request,
+               serf_bucket_t **req_bkt,
+               serf_bucket_t **hdrs_bkt,
+               svn_ra_serf__connection_t *conn,
+               const char *method, const char *url,
+               serf_bucket_t *body_bkt, const char *content_type,
+               apr_pool_t *request_pool,
+               apr_pool_t *scratch_pool)
 {
   serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
-  serf_bucket_t *hdrs_bkt;
 
 #if SERF_VERSION_AT_LEAST(1, 1, 0)
   svn_spillbuf_t *buf;
-
-  /* ### this should be passed  */
-  apr_pool_t *scratch_pool = conn->session->pool;
 
   if (conn->http10 && body_bkt != NULL)
     {
@@ -657,19 +675,18 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
          then wrap a bucket around that spillbuf. The spillbuf will give
          us the Content-Length value.  */
       SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
-                                              conn->session->pool,
+                                              request_pool,
                                               scratch_pool));
       body_bkt = svn_ra_serf__create_sb_bucket(buf, allocator,
-                                               conn->session->pool,
+                                               request_pool,
                                                scratch_pool);
     }
 #endif
 
   /* Create a request bucket.  Note that this sucker is kind enough to
      add a "Host" header for us.  */
-  *req_bkt =
-    serf_request_bucket_request_create(request, method, url, body_bkt,
-                                       allocator);
+  *req_bkt = serf_request_bucket_request_create(request, method, url,
+                                                body_bkt, allocator);
 
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
@@ -683,25 +700,24 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     }
 #endif
 
-  hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
+  *hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
+
+  /* We use serf_bucket_headers_setn() because the string below have a
+     lifetime longer than this bucket. Thus, there is no need to copy
+     the header values.  */
+  serf_bucket_headers_setn(*hdrs_bkt, "User-Agent", conn->useragent);
 
   if (content_type)
     {
-      serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
+      serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
-  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
-  if (ret_hdrs_bkt)
-    {
-      *ret_hdrs_bkt = hdrs_bkt;
-    }
+  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   return SVN_NO_ERROR;
 }
@@ -1986,40 +2002,26 @@ handle_response_cb(serf_request_t *request,
   return serf_status;
 }
 
-/* If the CTX->setup() callback is non-NULL, invoke it to carry out the
-   majority of the serf_request_setup_t implementation.  Otherwise, perform
-   default setup, with special handling for HEAD requests, and finer-grained
-   callbacks invoked (if non-NULL) to produce the request headers and
-   body. */
+/* Perform basic request setup, with special handling for HEAD requests,
+   and finer-grained callbacks invoked (if non-NULL) to produce the request
+   headers and body. */
 static svn_error_t *
 setup_request(serf_request_t *request,
-                 svn_ra_serf__handler_t *ctx,
-                 serf_bucket_t **req_bkt,
-                 serf_response_acceptor_t *acceptor,
-                 void **acceptor_baton,
-                 serf_response_handler_t *handler,
-                 void **handler_baton,
-                 apr_pool_t *pool)
+              svn_ra_serf__handler_t *ctx,
+              serf_bucket_t **req_bkt,
+              serf_response_acceptor_t *acceptor,
+              void **acceptor_baton,
+              serf_response_handler_t *handler,
+              void **handler_baton,
+              apr_pool_t *request_pool,
+              apr_pool_t *scratch_pool)
 {
   serf_bucket_t *headers_bkt;
 
-  *acceptor = svn_ra_serf__accept_response;
+  /* Default response acceptor.  */
+  *acceptor = accept_response;
   *acceptor_baton = ctx->session;
 
-  if (ctx->setup)
-    {
-      svn_ra_serf__response_handler_t response_handler;
-      void *response_baton;
-
-      SVN_ERR(ctx->setup(request, ctx->setup_baton, req_bkt,
-                         acceptor, acceptor_baton,
-                         &response_handler, &response_baton,
-                         pool));
-
-      ctx->response_handler = response_handler;
-      ctx->response_baton = response_baton;
-    }
-  else
     {
       serf_bucket_t *body_bkt;
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
@@ -2031,22 +2033,25 @@ setup_request(serf_request_t *request,
 
       if (ctx->body_delegate)
         {
+          /* ### should pass the scratch_pool  */
           SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
-                                     bkt_alloc, pool));
+                                     bkt_alloc, request_pool));
         }
       else
         {
           body_bkt = NULL;
         }
 
-      SVN_ERR(svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt,
-                                          ctx->conn, ctx->method, ctx->path,
-                                          body_bkt, ctx->body_type));
+      SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
+                             ctx->conn, ctx->method, ctx->path,
+                             body_bkt, ctx->body_type,
+                             request_pool, scratch_pool));
 
       if (ctx->header_delegate)
         {
+          /* ### should pass the scratch_pool  */
           SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
-                                       pool));
+                                       request_pool));
         }
     }
 
@@ -2072,11 +2077,15 @@ setup_request_cb(serf_request_t *request,
   svn_ra_serf__handler_t *ctx = setup_baton;
   svn_error_t *err;
 
+  /* ### construct a scratch_pool? serf gives us a pool that will live for
+     ### the duration of the request.  */
+  apr_pool_t *scratch_pool = pool;
+
   err = setup_request(request, ctx,
                       req_bkt,
                       acceptor, acceptor_baton,
                       handler, handler_baton,
-                      pool);
+                      pool /* request_pool */, scratch_pool);
 
   if (err)
     {

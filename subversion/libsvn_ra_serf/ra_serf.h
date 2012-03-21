@@ -324,12 +324,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool);
 
-serf_bucket_t*
-svn_ra_serf__accept_response(serf_request_t *request,
-                             serf_bucket_t *stream,
-                             void *acceptor_baton,
-                             apr_pool_t *pool);
-
 void
 svn_ra_serf__conn_closed(serf_connection_t *conn,
                          void *closed_baton,
@@ -356,24 +350,6 @@ svn_ra_serf__handle_client_cert_pw(void *data,
                                    const char *cert_path,
                                    const char **password);
 
-/*
- * Create a REQUEST with an associated REQ_BKT in the SESSION.
- *
- * If HDRS_BKT is not-NULL, it will be set to a headers_bucket that
- * corresponds to the new request.
- *
- * The request will be METHOD at URL.
- *
- * If BODY_BKT is not-NULL, it will be sent as the request body.
- *
- * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
- */
-svn_error_t *
-svn_ra_serf__setup_serf_req(serf_request_t *request,
-                            serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
-                            svn_ra_serf__connection_t *conn,
-                            const char *method, const char *url,
-                            serf_bucket_t *body_bkt, const char *content_type);
 
 /*
  * This function will run the serf context in SESS until *DONE is TRUE.
@@ -390,29 +366,20 @@ typedef svn_error_t *
                                    void *handler_baton,
                                    apr_pool_t *pool);
 
-/* Callback for setting up a complete serf request */
-typedef svn_error_t *
-(*svn_ra_serf__request_setup_t)(serf_request_t *request,
-                                void *setup_baton,
-                                serf_bucket_t **req_bkt,
-                                serf_response_acceptor_t *acceptor,
-                                void **acceptor_baton,
-                                svn_ra_serf__response_handler_t *handler,
-                                void **handler_baton,
-                                apr_pool_t *pool);
-
 /* Callback for when a request body is needed. */
+/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_body_delegate_t)(serf_bucket_t **body_bkt,
                                         void *baton,
                                         serf_bucket_alloc_t *alloc,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *request_pool);
 
 /* Callback for when request headers are needed. */
+/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
                                           void *baton,
-                                          apr_pool_t *pool);
+                                          apr_pool_t *request_pool);
 
 /* Callback for when a response has an error. */
 typedef svn_error_t *
@@ -445,15 +412,6 @@ typedef struct svn_ra_serf__handler_t {
    */
   svn_ra_serf__response_error_t response_error;
   void *response_error_baton;
-
-  /* This function and baton will be executed when the request is about
-   * to be delivered by serf.
-   *
-   * This just passes through serf's raw request creation parameters.
-   * None of the other parameters will be utilized if this field is set.
-   */
-  svn_ra_serf__request_setup_t setup;
-  void *setup_baton;
 
   /* This function and baton pair allows for custom request headers to
    * be set.
@@ -534,8 +492,6 @@ typedef svn_error_t *
  * of @a data with size @a len is encountered.
  *
  * This may be invoked multiple times for the same tag.
- *
- * @see svn_ra_serf__expand_string
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
@@ -890,16 +846,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
                        svn_ra_serf__ns_t *ns_list,
                        const char *name);
 
-/*
- * Expand the string represented by @a cur with a current size of @a
- * cur_len by appending @a new with a size of @a new_len.
- *
- * The reallocated string is made in @a pool.
- */
-void
-svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
-                           const char *new, apr_size_t new_len,
-                           apr_pool_t *pool);
 
 /** PROPFIND-related functions **/
 
