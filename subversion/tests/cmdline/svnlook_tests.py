@@ -701,6 +701,25 @@ fp.close()"""
                     '  bogus_rev_prop\n', '  svn:date\n']
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
+@XFail()
+def property_delete(sbox):
+  "property delete"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('foo', 'bar', 'A/mu')
+  sbox.simple_commit()
+  sbox.simple_propdel('foo', 'A/mu')
+  sbox.simple_commit()
+
+  # XFail since r1293375, changed and diff produce no output on a
+  # property delete
+  svntest.actions.run_and_verify_svnlook(None, ["_U  A/mu\n"], [],
+                                         'changed', repo_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -719,6 +738,7 @@ test_list = [ None,
               diff_binary,
               test_filesize,
               test_txn_flag,
+              property_delete,
              ]
 
 if __name__ == '__main__':
