@@ -125,6 +125,8 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
                                  const svn_opt_revision_t *source_revision,
                                  const char *target_wcpath,
                                  svn_boolean_t allow_mixed_rev,
+                                 svn_boolean_t allow_local_mods,
+                                 svn_boolean_t allow_switched_subtrees,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
