@@ -1525,7 +1525,7 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
-  parser.add_option('--set-log-level', action='callback', type='int',
+  parser.add_option('--set-log-level', action='callback', type='str',
                     callback=set_log_level)
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
