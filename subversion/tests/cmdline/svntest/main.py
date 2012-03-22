@@ -78,11 +78,18 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
+# This enables both a time stamp prefix on all log lines and a
+# '<TIME = 0.042552>' line after running every external command.
+log_with_timestamps = True
+
 # Set up logging
 logger = logging.getLogger()
 handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
-                              '%Y-%m-%d %H:%M:%S')
+if log_with_timestamps:
+  formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
+                                '%Y-%m-%d %H:%M:%S')
+else:
+  formatter = logging.Formatter('[%(levelname)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -504,8 +511,9 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  stop = time.time()
-  logger.info('<TIME = %.6f>' % (stop - start))
+  if log_with_timestamps:
+    stop = time.time()
+    logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
     logger.info(x[:-1])
   for x in stderr_lines:
