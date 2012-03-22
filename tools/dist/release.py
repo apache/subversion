@@ -445,39 +445,16 @@ def roll_tarballs(args):
 # Post the candidate release artifacts
 
 def post_candidates(args):
-    'Post the generated tarballs to web-accessible directory.'
-    if args.target:
-        target = args.target
-    else:
-        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version))
+    'Post candidate artifacts to the dist development directory.'
 
-    logging.info('Moving tarballs to %s' % target)
-    if os.path.exists(target):
-        shutil.rmtree(target)
-    shutil.copytree(get_deploydir(args.base_dir), target)
-
-    data = { 'version'      : str(args.version),
-             'revnum'       : args.revnum,
-           }
-
-    # Choose the right template text
-    if args.version.is_prerelease():
-        if args.version.pre == 'nightly':
-            template_filename = 'nightly-candidates.ezt'
-        else:
-            template_filename = 'rc-candidates.ezt'
-    else:
-        template_filename = 'stable-candidates.ezt'
-
-    template = ezt.Template()
-    template.parse(get_tmplfile(template_filename).read())
-    template.generate(open(os.path.join(target, 'HEADER.html'), 'w'), data)
-
-    template = ezt.Template()
-    template.parse(get_tmplfile('htaccess.ezt').read())
-    template.generate(open(os.path.join(target, '.htaccess'), 'w'), data)
-
+    target_url = 'https://dist.apache.org/repos/dist/dev/subversion'
+    logging.info('Importing tarballs to %s' % target_url)
+    proc = subprocess.Popen(['svn', 'import', '-m',
+                             'Add %s candidate release artifacts' 
+                               % args.version.base,
+                            get_deploydir(args.base_dir), target_url])
+    (stdout, stderr) = proc.communicate()
+    proc.wait()
 
 #----------------------------------------------------------------------
 # Clean dist
