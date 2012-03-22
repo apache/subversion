@@ -1,0 +1,7 @@
+This branch exists to allow folks (cmpilato, primarily) to play with
+implementations of a new Master Passphrase feature -- a single
+passphrase which is used in concert with an encryption mechanism to
+protect disk-cached Subversion credentials.
+
+See http://wiki.apache.org/subversion/MasterPassphrase and
+http://subversion.tigris.org/issues/show_bug.cgi?id=4145 for details.
