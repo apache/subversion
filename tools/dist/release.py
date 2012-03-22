@@ -300,8 +300,7 @@ class LibtoolDep(RollDep):
         output = self._test_version(['libtool', '--version'])
         if not output: return False
 
-        version = output[0].split()[-1:][0]
-        return version == self._libtool_ver
+        return self._libtool_ver in output[0]
 
     def use_system(self):
         # We unconditionally return False here, to avoid using a borked
