@@ -721,10 +721,6 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('revnum', type=int,
-                    help='''The revision number to base the release on.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the destination.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
