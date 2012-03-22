@@ -875,9 +875,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     [svnadmin_binary] + load_args,
     stdin=dump_out) # Attached to dump_kid
 
-  stop = time.time()
-  logger.info('<TIME = %.6f>' % (stop - start))
-
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
   dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
 
@@ -887,6 +884,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   #load_in is dump_out so it's already closed.
   load_out.close()
   load_err.close()
+
+  if log_with_timestamps:
+    stop = time.time()
+    logger.info('<TIME = %.6f>' % (stop - start))
 
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
