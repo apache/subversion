@@ -509,7 +509,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   for x in stdout_lines:
     logger.info(x[:-1])
   for x in stderr_lines:
-    logger.info(x)
+    logger.info(x[:-1])
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
