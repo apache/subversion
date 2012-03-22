@@ -134,6 +134,18 @@ svn_client__find_symmetric_merge(svn_client__symmetric_merge_t **merge,
 /* Perform a symmetric merge.
  *
  * Merge according to MERGE into the WC at TARGET_WCPATH.
+ *
+ * The other parameters are as in svn_client_merge4().  IGNORE_ANCESTRY
+ * only controls the diffing of files, it doesn't prevent mergeinfo from
+ * being used.
+ *
+ * ### TODO: There's little point in this function being the only way the
+ * caller can use the result of svn_client__find_symmetric_merge().  The
+ * contents of MERGE should be more public, or there should be other ways
+ * the caller can use it, or these two functions should be combined into
+ * one.  I want to make it more public, and also possibly have more ways
+ * to use it in future (for example, do_symmetric_merge_with_step_by_-
+ * step_confirmation).
  */
 svn_error_t *
 svn_client__do_symmetric_merge(const svn_client__symmetric_merge_t *merge,
