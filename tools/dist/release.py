@@ -70,8 +70,6 @@ swig_ver = '2.0.4'
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
-people_host = 'minotaur.apache.org'
-people_dist_dir = '/www/www.apache.org/dist/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
@@ -192,10 +190,6 @@ def download_file(url, target):
     response = urllib2.urlopen(url)
     target_file = open(target, 'w')
     target_file.write(response.read())
-
-def assert_people():
-    if os.uname()[1] != people_host:
-        raise RuntimeError('Not running on expected host "%s"' % people_host)
 
 #----------------------------------------------------------------------
 # Cleaning up the environment
