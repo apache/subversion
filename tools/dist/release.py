@@ -75,6 +75,11 @@ tool_versions = {
             'libtool'  : '2.4',
             'swig'     : '2.0.4',
   },
+  '1.6' : {
+            'autoconf' : '2.64',
+            'libtool'  : '1.5.26',
+            'swig'     : '1.3.36',
+  },
 }
 
 # Some constants
