@@ -461,7 +461,7 @@ generate_delta_tree(svn_repos_node_t **tree,
                                 base_root, root, pool, edit_pool));
 
   /* Drive our editor. */
-  SVN_ERR(svn_repos_replay2(root, "", SVN_INVALID_REVNUM, FALSE,
+  SVN_ERR(svn_repos_replay2(root, "", SVN_INVALID_REVNUM, TRUE,
                             editor, edit_baton, NULL, NULL, edit_pool));
 
   /* Return the tree we just built. */
