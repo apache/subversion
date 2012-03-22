@@ -1,5 +1,0 @@
-IndexOptions +FancyIndexing +SuppressColumnSorting +SuppressHTMLPreamble
-ServerSignature Off
-AddType text/plain .asc .h.dist
-AddIcon (TGZ,/icons/compressed.gif) .tar.gz .tar.bz2
-AddIcon (ZIP,/icons/compressed.gif) .zip
