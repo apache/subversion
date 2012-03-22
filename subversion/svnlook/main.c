@@ -445,7 +445,6 @@ generate_delta_tree(svn_repos_node_t **tree,
                     svn_repos_t *repos,
                     svn_fs_root_t *root,
                     svn_revnum_t base_rev,
-                    svn_boolean_t use_copy_history,
                     apr_pool_t *pool)
 {
   svn_fs_root_t *base_root;
@@ -1401,8 +1400,7 @@ do_dirs_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
        _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
 
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     SVN_ERR(print_dirs_changed_tree(tree, "", pool));
 
@@ -1507,8 +1505,7 @@ do_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
        _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
 
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     SVN_ERR(print_changed_tree(tree, "", c->copy_info, pool));
 
@@ -1536,8 +1533,7 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
        _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
 
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     {
       const char *tmpdir;
