@@ -39,6 +39,7 @@ import os
 import re
 import sys
 import glob
+import fnmatch
 import shutil
 import urllib2
 import hashlib
@@ -71,6 +72,9 @@ swig_ver = '2.0.4'
 repos = 'http://svn.apache.org/repos/asf/subversion'
 people_host = 'minotaur.apache.org'
 people_dist_dir = '/www/www.apache.org/dist/subversion'
+dist_repos = 'https://dist.apache.org/repos/dist'
+dist_dev_url = dist_repos + '/dev/subversion'
+dist_release_url = dist_repos + '/release/subversion'
 
 
 #----------------------------------------------------------------------
@@ -447,12 +451,11 @@ def roll_tarballs(args):
 def post_candidates(args):
     'Post candidate artifacts to the dist development directory.'
 
-    target_url = 'https://dist.apache.org/repos/dist/dev/subversion'
-    logging.info('Importing tarballs to %s' % target_url)
+    logging.info('Importing tarballs to %s' % dist_dev_url)
     proc = subprocess.Popen(['svn', 'import', '-m',
                              'Add %s candidate release artifacts' 
                                % args.version.base,
-                            get_deploydir(args.base_dir), target_url])
+                            get_deploydir(args.base_dir), dist_dev_url])
     (stdout, stderr) = proc.communicate()
     proc.wait()
 
@@ -491,23 +494,29 @@ def clean_dist(args):
 def move_to_dist(args):
     'Move candidate artifacts to the distribution directory.'
 
-    if not args.dist_dir:
-        assert_people()
-        args.dist_dir = people_dist_dir
+    proc = subprocess.Popen(['svn', 'list', dist_dev_url],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate()
+    proc.wait()
+    if stderr:
+      raise RuntimeError(stderr)
 
-    if args.target:
-        target = args.target
-    else:
-        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version))
-
-    logging.info('Moving %s to dist dir \'%s\'' % (str(args.version),
-                                                   args.dist_dir) )
-    filenames = glob.glob(os.path.join(target,
-                                       'subversion-%s.*' % str(args.version)))
+    filenames = []
+    for entry in stdout.split('\n'):
+      if fnmatch.fnmatch(entry, 'subversion-%s.*' % str(args.version)):
+        filenames.append(entry)
+    svnmucc_cmd = ['svnmucc', '-m',
+                   'Publish Subversion-%s.' % str(args.version)]
+    svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist']
     for filename in filenames:
-        shutil.copy(filename, args.dist_dir)
+        svnmucc_cmd += ['mv', dist_dev_url + '/' + filename,
+                        dist_release_url + '/' + filename]
 
+    # don't redirect stdout/stderr since svnmucc might ask for a password
+    logging.info('Moving release artifacts to %s' % dist_release_url)
+    proc = subprocess.Popen(svnmucc_cmd)
+    proc.wait()
 
 #----------------------------------------------------------------------
 # Write announcements
@@ -716,9 +725,8 @@ def main():
     # The move-to-dist subcommand
     subparser = subparsers.add_parser('move-to-dist',
                     help='''Move candiates and signatures from the temporary
-                            post location to the permanent distribution
-                            directory.  If no dist-dir is given, this command
-                            will assume it is running on people.apache.org.''')
+                            release dev location to the permanent distribution
+                            directory.''')
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
