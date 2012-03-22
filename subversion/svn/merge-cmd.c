@@ -387,6 +387,9 @@ svn_cl__merge(apr_getopt_t *os,
 #ifdef SVN_WITH_SYMMETRIC_MERGE
   if (opt_state->symmetric_merge)
     {
+      svn_boolean_t allow_local_mods = ! opt_state->reintegrate;
+      svn_boolean_t allow_switched_subtrees = ! opt_state->reintegrate;
+
       if (two_sources_specified)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("SOURCE2 can't be used with --symmetric"));
@@ -403,8 +406,8 @@ svn_cl__merge(apr_getopt_t *os,
                             opt_state->record_only,
                             opt_state->dry_run,
                             opt_state->allow_mixed_rev,
-                            ! opt_state->reintegrate,
-                            ! opt_state->reintegrate,
+                            allow_local_mods,
+                            allow_switched_subtrees,
                             options, ctx, pool);
     }
   else
