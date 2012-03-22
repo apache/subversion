@@ -515,13 +515,13 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
     stop = time.time()
     logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
-    logger.info(x[:-1])
+    logger.info(x.rstrip())
   for x in stderr_lines:
-    logger.info(x[:-1])
+    logger.info(x.rstrip())
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
-      logger.warning(x[:-1])
+      logger.warning(x.rstrip())
     raise Failure
 
   return exit_code, \
