@@ -693,9 +693,8 @@ def main():
 
     # Setup the parser for the post-candidates subcommand
     subparser = subparsers.add_parser('post-candidates',
-                    help='''Build the website to host the candidate tarballs.
-                            The default location is somewhere in ~/public_html.
-                            ''')
+                    help='''Commit candidates to the release development area
+                            of the dist.apache.org repository.''')
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
