@@ -381,7 +381,7 @@ def roll_tarballs(args):
     if args.branch:
         branch = args.branch
     else:
-        branch = 'branches/' + args.version.base[:-1] + 'x'
+        branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
@@ -539,7 +539,7 @@ def write_news(args):
     'Write text for the Subversion website.'
     data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
              'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
-             'major-minor' : args.version.base[:3],
+             'major-minor' : '%d.%d' % (args.version.major, args.version.minor),
              'version' : str(args.version),
              'version_base' : args.version.base,
            }
@@ -584,7 +584,8 @@ def write_announcement(args):
     data = { 'version'              : str(args.version),
              'sha1info'             : sha1info,
              'siginfo'              : open('getsigs-output', 'r').read(),
-             'major-minor'          : args.version.base[:3],
+             'major-minor'          : '%d.%d' % (args.version.major,
+                                                 args.version.minor),
              'major-minor-patch'    : args.version.base,
            }
 
