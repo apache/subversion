@@ -361,37 +361,18 @@ def build_env(args):
 #----------------------------------------------------------------------
 # Create release artifacts
 
-def fetch_changes(repos, branch, revision):
-    changes_peg_url = '%s/%s/CHANGES@%d' % (repos, branch, revision)
-    proc = subprocess.Popen(['svn', 'cat', changes_peg_url],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (stdout, stderr) = proc.communicate()
-    proc.wait()
-    return stdout.split('\n')
-
-
 def compare_changes(repos, branch, revision):
-    # Compare trunk's version of CHANGES with that of the branch,
-    # ignoring any lines in trunk's version precede what *should*
-    # match the contents of the branch's version.  (This allows us to
-    # continue adding new stuff at the top of trunk's CHANGES that
-    # might relate to the *next* major release line.)
-    branch_CHANGES = fetch_changes(repos, branch, revision)
-    trunk_CHANGES = fetch_changes(repos, 'trunk', revision)
-    try:
-        first_matching_line = trunk_CHANGES.index(branch_CHANGES[0])
-    except ValueError:
-        raise RuntimeError('CHANGES not synced between trunk and branch')
-
-    trunk_CHANGES = trunk_CHANGES[first_matching_line:]
-    saw_diff = False
-    import difflib
-    for diff_line in difflib.unified_diff(trunk_CHANGES, branch_CHANGES):
-        saw_diff = True
-        logging.debug('%s', diff_line)
-    if saw_diff:
-        raise RuntimeError('CHANGES not synced between trunk and branch')
-
+    mergeinfo_cmd = ['svn', 'mergeinfo', '--show-revs=eligible',
+                     repos + '/trunk/CHANGES',
+                     repos + '/' + branch + '/' + 'CHANGES']
+    proc = subprocess.Popen(mergeinfo_cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate()
+    rc = proc.wait()
+    if stderr:
+      raise RuntimeError('svn mergeinfo failed: %s' % stderr)
+    if stdout:
+      raise RuntimeError('CHANGES has unmerged revisions: %s' % stdout)
 
 def roll_tarballs(args):
     'Create the release artifacts.'
