@@ -465,28 +465,41 @@ def post_candidates(args):
 def clean_dist(args):
     'Clean the distribution directory of all but the most recent artifacts.'
 
-    if not args.dist_dir:
-        assert_people()
-        args.dist_dir = people_dist_dir
+    proc = subprocess.Popen(['svn', 'list', dist_release_url],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate()
+    proc.wait()
+    if stderr:
+      raise RuntimeError(stderr)
 
-    logging.info('Cleaning dist dir \'%s\'' % args.dist_dir)
+    filenames = stdout.split('\n')
+    tar_gz_archives = []
+    for entry in filenames:
+      if fnmatch.fnmatch(entry, 'subversion-*.tar.gz'):
+        tar_gz_archives.append(entry)
 
-    filenames = glob.glob(os.path.join(args.dist_dir, 'subversion-*.tar.gz'))
     versions = []
-    for filename in filenames:
-        versions.append(Version(filename))
+    for archive in tar_gz_archives:
+        versions.append(Version(archive))
 
+    svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
+                   'They are still available at ' +
+                   'http://archive.apache.org/dist/subversion/']
     for k, g in itertools.groupby(sorted(versions),
                                   lambda x: (x.major, x.minor)):
         releases = list(g)
         logging.info("Saving release '%s'", releases[-1])
 
         for r in releases[:-1]:
-            for filename in glob.glob(os.path.join(args.dist_dir,
-                                                   'subversion-%s.*' % r)):
+            for filename in filenames:
+              if fnmatch.fnmatch(filename, 'subversion-%s.*' % r):
                 logging.info("Removing '%s'" % filename)
-                os.remove(filename)
+                svnmucc_cmd += ['rm', dist_release_url + '/' + filename]
 
+    # don't redirect stdout/stderr since svnmucc might ask for a password
+    proc = subprocess.Popen(svnmucc_cmd)
+    proc.wait()
 
 #----------------------------------------------------------------------
 # Move to dist
@@ -715,9 +728,7 @@ def main():
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
                     help='''Clean the distribution directory (and mirrors) of
-                            all but the most recent MAJOR.MINOR release.  If no
-                            dist-dir is given, this command will assume it is
-                            running on people.apache.org.''')
+                            all but the most recent MAJOR.MINOR release.''')
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
