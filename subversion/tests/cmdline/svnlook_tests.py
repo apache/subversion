@@ -701,7 +701,6 @@ fp.close()"""
                     '  bogus_rev_prop\n', '  svn:date\n']
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
-@XFail()  # Revert r1302524 when this is fixed?
 def property_delete(sbox):
   "property delete"
 
