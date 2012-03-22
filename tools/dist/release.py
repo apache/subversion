@@ -63,10 +63,19 @@ except ImportError:
     import ezt
 
 
-# Our required / recommended versions
-autoconf_ver = '2.68'
-libtool_ver = '2.4'
-swig_ver = '2.0.4'
+# Our required / recommended release tool versions by release branch
+tool_versions = {
+  'trunk' : {
+            'autoconf' : '2.68',
+            'libtool'  : '2.4',
+            'swig'     : '2.0.4',
+  },
+  '1.7' : {
+            'autoconf' : '2.68',
+            'libtool'  : '2.4',
+            'swig'     : '2.0.4',
+  },
+}
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
@@ -90,6 +99,7 @@ class Version(object):
             self.pre = 'nightly'
             self.pre_num = None
             self.base = 'nightly'
+            self.branch = 'trunk'
             return
 
         match = self.regex.search(ver_str)
@@ -109,6 +119,7 @@ class Version(object):
             self.pre_num = None
 
         self.base = '%d.%d.%d' % (self.major, self.minor, self.patch)
+        self.branch = '%d.%d' % (self.major, self.minor)
 
     def is_prerelease(self):
         return self.pre != None
@@ -253,10 +264,11 @@ class RollDep(object):
 
 
 class AutoconfDep(RollDep):
-    def __init__(self, base_dir, use_existing, verbose):
+    def __init__(self, base_dir, use_existing, verbose, autoconf_ver):
         RollDep.__init__(self, base_dir, use_existing, verbose)
         self.label = 'autoconf'
         self._filebase = 'autoconf-' + autoconf_ver
+        self._autoconf_ver =  autoconf_ver
         self._url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % self._filebase
 
     def have_usable(self):
@@ -264,7 +276,7 @@ class AutoconfDep(RollDep):
         if not output: return False
 
         version = output[0].split()[-1:][0]
-        return version == autoconf_ver
+        return version == self._autoconf_ver
 
     def use_system(self):
         if not self._use_existing: return False
@@ -272,10 +284,11 @@ class AutoconfDep(RollDep):
 
 
 class LibtoolDep(RollDep):
-    def __init__(self, base_dir, use_existing, verbose):
+    def __init__(self, base_dir, use_existing, verbose, libtool_ver):
         RollDep.__init__(self, base_dir, use_existing, verbose)
         self.label = 'libtool'
         self._filebase = 'libtool-' + libtool_ver
+        self._libtool_ver = libtool_ver
         self._url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
 
     def have_usable(self):
@@ -283,7 +296,7 @@ class LibtoolDep(RollDep):
         if not output: return False
 
         version = output[0].split()[-1:][0]
-        return version == libtool_ver
+        return version == self._libtool_ver
 
     def use_system(self):
         # We unconditionally return False here, to avoid using a borked
@@ -292,10 +305,11 @@ class LibtoolDep(RollDep):
 
 
 class SwigDep(RollDep):
-    def __init__(self, base_dir, use_existing, verbose, sf_mirror):
+    def __init__(self, base_dir, use_existing, verbose, swig_ver, sf_mirror):
         RollDep.__init__(self, base_dir, use_existing, verbose)
         self.label = 'swig'
         self._filebase = 'swig-' + swig_ver
+        self._swig_ver = swig_ver
         self._url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
             { 'swig' : self._filebase,
               'sf_mirror' : sf_mirror }
@@ -306,7 +320,7 @@ class SwigDep(RollDep):
         if not output: return False
 
         version = output[1].split()[-1:][0]
-        return version == swig_ver
+        return version == self._swig_ver
 
     def use_system(self):
         if not self._use_existing: return False
@@ -324,9 +338,12 @@ def build_env(args):
         if not args.use_existing:
             raise
 
-    autoconf = AutoconfDep(args.base_dir, args.use_existing, args.verbose)
-    libtool = LibtoolDep(args.base_dir, args.use_existing, args.verbose)
+    autoconf = AutoconfDep(args.base_dir, args.use_existing, args.verbose,
+                           tool_versions[args.version.branch]['autoconf'])
+    libtool = LibtoolDep(args.base_dir, args.use_existing, args.verbose,
+                         tool_versions[args.version.branch]['libtool'])
     swig = SwigDep(args.base_dir, args.use_existing, args.verbose,
+                   tool_versions[args.version.branch]['swig'],
                    args.sf_mirror)
 
     # iterate over our rolling deps, and build them if needed
@@ -385,9 +402,12 @@ def roll_tarballs(args):
                                                            branch, args.revnum))
 
     # Ensure we've got the appropriate rolling dependencies available
-    autoconf = AutoconfDep(args.base_dir, False, args.verbose)
-    libtool = LibtoolDep(args.base_dir, False, args.verbose)
-    swig = SwigDep(args.base_dir, False, args.verbose, None)
+    autoconf = AutoconfDep(args.base_dir, False, args.verbose,
+                         tool_versions[args.version.branch]['autoconf'])
+    libtool = LibtoolDep(args.base_dir, False, args.verbose,
+                         tool_versions[args.version.branch]['libtool'])
+    swig = SwigDep(args.base_dir, False, args.verbose,
+                   tool_versions[args.version.branch]['swig'], None)
 
     for dep in [autoconf, libtool, swig]:
         if not dep.have_usable():
@@ -688,6 +708,8 @@ def main():
                     help='''Download release prerequisistes, including autoconf,
                             libtool, and swig.''')
     subparser.set_defaults(func=build_env)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('--sf-mirror', default='softlayer',
                     help='''The mirror to use for downloading files from
                             SourceForge.  If in the EU, you may want to use
