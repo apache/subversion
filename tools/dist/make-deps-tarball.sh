@@ -42,6 +42,8 @@ TEMPDIR=$BASEDIR/temp
 APACHE_MIRROR=http://archive.apache.org/dist
 
 create_deps() {
+    SVN_VERSION="$1"
+
     mkdir -p $TEMPDIR
     cd $TEMPDIR
     wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
@@ -98,7 +100,21 @@ create_deps() {
       mv $APR_UTIL apr-util
       mv $APR_ICONV apr-iconv
     fi
-    cd $TEMPDIR
+
+    cd $BASEDIR
+    mv unix-dependencies subversion-$SVN_VERSION
+    tar jcf subversion-deps-$SVN_VERSION.tar.bz2 subversion-$SVN_VERSION
+    tar zcf subversion-deps-$SVN_VERSION.tar.gz subversion-$SVN_VERSION
+    rm -rf subversion-$SVN_VERSION
+    mv win32-dependencies subversion-$SVN_VERSION
+    zip -r subversion-deps-$SVN_VERSION.zip subversion-$SVN_VERSION
+    rm -rf subversion-$SVN_VERSION
 }
 
-create_deps
+if [ -z "$1" ]; then
+  echo "Please provide a Subversion release number."
+  echo "Example: ./`basename $0` 1.6.19"
+  exit 1
+fi
+
+create_deps "$1"
