@@ -7944,58 +7944,24 @@ svn_fs_fs__verify(svn_fs_t *fs,
                                           start, end,
                                           pool));
 
-  /* Issue #4129: bogus pred-counts on the root node-rev. */
+  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
+     (and elsewhere).  This code makes more thorough checks that the
+     commit-time checks in validate_root_noderev(). */
   {
     svn_revnum_t i;
-    int predecessor_predecessor_count;
-
-    /* Compute PREDECESSOR_PREDECESSOR_COUNT. */
-    if (start == 0)
-      /* The value that passes the if() at the end of the loop. */
-      predecessor_predecessor_count = -1;
-    else
-      {
-        svn_fs_id_t *root_id;
-        node_revision_t *root_noderev;
-        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, start-1, iterpool));
-        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
-                                             iterpool));
-        predecessor_predecessor_count = root_noderev->predecessor_count;
-      }
-
     for (i = start; i <= end; i++)
       {
-        /* ### Caching.
+      	svn_fs_root_t *root;
 
-           svn_fs_fs__rev_get_root() consults caches, which in verify we
-           don't want.  But we can't easily bypass that, as
-           svn_fs_revision_root()+svn_fs_node_id()'s implementation uses
-           svn_fs_fs__rev_get_root() too.
+        svn_pool_clear(iterpool);
 
-           ### A future revision will make fs_verify() disable caches when it
-           ### opens ffd.
-         */
-        svn_fs_id_t *root_id;
-        node_revision_t *root_noderev;
-
-        if ((i % 128) == 0) /* uneducated guess */
-          svn_pool_clear(iterpool);
-
-        /* Fetch ROOT_NODEREV. */
-        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, i, iterpool));
-        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
-                                             iterpool));
-
-        /* Check correctness. (Compare validate_root_noderev().) */
-        if (1+predecessor_predecessor_count != root_noderev->predecessor_count)
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   _("predecessor count for "
-                                     "the root node-revision is wrong: "
-                                     "r%ld has %d, but r%ld has %d"),
-                                   i, root_noderev->predecessor_count,
-                                   i-1, predecessor_predecessor_count);
-
-        predecessor_predecessor_count = root_noderev->predecessor_count;
+      	/* ### TODO: Make sure caches are disabled.
+      	   
+      	   When this code is called in the library, we want to ensure we
+      	   use the on-disk data --- rather than some data that was read
+      	   in the possibly-distance past and cached since. */
+      	SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
+      	SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
       }
   }
 

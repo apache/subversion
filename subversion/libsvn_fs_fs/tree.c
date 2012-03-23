@@ -3770,3 +3770,167 @@ make_txn_root(svn_fs_root_t **root_p,
   *root_p = root;
   return SVN_NO_ERROR;
 }
+
+
+
+/* Verify. */
+static APR_INLINE const char *
+stringify_node(dag_node_t *node,
+               apr_pool_t *pool)
+{
+  /* ### TODO: print some PATH@REV to it, too. */
+  return svn_fs_fs__id_unparse(svn_fs_fs__dag_get_id(node), pool)->data;
+}
+
+/* Check metadata sanity on NODE, and on its children.  Manually verify
+   information for DAG nodes in revision REV, and trust the metadata
+   accuracy for nodes belonging to older revisions. */
+static svn_error_t *
+verify_node(dag_node_t *node,
+            svn_revnum_t rev,
+            apr_pool_t *pool)
+{
+  svn_boolean_t has_mergeinfo;
+  apr_int64_t mergeinfo_count;
+  const svn_fs_id_t *pred_id;
+  svn_fs_t *fs = svn_fs_fs__dag_get_fs(node);
+  int pred_count;
+  svn_node_kind_t kind;
+
+  /* Fetch some data. */
+  SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, node, pool));
+  SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_count, node, pool));
+  SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, pool));
+  SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_count, node, pool));
+  kind = svn_fs_fs__dag_node_kind(node);
+
+  /* Sanity check. */
+  if (mergeinfo_count < 0)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Negative mergeinfo-count %" APR_INT64_T_FMT
+                             " on node '%s'",
+                             mergeinfo_count, stringify_node(node, pool));
+
+  /* Issue #4129. (This check will explicitly catch non-root instances too.) */
+  if (pred_id)
+    {
+      dag_node_t *pred;
+      int pred_pred_count;
+      SVN_ERR(svn_fs_fs__dag_get_node(&pred, fs, pred_id, pool));
+      SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_pred_count, pred,
+                                                   pool));
+      if (pred_pred_count+1 != pred_count)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 "Predecessor count mismatch: "
+                                 "%s has %d, but %s has %d",
+                                 stringify_node(node, pool), pred_count, 
+                                 stringify_node(pred, pool), pred_pred_count);
+    }
+
+  /* Kind-dependent verifications. */
+  if (kind == svn_node_none)
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               "Node '%s' has kind 'none'",
+                               stringify_node(node, pool));
+    }
+  if (kind == svn_node_file)
+    {
+      if (has_mergeinfo != mergeinfo_count) /* comparing int to bool */
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 "File node '%s' has inconsistent mergeinfo: "
+                                 "has_mergeinfo=%d, mergeinfo_count=%d",
+                                 stringify_node(node, pool),
+                                 has_mergeinfo, mergeinfo_count);
+    }
+  if (kind == svn_node_dir)
+    {
+      apr_hash_t *entries;
+      apr_hash_index_t *hi;
+      apr_int64_t children_mergeinfo = 0;
+
+      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, pool));
+
+      /* Compute CHILDREN_MERGEINFO. */
+      /* ### TODO: iterpool? */
+      for (hi = apr_hash_first(pool, entries);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
+          dag_node_t *child;
+          svn_revnum_t child_rev;
+          apr_int64_t child_mergeinfo;
+
+          /* Compute CHILD_REV. */
+          SVN_ERR(svn_fs_fs__dag_get_node(&child, fs, dirent->id, pool));
+          SVN_ERR(svn_fs_fs__dag_get_revision(&child_rev, child, pool));
+
+          if (child_rev == rev)
+            SVN_ERR(verify_node(child, rev, pool));
+
+          SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&child_mergeinfo, child,
+                                                     pool));
+          children_mergeinfo += child_mergeinfo;
+        }
+
+      /* Side-effect of issue #4129. */
+      if (children_mergeinfo+has_mergeinfo != mergeinfo_count)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 "Mergeinfo-count discrepancy on '%s': "
+                                 "expected %" APR_INT64_T_FMT "+%d, "
+                                 "counted %" APR_INT64_T_FMT,
+                                 stringify_node(node, pool),
+                                 mergeinfo_count, has_mergeinfo,
+                                 children_mergeinfo);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__verify_root(svn_fs_root_t *root,
+                       apr_pool_t *pool)
+{
+  fs_rev_root_data_t *frd;
+
+  if (root->is_txn_root)
+    /* ### Not implemented */
+    return SVN_NO_ERROR;
+  frd = root->fsap_data;
+
+  /* Recursively verify ROOT_DIR. */
+  SVN_ERR(verify_node(frd->root_dir, root->rev, pool));
+
+  /* Verify explicitly the predecessor of the root. */
+  {
+    const svn_fs_id_t *pred_id;
+    dag_node_t *pred;
+    svn_revnum_t pred_rev;
+
+    /* Only r0 should have no predecessor. */
+    SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, frd->root_dir, pool));
+    if (!!pred_id != !!root->rev)
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               "r%ld's root node's predecessor is "
+                               "unexpectedly '%s'",
+                               root->rev,
+                               (pred_id
+                                ? svn_fs_fs__id_unparse(pred_id, pool)->data
+                                : "(null)"));
+
+    /* Check the predecessor's revision. */
+    if (pred_id)
+      {
+        SVN_ERR(svn_fs_fs__dag_get_node(&pred, root->fs, pred_id, pool));
+        SVN_ERR(svn_fs_fs__dag_get_revision(&pred_rev, pred, pool));
+        if (pred_rev+1 != root->rev)
+          /* Issue #4129. */
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   "r%ld's root node's predecessor is r%ld",
+                                   root->rev, pred_rev);
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
