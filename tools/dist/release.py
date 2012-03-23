@@ -87,6 +87,7 @@ repos = 'http://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
+extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
 #----------------------------------------------------------------------
@@ -376,7 +377,6 @@ def compare_changes(repos, branch, revision):
 
 def roll_tarballs(args):
     'Create the release artifacts.'
-    extns = ['zip', 'tar.gz', 'tar.bz2']
 
     if args.branch:
         branch = args.branch
@@ -442,6 +442,33 @@ def roll_tarballs(args):
     shutil.move('svn_version.h.dist', get_deploydir(args.base_dir))
 
     # And we're done!
+
+#----------------------------------------------------------------------
+# Sign the candidate release artifacts
+
+def sign_candidates(args):
+    'Sign candidate artifacts in the dist development directory.'
+
+    def sign_file(filename):
+        asc_file = open(filename + '.asc', 'a')
+        logging.info("Signing %s" % filename)
+        proc = subprocess.Popen(['gpg', '-ba', '-o', '-', filename],
+                              stdout=asc_file)
+        proc.wait()
+        asc_file.close()
+
+    if args.target:
+        target = args.target
+    else:
+        target = get_deploydir(args.base_dir)
+
+    for e in extns:
+        filename = os.path.join(target, 'subversion-%s.%s' % (args.version, e))
+        sign_file(filename)
+        if args.version.major >= 1 and args.version.minor <= 6:
+            filename = os.path.join(target,
+                                   'subversion-deps-%s.%s' % (args.version, e))
+            sign_file(filename)
 
 
 #----------------------------------------------------------------------
@@ -628,16 +655,16 @@ def check_sigs(args):
     if args.target:
         target = args.target
     else:
-        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version))
+        target = get_deploydir(args.base_dir)
 
     good_sigs = {}
 
-    glob_pattern = os.path.join(target, 'subversion-%s*.asc' % args.version)
+    glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
     for filename in glob.glob(glob_pattern):
         text = open(filename).read()
         keys = text.split(key_start)
 
+        logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
         for key in keys[1:]:
             fd, fn = tempfile.mkstemp()
             os.write(fd, key_start + key)
@@ -714,6 +741,16 @@ def main():
     subparser.add_argument('--branch',
                     help='''The branch to base the release on.''')
 
+    # Setup the parser for the sign-candidates subcommand
+    subparser = subparsers.add_parser('sign-candidates',
+                    help='''Sign the release artifacts.''')
+    subparser.set_defaults(func=sign_candidates)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
+
     # Setup the parser for the post-candidates subcommand
     subparser = subparsers.add_parser('post-candidates',
                     help='''Commit candidates to the release development area
@@ -774,8 +811,8 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('--target',
-                    help='''The full path to the destination used in
-                            'post-candiates'..''')
+                    help='''The full path to the directory containing
+                            release artifacts.''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',
