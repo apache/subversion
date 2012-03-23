@@ -43,59 +43,60 @@ APACHE_MIRROR=http://archive.apache.org/dist
 
 create_deps() {
     SVN_VERSION="$1"
+    set -x
 
     mkdir -p $TEMPDIR
     cd $TEMPDIR
-    wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
-    wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
+    wget -qnc $APACHE_MIRROR/apr/$APR.tar.bz2
+    wget -qnc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
     if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
-      wget -nc $APACHE_MIRROR/httpd/$HTTPD-win32-src$HTTPD_OOPS.zip
+      wget -qnc $APACHE_MIRROR/httpd/$HTTPD-win32-src$HTTPD_OOPS.zip
     else
-      wget -nc $APACHE_MIRROR/apr/$APR-win32-src.zip
-      wget -nc $APACHE_MIRROR/apr/$APR_UTIL-win32-src.zip
-      wget -nc $APACHE_MIRROR/apr/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
+      wget -qnc $APACHE_MIRROR/apr/$APR-win32-src.zip
+      wget -qnc $APACHE_MIRROR/apr/$APR_UTIL-win32-src.zip
+      wget -qnc $APACHE_MIRROR/apr/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
     fi
-    wget -nc http://webdav.org/neon/$NEON.tar.gz
-    wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
-    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
-    wget -nc http://www.sqlite.org/$SQLITE.zip
+    wget -qnc http://webdav.org/neon/$NEON.tar.gz
+    wget -qnc http://serf.googlecode.com/files/$SERF.tar.bz2
+    wget -qnc http://www.zlib.net/$ZLIB.tar.bz2
+    wget -qnc http://www.sqlite.org/$SQLITE.zip
 
     mkdir $BASEDIR/unix-dependencies
     cd $BASEDIR/unix-dependencies
-    tar zxvf $TEMPDIR/$NEON.tar.gz
-    tar jxvf $TEMPDIR/$ZLIB.tar.bz2
-    tar jxvf $TEMPDIR/$SERF.tar.bz2
-    unzip $TEMPDIR/$SQLITE.zip
+    tar zxf $TEMPDIR/$NEON.tar.gz
+    tar jxf $TEMPDIR/$ZLIB.tar.bz2
+    tar jxf $TEMPDIR/$SERF.tar.bz2
+    unzip -q $TEMPDIR/$SQLITE.zip
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
     mv $SQLITE sqlite-amalgamation
-    tar jxvf $TEMPDIR/$APR.tar.bz2
-    tar jxvf $TEMPDIR/$APR_UTIL.tar.bz2
+    tar jxf $TEMPDIR/$APR.tar.bz2
+    tar jxf $TEMPDIR/$APR_UTIL.tar.bz2
     mv $APR apr
     mv $APR_UTIL apr-util
     cd $TEMPDIR
 
     mkdir $BASEDIR/win32-dependencies
     cd $BASEDIR/win32-dependencies
-    tar zxvf $TEMPDIR/$NEON.tar.gz
-    tar jxvf $TEMPDIR/$ZLIB.tar.bz2
-    tar jxvf $TEMPDIR/$SERF.tar.bz2
-    unzip $TEMPDIR/$SQLITE.zip
+    tar zxf $TEMPDIR/$NEON.tar.gz
+    tar jxf $TEMPDIR/$ZLIB.tar.bz2
+    tar jxf $TEMPDIR/$SERF.tar.bz2
+    unzip -q $TEMPDIR/$SQLITE.zip
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
     mv $SQLITE sqlite-amalgamation
     if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
-      unzip $TEMPDIR/$HTTPD-win32-src$HTTPD_OOPS.zip
+      unzip -q $TEMPDIR/$HTTPD-win32-src$HTTPD_OOPS.zip
       for i in apr apr-util apr-iconv; do
         mv $HTTPD/srclib/$i .
       done
       rm -rf $HTTPD
     else
-      unzip $TEMPDIR/$APR-win32-src.zip
-      unzip $TEMPDIR/$APR_UTIL-win32-src.zip
-      unzip $TEMPDIR/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
+      unzip -q $TEMPDIR/$APR-win32-src.zip
+      unzip -q $TEMPDIR/$APR_UTIL-win32-src.zip
+      unzip -q $TEMPDIR/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
       mv $APR apr
       mv $APR_UTIL apr-util
       mv $APR_ICONV apr-iconv
@@ -107,7 +108,7 @@ create_deps() {
     tar zcf subversion-deps-$SVN_VERSION.tar.gz subversion-$SVN_VERSION
     rm -rf subversion-$SVN_VERSION
     mv win32-dependencies subversion-$SVN_VERSION
-    zip -r subversion-deps-$SVN_VERSION.zip subversion-$SVN_VERSION
+    zip -qr subversion-deps-$SVN_VERSION.zip subversion-$SVN_VERSION
     rm -rf subversion-$SVN_VERSION
 }
 
