@@ -775,11 +775,6 @@ def main():
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--dist-dir',
-                    help='''The directory to clean.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the destination used in
-                            'post-candiates'..''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
