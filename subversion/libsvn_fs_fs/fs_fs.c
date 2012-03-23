@@ -5907,7 +5907,7 @@ validate_root_noderev(svn_fs_t *fs,
 
      This kind of corruption was seen on svn.apache.org (both on
      the root noderev and on other fspaths' noderevs); see
-       http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+     issue #4129.
 
      Normally (rev == root_noderev->predecessor_count), but here we
      use a more roundabout check that should only trigger on new instances
