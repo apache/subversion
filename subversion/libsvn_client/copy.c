@@ -495,6 +495,16 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
           SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
                                                  TRUE, ctx, iterpool));
         }
+      else if(make_parents && dst_parent_kind == svn_node_dir)
+        {
+          /* Check if parent is already versioned */
+          SVN_ERR(svn_wc_read_kind(&dst_parent_kind, ctx->wc_ctx,
+                                   pair->dst_parent_abspath, FALSE, iterpool));
+
+          if (dst_parent_kind == svn_node_none)
+            SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
+                                                   TRUE, ctx, iterpool));
+        }
       else if (dst_parent_kind != svn_node_dir)
         {
           return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,

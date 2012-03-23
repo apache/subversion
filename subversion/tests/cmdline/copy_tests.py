@@ -5675,7 +5675,6 @@ def three_nested_moves(sbox):
                                         expected_status,
                                         None, wc_dir)
 
-@XFail() # Will add fix soon
 def copy_to_unversioned_parent(sbox):
   "copy to unversioned parent"
 
