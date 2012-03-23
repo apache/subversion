@@ -2718,8 +2718,6 @@ set_revision_proplist(svn_fs_t *fs,
          (Whereas the rev file should already exist at this point.) */
       SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
       SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
-
-      return SVN_NO_ERROR;
     }
 
   return SVN_NO_ERROR;
