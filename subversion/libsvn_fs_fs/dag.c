@@ -307,15 +307,13 @@ static svn_error_t *
 dir_entry_id_from_node(const svn_fs_id_t **id_p,
                        dag_node_t *parent,
                        const char *name,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool,
+                       apr_pool_t *result_pool)
 {
   svn_fs_dirent_t *dirent;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_fs__dag_dir_entry(&dirent, parent, name, subpool, pool));
-  *id_p = dirent ? svn_fs_fs__id_copy(dirent->id, pool) : NULL;
-
-  svn_pool_destroy(subpool);
+  SVN_ERR(svn_fs_fs__dag_dir_entry(&dirent, parent, name, scratch_pool));
+  *id_p = dirent ? svn_fs_fs__id_copy(dirent->id, result_pool) : NULL;
 
   return SVN_NO_ERROR;
 }
@@ -434,8 +432,7 @@ svn_error_t *
 svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
                          dag_node_t *node,
                          const char* name,
-                         apr_pool_t *pool,
-                         apr_pool_t *node_pool)
+                         apr_pool_t *pool)
 {
   node_revision_t *noderev;
   SVN_ERR(get_node_revision(&noderev, node));
@@ -1146,7 +1143,7 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
   const svn_fs_id_t *node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
-  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, pool));
+  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, pool, pool));
   if (! node_id)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
