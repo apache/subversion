@@ -3854,7 +3854,6 @@ verify_node(dag_node_t *node,
       SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, node_pool));
 
       /* Compute CHILDREN_MERGEINFO. */
-      /* ### TODO: iterpool? */
       for (hi = apr_hash_first(pool, entries);
            hi;
            hi = apr_hash_next(hi))
