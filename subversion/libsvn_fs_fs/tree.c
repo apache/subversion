@@ -594,6 +594,7 @@ open_path(parent_path_t **parent_path_p,
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
   const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
   const char *path_so_far = "/";
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
@@ -613,6 +614,8 @@ open_path(parent_path_t **parent_path_p,
       const char *next;
       char *entry;
       dag_node_t *child;
+
+      svn_pool_clear(iterpool);
 
       /* Parse out the next entry from the path.  */
       entry = svn_fs__next_entry_name(&next, rest, pool);
@@ -642,7 +645,7 @@ open_path(parent_path_t **parent_path_p,
           if (cached_node)
             child = cached_node;
           else
-            err = svn_fs_fs__dag_open(&child, here, entry, pool, pool);
+            err = svn_fs_fs__dag_open(&child, here, entry, pool, iterpool);
 
           /* "file not found" requires special handling.  */
           if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -699,6 +702,7 @@ open_path(parent_path_t **parent_path_p,
       here = child;
     }
 
+  svn_pool_destroy(iterpool);
   *parent_path_p = parent_path;
   return SVN_NO_ERROR;
 }
