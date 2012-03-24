@@ -423,8 +423,7 @@ svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
    Any previous edits on the file will be deleted, and a new edit
    stream will be constructed.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FILE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
                                             dag_node_t *file,
@@ -503,8 +502,7 @@ svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
 
    If PRESERVE_HISTORY is false, FROM_PATH and FROM_REV are ignored.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FROM_NODE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
                                  const char *entry,
@@ -534,39 +532,29 @@ svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
    may leave us with a slight chance of a false positive, though I
    don't really see how that would happen in practice.  Nevertheless,
    it should probably be fixed.
-
-   Use POOL for all allocations, including to cache the node_revision in NODE1
-   and NODE2.
  */
 svn_error_t *svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
                                              svn_boolean_t *contents_changed,
                                              dag_node_t *node1,
-                                             dag_node_t *node2,
-                                             apr_pool_t *pool);
+                                             dag_node_t *node2);
 
 
 /* Set *REV and *PATH to the copyroot revision and path of node NODE, or
    to SVN_INVALID_REVNUM and NULL if no copyroot exists.
-   Use POOL for all allocations, including to cache the node_revision in NODE.
  */
 svn_error_t *svn_fs_fs__dag_get_copyroot(svn_revnum_t *rev,
                                          const char **path,
-                                         dag_node_t *node,
-                                         apr_pool_t *pool);
+                                         dag_node_t *node);
 
 /* Set *REV to the copyfrom revision associated with NODE.
-   Use POOL for all allocations, including to cache the node_revision in NODE.
  */
 svn_error_t *svn_fs_fs__dag_get_copyfrom_rev(svn_revnum_t *rev,
-                                             dag_node_t *node,
-                                             apr_pool_t *pool);
+                                             dag_node_t *node);
 
 /* Set *PATH to the copyfrom path associated with NODE.
-   Use POOL for all allocations, including to cache the node_revision in NODE.
  */
 svn_error_t *svn_fs_fs__dag_get_copyfrom_path(const char **path,
-                                              dag_node_t *node,
-                                              apr_pool_t *pool);
+                                              dag_node_t *node);
 
 /* Update *TARGET so that SOURCE is it's predecessor.
  */
