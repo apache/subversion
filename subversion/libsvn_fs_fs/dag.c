@@ -652,6 +652,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
   dag_node_t *cur_entry; /* parent's current entry named NAME */
   const svn_fs_id_t *new_node_id; /* node id we'll put into NEW_NODE */
   svn_fs_t *fs = svn_fs_fs__dag_get_fs(parent);
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* First check that the parent is mutable. */
   if (! svn_fs_fs__dag_check_mutable(parent))
@@ -666,7 +667,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
        "Attempted to make a child clone with an illegal name '%s'", name);
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
-  SVN_ERR(svn_fs_fs__dag_open(&cur_entry, parent, name, pool, pool));
+  SVN_ERR(svn_fs_fs__dag_open(&cur_entry, parent, name, pool, subpool));
 
   /* Check for mutability in the node we found.  If it's mutable, we
      don't need to clone it. */
@@ -708,6 +709,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
     }
 
   /* Initialize the youngster. */
+  svn_pool_destroy(subpool);
   return svn_fs_fs__dag_get_node(child_p, fs, new_node_id, pool);
 }
 
