@@ -3788,7 +3788,8 @@ stringify_node(dag_node_t *node,
 static svn_error_t *
 verify_node(dag_node_t *node,
             svn_revnum_t rev,
-            apr_pool_t *pool)
+            apr_pool_t *pool,
+            apr_pool_t *node_pool)
 {
   svn_boolean_t has_mergeinfo;
   apr_int64_t mergeinfo_count;
@@ -3796,12 +3797,13 @@ verify_node(dag_node_t *node,
   svn_fs_t *fs = svn_fs_fs__dag_get_fs(node);
   int pred_count;
   svn_node_kind_t kind;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Fetch some data. */
-  SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, node, pool));
-  SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_count, node, pool));
-  SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, pool));
-  SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_count, node, pool));
+  SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, node, node_pool));
+  SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_count, node, node_pool));
+  SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, node_pool));
+  SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_count, node, node_pool));
   kind = svn_fs_fs__dag_node_kind(node);
 
   /* Sanity check. */
@@ -3809,22 +3811,22 @@ verify_node(dag_node_t *node,
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              "Negative mergeinfo-count %" APR_INT64_T_FMT
                              " on node '%s'",
-                             mergeinfo_count, stringify_node(node, pool));
+                             mergeinfo_count, stringify_node(node, iterpool));
 
   /* Issue #4129. (This check will explicitly catch non-root instances too.) */
   if (pred_id)
     {
       dag_node_t *pred;
       int pred_pred_count;
-      SVN_ERR(svn_fs_fs__dag_get_node(&pred, fs, pred_id, pool));
+      SVN_ERR(svn_fs_fs__dag_get_node(&pred, fs, pred_id, iterpool));
       SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_pred_count, pred,
-                                                   pool));
+                                                   iterpool));
       if (pred_pred_count+1 != pred_count)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  "Predecessor count mismatch: "
                                  "%s has %d, but %s has %d",
-                                 stringify_node(node, pool), pred_count, 
-                                 stringify_node(pred, pool), pred_pred_count);
+                                 stringify_node(node, iterpool), pred_count, 
+                                 stringify_node(pred, iterpool), pred_pred_count);
     }
 
   /* Kind-dependent verifications. */
@@ -3832,7 +3834,7 @@ verify_node(dag_node_t *node,
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                "Node '%s' has kind 'none'",
-                               stringify_node(node, pool));
+                               stringify_node(node, iterpool));
     }
   if (kind == svn_node_file)
     {
@@ -3840,7 +3842,7 @@ verify_node(dag_node_t *node,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  "File node '%s' has inconsistent mergeinfo: "
                                  "has_mergeinfo=%d, mergeinfo_count=%d",
-                                 stringify_node(node, pool),
+                                 stringify_node(node, iterpool),
                                  has_mergeinfo, mergeinfo_count);
     }
   if (kind == svn_node_dir)
@@ -3849,7 +3851,7 @@ verify_node(dag_node_t *node,
       apr_hash_index_t *hi;
       apr_int64_t children_mergeinfo = 0;
 
-      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, pool));
+      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, node_pool));
 
       /* Compute CHILDREN_MERGEINFO. */
       /* ### TODO: iterpool? */
@@ -3862,15 +3864,17 @@ verify_node(dag_node_t *node,
           svn_revnum_t child_rev;
           apr_int64_t child_mergeinfo;
 
+          svn_pool_clear(iterpool);
+
           /* Compute CHILD_REV. */
-          SVN_ERR(svn_fs_fs__dag_get_node(&child, fs, dirent->id, pool));
-          SVN_ERR(svn_fs_fs__dag_get_revision(&child_rev, child, pool));
+          SVN_ERR(svn_fs_fs__dag_get_node(&child, fs, dirent->id, iterpool));
+          SVN_ERR(svn_fs_fs__dag_get_revision(&child_rev, child, iterpool));
 
           if (child_rev == rev)
-            SVN_ERR(verify_node(child, rev, pool));
+            SVN_ERR(verify_node(child, rev, iterpool, iterpool));
 
           SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&child_mergeinfo, child,
-                                                     pool));
+                                                     iterpool));
           children_mergeinfo += child_mergeinfo;
         }
 
@@ -3880,11 +3884,12 @@ verify_node(dag_node_t *node,
                                  "Mergeinfo-count discrepancy on '%s': "
                                  "expected %" APR_INT64_T_FMT "+%d, "
                                  "counted %" APR_INT64_T_FMT,
-                                 stringify_node(node, pool),
+                                 stringify_node(node, iterpool),
                                  mergeinfo_count, has_mergeinfo,
                                  children_mergeinfo);
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -3900,7 +3905,7 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
   frd = root->fsap_data;
 
   /* Recursively verify ROOT_DIR. */
-  SVN_ERR(verify_node(frd->root_dir, root->rev, pool));
+  SVN_ERR(verify_node(frd->root_dir, root->rev, pool, pool));
 
   /* Verify explicitly the predecessor of the root. */
   {
