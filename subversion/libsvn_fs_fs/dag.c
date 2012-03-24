@@ -142,7 +142,7 @@ copy_node_revision(node_revision_t *noderev,
 
 /* Set *NODEREV_P to the cached node-revision for NODE.
    If the node-revision was not already cached in NODE, read it in,
-   allocating the cache in POOL.
+   allocating the cache in NODE->NODE_POOL.
 
    If you plan to change the contents of NODE, be careful!  We're
    handing you a pointer directly to our cached node-revision, not
