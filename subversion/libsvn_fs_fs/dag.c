@@ -230,8 +230,7 @@ svn_fs_fs__dag_get_revision(svn_revnum_t *rev,
 
 svn_error_t *
 svn_fs_fs__dag_get_predecessor_id(const svn_fs_id_t **id_p,
-                                  dag_node_t *node,
-                                  apr_pool_t *pool)
+                                  dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -243,8 +242,7 @@ svn_fs_fs__dag_get_predecessor_id(const svn_fs_id_t **id_p,
 
 svn_error_t *
 svn_fs_fs__dag_get_predecessor_count(int *count,
-                                     dag_node_t *node,
-                                     apr_pool_t *pool)
+                                     dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -255,8 +253,7 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
 
 svn_error_t *
 svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
-                                   dag_node_t *node,
-                                   apr_pool_t *pool)
+                                   dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -267,8 +264,7 @@ svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
 
 svn_error_t *
 svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
-                             dag_node_t *node,
-                             apr_pool_t *pool)
+                             dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -279,8 +275,7 @@ svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
 
 svn_error_t *
 svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
-                                              dag_node_t *node,
-                                              apr_pool_t *pool)
+                                              dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -358,7 +353,7 @@ set_entry(dag_node_t *parent,
    will be a file.  The new node will be allocated in POOL.  PARENT
    must be mutable, and must not have an entry named NAME.
 
-   Use POOL for all allocations including caching the node_revision in PARENT.
+   Use POOL for all allocations, except caching the node_revision in PARENT.
  */
 static svn_error_t *
 make_entry(dag_node_t **child_p,
@@ -422,8 +417,7 @@ make_entry(dag_node_t **child_p,
 svn_error_t *
 svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
                            dag_node_t *node,
-                           apr_pool_t *pool,
-                           apr_pool_t *node_pool)
+                           apr_pool_t *pool)
 {
   node_revision_t *noderev;
 
@@ -854,7 +848,7 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
       apr_hash_index_t *hi;
 
       /* Loop over hash entries */
-      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, pool));
+      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
       if (entries)
         {
           for (hi = apr_hash_first(pool, entries);

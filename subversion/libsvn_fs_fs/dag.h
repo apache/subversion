@@ -121,58 +121,39 @@ const char *svn_fs_fs__dag_get_created_path(dag_node_t *node);
 
 
 /* Set *ID_P to the node revision ID of NODE's immediate predecessor,
-   or NULL if NODE has no predecessor, allocating from POOL.
-
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   or NULL if NODE has no predecessor.
  */
 svn_error_t *svn_fs_fs__dag_get_predecessor_id(const svn_fs_id_t **id_p,
-                                               dag_node_t *node,
-                                               apr_pool_t *pool);
+                                               dag_node_t *node);
 
 
 /* Set *COUNT to the number of predecessors NODE has (recursively), or
-   -1 if not known, allocating from POOL.
-
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   -1 if not known.
  */
+/* ### This function is currently only used by 'verify'. */
 svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
-                                                  dag_node_t *node,
-                                                  apr_pool_t *pool);
+                                                  dag_node_t *node);
 
 /* Set *COUNT to the number of node under NODE (inclusive) with
-   svn:mergeinfo properties, allocating from POOL.
-
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   svn:mergeinfo properties.
  */
 svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
-                                                dag_node_t *node,
-                                                apr_pool_t *pool);
+                                                dag_node_t *node);
 
 /* Set *DO_THEY to a flag indicating whether or not NODE is a
    directory with at least one descendant (not including itself) with
    svn:mergeinfo.
-
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
  */
 svn_error_t *
 svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
-                                              dag_node_t *node,
-                                              apr_pool_t *pool);
+                                              dag_node_t *node);
 
 /* Set *HAS_MERGEINFO to a flag indicating whether or not NODE itself
    has svn:mergeinfo set on it.
-
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
  */
 svn_error_t *
 svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
-                             dag_node_t *node,
-                             apr_pool_t *pool);
+                             dag_node_t *node);
 
 /* Return non-zero IFF NODE is currently mutable. */
 svn_boolean_t svn_fs_fs__dag_check_mutable(const dag_node_t *node);
@@ -289,13 +270,10 @@ svn_error_t *svn_fs_fs__dag_open(dag_node_t **child_p,
 /* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the
    table are entry names, and the values are svn_fs_dirent_t's.  The
    returned table (and its keys and values) is allocated in POOL,
-   which is also used for temporary allocations.  NODE_POOL is used
-   for any allocation of memory that needs to live as long as NODE
-   lives. */
+   which is also used for temporary allocations. */
 svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
                                         dag_node_t *node,
-                                        apr_pool_t *pool,
-                                        apr_pool_t *node_pool);
+                                        apr_pool_t *pool);
 
 /* Fetches the NODE's entries and returns a copy of the entry selected
    by the key value given in NAME and set *DIRENT to a copy of that
