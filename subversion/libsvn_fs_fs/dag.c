@@ -70,6 +70,9 @@ struct dag_node_t
      things for you.  */
   node_revision_t *node_revision;
 
+  /* The pool to allocate NODE_REVISION in. */
+  apr_pool_t *node_pool;
+
   /* the path at which this node was created. */
   const char *created_path;
 };
@@ -151,7 +154,7 @@ copy_node_revision(node_revision_t *noderev,
 static svn_error_t *
 get_node_revision(node_revision_t **noderev_p,
                   dag_node_t *node,
-                  apr_pool_t *pool)
+                  apr_pool_t *pool /* unused */)
 {
   node_revision_t *noderev;
 
@@ -159,7 +162,7 @@ get_node_revision(node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, node->fs,
-                                           node->id, pool));
+                                           node->id, node->node_pool));
       node->node_revision = noderev;
     }
 
@@ -190,6 +193,7 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
   new_node->id = svn_fs_fs__id_copy(id, pool);
 
   /* Grab the contents so we can inspect the node's kind and created path. */
+  new_node->node_pool = pool;
   SVN_ERR(get_node_revision(&noderev, new_node, pool));
 
   /* Initialize the KIND and CREATED_PATH attributes */
@@ -1066,6 +1070,8 @@ svn_fs_fs__dag_dup(const dag_node_t *node,
       new_node->node_revision->is_fresh_txn_root =
           node->node_revision->is_fresh_txn_root;
     }
+  new_node->node_pool = pool;
+
   return new_node;
 }
 
@@ -1091,6 +1097,10 @@ svn_fs_fs__dag_serialize(char **data,
   else
     svn_temp_serializer__set_null(context,
                                   (const void * const *)&node->node_revision);
+
+  /* The deserializer will use its own pool. */
+  svn_temp_serializer__set_null(context,
+				(const void * const *)&node->node_pool);
 
   /* serialize other sub-structures */
   svn_fs_fs__id_serialize(context, (const svn_fs_id_t **)&node->id);
@@ -1124,6 +1134,7 @@ svn_fs_fs__dag_deserialize(void **out,
   svn_fs_fs__id_deserialize(node,
                             (svn_fs_id_t **)&node->fresh_root_predecessor_id);
   svn_fs_fs__noderev_deserialize(node, &node->node_revision);
+  node->node_pool = pool;
 
   svn_temp_deserializer__resolve(node, (void**)&node->created_path);
 
