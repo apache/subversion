@@ -666,7 +666,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
        "Attempted to make a child clone with an illegal name '%s'", name);
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
-  SVN_ERR(svn_fs_fs__dag_open(&cur_entry, parent, name, pool));
+  SVN_ERR(svn_fs_fs__dag_open(&cur_entry, parent, name, pool, pool));
 
   /* Check for mutability in the node we found.  If it's mutable, we
      don't need to clone it. */
@@ -1138,12 +1138,14 @@ svn_error_t *
 svn_fs_fs__dag_open(dag_node_t **child_p,
                     dag_node_t *parent,
                     const char *name,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   const svn_fs_id_t *node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
-  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, pool, pool));
+  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, 
+                                 scratch_pool, scratch_pool));
   if (! node_id)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
@@ -1157,7 +1159,7 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
 
   /* Now get the node that was requested. */
   return svn_fs_fs__dag_get_node(child_p, svn_fs_fs__dag_get_fs(parent),
-                                 node_id, pool);
+                                 node_id, result_pool);
 }
 
 
