@@ -251,16 +251,15 @@ svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
 
 
 /* Open the node named NAME in the directory PARENT.  Set *CHILD_P to
-   the new node, allocated in POOL.  NAME must be a single path
+   the new node, allocated in RESULT_POOL.  NAME must be a single path
    component; it cannot be a slash-separated directory path.
-
-   Use POOL for all allocations, including to cache the node_revision in
-   PARENT.
  */
-svn_error_t *svn_fs_fs__dag_open(dag_node_t **child_p,
-                                 dag_node_t *parent,
-                                 const char *name,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_fs_fs__dag_open(dag_node_t **child_p,
+                    dag_node_t *parent,
+                    const char *name,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
 
 
 /* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the

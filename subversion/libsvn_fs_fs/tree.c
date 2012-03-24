@@ -642,7 +642,7 @@ open_path(parent_path_t **parent_path_p,
           if (cached_node)
             child = cached_node;
           else
-            err = svn_fs_fs__dag_open(&child, here, entry, pool);
+            err = svn_fs_fs__dag_open(&child, here, entry, pool, pool);
 
           /* "file not found" requires special handling.  */
           if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
