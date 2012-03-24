@@ -1223,8 +1223,7 @@ svn_error_t *
 svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
                                 svn_boolean_t *contents_changed,
                                 dag_node_t *node1,
-                                dag_node_t *node2,
-                                apr_pool_t *pool)
+                                dag_node_t *node2)
 {
   node_revision_t *noderev1, *noderev2;
 
@@ -1254,8 +1253,7 @@ svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
 svn_error_t *
 svn_fs_fs__dag_get_copyroot(svn_revnum_t *rev,
                             const char **path,
-                            dag_node_t *node,
-                            apr_pool_t *pool)
+                            dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -1270,8 +1268,7 @@ svn_fs_fs__dag_get_copyroot(svn_revnum_t *rev,
 
 svn_error_t *
 svn_fs_fs__dag_get_copyfrom_rev(svn_revnum_t *rev,
-                                dag_node_t *node,
-                                apr_pool_t *pool)
+                                dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -1285,8 +1282,7 @@ svn_fs_fs__dag_get_copyfrom_rev(svn_revnum_t *rev,
 
 svn_error_t *
 svn_fs_fs__dag_get_copyfrom_path(const char **path,
-                                 dag_node_t *node,
-                                 apr_pool_t *pool)
+                                 dag_node_t *node)
 {
   node_revision_t *noderev;
 
