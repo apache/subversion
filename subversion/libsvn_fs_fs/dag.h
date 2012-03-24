@@ -169,8 +169,7 @@ svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
    If properties do not exist on NODE, *PROPLIST_P will be set to
    NULL.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
                                          dag_node_t *node,
@@ -179,8 +178,7 @@ svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
 /* Set the property list of NODE to PROPLIST, allocating from POOL.
    The node being changed must be mutable.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
                                          apr_hash_t *proplist,
@@ -189,8 +187,7 @@ svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
 /* Increment the mergeinfo_count field on NODE by INCREMENT.  The node
    being changed must be mutable.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
                                                       apr_int64_t increment,
@@ -199,8 +196,7 @@ svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
 /* Set the has-mergeinfo flag on NODE to HAS_MERGEINFO.  The node
    being changed must be mutable.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   NODE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
                                               svn_boolean_t has_mergeinfo,
@@ -320,8 +316,7 @@ svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
 
    TXN_ID is the Subversion transaction under which this occurs.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FILE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                                         dag_node_t *parent,
@@ -343,8 +338,7 @@ svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
    If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
    PARENT.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FILE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
                                    const char *name,
@@ -404,8 +398,7 @@ svn_error_t *svn_fs_fs__dag_make_dir(dag_node_t **child_p,
 
    If FILE is not a file, return SVN_ERR_FS_NOT_FILE.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FILE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
                                          dag_node_t *file,
@@ -416,8 +409,7 @@ svn_error_t *svn_fs_fs__dag_get_contents(svn_stream_t **contents,
    the contents of TARGET, allocated in POOL.  If SOURCE is null, the empty
    string will be used.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   SOURCE and TARGET.
+   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
@@ -458,8 +450,7 @@ svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
 
 /* Set *LENGTH to the length of the contents of FILE.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FILE.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
                                         dag_node_t *file,
@@ -471,8 +462,7 @@ svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
    If no stored checksum is available, do not calculate the checksum,
    just put NULL into CHECKSUM.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   FILE.
+   Use POOL for all allocations.
  */
 svn_error_t *
 svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
