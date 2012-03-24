@@ -386,8 +386,7 @@ svn_error_t *svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
    not currently have an entry named NAME.  TXN_ID is the Subversion
    transaction under which this occurs.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   PARENT.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_make_dir(dag_node_t **child_p,
                                      dag_node_t *parent,
@@ -490,8 +489,7 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
    canonicalized absolute path of the parent directory.  TXN_ID is the
    Subversion transaction under which this occurs.
 
-   Use POOL for all allocations, including to cache the node_revision in
-   PARENT.
+   Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
                                       dag_node_t *parent,
