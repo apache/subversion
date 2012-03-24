@@ -153,8 +153,7 @@ copy_node_revision(node_revision_t *noderev,
    the structure at all.  */
 static svn_error_t *
 get_node_revision(node_revision_t **noderev_p,
-                  dag_node_t *node,
-                  apr_pool_t *pool /* unused */)
+                  dag_node_t *node)
 {
   node_revision_t *noderev;
 
@@ -194,7 +193,7 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   new_node->node_pool = pool;
-  SVN_ERR(get_node_revision(&noderev, new_node, pool));
+  SVN_ERR(get_node_revision(&noderev, new_node));
 
   /* Initialize the KIND and CREATED_PATH attributes */
   new_node->kind = noderev->kind;
@@ -236,7 +235,7 @@ svn_fs_fs__dag_get_predecessor_id(const svn_fs_id_t **id_p,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
   *id_p = noderev->predecessor_id;
   return SVN_NO_ERROR;
 }
@@ -249,7 +248,7 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
   *count = noderev->predecessor_count;
   return SVN_NO_ERROR;
 }
@@ -261,7 +260,7 @@ svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
   *count = noderev->mergeinfo_count;
   return SVN_NO_ERROR;
 }
@@ -273,7 +272,7 @@ svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
   *has_mergeinfo = noderev->has_mergeinfo;
   return SVN_NO_ERROR;
 }
@@ -291,7 +290,7 @@ svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
   if (noderev->mergeinfo_count > 1)
     *do_they = TRUE;
   else if (noderev->mergeinfo_count == 1 && !noderev->has_mergeinfo)
@@ -346,7 +345,7 @@ set_entry(dag_node_t *parent,
   node_revision_t *parent_noderev;
 
   /* Get the parent's node-revision. */
-  SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
+  SVN_ERR(get_node_revision(&parent_noderev, parent));
 
   /* Set the new entry. */
   return svn_fs_fs__set_entry(parent->fs, txn_id, parent_noderev, name, id,
@@ -396,7 +395,7 @@ make_entry(dag_node_t **child_p,
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
   new_noderev.created_path = svn_fspath__join(parent_path, name, pool);
 
-  SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
+  SVN_ERR(get_node_revision(&parent_noderev, parent));
   new_noderev.copyroot_path = apr_pstrdup(pool,
                                           parent_noderev->copyroot_path);
   new_noderev.copyroot_rev = parent_noderev->copyroot_rev;
@@ -428,7 +427,7 @@ svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, node_pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   if (noderev->kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
@@ -445,7 +444,7 @@ svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
                          apr_pool_t *node_pool)
 {
   node_revision_t *noderev;
-  SVN_ERR(get_node_revision(&noderev, node, node_pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   if (noderev->kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
@@ -492,7 +491,7 @@ svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
   node_revision_t *noderev;
   apr_hash_t *proplist = NULL;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   SVN_ERR(svn_fs_fs__get_proplist(&proplist, node->fs,
                                   noderev, pool));
@@ -521,7 +520,7 @@ svn_fs_fs__dag_set_proplist(dag_node_t *node,
     }
 
   /* Go get a fresh NODE-REVISION for this node. */
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   /* Set the new proplist. */
   return svn_fs_fs__set_proplist(node->fs, noderev, proplist, pool);
@@ -549,7 +548,7 @@ svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
     return SVN_NO_ERROR;
 
   /* Go get a fresh NODE-REVISION for this node. */
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   noderev->mergeinfo_count += increment;
   if (noderev->mergeinfo_count < 0)
@@ -598,7 +597,7 @@ svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
     }
 
   /* Go get a fresh NODE-REVISION for this node. */
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   noderev->has_mergeinfo = has_mergeinfo;
 
@@ -690,11 +689,11 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
       node_revision_t *noderev, *parent_noderev;
 
       /* Go get a fresh NODE-REVISION for current child node. */
-      SVN_ERR(get_node_revision(&noderev, cur_entry, pool));
+      SVN_ERR(get_node_revision(&noderev, cur_entry));
 
       if (is_parent_copyroot)
         {
-          SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
+          SVN_ERR(get_node_revision(&parent_noderev, parent));
           noderev->copyroot_rev = parent_noderev->copyroot_rev;
           noderev->copyroot_path = apr_pstrdup(pool,
                                                parent_noderev->copyroot_path);
@@ -782,7 +781,7 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
        "Attempted to delete a node with an illegal name '%s'", name);
 
   /* Get a fresh NODE-REVISION for the parent node. */
-  SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
+  SVN_ERR(get_node_revision(&parent_noderev, parent));
 
   subpool = svn_pool_create(pool);
 
@@ -916,7 +915,7 @@ svn_fs_fs__dag_get_contents(svn_stream_t **contents_p,
        "Attempted to get textual contents of a *non*-file node");
 
   /* Go get a fresh node-revision for FILE. */
-  SVN_ERR(get_node_revision(&noderev, file, pool));
+  SVN_ERR(get_node_revision(&noderev, file));
 
   /* Get a stream to the contents. */
   SVN_ERR(svn_fs_fs__get_contents(&contents, file->fs,
@@ -946,10 +945,10 @@ svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
   /* Go get fresh node-revisions for the nodes. */
   if (source)
-    SVN_ERR(get_node_revision(&src_noderev, source, pool));
+    SVN_ERR(get_node_revision(&src_noderev, source));
   else
     src_noderev = NULL;
-  SVN_ERR(get_node_revision(&tgt_noderev, target, pool));
+  SVN_ERR(get_node_revision(&tgt_noderev, target));
 
   /* Get the delta stream. */
   return svn_fs_fs__get_file_delta_stream(stream_p, target->fs,
@@ -971,7 +970,7 @@ svn_fs_fs__dag_file_length(svn_filesize_t *length,
        "Attempted to get length of a *non*-file node");
 
   /* Go get a fresh node-revision for FILE, and . */
-  SVN_ERR(get_node_revision(&noderev, file, pool));
+  SVN_ERR(get_node_revision(&noderev, file));
 
   return svn_fs_fs__file_length(length, noderev, pool);
 }
@@ -990,7 +989,7 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
       (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to get checksum of a *non*-file node");
 
-  SVN_ERR(get_node_revision(&noderev, file, pool));
+  SVN_ERR(get_node_revision(&noderev, file));
 
   return svn_fs_fs__file_checksum(checksum, noderev, kind, pool);
 }
@@ -1017,7 +1016,7 @@ svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
        "Attempted to set textual contents of an immutable node");
 
   /* Get the node revision. */
-  SVN_ERR(get_node_revision(&noderev, file, pool));
+  SVN_ERR(get_node_revision(&noderev, file));
 
   SVN_ERR(svn_fs_fs__set_contents(&ws, file->fs, noderev, pool));
 
@@ -1191,7 +1190,7 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
       svn_fs_t *fs = svn_fs_fs__dag_get_fs(from_node);
 
       /* Make a copy of the original node revision. */
-      SVN_ERR(get_node_revision(&from_noderev, from_node, pool));
+      SVN_ERR(get_node_revision(&from_noderev, from_node));
       to_noderev = copy_node_revision(from_noderev, pool);
 
       /* Reserve a copy ID for this new copy. */
@@ -1244,8 +1243,8 @@ svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
     return SVN_NO_ERROR;
 
   /* The node revision skels for these two nodes. */
-  SVN_ERR(get_node_revision(&noderev1, node1, pool));
-  SVN_ERR(get_node_revision(&noderev2, node2, pool));
+  SVN_ERR(get_node_revision(&noderev1, node1));
+  SVN_ERR(get_node_revision(&noderev2, node2));
 
   /* Compare property keys. */
   if (props_changed != NULL)
@@ -1270,7 +1269,7 @@ svn_fs_fs__dag_get_copyroot(svn_revnum_t *rev,
   node_revision_t *noderev;
 
   /* Go get a fresh node-revision for NODE. */
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   *rev = noderev->copyroot_rev;
   *path = noderev->copyroot_path;
@@ -1286,7 +1285,7 @@ svn_fs_fs__dag_get_copyfrom_rev(svn_revnum_t *rev,
   node_revision_t *noderev;
 
   /* Go get a fresh node-revision for NODE. */
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   *rev = noderev->copyfrom_rev;
 
@@ -1301,7 +1300,7 @@ svn_fs_fs__dag_get_copyfrom_path(const char **path,
   node_revision_t *noderev;
 
   /* Go get a fresh node-revision for NODE. */
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node));
 
   *path = noderev->copyfrom_path;
 
@@ -1320,8 +1319,8 @@ svn_fs_fs__dag_update_ancestry(dag_node_t *target,
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        _("Attempted to update ancestry of non-mutable node"));
 
-  SVN_ERR(get_node_revision(&source_noderev, source, pool));
-  SVN_ERR(get_node_revision(&target_noderev, target, pool));
+  SVN_ERR(get_node_revision(&source_noderev, source));
+  SVN_ERR(get_node_revision(&target_noderev, target));
 
   target_noderev->predecessor_id = source->id;
   target_noderev->predecessor_count = source_noderev->predecessor_count;
