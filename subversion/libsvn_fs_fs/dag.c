@@ -307,7 +307,7 @@ static svn_error_t *
 dir_entry_id_from_node(const svn_fs_id_t **id_p,
                        dag_node_t *parent,
                        const char *name,
-                       apr_pool_t *result_pool
+                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   svn_fs_dirent_t *dirent;
