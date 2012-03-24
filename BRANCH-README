@@ -1,0 +1,4 @@
+Short-lived branch to make FSFS's dag_node_t keep track of its
+'node_revision' member's lifetime, rather than require callers
+to pass a pool that will potentially be used to allocate that
+member in.
