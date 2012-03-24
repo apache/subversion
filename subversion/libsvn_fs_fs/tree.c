@@ -679,14 +679,14 @@ open_path(parent_path_t **parent_path_p,
           if (txn_id)
             {
               SVN_ERR(get_copy_inheritance(&inherit, &copy_path,
-                                           fs, parent_path, txn_id, pool));
+                                           fs, parent_path, txn_id, iterpool));
               parent_path->copy_inherit = inherit;
               parent_path->copy_src_path = apr_pstrdup(pool, copy_path);
             }
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
-            SVN_ERR(dag_node_cache_set(root, path_so_far, child, pool));
+            SVN_ERR(dag_node_cache_set(root, path_so_far, child, iterpool));
         }
 
       /* Are we finished traversing the path?  */
@@ -695,8 +695,8 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far, pool),
-                  apr_psprintf(pool, _("Failure opening '%s'"), path));
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far, iterpool),
+                  apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
       here = child;
