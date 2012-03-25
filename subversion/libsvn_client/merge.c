@@ -6798,6 +6798,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
          by SOURCE->rev1:rev2. */
       if (!merge_b->record_only)
         {
+          /* ### Bug?  calculate_remaining_ranges() needs 'source' to adhere
+           *   to the requirements of 'MERGEINFO MERGE SOURCE NORMALIZATION'
+           *   here, but it doesn't appear to be guaranteed so. */
           SVN_ERR(calculate_remaining_ranges(NULL, merge_target,
                                              source,
                                              target_mergeinfo,
