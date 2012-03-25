@@ -4712,7 +4712,7 @@ update_wc_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
 
    IS_ROLLBACK is true if the caller is recording a reverse merge and false
    otherwise.  RANGELIST is the set of revisions being merged from
-   MERGEINFO_PATH to MERGE_B->TARGET_ABSPATH. */
+   MERGEINFO_PATH to MERGE_B->target. */
 static svn_error_t *
 record_skips(const char *mergeinfo_path,
              const apr_array_header_t *rangelist,
@@ -4831,7 +4831,7 @@ remove_absent_children(const char *target_wcpath,
    false then for each path (if any) in MERGE_B->PATHS_WITH_DELETED_MERGEINFO
    remove that path from CHILDREN_WITH_MERGEINFO by setting that
    child to NULL.  The one exception is for the merge target itself,
-   MERGE_B->TARGET_ABSPATH, this must always be present in
+   MERGE_B->target->abspath, this must always be present in
    CHILDREN_WITH_MERGEINFO so this is never removed by this
    function. */
 static void
@@ -5409,7 +5409,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
    get_mergeinfo_paths() is iterating over and *CURR_INDEX is index for
    *CHILD.
 
-   If CHILD->ABSPATH is equal to MERGE_CMD_BATON->TARGET_ABSPATH do nothing.
+   If CHILD->ABSPATH is equal to MERGE_CMD_BATON->target->abspath do nothing.
    Else if CHILD->ABSPATH is switched or absent then make sure its immediate
    (as opposed to nearest) parent in CHILDREN_WITH_MERGEINFO is marked as
    missing a child.  If the immediate parent does not exist in
@@ -5676,14 +5676,14 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
 /* Helper for do_directory_merge() when performing merge-tracking aware
    merges.
 
-   Walk of the working copy tree rooted at MERGE_CMD_BATON->TARGET_ABSPATH to
+   Walk of the working copy tree rooted at MERGE_CMD_BATON->target->abspath to
    depth DEPTH.  Create an svn_client__merge_path_t * for any path which meets
    one or more of the following criteria:
 
      1) Path has working svn:mergeinfo.
      2) Path is switched.
      3) Path is a subtree of the merge target (i.e. is not equal to
-        MERGE_CMD_BATON->TARGET_ABSPATH) and has no mergeinfo of its own but
+        MERGE_CMD_BATON->target->abspath) and has no mergeinfo of its own but
         its immediate parent has mergeinfo with non-inheritable ranges.  If
         this isn't a dry-run and the merge is between differences in the same
         repository, then this function will set working mergeinfo on the path
@@ -5695,10 +5695,10 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
         sibling is switched, absent, scheduled for deletion, or missing due to
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
-     7) Path is equal to MERGE_CMD_BATON->TARGET_ABSPATH.
+     7) Path is equal to MERGE_CMD_BATON->target->abspath.
      8) Path is an immediate *directory* child of
-        MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_immediates.
-     9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET_ABSPATH
+        MERGE_CMD_BATON->target->abspath and DEPTH is svn_depth_immediates.
+     9) Path is an immediate *file* child of MERGE_CMD_BATON->target->abspath
         and DEPTH is svn_depth_files.
      10) Path is at a depth of 'empty' or 'files'.
      11) Path is missing from disk (e.g. due to an OS-level deletion).
@@ -5711,7 +5711,7 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
    sorted by svn_path_compare_paths().  Set the remaining_ranges field of each
    element to NULL.
 
-   Note: Since the walk is rooted at MERGE_CMD_BATON->TARGET_ABSPATH, the
+   Note: Since the walk is rooted at MERGE_CMD_BATON->target->abspath, the
    latter is guaranteed to be in *CHILDREN_WITH_MERGEINFO and due to the
    depth-first ordering it is guaranteed to be the first element in
    *CHILDREN_WITH_MERGEINFO.
@@ -5933,7 +5933,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         }
     }
 
-  /* Case 7: The merge target MERGE_CMD_BATON->TARGET_ABSPATH is always
+  /* Case 7: The merge target MERGE_CMD_BATON->target->abspath is always
      present. */
   if (!get_child_with_mergeinfo(children_with_mergeinfo,
                                 merge_cmd_baton->target->abspath))
@@ -5946,10 +5946,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     }
 
   /* Case 8: Path is an immediate *directory* child of
-     MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_immediates.
+     MERGE_CMD_BATON->target->abspath and DEPTH is svn_depth_immediates.
 
      Case 9: Path is an immediate *file* child of
-     MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_files. */
+     MERGE_CMD_BATON->target->abspath and DEPTH is svn_depth_files. */
   if (depth == svn_depth_immediates || depth == svn_depth_files)
     {
       int j;
@@ -7696,7 +7696,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
   svn_merge_range_t range = *merged_range;
 
-  /* Regardless of what subtrees in MERGE_B->TARGET_ABSPATH might be missing
+  /* Regardless of what subtrees in MERGE_B->target->abspath might be missing
      could this merge have been operative? */
   operative_merge = subtree_touched_by_merge(merge_b->target->abspath,
                                              notify_b, iterpool);
@@ -7707,7 +7707,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   if (!operative_merge)
     range.inheritable = TRUE;
 
-  /* Remove absent children at or under TARGET_WCPATH from
+  /* Remove absent children at or under MERGE_B->target->abspath from
      NOTIFY_B->CHILDREN_WITH_MERGEINFO
      before we calculate the merges performed. */
   remove_absent_children(merge_b->target->abspath,
@@ -8006,7 +8006,7 @@ record_mergeinfo_for_added_subtrees(
                         iterpool);
 
           /* Create the new mergeinfo path for added_path's mergeinfo.
-             (added_abspath had better be a child of target_abspath
+             (added_abspath had better be a child of MERGE_B->target->abspath
              or something is *really* wrong.) */
           rel_added_path = svn_dirent_is_child(merge_b->target->abspath,
                                                added_abspath, iterpool);
@@ -8070,7 +8070,7 @@ typedef struct log_noop_baton_t
      of this file.*/
   apr_array_header_t *children_with_mergeinfo;
 
-  /* Absolute repository path of MERGE_B->TARGET_ABSPATH. */
+  /* Absolute repository path of MERGE_B->target->abspath. */
   const char *target_fspath;
 
   /* Absolute repository path of younger of the two merge sources
@@ -8131,7 +8131,7 @@ rangelist_merge_revision(apr_array_header_t *rangelist,
    Add LOG_ENTRY->REVISION to BATON->OPERATIVE_RANGES.
 
    If LOG_ENTRY->REVISION has already been fully merged to
-   MERGE_B->TARGET_ABSPATH per the mergeinfo in CHILDREN_WITH_MERGEINFO,
+   MERGE_B->target->abspath per the mergeinfo in CHILDREN_WITH_MERGEINFO,
    then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES.
 
    Use SCRATCH_POOL for temporary allocations.  Allocate additions to
@@ -8164,7 +8164,7 @@ log_noop_revs(void *baton,
 
   /* Examine each path affected by LOG_ENTRY->REVISION.  If the explicit or
      inherited mergeinfo for *all* of the corresponding paths under
-     MERGE_B->TARGET_ABSPATH reflects that LOG_ENTRY->REVISION has been
+     MERGE_B->target->abspath reflects that LOG_ENTRY->REVISION has been
      merged, then add LOG_ENTRY->REVISION to BATON->MERGED_RANGES. */
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
        hi;
@@ -8260,7 +8260,7 @@ log_noop_revs(void *baton,
 
    Find all the ranges required by subtrees in
    CHILDREN_WITH_MERGEINFO that are *not* required by
-   MERGE_B->TARGET_ABSPATH (i.e. CHILDREN_WITH_MERGEINFO[0]).  If such
+   MERGE_B->target->abspath (i.e. CHILDREN_WITH_MERGEINFO[0]).  If such
    ranges exist, then find any subset of ranges which, if merged, would be
    inoperative.  Finally, if any inoperative ranges are found then remove
    these ranges from all of the subtree's REMAINING_RANGES.
@@ -10345,16 +10345,16 @@ calculate_left_hand_side(const char **url_left,
   *url_left = NULL;
   *rev_left = SVN_INVALID_REVNUM;
 
-  /* TARGET_ABSPATH may not have explicit mergeinfo and thus may not be
+  /* TARGET->abspath may not have explicit mergeinfo and thus may not be
      contained within SUBTREES_WITH_MERGEINFO.  If this is the case then
-     add a dummy item for TARGET_ABSPATH so we get its history (i.e. implicit
+     add a dummy item for TARGET->abspath so we get its history (i.e. implicit
      mergeinfo) below.  */
   if (!apr_hash_get(subtrees_with_mergeinfo, target->abspath,
                     APR_HASH_KEY_STRING))
     apr_hash_set(subtrees_with_mergeinfo, target->abspath,
                  APR_HASH_KEY_STRING, apr_hash_make(result_pool));
 
-  /* Get the history segments (as mergeinfo) for TARGET_ABSPATH and any of
+  /* Get the history segments (as mergeinfo) for TARGET->abspath and any of
      its subtrees with explicit mergeinfo. */
   for (hi = apr_hash_first(scratch_pool, subtrees_with_mergeinfo);
        hi;
@@ -10465,7 +10465,7 @@ calculate_left_hand_side(const char **url_left,
   else
     {
       /* We've previously merged some or all of the target, up to
-         youngest_merged_rev, from TARGET_ABSPATH to the source.  Set
+         youngest_merged_rev, to the source.  Set
          *URL_LEFT and *REV_LEFT to cover the youngest part of this range. */
       *rev_left = youngest_merged_rev;
       SVN_ERR(svn_client__repos_location(url_left, target_ra_session,
