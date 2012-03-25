@@ -2034,43 +2034,41 @@ setup_request(serf_request_t *request,
               apr_pool_t *request_pool,
               apr_pool_t *scratch_pool)
 {
+  serf_bucket_t *body_bkt;
   serf_bucket_t *headers_bkt;
 
   /* Default response acceptor.  */
   *acceptor = accept_response;
   *acceptor_baton = ctx->session;
 
+  if (strcmp(ctx->method, "HEAD") == 0)
     {
-      serf_bucket_t *body_bkt;
+      *acceptor = accept_head;
+    }
+
+  if (ctx->body_delegate)
+    {
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
 
-      if (strcmp(ctx->method, "HEAD") == 0)
-        {
-          *acceptor = accept_head;
-        }
+      /* ### should pass the scratch_pool  */
+      SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
+                                 bkt_alloc, request_pool));
+    }
+  else
+    {
+      body_bkt = NULL;
+    }
 
-      if (ctx->body_delegate)
-        {
-          /* ### should pass the scratch_pool  */
-          SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
-                                     bkt_alloc, request_pool));
-        }
-      else
-        {
-          body_bkt = NULL;
-        }
+  SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
+                         ctx->conn, ctx->method, ctx->path,
+                         body_bkt, ctx->body_type,
+                         request_pool, scratch_pool));
 
-      SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
-                             ctx->conn, ctx->method, ctx->path,
-                             body_bkt, ctx->body_type,
-                             request_pool, scratch_pool));
-
-      if (ctx->header_delegate)
-        {
-          /* ### should pass the scratch_pool  */
-          SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
-                                       request_pool));
-        }
+  if (ctx->header_delegate)
+    {
+      /* ### should pass the scratch_pool  */
+      SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
+                                   request_pool));
     }
 
   *handler = handle_response_cb;
