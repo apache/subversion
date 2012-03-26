@@ -27,6 +27,7 @@ from libsvn.fs import *
 from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
 

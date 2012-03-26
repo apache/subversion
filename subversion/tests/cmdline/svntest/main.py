@@ -78,11 +78,18 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
+# This enables both a time stamp prefix on all log lines and a
+# '<TIME = 0.042552>' line after running every external command.
+log_with_timestamps = True
+
 # Set up logging
 logger = logging.getLogger()
 handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
-                              '%Y-%m-%d %H:%M:%S')
+if log_with_timestamps:
+  formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
+                                '%Y-%m-%d %H:%M:%S')
+else:
+  formatter = logging.Formatter('[%(levelname)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -504,16 +511,17 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  stop = time.time()
-  logger.info('<TIME = %.6f>' % (stop - start))
+  if log_with_timestamps:
+    stop = time.time()
+    logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
-    logger.info(x[:-1])
+    logger.info(x.rstrip())
   for x in stderr_lines:
-    logger.info(x)
+    logger.info(x.rstrip())
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
-      logger.warning(x[:-1])
+      logger.warning(x.rstrip())
     raise Failure
 
   return exit_code, \
@@ -867,9 +875,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     [svnadmin_binary] + load_args,
     stdin=dump_out) # Attached to dump_kid
 
-  stop = time.time()
-  logger.info('<TIME = %.6f>' % (stop - start))
-
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
   dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
 
@@ -879,6 +884,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   #load_in is dump_out so it's already closed.
   load_out.close()
   load_err.close()
+
+  if log_with_timestamps:
+    stop = time.time()
+    logger.info('<TIME = %.6f>' % (stop - start))
 
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
@@ -1525,7 +1534,7 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
-  parser.add_option('--set-log-level', action='callback', type='int',
+  parser.add_option('--set-log-level', action='callback', type='str',
                     callback=set_log_level)
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +

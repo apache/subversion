@@ -39,9 +39,15 @@ class Sandbox:
   dependents = None
 
   def __init__(self, module, idx):
+    self.test_paths = []
+
     self._set_name("%s-%d" % (module, idx))
     # This flag is set to True by build() and returned by is_built()
     self._is_built = False
+
+    # Create an empty directory for temporary files
+    self.tmp_dir = self.add_wc_path('tmp', remove=True)
+    os.mkdir(self.tmp_dir)
 
   def _set_name(self, name, read_only=False):
     """A convenience method for renaming a sandbox, useful when
@@ -50,10 +56,12 @@ class Sandbox:
       self.name = name
     self.read_only = read_only
     self.wc_dir = os.path.join(svntest.main.general_wc_dir, self.name)
+    self.add_test_path(self.wc_dir)
     if not read_only:
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
       self.repo_url = (svntest.main.options.test_area_url + '/'
                        + urllib.pathname2url(self.repo_dir))
+      self.add_test_path(self.repo_dir)
     else:
       self.repo_dir = svntest.main.pristine_greek_repos_dir
       self.repo_url = svntest.main.pristine_greek_repos_url
@@ -76,8 +84,6 @@ class Sandbox:
     # have any default contents.
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
-
-    self.test_paths = [self.wc_dir, self.repo_dir]
 
   def clone_dependent(self, copy_wc=False):
     """A convenience method for creating a near-duplicate of this
@@ -151,13 +157,9 @@ class Sandbox:
     """Get a stable name for a temporary file that will be removed after
        running the test"""
 
-    dir = self.add_wc_path('tmp')
-    if not os.path.exists(dir):
-      os.mkdir(dir)
-
     self.tempname_offs = self.tempname_offs + 1
 
-    return os.path.join(dir, '%s-%s' % (prefix, self.tempname_offs))
+    return os.path.join(self.tmp_dir, '%s-%s' % (prefix, self.tempname_offs))
 
   def cleanup_test_paths(self):
     "Clean up detritus from this sandbox, and any dependents."

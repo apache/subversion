@@ -67,11 +67,11 @@ typedef struct date_context_t {
 
 static svn_error_t *
 start_getdate(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               svn_ra_serf__dav_props_t name,
-              const char **attrs)
+              const char **attrs,
+              apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
+  date_context_t *date_ctx = parser->user_data;
   date_state_e state = parser->state->current_state;
 
   UNUSED_CTX(date_ctx);
@@ -89,10 +89,10 @@ start_getdate(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_getdate(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
-            svn_ra_serf__dav_props_t name)
+            svn_ra_serf__dav_props_t name,
+            apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
+  date_context_t *date_ctx = parser->user_data;
   date_state_e state = parser->state->current_state;
 
   if (state == VERSION_NAME &&
@@ -109,11 +109,11 @@ end_getdate(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_getdate(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               const char *data,
-              apr_size_t len)
+              apr_size_t len,
+              apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
+  date_context_t *date_ctx = parser->user_data;
   date_state_e state = parser->state->current_state;
   svn_stringbuf_t *datebuf;
 

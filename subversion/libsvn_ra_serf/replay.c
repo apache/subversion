@@ -176,11 +176,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 start_replay(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              svn_ra_serf__dav_props_t name,
-             const char **attrs)
+             const char **attrs,
+             apr_pool_t *scratch_pool)
 {
-  replay_context_t *ctx = userData;
+  replay_context_t *ctx = parser->user_data;
   replay_state_e state;
 
   state = parser->state->current_state;
@@ -473,10 +473,10 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_replay(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
-           svn_ra_serf__dav_props_t name)
+           svn_ra_serf__dav_props_t name,
+           apr_pool_t *scratch_pool)
 {
-  replay_context_t *ctx = userData;
+  replay_context_t *ctx = parser->user_data;
   replay_state_e state;
 
   state = parser->state->current_state;
@@ -538,6 +538,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
           const svn_string_t *morph;
 
           morph = svn_stringbuf__morph_into_string(info->prop_value);
+#ifdef SVN_DEBUG
+          info->prop_value = NULL;  /* morph killed the stringbuf.  */
+#endif
 
           if (strcmp(name.name, "change-file-prop") == 0)
             prop_val = svn_base64_decode_string(morph, ctx->file_pool);
@@ -555,11 +558,11 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_replay(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              const char *data,
-             apr_size_t len)
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
 {
-  replay_context_t *replay_ctx = userData;
+  replay_context_t *replay_ctx = parser->user_data;
   replay_state_e state;
 
   UNUSED_CTX(replay_ctx);

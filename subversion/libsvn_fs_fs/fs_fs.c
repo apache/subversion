@@ -2718,8 +2718,6 @@ set_revision_proplist(svn_fs_t *fs,
          (Whereas the rev file should already exist at this point.) */
       SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
       SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
-
-      return SVN_NO_ERROR;
     }
 
   return SVN_NO_ERROR;
@@ -5004,6 +5002,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   apr_file_t *file;
   svn_stream_t *out;
   fs_fs_data_t *ffd = fs->fsap_data;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (!rep || !rep->txn_id)
     {
@@ -5011,7 +5010,8 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
       {
         apr_hash_t *entries;
-        apr_pool_t *subpool = svn_pool_create(pool);
+
+        svn_pool_clear(subpool);
 
         /* Before we can modify the directory, we need to dump its old
            contents into a mutable representation file. */
@@ -5024,7 +5024,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
         out = svn_stream_from_aprfile2(file, TRUE, pool);
         SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
 
-        svn_pool_destroy(subpool);
+        svn_pool_clear(subpool);
       }
 
       /* Mark the node-rev's data rep as mutable. */
@@ -5046,10 +5046,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* if we have a directory cache for this transaction, update it */
+  svn_pool_clear(subpool);
   if (ffd->txn_dir_cache)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
-
       /* build parameters: (name, new entry) pair */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
@@ -5064,28 +5063,31 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
         }
 
       /* actually update the cached directory (if cached) */
-      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key, svn_fs_fs__replace_dir_entry, &baton, subpool));
-
-      svn_pool_destroy(subpool);
+      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key,
+                                     svn_fs_fs__replace_dir_entry, &baton,
+                                     subpool));
     }
+  svn_pool_clear(subpool);
 
   /* Append an incremental hash entry for the entry change. */
   if (id)
     {
-      const char *val = unparse_dir_entry(kind, id, pool);
+      const char *val = unparse_dir_entry(kind, id, subpool);
 
-      SVN_ERR(svn_stream_printf(out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
+      SVN_ERR(svn_stream_printf(out, subpool, "K %" APR_SIZE_T_FMT "\n%s\n"
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name,
                                 strlen(val), val));
     }
   else
     {
-      SVN_ERR(svn_stream_printf(out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
+      SVN_ERR(svn_stream_printf(out, subpool, "D %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name));
     }
 
-  return svn_io_file_close(file, pool);
+  SVN_ERR(svn_io_file_close(file, subpool));
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
@@ -5909,7 +5911,7 @@ validate_root_noderev(svn_fs_t *fs,
 
      This kind of corruption was seen on svn.apache.org (both on
      the root noderev and on other fspaths' noderevs); see
-       http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+     issue #4129.
 
      Normally (rev == root_noderev->predecessor_count), but here we
      use a more roundabout check that should only trigger on new instances
@@ -7946,58 +7948,24 @@ svn_fs_fs__verify(svn_fs_t *fs,
                                           start, end,
                                           pool));
 
-  /* Issue #4129: bogus pred-counts on the root node-rev. */
+  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
+     (and elsewhere).  This code makes more thorough checks that the
+     commit-time checks in validate_root_noderev(). */
   {
     svn_revnum_t i;
-    int predecessor_predecessor_count;
-
-    /* Compute PREDECESSOR_PREDECESSOR_COUNT. */
-    if (start == 0)
-      /* The value that passes the if() at the end of the loop. */
-      predecessor_predecessor_count = -1;
-    else
-      {
-        svn_fs_id_t *root_id;
-        node_revision_t *root_noderev;
-        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, start-1, iterpool));
-        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
-                                             iterpool));
-        predecessor_predecessor_count = root_noderev->predecessor_count;
-      }
-
     for (i = start; i <= end; i++)
       {
-        /* ### Caching.
+      	svn_fs_root_t *root;
 
-           svn_fs_fs__rev_get_root() consults caches, which in verify we
-           don't want.  But we can't easily bypass that, as
-           svn_fs_revision_root()+svn_fs_node_id()'s implementation uses
-           svn_fs_fs__rev_get_root() too.
+        svn_pool_clear(iterpool);
 
-           ### A future revision will make fs_verify() disable caches when it
-           ### opens ffd.
-         */
-        svn_fs_id_t *root_id;
-        node_revision_t *root_noderev;
-
-        if ((i % 128) == 0) /* uneducated guess */
-          svn_pool_clear(iterpool);
-
-        /* Fetch ROOT_NODEREV. */
-        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, i, iterpool));
-        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
-                                             iterpool));
-
-        /* Check correctness. (Compare validate_root_noderev().) */
-        if (1+predecessor_predecessor_count != root_noderev->predecessor_count)
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   _("predecessor count for "
-                                     "the root node-revision is wrong: "
-                                     "r%ld has %d, but r%ld has %d"),
-                                   i, root_noderev->predecessor_count,
-                                   i-1, predecessor_predecessor_count);
-
-        predecessor_predecessor_count = root_noderev->predecessor_count;
+      	/* ### TODO: Make sure caches are disabled.
+      	   
+      	   When this code is called in the library, we want to ensure we
+      	   use the on-disk data --- rather than some data that was read
+      	   in the possibly-distance past and cached since. */
+      	SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
+      	SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
       }
   }
 
