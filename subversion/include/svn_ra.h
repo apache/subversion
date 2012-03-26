@@ -938,12 +938,16 @@ svn_ra_get_commit_editor(svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are
  * <tt>@c svn_string_t *</tt>.
  *
- * If @a inherited_props is not @c NULL, then set @a *inherited_props to a
- * depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * If the server advertises the #SVN_RA_CAPABILITY_INHERITED_PROPS capability
+ * and if @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * a depth-first ordered array of #svn_prop_inherited_item_t * structures
  * representing the properties inherited by @a path at @a revision (or the
  * 'head' revision if @a revision is @c SVN_INVALID_REVNUM.  If
  * @a inherited_props is not @c NULL and no inheritable properties are found,
- * then set @a *inherited_props to an empty array.
+ * then set @a *inherited_props to an empty array.  If the server does not
+ * advertise the #SVN_RA_CAPABILITY_INHERITED_PROPS capability and
+ * @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * @c NULL.
  *
  * The stream handlers for @a stream may not perform any RA
  * operations using @a session.
@@ -1003,12 +1007,16 @@ svn_ra_get_file(svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are
  * <tt>@c svn_string_t *</tt>.
  *
- * If @a inherited_props is not @c NULL, then set @a *inherited_props to a
- * depth-first ordered array of #svn_prop_inherited_item_t * structures
+ * If the server advertises the #SVN_RA_CAPABILITY_INHERITED_PROPS capability
+ * and if @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * a depth-first ordered array of #svn_prop_inherited_item_t * structures
  * representing the properties inherited by @a path at @a revision (or the
  * 'head' revision if @a revision is @c SVN_INVALID_REVNUM.  If
  * @a inherited_props is not @c NULL and no inheritable properties are found,
- * then set @a *inherited_props to an empty array.
+ * then set @a *inherited_props to an empty array.  If the server does not
+ * advertise the #SVN_RA_CAPABILITY_INHERITED_PROPS capability and
+ * @a inherited_props is not @c NULL, then set @a *inherited_props to
+ * @c NULL.
  *
  * @since New in 1.8.
  */
