@@ -994,10 +994,10 @@ fs_node_prop(svn_string_t **value_p,
 }
 
 
-/* Set *TABLE_P to the entire property list of PATH under ROOT, as an
-   APR hash table allocated in RESULT_POOL.  The resulting property table
-   maps property names to pointers to svn_string_t objects containing
-   the property value.
+/* If TABLE_P is not null, then set *TABLE_P to the entire property list
+   of PATH under ROOT, as an APR hash table allocated in RESULT_POOL.
+   The resulting property table maps property names to pointers to
+   svn_string_t objects containing the property value.
 
    If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a depth-first
    ordered array of svn_prop_inherited_item_t * structures (the path_or_url
@@ -1018,8 +1018,12 @@ fs_node_proplist(apr_hash_t **table_p,
   dag_node_t *node;
 
   SVN_ERR(get_dag(&node, root, path, scratch_pool));
-  SVN_ERR(svn_fs_fs__dag_get_proplist(&table, node, result_pool));
-  *table_p = table ? table : apr_hash_make(result_pool);
+
+  if (table_p)
+    {
+      SVN_ERR(svn_fs_fs__dag_get_proplist(&table, node, result_pool));
+      *table_p = table ? table : apr_hash_make(result_pool);
+    }
 
   /* If the caller requested PATH's inherited properties, then walk from
      PATH to the repository root to gather PATH's inherited props. */
