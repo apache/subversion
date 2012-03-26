@@ -21,7 +21,9 @@
 #
 set -e
 
-APR=apr-1.4.6
+# NOTE: Before bumping the default APR dependency the 1.6.x test suite
+# should be adjusted to cope with hash ordering changes from APR 1.4.6.
+APR=apr-1.4.5
 APR_UTIL=apr-util-1.4.1
 NEON=neon-0.29.6
 SERF=serf-0.3.1
