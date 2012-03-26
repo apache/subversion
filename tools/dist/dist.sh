@@ -247,6 +247,11 @@ if [ "$ver_major" -eq "1" -a "$ver_minor" -ge "7" ]; then
   rm -rf "$DISTPATH/packages"
 fi
 
+# Remove www/ from the tarball for 1.6.x and earlier releases
+if [ "$ver_major" -eq "1" -a "$ver_minor" -le "6" ]; then
+  rm -rf "$DISTPATH/www"
+fi
+
 # Check for a recent enough Python
 # Instead of attempting to deal with various line ending issues, just export
 # the find_python script manually.
