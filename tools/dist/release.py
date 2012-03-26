@@ -21,10 +21,10 @@
 
 
 # About this script:
-#   This script is intended to simplify creating Subversion releases, by
-#   automating as much as is possible.  It works well with our Apache
-#   infrastructure, and should make rolling, posting, and announcing
-#   releases dirt simple.
+#   This script is intended to simplify creating Subversion releases for
+#   any of the supported release lines of Subversion.
+#   It works well with our Apache infrastructure, and should make rolling,
+#   posting, and announcing releases dirt simple.
 #
 #   This script may be run on a number of platforms, but it is intended to
 #   be run on people.apache.org.  As such, it may have dependencies (such
