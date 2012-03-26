@@ -5002,6 +5002,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   apr_file_t *file;
   svn_stream_t *out;
   fs_fs_data_t *ffd = fs->fsap_data;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (!rep || !rep->txn_id)
     {
@@ -5009,7 +5010,8 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
       {
         apr_hash_t *entries;
-        apr_pool_t *subpool = svn_pool_create(pool);
+
+        svn_pool_clear(subpool);
 
         /* Before we can modify the directory, we need to dump its old
            contents into a mutable representation file. */
@@ -5022,7 +5024,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
         out = svn_stream_from_aprfile2(file, TRUE, pool);
         SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
 
-        svn_pool_destroy(subpool);
+        svn_pool_clear(subpool);
       }
 
       /* Mark the node-rev's data rep as mutable. */
@@ -5044,10 +5046,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* if we have a directory cache for this transaction, update it */
+  svn_pool_clear(subpool);
   if (ffd->txn_dir_cache)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
-
       /* build parameters: (name, new entry) pair */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
@@ -5065,27 +5066,28 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key,
                                      svn_fs_fs__replace_dir_entry, &baton,
                                      subpool));
-
-      svn_pool_destroy(subpool);
     }
+  svn_pool_clear(subpool);
 
   /* Append an incremental hash entry for the entry change. */
   if (id)
     {
-      const char *val = unparse_dir_entry(kind, id, pool);
+      const char *val = unparse_dir_entry(kind, id, subpool);
 
-      SVN_ERR(svn_stream_printf(out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
+      SVN_ERR(svn_stream_printf(out, subpool, "K %" APR_SIZE_T_FMT "\n%s\n"
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name,
                                 strlen(val), val));
     }
   else
     {
-      SVN_ERR(svn_stream_printf(out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
+      SVN_ERR(svn_stream_printf(out, subpool, "D %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name));
     }
 
-  return svn_io_file_close(file, pool);
+  SVN_ERR(svn_io_file_close(file, subpool));
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
