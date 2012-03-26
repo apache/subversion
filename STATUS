@@ -115,17 +115,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * r1302399, r1302539, r1302591, r1302613
-   Fix issue 4129, wrong predecessor count in FSFS revision files
-   Justification:
-     Repository corruption.
-   Notes:
-     r1302399 is a comment change.
-     r1302539 and r1302591 add a test.
-     r1302613 is the fix.
-   Votes:
-     +1: philip, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -146,3 +135,13 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1302399, r1302539, r1302591, r1302613
+   Fix issue 4129, wrong predecessor count in FSFS revision files
+   Justification:
+     Repository corruption.
+   Notes:
+     r1302399 is a comment change.
+     r1302539 and r1302591 add a test.
+     r1302613 is the fix.
+   Votes:
+     +1: philip, danielsh, stsp
