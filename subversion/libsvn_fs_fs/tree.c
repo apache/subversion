@@ -3841,7 +3841,8 @@ verify_node(dag_node_t *node,
       if (has_mergeinfo != mergeinfo_count) /* comparing int to bool */
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  "File node '%s' has inconsistent mergeinfo: "
-                                 "has_mergeinfo=%d, mergeinfo_count=%d",
+                                 "has_mergeinfo=%d, "
+                                 "mergeinfo_count=%" APR_INT64_T_FMT,
                                  stringify_node(node, iterpool),
                                  has_mergeinfo, mergeinfo_count);
     }
