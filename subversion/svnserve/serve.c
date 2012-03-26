@@ -963,15 +963,19 @@ static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
 
 /* ### This really belongs in libsvn_repos. */
 /* Get the properties for a path, with hardcoded committed-info values. */
-static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
-                              const char *path, apr_pool_t *pool)
+static svn_error_t *
+get_props(apr_hash_t **props,
+          apr_array_header_t **iprops,
+          svn_fs_root_t *root,
+          const char *path,
+          apr_pool_t *pool)
 {
   svn_string_t *str;
   svn_revnum_t crev;
   const char *cdate, *cauthor, *uuid;
 
   /* Get the properties. */
-  SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
+  SVN_ERR(svn_fs_node_proplist2(props, iprops, root, path, pool, pool));
 
   /* Hardcode the values for the committed revision, date, and author. */
   SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
@@ -1390,16 +1394,20 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_fs_root_t *root;
   svn_stream_t *contents;
   apr_hash_t *props = NULL;
+  apr_array_header_t *inherited_props;
   svn_string_t write_str;
   char buf[4096];
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
+  apr_uint64_t wants_inherited_props;
   svn_checksum_t *checksum;
   svn_error_t *err, *write_err;
+  int i;
 
   /* Parse arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
-                                 &want_props, &want_contents));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?B", &path, &rev,
+                                 &want_props, &want_contents,
+                                 &wants_inherited_props));
 
   full_path = svn_fspath__join(b->fs_path->data,
                                svn_relpath_canonicalize(path, pool), pool);
@@ -1420,8 +1428,8 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root,
                                    full_path, TRUE, pool));
   hex_digest = svn_checksum_to_cstring_display(checksum, pool);
-  if (want_props)
-    SVN_CMD_ERR(get_props(&props, root, full_path, pool));
+  if (want_props || wants_inherited_props)
+    SVN_CMD_ERR(get_props(&props, &inherited_props, root, full_path, pool));
   if (want_contents)
     SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
@@ -1429,6 +1437,23 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)r(!", "success",
                                  hex_digest, rev));
   SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
+
+  if (wants_inherited_props)
+    {
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?!"));
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(c(!",
+                                         iprop->path_or_url));
+          SVN_ERR(svn_ra_svn_write_proplist(conn, pool, iprop->prop_hash));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))!",
+                                         iprop->path_or_url));
+        }  
+    }
+
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   /* Now send the file's contents. */
@@ -1473,17 +1498,21 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path, *full_path, *file_path, *cdate;
   svn_revnum_t rev;
   apr_hash_t *entries, *props = NULL, *file_props;
+  apr_array_header_t *inherited_props;
   apr_hash_index_t *hi;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
+  apr_uint64_t wants_inherited_props;
   apr_uint64_t dirent_fields;
   apr_array_header_t *dirent_fields_list = NULL;
   svn_ra_svn_item_t *elt;
+  int i;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l", &path, &rev,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l?B", &path, &rev,
                                  &want_props, &want_contents,
-                                 &dirent_fields_list));
+                                 &dirent_fields_list,
+                                 &wants_inherited_props));
 
   if (! dirent_fields_list)
     {
@@ -1491,8 +1520,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
-      int i;
-
       dirent_fields = 0;
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
@@ -1536,9 +1563,10 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the root of the appropriate revision. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
 
-  /* Fetch the directory properties if requested. */
-  if (want_props)
-    SVN_CMD_ERR(get_props(&props, root, full_path, pool));
+  /* Fetch the directory's explicit and/or inherited properties
+     if requested. */
+  if (want_props || wants_inherited_props)
+    SVN_CMD_ERR(get_props(&props, &inherited_props, root, full_path, pool));
 
   /* Begin response ... */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
@@ -1610,6 +1638,22 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                          cdate, entry.last_author));
         }
       svn_pool_destroy(subpool);
+    }
+
+  if (wants_inherited_props)
+    {
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?!"));
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(c(!",
+                                         iprop->path_or_url));
+          SVN_ERR(svn_ra_svn_write_proplist(conn, pool, iprop->prop_hash));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))!",
+                                         iprop->path_or_url));
+        }  
     }
 
   /* Finish response. */

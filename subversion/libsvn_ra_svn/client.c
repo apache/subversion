@@ -1009,6 +1009,82 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Parse IPROPLIST, an array of svn_ra_svn_item_t structures, as a list of
+   const char * repos relative paths and properties for those paths, storing
+   the result as an array of svn_prop_inherited_item_t *items. */
+static svn_error_t *
+parse_iproplist(apr_array_header_t **inherited_props,
+                const apr_array_header_t *iproplist,
+                svn_ra_session_t *session,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+
+{
+  int i;
+  const char *repos_root_url;
+  apr_pool_t *iterpool;
+
+  if (iproplist == NULL)
+    {
+      /* If the server doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS
+         capability we shouldn't be asking for inherited props, but if we
+         did and the server sent back nothing then we'll want to handle
+         that. */
+      *inherited_props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
+
+  *inherited_props = apr_array_make(
+    result_pool, iproplist->nelts, sizeof(svn_prop_inherited_item_t *));
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  /* Iterate backwards over the array to preserve the depth-first ordering
+     of the parent paths as we create *INHERITED_PROPS. */
+  for (i = iproplist->nelts - 1; i >= 0; i--)
+    {
+      apr_array_header_t *iprop_list;
+      char *parent_rel_path;
+      apr_hash_t *iprops;
+      apr_hash_index_t *hi;
+      svn_prop_inherited_item_t *new_iprop =
+        apr_palloc(result_pool, sizeof(*new_iprop));
+      svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(iproplist, i,
+                                              svn_ra_svn_item_t);
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(
+          SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+          _("Inherited proplist element not a list"));
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, iterpool, "cl",
+                                     &parent_rel_path, &iprop_list));
+      SVN_ERR(svn_ra_svn_parse_proplist(iprop_list, iterpool, &iprops));
+      new_iprop->path_or_url = svn_path_url_add_component2(repos_root_url,
+                                                           parent_rel_path,
+                                                           result_pool);
+      new_iprop->prop_hash = apr_hash_make(result_pool);
+      for (hi = apr_hash_first(iterpool, iprops);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_string_t *value = svn__apr_hash_index_val(hi);
+          apr_hash_set(new_iprop->prop_hash,
+                       apr_pstrdup(result_pool, name),
+                       APR_HASH_KEY_STRING,
+                       svn_string_dup(value, result_pool));
+        }
+      APR_ARRAY_PUSH(*inherited_props, svn_prop_inherited_item_t *) =
+        new_iprop;
+    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                     svn_revnum_t rev, svn_stream_t *stream,
                                     svn_revnum_t *fetched_rev,
@@ -1019,22 +1095,26 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *proplist;
+  apr_array_header_t *iproplist;
   const char *expected_digest;
   svn_checksum_t *expected_checksum = NULL;
   svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c(?r)bb", path,
-                               rev, (props != NULL), (stream != NULL)));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c(?r)bbb", path,
+                               rev, (props != NULL), (stream != NULL),
+                               (inherited_props != NULL)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?c)rl",
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?c)rl?l",
                                        &expected_digest,
-                                       &rev, &proplist));
+                                       &rev, &proplist, &iproplist));
 
   if (fetched_rev)
     *fetched_rev = rev;
   if (props)
     SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
+  if (inherited_props)
+    SVN_ERR(parse_iproplist(inherited_props, iproplist, session, pool, pool));
 
   /* We're done if the contents weren't wanted. */
   if (!stream)
@@ -1098,7 +1178,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *proplist, *dirlist;
+  apr_array_header_t *proplist, *dirlist, *iproplist;
   int i;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
@@ -1116,16 +1196,20 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_LAST_AUTHOR));
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b)",
+                                 (inherited_props != NULL)));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
-                                       &dirlist));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll?l", &rev, &proplist,
+                                       &dirlist, &iproplist));
 
   if (fetched_rev)
     *fetched_rev = rev;
   if (props)
     SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
+  if (inherited_props)
+    SVN_ERR(parse_iproplist(inherited_props, iproplist, session, pool,
+                            pool));
 
   /* We're done if dirents aren't wanted. */
   if (!dirents)
