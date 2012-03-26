@@ -24,6 +24,7 @@
 #include <serf.h>
 #include <serf_bucket_util.h>
 
+#include "svn_private_config.h"
 #include "private/svn_subr_private.h"
 
 #include "ra_serf.h"
@@ -60,8 +61,8 @@ svn_ra_serf__copy_into_spillbuf(svn_spillbuf_t **spillbuf,
 
       status = serf_bucket_read(bkt, SERF_READ_ALL_AVAIL, &data, &len);
 
-      /* ### we should throw an error, if the bucket does.  */
-      SVN_ERR_ASSERT(status == APR_SUCCESS || status == APR_EOF);
+      if (status != APR_SUCCESS && status != APR_EOF)
+        return svn_error_wrap_apr(status, _("Failed to read the request"));
 
       SVN_ERR(svn_spillbuf__write(*spillbuf, data, len, scratch_pool));
 

@@ -413,12 +413,11 @@ simple_gpg_agent_first_creds(void **credentials,
                              const char *realmstring,
                              apr_pool_t *pool)
 {
-  return svn_auth__simple_first_creds_helper(credentials,
-                                             iter_baton, provider_baton,
-                                             parameters, realmstring,
-                                             password_get_gpg_agent,
-                                             SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
-                                             pool);
+  return svn_auth__simple_creds_cache_get(credentials, iter_baton,
+                                          provider_baton, parameters,
+                                          realmstring, password_get_gpg_agent,
+                                          SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
+                                          pool);
 }
 
 
@@ -431,12 +430,11 @@ simple_gpg_agent_save_creds(svn_boolean_t *saved,
                             const char *realmstring,
                             apr_pool_t *pool)
 {
-  return svn_auth__simple_save_creds_helper(saved, credentials,
-                                            provider_baton, parameters,
-                                            realmstring,
-                                            password_set_gpg_agent,
-                                            SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
-                                            pool);
+  return svn_auth__simple_creds_cache_set(saved, credentials,
+                                          provider_baton, parameters,
+                                          realmstring, password_set_gpg_agent,
+                                          SVN_AUTH__GPG_AGENT_PASSWORD_TYPE,
+                                          pool);
 }
 
 

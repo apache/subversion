@@ -141,6 +141,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   return parser->state->private;
 }
 
+
 static const svn_string_t *
 create_propval(blame_info_t *info)
 {
@@ -149,6 +150,9 @@ create_propval(blame_info_t *info)
       const svn_string_t *morph;
 
       morph = svn_stringbuf__morph_into_string(info->prop_value);
+#ifdef SVN_DEBUG
+      info->prop_value = NULL;  /* morph killed the stringbuf.  */
+#endif
       return svn_base64_decode_string(morph, info->pool);
     }
 
@@ -157,11 +161,11 @@ create_propval(blame_info_t *info)
 
 static svn_error_t *
 start_blame(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             svn_ra_serf__dav_props_t name,
-            const char **attrs)
+            const char **attrs,
+            apr_pool_t *scratch_pool)
 {
-  blame_context_t *blame_ctx = userData;
+  blame_context_t *blame_ctx = parser->user_data;
   blame_state_e state;
 
   state = parser->state->current_state;
@@ -253,10 +257,10 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_blame(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name)
+          svn_ra_serf__dav_props_t name,
+          apr_pool_t *scratch_pool)
 {
-  blame_context_t *blame_ctx = userData;
+  blame_context_t *blame_ctx = parser->user_data;
   blame_state_e state;
   blame_info_t *info;
 
@@ -325,11 +329,11 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_blame(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             const char *data,
-            apr_size_t len)
+            apr_size_t len,
+            apr_pool_t *scratch_pool)
 {
-  blame_context_t *blame_ctx = userData;
+  blame_context_t *blame_ctx = parser->user_data;
   blame_state_e state;
   blame_info_t *info;
 

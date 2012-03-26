@@ -217,6 +217,7 @@ class SvnInfoTest < Test::Unit::TestCase
       assert_equal([file1, file2, file4].sort, keys[0..-2])
       assert_match(/\A#{file5}/, file5_key)
       assert(info.diffs[file1].has_key?(:modified))
+      assert(info.diffs[file1].has_key?(:property_changed))
       assert(info.diffs[file2].has_key?(:modified))
       assert(info.diffs[file4].has_key?(:added))
       assert(info.diffs[file4].has_key?(:property_changed))
@@ -229,6 +230,8 @@ class SvnInfoTest < Test::Unit::TestCase
       assert_equal(0, info.diffs[file4][:added].deleted_line)
       assert_equal(0, info.diffs[file5_key][:copied].added_line)
       assert_equal(0, info.diffs[file5_key][:copied].deleted_line)
+      assert_equal("Name: #{file1_prop_key}\n   - #{file1_prop_value}\n",
+                   info.diffs[file1][:property_changed].body)
       assert_equal("Name: #{file4_prop_key}\n   + #{file4_prop_value}\n",
                    info.diffs[file4][:property_changed].body)
       assert_equal(commit_info.revision, info.revision)

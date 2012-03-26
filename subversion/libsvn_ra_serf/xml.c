@@ -124,34 +124,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
   return;
 }
 
-void
-svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
-                           const char *new, apr_size_t new_len,
-                           apr_pool_t *pool)
-{
-  if (!*cur)
-    {
-      *cur = apr_pstrmemdup(pool, new, new_len);
-      *cur_len = new_len;
-    }
-  else
-    {
-      char *new_cur;
-
-      /* append the data we received before. */
-      new_cur = apr_palloc(pool, *cur_len + new_len + 1);
-
-      memcpy(new_cur, *cur, *cur_len);
-      memcpy(new_cur + *cur_len, new, new_len);
-
-      /* NULL-term our new string */
-      new_cur[*cur_len + new_len] = '\0';
-
-      /* update our length */
-      *cur_len += new_len;
-      *cur = new_cur;
-    }
-}
 
 #define XML_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 

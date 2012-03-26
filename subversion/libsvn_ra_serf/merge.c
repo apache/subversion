@@ -129,11 +129,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 start_merge(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             svn_ra_serf__dav_props_t name,
-            const char **attrs)
+            const char **attrs,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = parser->user_data;
   merge_state_e state;
   merge_info_t *info;
 
@@ -235,10 +235,10 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_merge(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name)
+          svn_ra_serf__dav_props_t name,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = parser->user_data;
   merge_state_e state;
   merge_info_t *info;
 
@@ -376,11 +376,11 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_merge(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             const char *data,
-            apr_size_t len)
+            apr_size_t len,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = parser->user_data;
   merge_state_e state;
   merge_info_t *info;
 

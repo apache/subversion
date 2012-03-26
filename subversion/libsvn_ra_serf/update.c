@@ -43,6 +43,7 @@
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -241,8 +242,7 @@ typedef struct report_info_t
    */
   const char *prop_ns;
   const char *prop_name;
-  const char *prop_val;
-  apr_size_t prop_val_len;
+  svn_stringbuf_t *prop_value;
   const char *prop_encoding;
 } report_info_t;
 
@@ -397,6 +397,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
       new_info->pool = svn_pool_create(info_parent_pool);
       new_info->lock_token = NULL;
+      new_info->prop_value = svn_stringbuf_create_empty(new_info->pool);
 
       new_info->dir = apr_pcalloc(new_info->pool, sizeof(*new_info->dir));
       new_info->dir->pool = new_info->pool;
@@ -441,6 +442,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
       new_info->fetch_file = FALSE;
+      new_info->prop_value = svn_stringbuf_create_empty(new_info->pool);
 
       /* Point at our parent's directory state. */
       new_info->dir = info->dir;
@@ -1327,11 +1329,11 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
 static svn_error_t *
 start_report(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              svn_ra_serf__dav_props_t name,
-             const char **attrs)
+             const char **attrs,
+             apr_pool_t *scratch_pool)
 {
-  report_context_t *ctx = userData;
+  report_context_t *ctx = parser->user_data;
   report_state_e state;
 
   state = parser->state->current_state;
@@ -1645,8 +1647,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_ns = name.namespace;
           info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
-          info->prop_val = NULL;
-          info->prop_val_len = 0;
+          svn_stringbuf_setempty(info->prop_value);
         }
       else if (strcmp(name.name, "set-prop") == 0 ||
                strcmp(name.name, "remove-prop") == 0)
@@ -1675,8 +1676,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                          colon - full_prop_name);
           info->prop_name = apr_pstrdup(parser->state->pool, colon);
           info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
-          info->prop_val = NULL;
-          info->prop_val_len = 0;
+          svn_stringbuf_setempty(info->prop_value);
         }
       else if (strcmp(name.name, "prop") == 0)
         {
@@ -1707,8 +1707,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_ns = name.namespace;
           info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
-          info->prop_val = NULL;
-          info->prop_val_len = 0;
+          svn_stringbuf_setempty(info->prop_value);
         }
       else if (strcmp(name.name, "prop") == 0)
         {
@@ -1763,8 +1762,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                          colon - full_prop_name);
           info->prop_name = apr_pstrdup(parser->state->pool, colon);
           info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
-          info->prop_val = NULL;
-          info->prop_val_len = 0;
+          svn_stringbuf_setempty(info->prop_value);
         }
       else
         {
@@ -1787,8 +1785,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->prop_ns = name.namespace;
       info->prop_name = apr_pstrdup(parser->state->pool, name.name);
       info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
-      info->prop_val = NULL;
-      info->prop_val_len = 0;
+      svn_stringbuf_setempty(info->prop_value);
     }
 
   return SVN_NO_ERROR;
@@ -1796,10 +1793,10 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_report(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
-           svn_ra_serf__dav_props_t name)
+           svn_ra_serf__dav_props_t name,
+           apr_pool_t *scratch_pool)
 {
-  report_context_t *ctx = userData;
+  report_context_t *ctx = parser->user_data;
   report_state_e state;
 
   state = parser->state->current_state;
@@ -1950,7 +1947,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
     }
   else if (state == PROP)
     {
-      /* We need to move the prop_ns, prop_name, and prop_val into the
+      /* We need to move the prop_ns, prop_name, and prop_value into the
        * same lifetime as the dir->pool.
        */
       svn_ra_serf__ns_t *ns, *ns_name_match;
@@ -1958,8 +1955,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info;
       report_dir_t *dir;
       apr_hash_t *props;
-      const char *set_val;
-      svn_string_t *set_val_str;
+      const svn_string_t *set_val_str;
       apr_pool_t *pool;
 
       info = parser->state->private;
@@ -2009,24 +2005,21 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         {
           props = dir->removed_props;
           pool = dir->pool;
-          info->prop_val = "";
-          info->prop_val_len = 1;
+          svn_stringbuf_setempty(info->prop_value);
         }
 
       if (info->prop_encoding)
         {
           if (strcmp(info->prop_encoding, "base64") == 0)
             {
-              svn_string_t encoded;
-              const svn_string_t *decoded;
+              svn_string_t tmp;
 
-              encoded.data = info->prop_val;
-              encoded.len = info->prop_val_len;
+              /* Don't use morph_info_string cuz we need prop_value to
+                 remain usable.  */
+              tmp.data = info->prop_value->data;
+              tmp.len = info->prop_value->len;
 
-              decoded = svn_base64_decode_string(&encoded, parser->state->pool);
-
-              info->prop_val = decoded->data;
-              info->prop_val_len = decoded->len;
+              set_val_str = svn_base64_decode_string(&tmp, pool);
             }
           else
             {
@@ -2035,11 +2028,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                        _("Got unrecognized encoding '%s'"),
                                        info->prop_encoding);
             }
-
         }
-
-      set_val = apr_pmemdup(pool, info->prop_val, info->prop_val_len);
-      set_val_str = svn_string_ncreate(set_val, info->prop_val_len, pool);
+      else
+        {
+          set_val_str = svn_string_create_from_buf(info->prop_value, pool);
+        }
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
                                 ns->namespace, ns->url, set_val_str, pool);
@@ -2055,11 +2048,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_report(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              const char *data,
-             apr_size_t len)
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
 {
-  report_context_t *ctx = userData;
+  report_context_t *ctx = parser->user_data;
 
   UNUSED_CTX(ctx);
 
@@ -2067,8 +2060,7 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
     {
       report_info_t *info = parser->state->private;
 
-      svn_ra_serf__expand_string(&info->prop_val, &info->prop_val_len,
-                                 data, len, parser->state->pool);
+      svn_stringbuf_appendbytes(info->prop_value, data, len);
     }
 
   return SVN_NO_ERROR;
