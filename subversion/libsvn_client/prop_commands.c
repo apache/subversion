@@ -1026,6 +1026,15 @@ remote_proplist(const char *target_prefix,
                                target_full_url);
     }
 
+  /* svn_ra_get_file2 and svn_ra_get_dir3 shouldn't be asking a server for
+     inherited props if the server doesn't advertise the
+     SVN_RA_CAPABILITY_INHERITED_PROPS capability, but better to check and
+     error out than segfault. */
+  if (get_target_inherited_props && inherited_props == NULL)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Server does not support retrieving "
+                               "inherited properties"));
+
   /* Filter out non-regular properties, since the RA layer returns all
      kinds.  Copy regular properties keys/vals from the prop_hash
      allocated in SCRATCH_POOL to the "final" hash allocated in POOL. */
