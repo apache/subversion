@@ -90,16 +90,7 @@ Candidate changes:
    Justification:
      User reported regression since 1.7.0
    Votes:
-     +1: rhuijben (r1297522 only)
-     +1: stsp
-
- * r1300265
-   Resolve issue #4130, "poor memory and file handle management when
-   updating w/ externals definitions".
-   Justification:
-     Simple fix with noticeable scalability returns.
-   Votes:
-     +1: cmpilato, stsp
+     +1: stsp, rhuijben
 
  * r1298343
    Return an error when attempting to MERGE a resource that does not exist.
@@ -107,24 +98,6 @@ Candidate changes:
      Avoid asserting.
    Votes:
      +1: philip, stsp
-
- * r1302417
-   Fix another ra_serf assert (MERGE fails).
-   Notes: 
-     This revision r1300265 originates in #4129; r1298343 originates in #3696.
-   Votes:
-     +1: danielsh, stsp
-
- * r1302588, r1305853
-   Fix issue #4144, "Reverse merge with replace in source applies diffs
-   in forward order"
-   Justification:
-     Pointer bug which can cause undefined behaviour during some merges.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4144
-   Votes:
-     +1: stsp, philip
-
 
 Veto-blocked changes:
 =====================
@@ -145,3 +118,30 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1300265
+   Resolve issue #4130, "poor memory and file handle management when
+   updating w/ externals definitions".
+   Justification:
+     Simple fix with noticeable scalability returns.
+   Votes:
+     +1: cmpilato, stsp
+     +1: rhuijben (I would like a better fix, but I don't think we can do that
+                   for 1.7.x)
+
+ * r1302417
+   Fix another ra_serf assert (MERGE fails).
+   Notes: 
+     This revision r1300265 originates in #4129; r1298343 originates in #3696.
+   Votes:
+     +1: danielsh, stsp, rhuijben
+
+ * r1302588, r1305853
+   Fix issue #4144, "Reverse merge with replace in source applies diffs
+   in forward order"
+   Justification:
+     Pointer bug which can cause undefined behaviour during some merges.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4144
+   Votes:
+     +1: stsp, philip, rhuijben
