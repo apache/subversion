@@ -1121,6 +1121,9 @@ def is_os_darwin():
 def is_fs_case_insensitive():
   return (is_os_darwin() or is_os_windows())
 
+def is_threaded_python():
+  return True
+
 def server_has_mergeinfo():
   return options.server_minor_version >= 5
 
