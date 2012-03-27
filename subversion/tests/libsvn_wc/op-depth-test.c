@@ -342,12 +342,12 @@ print_row(const nodes_row_t *row,
     return "(null)";
 
   if (row->moved_to)
-    moved_to_str = apr_psprintf(result_pool, ", to %s", row->moved_to);
+    moved_to_str = apr_psprintf(result_pool, ", moved-to %s", row->moved_to);
   else
     moved_to_str = "";
 
   if (row->moved_here)
-    moved_here_str = ", here";
+    moved_here_str = ", moved-here";
   else
     moved_here_str = "";
 
@@ -362,8 +362,9 @@ print_row(const nodes_row_t *row,
                         moved_here_str, moved_to_str,
                         file_external_str);
   else
-    return apr_psprintf(result_pool, "%d, %s, %s, from ^/%s@%d%s%s%s",
+    return apr_psprintf(result_pool, "%d, %s, %s, %s ^/%s@%d%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
+                        row->op_depth == 0 ? "base" : "copyfrom",
                         row->repo_relpath, (int)row->repo_revnum,
                         moved_here_str, moved_to_str,
                         file_external_str);
