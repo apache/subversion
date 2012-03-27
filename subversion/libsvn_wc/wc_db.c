@@ -3423,7 +3423,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     have_work,
                     wcroot, local_relpath, result_pool, scratch_pool));
 
-  if (*status == svn_wc__db_status_excluded)
+  if (status && *status == svn_wc__db_status_excluded)
     {
       /* The parent cannot be excluded, so look at the parent and then
          adjust the relpath */
@@ -3439,7 +3439,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
         *copyfrom_relpath = svn_relpath_join(*copyfrom_relpath, base_name,
                                              result_pool);
     }
-  else if (*status == svn_wc__db_status_added)
+  else if (status && *status == svn_wc__db_status_added)
     {
       const char *op_root_relpath;
 
@@ -3457,7 +3457,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                result_pool);
         }
     }
-  else if (*status == svn_wc__db_status_deleted)
+  else if (status && *status == svn_wc__db_status_deleted)
     {
       const char *base_del_relpath, *work_del_relpath;
 
