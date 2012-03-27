@@ -1548,7 +1548,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the directory entries if requested and send them immediately. */
   if (want_contents)
     {
-      const char *zero_date = svn_time_to_cstring(0, pool);
       SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
 
       /* Transform the hash table's FS entries into dirents.  This probably
@@ -1598,9 +1597,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                                        file_path,
                                                        subpool));
             }
-
-          if (cdate == NULL)
-            cdate = zero_date;
 
           /* Send the entry. */
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
