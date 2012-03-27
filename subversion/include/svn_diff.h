@@ -1045,7 +1045,7 @@ typedef struct svn_patch_t {
   const char *new_filename;
 
   /**
-   * An array containing an svn_diff_hunk_t object for each hunk parsed
+   * An array containing an svn_diff_hunk_t * for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 

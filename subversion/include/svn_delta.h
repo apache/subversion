@@ -1292,6 +1292,8 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  * Use @a revision as the revision number passed to intermediate
  * directory openings.
  *
+ * Each path in @a paths is a const char *.
+ *
  * Use @a pool for all necessary allocations.
  */
 svn_error_t *
