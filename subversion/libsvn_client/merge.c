@@ -6311,8 +6311,8 @@ static int
 compare_merge_source_ts(const void *a,
                         const void *b)
 {
-  svn_revnum_t a_rev = ((const merge_source_t *)a)->loc1->rev;
-  svn_revnum_t b_rev = ((const merge_source_t *)b)->loc1->rev;
+  svn_revnum_t a_rev = (*(const merge_source_t *const *)a)->loc1->rev;
+  svn_revnum_t b_rev = (*(const merge_source_t *const *)b)->loc1->rev;
   if (a_rev == b_rev)
     return 0;
   return a_rev < b_rev ? 1 : -1;
