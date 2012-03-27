@@ -5818,8 +5818,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
             = svn_mergeinfo__is_noninheritable(
                 mergeinfo_child->pre_merge_mergeinfo, iterpool);
 
-          insert_child_to_merge(children_with_mergeinfo, mergeinfo_child,
-                                result_pool);
+          /* Append it.  We'll sort below. */
+          APR_ARRAY_PUSH(children_with_mergeinfo, svn_client__merge_path_t *)
+            = svn_client__merge_path_dup(mergeinfo_child, result_pool);
         }
 
       /* Sort CHILDREN_WITH_MERGEINFO by each child's path (i.e. as per
