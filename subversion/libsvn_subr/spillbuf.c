@@ -184,8 +184,14 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
      in memory.  */
   if (buf->spill != NULL)
     {
-      /* NOTE: we assume the file position is at the END. The caller should
-         ensure this, so that we will append.  */
+      apr_off_t output_unused = 0;  /* ### stupid API  */
+
+      /* Seek to the end of the spill file. We don't know if a read has
+         occurred since our last write, and moved the file position.  */
+      SVN_ERR(svn_io_file_seek(buf->spill,
+                               APR_END, &output_unused,
+                               scratch_pool));
+
       SVN_ERR(svn_io_file_write_full(buf->spill, data, len,
                                      NULL, scratch_pool));
       buf->spill_size += len;
