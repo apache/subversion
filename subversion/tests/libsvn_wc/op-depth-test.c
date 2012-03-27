@@ -4496,7 +4496,7 @@ move_added(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       1, "A",   MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
-      {3, "A2/B/C",   "normal",       NO_COPY_FROM},          /* XFAIL */
+      {3, "A2/B/C",   "normal",       NO_COPY_FROM},
       {3, "A2/B/C2",  "normal",       NO_COPY_FROM},
       {0}
     };
