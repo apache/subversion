@@ -4666,7 +4666,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_on_move"),
     SVN_TEST_OPTS_PASS(move_on_move2,
                        "move_on_move2"),
-    SVN_TEST_OPTS_XFAIL(move_added,
+    SVN_TEST_OPTS_PASS(move_added,
                        "move_added"),
     SVN_TEST_OPTS_XFAIL(move_update,
                        "move_update"),

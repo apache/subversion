@@ -3443,7 +3443,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     {
       const char *op_root_relpath;
 
-      SVN_ERR(scan_addition(NULL, &op_root_relpath,
+      SVN_ERR(scan_addition(status, &op_root_relpath,
                             NULL, NULL, /* repos_* */
                             copyfrom_relpath, copyfrom_id, copyfrom_rev,
                             NULL, NULL, NULL, wcroot, local_relpath,
@@ -3657,7 +3657,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                     dst_op_depth,
                     dst_parent_relpath,
                     presence_map, dst_presence));
-      if (is_move)
+      if (is_move && status != svn_wc__db_status_added)
         SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
