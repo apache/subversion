@@ -10039,6 +10039,10 @@ find_youngest_merged_rev(svn_revnum_t *youngest_merged_rev,
  * branch SOURCE_URL@SOURCE_REV.  Extend SOURCE_MERGEINFO, modifying it in
  * place, to include the natural history (implicit mergeinfo) of
  * SOURCE_URL@SOURCE_REV.  ### But make these additions in SCRATCH_POOL.
+ *
+ * ### [JAF] This function is named '..._subroutine' simply because I
+ *     factored it out based on code similarity, without knowing what it's
+ *     purpose is.  We should clarify its purpose and choose a better name.
  */
 static svn_error_t *
 find_unmerged_mergeinfo_subroutine(svn_mergeinfo_t *filtered_mergeinfo_p,
