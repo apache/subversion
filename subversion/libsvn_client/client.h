@@ -842,7 +842,7 @@ svn_client__get_copy_committables(svn_client__committables_t **committables,
                                   apr_pool_t *scratch_pool);
 
 /* A qsort()-compatible sort routine for sorting an array of
-   svn_client_commit_item_t's by their URL member. */
+   svn_client_commit_item_t *'s by their URL member. */
 int svn_client__sort_commit_item_urls(const void *a, const void *b);
 
 
