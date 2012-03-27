@@ -3661,6 +3661,10 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                     dst_op_depth,
                     dst_parent_relpath,
                     presence_map, dst_presence));
+
+      /* ### What about other results from scan_addition()?
+       * ### 'cp A B; mv B C' currently results in C being marked moved-here
+       * ### with no corresponding moved-from. */
       if (is_move && status != svn_wc__db_status_added)
         SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
 
