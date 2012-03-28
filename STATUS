@@ -118,13 +118,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1302588, r1305853
-   Fix issue #4144, "Reverse merge with replace in source applies diffs
-   in forward order"
-   Justification:
-     Pointer bug which can cause undefined behaviour during some merges.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4144
-   Votes:
-     +1: stsp, philip, rhuijben
