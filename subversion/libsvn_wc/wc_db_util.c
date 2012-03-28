@@ -121,6 +121,21 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
   const char *sdb_abspath = svn_wc__adm_child(dir_abspath, sdb_fname,
                                               scratch_pool);
 
+  if (smode != svn_sqlite__mode_rwcreate)
+    {
+      svn_node_kind_t kind;
+
+      /* A file stat is much cheaper then a failed database open handled
+         by SQLite. */
+      SVN_ERR(svn_io_check_path(sdb_abspath, &kind, scratch_pool));
+
+      if (kind != svn_node_file)
+        return svn_error_createf(APR_ENOENT, NULL,
+                                 _("Working copy database '%s' not found"),
+                                 svn_dirent_local_style(sdb_abspath,
+                                                        scratch_pool));
+    }
+
   SVN_ERR(svn_sqlite__open(sdb, sdb_abspath, smode,
                            my_statements ? my_statements : statements,
                            0, NULL, result_pool, scratch_pool));
