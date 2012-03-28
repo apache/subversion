@@ -361,6 +361,61 @@ test_spillbuf_rwfile(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_spillbuf_eof(apr_pool_t *pool)
+{
+  svn_spillbuf_t *buf = svn_spillbuf__create(4 /* blocksize */,
+                                             10 /* maxsize */,
+                                             pool);
+
+  SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
+  SVN_ERR(svn_spillbuf__write(buf, "ghijkl", 6, pool));
+  /* now: two blocks: 4 and 2 bytes, and 6 bytes in spill file.  */
+
+  CHECK_READ(buf, 12, "abcd", pool);
+  CHECK_READ(buf, 8, "ef", pool);
+  CHECK_READ(buf, 6, "ghij", pool);
+  CHECK_READ(buf, 2, "kl", pool);
+  /* The spill file should have been emptied and forgotten.  */
+
+  /* Assuming the spill file has been forgotten, this should result in
+     precisely the same behavior. Specifically: the initial write should
+     create two blocks, and the second write should be spilled. If there
+     *was* a spill file, then this written data would go into the file.  */
+  SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
+  SVN_ERR(svn_spillbuf__write(buf, "ghijkl", 6, pool));
+  CHECK_READ(buf, 12, "abcd", pool);
+  CHECK_READ(buf, 8, "ef", pool);
+  CHECK_READ(buf, 6, "ghij", pool);
+  CHECK_READ(buf, 2, "kl", pool);
+  /* The spill file should have been emptied and forgotten.  */
+
+  /* Now, let's do a sequence where we arrange to hit EOF precisely on
+     a block-sized read. Note: the second write must be more than 4 bytes,
+     or it will not cause a spill. We use 8 to get the right boundary.  */
+  SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
+  SVN_ERR(svn_spillbuf__write(buf, "ghijklmn", 8, pool));
+  CHECK_READ(buf, 14, "abcd", pool);
+  CHECK_READ(buf, 10, "ef", pool);
+  CHECK_READ(buf, 8, "ghij", pool);
+  CHECK_READ(buf, 4, "klmn", pool);
+  /* We discard the spill file when we know it has no data, rather than
+     upon hitting EOF (upon a read attempt). Thus, the spill file should
+     be gone.  */
+
+  /* Verify the forgotten spill file.  */
+  SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
+  SVN_ERR(svn_spillbuf__write(buf, "ghijkl", 6, pool));
+  CHECK_READ(buf, 12, "abcd", pool);
+  CHECK_READ(buf, 8, "ef", pool);
+  CHECK_READ(buf, 6, "ghij", pool);
+  /* Two unread bytes remaining in the spill file.  */
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) == 2);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -373,5 +428,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_spillbuf_reader, "spill buffer reader test"),
     SVN_TEST_PASS2(test_spillbuf_stream, "spill buffer stream test"),
     SVN_TEST_PASS2(test_spillbuf_rwfile, "read/write spill file"),
+    SVN_TEST_PASS2(test_spillbuf_eof, "validate reaching EOF of spill file"),
     SVN_TEST_NULL
   };
