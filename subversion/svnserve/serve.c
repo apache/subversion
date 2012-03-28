@@ -1623,10 +1623,16 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
+          static const char *missing_date = svn_time_to_cstring(0, pool);
           const char *name = svn__apr_hash_index_key(hi);
           svn_dirent_t *entry = svn__apr_hash_index_val(hi);
 
-          cdate = (entry->time == (time_t) -1) ? NULL
+          /* The client does not properly handle a missing CDATE. For                              
+             interoperability purposes, we must fill in some junk.                                 
+                                                                                                   
+             See libsvn_ra_svn/client.c:ra_svn_get_dir()  */                                       
+          cdate = (entry->time == (time_t) -1)
+            ? missing_date
             : svn_time_to_cstring(entry->time, pool);
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
                                          svn_node_kind_to_word(entry->kind),
