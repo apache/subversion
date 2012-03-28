@@ -99,6 +99,13 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
+ * r1306111
+   Handle NULL dates in libsvn_ra_svn.
+   Justification:
+     Avoids segfault.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
