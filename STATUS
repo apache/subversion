@@ -106,6 +106,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1306334
+   Optimize failure of opening wc.db files.
+   Justification:
+     Takes far too much CPU when performing status on not-working copies.
+     Reported as raw performance data on AnkhSVN. Probably noticable on the
+     buildbot total time too.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
