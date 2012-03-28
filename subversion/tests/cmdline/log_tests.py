@@ -2217,6 +2217,78 @@ def log_xml_old(sbox):
                                          expected_paths=paths)
 
 
+@XFail()
+@Issue(4153)
+def log_diff_moved(sbox):
+  "log --diff on moved file"
+
+  sbox.build()
+
+  sbox.simple_move('A/mu', 'A/mu2')
+  svntest.main.file_append(sbox.ospath('A/mu2'), "now mu2\n")
+  sbox.simple_commit()
+  sbox.simple_move('A/mu2', 'A/mu3')
+  svntest.main.file_append(sbox.ospath('A/mu3'), "now mu3\n")
+  sbox.simple_commit()
+  
+  mu_at_1 = sbox.repo_url + '/A/mu@1'
+  mu3_at_3 = sbox.repo_url + '/A/mu3@3'
+
+  r1diff = [make_diff_header('A/mu', 'revision 0', 'revision 1')
+            + ["@@ -0,0 +1 @@\n",
+               "+This is the file 'mu'.\n"]]
+
+  # The mu2@2 and mu3@3 diffs show diffs relative to the copy source
+  r2diff = [make_diff_header('mu',
+                             '.../mu)\t(revision 1',
+                             '.../mu2)\t(revision 2')
+            + ["@@ -1 +1,2 @@\n",
+               " This is the file 'mu'.\n",
+               "+now mu2\n"]]
+
+  r3diff = [make_diff_header('mu2',
+                             '.../mu2)\t(revision 2',
+                             '.../mu3)\t(revision 3')
+            + ["@@ -1,2 +1,3 @@\n",
+               " This is the file 'mu'.\n",
+               " now mu2\n",
+               "+now mu3\n"]]
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              mu_at_1)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 1:
+    raise SVNLogParseError("%d logs found, 1 expected" % len(log_chain))
+  compare_diff_output(r1diff, log_chain[0]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r3', mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 1:
+    raise SVNLogParseError("%d logs found, 1 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              '-r3:2', mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 2:
+    raise SVNLogParseError("%d logs found, 2 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+  compare_diff_output(r2diff, log_chain[1]['diff_lines'])
+
+  # XFAIL mu3 not found at revisions 0 and 1
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '--diff',
+                                                              mu3_at_3)
+  log_chain = parse_log_output(output, with_diffs=True)
+  if len(log_chain) != 3:
+    raise SVNLogParseError("%d logs found, 3 expected" % len(log_chain))
+  compare_diff_output(r3diff, log_chain[0]['diff_lines'])
+  compare_diff_output(r2diff, log_chain[1]['diff_lines'])
+  compare_diff_output(r1diff, log_chain[2]['diff_lines'])
 
 ########################################################################
 # Run the tests
@@ -2260,6 +2332,7 @@ test_list = [ None,
               merge_sensitive_log_copied_path_inherited_mergeinfo,
               log_diff,
               log_xml_old,
+              log_diff_moved,
              ]
 
 if __name__ == '__main__':
