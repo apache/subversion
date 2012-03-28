@@ -311,8 +311,10 @@ read_data(struct memblock_t **mem,
   /* Did we consume all the data from the spill file?  */
   if ((buf->spill_size -= (*mem)->size) == 0)
     {
+      /* Close and reset our spill file information.  */
       SVN_ERR(svn_io_file_close(buf->spill, scratch_pool));
       buf->spill = NULL;
+      buf->spill_start = 0;
     }
 
   /* *mem has been initialized. Done.  */
