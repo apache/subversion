@@ -119,13 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1302417
-   Fix another ra_serf assert (MERGE fails).
-   Notes: 
-     This revision r1300265 originates in #4129; r1298343 originates in #3696.
-   Votes:
-     +1: danielsh, stsp, rhuijben
-
  * r1302588, r1305853
    Fix issue #4144, "Reverse merge with replace in source applies diffs
    in forward order"
