@@ -119,16 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1300265
-   Resolve issue #4130, "poor memory and file handle management when
-   updating w/ externals definitions".
-   Justification:
-     Simple fix with noticeable scalability returns.
-   Votes:
-     +1: cmpilato, stsp
-     +1: rhuijben (I would like a better fix, but I don't think we can do that
-                   for 1.7.x)
-
  * r1302417
    Fix another ra_serf assert (MERGE fails).
    Notes: 

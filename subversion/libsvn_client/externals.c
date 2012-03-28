@@ -175,6 +175,8 @@ switch_dir_external(const char *local_abspath,
                                                   timestamp_sleep,
                                                   ctx, subpool));
               svn_pool_destroy(subpool);
+              /* Issue #4130: We don't need to keep the external's DB open. */
+              SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
               return SVN_NO_ERROR;
             }
 
@@ -235,6 +237,8 @@ switch_dir_external(const char *local_abspath,
                                                 subpool));
 
               svn_pool_destroy(subpool);
+              /* Issue #4130: We don't need to keep the external's DB open. */
+              SVN_ERR(svn_wc__close_db(local_abspath, ctx->wc_ctx, pool));
               return SVN_NO_ERROR;
             }
         }
