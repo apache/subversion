@@ -77,34 +77,34 @@
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
-trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
+trap stop_httpd_and_die HUP TERM INT
 
 # Ensure the server uses a known locale.
 LC_ALL=C
 export LC_ALL
 
-function stop_httpd_and_die() {
+stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
   exit 1
 }
 
-function say() {
+say() {
   echo "$SCRIPT: $*"
 }
 
-function fail() {
+fail() {
   say $*
   stop_httpd_and_die
 }
 
-function query() {
-  echo -n "$SCRIPT: $1 (y/n)? [$2] "
+query() {
+  printf "%s" "$SCRIPT: $1 (y/n)? [$2] "
   read -n 1 -t 32
   echo
   [ "${REPLY:-$2}" = 'y' ]
 }
 
-function get_loadmodule_config() {
+get_loadmodule_config() {
   local SO="$($APXS -q LIBEXECDIR)/$1.so"
 
   # shared object module?
@@ -121,7 +121,7 @@ function get_loadmodule_config() {
 }
 
 # Check apxs's SBINDIR and BINDIR for given program names
-function get_prog_name() {
+get_prog_name() {
   for prog in $*
   do
     for dir in $($APXS -q SBINDIR) $($APXS -q BINDIR)
@@ -171,9 +171,7 @@ fi
 
 # Find the source and build directories. The build dir can be found if it is
 # the current working dir or the source dir.
-pushd ${SCRIPTDIR}/../../../ > /dev/null
-ABS_SRCDIR=$(pwd)
-popd > /dev/null
+ABS_SRCDIR=$(cd ${SCRIPTDIR}/../../../; pwd)
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
 elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
@@ -195,7 +193,8 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
+LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH
 
 case "`uname`" in
   Darwin*) LDD='otool -L'
@@ -424,12 +423,11 @@ if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else
-  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
+  (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@"
+  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@")
   r=$?
-  popd >/dev/null
 fi
 
 say "Finished testing..."
