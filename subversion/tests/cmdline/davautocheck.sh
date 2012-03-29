@@ -74,6 +74,8 @@
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.
 
+PYTHON=${PYTHON:-python}
+
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
@@ -264,7 +266,7 @@ random_port() {
 }
 
 HTTPD_PORT=$(random_port)
-while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+while netstat -an | grep $HTTPD_PORT | grep 'LISTEN'; do
   HTTPD_PORT=$(random_port)
 done
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
