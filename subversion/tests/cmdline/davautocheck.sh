@@ -101,7 +101,18 @@ fail() {
 
 query() {
   printf "%s" "$SCRIPT: $1 (y/n)? [$2] "
-  read -n 1 -t 32
+  if [ -n "$BASH_VERSION" ]; then
+    read -n 1 -t 32
+  else
+    # 
+    prog=$(cat) <<'EOF'
+import select as s
+import sys
+if s.select([sys.stdin.fileno()], [], [], 32)[0]:
+  sys.stdout.write(sys.stdin.read(1))
+EOF
+    REPLY=`stty cbreak; $PYTHON -c "$prog" "$@"; stty -cbreak`
+  fi
   echo
   [ "${REPLY:-$2}" = 'y' ]
 }
