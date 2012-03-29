@@ -4359,7 +4359,7 @@ read_change(change_t **change_p,
 
 /* Fetch all the changed path entries from FILE and store then in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data.  Store a hash of paths to copyfrom revisions/paths in
+   *data.  Store a hash of paths to copyfrom "REV PATH" strings in
    COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
    the changed-path entries have already been folded (by
    write_final_changed_path_info) and may be out of order, so we shouldn't
@@ -4367,7 +4367,7 @@ read_change(change_t **change_p,
    allocations in POOL. */
 static svn_error_t *
 fetch_all_changes(apr_hash_t *changed_paths,
-                  apr_hash_t *copyfrom_hash,
+                  apr_hash_t *copyfrom_cache,
                   apr_file_t *file,
                   svn_boolean_t prefolded,
                   apr_pool_t *pool)
@@ -4382,7 +4382,7 @@ fetch_all_changes(apr_hash_t *changed_paths,
 
   while (change)
     {
-      SVN_ERR(fold_change(changed_paths, change, copyfrom_hash));
+      SVN_ERR(fold_change(changed_paths, change, copyfrom_cache));
 
       /* Now, if our change was a deletion or replacement, we have to
          blow away any changes thus far on paths that are (or, were)
