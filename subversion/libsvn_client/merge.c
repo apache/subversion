@@ -10364,8 +10364,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
    allocations. */
 static svn_error_t *
 calculate_left_hand_side(repo_location_t **left_p,
-                         svn_mergeinfo_t *merged_to_source_catalog,
-                         svn_mergeinfo_t *unmerged_to_source_catalog,
+                         svn_mergeinfo_catalog_t *merged_to_source_catalog,
+                         svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                          const merge_target_t *target,
                          apr_hash_t *subtrees_with_mergeinfo,
                          const repo_location_t *source_loc,
@@ -10544,8 +10544,8 @@ find_reintegrate_merge(merge_source_t **source_p,
   repo_location_t *yc_ancestor;
   repo_location_t *loc1;
   merge_source_t source;
-  svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
-  svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
+  svn_mergeinfo_catalog_t unmerged_to_source_mergeinfo_catalog;
+  svn_mergeinfo_catalog_t merged_to_source_mergeinfo_catalog;
   svn_error_t *err;
   apr_hash_t *subtrees_with_mergeinfo;
 
@@ -11125,8 +11125,8 @@ find_base_on_target(repo_location_t **base_p,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  svn_mergeinfo_t unmerged_to_source_mergeinfo_catalog;
-  svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
+  svn_mergeinfo_catalog_t unmerged_to_source_mergeinfo_catalog;
+  svn_mergeinfo_catalog_t merged_to_source_mergeinfo_catalog;
   apr_hash_t *subtrees_with_mergeinfo;
 
   /* Find all the subtrees in TARGET_WCPATH that have explicit mergeinfo. */
