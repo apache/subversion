@@ -10329,11 +10329,7 @@ scan_deletion_txn(void *baton,
                                                     current_relpath);
 
           if (!scan && !sd_baton->base_del_relpath)
-            {
-              /* We have all we need, exit early */
-              SVN_ERR(svn_sqlite__reset(stmt));
-              return SVN_NO_ERROR;
-            }
+            break; /* We have all we need */
         }
 
       current_relpath = parent_relpath;
