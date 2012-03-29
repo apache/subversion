@@ -255,7 +255,18 @@ LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
 
-HTTPD_PORT=$(($RANDOM+1024))
+random_port() {
+  if [ -n "$BASH_VERSION" ]; then
+    echo $(($RANDOM+1024))
+  else
+    $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
+  fi
+}
+
+HTTPD_PORT=$(random_port)
+while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+  HTTPD_PORT=$(random_port)
+done
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
