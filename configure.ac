@@ -138,7 +138,7 @@ if test "$svn_lib_neon" = "yes"; then
 fi
 
 dnl Search for serf as an alternative to neon
-SVN_LIB_SERF(0,7,1)
+SVN_LIB_SERF(1,0,0)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,

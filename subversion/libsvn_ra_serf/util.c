@@ -103,75 +103,7 @@ struct svn_ra_serf__pending_t {
    into a temporary file.  */
 #define SPILL_SIZE 1000000
 
-/* See notes/ra-serf-testing.txt for some information on testing this
-   new "paused" feature (aka network pushback).
 
-   Define PBTEST_ACTIVE, if you would like to run the pushback tests.  */
-#undef PBTEST_ACTIVE
-#ifdef PBTEST_ACTIVE
-
-static int pbtest_step = 0;
-
-/* Note: this cannot resolve states 5 and 7.  */
-#define PBTEST_STATE(p) \
-  ((p) == NULL ? 1                                                 \
-               : ((p)->spill == NULL ? ((p)->head == NULL ? 2 : 3) \
-                                     : ((p)->head == NULL ? 6 : 4)))
-
-/* Note: INJECT and COMPLETED are only used for debug output.  */
-typedef struct {
-  svn_boolean_t paused;   /* pause the parser on this step?  */
-  svn_boolean_t inject;   /* inject pending content on this step?  */
-  int when_next;          /* when to move to the next step?  */
-  const char *completed;  /* what test was completed?  */
-} pbtest_desc_t;
-
-static const pbtest_desc_t pbtest_description[] = {
-  { 0 }, /* unused */
-  { TRUE,  FALSE, 3, "1.1" },
-  { TRUE,  FALSE, 3, "1.3" },
-  { FALSE, FALSE, 3, "2.3" },
-  { FALSE, TRUE,  2, "3.3" },  /* WHEN_NEXT is ignored due to INJECT  */
-  { TRUE,  FALSE, 3, "1.2" },
-  { TRUE,  FALSE, 4, NULL  },
-  { TRUE,  FALSE, 4, "1.4" },
-  { FALSE, FALSE, 4, "2.4" },
-  { FALSE, TRUE,  6, "3.4" },  /* WHEN_NEXT is ignored due to INJECT  */
-  { TRUE,  FALSE, 6, "1.6" },
-  { FALSE, FALSE, 6, "2.6" },
-  { FALSE, TRUE,  7, "3.6" },  /* WHEN_NEXT is ignored due to INJECT  */
-  { TRUE,  FALSE, 6, "1.7" },
-  { 0 } /* unused */
-};
-
-#define PBTEST_SET_PAUSED(ctx) \
-  (PBTEST_THIS_REQ(ctx) && pbtest_step < 14                  \
-   ? (ctx)->paused = pbtest_description[pbtest_step].paused  \
-   : FALSE)
-
-#define PBTEST_MAYBE_STEP(ctx, force) maybe_next_step(ctx, force)
-
-#define PBTEST_FORCE_SPILL(ctx) (PBTEST_THIS_REQ(ctx) && pbtest_step == 6)
-
-#define PBTEST_THIS_REQ(ctx) \
-  ((ctx)->response_type != NULL \
-   && strcmp((ctx)->response_type, "update-report") == 0)
-
-#else /* PBTEST_ACTIVE  */
-
-/* Be wary with the definition of these macros so that we don't
-   end up with "statement with no effect" warnings. Obviously, this
-   depends upon particular usage, which is easy to verify.  */
-#define PBTEST_SET_PAUSED(ctx)  /* empty */
-#define PBTEST_MAYBE_STEP(ctx, force)  /* empty */
-
-#define PBTEST_FORCE_SPILL(ctx) FALSE
-#define PBTEST_THIS_REQ(ctx) FALSE
-
-#endif /* PBTEST_ACTIVE  */
-
-
-
 static const apr_uint32_t serf_failure_map[][2] =
 {
   { SERF_SSL_CERT_NOTYETVALID,   SVN_AUTH_SSL_NOTYETVALID },
@@ -504,11 +436,13 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
   return status;
 }
 
-serf_bucket_t*
-svn_ra_serf__accept_response(serf_request_t *request,
-                             serf_bucket_t *stream,
-                             void *acceptor_baton,
-                             apr_pool_t *pool)
+
+/* Our default serf response acceptor.  */
+static serf_bucket_t *
+accept_response(serf_request_t *request,
+                serf_bucket_t *stream,
+                void *acceptor_baton,
+                apr_pool_t *pool)
 {
   serf_bucket_t *c;
   serf_bucket_alloc_t *bkt_alloc;
@@ -519,7 +453,9 @@ svn_ra_serf__accept_response(serf_request_t *request,
   return serf_bucket_response_create(c, bkt_alloc);
 }
 
-static serf_bucket_t*
+
+/* Custom response acceptor for HEAD requests.  */
+static serf_bucket_t *
 accept_head(serf_request_t *request,
             serf_bucket_t *stream,
             void *acceptor_baton,
@@ -527,8 +463,7 @@ accept_head(serf_request_t *request,
 {
   serf_bucket_t *response;
 
-  response = svn_ra_serf__accept_response(request, stream, acceptor_baton,
-                                          pool);
+  response = accept_response(request, stream, acceptor_baton, pool);
 
   /* We know we shouldn't get a response body. */
   serf_bucket_response_set_head(response);
@@ -698,41 +633,91 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 }
 
 
-svn_error_t *
-svn_ra_serf__setup_serf_req(serf_request_t *request,
-                            serf_bucket_t **req_bkt,
-                            serf_bucket_t **ret_hdrs_bkt,
-                            svn_ra_serf__connection_t *conn,
-                            const char *method, const char *url,
-                            serf_bucket_t *body_bkt, const char *content_type)
+/*
+ * Given a REQUEST on connection CONN, construct a request bucket for it,
+ * returning the bucket in *REQ_BKT.
+ *
+ * If HDRS_BKT is not-NULL, it will be set to a headers_bucket that
+ * corresponds to the new request.
+ *
+ * The request will be METHOD at URL.
+ *
+ * If BODY_BKT is not-NULL, it will be sent as the request body.
+ *
+ * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
+ *
+ * REQUEST_POOL should live for the duration of the request. Serf will
+ * construct this and provide it to the request_setup callback, so we
+ * should just use that one.
+ */
+static svn_error_t *
+setup_serf_req(serf_request_t *request,
+               serf_bucket_t **req_bkt,
+               serf_bucket_t **hdrs_bkt,
+               svn_ra_serf__connection_t *conn,
+               const char *method, const char *url,
+               serf_bucket_t *body_bkt, const char *content_type,
+               apr_pool_t *request_pool,
+               apr_pool_t *scratch_pool)
 {
-  serf_bucket_t *hdrs_bkt;
+  serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
+
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  svn_spillbuf_t *buf;
+
+  if (conn->http10 && body_bkt != NULL)
+    {
+      /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
+         it speaks HTTP/1.1 (and thus, chunked requests), or because the
+         server actually responded as only supporting HTTP/1.0.
+
+         We'll take the existing body_bkt, spool it into a spillbuf, and
+         then wrap a bucket around that spillbuf. The spillbuf will give
+         us the Content-Length value.  */
+      SVN_ERR(svn_ra_serf__copy_into_spillbuf(&buf, body_bkt,
+                                              request_pool,
+                                              scratch_pool));
+      body_bkt = svn_ra_serf__create_sb_bucket(buf, allocator,
+                                               request_pool,
+                                               scratch_pool);
+    }
+#endif
 
   /* Create a request bucket.  Note that this sucker is kind enough to
      add a "Host" header for us.  */
-  *req_bkt =
-    serf_request_bucket_request_create(request, method, url, body_bkt,
-                                       serf_request_get_alloc(request));
+  *req_bkt = serf_request_bucket_request_create(request, method, url,
+                                                body_bkt, allocator);
 
-  hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
+  /* Set the Content-Length value. This will also trigger an HTTP/1.0
+     request (rather than the default chunked request).  */
+#if SERF_VERSION_AT_LEAST(1, 1, 0)
+  if (conn->http10)
+    {
+      if (body_bkt == NULL)
+        serf_bucket_request_set_CL(*req_bkt, 0);
+      else
+        serf_bucket_request_set_CL(*req_bkt, svn_spillbuf__get_size(buf));
+    }
+#endif
+
+  *hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
+
+  /* We use serf_bucket_headers_setn() because the string below have a
+     lifetime longer than this bucket. Thus, there is no need to copy
+     the header values.  */
+  serf_bucket_headers_setn(*hdrs_bkt, "User-Agent", conn->useragent);
 
   if (content_type)
     {
-      serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
+      serf_bucket_headers_setn(*hdrs_bkt, "Content-Type", content_type);
     }
 
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
-  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
-  if (ret_hdrs_bkt)
-    {
-      *ret_hdrs_bkt = hdrs_bkt;
-    }
+  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   return SVN_NO_ERROR;
 }
@@ -801,11 +786,11 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
  */
 static svn_error_t *
 start_error(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             svn_ra_serf__dav_props_t name,
-            const char **attrs)
+            const char **attrs,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (!ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -843,10 +828,10 @@ start_error(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_error(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name)
+          svn_ra_serf__dav_props_t name,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -881,11 +866,11 @@ end_error(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 cdata_error(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             const char *data,
-            apr_size_t len)
+            apr_size_t len,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->collect_cdata)
     {
@@ -1068,11 +1053,11 @@ parse_dav_status(int *status_code_out, svn_stringbuf_t *buf,
  */
 static svn_error_t *
 start_207(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           svn_ra_serf__dav_props_t name,
-          const char **attrs)
+          const char **attrs,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (!ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -1103,10 +1088,10 @@ start_207(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_207(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
+        svn_ra_serf__dav_props_t name,
+        apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->in_error &&
       strcmp(name.namespace, "DAV:") == 0 &&
@@ -1147,11 +1132,11 @@ end_207(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 cdata_207(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           const char *data,
-          apr_size_t len)
+          apr_size_t len,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__server_error_t *ctx = userData;
+  svn_ra_serf__server_error_t *ctx = parser->user_data;
 
   if (ctx->collect_cdata)
     {
@@ -1252,43 +1237,58 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
   return svn_error_trace(err);
 }
 
+
+/* Conforms to Expat's XML_StartElementHandler  */
 static void
 start_xml(void *userData, const char *raw_name, const char **attrs)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
+  apr_pool_t *scratch_pool;
 
   if (parser->error)
     return;
 
   if (!parser->state)
     svn_ra_serf__xml_push_state(parser, 0);
+
+  /* ### get a real scratch_pool  */
+  scratch_pool = parser->state->pool;
 
   svn_ra_serf__define_ns(&parser->state->ns_list, attrs, parser->state->pool);
 
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->start(parser, parser->user_data, name, attrs);
+  parser->error = parser->start(parser, name, attrs, scratch_pool);
 }
 
+
+/* Conforms to Expat's XML_EndElementHandler  */
 static void
 end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
+  apr_pool_t *scratch_pool;
 
   if (parser->error)
     return;
 
+  /* ### get a real scratch_pool  */
+  scratch_pool = parser->state->pool;
+
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->end(parser, parser->user_data, name);
+  parser->error = parser->end(parser, name, scratch_pool);
 }
 
+
+/* Conforms to Expat's XML_CharacterDataHandler  */
 static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+  apr_pool_t *scratch_pool;
 
   if (parser->error)
     return;
@@ -1296,7 +1296,10 @@ cdata_xml(void *userData, const char *data, int len)
   if (!parser->state)
     svn_ra_serf__xml_push_state(parser, 0);
 
-  parser->error = parser->cdata(parser, parser->user_data, data, len);
+  /* ### get a real scratch_pool  */
+  scratch_pool = parser->state->pool;
+
+  parser->error = parser->cdata(parser, data, len, scratch_pool);
 }
 
 /* Flip the requisite bits in CTX to indicate that processing of the
@@ -1317,54 +1320,6 @@ add_done_item(svn_ra_serf__xml_parser_t *ctx)
         }
     }
 }
-
-
-#ifdef PBTEST_ACTIVE
-
-/* Determine whether we should move to the next step. Print out the
-   transition for debugging purposes. If FORCE is TRUE, then we
-   definitely make a step (injection has completed).  */
-static void
-maybe_next_step(svn_ra_serf__xml_parser_t *parser, svn_boolean_t force)
-{
-  const pbtest_desc_t *desc;
-  int state;
-
-  /* This would fail the state transition, but for clarity... just return
-     when the testing has completed.  */
-  if (pbtest_step == 14)
-    return;
-
-  /* If this is not the request running the test, then exit.  */
-  if (!PBTEST_THIS_REQ(parser))
-    return;
-
-  desc = &pbtest_description[pbtest_step];
-  state = PBTEST_STATE(parser->pending);
-
-  /* Forced? ... or reached target state?  */
-  if (force || state == desc->when_next)
-    {
-      ++pbtest_step;
-
-      if (desc->completed != NULL)
-        SVN_DBG(("PBTEST: completed TEST %s\n", desc->completed));
-
-      /* Pause the parser based on the new step's config.  */
-      ++desc;
-      parser->paused = desc->paused;
-
-      SVN_DBG(("PBTEST: advanced: step=%d  paused=%d  inject=%d  state=%d\n",
-               pbtest_step, desc->paused, desc->inject, state));
-    }
-  else
-    {
-      SVN_DBG(("PBTEST: step[%d]: state=%d  waiting_for=%d\n",
-               pbtest_step, state, desc->when_next));
-    }
-}
-
-#endif /* PBTEST_ACTIVE  */
 
 
 /* Get a buffer from the parsing context. It will come from the free list,
@@ -1410,18 +1365,10 @@ write_to_pending(svn_ra_serf__xml_parser_t *ctx,
 
   /* We do not (yet) have a spill file, but the amount stored in memory
      has grown too large. Create the file and place the pending data into
-     the temporary file.
-
-     For testing purposes, there are points when we may want to
-     create the spill file, regardless.  */
-  if (PBTEST_FORCE_SPILL(ctx)
-      || (ctx->pending->spill == NULL
-          && ctx->pending->memory_size > SPILL_SIZE))
+     the temporary file.  */
+  if (ctx->pending->spill == NULL
+      && ctx->pending->memory_size > SPILL_SIZE)
     {
-#ifdef PBTEST_ACTIVE
-      /* Only allow a spill file for steps 6 or later.  */
-      if (!PBTEST_THIS_REQ(ctx) || pbtest_step >= 6)
-#endif
       SVN_ERR(svn_io_open_unique_file3(&ctx->pending->spill,
                                        NULL /* temp_path */,
                                        NULL /* dirpath */,
@@ -1496,10 +1443,6 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   if (ctx->error && !ctx->ignore_errors)
     return svn_error_trace(ctx->error);
 
-  /* We may want to ignore the callbacks choice for the PAUSED flag.
-     Set this value, as appropriate.  */
-  PBTEST_SET_PAUSED(ctx);
-
   return SVN_NO_ERROR;
 }
 
@@ -1526,19 +1469,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   struct pending_buffer_t *pb;
   svn_error_t *err;
   apr_off_t output_unused;
-
-  /* We may need to repair the PAUSED state when testing.  */
-  PBTEST_SET_PAUSED(parser);
-
-#ifdef PBTEST_ACTIVE
-  /* If this step should not inject content, then fast-path exit.  */
-  if (PBTEST_THIS_REQ(parser)
-      && pbtest_step < 14 && !pbtest_description[pbtest_step].inject)
-    {
-      SVN_DBG(("PBTEST: process: injection disabled\n"));
-      return SVN_NO_ERROR;
-    }
-#endif
 
   /* Fast path exit: already paused, nothing to do, or already done.  */
   if (parser->paused || parser->pending == NULL || *parser->done)
@@ -1576,18 +1506,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       if (parser->paused)
         return SVN_NO_ERROR;
     }
-
-#ifdef PBTEST_ACTIVE
-  /* For steps 4 and 9, we wait until all of the memory content has been
-     injected. At that point, we can take another step which will pause
-     the parser, and we'll need to exit.  */
-  if (PBTEST_THIS_REQ(parser)
-      && (pbtest_step == 4 || pbtest_step == 9))
-    {
-      PBTEST_MAYBE_STEP(parser, TRUE);
-      return SVN_NO_ERROR;
-    }
-#endif
 
   /* If we don't have a spill file, then we've exhausted all
      pending content.  */
@@ -1643,11 +1561,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
      the network, then we're completely done with the parsing.  */
   if (parser->pending->network_eof)
     {
-#ifdef PBTEST_ACTIVE
-      if (PBTEST_THIS_REQ(parser))
-        SVN_DBG(("process: terminating parse.\n"));
-#endif
-
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
       /* Tell the parser that no more content will be parsed. Ignore the
@@ -1658,10 +1571,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       parser->xmlp = NULL;
       add_done_item(parser);
     }
-
-  /* For testing step 12, we have written all of the disk content. This
-     will advance to step 13 and pause the parser again.  */
-  PBTEST_MAYBE_STEP(parser, TRUE);
 
   return SVN_NO_ERROR;
 }
@@ -1738,13 +1647,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         {
           XML_SetCharacterDataHandler(ctx->xmlp, cdata_xml);
         }
-
-      /* This is the first invocation. If we're looking at an update
-         report, then move to step 1 of the testing sequence.  */
-#ifdef PBTEST_ACTIVE
-      if (PBTEST_THIS_REQ(ctx))
-        PBTEST_MAYBE_STEP(ctx, TRUE);
-#endif
     }
 
   /* If we are storing content into a spill file, then move to the end of
@@ -1800,24 +1702,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           ctx->skip_size = 0;
         }
 
-      /* Ensure that the parser's PAUSED state is correct before we test
-         the flag.  */
-      PBTEST_SET_PAUSED(ctx);
-
-#ifdef PBTEST_ACTIVE
-      if (PBTEST_THIS_REQ(ctx))
-        {
-          SVN_DBG(("response: len=%d  paused=%d  status=%08x\n",
-                   (int)len, ctx->paused, status));
-#if 0
-          /* ### DATA is not necessarily NUL-terminated, but this
-             ### generally works. so if you want to see content... */
-          if (len > 0)
-            SVN_DBG(("content=%s\n", data));
-#endif
-        }
-#endif
-
       /* Note: once the callbacks invoked by inject_to_parser() sets the
          PAUSED flag, then it will not be cleared. write_to_pending() will
          only save the content. Logic outside of serf_context_run() will
@@ -1830,13 +1714,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
         {
           err = write_to_pending(ctx, data, len, pool);
-
-          /* We may have a transition to a next step.
-
-             Note: this only happens on writing to PENDING. If the
-             parser is unpaused, then we will never change state within
-             this network-reading loop.  */
-          PBTEST_MAYBE_STEP(ctx, FALSE);
         }
       else
         {
@@ -1866,20 +1743,10 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           if (ctx->pending != NULL)
             ctx->pending->network_eof = TRUE;
 
-#ifdef PBTEST_ACTIVE
-          if (PBTEST_THIS_REQ(ctx))
-            SVN_DBG(("network: reached EOF.\n"));
-#endif
-
           /* We just hit the end of the network content. If we have nothing
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
-#ifdef PBTEST_ACTIVE
-              if (PBTEST_THIS_REQ(ctx))
-                SVN_DBG(("network: terminating parse.\n"));
-#endif
-
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
               /* Ignore the return status. We just don't care.  */
@@ -2153,40 +2020,26 @@ handle_response_cb(serf_request_t *request,
   return serf_status;
 }
 
-/* If the CTX->setup() callback is non-NULL, invoke it to carry out the
-   majority of the serf_request_setup_t implementation.  Otherwise, perform
-   default setup, with special handling for HEAD requests, and finer-grained
-   callbacks invoked (if non-NULL) to produce the request headers and
-   body. */
+/* Perform basic request setup, with special handling for HEAD requests,
+   and finer-grained callbacks invoked (if non-NULL) to produce the request
+   headers and body. */
 static svn_error_t *
 setup_request(serf_request_t *request,
-                 svn_ra_serf__handler_t *ctx,
-                 serf_bucket_t **req_bkt,
-                 serf_response_acceptor_t *acceptor,
-                 void **acceptor_baton,
-                 serf_response_handler_t *handler,
-                 void **handler_baton,
-                 apr_pool_t *pool)
+              svn_ra_serf__handler_t *ctx,
+              serf_bucket_t **req_bkt,
+              serf_response_acceptor_t *acceptor,
+              void **acceptor_baton,
+              serf_response_handler_t *handler,
+              void **handler_baton,
+              apr_pool_t *request_pool,
+              apr_pool_t *scratch_pool)
 {
   serf_bucket_t *headers_bkt;
 
-  *acceptor = svn_ra_serf__accept_response;
+  /* Default response acceptor.  */
+  *acceptor = accept_response;
   *acceptor_baton = ctx->session;
 
-  if (ctx->setup)
-    {
-      svn_ra_serf__response_handler_t response_handler;
-      void *response_baton;
-
-      SVN_ERR(ctx->setup(request, ctx->setup_baton, req_bkt,
-                         acceptor, acceptor_baton,
-                         &response_handler, &response_baton,
-                         pool));
-
-      ctx->response_handler = response_handler;
-      ctx->response_baton = response_baton;
-    }
-  else
     {
       serf_bucket_t *body_bkt;
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
@@ -2198,22 +2051,25 @@ setup_request(serf_request_t *request,
 
       if (ctx->body_delegate)
         {
+          /* ### should pass the scratch_pool  */
           SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
-                                     bkt_alloc, pool));
+                                     bkt_alloc, request_pool));
         }
       else
         {
           body_bkt = NULL;
         }
 
-      SVN_ERR(svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt,
-                                          ctx->conn, ctx->method, ctx->path,
-                                          body_bkt, ctx->body_type));
+      SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
+                             ctx->conn, ctx->method, ctx->path,
+                             body_bkt, ctx->body_type,
+                             request_pool, scratch_pool));
 
       if (ctx->header_delegate)
         {
+          /* ### should pass the scratch_pool  */
           SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
-                                       pool));
+                                       request_pool));
         }
     }
 
@@ -2239,11 +2095,15 @@ setup_request_cb(serf_request_t *request,
   svn_ra_serf__handler_t *ctx = setup_baton;
   svn_error_t *err;
 
+  /* ### construct a scratch_pool? serf gives us a pool that will live for
+     ### the duration of the request.  */
+  apr_pool_t *scratch_pool = pool;
+
   err = setup_request(request, ctx,
                       req_bkt,
                       acceptor, acceptor_baton,
                       handler, handler_baton,
-                      pool);
+                      pool /* request_pool */, scratch_pool);
 
   if (err)
     {

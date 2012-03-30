@@ -477,8 +477,9 @@ svn_wc__node_get_url(const char **url,
 
 /**
  * Retrieves the origin of the node as it is known in the repository. For
- * added nodes this retrieves where the node is copied from, and the repository
- * location for other nodes.
+ * a copied node this retrieves where the node is copied from, for an added
+ * node this returns NULL/INVALID outputs, and for any other node this
+ * retrieves the repository location.
  *
  * All output arguments may be NULL.
  *
@@ -837,7 +838,7 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
     SVN_ERR(svn_wc__acquire_write_lock(&svn_wc__lock_root_abspath, wc_ctx,    \
                                        local_abspath, lock_anchor,            \
                                        scratch_pool, scratch_pool));          \
-    svn_wc__err1 = svn_error_trace(expr);                                     \
+    svn_wc__err1 = (expr);                                                    \
     svn_wc__err2 = svn_wc__release_write_lock(                                \
                      wc_ctx, svn_wc__lock_root_abspath, scratch_pool);        \
     SVN_ERR(svn_error_compose_create(svn_wc__err1, svn_wc__err2));            \

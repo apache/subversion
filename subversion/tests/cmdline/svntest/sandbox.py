@@ -24,8 +24,12 @@
 import os
 import shutil
 import copy
+import urllib
+import logging
 
 import svntest
+
+logger = logging.getLogger()
 
 
 class Sandbox:
@@ -49,7 +53,7 @@ class Sandbox:
     if not read_only:
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
       self.repo_url = (svntest.main.options.test_area_url + '/'
-                       + svntest.main.pathname2url(self.repo_dir))
+                       + urllib.pathname2url(self.repo_dir))
     else:
       self.repo_dir = svntest.main.pristine_greek_repos_dir
       self.repo_url = svntest.main.pristine_greek_repos_url
@@ -126,7 +130,7 @@ class Sandbox:
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
     url = svntest.main.options.test_area_url + \
-                                        '/' + svntest.main.pathname2url(path)
+                                        '/' + urllib.pathname2url(path)
     self.add_test_path(path, remove)
     return path, url
 
@@ -147,7 +151,7 @@ class Sandbox:
     """Get a stable name for a temporary file that will be removed after
        running the test"""
 
-    dir = self.add_wc_path('tmp')
+    dir = self.add_wc_path('tmp', remove=False)
     if not os.path.exists(dir):
       os.mkdir(dir)
 
@@ -196,17 +200,18 @@ class Sandbox:
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
 
-  def simple_update(self, target=None):
+  def simple_update(self, target=None, revision='HEAD'):
     """Update the WC or TARGET.
        TARGET is a relpath relative to the WC."""
     if target is None:
       target = self.wc_dir
     else:
       target = self.ospath(target)
-    svntest.main.run_svn(False, 'update', target)
+    svntest.main.run_svn(False, 'update', target, '-r', revision)
 
   def simple_switch(self, url, target=None):
-    """Switch a TARGET to URL"""
+    """Switch the WC or TARGET to URL.
+       TARGET is a relpath relative to the WC."""
     if target is None:
       target = self.wc_dir
     else:
@@ -228,61 +233,72 @@ class Sandbox:
                          target)
 
   def simple_rm(self, *targets):
-    """TARGET is a relpath relative to the WC."""
+    """Schedule TARGETS for deletion.
+       TARGETS are relpaths relative to the WC."""
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'rm', *targets)
 
   def simple_mkdir(self, *targets):
-    """TARGET is a relpath relative to the WC."""
+    """Create TARGETS as directories scheduled for addition.
+       TARGETS are relpaths relative to the WC."""
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'mkdir', *targets)
 
   def simple_add(self, *targets):
-    """TARGET is a relpath relative to the WC."""
+    """Schedule TARGETS for addition.
+       TARGETS are relpaths relative to the WC."""
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'add', *targets)
 
   def simple_revert(self, *targets):
-    """TARGET is a relpath relative to the WC."""
+    """Revert TARGETS.
+       TARGETS are relpaths relative to the WC."""
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'revert', *targets)
 
   def simple_propset(self, name, value, *targets):
-    """TARGET is a relpath relative to the WC."""
+    """Set property NAME to VALUE on TARGETS.
+       TARGETS are relpaths relative to the WC."""
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propset', name, value, *targets)
 
   def simple_propdel(self, name, *targets):
-    """TARGET is a relpath relative to the WC."""
+    """Delete property NAME from TARGETS.
+       TARGETS are relpaths relative to the WC."""
     assert len(targets) > 0
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propdel', name, *targets)
 
   def simple_copy(self, source, dest):
-    """SOURCE and DEST are relpaths relative to the WC."""
+    """Copy SOURCE to DEST in the WC.
+       SOURCE and DEST are relpaths relative to the WC."""
     source = self.ospath(source)
     dest = self.ospath(dest)
     svntest.main.run_svn(False, 'copy', source, dest)
 
   def simple_move(self, source, dest):
-    """SOURCE and DEST are relpaths relative to the WC."""
+    """Move SOURCE to DEST in the WC.
+       SOURCE and DEST are relpaths relative to the WC."""
     source = self.ospath(source)
     dest = self.ospath(dest)
     svntest.main.run_svn(False, 'move', source, dest)
 
   def simple_repo_copy(self, source, dest):
-    """SOURCE and DEST are relpaths relative to the repo root."""
+    """Copy SOURCE to DEST in the repository, committing the result with a
+       default log message.
+       SOURCE and DEST are relpaths relative to the repo root."""
     svntest.main.run_svn(False, 'copy', '-m', svntest.main.make_log_msg(),
                          self.repo_url + '/' + source,
                          self.repo_url + '/' + dest)
 
   def simple_append(self, dest, contents, truncate=False):
-    """Append CONTENTS to file DEST, optionally truncating it first."""
+    """Append CONTENTS to file DEST, optionally truncating it first.
+       DEST is a relpath relative to the WC."""
     open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
 
 
@@ -306,14 +322,13 @@ def cleanup_deferred_test_paths():
 
 
 def _cleanup_test_path(path, retrying=False):
-  if svntest.main.options.verbose:
-    if retrying:
-      print("CLEANUP: RETRY: %s" % path)
-    else:
-      print("CLEANUP: %s" % path)
+  if retrying:
+    logger.info("CLEANUP: RETRY: %s", path)
+  else:
+    logger.info("CLEANUP: %s", path)
+
   try:
     svntest.main.safe_rmtree(path)
   except:
-    if svntest.main.options.verbose:
-      print("WARNING: cleanup failed, will try again later")
+    logger.info("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)

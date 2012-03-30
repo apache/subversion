@@ -64,11 +64,11 @@ typedef struct gls_context_t {
 
 static svn_error_t *
 start_gls(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
           svn_ra_serf__dav_props_t name,
-          const char **attrs)
+          const char **attrs,
+          apr_pool_t *scratch_pool)
 {
-  gls_context_t *gls_ctx = userData;
+  gls_context_t *gls_ctx = parser->user_data;
 
   if ((! gls_ctx->inside_report)
       && strcmp(name.name, "get-location-segments-report") == 0)
@@ -115,10 +115,10 @@ start_gls(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_gls(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
+        svn_ra_serf__dav_props_t name,
+        apr_pool_t *scratch_pool)
 {
-  gls_context_t *gls_ctx = userData;
+  gls_context_t *gls_ctx = parser->user_data;
 
   if (strcmp(name.name, "get-location-segments-report") == 0)
     gls_ctx->inside_report = FALSE;

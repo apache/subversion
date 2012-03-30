@@ -381,16 +381,18 @@ fast-clean: doc-clean
 		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
 		-name "*.pyc" -exec rm {} ';'
 
-# clean all but bulky test output, returning to before './configure' was run.
+# clean everything, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
-fast-distclean: fast-clean
-	rm -fr Makefile config.cache config.log config.nice config.status \
-	libtool mkmf.log subversion/svn_private_config.h \
-	subversion/bindings/javahl/classes subversion/bindings/javahl/include \
+local-distclean: local-clean
+	rm -fr config.cache config.log config.nice config.status \
+	  libtool mkmf.log subversion/svn_private_config.h \
+	  subversion/bindings/javahl/classes \
+	  subversion/bindings/javahl/include \
 	$(SVN_CONFIG_SCRIPT_FILES)
+	rm -f Makefile
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extraclean-javahl
+local-extraclean: extraclean-bindings local-distclean
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -408,10 +410,7 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extra
 
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig clean-ctypes-python clean-javahl
-
-# clean everything, including test output.
-local-distclean: fast-distclean check-clean
+local-clean: check-clean clean-bindings fast-clean
 
 local-install: @INSTALL_RULES@
 
@@ -436,8 +435,6 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
-
-extraclean-javahl: clean-javahl
 
 check-tigris-javahl: javahl-compat
 	@FIX_JAVAHL_LIB@
@@ -575,36 +572,24 @@ external-all external-install:
         done;
 
 ### apr-util relies on generated files in apr, so reverse the
-### list so that it is cleaned before apr.
-external-clean external-distclean:
+### list so that it is cleaned before apr. also note that Neon does
+### not have an extraclean target, so get "close" with distclean
+external-clean external-distclean external-extraclean:
 	@target=`echo $@ | sed s/external-//`;          \
         list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';         \
         for i in $$list; do                             \
             revlist="$$i $$revlist";                    \
         done;                                           \
         for i in $$revlist; do                          \
-            echo "------ making $$target in $$i";       \
-            (cd $$i && $(MAKE) $$target) || exit 1;     \
-            echo "------ completed $$target in $$i";    \
-        done;
-
-### temporary hack. Neon does not have an "extraclean" and neither does db
-### If we don't have extraclean -- do the next best thing.
-external-extraclean:
-	@list='$(SVN_EXTERNAL_PROJECT_SUBDIRS)';                         \
-        for i in $$list; do                                              \
-            revlist="$$i $$revlist";                                     \
-        done;                                                            \
-        for i in $$revlist; do                                           \
-            if test "$$i" = "neon" || test "$$i" = "db/dist"; then       \
-                echo "------ making distclean(no extraclean) in $$i";    \
+            if test "$$i" = "neon" -a "$$target" = "extraclean"; then    \
+                echo "------ making distclean (no extraclean) in $$i";    \
                 (cd $$i && $(MAKE) distclean) || exit 1;                 \
-                echo "------ completed distclean(no extraclean) in $$i"; \
+                echo "------ completed distclean (no extraclean) in $$i"; \
             else                                                         \
-                echo "------ making extraclean in $$i";                  \
-                (cd $$i && $(MAKE) extraclean) || exit 1;                \
-                echo "------ completed extraclean in $$i";               \
-            fi;                                                          \
+                echo "------ making $$target in $$i";       \
+                (cd $$i && $(MAKE) $$target) || exit 1;     \
+                echo "------ completed $$target in $$i";    \
+            fi;                                             \
         done;
 
 
@@ -729,10 +714,15 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+clean-bindings: clean-swig clean-ctypes-python clean-javahl
+
+extraclean-bindings: clean-swig extraclean-swig-headers \
+			extraclean-swig-py extraclean-swig-rb \
+			extraclean-swig-pl \
+			clean-ctypes-python clean-javahl \
+
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 	@rm -f .swig_checked
-extraclean-swig: extraclean-swig-headers extraclean-swig-py \
-                 extraclean-swig-rb extraclean-swig-pl
 
 EXTRACLEAN_SWIG_HEADERS=rm -f $(SWIG_SRC_DIR)/proxy/*.swg
 
@@ -865,8 +855,6 @@ check-ctypes-python: ctypes-python
 clean-ctypes-python:
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(PYTHON) setup.py clean --all
-
-extraclean-ctypes-python: clean-ctypes-python
 
 
 # manually describe a dependency, which we won't otherwise detect

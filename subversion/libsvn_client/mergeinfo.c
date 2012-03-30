@@ -43,6 +43,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_client_private.h"
 #include "client.h"
 #include "mergeinfo.h"
 #include "svn_private_config.h"
@@ -1063,20 +1064,13 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
      contact the repository for the requested PEG_REVISION. */
   if (!use_url)
     {
-      const char *repos_root_url;
-      const char *repos_relpath;
       const char *origin_url = NULL;
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
                                       scratch_pool));
 
-      SVN_ERR(svn_wc__node_get_origin(NULL, &rev, &repos_relpath,
-                                      &repos_root_url, NULL, NULL,
-                                      ctx->wc_ctx, local_abspath, FALSE,
-                                      scratch_pool, scratch_pool));
-
-      if(repos_relpath)
-        origin_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                                 scratch_pool);
+      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL, &rev, &origin_url,
+                                             local_abspath, ctx,
+                                             scratch_pool, scratch_pool));
 
       if (!origin_url
           || strcmp(origin_url, url) != 0

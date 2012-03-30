@@ -90,10 +90,7 @@ svn_client__path_relative_to_root(const char **rel_path,
   /* If we have a WC path... */
   if (! svn_path_is_url(abspath_or_url))
     {
-      /* ...fetch its entry, and attempt to get both its full URL and
-         repository root URL.  If we can't get REPOS_ROOT from the WC
-         entry, we'll get it from the RA layer.*/
-
+      /* ... query it directly. */
       SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
                                              wc_ctx,
                                              abspath_or_url,
@@ -139,6 +136,50 @@ svn_client__path_relative_to_root(const char **rel_path,
     *rel_path = repos_relpath;
 
    return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__wc_node_get_origin(const char **repos_root_url_p,
+                               const char **repos_uuid_p,
+                               svn_revnum_t *rev_p,
+                               const char **url_p,
+                               const char *wc_abspath,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url, *relpath;
+
+  SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */, rev_p, &relpath,
+                                  &repos_root_url, repos_uuid_p,
+                                  NULL, ctx->wc_ctx, wc_abspath,
+                                  FALSE /* scan_deleted */,
+                                  result_pool, scratch_pool));
+  if (repos_root_url && relpath)
+    {
+      *url_p = svn_path_url_add_component2(repos_root_url, relpath,
+                                           result_pool);
+    }
+  else
+    {
+      /* The node has no location in the repository. It's unversioned or
+       * locally added or locally deleted.
+       *
+       * If it's locally added or deleted, find the repository root
+       * URL and UUID anyway, and leave the node URL and revision as NULL
+       * and INVALID.  If it's unversioned, this will throw an error. */
+      *url_p = NULL;
+      SVN_ERR(svn_client_get_repos_root(&repos_root_url, repos_uuid_p,
+                                        wc_abspath,
+                                        ctx, result_pool, scratch_pool));
+    }
+
+  if (repos_root_url_p)
+    *repos_root_url_p = repos_root_url;
+
+  SVN_ERR_ASSERT(!repos_root_url_p || *repos_root_url_p);
+  SVN_ERR_ASSERT(!repos_uuid_p || *repos_uuid_p);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

@@ -676,7 +676,7 @@ change_dir_prop(void *parent_baton,
 
   LDR_DBG(("change_dir_prop %p\n", parent_baton));
 
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   if (value)
@@ -718,7 +718,7 @@ change_file_prop(void *file_baton,
 
   LDR_DBG(("change_file_prop %p\n", file_baton));
 
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   if (value)

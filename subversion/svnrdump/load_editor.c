@@ -876,7 +876,7 @@ remove_node_props(void *baton)
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
       const char *name = svn__apr_hash_index_key(hi);
-      svn_prop_kind_t kind = svn_property_kind(NULL, name);
+      svn_prop_kind_t kind = svn_property_kind2(name);
 
       if (kind == svn_prop_regular_kind)
         SVN_ERR(set_node_property(nb, name, NULL));

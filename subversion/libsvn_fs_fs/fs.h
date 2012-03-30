@@ -264,7 +264,7 @@ typedef struct fs_fs_data_t
   /* If set, there are or have been more than one concurrent transaction */
   svn_boolean_t concurrent_transactions;
 
-  /* Tempoary cache for changed directories yet to be committed; maps from
+  /* Temporary cache for changed directories yet to be committed; maps from
      unparsed FS ID to ###x.  NULL outside transactions. */
   svn_cache__t *txn_dir_cache;
 

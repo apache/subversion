@@ -5675,6 +5675,23 @@ def three_nested_moves(sbox):
                                         expected_status,
                                         None, wc_dir)
 
+def copy_to_unversioned_parent(sbox):
+  "copy to unversioned parent"
+
+  sbox.build()
+
+  # This succeeds
+  #svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+  #                                   sbox.ospath('A/B'),
+  #                                   sbox.ospath('New/B2'))
+
+  # And this currently fails with The node '.*Unversioned' was not found,
+  # while it should succeed or returns some error that a GUI client can use.
+  os.mkdir(sbox.ospath('Unversioned'))
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('Unversioned/B2'))
+
 ########################################################################
 # Run the tests
 
@@ -5789,6 +5806,7 @@ test_list = [ None,
               commit_deleted_half_of_move,
               wc_wc_copy_incomplete,
               three_nested_moves,
+              copy_to_unversioned_parent,
              ]
 
 if __name__ == '__main__':
