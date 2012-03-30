@@ -24,10 +24,11 @@
 #ifndef SVN_LIBSVN_SUBR_CRYPTO_H
 #define SVN_LIBSVN_SUBR_CRYPTO_H
 
-#include <apr.h>
-#include <apr_crypto.h>
+#include <apu.h>  /* for APU_HAVE_CRYPTO */
 
 #ifdef APU_HAVE_CRYPTO
+
+#include <apr_crypto.h>
 
 /* Set *CRYPTO_CTX to an APR-managed OpenSSL cryptography context
    object allocated from POOL. */

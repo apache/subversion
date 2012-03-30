@@ -34,6 +34,7 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_signal.h>
+#include <apu.h>  /* for APU_HAVE_CRYPTO */
 
 #ifdef APU_HAVE_CRYPTO
 #include <apr_crypto.h>
