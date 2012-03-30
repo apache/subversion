@@ -195,7 +195,7 @@ create_dir_config(apr_pool_t *p, char *dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
-  conf->hooks_env = apr_hash_make(p);
+  conf->hooks_env = NULL;
 
   return conf;
 }
@@ -543,6 +543,9 @@ SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
       dir_conf_t *conf = config;
       const char *name;
       const char *val;
+
+      if (! conf->hooks_env)
+        conf->hooks_env = apr_hash_make(cmd->pool);
 
       name = apr_pstrdup(apr_hash_pool_get(conf->hooks_env),
                          APR_ARRAY_IDX(var, 0, const char *));
