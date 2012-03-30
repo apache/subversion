@@ -34,7 +34,10 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_signal.h>
+
+#ifdef APU_HAVE_CRYPTO
 #include <apr_crypto.h>
+#endif
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"
