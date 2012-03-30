@@ -77,7 +77,7 @@ typedef struct
  * #svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
-svn_fs_fs__serialize_txdelta_window(char **buffer,
+svn_fs_fs__serialize_txdelta_window(void **buffer,
                                     apr_size_t *buffer_size,
                                     void *item,
                                     apr_pool_t *pool);
@@ -88,7 +88,7 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
  */
 svn_error_t *
 svn_fs_fs__deserialize_txdelta_window(void **item,
-                                      char *buffer,
+                                      void *buffer,
                                       apr_size_t buffer_size,
                                       apr_pool_t *pool);
 
@@ -97,7 +97,7 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
  * (@a in is an #apr_array_header_t of apr_off_t elements).
  */
 svn_error_t *
-svn_fs_fs__serialize_manifest(char **data,
+svn_fs_fs__serialize_manifest(void **data,
                               apr_size_t *data_len,
                               void *in,
                               apr_pool_t *pool);
@@ -108,7 +108,7 @@ svn_fs_fs__serialize_manifest(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
-                                char *data,
+                                void *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
 
@@ -117,7 +117,7 @@ svn_fs_fs__deserialize_manifest(void **out,
  * (@a in is an #apr_hash_t of svn_string_t elements, keyed by const char*).
  */
 svn_error_t *
-svn_fs_fs__serialize_properties(char **data,
+svn_fs_fs__serialize_properties(void **data,
                                 apr_size_t *data_len,
                                 void *in,
                                 apr_pool_t *pool);
@@ -128,7 +128,7 @@ svn_fs_fs__serialize_properties(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_properties(void **out,
-                                  char *data,
+                                  void *data,
                                   apr_size_t data_len,
                                   apr_pool_t *pool);
 
@@ -136,7 +136,7 @@ svn_fs_fs__deserialize_properties(void **out,
  * Implements #svn_cache__serialize_func_t for #svn_fs_id_t
  */
 svn_error_t *
-svn_fs_fs__serialize_id(char **data,
+svn_fs_fs__serialize_id(void **data,
                         apr_size_t *data_len,
                         void *in,
                         apr_pool_t *pool);
@@ -146,7 +146,7 @@ svn_fs_fs__serialize_id(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
-                          char *data,
+                          void *data,
                           apr_size_t data_len,
                           apr_pool_t *pool);
 
@@ -154,7 +154,7 @@ svn_fs_fs__deserialize_id(void **out,
  * Implements #svn_cache__serialize_func_t for #node_revision_t
  */
 svn_error_t *
-svn_fs_fs__serialize_node_revision(char **buffer,
+svn_fs_fs__serialize_node_revision(void **buffer,
                                    apr_size_t *buffer_size,
                                    void *item,
                                    apr_pool_t *pool);
@@ -164,7 +164,7 @@ svn_fs_fs__serialize_node_revision(char **buffer,
  */
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
-                                     char *buffer,
+                                     void *buffer,
                                      apr_size_t buffer_size,
                                      apr_pool_t *pool);
 
@@ -172,7 +172,7 @@ svn_fs_fs__deserialize_node_revision(void **item,
  * Implements #svn_cache__serialize_func_t for a directory contents hash
  */
 svn_error_t *
-svn_fs_fs__serialize_dir_entries(char **data,
+svn_fs_fs__serialize_dir_entries(void **data,
                                  apr_size_t *data_len,
                                  void *in,
                                  apr_pool_t *pool);
@@ -182,7 +182,7 @@ svn_fs_fs__serialize_dir_entries(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_dir_entries(void **out,
-                                   char *data,
+                                   void *data,
                                    apr_size_t data_len,
                                    apr_pool_t *pool);
 
@@ -192,7 +192,7 @@ svn_fs_fs__deserialize_dir_entries(void **out,
  * serialized manifest array @a data and @a data_len. */
 svn_error_t *
 svn_fs_fs__get_sharded_offset(void **out,
-                              const char *data,
+                              const void *data,
                               apr_size_t data_len,
                               void *baton,
                               apr_pool_t *pool);
@@ -204,7 +204,7 @@ svn_fs_fs__get_sharded_offset(void **out,
  */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
-                             const char *data,
+                             const void *data,
                              apr_size_t data_len,
                              void *baton,
                              apr_pool_t *pool);
@@ -230,7 +230,7 @@ typedef struct replace_baton_t
  * identified by its name in the #replace_baton_t in @a baton.
  */
 svn_error_t *
-svn_fs_fs__replace_dir_entry(char **data,
+svn_fs_fs__replace_dir_entry(void **data,
                              apr_size_t *data_len,
                              void *baton,
                              apr_pool_t *pool);

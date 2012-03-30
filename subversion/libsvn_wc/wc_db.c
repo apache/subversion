@@ -3414,8 +3414,9 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
 {
   const char *repos_relpath;
   svn_revnum_t revision;
+  svn_wc__db_status_t node_status;
 
-  SVN_ERR(read_info(status, kind, &revision, &repos_relpath, copyfrom_id,
+  SVN_ERR(read_info(&node_status, kind, &revision, &repos_relpath, copyfrom_id,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, op_root, NULL, NULL,
                     NULL /* have_base */,
@@ -3423,32 +3424,27 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     have_work,
                     wcroot, local_relpath, result_pool, scratch_pool));
 
-  if (*status == svn_wc__db_status_excluded)
+  if (node_status == svn_wc__db_status_excluded)
     {
       /* The parent cannot be excluded, so look at the parent and then
          adjust the relpath */
       const char *parent_relpath, *base_name;
-      svn_wc__db_status_t parent_status;
-      svn_kind_t parent_kind;
-      svn_boolean_t parent_have_work;
 
       svn_dirent_split(&parent_relpath, &base_name, local_relpath,
                        scratch_pool);
       SVN_ERR(get_info_for_copy(copyfrom_id, copyfrom_relpath, copyfrom_rev,
-                                &parent_status,
-                                &parent_kind,
-                                NULL, &parent_have_work,
+                                NULL, NULL, NULL, NULL,
                                 wcroot, parent_relpath,
                                 scratch_pool, scratch_pool));
       if (*copyfrom_relpath)
         *copyfrom_relpath = svn_relpath_join(*copyfrom_relpath, base_name,
                                              result_pool);
     }
-  else if (*status == svn_wc__db_status_added)
+  else if (node_status == svn_wc__db_status_added)
     {
       const char *op_root_relpath;
 
-      SVN_ERR(scan_addition(NULL, &op_root_relpath,
+      SVN_ERR(scan_addition(&node_status, &op_root_relpath,
                             NULL, NULL, /* repos_* */
                             copyfrom_relpath, copyfrom_id, copyfrom_rev,
                             NULL, NULL, NULL, wcroot, local_relpath,
@@ -3462,7 +3458,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                result_pool);
         }
     }
-  else if (*status == svn_wc__db_status_deleted)
+  else if (node_status == svn_wc__db_status_deleted)
     {
       const char *base_del_relpath, *work_del_relpath;
 
@@ -3505,6 +3501,9 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       *copyfrom_relpath = repos_relpath;
       *copyfrom_rev = revision;
     }
+
+  if (status)
+    *status = node_status;
 
   return SVN_NO_ERROR;
 }
@@ -3662,7 +3661,11 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                     dst_op_depth,
                     dst_parent_relpath,
                     presence_map, dst_presence));
-      if (is_move)
+
+      /* ### What about other results from scan_addition()?
+       * ### 'cp A B; mv B C' currently results in C being marked moved-here
+       * ### with no corresponding moved-from. */
+      if (is_move && status != svn_wc__db_status_added)
         SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
 
       SVN_ERR(svn_sqlite__step_done(stmt));

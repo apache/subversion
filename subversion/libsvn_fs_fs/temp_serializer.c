@@ -489,7 +489,7 @@ serialize_txdeltawindow(svn_temp_serializer__context_t *context,
 }
 
 svn_error_t *
-svn_fs_fs__serialize_txdelta_window(char **buffer,
+svn_fs_fs__serialize_txdelta_window(void **buffer,
                                     apr_size_t *buffer_size,
                                     void *item,
                                     apr_pool_t *pool)
@@ -522,7 +522,7 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
 
 svn_error_t *
 svn_fs_fs__deserialize_txdelta_window(void **item,
-                                      char *buffer,
+                                      void *buffer,
                                       apr_size_t buffer_size,
                                       apr_pool_t *pool)
 {
@@ -548,7 +548,7 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
 }
 
 svn_error_t *
-svn_fs_fs__serialize_manifest(char **data,
+svn_fs_fs__serialize_manifest(void **data,
                               apr_size_t *data_len,
                               void *in,
                               apr_pool_t *pool)
@@ -564,7 +564,7 @@ svn_fs_fs__serialize_manifest(char **data,
 
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
-                                char *data,
+                                void *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool)
 {
@@ -637,7 +637,7 @@ serialize_svn_string_array(svn_temp_serializer__context_t *context,
 }
 
 svn_error_t *
-svn_fs_fs__serialize_properties(char **data,
+svn_fs_fs__serialize_properties(void **data,
                                 apr_size_t *data_len,
                                 void *in,
                                 apr_pool_t *pool)
@@ -682,7 +682,7 @@ svn_fs_fs__serialize_properties(char **data,
 
 svn_error_t *
 svn_fs_fs__deserialize_properties(void **out,
-                                  char *data,
+                                  void *data,
                                   apr_size_t data_len,
                                   apr_pool_t *pool)
 {
@@ -716,7 +716,7 @@ svn_fs_fs__deserialize_properties(void **out,
 }
 
 svn_error_t *
-svn_fs_fs__serialize_id(char **data,
+svn_fs_fs__serialize_id(void **data,
                         apr_size_t *data_len,
                         void *in,
                         apr_pool_t *pool)
@@ -741,7 +741,7 @@ svn_fs_fs__serialize_id(char **data,
 
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
-                          char *data,
+                          void *data,
                           apr_size_t data_len,
                           apr_pool_t *pool)
 {
@@ -759,10 +759,10 @@ svn_fs_fs__deserialize_id(void **out,
 /** Caching node_revision_t objects. **/
 
 svn_error_t *
-svn_fs_fs__serialize_node_revision(char **buffer,
-                                    apr_size_t *buffer_size,
-                                    void *item,
-                                    apr_pool_t *pool)
+svn_fs_fs__serialize_node_revision(void **buffer,
+                                   apr_size_t *buffer_size,
+                                   void *item,
+                                   apr_pool_t *pool)
 {
   svn_stringbuf_t *serialized;
   node_revision_t *noderev = item;
@@ -784,7 +784,7 @@ svn_fs_fs__serialize_node_revision(char **buffer,
 
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
-                                     char *buffer,
+                                     void *buffer,
                                      apr_size_t buffer_size,
                                      apr_pool_t *pool)
 {
@@ -803,7 +803,7 @@ svn_fs_fs__deserialize_node_revision(void **item,
  * to DATA and DATA_LEN. */
 static svn_error_t *
 return_serialized_dir_context(svn_temp_serializer__context_t *context,
-                              char **data,
+                              void **data,
                               apr_size_t *data_len)
 {
   svn_stringbuf_t *serialized = svn_temp_serializer__get(context);
@@ -816,7 +816,7 @@ return_serialized_dir_context(svn_temp_serializer__context_t *context,
 }
 
 svn_error_t *
-svn_fs_fs__serialize_dir_entries(char **data,
+svn_fs_fs__serialize_dir_entries(void **data,
                                  apr_size_t *data_len,
                                  void *in,
                                  apr_pool_t *pool)
@@ -832,7 +832,7 @@ svn_fs_fs__serialize_dir_entries(char **data,
 
 svn_error_t *
 svn_fs_fs__deserialize_dir_entries(void **out,
-                                   char *data,
+                                   void *data,
                                    apr_size_t data_len,
                                    apr_pool_t *pool)
 {
@@ -847,7 +847,7 @@ svn_fs_fs__deserialize_dir_entries(void **out,
 
 svn_error_t *
 svn_fs_fs__get_sharded_offset(void **out,
-                              const char *data,
+                              const void *data,
                               apr_size_t data_len,
                               void *baton,
                               apr_pool_t *pool)
@@ -908,7 +908,7 @@ find_entry(svn_fs_dirent_t **entries,
 
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
-                             const char *data,
+                             const void *data,
                              apr_size_t data_len,
                              void *baton,
                              apr_pool_t *pool)
@@ -961,7 +961,7 @@ svn_fs_fs__extract_dir_entry(void **out,
  * modification as a simply deserialize / modify / serialize sequence.
  */
 static svn_error_t *
-slowly_replace_dir_entry(char **data,
+slowly_replace_dir_entry(void **data,
                          apr_size_t *data_len,
                          void *baton,
                          apr_pool_t *pool)
@@ -983,7 +983,7 @@ slowly_replace_dir_entry(char **data,
 }
 
 svn_error_t *
-svn_fs_fs__replace_dir_entry(char **data,
+svn_fs_fs__replace_dir_entry(void **data,
                              apr_size_t *data_len,
                              void *baton,
                              apr_pool_t *pool)
