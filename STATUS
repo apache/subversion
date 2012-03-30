@@ -115,6 +115,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1307177
+   Move mod_dontdothat to install-tools.
+   Justification:
+     Undo compatibility break of 'make install' in 1.7.3.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
