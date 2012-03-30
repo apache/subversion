@@ -1621,9 +1621,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
   if (want_contents)
     {
+      const char *missing_date = svn_time_to_cstring(0, pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          static const char *missing_date = svn_time_to_cstring(0, pool);
           const char *name = svn__apr_hash_index_key(hi);
           svn_dirent_t *entry = svn__apr_hash_index_val(hi);
 
