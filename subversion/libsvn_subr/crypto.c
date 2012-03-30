@@ -39,7 +39,7 @@ err_from_apu_err(apr_status_t apr_err,
                              _("code (%d), reason (\"%s\"), msg (\"%s\")"),
                              apu_err->rc,
                              apu_err->reason ? apu_err->reason : "",
-                             apu_err->msg ? apu_err->msg : "",
+                             apu_err->msg ? apu_err->msg : "");
   return SVN_NO_ERROR;
 }
 
