@@ -103,6 +103,8 @@ Candidate changes:
    Handle NULL dates in libsvn_ra_svn.
    Justification:
      Avoids segfault.
+   Branch:
+     1.7.x-r1306111
    Votes:
      +1: danielsh
 
