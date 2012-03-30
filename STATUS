@@ -124,6 +124,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1307184
+   Change mod_dontdothat install target to a subdir of $(APACHE_LIBEXECDIR).
+   Justification:
+     Consistency with $(bindir)/svn-tools/.
+   Notes:
+     Depends on r1307177.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
