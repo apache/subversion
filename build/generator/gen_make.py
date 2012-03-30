@@ -369,18 +369,21 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      ezt_area = _eztdata(type=area, files=[ ], extra_install=None)
+      ezt_area = _eztdata(type=area, files=[ ], apache_files=[ ],
+                          extra_install=None)
 
-      if area == 'apache-mod':
-        data.areas.append(ezt_area)
-
-        for file in files:
+      def apache_file_to_eztdata(file):
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
           base, ext = os.path.splitext(fname)
           name = base.replace('mod_', '')
-          ezt_area.files.append(_eztdata(fullname=file, dirname=dirname,
-                                         name=name, filename=fname))
+          return _eztdata(fullname=file, dirname=dirname,
+                          name=name, filename=fname)
+      if area == 'apache-mod':
+        data.areas.append(ezt_area)
+
+        for file in files:
+          ezt_area.files.append(apache_file_to_eztdata(file))
 
       elif area != 'test' and area != 'bdb-test':
         data.areas.append(ezt_area)
@@ -390,6 +393,14 @@ class Generator(gen_base.GeneratorBase):
         ezt_area.varname = area_var
         ezt_area.uppervar = upper_var
 
+        # ### TODO: This is a hack.  See discussion here:
+        # ### http://mid.gmane.org/20120316191639.GA28451@daniel3.local
+        apache_files = [t.filename for t in inst_targets
+                        if isinstance(t, gen_base.TargetApacheMod)]
+
+        files = [f for f in files if f not in apache_files]
+        for file in apache_files:
+          ezt_area.apache_files.append(apache_file_to_eztdata(file))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
