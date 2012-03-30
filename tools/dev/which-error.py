@@ -29,6 +29,7 @@
 # $LastChangedRevision$
 #
 
+import errno
 import sys
 import os.path
 import re
@@ -68,6 +69,7 @@ codes.  This can be done in variety of ways:
 
 def get_errors():
   errs = {}
+  errs.update(errno.errorcode)
   for key in vars(core):
     if key.find('SVN_ERR_') == 0:
       try:
