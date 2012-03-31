@@ -30,6 +30,9 @@
 
 #include <apr_crypto.h>
 
+#include "svn_types.h"
+#include "svn_string.h"
+
 /* Set *CRYPTO_CTX to an APR-managed OpenSSL cryptography context
    object allocated from POOL. */
 /* ### TODO: Should this be something done once at apr_crypto_init()

@@ -25,6 +25,40 @@
 #if APU_HAVE_CRYPTO
 #include <apr_random.h>
 
+#include "svn_types.h"
+
+#include "svn_private_config.h"
+#include "private/svn_atomic.h"
+
+
+static volatile svn_atomic_t crypto_init_state = 0;
+
+#define CRYPTO_INIT(scratch_pool) \
+  SVN_ERR(svn_atomic__init_once(&crypto_init_state, \
+                                crypto_init, NULL, (scratch_pool)))
+
+/* Initialize the APR cryptography subsystem (if available), using
+   ANY_POOL's ancestor root pool for the registration of cleanups,
+   shutdowns, etc.   */
+/* Don't call this function directly!  Use svn_atomic__init_once(). */
+static svn_error_t *
+crypto_init(void *baton, apr_pool_t *any_pool)
+{
+#if APU_HAVE_CRYPTO
+  /* NOTE: this function will locate the topmost ancestor of ANY_POOL
+     for its cleanup handlers. We don't have to worry about ANY_POOL
+     being cleared.  */
+  apr_status_t apr_err = apr_crypto_init(any_pool);
+
+  if (apr_err)
+    return svn_error_wrap_apr(
+             apr_err,
+             _("Failed to initialize cryptography subsystem"));
+#endif /* APU_HAVE_CRYPTO  */
+
+  return SVN_NO_ERROR;
+}
+
 
 /* If APU_ERR is non-NULL, create and return a Subversion error using
    APR_ERR and APU_ERR. */
@@ -65,6 +99,8 @@ svn_crypto__context_create(apr_crypto_t **crypto_ctx,
   apr_status_t apr_err;
   const apu_err_t *apu_err = NULL;
   const apr_crypto_driver_t *driver;
+
+  CRYPTO_INIT(pool);
 
   /* ### TODO: So much for abstraction.  APR's wrappings around NSS
          and OpenSSL aren't quite as opaque as I'd hoped, requiring us
