@@ -22,13 +22,20 @@
  */
 
 #include "crypto.h"
+
 #if APU_HAVE_CRYPTO
 #include <apr_random.h>
+#include <apr_crypto.h>
 
 #include "svn_types.h"
 
 #include "svn_private_config.h"
 #include "private/svn_atomic.h"
+
+
+struct svn_crypto__ctx_t {
+  apr_crypto_t *crypto;
+};
 
 
 static volatile svn_atomic_t crypto_init_state = 0;
@@ -75,6 +82,7 @@ err_from_apu_err(apr_status_t apr_err,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 get_random_bytes(void **rand_bytes,
                  apr_size_t rand_len,
@@ -92,15 +100,18 @@ get_random_bytes(void **rand_bytes,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
-svn_crypto__context_create(apr_crypto_t **crypto_ctx,
-                           apr_pool_t *pool)
+svn_crypto__context_create(svn_crypto__ctx_t **ctx,
+                           apr_pool_t *result_pool)
 {
   apr_status_t apr_err;
   const apu_err_t *apu_err = NULL;
   const apr_crypto_driver_t *driver;
 
-  CRYPTO_INIT(pool);
+  CRYPTO_INIT(result_pool);
+
+  *ctx = apr_palloc(result_pool, sizeof(**ctx));
 
   /* ### TODO: So much for abstraction.  APR's wrappings around NSS
          and OpenSSL aren't quite as opaque as I'd hoped, requiring us
@@ -111,19 +122,21 @@ svn_crypto__context_create(apr_crypto_t **crypto_ctx,
          driver at apr_crypto_make() time.  Or maybe I'm just
          overlooking something...   -- cmpilato  */
 
-  apr_err = apr_crypto_get_driver(&driver, "openssl", NULL, &apu_err, pool);
-  if ((apr_err != APR_SUCCESS) || (! driver))
-    return svn_error_createf(apr_err,
-                             err_from_apu_err(apr_err, apu_err),
-                             _("OpenSSL crypto driver error"));
+  apr_err = apr_crypto_get_driver(&driver, "openssl", NULL, &apu_err,
+                                  result_pool);
+  if (apr_err != APR_SUCCESS || driver == NULL)
+    return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
+                            _("OpenSSL crypto driver error"));
 
-  apr_err = apr_crypto_make(crypto_ctx, driver, "engine=openssl", pool);
-  if ((apr_err != APR_SUCCESS) || (! *crypto_ctx))
+  apr_err = apr_crypto_make(&(*ctx)->crypto, driver, "engine=openssl",
+                            result_pool);
+  if (apr_err != APR_SUCCESS || (*ctx)->crypto == NULL)
     return svn_error_create(apr_err, NULL,
                             _("Error creating OpenSSL crypto context"));
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_crypto__encrypt_cstring(unsigned char **ciphertext,
@@ -132,7 +145,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                             apr_size_t *iv_len,
                             const unsigned char **salt,
                             apr_size_t *salt_len,
-                            apr_crypto_t *crypto_ctx,
+                            svn_crypto__ctx_t *ctx,
                             const char *plaintext,
                             const char *secret,
                             apr_pool_t *result_pool,
@@ -146,7 +159,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
   apr_crypto_block_t *block_ctx = NULL;
   apr_size_t block_size = 0, encrypted_len = 0;
  
-  SVN_ERR_ASSERT(crypto_ctx);
+  SVN_ERR_ASSERT(ctx != NULL);
 
   /* Generate the salt. */
   *salt_len = 8;
@@ -156,11 +169,11 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
   apr_err = apr_crypto_passphrase(&key, NULL, secret, strlen(secret),
                                   *salt, 8 /* salt_len */,
                                   APR_KEY_AES_256, APR_MODE_CBC,
-                                  1 /* doPad */, 4096, crypto_ctx,
+                                  1 /* doPad */, 4096, ctx->crypto,
                                   scratch_pool);
   if (apr_err != APR_SUCCESS)
     {
-      apr_crypto_error(&apu_err, crypto_ctx);
+      apr_crypto_error(&apu_err, ctx->crypto);
       return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
                               _("Error creating derived key"));
     }
@@ -173,7 +186,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                                           result_pool);
   if ((apr_err != APR_SUCCESS) || (! block_ctx))
     {
-      apr_crypto_error(&apu_err, crypto_ctx);
+      apr_crypto_error(&apu_err, ctx->crypto);
       return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
                               _("Error initializing block encryption"));
     }
@@ -186,7 +199,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                                      strlen(plaintext) + 1, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
-      apr_crypto_error(&apu_err, crypto_ctx);
+      apr_crypto_error(&apu_err, ctx->crypto);
       err = svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
                              _("Error encrypting block"));
       goto cleanup;
@@ -197,7 +210,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                                             &encrypted_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
-      apr_crypto_error(&apu_err, crypto_ctx);
+      apr_crypto_error(&apu_err, ctx->crypto);
       err = svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
                              _("Error finalizing block encryption"));
       goto cleanup;
@@ -208,9 +221,10 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
   return err;
 }
 
+
 svn_error_t *
 svn_crypto__decrypt_cstring(const svn_string_t **plaintext,
-                            apr_crypto_t *crypto_ctx,
+                            svn_crypto__ctx_t *ctx,
                             const unsigned char *ciphertext,
                             apr_size_t ciphertext_len,
                             const unsigned char *iv,

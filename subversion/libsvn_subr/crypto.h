@@ -28,19 +28,26 @@
 
 #if APU_HAVE_CRYPTO
 
-#include <apr_crypto.h>
-
 #include "svn_types.h"
 #include "svn_string.h"
 
-/* Set *CRYPTO_CTX to an APR-managed OpenSSL cryptography context
-   object allocated from POOL. */
-/* ### TODO: Should this be something done once at apr_crypto_init()
-   ### time, with the apr_crypto_t object stored in, perhaps,
-   ### Subversion's svn_client_ctx_t?  */
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+/* Opaque context for cryptographic operations.  */
+typedef struct svn_crypto__ctx_t svn_crypto__ctx_t;
+
+
+/* Set *CTX to new Subversion cryptographic context, based on an
+   APR-managed OpenSSL cryptography context object allocated
+   within RESULT_POOL.  */
+/* ### TODO: Should this be something done once with the resulting
+   ### svn_crypto__ctx_t object stored in svn_client_ctx_t?  */
 svn_error_t *
-svn_crypto__context_create(apr_crypto_t **crypto_ctx,
-                           apr_pool_t *pool);
+svn_crypto__context_create(svn_crypto__ctx_t **ctx,
+                           apr_pool_t *result_pool);
 
 
 svn_error_t *
@@ -50,15 +57,16 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                             apr_size_t *iv_len,
                             const unsigned char **salt,
                             apr_size_t *salt_len,
-                            apr_crypto_t *crypto_ctx,
+                            svn_crypto__ctx_t *ctx,
                             const char *plaintext,
                             const char *secret,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+
 svn_error_t *
 svn_crypto__decrypt_cstring(const svn_string_t **plaintext,
-                            apr_crypto_t *crypto_ctx,
+                            svn_crypto__ctx_t *ctx,
                             const unsigned char *ciphertext,
                             apr_size_t ciphertext_len,
                             const unsigned char *iv,
@@ -69,5 +77,10 @@ svn_crypto__decrypt_cstring(const svn_string_t **plaintext,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif  /* APU_HAVE_CRYPTO */
+
 #endif  /* SVN_CRYPTO_H */
