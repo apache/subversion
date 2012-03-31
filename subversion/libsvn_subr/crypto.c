@@ -33,6 +33,9 @@
 #include "private/svn_atomic.h"
 
 
+/* 1000 iterations is the recommended minimum, per RFC 2898, section 4.2.  */
+#define NUM_ITERATIONS 1000
+
 struct svn_crypto__ctx_t {
   apr_crypto_t *crypto;
 
@@ -113,20 +116,22 @@ crypto_error_create(svn_crypto__ctx_t *ctx,
 
 
 static svn_error_t *
-get_random_bytes(void **rand_bytes,
+get_random_bytes(const unsigned char **rand_bytes,
                  svn_crypto__ctx_t *ctx,
                  apr_size_t rand_len,
                  apr_pool_t *result_pool)
 {
   apr_status_t apr_err;
+  unsigned char *bytes;
 
   /* ### need to check APR_HAS_RANDOM  */
 
-  *rand_bytes = apr_palloc(result_pool, rand_len);
-  apr_err = apr_generate_random_bytes(*rand_bytes, rand_len);
+  bytes = apr_palloc(result_pool, rand_len);
+  apr_err = apr_generate_random_bytes(bytes, rand_len);
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err, _("Error obtaining random data"));
 
+  *rand_bytes = bytes;
   return SVN_NO_ERROR;
 }
 
@@ -179,76 +184,127 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
 }
 
 
+static const svn_string_t *
+wrap_as_string(const unsigned char *data,
+               apr_size_t len,
+               apr_pool_t *result_pool)
+{
+  svn_string_t *s = apr_palloc(result_pool, sizeof(*s));
+
+  s->data = (const char *)data;  /* better already be in RESULT_POOL  */
+  s->len = len;
+  return s;
+}
+
+
 svn_error_t *
-svn_crypto__encrypt_cstring(unsigned char **ciphertext,
-                            apr_size_t *ciphertext_len,
-                            const unsigned char **iv,
-                            apr_size_t *iv_len,
-                            const unsigned char **salt,
-                            apr_size_t *salt_len,
-                            svn_crypto__ctx_t *ctx,
-                            const char *plaintext,
-                            const char *secret,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_crypto__encrypt_password(const svn_string_t **ciphertext,
+                             const svn_string_t **iv,
+                             const svn_string_t **salt,
+                             svn_crypto__ctx_t *ctx,
+                             const char *password,
+                             const svn_string_t *master,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+  const unsigned char *salt_vector;
+  const unsigned char *iv_vector;
+  apr_size_t iv_len;
   apr_crypto_key_t *key = NULL;
   apr_status_t apr_err;
   const unsigned char *prefix;
   apr_crypto_block_t *block_ctx = NULL;
-  apr_size_t block_size = 0, encrypted_len = 0;
- 
+  apr_size_t block_size;
+  svn_string_t *assembled;
+  apr_size_t result_len;
+  unsigned char *result;
+  apr_size_t ignored_result_len = 0;
+
   SVN_ERR_ASSERT(ctx != NULL);
 
   /* Generate the salt. */
-  *salt_len = 8;
-  SVN_ERR(get_random_bytes((void **)salt, ctx, *salt_len, result_pool));
+#define SALT_LEN 8
+  SVN_ERR(get_random_bytes(&salt_vector, ctx, SALT_LEN, result_pool));
 
   /* Initialize the passphrase.  */
-  apr_err = apr_crypto_passphrase(&key, NULL, secret, strlen(secret),
-                                  *salt, 8 /* salt_len */,
+  apr_err = apr_crypto_passphrase(&key, &iv_len,
+                                  master->data, master->len,
+                                  salt_vector, SALT_LEN,
                                   APR_KEY_AES_256, APR_MODE_CBC,
-                                  1 /* doPad */, 4096, ctx->crypto,
+                                  FALSE /* doPad */, NUM_ITERATIONS,
+                                  ctx->crypto,
                                   scratch_pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_trace(crypto_error_create(
                              ctx, apr_err,
                              _("Error creating derived key")));
 
+  /* Generate the proper length IV.  */
+  SVN_ERR(get_random_bytes(&iv_vector, ctx, iv_len, result_pool));
+
   /* Generate a 4-byte prefix. */
-  SVN_ERR(get_random_bytes((void **)&prefix, ctx, 4, scratch_pool));
+#define PREFIX_LEN 4
+  SVN_ERR(get_random_bytes(&prefix, ctx, PREFIX_LEN, scratch_pool));
 
   /* Initialize block encryption. */
-  apr_err = apr_crypto_block_encrypt_init(&block_ctx, iv, key, &block_size,
-                                          result_pool);
+  apr_err = apr_crypto_block_encrypt_init(&block_ctx, &iv_vector, key,
+                                          &block_size, scratch_pool);
   if ((apr_err != APR_SUCCESS) || (! block_ctx))
     return svn_error_trace(crypto_error_create(
                              ctx, apr_err,
                              _("Error initializing block encryption")));
 
-  /* ### FIXME:  We need to actually use the prefix! */
+  /* ### We need to actually use the prefix, and add appropriate pad  */
+  assembled = svn_string_create(password, scratch_pool);
 
-  /* Encrypt the block. */
-  apr_err = apr_crypto_block_encrypt(ciphertext, ciphertext_len,
-                                     (unsigned char *)plaintext,
-                                     strlen(plaintext) + 1, block_ctx);
+  /* Get the length that we need to allocate.  */
+  apr_err = apr_crypto_block_encrypt(NULL, &result_len,
+                                     (unsigned char *)assembled->data,
+                                     assembled->len,
+                                     block_ctx);
   if (apr_err != APR_SUCCESS)
     {
-      err = crypto_error_create(ctx, apr_err, _("Error encrypting block"));
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error fetching result length"));
       goto cleanup;
     }
 
-  /* Finalize the block encryption. */
-  apr_err = apr_crypto_block_encrypt_finish(*ciphertext + *ciphertext_len,
-                                            &encrypted_len, block_ctx);
+  /* The result length should precisely match our padded input. If not,
+     then something weird is going on with the crypto libraries.  */
+  SVN_ERR_ASSERT(result_len == assembled->len);
+
+  /* Allocate our result buffer.  */
+  result = apr_palloc(result_pool, result_len);
+
+  /* Encrypt the block. */
+  apr_err = apr_crypto_block_encrypt(&result, &result_len,
+                                     (unsigned char *)assembled->data,
+                                     assembled->len,
+                                     block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error during block encryption"));
+      goto cleanup;
+    }
+
+  /* Finalize the block encryption. Since we padded everything, this should
+     not produce any more encrypted output.  */
+  apr_err = apr_crypto_block_encrypt_finish(NULL,
+                                            &ignored_result_len,
+                                            block_ctx);
   if (apr_err != APR_SUCCESS)
     {
       err = crypto_error_create(ctx, apr_err,
                                 _("Error finalizing block encryption"));
       goto cleanup;
     }
-  
+
+  *ciphertext = wrap_as_string(result, result_len, result_pool);
+  *iv = wrap_as_string(iv_vector, iv_len, result_pool);
+  *salt = wrap_as_string(salt_vector, SALT_LEN, result_pool);
+
  cleanup:
   apr_crypto_block_cleanup(block_ctx);
   return err;
@@ -256,17 +312,14 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
 
 
 svn_error_t *
-svn_crypto__decrypt_cstring(const svn_string_t **plaintext,
-                            svn_crypto__ctx_t *ctx,
-                            const unsigned char *ciphertext,
-                            apr_size_t ciphertext_len,
-                            const unsigned char *iv,
-                            apr_size_t iv_len,
-                            const unsigned char *salt,
-                            apr_size_t salt_len,
-                            const svn_string_t *secret,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_crypto__decrypt_password(const char **plaintext,
+                             svn_crypto__ctx_t *ctx,
+                             const svn_string_t *ciphertext,
+                             const svn_string_t *iv,
+                             const svn_string_t *salt,
+                             const svn_string_t *master,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
 }

@@ -50,32 +50,40 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
                            apr_pool_t *result_pool);
 
 
+/* Using a PBKDF2 derivative key based on MASTER, encrypt PLAINTEXT.
+   The salt used for PBKDF2 is returned in SALT, and the IV used for
+   the (AES-256/CBC) encryption is returned in IV. The resulting
+   encrypted data is returned in CIPHERTEXT.
+
+   Note that MASTER may be the plaintext obtained from the user or
+   some other OS-provided cryptographic store, or it can be a derivation
+   such as SHA1(plaintext). As long as the same octets are passed to
+   the decryption function, everything works just fine. (the SHA1
+   approach is suggested, to avoid keeping the plaintext master in
+   the process' memory space)  */
 svn_error_t *
-svn_crypto__encrypt_cstring(unsigned char **ciphertext,
-                            apr_size_t *ciphertext_len,
-                            const unsigned char **iv,
-                            apr_size_t *iv_len,
-                            const unsigned char **salt,
-                            apr_size_t *salt_len,
-                            svn_crypto__ctx_t *ctx,
-                            const char *plaintext,
-                            const char *secret,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_crypto__encrypt_password(const svn_string_t **ciphertext,
+                             const svn_string_t **iv,
+                             const svn_string_t **salt,
+                             svn_crypto__ctx_t *ctx,
+                             const char *plaintext,
+                             const svn_string_t *master,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
+/* Given the CIPHERTEXT which was encrypted using (AES-256/CBC) with
+   initialization vector given by IV, and a key derived using PBKDF2
+   with SALT and MASTER... return the decrypted password in PLAINTEXT.  */
 svn_error_t *
-svn_crypto__decrypt_cstring(const svn_string_t **plaintext,
-                            svn_crypto__ctx_t *ctx,
-                            const unsigned char *ciphertext,
-                            apr_size_t ciphertext_len,
-                            const unsigned char *iv,
-                            apr_size_t iv_len,
-                            const unsigned char *salt,
-                            apr_size_t salt_len,
-                            const svn_string_t *secret,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_crypto__decrypt_password(const char **plaintext,
+                             svn_crypto__ctx_t *ctx,
+                             const svn_string_t *ciphertext,
+                             const svn_string_t *iv,
+                             const svn_string_t *salt,
+                             const svn_string_t *master,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
