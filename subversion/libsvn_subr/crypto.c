@@ -91,6 +91,28 @@ err_from_apu_err(apr_status_t apr_err,
 
 
 static svn_error_t *
+crypto_error_create(svn_crypto__ctx_t *ctx,
+                    apr_status_t apr_err,
+                    const char *msg)
+{
+  const apu_err_t *apu_err;
+  apr_status_t rv = apr_crypto_error(&apu_err, ctx->crypto);
+  svn_error_t *child;
+
+  /* Ugh. The APIs are a bit slippery, so be wary.  */
+  if (apr_err == APR_SUCCESS)
+    apr_err = APR_EGENERAL;
+
+  if (rv == APR_SUCCESS)
+    child = err_from_apu_err(apr_err, apu_err);
+  else
+    child = svn_error_wrap_apr(rv, _("Fetching error from APR"));
+
+  return svn_error_create(apr_err, child, msg);
+}
+
+
+static svn_error_t *
 get_random_bytes(void **rand_bytes,
                  svn_crypto__ctx_t *ctx,
                  apr_size_t rand_len,
@@ -137,9 +159,15 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
 
   apr_err = apr_crypto_get_driver(&driver, "openssl", NULL, &apu_err,
                                   result_pool);
-  if (apr_err != APR_SUCCESS || driver == NULL)
+  /* Potential bugs in get_driver() imply we might get APR_SUCCESS and NULL.
+     Sigh. Just be a little more careful in error generation here.  */
+  if (apr_err != APR_SUCCESS)
     return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
                             _("OpenSSL crypto driver error"));
+  if (driver == NULL)
+    return svn_error_create(APR_EGENERAL,
+                            err_from_apu_err(APR_EGENERAL, apu_err),
+                            _("Bad return value while loading"));
 
   apr_err = apr_crypto_make(&(*ctx)->crypto, driver, "engine=openssl",
                             result_pool);
@@ -166,7 +194,6 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
 {
   svn_error_t *err = SVN_NO_ERROR;
   apr_crypto_key_t *key = NULL;
-  const apu_err_t *apu_err = NULL;
   apr_status_t apr_err;
   const unsigned char *prefix;
   apr_crypto_block_t *block_ctx = NULL;
@@ -185,11 +212,9 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                                   1 /* doPad */, 4096, ctx->crypto,
                                   scratch_pool);
   if (apr_err != APR_SUCCESS)
-    {
-      apr_crypto_error(&apu_err, ctx->crypto);
-      return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
-                              _("Error creating derived key"));
-    }
+    return svn_error_trace(crypto_error_create(
+                             ctx, apr_err,
+                             _("Error creating derived key")));
 
   /* Generate a 4-byte prefix. */
   SVN_ERR(get_random_bytes((void **)&prefix, ctx, 4, scratch_pool));
@@ -198,11 +223,9 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
   apr_err = apr_crypto_block_encrypt_init(&block_ctx, iv, key, &block_size,
                                           result_pool);
   if ((apr_err != APR_SUCCESS) || (! block_ctx))
-    {
-      apr_crypto_error(&apu_err, ctx->crypto);
-      return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
-                              _("Error initializing block encryption"));
-    }
+    return svn_error_trace(crypto_error_create(
+                             ctx, apr_err,
+                             _("Error initializing block encryption")));
 
   /* ### FIXME:  We need to actually use the prefix! */
 
@@ -212,9 +235,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                                      strlen(plaintext) + 1, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
-      apr_crypto_error(&apu_err, ctx->crypto);
-      err = svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
-                             _("Error encrypting block"));
+      err = crypto_error_create(ctx, apr_err, _("Error encrypting block"));
       goto cleanup;
     }
 
@@ -223,9 +244,8 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
                                             &encrypted_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
-      apr_crypto_error(&apu_err, ctx->crypto);
-      err = svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
-                             _("Error finalizing block encryption"));
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error finalizing block encryption"));
       goto cleanup;
     }
   
