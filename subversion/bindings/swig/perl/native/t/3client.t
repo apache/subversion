@@ -339,7 +339,7 @@ is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
                                               ok($date,'date is defined');
                                               if ($^O eq 'MSWin32') {
                                                 #### Why two \r-s?
-                                                is($line,'foobar\r\r',
+                                                is($line,"foobar\r\r",
                                                    'line is expected value');
                                               } else {
                                                 is($line,'foobar',
