@@ -35,6 +35,13 @@
 
 struct svn_crypto__ctx_t {
   apr_crypto_t *crypto;
+
+#if 0
+  /* ### For now, we will use apr_generate_random_bytes(). If we need more
+     ### strength, then we can use that function to generate entropy for
+     ### seeding apr_random_t. See httpd/server/core.c:ap_init_rng()  */
+  apr_random_t *rand;
+#endif
 };
 
 
@@ -85,18 +92,19 @@ err_from_apu_err(apr_status_t apr_err,
 
 static svn_error_t *
 get_random_bytes(void **rand_bytes,
+                 svn_crypto__ctx_t *ctx,
                  apr_size_t rand_len,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
-  apr_random_t *apr_rand;
   apr_status_t apr_err;
 
-  *rand_bytes = apr_palloc(pool, rand_len);
-  apr_rand = apr_random_standard_new(pool);
-  apr_err = apr_random_secure_bytes(apr_rand, *rand_bytes, rand_len);
+  /* ### need to check APR_HAS_RANDOM  */
+
+  *rand_bytes = apr_palloc(result_pool, rand_len);
+  apr_err = apr_generate_random_bytes(*rand_bytes, rand_len);
   if (apr_err != APR_SUCCESS)
-    return svn_error_create(apr_err, NULL, _("Error obtaining random data"));
-  
+    return svn_error_wrap_apr(apr_err, _("Error obtaining random data"));
+
   return SVN_NO_ERROR;
 }
 
@@ -112,6 +120,11 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
   CRYPTO_INIT(result_pool);
 
   *ctx = apr_palloc(result_pool, sizeof(**ctx));
+
+#if 0
+  /* ### Seeding with entropy is needed. See svn_crypto__ctx_t comments.  */
+  ctx->rand = apr_random_standard_new(result_pool);
+#endif
 
   /* ### TODO: So much for abstraction.  APR's wrappings around NSS
          and OpenSSL aren't quite as opaque as I'd hoped, requiring us
@@ -163,7 +176,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
 
   /* Generate the salt. */
   *salt_len = 8;
-  SVN_ERR(get_random_bytes((void **)salt, *salt_len, result_pool));
+  SVN_ERR(get_random_bytes((void **)salt, ctx, *salt_len, result_pool));
 
   /* Initialize the passphrase.  */
   apr_err = apr_crypto_passphrase(&key, NULL, secret, strlen(secret),
@@ -179,7 +192,7 @@ svn_crypto__encrypt_cstring(unsigned char **ciphertext,
     }
 
   /* Generate a 4-byte prefix. */
-  SVN_ERR(get_random_bytes((void **)&prefix, 4, scratch_pool));
+  SVN_ERR(get_random_bytes((void **)&prefix, ctx, 4, scratch_pool));
 
   /* Initialize block encryption. */
   apr_err = apr_crypto_block_encrypt_init(&block_ctx, iv, key, &block_size,
