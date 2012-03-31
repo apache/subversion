@@ -36,7 +36,7 @@
 #include <apr_signal.h>
 #include <apu.h>  /* for APU_HAVE_CRYPTO */
 
-#ifdef APU_HAVE_CRYPTO
+#if APU_HAVE_CRYPTO
 #include <apr_crypto.h>
 #endif
 
@@ -1541,11 +1541,19 @@ svn_cl__check_cancel(void *baton)
 }
 
 /* Initialize the APR cryptography subsystem (if available), using
-   POOL for the registration of cleanups, shutdowns, etc. */
+   POOL for the registration of cleanups, shutdowns, etc. 
+   
+   ### Maybe this should move to one of our library initialization routines
+   ### or an atomic initializer from the new api, in order not to break
+   ### backwards compatibility with older api users.
+   
+   ### If not this should be duplicated in svnsync, svnmucc, javahl, the swig
+   ### bindings, etc. etc. when we switch to the master password.
+   */
 static svn_error_t *
 crypto_init(apr_pool_t *pool)
 {
-#ifdef APU_HAVE_CRYPTO
+#if APU_HAVE_CRYPTO
   apr_status_t apr_err = apr_crypto_init(pool);
   if (apr_err)
     return svn_error_wrap_apr(apr_err,
