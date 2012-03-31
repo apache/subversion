@@ -21,10 +21,8 @@
  * ====================================================================
  */
 
-#ifdef APU_HAVE_CRYPTO
-
 #include "crypto.h"
-
+#if APU_HAVE_CRYPTO
 #include <apr_random.h>
 
 

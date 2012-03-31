@@ -26,7 +26,7 @@
 
 #include <apu.h>  /* for APU_HAVE_CRYPTO */
 
-#ifdef APU_HAVE_CRYPTO
+#if APU_HAVE_CRYPTO
 
 #include <apr_crypto.h>
 
