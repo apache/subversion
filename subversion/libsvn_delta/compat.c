@@ -31,6 +31,8 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
+#include "svn_private_config.h"
+
 
 struct file_rev_handler_wrapper_baton {
   void *baton;
