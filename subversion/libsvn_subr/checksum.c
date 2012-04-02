@@ -278,7 +278,7 @@ svn_checksum(svn_checksum_t **checksum,
 
       case svn_checksum_sha1:
         apr_sha1_init(&sha1_ctx);
-        apr_sha1_update(&sha1_ctx, data, len);
+        apr_sha1_update(&sha1_ctx, data, (unsigned int)len);
         apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
         break;
 
@@ -359,7 +359,7 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_update(ctx->apr_ctx, data, len);
+        apr_sha1_update(ctx->apr_ctx, data, (unsigned int)len);
         break;
 
       default:
