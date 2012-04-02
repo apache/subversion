@@ -23,23 +23,25 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <svn_pools.h>
 
 #include "../svn_test.h"
 #include "../../libsvn_subr/crypto.h"
 
 #if APU_HAVE_CRYPTO
 
+/* Helper function:  encrypt PASSWORD within CTX using MASTER, then
+   decrypt those results and ensure the original PASSWORD comes out
+   the other end. */
 static svn_error_t *
-test_encrypt_decrypt_password(apr_pool_t *pool)
+encrypt_decrypt(svn_crypto__ctx_t *ctx,
+                const svn_string_t *master,
+                const char *password,
+                apr_pool_t *pool)
 {
-  const svn_string_t *ciphertext, *iv, *salt, *master;
-  const char *password, *password_again;
-  svn_crypto__ctx_t *ctx;
+  const svn_string_t *ciphertext, *iv, *salt;
+  const char *password_again;
 
-  master = svn_string_create("Pastor Massword", pool);
-  password = "3ncryptm3!";
-
-  SVN_ERR(svn_crypto__context_create(&ctx, pool));
   SVN_ERR(svn_crypto__encrypt_password(&ciphertext, &iv, &salt, ctx,
                                        password, master, pool, pool));
   if (! ciphertext)
@@ -67,6 +69,35 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
                              "   orig (%s)\n"
                              "    new (%s)\n",
                              password, password_again);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_encrypt_decrypt_password(apr_pool_t *pool)
+{
+  svn_crypto__ctx_t *ctx;
+  const svn_string_t *master = svn_string_create("Pastor Massword", pool);
+  int i;
+  apr_pool_t *iterpool;
+  const char *passwords[] = {
+    "3ncryptm!3", /* fits in one block */
+    "this is a particularly long password", /* spans blocks */
+    "mypassphrase", /* with 4-byte padding, should align on block boundary */
+  };
+
+
+  SVN_ERR(svn_crypto__context_create(&ctx, pool));
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < (sizeof(passwords) / sizeof(const char *)); i++)
+    {
+      svn_pool_clear(iterpool);
+      SVN_ERR(encrypt_decrypt(ctx, master, passwords[i], iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -81,7 +112,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
 #if APU_HAVE_CRYPTO
-    SVN_TEST_XFAIL2(test_encrypt_decrypt_password,
+    SVN_TEST_PASS2(test_encrypt_decrypt_password,
                    "basic password encryption/decryption test"),
 #endif  /* APU_HAVE_CRYPTO */
     SVN_TEST_NULL

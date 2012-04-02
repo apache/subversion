@@ -238,7 +238,8 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
   const unsigned char *prefix;
   apr_crypto_block_t *block_ctx = NULL;
   apr_size_t block_size;
-  svn_string_t *assembled;
+  unsigned char *assembled;
+  apr_size_t password_len, assembled_len = 0;
   apr_size_t result_len;
   unsigned char *result;
   apr_size_t ignored_result_len = 0;
@@ -265,10 +266,6 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
   /* Generate the proper length IV.  */
   SVN_ERR(get_random_bytes(&iv_vector, ctx, iv_len, result_pool));
 
-  /* Generate a 4-byte prefix. */
-#define PREFIX_LEN 4
-  SVN_ERR(get_random_bytes(&prefix, ctx, PREFIX_LEN, scratch_pool));
-
   /* Initialize block encryption. */
   apr_err = apr_crypto_block_encrypt_init(&block_ctx, &iv_vector, key,
                                           &block_size, scratch_pool);
@@ -277,14 +274,40 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
                              ctx, apr_err,
                              _("Error initializing block encryption")));
 
-  /* ### We need to actually use the prefix, and add appropriate pad  */
-  assembled = svn_string_create(password, scratch_pool);
+  /* Generate a 4-byte prefix. */
+#define PREFIX_LEN 4
+  SVN_ERR(get_random_bytes(&prefix, ctx, PREFIX_LEN, scratch_pool));
 
+  /* Combine our prefix, original password, and appropriate padding.
+     We won't bother padding if the prefix and password combined
+     perfectly align on the block boundary.  If they don't,
+     however, we'll drop a NUL byte after the password and pad with
+     random stuff after that to the block boundary. */
+  password_len = strlen(password);
+  assembled_len = PREFIX_LEN + password_len;
+  if ((assembled_len % block_size) == 0)
+    {
+      assembled = apr_palloc(scratch_pool, assembled_len);
+      memcpy(assembled, prefix, PREFIX_LEN);
+      memcpy(assembled + PREFIX_LEN, password, password_len);
+    }
+  else
+    {
+      const unsigned char *padding;
+      apr_size_t pad_len = block_size - (assembled_len % block_size) - 1;
+
+      SVN_ERR(get_random_bytes(&padding, ctx, pad_len, scratch_pool));
+      assembled_len = assembled_len + 1 + pad_len;
+      assembled = apr_palloc(scratch_pool, assembled_len);
+      memcpy(assembled, prefix, PREFIX_LEN);
+      memcpy(assembled + PREFIX_LEN, password, password_len);
+      *(assembled + PREFIX_LEN + password_len) = '\0';
+      memcpy(assembled + PREFIX_LEN + password_len + 1, padding, pad_len);
+    }      
+    
   /* Get the length that we need to allocate.  */
-  apr_err = apr_crypto_block_encrypt(NULL, &result_len,
-                                     (unsigned char *)assembled->data,
-                                     assembled->len,
-                                     block_ctx);
+  apr_err = apr_crypto_block_encrypt(NULL, &result_len, assembled, 
+                                     assembled_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
       err = crypto_error_create(ctx, apr_err,
@@ -292,18 +315,12 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
       goto cleanup;
     }
 
-  /* The result length should precisely match our padded input. If not,
-     then something weird is going on with the crypto libraries.  */
-  SVN_ERR_ASSERT(result_len == assembled->len);
-
   /* Allocate our result buffer.  */
   result = apr_palloc(result_pool, result_len);
 
   /* Encrypt the block. */
-  apr_err = apr_crypto_block_encrypt(&result, &result_len,
-                                     (unsigned char *)assembled->data,
-                                     assembled->len,
-                                     block_ctx);
+  apr_err = apr_crypto_block_encrypt(&result, &result_len, assembled,
+                                     assembled_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
       err = crypto_error_create(ctx, apr_err,
@@ -343,7 +360,71 @@ svn_crypto__decrypt_password(const char **plaintext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  svn_error_t *err;
+  apr_status_t apr_err;
+  apr_crypto_block_t *block_ctx = NULL;
+  apr_size_t block_size, iv_len;
+  apr_crypto_key_t *key = NULL;
+  unsigned char *result;
+  apr_size_t result_len = 0, final_len = 0;
+
+  /* Initialize the passphrase.  */
+  apr_err = apr_crypto_passphrase(&key, &iv_len,
+                                  master->data, master->len,
+                                  (unsigned char *)salt->data, salt->len,
+                                  APR_KEY_AES_256, APR_MODE_CBC,
+                                  FALSE /* doPad */, NUM_ITERATIONS,
+                                  ctx->crypto, scratch_pool);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_trace(crypto_error_create(
+                               ctx, apr_err, _("Error creating derived key")));
+  
+  apr_err = apr_crypto_block_decrypt_init(&block_ctx, &block_size,
+                                          (unsigned char *)iv->data,
+                                          key, scratch_pool);
+  if ((apr_err != APR_SUCCESS) || (! block_ctx))
+    return svn_error_trace(crypto_error_create(
+                             ctx, apr_err,
+                             _("Error initializing block decryption")));
+
+  apr_err = apr_crypto_block_decrypt(NULL, &result_len,
+                                     (unsigned char *)ciphertext->data,
+                                     ciphertext->len, block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error fetching result length"));
+      goto cleanup;
+    }
+
+  result = apr_palloc(scratch_pool, result_len);
+  apr_err = apr_crypto_block_decrypt(&result, &result_len,
+                                     (unsigned char *)ciphertext->data,
+                                     ciphertext->len, block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error during block decryption"));
+      goto cleanup;
+    }
+
+  apr_err = apr_crypto_block_decrypt_finish(result + result_len, &final_len,
+                                            block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error finalizing block decryption"));
+      goto cleanup;
+    }
+
+  /* Copy the non-random bits of the resulting plaintext, skipping the
+     prefix and ignoring any trailing padding. */
+  *plaintext = apr_pstrndup(result_pool, (const char *)(result + PREFIX_LEN),
+                            result_len + final_len - PREFIX_LEN);
+
+ cleanup:
+  apr_crypto_block_cleanup(block_ctx);
+  return err;
 }
 
 #endif  /* APU_HAVE_CRYPTO */
