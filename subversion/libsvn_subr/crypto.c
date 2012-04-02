@@ -36,10 +36,19 @@
 /* 1000 iterations is the recommended minimum, per RFC 2898, section 4.2.  */
 #define NUM_ITERATIONS 1000
 
-struct svn_crypto__ctx_t {
-  apr_crypto_t *crypto;
 
-#if 0
+/* Set this define if we need stronger randomness.  (Or if that
+   decision is permanent, just remove this #define and enable the code
+   below which uses it to conditionalize functionality.)  */
+#define NEED_RANDOMER_RANDOMNESS 0
+
+
+/* A structure for containing Subversion's cryptography-related bits
+   (so we can avoid passing around APR-isms outside this module). */
+struct svn_crypto__ctx_t {
+  apr_crypto_t *crypto;  /* APR cryptography context. */
+
+#if NEED_RANDOMER_RANDOMNESS
   /* ### For now, we will use apr_generate_random_bytes(). If we need more
      ### strength, then we can use that function to generate entropy for
      ### seeding apr_random_t. See httpd/server/core.c:ap_init_rng()  */
@@ -48,11 +57,18 @@ struct svn_crypto__ctx_t {
 };
 
 
+
+/*** Initialization ***/
+
+
+/* One-time initialization of the cryptography subsystem. */
 static volatile svn_atomic_t crypto_init_state = 0;
+
 
 #define CRYPTO_INIT(scratch_pool) \
   SVN_ERR(svn_atomic__init_once(&crypto_init_state, \
                                 crypto_init, NULL, (scratch_pool)))
+
 
 /* Initialize the APR cryptography subsystem (if available), using
    ANY_POOL's ancestor root pool for the registration of cleanups,
@@ -74,6 +90,10 @@ crypto_init(void *baton, apr_pool_t *any_pool)
 }
 
 
+
+/*** Helper Functions ***/
+
+
 /* If APU_ERR is non-NULL, create and return a Subversion error using
    APR_ERR and APU_ERR. */
 static svn_error_t *
@@ -90,6 +110,8 @@ err_from_apu_err(apr_status_t apr_err,
 }
 
 
+/* Generate a Subversion error which describes the state reflected by
+   APR_ERR and any crypto errors registered with CTX. */
 static svn_error_t *
 crypto_error_create(svn_crypto__ctx_t *ctx,
                     apr_status_t apr_err,
@@ -112,6 +134,8 @@ crypto_error_create(svn_crypto__ctx_t *ctx,
 }
 
 
+/* Set RAND_BYTES to a block of bytes containing random data RAND_LEN
+   long and allocated from RESULT_POOL. */
 static svn_error_t *
 get_random_bytes(const unsigned char **rand_bytes,
                  svn_crypto__ctx_t *ctx,
@@ -136,6 +160,8 @@ get_random_bytes(const unsigned char **rand_bytes,
 }
 
 
+/* Set CTX to a Subversion cryptography context allocated from
+   RESULT_POOL.  */
 svn_error_t *
 svn_crypto__context_create(svn_crypto__ctx_t **ctx,
                            apr_pool_t *result_pool)
@@ -148,19 +174,10 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
 
   *ctx = apr_palloc(result_pool, sizeof(**ctx));
 
-#if 0
+#if NEED_RANDOMER_RANDOMNESS
   /* ### Seeding with entropy is needed. See svn_crypto__ctx_t comments.  */
   ctx->rand = apr_random_standard_new(result_pool);
 #endif
-
-  /* ### TODO: So much for abstraction.  APR's wrappings around NSS
-         and OpenSSL aren't quite as opaque as I'd hoped, requiring us
-         to specify a driver type and then params to the driver.  We
-         *could* use APU_CRYPTO_RECOMMENDED_DRIVER for the driver bit,
-         but we'd still have to then dynamically ask APR which driver
-         it used and then figure out the parameters to send to that
-         driver at apr_crypto_make() time.  Or maybe I'm just
-         overlooking something...   -- cmpilato  */
 
   apr_err = apr_crypto_get_driver(&driver, "openssl", NULL, &apu_err,
                                   result_pool);
@@ -183,6 +200,12 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
 }
 
 
+/* Return an svn_string_t allocated from RESULT_POOL, with its .data
+   and .len members set to DATA and LEN, respective.
+
+   WARNING: No lifetime management of DATA is offered here, so you
+   probably want to ensure that that information is allocated in a
+   sufficiently long-lived pool (such as, for example, RESULT_POOL). */
 static const svn_string_t *
 wrap_as_string(const unsigned char *data,
                apr_size_t len,
