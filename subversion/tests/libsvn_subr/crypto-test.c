@@ -27,7 +27,7 @@
 #include "../svn_test.h"
 #include "../../libsvn_subr/crypto.h"
 
-#ifdef APU_HAVE_CRYPTO
+#if APU_HAVE_CRYPTO
 
 static svn_error_t *
 test_encrypt_decrypt_password(apr_pool_t *pool)
