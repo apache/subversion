@@ -1525,8 +1525,6 @@ alter_symlink_cb(void *baton,
                  const char *target,
                  apr_pool_t *scratch_pool)
 {
-  struct editor_baton *eb = baton;
-
   /* ### should we verify the kind is truly a symlink?  */
 
   /* ### do something  */
@@ -1586,8 +1584,6 @@ move_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
-  struct editor_baton *eb = baton;
-
   return SVN_NO_ERROR;
 }
 
@@ -1598,8 +1594,6 @@ rotate_cb(void *baton,
           const apr_array_header_t *revisions,
           apr_pool_t *scratch_pool)
 {
-  struct editor_baton *eb = baton;
-
   return SVN_NO_ERROR;
 }
 
