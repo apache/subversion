@@ -2012,9 +2012,9 @@ svn_delta_shim_callbacks_default(apr_pool_t *result_pool)
   return shim_callbacks;
 }
 
-/* Uncomment below to add editor shims throughout Subversion.  In it's
- * current state, that will likely break The World. */
-/* #define ENABLE_EDITOR_SHIMS*/
+/* To enable editor shims throughout Subversion, ENABLE_EV2_SHIMS should be
+ * defined.  This can be done manually, or by providing `--enable-ev2-shims'
+ * to `configure'.  */
 
 svn_error_t *
 svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
@@ -2025,7 +2025,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-#ifndef ENABLE_EDITOR_SHIMS
+#ifndef ENABLE_EV2_SHIMS
   /* Shims disabled, just copy the editor and baton directly. */
   *deditor_out = deditor_in;
   *dedit_baton_out = dedit_baton_in;
