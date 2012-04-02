@@ -967,8 +967,9 @@ typedef struct replay_baton_t {
 
 /* Return a replay baton allocated from POOL and populated with
    data from the provided parameters. */
-static replay_baton_t *
-make_replay_baton(svn_ra_session_t *from_session,
+static svn_error_t *
+make_replay_baton(replay_baton_t **baton_p,
+                  svn_ra_session_t *from_session,
                   svn_ra_session_t *to_session,
                   subcommand_baton_t *sb, apr_pool_t *pool)
 {
@@ -976,7 +977,9 @@ make_replay_baton(svn_ra_session_t *from_session,
   rb->from_session = from_session;
   rb->to_session = to_session;
   rb->sb = sb;
-  return rb;
+
+  *baton_p = rb;
+  return SVN_NO_ERROR;
 }
 
 /* Return TRUE iff KEY is the name of an svn:date or svn:author or any svnsync
@@ -1311,7 +1314,7 @@ do_synchronize(svn_ra_session_t *to_session,
 
   /* Ok, so there are new revisions, iterate over them copying them
      into the destination repository. */
-  rb = make_replay_baton(from_session, to_session, baton, pool);
+  SVN_ERR(make_replay_baton(&rb, from_session, to_session, baton, pool));
 
   /* For compatibility with older svnserve versions, check first if we
      support adding revprops to the commit. */
