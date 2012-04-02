@@ -10279,13 +10279,13 @@ scan_deletion_txn(void *baton,
             {
               err = get_moved_to(sd_baton, &scan, stmt, current_relpath,
                                  wcroot, local_relpath, scratch_pool);
-              SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-              if (!scan
-                  && !sd_baton->base_del_relpath && !sd_baton->work_del_relpath)
+              if (err || (!scan
+                          && !sd_baton->base_del_relpath
+                          && !sd_baton->work_del_relpath))
                 {
-                  /* We have all we need, exit early */
+                  /* We have all we need (or an error occurred) */
                   SVN_ERR(svn_sqlite__reset(stmt));
-                  return SVN_NO_ERROR;
+                  return svn_error_trace(err);
                 }
             }
 
