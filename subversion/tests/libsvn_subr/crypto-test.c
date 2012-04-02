@@ -23,7 +23,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <svn_pools.h>
+
+#include "svn_pools.h"
 
 #include "../svn_test.h"
 #include "../../libsvn_subr/crypto.h"
