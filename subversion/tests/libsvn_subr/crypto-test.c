@@ -74,10 +74,12 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
+#endif  /* APU_HAVE_CRYPTO */
 
 static svn_error_t *
 test_encrypt_decrypt_password(apr_pool_t *pool)
 {
+#if APU_HAVE_CRYPTO
   svn_crypto__ctx_t *ctx;
   const svn_string_t *master = svn_string_create("Pastor Massword", pool);
   int i;
@@ -100,11 +102,13 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+#else
+  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+#endif  /* APU_HAVE_CRYPTO */
 }
 
 
 
-#endif  /* APU_HAVE_CRYPTO */
 
 
 /* The test table.  */
@@ -112,9 +116,7 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-#if APU_HAVE_CRYPTO
     SVN_TEST_PASS2(test_encrypt_decrypt_password,
                    "basic password encryption/decryption test"),
-#endif  /* APU_HAVE_CRYPTO */
     SVN_TEST_NULL
   };
