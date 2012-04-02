@@ -360,7 +360,7 @@ svn_crypto__decrypt_password(const char **plaintext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_status_t apr_err;
   apr_crypto_block_t *block_ctx = NULL;
   apr_size_t block_size, iv_len;
