@@ -61,17 +61,14 @@ static volatile svn_atomic_t crypto_init_state = 0;
 static svn_error_t *
 crypto_init(void *baton, apr_pool_t *any_pool)
 {
-#if APU_HAVE_CRYPTO
   /* NOTE: this function will locate the topmost ancestor of ANY_POOL
      for its cleanup handlers. We don't have to worry about ANY_POOL
      being cleared.  */
   apr_status_t apr_err = apr_crypto_init(any_pool);
-
   if (apr_err)
-    return svn_error_wrap_apr(
-             apr_err,
-             _("Failed to initialize cryptography subsystem"));
-#endif /* APU_HAVE_CRYPTO  */
+    return svn_error_wrap_apr(apr_err,
+                              _("Failed to initialize cryptography "
+                                "subsystem"));
 
   return SVN_NO_ERROR;
 }
@@ -121,11 +118,10 @@ get_random_bytes(const unsigned char **rand_bytes,
                  apr_size_t rand_len,
                  apr_pool_t *result_pool)
 {
+#if APR_HAS_RANDOM
   apr_status_t apr_err;
   unsigned char *bytes;
-
-  /* ### need to check APR_HAS_RANDOM  */
-
+  
   bytes = apr_palloc(result_pool, rand_len);
   apr_err = apr_generate_random_bytes(bytes, rand_len);
   if (apr_err != APR_SUCCESS)
@@ -133,6 +129,10 @@ get_random_bytes(const unsigned char **rand_bytes,
 
   *rand_bytes = bytes;
   return SVN_NO_ERROR;
+#else
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          _("No support for random data generation found"));
+#endif
 }
 
 
@@ -174,8 +174,7 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
                             err_from_apu_err(APR_EGENERAL, apu_err),
                             _("Bad return value while loading"));
 
-  apr_err = apr_crypto_make(&(*ctx)->crypto, driver, "engine=openssl",
-                            result_pool);
+  apr_err = apr_crypto_make(&(*ctx)->crypto, driver, NULL, result_pool);
   if (apr_err != APR_SUCCESS || (*ctx)->crypto == NULL)
     return svn_error_create(apr_err, NULL,
                             _("Error creating OpenSSL crypto context"));
