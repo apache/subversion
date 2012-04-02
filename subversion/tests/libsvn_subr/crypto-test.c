@@ -30,10 +30,43 @@
 #ifdef APU_HAVE_CRYPTO
 
 static svn_error_t *
-test_encrypt_decrypt(apr_pool_t *pool)
+test_encrypt_decrypt_password(apr_pool_t *pool)
 {
-  /* ### TODO:  Anything! */
+  const svn_string_t *ciphertext, *iv, *salt, *master;
+  const char *password, *password_again;
+  svn_crypto__ctx_t *ctx;
 
+  master = svn_string_create("Pastor Massword", pool);
+  password = "3ncryptm3!";
+
+  SVN_ERR(svn_crypto__context_create(&ctx, pool));
+  SVN_ERR(svn_crypto__encrypt_password(&ciphertext, &iv, &salt, ctx,
+                                       password, master, pool, pool));
+  if (! ciphertext)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Encryption failed to return ciphertext");
+  if (! salt)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Encryption failed to return salt");
+  if (! iv)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Encryption failed to return initialization "
+                            "vector");
+
+  SVN_ERR(svn_crypto__decrypt_password(&password_again, ctx, ciphertext, iv,
+                                       salt, master, pool, pool));
+
+  if (! password_again)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Decryption failed to generate results");
+
+  if (strcmp(password, password_again) != 0)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Encrypt/decrypt cycle failed to produce "
+                             "original result\n"
+                             "   orig (%s)\n"
+                             "    new (%s)\n",
+                             password, password_again);
   return SVN_NO_ERROR;
 }
 
@@ -48,8 +81,8 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
 #ifdef APU_HAVE_CRYPTO
-    SVN_TEST_PASS2(test_encrypt_decrypt,
-                   "basic encryption/decryption test"),
+    SVN_TEST_XFAIL2(test_encrypt_decrypt_password,
+                   "basic password encryption/decryption test"),
 #endif  /* APU_HAVE_CRYPTO */
     SVN_TEST_NULL
   };
