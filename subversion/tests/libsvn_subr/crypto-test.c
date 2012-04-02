@@ -80,7 +80,7 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-#ifdef APU_HAVE_CRYPTO
+#if I_HAVE_TO_CHANGE_THIS_STINKING_THING_ONE_MORE_TIME...
     SVN_TEST_XFAIL2(test_encrypt_decrypt_password,
                    "basic password encryption/decryption test"),
 #endif  /* APU_HAVE_CRYPTO */
