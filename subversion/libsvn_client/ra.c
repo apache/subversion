@@ -427,8 +427,8 @@ resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
                                       ra_session, path_or_url, &peg_rev,
                                       &start_rev, NULL, ctx, pool));
 
-  *resolved_loc_p = svn_client__pathrev_create_with_session(ra_session,
-                                                            rev, url, pool);
+  SVN_ERR(svn_client__pathrev_create_with_session(resolved_loc_p,
+                                                  ra_session, rev, url, pool));
   return SVN_NO_ERROR;
 }
 
