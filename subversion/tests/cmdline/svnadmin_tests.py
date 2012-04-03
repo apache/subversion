@@ -29,6 +29,7 @@ import os
 import re
 import shutil
 import sys
+import threading
 
 # Our testing module
 import svntest
@@ -693,7 +694,8 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Found malformed header '[^']*' in revision file")
+    expected_stderr=".*Found malformed header '[^']*' in revision file"
+                    "|.*Missing id field in node-rev.*")
 
 #----------------------------------------------------------------------
 
@@ -1780,6 +1782,47 @@ def locking(sbox):
                                           iota_token)
 
 
+@SkipUnless(svntest.main.is_threaded_python)
+@Issue(4129)
+def mergeinfo_race(sbox):
+  "concurrent mergeinfo commits invalidate pred-count"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  ## Create wc2.
+  svntest.main.run_svn(None, 'checkout', '-q', sbox.repo_url, wc2_dir)
+
+  ## Some random edits.
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d1', wc_dir))
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d2', wc2_dir))
+
+  ## Set random mergeinfo properties.
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/P:42', sbox.ospath('A', wc_dir))
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/Q:42', sbox.ospath('iota', wc2_dir))
+
+  def makethread(some_wc_dir):
+    def worker():
+      svntest.main.run_svn(None, 'commit', '-mm', some_wc_dir)
+    return worker
+
+  t1 = threading.Thread(None, makethread(wc_dir))
+  t2 = threading.Thread(None, makethread(wc2_dir))
+
+  # t2 will trigger the issue #4129 sanity check in fs_fs.c
+  t1.start(); t2.start();
+
+  t1.join(); t2.join();
+
+  # Crude attempt to make sure everything worked.
+  # TODO: better way to catch exceptions in the thread
+  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != '3':
+    raise svntest.Failure("one or both commits failed")
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1814,6 +1857,7 @@ test_list = [ None,
               hotcopy_incremental,
               hotcopy_incremental_packed,
               locking,
+              mergeinfo_race,
              ]
 
 if __name__ == '__main__':

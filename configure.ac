@@ -138,7 +138,7 @@ if test "$svn_lib_neon" = "yes"; then
 fi
 
 dnl Search for serf as an alternative to neon
-SVN_LIB_SERF(0,7,1)
+SVN_LIB_SERF(1,0,0)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
@@ -652,6 +652,19 @@ else
 fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
+
+
+dnl Ev2 experimental feature ----------------------
+dnl Note: The Ev2 compat code will be built unconditionally, but by providing
+dnl this flag, users can enforce Ev2 compliance for testing purposes
+AC_ARG_ENABLE(ev2-shims,
+  AS_HELP_STRING([--enable-ev2-shims],
+                 [Compile with Ev2 translation [EXPERIMENTAL]]),
+  [enable_ev2_shims=$enableval],[enable_ev2_shims=no])
+if test "$enable_ev2_shims" = "yes"; then
+  AC_DEFINE(ENABLE_EV2_SHIMS, 1,
+            [Define to 1 if Ev2 should be interjected into editor stacks.])
+fi
 
 
 dnl I18n -------------------

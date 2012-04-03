@@ -572,7 +572,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-copy-crash", opts, pool));
 
-  svn_client_create_context(&ctx, pool);
+  SVN_ERR(svn_client_create_context(&ctx, pool));
 
   rev.kind = svn_opt_revision_head;
   dest = svn_path_url_add_component2(repos_url, "A/E", pool);
@@ -668,7 +668,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
   /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-youngest-common-ancestor", opts, pool));
 
-  svn_client_create_context(&ctx, pool);
+  SVN_ERR(svn_client_create_context(&ctx, pool));
 
   /* Copy a file into dir 'A', keeping its own basename. */
   sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));

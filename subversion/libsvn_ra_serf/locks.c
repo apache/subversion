@@ -58,11 +58,6 @@ typedef enum lock_state_e {
   COMMENT
 } lock_state_e;
 
-typedef struct lock_prop_info_t {
-  const char *data;
-  apr_size_t len;
-} lock_prop_info_t;
-
 typedef struct lock_info_t {
   apr_pool_t *pool;
 
@@ -79,16 +74,12 @@ typedef struct lock_info_t {
   int status_code;
   const char *reason;
 
-  /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
-
   /* are we done? */
   svn_boolean_t done;
 } lock_info_t;
 
 
-static lock_prop_info_t*
+static svn_stringbuf_t *
 push_state(svn_ra_serf__xml_parser_t *parser,
            lock_info_t *lock_ctx,
            lock_state_e state)
@@ -102,8 +93,8 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     case TIMEOUT:
     case LOCK_TOKEN:
     case COMMENT:
-        parser->state->private = apr_pcalloc(parser->state->pool,
-                                             sizeof(lock_prop_info_t));
+        parser->state->private =
+          svn_stringbuf_create_empty(parser->state->pool);
         break;
       default:
         break;
@@ -117,11 +108,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 start_lock(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
            svn_ra_serf__dav_props_t name,
-           const char **attrs)
+           const char **attrs,
+           apr_pool_t *scratch_pool)
 {
-  lock_info_t *ctx = userData;
+  lock_info_t *ctx = parser->user_data;
   lock_state_e state;
 
   state = parser->state->current_state;
@@ -198,10 +189,10 @@ start_lock(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_lock(svn_ra_serf__xml_parser_t *parser,
-         void *userData,
-         svn_ra_serf__dav_props_t name)
+         svn_ra_serf__dav_props_t name,
+         apr_pool_t *scratch_pool)
 {
-  lock_info_t *ctx = userData;
+  lock_info_t *ctx = parser->user_data;
   lock_state_e state;
 
   state = parser->state->current_state;
@@ -239,7 +230,7 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
   else if (state == TIMEOUT &&
            strcmp(name.name, "timeout") == 0)
     {
-      lock_prop_info_t *info = parser->state->private;
+      svn_stringbuf_t *info = parser->state->private;
 
       if (strcmp(info->data, "Infinite") == 0)
         {
@@ -255,12 +246,12 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
   else if (state == LOCK_TOKEN &&
            strcmp(name.name, "locktoken") == 0)
     {
-      lock_prop_info_t *info = parser->state->private;
+      svn_stringbuf_t *info = parser->state->private;
 
       if (!ctx->lock->token && info->len)
         {
-          apr_collapse_spaces((char*)info->data, info->data);
-          ctx->lock->token = apr_pstrndup(ctx->pool, info->data, info->len);
+          apr_collapse_spaces(info->data, info->data);
+          ctx->lock->token = apr_pstrmemdup(ctx->pool, info->data, info->len);
         }
       /* We don't actually need the lock token. */
       svn_ra_serf__xml_pop_state(parser);
@@ -268,11 +259,12 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
   else if (state == COMMENT &&
            strcmp(name.name, "owner") == 0)
     {
-      lock_prop_info_t *info = parser->state->private;
+      svn_stringbuf_t *info = parser->state->private;
 
       if (info->len)
         {
-          ctx->lock->comment = apr_pstrndup(ctx->pool, info->data, info->len);
+          ctx->lock->comment = apr_pstrmemdup(ctx->pool,
+                                              info->data, info->len);
         }
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -282,13 +274,13 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_lock(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
            const char *data,
-           apr_size_t len)
+           apr_size_t len,
+           apr_pool_t *scratch_pool)
 {
-  lock_info_t *lock_ctx = userData;
+  lock_info_t *lock_ctx = parser->user_data;
   lock_state_e state;
-  lock_prop_info_t *info;
+  svn_stringbuf_t *info;
 
   UNUSED_CTX(lock_ctx);
 
@@ -303,9 +295,9 @@ cdata_lock(svn_ra_serf__xml_parser_t *parser,
     case TIMEOUT:
     case LOCK_TOKEN:
     case COMMENT:
-        svn_ra_serf__expand_string(&info->data, &info->len,
-                                   data, len, parser->state->pool);
+        svn_stringbuf_appendbytes(info, data, len);
         break;
+
       default:
         break;
     }

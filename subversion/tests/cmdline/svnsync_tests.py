@@ -28,7 +28,7 @@
 import sys, os
 
 # Test suite-specific modules
-import locale, re
+import locale, re, urllib
 
 # Our testing module
 import svntest
@@ -191,14 +191,16 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   repo_url = sbox.repo_url
   cwd = os.getcwd()
   if is_src_ra_local:
-    repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, sbox.repo_dir))
+    repo_url = svntest.main.file_scheme_prefix + \
+                        urllib.pathname2url(os.path.join(cwd, sbox.repo_dir))
 
   if subdir:
     repo_url = repo_url + subdir
 
   dest_repo_url = dest_sbox.repo_url
   if is_dest_ra_local:
-    dest_repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
+    dest_repo_url = svntest.main.file_scheme_prefix + \
+                    urllib.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
   run_init(dest_repo_url, repo_url, source_prop_encoding)
 
   run_sync(dest_repo_url, repo_url,
@@ -1029,7 +1031,7 @@ def copy_delete_unreadable_child(sbox):
       % (authz, authz))
 
   dest_url = svntest.main.file_scheme_prefix \
-             + svntest.main.pathname2url(os.path.abspath(dest_sbox.repo_dir))
+                    + urllib.pathname2url(os.path.abspath(dest_sbox.repo_dir))
   run_init(dest_url, sbox.repo_url)
   run_sync(dest_url)
 

@@ -415,7 +415,7 @@ module Svn
                         ignore_ancestry)
       end
 
-      def replay(editor, base_dir=nil, low_water_mark=nil, send_deltas=false,
+      def replay(editor, base_dir=nil, low_water_mark=nil, send_deltas=true,
                  &callback)
         base_dir ||= ""
         low_water_mark ||= Core::INVALID_REVNUM

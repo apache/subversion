@@ -135,14 +135,14 @@ windows_simple_first_creds(void **credentials,
                            const char *realmstring,
                            apr_pool_t *pool)
 {
-  return svn_auth__simple_first_creds_helper(credentials,
-                                             iter_baton,
-                                             provider_baton,
-                                             parameters,
-                                             realmstring,
-                                             windows_password_decrypter,
-                                             SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
-                                             pool);
+  return svn_auth__simple_creds_cache_get(credentials,
+                                          iter_baton,
+                                          provider_baton,
+                                          parameters,
+                                          realmstring,
+                                          windows_password_decrypter,
+                                          SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
+                                          pool);
 }
 
 /* Save encrypted credentials to the simple provider's cache. */
@@ -154,13 +154,13 @@ windows_simple_save_creds(svn_boolean_t *saved,
                           const char *realmstring,
                           apr_pool_t *pool)
 {
-  return svn_auth__simple_save_creds_helper(saved, credentials,
-                                            provider_baton,
-                                            parameters,
-                                            realmstring,
-                                            windows_password_encrypter,
-                                            SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
-                                            pool);
+  return svn_auth__simple_creds_cache_set(saved, credentials,
+                                          provider_baton,
+                                          parameters,
+                                          realmstring,
+                                          windows_password_encrypter,
+                                          SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
+                                          pool);
 }
 
 static const svn_auth_provider_t windows_simple_provider = {
@@ -274,15 +274,10 @@ windows_ssl_client_cert_pw_first_creds(void **credentials,
                                        const char *realmstring,
                                        apr_pool_t *pool)
 {
-    return svn_auth__ssl_client_cert_pw_file_first_creds_helper
-              (credentials,
-               iter_baton,
-               provider_baton,
-               parameters,
-               realmstring,
-               windows_ssl_client_cert_pw_decrypter,
-               SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
-               pool);
+  return svn_auth__ssl_client_cert_pw_cache_get(
+             credentials, iter_baton, provider_baton, parameters, realmstring,
+             windows_ssl_client_cert_pw_decrypter,
+             SVN_AUTH__WINCRYPT_PASSWORD_TYPE, pool);
 }
 
 /* Save encrypted credentials to the simple provider's cache. */
@@ -294,15 +289,10 @@ windows_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
                                       const char *realmstring,
                                       apr_pool_t *pool)
 {
-    return svn_auth__ssl_client_cert_pw_file_save_creds_helper
-              (saved,
-               credentials,
-               provider_baton,
-               parameters,
-               realmstring,
-               windows_ssl_client_cert_pw_encrypter,
-               SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
-               pool);
+  return svn_auth__ssl_client_cert_pw_cache_set(
+             saved, credentials, provider_baton, parameters, realmstring,
+             windows_ssl_client_cert_pw_encrypter,
+             SVN_AUTH__WINCRYPT_PASSWORD_TYPE, pool);
 }
 
 static const svn_auth_provider_t windows_ssl_client_cert_pw_provider = {

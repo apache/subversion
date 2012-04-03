@@ -72,7 +72,7 @@ pushd subversion\bindings\swig\perl\native
 perl -MExtUtils::Command::MM -e test_harness() t\*.t
 IF ERRORLEVEL 1 (
   echo [Perl reported error %ERRORLEVEL%]
-  REM SET result=1
+  SET result=1
 )
 popd
 

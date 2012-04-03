@@ -109,11 +109,11 @@ static void pop_state(loc_context_t *loc_ctx)
 
 static svn_error_t *
 start_getloc(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
              svn_ra_serf__dav_props_t name,
-             const char **attrs)
+             const char **attrs,
+             apr_pool_t *scratch_pool)
 {
-  loc_context_t *loc_ctx = userData;
+  loc_context_t *loc_ctx = parser->user_data;
 
   if (!loc_ctx->state && strcmp(name.name, "get-locations-report") == 0)
     {
@@ -148,10 +148,10 @@ start_getloc(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_getloc(svn_ra_serf__xml_parser_t *parser,
-           void *userData,
-           svn_ra_serf__dav_props_t name)
+           svn_ra_serf__dav_props_t name,
+           apr_pool_t *scratch_pool)
 {
-  loc_context_t *loc_ctx = userData;
+  loc_context_t *loc_ctx = parser->user_data;
   loc_state_list_t *cur_state;
 
   if (!loc_ctx->state)
