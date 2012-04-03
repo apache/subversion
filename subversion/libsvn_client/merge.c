@@ -530,32 +530,24 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
                        svn_node_kind_t node_kind,
                        merge_cmd_baton_t *merge_b)
 {
-  const char *left_url;
-  const char *right_url;
+  const char *child = svn_dirent_skip_ancestor(merge_b->target->abspath,
+                                               victim_abspath);
+  const char *left_relpath, *right_relpath;
 
-  /* Construct the source URLs of the victim. */
-  {
-    const char *child = svn_dirent_skip_ancestor(merge_b->target->abspath,
-                                                 victim_abspath);
-    SVN_ERR_ASSERT(child != NULL);
-    left_url = svn_path_url_add_component2(merge_b->merge_source.loc1->url,
-                                           child, merge_b->pool);
-    right_url = svn_path_url_add_component2(merge_b->merge_source.loc2->url,
-                                            child, merge_b->pool);
-  }
+  SVN_ERR_ASSERT(child != NULL);
+  left_relpath = svn_client__pathrev_relpath(merge_b->merge_source.loc1,
+                                             merge_b->pool);
+  right_relpath = svn_client__pathrev_relpath(merge_b->merge_source.loc2,
+                                              merge_b->pool);
 
   *left = svn_wc_conflict_version_create(
             merge_b->merge_source.loc1->repos_root_url,
-            svn_uri_skip_ancestor(
-              merge_b->merge_source.loc1->repos_root_url,
-              left_url, merge_b->pool),
+            svn_relpath_join(left_relpath, child, merge_b->pool),
             merge_b->merge_source.loc1->rev, node_kind, merge_b->pool);
 
   *right = svn_wc_conflict_version_create(
              merge_b->merge_source.loc2->repos_root_url,
-             svn_uri_skip_ancestor(
-               merge_b->merge_source.loc2->repos_root_url,
-               right_url, merge_b->pool),
+             svn_relpath_join(right_relpath, child, merge_b->pool),
              merge_b->merge_source.loc2->rev, node_kind, merge_b->pool);
 
   return SVN_NO_ERROR;
@@ -9865,11 +9857,9 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
   if (potentially_unmerged_ranges)
     {
       const char *source_repos_rel_path
-        = svn_uri_skip_ancestor(source_loc->repos_root_url, source_loc->url,
-                                scratch_pool);
+        = svn_client__pathrev_relpath(source_loc, scratch_pool);
       const char *target_repos_rel_path
-        = svn_uri_skip_ancestor(target_loc->repos_root_url, target_loc->url,
-                                scratch_pool);
+        = svn_client__pathrev_relpath(target_loc, scratch_pool);
       svn_revnum_t oldest_rev =
         (APR_ARRAY_IDX(potentially_unmerged_ranges,
                        0,
@@ -10374,8 +10364,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
                                svn_mergeinfo_inherited,
                                TRUE, iterpool));
 
-  source_repos_rel_path = svn_uri_skip_ancestor(source_loc->repos_root_url,
-                                                source_loc->url, scratch_pool);
+  source_repos_rel_path = svn_client__pathrev_relpath(source_loc, scratch_pool);
   if (mergeinfo_catalog)
     SVN_ERR(svn_mergeinfo__add_prefix_to_catalog(&mergeinfo_catalog,
                                                  mergeinfo_catalog,
