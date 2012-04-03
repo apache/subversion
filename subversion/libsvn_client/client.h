@@ -246,6 +246,19 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Like svn_client__ra_session_from_path() but returning a path-rev
+ * instead of separate URL and rev outputs.  RESOLVED_LOC_P may be NULL
+ * if not wanted. */
+svn_error_t *
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                 svn_client__pathrev_t **resolved_loc_p,
+                                 const char *path_or_url,
+                                 const char *base_dir_abspath,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.
    Store the previous session URL in *OLD_SESSION_URL (so that if the

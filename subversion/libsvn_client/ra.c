@@ -433,15 +433,14 @@ resolve_rev_and_url(svn_client__pathrev_t **resolved_loc_p,
 }
 
 svn_error_t *
-svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
-                                 svn_revnum_t *rev_p,
-                                 const char **url_p,
-                                 const char *path_or_url,
-                                 const char *base_dir_abspath,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool)
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                  svn_client__pathrev_t **resolved_loc_p,
+                                  const char *path_or_url,
+                                  const char *base_dir_abspath,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *revision,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
   const char *initial_url;
@@ -473,6 +472,29 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   SVN_ERR(svn_ra_reparent(ra_session, resolved_loc->url, pool));
 
   *ra_session_p = ra_session;
+  if (resolved_loc_p)
+    *resolved_loc_p = resolved_loc;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
+                                 svn_revnum_t *rev_p,
+                                 const char **url_p,
+                                 const char *path_or_url,
+                                 const char *base_dir_abspath,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
+{
+  svn_client__pathrev_t *resolved_loc;
+
+  SVN_ERR(svn_client__ra_session_from_path2(ra_session_p, &resolved_loc,
+                                            path_or_url, base_dir_abspath,
+                                            peg_revision, revision,
+                                            ctx, pool));
   if (rev_p)
     *rev_p = resolved_loc->rev;
   if (url_p)
@@ -918,21 +940,19 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
 {
   apr_pool_t *sesspool = svn_pool_create(scratch_pool);
   svn_ra_session_t *session;
-  svn_client__pathrev_t loc1, *loc2, *ancestor;
+  svn_client__pathrev_t *loc1, *loc2, *ancestor;
 
   /* Resolve the two locations */
-  SVN_ERR(svn_client__ra_session_from_path(&session, &loc1.rev, &loc1.url,
-                                           path_or_url1, NULL,
-                                           revision1, revision1,
-                                           ctx, sesspool));
-  SVN_ERR(svn_ra_get_repos_root2(session, &loc1.repos_root_url, sesspool));
-  SVN_ERR(svn_ra_get_uuid2(session, &loc1.repos_uuid, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path2(&session, &loc1,
+                                            path_or_url1, NULL,
+                                            revision1, revision1,
+                                            ctx, sesspool));
   SVN_ERR(resolve_rev_and_url(&loc2, session,
                               path_or_url2, revision2, revision2,
                               ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &ancestor, &loc1, loc2, ctx, result_pool, scratch_pool));
+            &ancestor, loc1, loc2, ctx, result_pool, scratch_pool));
 
   if (ancestor)
     {
