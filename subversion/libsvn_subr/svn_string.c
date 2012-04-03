@@ -255,7 +255,7 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
    */
 #ifdef SVN_DEBUG
   strbuf->pool = NULL;
-  strbuf->blocksize = strbuf->len;
+  strbuf->blocksize = strbuf->len + 1;
 #endif
 
   /* Both, svn_string_t and svn_stringbuf_t are public API structures
