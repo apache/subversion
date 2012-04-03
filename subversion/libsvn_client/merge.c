@@ -9327,19 +9327,10 @@ open_source_session(svn_client__pathrev_t **location_p,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  svn_client__pathrev_t *location = apr_palloc(result_pool, sizeof(*location));
-  svn_ra_session_t *ra_session;
-
-  SVN_ERR(svn_client__ra_session_from_path(
-            &ra_session, &location->rev, &location->url,
+  SVN_ERR(svn_client__ra_session_from_path2(
+            ra_session_p, location_p,
             path_or_url, NULL, peg_revision, peg_revision,
             ctx, result_pool));
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &location->repos_root_url,
-                                 result_pool));
-  SVN_ERR(svn_ra_get_uuid2(ra_session, &location->repos_uuid, result_pool));
-
-  *location_p = location;
-  *ra_session_p = ra_session;
   return SVN_NO_ERROR;
 }
 
