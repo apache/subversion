@@ -44,7 +44,7 @@
  */
 #define MATCH_BLOCKSIZE 64
 
-/* "no" / "invalid" / "unused" value for positions within the detla windows
+/* "no" / "invalid" / "unused" value for positions within the delta windows
  */
 #define NO_POSITION ((apr_uint32_t)-1)
 
