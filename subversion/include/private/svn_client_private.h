@@ -37,6 +37,30 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* A location in a repository. */
+typedef struct svn_client__pathrev_t
+{
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_revnum_t rev;
+  const char *url;
+} svn_client__pathrev_t;
+
+/* Return a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of REPOS_ROOT_URL, REPOS_UUID, REV and URL. */
+svn_client__pathrev_t *
+svn_client__pathrev_create(const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t rev,
+                           const char *url,
+                           apr_pool_t *result_pool);
+
+/* Return a deep copy of the path-rev LOC, allocated in RESULT_POOL. */
+svn_client__pathrev_t *
+svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+                        apr_pool_t *result_pool);
+
+
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
  * URLs and paths; otherwise return SVN_NO_ERROR.
  *

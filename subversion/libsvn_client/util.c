@@ -41,6 +41,30 @@
 
 #include "svn_private_config.h"
 
+svn_client__pathrev_t *
+svn_client__pathrev_create(const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t rev,
+                           const char *url,
+                           apr_pool_t *result_pool)
+{
+  svn_client__pathrev_t *loc = apr_palloc(result_pool, sizeof(*loc));
+
+  loc->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
+  loc->repos_uuid = apr_pstrdup(result_pool, repos_uuid);
+  loc->rev = rev;
+  loc->url = apr_pstrdup(result_pool, url);
+  return loc;
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+                        apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(loc->repos_root_url, loc->repos_uuid,
+                                    loc->rev, loc->url, result_pool);
+}
+
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
 {
