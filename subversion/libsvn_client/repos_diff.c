@@ -418,17 +418,6 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
     }
 }
 
-/* Get the props attached to a directory in the repository at BASE_REVISION. */
-static svn_error_t *
-get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
-{
-  return svn_ra_get_dir2(b->edit_baton->ra_session,
-                         NULL, NULL, &(b->pristine_props),
-                         b->path,
-                         base_revision,
-                         0,
-                         b->pool);
-}
 
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
@@ -472,7 +461,8 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
 
-  SVN_ERR(get_dirprops_from_ra(b, base_revision));
+  SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &b->pristine_props,
+                          b->path, base_revision, 0, pool));
 
   *root_baton = b;
   return SVN_NO_ERROR;
@@ -766,7 +756,8 @@ open_directory(const char *path,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_dirprops_from_ra(b, base_revision));
+  SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &b->pristine_props,
+                          b->path, base_revision, 0, pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened(
                 &b->tree_conflicted, &b->skip,
