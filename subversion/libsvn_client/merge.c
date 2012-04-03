@@ -171,11 +171,9 @@ typedef struct repo_location_t
 typedef struct merge_source_t
 {
   /* "left" side URL and revision (inclusive iff youngest) */
-  /* The "repos_*" fields are not currently initialized or used. */
   const repo_location_t *loc1;
 
   /* "right" side URL and revision (inclusive iff youngest) */
-  /* The "repos_*" fields are not currently initialized or used. */
   const repo_location_t *loc2;
 
 } merge_source_t;
