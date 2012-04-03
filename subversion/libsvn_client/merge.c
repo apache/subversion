@@ -958,6 +958,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                     ctx, pool, pool));
   SVN_ERR(svn_wc__node_get_base_rev(&target_base.rev, ctx->wc_ctx,
                                     target_abspath, pool));
+  SVN_ERR(svn_wc__node_get_repos_info(&target_base.repos_root_url,
+                                      &target_base.repos_uuid,
+                                      ctx->wc_ctx, target_abspath, pool, pool));
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
   iterpool = svn_pool_create(pool);
