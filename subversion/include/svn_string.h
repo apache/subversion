@@ -235,10 +235,12 @@ svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
   __attribute__((format(printf, 2, 0)));
 
-/** Make sure that the string @a str has at least @a minimum_size bytes of
- * space available in the memory block.
+/** Make sure that the string @a str has allocated at least enough space
+ * to hold a string of length @a minimum_size bytes (as well as the
+ * terminating null character).
  *
- * (@a minimum_size should include space for the terminating NULL character.)
+ * @note: Before Subversion 1.8, the caller was supposed to include one
+ * byte for the null terminator in the value of @a minimum_size.
  */
 void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size);

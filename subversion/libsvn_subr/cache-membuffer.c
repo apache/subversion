@@ -311,7 +311,7 @@ typedef struct entry_t
   /* Size of the serialized item data. May be 0.
    * Only valid for used entries.
    */
-  apr_uint32_t size;
+  apr_size_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
@@ -1162,7 +1162,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 {
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
-  char *buffer = NULL;
+  void *buffer = NULL;
   apr_size_t size;
 
   /* find the entry group that will hold the key.
@@ -1457,7 +1457,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
 
       /* modify it, preferrably in-situ.
        */
-      err = func(&data, &size, baton, scratch_pool);
+      err = func((void **)&data, &size, baton, scratch_pool);
 
       if (err)
         {
@@ -2014,7 +2014,7 @@ static svn_cache__vtable_t membuffer_cache_synced_vtable = {
  * Implements svn_cache__serialize_func_t.
  */
 static svn_error_t *
-serialize_svn_stringbuf(char **buffer,
+serialize_svn_stringbuf(void **buffer,
                         apr_size_t *buffer_size,
                         void *item,
                         apr_pool_t *result_pool)
@@ -2032,7 +2032,7 @@ serialize_svn_stringbuf(char **buffer,
  */
 static svn_error_t *
 deserialize_svn_stringbuf(void **item,
-                          char *buffer,
+                          void *buffer,
                           apr_size_t buffer_size,
                           apr_pool_t *result_pool)
 {

@@ -255,7 +255,7 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
    */
 #ifdef SVN_DEBUG
   strbuf->pool = NULL;
-  strbuf->blocksize = strbuf->len;
+  strbuf->blocksize = strbuf->len + 1;
 #endif
 
   /* Both, svn_string_t and svn_stringbuf_t are public API structures
@@ -441,6 +441,8 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str)
 void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 {
+  ++minimum_size;  /* + space for '\0' */
+
   /* Keep doubling capacity until have enough. */
   if (str->blocksize < minimum_size)
     {

@@ -29,12 +29,62 @@
 
 #include <apr_pools.h>
 
+#include "svn_ra.h"
 #include "svn_client.h"
 #include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+/* A location in a repository. */
+typedef struct svn_client__pathrev_t
+{
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_revnum_t rev;
+  const char *url;
+} svn_client__pathrev_t;
+
+/* Return a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of REPOS_ROOT_URL, REPOS_UUID, REV and URL. */
+svn_client__pathrev_t *
+svn_client__pathrev_create(const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t rev,
+                           const char *url,
+                           apr_pool_t *result_pool);
+
+/* Return a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of REPOS_ROOT_URL, REPOS_UUID, and REV,
+ * and using the repository-relative RELPATH to construct the URL. */
+svn_client__pathrev_t *
+svn_client__pathrev_create_with_relpath(const char *repos_root_url,
+                                        const char *repos_uuid,
+                                        svn_revnum_t rev,
+                                        const char *relpath,
+                                        apr_pool_t *result_pool);
+
+/* Set *PATHREV_P to a new path-rev structure, allocated in RESULT_POOL,
+ * initialized with deep copies of the repository root URL and UUID from
+ * RA_SESSION, and of REV and URL. */
+svn_error_t *
+svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
+                                        svn_ra_session_t *ra_session,
+                                        svn_revnum_t rev,
+                                        const char *url,
+                                        apr_pool_t *result_pool);
+
+/* Return a deep copy of the path-rev LOC, allocated in RESULT_POOL. */
+svn_client__pathrev_t *
+svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+                        apr_pool_t *result_pool);
+
+/* Return the repository-relative relpath of PATHREV. */
+const char *
+svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
+                            apr_pool_t *result_pool);
 
 
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of

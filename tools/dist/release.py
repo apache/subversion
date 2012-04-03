@@ -21,10 +21,10 @@
 
 
 # About this script:
-#   This script is intended to simplify creating Subversion releases, by
-#   automating as much as is possible.  It works well with our Apache
-#   infrastructure, and should make rolling, posting, and announcing
-#   releases dirt simple.
+#   This script is intended to simplify creating Subversion releases for
+#   any of the supported release lines of Subversion.
+#   It works well with our Apache infrastructure, and should make rolling,
+#   posting, and announcing releases dirt simple.
 #
 #   This script may be run on a number of platforms, but it is intended to
 #   be run on people.apache.org.  As such, it may have dependencies (such
@@ -75,6 +75,11 @@ tool_versions = {
             'libtool'  : '2.4',
             'swig'     : '2.0.4',
   },
+  '1.6' : {
+            'autoconf' : '2.64',
+            'libtool'  : '1.5.26',
+            'swig'     : '1.3.36',
+  },
 }
 
 # Some constants
@@ -82,6 +87,7 @@ repos = 'http://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
+extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
 #----------------------------------------------------------------------
@@ -295,8 +301,7 @@ class LibtoolDep(RollDep):
         output = self._test_version(['libtool', '--version'])
         if not output: return False
 
-        version = output[0].split()[-1:][0]
-        return version == self._libtool_ver
+        return self._libtool_ver in output[0]
 
     def use_system(self):
         # We unconditionally return False here, to avoid using a borked
@@ -357,41 +362,21 @@ def build_env(args):
 #----------------------------------------------------------------------
 # Create release artifacts
 
-def fetch_changes(repos, branch, revision):
-    changes_peg_url = '%s/%s/CHANGES@%d' % (repos, branch, revision)
-    proc = subprocess.Popen(['svn', 'cat', changes_peg_url],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (stdout, stderr) = proc.communicate()
-    proc.wait()
-    return stdout.split('\n')
-
-
 def compare_changes(repos, branch, revision):
-    # Compare trunk's version of CHANGES with that of the branch,
-    # ignoring any lines in trunk's version precede what *should*
-    # match the contents of the branch's version.  (This allows us to
-    # continue adding new stuff at the top of trunk's CHANGES that
-    # might relate to the *next* major release line.)
-    branch_CHANGES = fetch_changes(repos, branch, revision)
-    trunk_CHANGES = fetch_changes(repos, 'trunk', revision)
-    try:
-        first_matching_line = trunk_CHANGES.index(branch_CHANGES[0])
-    except ValueError:
-        raise RuntimeError('CHANGES not synced between trunk and branch')
-
-    trunk_CHANGES = trunk_CHANGES[first_matching_line:]
-    saw_diff = False
-    import difflib
-    for diff_line in difflib.unified_diff(trunk_CHANGES, branch_CHANGES):
-        saw_diff = True
-        logging.debug('%s', diff_line)
-    if saw_diff:
-        raise RuntimeError('CHANGES not synced between trunk and branch')
-
+    mergeinfo_cmd = ['svn', 'mergeinfo', '--show-revs=eligible',
+                     repos + '/trunk/CHANGES',
+                     repos + '/' + branch + '/' + 'CHANGES']
+    proc = subprocess.Popen(mergeinfo_cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate()
+    rc = proc.wait()
+    if stderr:
+      raise RuntimeError('svn mergeinfo failed: %s' % stderr)
+    if stdout:
+      raise RuntimeError('CHANGES has unmerged revisions: %s' % stdout)
 
 def roll_tarballs(args):
     'Create the release artifacts.'
-    extns = ['zip', 'tar.gz', 'tar.bz2']
 
     if args.branch:
         branch = args.branch
@@ -457,6 +442,33 @@ def roll_tarballs(args):
     shutil.move('svn_version.h.dist', get_deploydir(args.base_dir))
 
     # And we're done!
+
+#----------------------------------------------------------------------
+# Sign the candidate release artifacts
+
+def sign_candidates(args):
+    'Sign candidate artifacts in the dist development directory.'
+
+    def sign_file(filename):
+        asc_file = open(filename + '.asc', 'a')
+        logging.info("Signing %s" % filename)
+        proc = subprocess.Popen(['gpg', '-ba', '-o', '-', filename],
+                              stdout=asc_file)
+        proc.wait()
+        asc_file.close()
+
+    if args.target:
+        target = args.target
+    else:
+        target = get_deploydir(args.base_dir)
+
+    for e in extns:
+        filename = os.path.join(target, 'subversion-%s.%s' % (args.version, e))
+        sign_file(filename)
+        if args.version.major >= 1 and args.version.minor <= 6:
+            filename = os.path.join(target,
+                                   'subversion-deps-%s.%s' % (args.version, e))
+            sign_file(filename)
 
 
 #----------------------------------------------------------------------
@@ -643,16 +655,16 @@ def check_sigs(args):
     if args.target:
         target = args.target
     else:
-        target = os.path.join(os.getenv('HOME'), 'public_html', 'svn',
-                              str(args.version))
+        target = get_deploydir(args.base_dir)
 
     good_sigs = {}
 
-    glob_pattern = os.path.join(target, 'subversion-%s*.asc' % args.version)
+    glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
     for filename in glob.glob(glob_pattern):
         text = open(filename).read()
         keys = text.split(key_start)
 
+        logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
         for key in keys[1:]:
             fd, fn = tempfile.mkstemp()
             os.write(fd, key_start + key)
@@ -729,6 +741,16 @@ def main():
     subparser.add_argument('--branch',
                     help='''The branch to base the release on.''')
 
+    # Setup the parser for the sign-candidates subcommand
+    subparser = subparsers.add_parser('sign-candidates',
+                    help='''Sign the release artifacts.''')
+    subparser.set_defaults(func=sign_candidates)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
+
     # Setup the parser for the post-candidates subcommand
     subparser = subparsers.add_parser('post-candidates',
                     help='''Commit candidates to the release development area
@@ -736,10 +758,6 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('revnum', type=int,
-                    help='''The revision number to base the release on.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the destination.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -757,11 +775,6 @@ def main():
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--dist-dir',
-                    help='''The directory to clean.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the destination used in
-                            'post-candiates'..''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
@@ -793,8 +806,8 @@ def main():
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('--target',
-                    help='''The full path to the destination used in
-                            'post-candiates'..''')
+                    help='''The full path to the directory containing
+                            release artifacts.''')
 
     # A meta-target
     subparser = subparsers.add_parser('clean',

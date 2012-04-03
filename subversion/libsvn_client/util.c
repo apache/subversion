@@ -41,6 +41,69 @@
 
 #include "svn_private_config.h"
 
+svn_client__pathrev_t *
+svn_client__pathrev_create(const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t rev,
+                           const char *url,
+                           apr_pool_t *result_pool)
+{
+  svn_client__pathrev_t *loc = apr_palloc(result_pool, sizeof(*loc));
+
+  loc->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
+  loc->repos_uuid = apr_pstrdup(result_pool, repos_uuid);
+  loc->rev = rev;
+  loc->url = apr_pstrdup(result_pool, url);
+  return loc;
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_create_with_relpath(const char *repos_root_url,
+                                        const char *repos_uuid,
+                                        svn_revnum_t rev,
+                                        const char *relpath,
+                                        apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(
+           repos_root_url, repos_uuid, rev,
+           svn_path_url_add_component2(repos_root_url, relpath, result_pool),
+           result_pool);
+}
+
+svn_error_t *
+svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
+                                         svn_ra_session_t *ra_session,
+                                         svn_revnum_t rev,
+                                         const char *url,
+                                         apr_pool_t *result_pool)
+{
+  svn_client__pathrev_t *pathrev = apr_palloc(result_pool, sizeof(*pathrev));
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &pathrev->repos_root_url,
+                                 result_pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &pathrev->repos_uuid, result_pool));
+  pathrev->rev = rev;
+  pathrev->url = url;
+  *pathrev_p = pathrev;
+  return SVN_NO_ERROR;
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+                        apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(loc->repos_root_url, loc->repos_uuid,
+                                    loc->rev, loc->url, result_pool);
+}
+
+const char *
+svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
+                            apr_pool_t *result_pool)
+{
+  return svn_uri_skip_ancestor(pathrev->repos_root_url, pathrev->url,
+                               result_pool);
+}
+
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
 {

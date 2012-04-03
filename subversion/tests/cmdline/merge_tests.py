@@ -17471,7 +17471,6 @@ def merge_source_with_replacement(sbox):
 # Test for issue #4144 'Reverse merge with replace in source applies
 # diffs in forward order'.
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issue(4144)
 def reverse_merge_with_rename(sbox):
   "reverse merge applies revs in reverse order"

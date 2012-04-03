@@ -393,6 +393,10 @@ class TestHarness:
 
       line = prog.stdout.readline()
 
+    # If we didn't run any tests, still print out the dots
+    if not tests_completed:
+      os.write(sys.stdout.fileno(), '.' * dot_count)
+
     prog.wait()
     return prog.returncode
 

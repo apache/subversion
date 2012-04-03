@@ -44,7 +44,7 @@
  */
 #define MATCH_BLOCKSIZE 64
 
-/* "no" / "invalid" / "unused" value for positions within the detla windows
+/* "no" / "invalid" / "unused" value for positions within the delta windows
  */
 #define NO_POSITION ((apr_uint32_t)-1)
 
@@ -112,7 +112,7 @@ struct block
 struct blocks
 {
   /* The largest valid index of slots. */
-  apr_uint32_t max;
+  apr_size_t max;
   /* Source buffer that the positions in SLOTS refer to. */
   const char* data;
   /* The vector of blocks.  A pos value of NO_POSITION represents an unused
@@ -135,7 +135,7 @@ static apr_uint32_t hash_func(apr_uint32_t sum)
    data into the table BLOCKS.  Ignore true duplicates, i.e. blocks with
    actually the same content. */
 static void
-add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_uint32_t pos)
+add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
 {
   apr_uint32_t h = hash_func(adlersum) & blocks->max;
 
@@ -384,9 +384,9 @@ store_delta_trailer(svn_txdelta__ops_baton_t *build_baton,
 static void
 compute_delta(svn_txdelta__ops_baton_t *build_baton,
               const char *a,
-              apr_uint32_t asize,
+              apr_size_t asize,
               const char *b,
-              apr_uint32_t bsize,
+              apr_size_t bsize,
               apr_pool_t *pool)
 {
   struct blocks blocks;
