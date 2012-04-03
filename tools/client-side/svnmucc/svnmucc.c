@@ -52,7 +52,9 @@
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_version.h"
+
 #include "private/svn_cmdline_private.h"
+#include "private/svn_ra_private.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -611,6 +613,54 @@ struct action {
 };
 
 static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *filename = NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  *props = apr_hash_make(result_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  *kind = svn_kind_unknown;
+  return SVN_NO_ERROR;
+}
+
+static svn_delta_shim_callbacks_t *
+get_shim_callbacks(apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                            svn_delta_shim_callbacks_default(result_pool);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+
+  return callbacks;
+}
+
+static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor,
         apr_hash_t *revprops,
@@ -713,6 +763,8 @@ execute(const apr_array_header_t *actions,
         }
     }
 
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(session,
+                                                 get_shim_callbacks(pool)));
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &editor_baton, revprops,
                                     commit_callback, NULL, NULL, FALSE, pool));
 
