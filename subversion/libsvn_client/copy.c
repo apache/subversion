@@ -93,12 +93,15 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
      bother checking. */
   if (local_abspath)
     {
+      svn_client__pathrev_t *origin;
+
       SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL,
-                                             &src_revnum, &src_url,
+      SVN_ERR(svn_client__wc_node_get_origin(&origin,
                                              local_abspath, ctx,
                                              pool, pool));
+      src_revnum = origin->rev;
+      src_url = origin->url;
 
       if (! src_url)
         locally_added = TRUE;

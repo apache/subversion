@@ -3518,8 +3518,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
   if (implicit_mergeinfo)
     {
-      svn_revnum_t target_rev;
-      const char *target_url;
+      svn_client__pathrev_t *target;
 
       /* Assert that we have sane input. */
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start) && SVN_IS_VALID_REVNUM(end)
@@ -3527,18 +3526,16 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       /* Retrieve the origin (original_*) of the node, or just the
          url if the node was not copied. */
-      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL,
-                                             &target_rev, &target_url,
-                                             target_abspath, ctx,
+      SVN_ERR(svn_client__wc_node_get_origin(&target, target_abspath, ctx,
                                              scratch_pool, scratch_pool));
 
-      if (! target_url)
+      if (! target->url)
         {
           /* We've been asked to operate on a locally added target, so its
            * implicit mergeinfo is empty. */
           *implicit_mergeinfo = apr_hash_make(result_pool);
         }
-      else if (target_rev <= end)
+      else if (target->rev <= end)
         {
           /* We're asking about a range outside our natural history
              altogether.  That means our implicit mergeinfo is empty. */
@@ -3553,13 +3550,13 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
              TARGET_ABSPATH might not even exist, and even if it does the
              working copy is *at* TARGET_REV so its implicit history ends
              at TARGET_REV! */
-          if (target_rev < start)
-            start = target_rev;
+          if (target->rev < start)
+            start = target->rev;
 
           /* Fetch the implicit mergeinfo. */
           SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo,
                                                        NULL,
-                                                       target_url, target_rev,
+                                                       target->url, target->rev,
                                                        start, end,
                                                        ra_session, ctx,
                                                        result_pool));
@@ -9294,17 +9291,15 @@ open_target_wc(merge_target_t **target_p,
                apr_pool_t *scratch_pool)
 {
   merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
+  svn_client__pathrev_t *origin;
 
   target->abspath = apr_pstrdup(result_pool, wc_abspath);
 
   SVN_ERR(svn_wc_read_kind(&target->kind, ctx->wc_ctx, wc_abspath, FALSE,
                            scratch_pool));
-
-  SVN_ERR(svn_client__wc_node_get_origin(&target->loc.repos_root_url,
-                                         &target->loc.repos_uuid,
-                                         &target->loc.rev, &target->loc.url,
-                                         wc_abspath, ctx,
+  SVN_ERR(svn_client__wc_node_get_origin(&origin, wc_abspath, ctx,
                                          result_pool, scratch_pool));
+  target->loc = *origin;
 
   SVN_ERR(ensure_wc_is_suitable_merge_target(
             wc_abspath, ctx,
