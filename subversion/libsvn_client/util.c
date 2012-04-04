@@ -376,15 +376,10 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
   return SVN_NO_ERROR;
 }
 
-struct shim_callbacks_baton
-{
-  svn_wc_context_t *wc_ctx;
-  const char *anchor_abspath;
-};
 
 static svn_error_t *
 rationalize_shim_path(const char **local_abspath,
-                      struct shim_callbacks_baton *scb,
+                      struct svn_client__shim_callbacks_baton *scb,
                       const char *path,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -410,15 +405,15 @@ rationalize_shim_path(const char **local_abspath,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-fetch_props_func(apr_hash_t **props,
-                 void *baton,
-                 const char *path,
-                 svn_revnum_t base_revision,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__shim_fetch_props_func(apr_hash_t **props,
+                                  void *baton,
+                                  const char *path,
+                                  svn_revnum_t base_revision,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
-  struct shim_callbacks_baton *scb = baton;
+  struct svn_client__shim_callbacks_baton *scb = baton;
   const char *local_abspath;
 
   /* Early out: if we didn't get an anchor_abspath, it means we don't have a
@@ -441,14 +436,14 @@ fetch_props_func(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__shim_fetch_kind_func(svn_kind_t *kind,
+                                 void *baton,
+                                 const char *path,
+                                 svn_revnum_t base_revision,
+                                 apr_pool_t *scratch_pool)
 {
-  struct shim_callbacks_baton *scb = baton;
+  struct svn_client__shim_callbacks_baton *scb = baton;
   svn_node_kind_t node_kind;
   const char *local_abspath;
 
@@ -470,15 +465,15 @@ fetch_kind_func(svn_kind_t *kind,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-fetch_base_func(const char **filename,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__shim_fetch_base_func(const char **filename,
+                                 void *baton,
+                                 const char *path,
+                                 svn_revnum_t base_revision,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
-  struct shim_callbacks_baton *scb = baton;
+  struct svn_client__shim_callbacks_baton *scb = baton;
   const char *local_abspath;
   svn_stream_t *pristine_stream;
   svn_stream_t *temp_stream;
@@ -523,14 +518,15 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
 {
   svn_delta_shim_callbacks_t *callbacks =
                             svn_delta_shim_callbacks_default(result_pool);
-  struct shim_callbacks_baton *scb = apr_pcalloc(result_pool, sizeof(*scb));
+  struct svn_client__shim_callbacks_baton *scb = apr_pcalloc(result_pool,
+                                                             sizeof(*scb));
 
   scb->wc_ctx = wc_ctx;
   scb->anchor_abspath = apr_pstrdup(result_pool, anchor_abspath);
 
-  callbacks->fetch_props_func = fetch_props_func;
-  callbacks->fetch_kind_func = fetch_kind_func;
-  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_props_func = svn_client__shim_fetch_props_func;
+  callbacks->fetch_kind_func = svn_client__shim_fetch_kind_func;
+  callbacks->fetch_base_func = svn_client__shim_fetch_base_func;
   callbacks->fetch_baton = scb;
 
   return callbacks;
