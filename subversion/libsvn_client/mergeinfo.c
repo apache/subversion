@@ -748,26 +748,26 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
-                                     svn_boolean_t *has_rev_zero_history,
-                                     const char *url,
-                                     svn_revnum_t peg_revnum,
-                                     svn_revnum_t range_youngest,
-                                     svn_revnum_t range_oldest,
-                                     svn_ra_session_t *ra_session,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool)
+                                      svn_boolean_t *has_rev_zero_history,
+                                      const svn_client__pathrev_t *pathrev,
+                                      svn_revnum_t range_youngest,
+                                      svn_revnum_t range_oldest,
+                                      svn_ra_session_t *ra_session,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool)
 {
   apr_array_header_t *segments;
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
   if (! SVN_IS_VALID_REVNUM(range_youngest))
-    range_youngest = peg_revnum;
+    range_youngest = pathrev->rev;
   if (! SVN_IS_VALID_REVNUM(range_oldest))
     range_oldest = 0;
 
-  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session, url,
-                                              peg_revnum, range_youngest,
-                                              range_oldest, ctx, pool));
+  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
+                                              pathrev->url, pathrev->rev,
+                                              range_youngest, range_oldest,
+                                              ctx, pool));
 
   if (has_rev_zero_history)
     {
@@ -1714,32 +1714,30 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   if (!finding_merged)
     {
       svn_ra_session_t *target_session;
-      svn_revnum_t rev;
-      const char *url;
+      svn_client__pathrev_t *pathrev;
 
-      SVN_ERR(svn_client__ra_session_from_path(
-                &target_session, &rev, &url,
+      SVN_ERR(svn_client__ra_session_from_path2(
+                &target_session, &pathrev,
                 target_path_or_url, NULL,
                 target_peg_revision, target_peg_revision,
                 ctx, sesspool));
       SVN_ERR(svn_client__get_history_as_mergeinfo(
                 &target_history, NULL,
-                url, rev, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                pathrev, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                 target_session, ctx, scratch_pool));
     }
   {
     svn_ra_session_t *source_session;
-    svn_revnum_t rev;
-    const char *url;
+    svn_client__pathrev_t *pathrev;
 
-    SVN_ERR(svn_client__ra_session_from_path(
-              &source_session, &rev, &url,
+    SVN_ERR(svn_client__ra_session_from_path2(
+              &source_session, &pathrev,
               source_path_or_url, NULL,
               source_peg_revision, source_peg_revision,
               ctx, sesspool));
     SVN_ERR(svn_client__get_history_as_mergeinfo(
               &source_history, NULL,
-              url, rev, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+              pathrev, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
               source_session, ctx, scratch_pool));
   }
   /* Close the source and target sessions. */

@@ -859,13 +859,13 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
      saves us a bunch of annoying custom data comparisons and such. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
                                                &has_rev_zero_history1,
-                                               loc1->url, loc1->rev,
+                                               loc1,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session, ctx, scratch_pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history2,
                                                &has_rev_zero_history2,
-                                               loc2->url, loc2->rev,
+                                               loc2,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session, ctx, scratch_pool));
