@@ -1064,16 +1064,15 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
      contact the repository for the requested PEG_REVISION. */
   if (!use_url)
     {
-      const char *origin_url = NULL;
+      svn_client__pathrev_t *origin;
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
                                       scratch_pool));
 
-      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL, &rev, &origin_url,
-                                             local_abspath, ctx,
+      SVN_ERR(svn_client__wc_node_get_origin(&origin, local_abspath, ctx,
                                              scratch_pool, scratch_pool));
-
-      if (!origin_url
-          || strcmp(origin_url, url) != 0
+      rev = origin->rev;
+      if (!origin->url
+          || strcmp(origin->url, url) != 0
           || peg_rev != rev)
       {
         use_url = TRUE; /* Don't rely on local mergeinfo */
