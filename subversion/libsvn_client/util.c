@@ -50,6 +50,9 @@ svn_client__pathrev_create(const char *repos_root_url,
 {
   svn_client__pathrev_t *loc = apr_palloc(result_pool, sizeof(*loc));
 
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(repos_root_url));
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(url));
+
   loc->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
   loc->repos_uuid = apr_pstrdup(result_pool, repos_uuid);
   loc->rev = rev;
@@ -64,6 +67,8 @@ svn_client__pathrev_create_with_relpath(const char *repos_root_url,
                                         const char *relpath,
                                         apr_pool_t *result_pool)
 {
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath));
+
   return svn_client__pathrev_create(
            repos_root_url, repos_uuid, rev,
            svn_path_url_add_component2(repos_root_url, relpath, result_pool),
@@ -72,18 +77,20 @@ svn_client__pathrev_create_with_relpath(const char *repos_root_url,
 
 svn_error_t *
 svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
-                                         svn_ra_session_t *ra_session,
-                                         svn_revnum_t rev,
-                                         const char *url,
-                                         apr_pool_t *result_pool)
+                                        svn_ra_session_t *ra_session,
+                                        svn_revnum_t rev,
+                                        const char *url,
+                                        apr_pool_t *result_pool)
 {
   svn_client__pathrev_t *pathrev = apr_palloc(result_pool, sizeof(*pathrev));
+
+  SVN_ERR_ASSERT(svn_path_is_url(url));
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &pathrev->repos_root_url,
                                  result_pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &pathrev->repos_uuid, result_pool));
   pathrev->rev = rev;
-  pathrev->url = url;
+  pathrev->url = apr_pstrdup(result_pool, url);
   *pathrev_p = pathrev;
   return SVN_NO_ERROR;
 }
