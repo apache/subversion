@@ -872,6 +872,18 @@ add_directory(void *baton,
 }
 
 static svn_error_t *
+target_revision_func(void *baton,
+                     svn_revnum_t target_revision,
+                     apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+
+  *eb->target_revision = target_revision;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 get_editor(const svn_delta_editor_t **export_editor,
            void **edit_baton,
            struct edit_baton *eb,
@@ -883,6 +895,9 @@ get_editor(const svn_delta_editor_t **export_editor,
   struct svn_delta__extra_baton *exb = apr_pcalloc(result_pool, sizeof(*exb));
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
+
+  exb->baton = eb;
+  exb->target_revision = target_revision_func;
 
   SVN_ERR(svn_editor_create(&editor, eb, ctx->cancel_func, ctx->cancel_baton,
                             result_pool, scratch_pool));
