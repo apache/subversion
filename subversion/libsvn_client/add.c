@@ -714,19 +714,6 @@ svn_client_add4(const char *path,
 }
 
 
-static svn_error_t *
-path_driver_cb_func(void **dir_baton,
-                    void *parent_baton,
-                    void *callback_baton,
-                    const char *path,
-                    apr_pool_t *pool)
-{
-  const svn_delta_editor_t *editor = callback_baton;
-  SVN_ERR(svn_path_check_valid(path, pool));
-  return editor->add_directory(path, parent_baton, NULL,
-                               SVN_INVALID_REVNUM, pool, dir_baton);
-}
-
 /* Append URL, and all it's non-existent parent directories, to TARGETS.
    Use TEMPPOOL for temporary allocations and POOL for any additions to
    TARGETS. */
@@ -753,6 +740,68 @@ add_url_parents(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
+drive_editor(const svn_delta_editor_t *deditor,
+             void *dedit_baton,
+             apr_array_header_t *targets,
+             apr_hash_t *children_hash,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool)
+{
+  svn_editor_t *editor;
+  struct svn_delta__extra_baton *exb;
+  svn_delta_unlock_func_t unlock_func;
+  void *unlock_baton;
+  svn_boolean_t send_abs_paths;
+  apr_hash_t *empty_props = apr_hash_make(scratch_pool);
+  apr_pool_t *iterpool;
+  svn_error_t *err;
+  int i;
+
+  /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
+  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
+                                       &unlock_func, &unlock_baton,
+                                       deditor, dedit_baton, &send_abs_paths,
+                                       cancel_func, cancel_baton,
+                                       NULL, NULL, NULL, NULL,
+                                       scratch_pool, scratch_pool));
+
+  if (exb->start_edit)
+    SVN_ERR(exb->start_edit(exb->baton, SVN_INVALID_REVNUM));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      apr_array_header_t *children;
+
+      svn_pool_clear(iterpool);
+
+      children = apr_hash_get(children_hash, path, APR_HASH_KEY_STRING);
+      if (!children)
+        children = apr_array_make(iterpool, 1, sizeof(const char *));
+
+      SVN_ERR(svn_path_check_valid(path, iterpool));
+      err = svn_editor_add_directory(editor, path, children, empty_props,
+                                     SVN_INVALID_REVNUM);
+      if (err)
+        break;
+    }
+  svn_pool_destroy(iterpool);
+
+  if (err)
+    {
+      /* At least try to abort the edit (and fs txn) before throwing err. */
+      svn_error_clear(svn_editor_abort(editor));
+      return svn_error_trace(err);
+    }
+
+  /* Complete the edit. */
+  return svn_error_trace(svn_editor_complete(editor));
+}
+
+
+static svn_error_t *
 mkdir_urls(const apr_array_header_t *urls,
            svn_boolean_t make_parents,
            const apr_hash_t *revprop_table,
@@ -768,7 +817,7 @@ mkdir_urls(const apr_array_header_t *urls,
   apr_array_header_t *targets;
   apr_hash_t *targets_hash;
   apr_hash_t *commit_revprops;
-  svn_error_t *err;
+  apr_hash_t *children_hash;
   const char *common;
   int i;
 
@@ -896,6 +945,26 @@ mkdir_urls(const apr_array_header_t *urls,
                                                  NULL, NULL, FALSE, TRUE,
                                                  ctx, pool));
 
+  children_hash = apr_hash_make(pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      const char *parent;
+      const char *basename;
+      apr_array_header_t *children;
+      
+      svn_relpath_split(&parent, &basename, path, pool);
+
+      children = apr_hash_get(children_hash, parent, APR_HASH_KEY_STRING);
+      if (!children)
+        {
+          children = apr_array_make(pool, 1, sizeof(const char *));
+          apr_hash_set(children_hash, parent, APR_HASH_KEY_STRING, children);
+        }
+
+      APR_ARRAY_PUSH(children, const char *) = basename;
+    }
+
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
@@ -907,19 +976,10 @@ mkdir_urls(const apr_array_header_t *urls,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
-  /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                              targets, path_driver_cb_func,
-                              (void *)editor, pool);
-  if (err)
-    {
-      /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_trace(err);
-    }
-
-  /* Close the edit. */
-  return editor->close_edit(edit_baton, pool);
+  return svn_error_trace(drive_editor(editor, edit_baton, targets,
+                                      children_hash,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      pool));
 }
 
 
