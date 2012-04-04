@@ -913,12 +913,9 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
 
   if (yc_relpath)
     {
-      const char *yc_url = svn_path_url_add_component2(
-                             loc1->repos_root_url, yc_relpath, result_pool);
-
-      *ancestor_p = svn_client__pathrev_create(
+      *ancestor_p = svn_client__pathrev_create_with_relpath(
                       loc1->repos_root_url, loc1->repos_uuid,
-                      yc_revision, yc_url, result_pool);
+                      yc_revision, yc_relpath, result_pool);
     }
   else
     {
