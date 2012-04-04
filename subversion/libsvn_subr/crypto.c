@@ -37,21 +37,17 @@
 #define NUM_ITERATIONS 1000
 
 
-/* Set this define if we need stronger randomness.  (Or if that
-   decision is permanent, just remove this #define and enable the code
-   below which uses it to conditionalize functionality.)  */
-#define NEED_RANDOMER_RANDOMNESS 0
-
-
 /* A structure for containing Subversion's cryptography-related bits
    (so we can avoid passing around APR-isms outside this module). */
 struct svn_crypto__ctx_t {
   apr_crypto_t *crypto;  /* APR cryptography context. */
 
-#if NEED_RANDOMER_RANDOMNESS
-  /* ### For now, we will use apr_generate_random_bytes(). If we need more
-     ### strength, then we can use that function to generate entropy for
-     ### seeding apr_random_t. See httpd/server/core.c:ap_init_rng()  */
+#if 0
+  /* ### For now, we will use apr_generate_random_bytes(). If we need
+     ### more strength, then we can set this member using
+     ### apr_random_standard_new(), then use
+     ### apr_generate_random_bytes() to generate entropy for seeding
+     ### apr_random_t. See httpd/server/core.c:ap_init_rng()  */
   apr_random_t *rand;
 #endif
 };
@@ -173,11 +169,6 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
   CRYPTO_INIT(result_pool);
 
   *ctx = apr_palloc(result_pool, sizeof(**ctx));
-
-#if NEED_RANDOMER_RANDOMNESS
-  /* ### Seeding with entropy is needed. See svn_crypto__ctx_t comments.  */
-  ctx->rand = apr_random_standard_new(result_pool);
-#endif
 
   apr_err = apr_crypto_get_driver(&driver, "openssl", NULL, &apu_err,
                                   result_pool);
