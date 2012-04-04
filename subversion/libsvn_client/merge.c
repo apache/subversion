@@ -9843,10 +9843,6 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
      are not yet merged to it. */
   if (potentially_unmerged_ranges)
     {
-      const char *source_repos_rel_path
-        = svn_client__pathrev_relpath(source_loc, scratch_pool);
-      const char *target_repos_rel_path
-        = svn_client__pathrev_relpath(target_loc, scratch_pool);
       svn_revnum_t oldest_rev =
         (APR_ARRAY_IDX(potentially_unmerged_ranges,
                        0,
@@ -9861,9 +9857,10 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
 
       log_baton.merged_catalog = merged_catalog;
       log_baton.unmerged_catalog = true_unmerged_catalog;
-      log_baton.source_repos_rel_path = source_repos_rel_path;
-      log_baton.target_fspath = apr_psprintf(scratch_pool, "/%s",
-                                             target_repos_rel_path);
+      log_baton.source_repos_rel_path
+        = svn_client__pathrev_relpath(source_loc, scratch_pool);
+      log_baton.target_fspath
+        = svn_client__pathrev_fspath(target_loc, scratch_pool);
       log_baton.result_pool = result_pool;
 
       APR_ARRAY_PUSH(log_targets, const char *) = "";
@@ -10153,7 +10150,6 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       const char *source_url;
       svn_mergeinfo_t source_mergeinfo = svn__apr_hash_index_val(hi);
       svn_mergeinfo_t filtered_mergeinfo;
-      const char *target_url;
       svn_client__pathrev_t *target_pathrev;
       svn_mergeinfo_t target_history_as_mergeinfo;
       svn_error_t *err;
@@ -10162,11 +10158,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
       source_url = svn_path_url_add_component2(source_session_url,
                                                path_rel_to_session, iterpool);
-      target_url = svn_path_url_add_component2(target->loc.url,
-                                               path_rel_to_session, iterpool);
-      target_pathrev = svn_client__pathrev_create(
-                         target->loc.repos_root_url, target->loc.repos_uuid,
-                         target->loc.rev, target_url, iterpool);
+      target_pathrev = svn_client__pathrev_join_relpath(
+                         &target->loc, path_rel_to_session, iterpool);
       err = svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
                                                  NULL /* has_rev_zero_history */,
                                                  target_pathrev,

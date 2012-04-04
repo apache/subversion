@@ -76,15 +76,27 @@ svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
                                         const char *url,
                                         apr_pool_t *result_pool);
 
-/* Return a deep copy of the path-rev LOC, allocated in RESULT_POOL. */
+/* Return a deep copy of PATHREV, allocated in RESULT_POOL. */
 svn_client__pathrev_t *
-svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+svn_client__pathrev_dup(const svn_client__pathrev_t *pathrev,
                         apr_pool_t *result_pool);
+
+/* Return a deep copy of PATHREV, with a URI-encoded representation of
+ * RELPATH joined on to the URL.  Allocate the result in RESULT_POOL. */
+svn_client__pathrev_t *
+svn_client__pathrev_join_relpath(const svn_client__pathrev_t *pathrev,
+                                 const char *relpath,
+                                 apr_pool_t *result_pool);
 
 /* Return the repository-relative relpath of PATHREV. */
 const char *
 svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
                             apr_pool_t *result_pool);
+
+/* Return the repository-relative fspath of PATHREV. */
+const char *
+svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
+                           apr_pool_t *result_pool);
 
 
 /** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of

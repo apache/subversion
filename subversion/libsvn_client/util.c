@@ -96,11 +96,23 @@ svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
 }
 
 svn_client__pathrev_t *
-svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+svn_client__pathrev_dup(const svn_client__pathrev_t *pathrev,
                         apr_pool_t *result_pool)
 {
-  return svn_client__pathrev_create(loc->repos_root_url, loc->repos_uuid,
-                                    loc->rev, loc->url, result_pool);
+  return svn_client__pathrev_create(
+           pathrev->repos_root_url, pathrev->repos_uuid,
+           pathrev->rev, pathrev->url, result_pool);
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_join_relpath(const svn_client__pathrev_t *pathrev,
+                                 const char *relpath,
+                                 apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(
+           pathrev->repos_root_url, pathrev->repos_uuid, pathrev->rev,
+           svn_path_url_add_component2(pathrev->url, relpath, result_pool),
+           result_pool);
 }
 
 const char *
@@ -110,6 +122,17 @@ svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
   return svn_uri_skip_ancestor(pathrev->repos_root_url, pathrev->url,
                                result_pool);
 }
+
+const char *
+svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
+                           apr_pool_t *result_pool)
+{
+  return svn_fspath__canonicalize(svn_uri_skip_ancestor(
+                                    pathrev->repos_root_url, pathrev->url,
+                                    result_pool),
+                                  result_pool);
+}
+
 
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
