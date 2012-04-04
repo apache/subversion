@@ -116,14 +116,14 @@ svn_time_to_cstring(apr_time_t when, apr_pool_t *pool)
 }
 
 
-static int
+static apr_int32_t
 find_matching_string(char *str, apr_size_t size, const char strings[][4])
 {
   apr_size_t i;
 
   for (i = 0; i < size; i++)
     if (strings[i] && (strcmp(str, strings[i]) == 0))
-      return i;
+      return (apr_int32_t) i;
 
   return -1;
 }
@@ -140,19 +140,19 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
   /* Open-code parsing of the new timestamp format, as this
      is a hot path for reading the entries file.  This format looks
      like:  "2001-08-31T04:24:14.966996Z"  */
-  exploded_time.tm_year = strtol(data, &c, 10);
+  exploded_time.tm_year = (apr_int32_t) strtol(data, &c, 10);
   if (*c++ != '-') goto fail;
-  exploded_time.tm_mon = strtol(c, &c, 10);
+  exploded_time.tm_mon = (apr_int32_t) strtol(c, &c, 10);
   if (*c++ != '-') goto fail;
-  exploded_time.tm_mday = strtol(c, &c, 10);
+  exploded_time.tm_mday = (apr_int32_t) strtol(c, &c, 10);
   if (*c++ != 'T') goto fail;
-  exploded_time.tm_hour = strtol(c, &c, 10);
+  exploded_time.tm_hour = (apr_int32_t) strtol(c, &c, 10);
   if (*c++ != ':') goto fail;
-  exploded_time.tm_min = strtol(c, &c, 10);
+  exploded_time.tm_min = (apr_int32_t) strtol(c, &c, 10);
   if (*c++ != ':') goto fail;
-  exploded_time.tm_sec = strtol(c, &c, 10);
+  exploded_time.tm_sec = (apr_int32_t) strtol(c, &c, 10);
   if (*c++ != '.') goto fail;
-  exploded_time.tm_usec = strtol(c, &c, 10);
+  exploded_time.tm_usec = (apr_int32_t) strtol(c, &c, 10);
   if (*c++ != 'Z') goto fail;
 
   exploded_time.tm_year  -= 1900;
