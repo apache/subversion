@@ -490,9 +490,29 @@ bdb_close(bdb_env_t *bdb)
 
 
 static svn_error_t *
-svn_fs_bdb__close_internal(bdb_env_t *bdb)
+svn_fs_bdb__close_internal(bdb_env_baton_t *bdb_baton)
 {
   svn_error_t *err = SVN_NO_ERROR;
+  bdb_env_t *bdb = bdb_baton->bdb;
+
+  SVN_ERR_ASSERT(bdb_baton->error_info->refcount > 0);
+
+  /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
+     cleanup_env_baton(). */
+  bdb_baton->bdb = NULL;
+
+  /* Note that we only bother with this cleanup if the pool is non-NULL, to
+     guard against potential races between this and the cleanup_env cleanup
+     callback.  It's not clear if that can actually happen, but better safe
+     than sorry. */
+  if (0 == --bdb_baton->error_info->refcount && bdb->pool)
+    {
+      svn_error_clear(bdb_baton->error_info->pending_errors);
+#if APR_HAS_THREADS
+      free(bdb_baton->error_info);
+      apr_threadkey_private_set(NULL, bdb->error_info);
+#endif
+    }
 
   if (--bdb->refcount != 0)
     {
@@ -520,29 +540,10 @@ svn_fs_bdb__close_internal(bdb_env_t *bdb)
 svn_error_t *
 svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 {
-  bdb_env_t *bdb = bdb_baton->bdb;
-
   SVN_ERR_ASSERT(bdb_baton->env == bdb_baton->bdb->env);
 
-  /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
-     cleanup_env_baton(). */
-  bdb_baton->bdb = NULL;
-
-  /* Note that we only bother with this cleanup if the pool is non-NULL, to
-     guard against potential races between this and the cleanup_env cleanup
-     callback.  It's not clear if that can actually happen, but better safe
-     than sorry. */
-  if (0 == --bdb_baton->error_info->refcount && bdb->pool)
-    {
-      svn_error_clear(bdb_baton->error_info->pending_errors);
-#if APR_HAS_THREADS
-      free(bdb_baton->error_info);
-      apr_threadkey_private_set(NULL, bdb->error_info);
-#endif
-    }
-
   /* This may run during final pool cleanup when the lock is NULL. */
-  SVN_MUTEX__WITH_LOCK(bdb_cache_lock, svn_fs_bdb__close_internal(bdb));
+  SVN_MUTEX__WITH_LOCK(bdb_cache_lock, svn_fs_bdb__close_internal(bdb_baton));
 
   return SVN_NO_ERROR;
 }

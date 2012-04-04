@@ -36,6 +36,7 @@
 #include "svn_client.h"
 
 #include "private/svn_magic.h"
+#include "private/svn_client_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -146,16 +147,15 @@ svn_client__repos_locations(const char **start_url,
 /* Trace a line of history of a particular versioned resource back to a
  * specific revision.
  *
- * Set *OP_URL to the URL that the object PEG_URL@PEG_REVNUM had in
+ * Set *OP_LOC_P to the location that the object PEG_LOC had in
  * revision OP_REVNUM.
  *
  * RA_SESSION is an open RA session to the correct repository; it may be
  * temporarily reparented inside this function. */
 svn_error_t *
-svn_client__repos_location(const char **start_url,
+svn_client__repos_location(svn_client__pathrev_t **op_loc_p,
                            svn_ra_session_t *ra_session,
-                           const char *peg_url,
-                           svn_revnum_t peg_revnum,
+                           const svn_client__pathrev_t *peg_loc,
                            svn_revnum_t op_revnum,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
@@ -194,13 +194,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    Ancestry is determined by the 'copy-from' relationship and the normal
    successor relationship.
 
-   Set *ANCESTOR_RELPATH, *ANCESTOR_URL, and *ANCESTOR_REVISION to the
-   path (relative to the root of the repository, with no leading '/'),
-   URL, and revision, respectively, of the youngest common ancestor of
-   the two locations URL1@REV1 and URL2@REV2.  Set *ANCESTOR_RELPATH and
-   *ANCESTOR_URL to NULL and *ANCESTOR_REVISION to SVN_INVALID_REVNUM if
-   they have no common ancestor.  This function assumes that URL1@REV1
-   and URL2@REV2 both refer to the same repository.
+   Set *ANCESTOR_P to the location of the youngest common ancestor of
+   LOC1 and LOC2.  If the locations have no common ancestor (including if
+   they don't have the same repository root URL), set *ANCESTOR_P to NULL.
 
    Use the authentication baton cached in CTX to authenticate against
    the repository.  Use POOL for all allocations.
@@ -208,15 +204,12 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    See also svn_client__youngest_common_ancestor().
 */
 svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_relpath,
-                                         const char **ancestor_url,
-                                         svn_revnum_t *ancestor_revision,
-                                         const char *url1,
-                                         svn_revnum_t rev1,
-                                         const char *url2,
-                                         svn_revnum_t rev2,
+svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
+                                         const svn_client__pathrev_t *loc1,
+                                         const svn_client__pathrev_t *loc2,
                                          svn_client_ctx_t *ctx,
-                                         apr_pool_t *pool);
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute URL, a peg revision PEG_REVISION, and a desired revision
@@ -246,6 +239,19 @@ svn_error_t *
 svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
+                                 const char *path_or_url,
+                                 const char *base_dir_abspath,
+                                 const svn_opt_revision_t *peg_revision,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
+/* Like svn_client__ra_session_from_path() but returning a path-rev
+ * instead of separate URL and rev outputs.  RESOLVED_LOC_P may be NULL
+ * if not wanted. */
+svn_error_t *
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                 svn_client__pathrev_t **resolved_loc_p,
                                  const char *path_or_url,
                                  const char *base_dir_abspath,
                                  const svn_opt_revision_t *peg_revision,

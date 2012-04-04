@@ -1510,6 +1510,7 @@ alter_symlink_cb(void *baton,
 
   /* ### do something  */
 
+  SVN__NOT_IMPLEMENTED();
   return SVN_NO_ERROR;
 }
 
@@ -1565,6 +1566,7 @@ move_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
+  SVN__NOT_IMPLEMENTED();
   return SVN_NO_ERROR;
 }
 
@@ -1575,6 +1577,7 @@ rotate_cb(void *baton,
           const apr_array_header_t *revisions,
           apr_pool_t *scratch_pool)
 {
+  SVN__NOT_IMPLEMENTED();
   return SVN_NO_ERROR;
 }
 
