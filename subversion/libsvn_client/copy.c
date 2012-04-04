@@ -1042,14 +1042,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                    path_driver_info_t *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_url_add_component2(top_url, info->dst_path, pool);
+          item->url = svn_path_url_add_component2(top_url, info->dst_path,
+                                                  pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
           if (is_move && (! info->resurrection))
             {
               item = apr_pcalloc(pool, sizeof(*item));
-              item->url = svn_path_url_add_component2(top_url, info->src_path, pool);
+              item->url = svn_path_url_add_component2(top_url, info->src_path,
+                                                      pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
