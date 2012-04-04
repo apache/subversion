@@ -232,9 +232,9 @@ svn_client__wc_node_get_origin(const char **repos_root_url_p,
        * URL and UUID anyway, and leave the node URL and revision as NULL
        * and INVALID.  If it's unversioned, this will throw an error. */
       *url_p = NULL;
-      SVN_ERR(svn_client_get_repos_root(&repos_root_url, repos_uuid_p,
-                                        wc_abspath,
-                                        ctx, result_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, repos_uuid_p,
+                                          ctx->wc_ctx, wc_abspath,
+                                          result_pool, scratch_pool));
     }
 
   if (repos_root_url_p)
