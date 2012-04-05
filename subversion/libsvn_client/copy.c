@@ -1182,6 +1182,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
+  const char *common_wc_abspath = NULL;
   void *edit_baton;
   svn_client__committables_t *committables;
   apr_array_header_t *commit_items;
@@ -1406,6 +1407,26 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
                                             commit_items, pool));
 
+#if ENABLE_EV2_SHIMS
+  for (i = 0; !common_wc_abspath && i < commit_items->nelts; i++)
+    {
+      common_wc_abspath = APR_ARRAY_IDX(commit_items, i,
+                                        svn_client_commit_item3_t *)->path;
+    }
+
+  for (; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+      if (!item->path)
+        continue;
+
+      common_wc_abspath = svn_dirent_get_longest_ancestor(common_wc_abspath,
+                                                          item->path, pool);
+    }
+#endif
+
   /* Open an RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
                                                NULL, commit_items,
@@ -1414,7 +1435,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       NULL, pool)));
+                                                       common_wc_abspath,
+                                                       pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,

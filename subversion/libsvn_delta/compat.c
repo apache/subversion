@@ -1242,7 +1242,7 @@ build(struct editor_baton *eb,
                    && (operation->operation == OP_OPEN))
             operation->operation = OP_PROPSET;
         }
-      if (!operation->copyfrom_revision)
+      if (!SVN_IS_VALID_REVNUM(operation->copyfrom_revision))
         operation->copyfrom_revision = rev;
       return SVN_NO_ERROR;
     }

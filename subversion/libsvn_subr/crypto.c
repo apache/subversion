@@ -37,6 +37,10 @@
 #define NUM_ITERATIONS 1000
 
 
+/* Size (in bytes) of the random data we'll prepend to encrypted data. */
+#define RANDOM_PREFIX_LEN 4
+
+
 /* A structure for containing Subversion's cryptography-related bits
    (so we can avoid passing around APR-isms outside this module). */
 struct svn_crypto__ctx_t {
@@ -141,7 +145,7 @@ get_random_bytes(const unsigned char **rand_bytes,
 #if APR_HAS_RANDOM
   apr_status_t apr_err;
   unsigned char *bytes;
-  
+
   bytes = apr_palloc(result_pool, rand_len);
   apr_err = apr_generate_random_bytes(bytes, rand_len);
   if (apr_err != APR_SUCCESS)
@@ -164,28 +168,39 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
 {
   apr_status_t apr_err;
   const apu_err_t *apu_err = NULL;
+  apr_crypto_t *apr_crypto;
   const apr_crypto_driver_t *driver;
 
   CRYPTO_INIT(result_pool);
 
-  *ctx = apr_palloc(result_pool, sizeof(**ctx));
+  /* Load the crypto driver.
+ 
+     ### TODO: For the sake of flexibility, should we use
+     ### APU_CRYPTO_RECOMMENDED_DRIVER instead of hard coding
+     ### "openssl" here?
 
+     NOTE: Potential bugs in get_driver() imply we might get
+     APR_SUCCESS and NULL.  Sigh. Just be a little more careful in
+     error generation here.  */
   apr_err = apr_crypto_get_driver(&driver, "openssl", NULL, &apu_err,
                                   result_pool);
-  /* Potential bugs in get_driver() imply we might get APR_SUCCESS and NULL.
-     Sigh. Just be a little more careful in error generation here.  */
   if (apr_err != APR_SUCCESS)
     return svn_error_create(apr_err, err_from_apu_err(apr_err, apu_err),
                             _("OpenSSL crypto driver error"));
   if (driver == NULL)
     return svn_error_create(APR_EGENERAL,
                             err_from_apu_err(APR_EGENERAL, apu_err),
-                            _("Bad return value while loading"));
+                            _("Bad return value while loading crypto "
+                              "driver"));
 
-  apr_err = apr_crypto_make(&(*ctx)->crypto, driver, NULL, result_pool);
-  if (apr_err != APR_SUCCESS || (*ctx)->crypto == NULL)
+  apr_err = apr_crypto_make(&apr_crypto, driver, NULL, result_pool);
+  if (apr_err != APR_SUCCESS || apr_crypto == NULL)
     return svn_error_create(apr_err, NULL,
                             _("Error creating OpenSSL crypto context"));
+
+  /* Allocate and initialize our crypto context. */
+  *ctx = apr_palloc(result_pool, sizeof(**ctx));
+  (*ctx)->crypto = apr_crypto;
 
   return SVN_NO_ERROR;
 }
@@ -251,8 +266,14 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
                                   scratch_pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_trace(crypto_error_create(
-                             ctx, apr_err,
-                             _("Error creating derived key")));
+                               ctx, apr_err,
+                               _("Error creating derived key")));
+  if (! key)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Error creating derived key"));
+  if (iv_len == 0)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Unexpected IV length returned"));
 
   /* Generate the proper length IV.  */
   SVN_ERR(get_random_bytes(&iv_vector, ctx, iv_len, result_pool));
@@ -266,8 +287,7 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
                              _("Error initializing block encryption")));
 
   /* Generate a 4-byte prefix. */
-#define PREFIX_LEN 4
-  SVN_ERR(get_random_bytes(&prefix, ctx, PREFIX_LEN, scratch_pool));
+  SVN_ERR(get_random_bytes(&prefix, ctx, RANDOM_PREFIX_LEN, scratch_pool));
 
   /* Combine our prefix, original password, and appropriate padding.
      We won't bother padding if the prefix and password combined
@@ -275,12 +295,12 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
      however, we'll drop a NUL byte after the password and pad with
      random stuff after that to the block boundary. */
   password_len = strlen(password);
-  assembled_len = PREFIX_LEN + password_len;
+  assembled_len = RANDOM_PREFIX_LEN + password_len;
   if ((assembled_len % block_size) == 0)
     {
       assembled = apr_palloc(scratch_pool, assembled_len);
-      memcpy(assembled, prefix, PREFIX_LEN);
-      memcpy(assembled + PREFIX_LEN, password, password_len);
+      memcpy(assembled, prefix, RANDOM_PREFIX_LEN);
+      memcpy(assembled + RANDOM_PREFIX_LEN, password, password_len);
     }
   else
     {
@@ -290,10 +310,11 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
       SVN_ERR(get_random_bytes(&padding, ctx, pad_len, scratch_pool));
       assembled_len = assembled_len + 1 + pad_len;
       assembled = apr_palloc(scratch_pool, assembled_len);
-      memcpy(assembled, prefix, PREFIX_LEN);
-      memcpy(assembled + PREFIX_LEN, password, password_len);
-      *(assembled + PREFIX_LEN + password_len) = '\0';
-      memcpy(assembled + PREFIX_LEN + password_len + 1, padding, pad_len);
+      memcpy(assembled, prefix, RANDOM_PREFIX_LEN);
+      memcpy(assembled + RANDOM_PREFIX_LEN, password, password_len);
+      *(assembled + RANDOM_PREFIX_LEN + password_len) = '\0';
+      memcpy(assembled + RANDOM_PREFIX_LEN + password_len + 1, 
+             padding, pad_len);
     }      
     
   /* Get the length that we need to allocate.  */
@@ -368,7 +389,17 @@ svn_crypto__decrypt_password(const char **plaintext,
                                   ctx->crypto, scratch_pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_trace(crypto_error_create(
-                               ctx, apr_err, _("Error creating derived key")));
+                               ctx, apr_err,
+                               _("Error creating derived key")));
+  if (! key)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Error creating derived key"));
+  if (iv_len == 0)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Unexpected IV length returned"));
+  if (iv_len != iv->len)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Provided IV has incorrect length"));
   
   apr_err = apr_crypto_block_decrypt_init(&block_ctx, &block_size,
                                           (unsigned char *)iv->data,
@@ -410,8 +441,9 @@ svn_crypto__decrypt_password(const char **plaintext,
 
   /* Copy the non-random bits of the resulting plaintext, skipping the
      prefix and ignoring any trailing padding. */
-  *plaintext = apr_pstrndup(result_pool, (const char *)(result + PREFIX_LEN),
-                            result_len + final_len - PREFIX_LEN);
+  *plaintext = apr_pstrndup(result_pool,
+                            (const char *)(result + RANDOM_PREFIX_LEN),
+                            result_len + final_len - RANDOM_PREFIX_LEN);
 
  cleanup:
   apr_crypto_block_cleanup(block_ctx);

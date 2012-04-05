@@ -1092,9 +1092,9 @@ outside."
       (insert str)
       (goto-char svn-output-marker)
       (while (looking-at
-              "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([* ]\\) \\(........\\) \\(........\\) \\(............\\) \\([^ ].*\\)\n")
-        (let ((status (match-string 1))
-              (filename (svn-normalise-path (match-string 6))))
+              "\\(?:\\(\\?.....\\)\\|\\([ ACDGIMRX!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? [* ] +[^ ]+ +[^ ]+ +[^ ]+\\) +\\([^ ].*\\)\n")
+        (let ((status (or (match-string 1) (match-string 2)))
+              (filename (svn-normalise-path (match-string 3))))
           (delete-region (match-beginning 0)
                          (match-end 0))
 	  (when (or (not svn-file-filter)
