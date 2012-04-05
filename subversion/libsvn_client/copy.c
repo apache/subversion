@@ -537,117 +537,6 @@ typedef struct path_driver_info_t
 } path_driver_info_t;
 
 
-/* The baton used with the path_driver_cb_func() callback for a copy
-   or move operation. */
-struct path_driver_cb_baton
-{
-  /* The editor (and its state) used to perform the operation. */
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-
-  /* A hash of path -> path_driver_info_t *'s. */
-  apr_hash_t *action_hash;
-
-  /* Whether the operation is a move or copy. */
-  svn_boolean_t is_move;
-};
-
-static svn_error_t *
-path_driver_cb_func(void **dir_baton,
-                    void *parent_baton,
-                    void *callback_baton,
-                    const char *path,
-                    apr_pool_t *pool)
-{
-  struct path_driver_cb_baton *cb_baton = callback_baton;
-  svn_boolean_t do_delete = FALSE, do_add = FALSE;
-  path_driver_info_t *path_info = apr_hash_get(cb_baton->action_hash,
-                                               path,
-                                               APR_HASH_KEY_STRING);
-
-  /* Initialize return value. */
-  *dir_baton = NULL;
-
-  /* This function should never get an empty PATH.  We can neither
-     create nor delete the empty PATH, so if someone is calling us
-     with such, the code is just plain wrong. */
-  SVN_ERR_ASSERT(! svn_path_is_empty(path));
-
-  /* Check to see if we need to add the path as a directory. */
-  if (path_info->dir_add)
-    {
-      return cb_baton->editor->add_directory(path, parent_baton, NULL,
-                                             SVN_INVALID_REVNUM, pool,
-                                             dir_baton);
-    }
-
-  /* If this is a resurrection, we know the source and dest paths are
-     the same, and that our driver will only be calling us once.  */
-  if (path_info->resurrection)
-    {
-      /* If this is a move, we do nothing.  Otherwise, we do the copy.  */
-      if (! cb_baton->is_move)
-        do_add = TRUE;
-    }
-  /* Not a resurrection. */
-  else
-    {
-      /* If this is a move, we check PATH to see if it is the source
-         or the destination of the move. */
-      if (cb_baton->is_move)
-        {
-          if (strcmp(path_info->src_path, path) == 0)
-            do_delete = TRUE;
-          else
-            do_add = TRUE;
-        }
-      /* Not a move?  This must just be the copy addition. */
-      else
-        {
-          do_add = TRUE;
-        }
-    }
-
-  if (do_delete)
-    {
-      SVN_ERR(cb_baton->editor->delete_entry(path, SVN_INVALID_REVNUM,
-                                             parent_baton, pool));
-    }
-  if (do_add)
-    {
-      SVN_ERR(svn_path_check_valid(path, pool));
-
-      if (path_info->src_kind == svn_node_file)
-        {
-          void *file_baton;
-          SVN_ERR(cb_baton->editor->add_file(path, parent_baton,
-                                             path_info->src_url,
-                                             path_info->src_revnum,
-                                             pool, &file_baton));
-          if (path_info->mergeinfo)
-            SVN_ERR(cb_baton->editor->change_file_prop(file_baton,
-                                                       SVN_PROP_MERGEINFO,
-                                                       path_info->mergeinfo,
-                                                       pool));
-          SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
-        }
-      else
-        {
-          SVN_ERR(cb_baton->editor->add_directory(path, parent_baton,
-                                                  path_info->src_url,
-                                                  path_info->src_revnum,
-                                                  pool, dir_baton));
-          if (path_info->mergeinfo)
-            SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton,
-                                                      SVN_PROP_MERGEINFO,
-                                                      path_info->mergeinfo,
-                                                      pool));
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
-
 /* Starting with the path DIR relative to the RA_SESSION's session
    URL, work up through DIR's parents until an existing node is found.
    Push each nonexistent path onto the array NEW_DIRS, allocating in
@@ -728,6 +617,169 @@ find_absent_parents2(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* This should probably be smarter... */
+static svn_error_t *
+fetch_remote_kind_func(svn_kind_t *kind,
+                       void *baton,
+                       const char *path,
+                       svn_revnum_t base_revision,
+                       apr_pool_t *scratch_pool)
+{
+  *kind = svn_kind_unknown;
+  return SVN_NO_ERROR;
+}
+
+/* This should probably be smarter... */
+static svn_error_t *
+fetch_remote_props_func(apr_hash_t **props,
+                        void *baton,
+                        const char *path,
+                        svn_revnum_t base_revision,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  *props = apr_hash_make(result_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+drive_single_path(svn_editor_t *editor,
+                  const char *path,
+                  path_driver_info_t *path_info,
+                  svn_boolean_t is_move,
+                  svn_revnum_t youngest,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props = apr_hash_make(scratch_pool);
+  apr_array_header_t *children = apr_array_make(scratch_pool, 1,
+                                                sizeof(const char *));
+  svn_boolean_t do_delete = FALSE;
+  svn_boolean_t do_add = FALSE;
+
+  /* Check to see if we need to add the path as a directory. */
+  if (path_info->dir_add)
+    {
+      return svn_error_trace(svn_editor_add_directory(editor, path, children,
+                                                      props,
+                                                      SVN_INVALID_REVNUM));
+     }
+
+  /* If this is a resurrection, we know the source and dest paths are
+     the same, and that our driver will only be calling us once.  */
+  if (path_info->resurrection)
+    {
+      /* If this is a move, we do nothing.  Otherwise, we do the copy.  */
+      if (!is_move)
+        do_add = TRUE;
+    }
+  /* Not a resurrection. */
+  else
+    {
+      /* If this is a move, we check PATH to see if it is the source
+         or the destination of the move. */
+      if (is_move)
+        {
+          if (strcmp(path_info->src_path, path) == 0)
+            do_delete = TRUE;
+          else
+            do_add = TRUE;
+        }
+      /* Not a move?  This must just be the copy addition. */
+      else
+        {
+          do_add = TRUE;
+        }
+    }
+
+  /* ### We need to handle moves here, rather than just pretend they are
+         a delete + add. */
+  if (do_delete)
+    {
+      SVN_ERR(svn_editor_delete(editor, path, youngest));
+    }
+  if (do_add)
+    {
+      SVN_ERR(svn_path_check_valid(path, scratch_pool));
+
+      /* ### Need to get existing props, rather than just set mergeinfo
+             on an empty set of props. */
+      if (path_info->mergeinfo)
+        apr_hash_set(props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
+                     path_info->mergeinfo);
+
+      SVN_ERR(svn_editor_copy(editor,
+                              path_info->src_url, path_info->src_revnum,
+                              path, SVN_INVALID_REVNUM));
+
+      if (path_info->src_kind == svn_node_file)
+        SVN_ERR(svn_editor_alter_file(editor, path, SVN_INVALID_REVNUM,
+                                      props, NULL, NULL));
+      else
+        SVN_ERR(svn_editor_alter_directory(editor, path, SVN_INVALID_REVNUM,
+                                           props));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+drive_editor(const svn_delta_editor_t *deditor,
+             void *dedit_baton,
+             apr_array_header_t *paths,
+             apr_hash_t *action_hash,
+             svn_boolean_t is_move,
+             svn_revnum_t youngest,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool)
+{
+  svn_editor_t *editor;
+  struct svn_delta__extra_baton *exb;
+  svn_delta_unlock_func_t unlock_func;
+  void *unlock_baton;
+  svn_boolean_t send_abs_paths;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *iterpool;
+  int i;
+
+  /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
+  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
+                                       &unlock_func, &unlock_baton,
+                                       deditor, dedit_baton, &send_abs_paths,
+                                       cancel_func, cancel_baton,
+                                       fetch_remote_kind_func, NULL,
+                                       fetch_remote_props_func, NULL,
+                                       scratch_pool, scratch_pool));
+  if (exb->start_edit)
+    SVN_ERR(exb->start_edit(exb->baton, youngest));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      path_driver_info_t *path_info = apr_hash_get(action_hash, path,
+                                                   APR_HASH_KEY_STRING);
+
+      svn_pool_clear(iterpool);
+
+      err = drive_single_path(editor, path, path_info, is_move, youngest,
+                              iterpool);
+      if (err)
+        break;
+    }
+  svn_pool_destroy(iterpool);
+
+  if (err)
+    {
+      /* At least try to abort the edit (and fs txn) before throwing err. */
+      svn_error_clear(svn_editor_abort(editor));
+      return svn_error_trace(err);
+    }
+
+  /* Complete the edit. */
+  return svn_error_trace(svn_editor_complete(editor));
+}
+
 static svn_error_t *
 repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t make_parents,
@@ -738,7 +790,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_array_header_t *paths = apr_array_make(pool, 2 * copy_pairs->nelts,
                                              sizeof(const char *));
   apr_hash_t *action_hash = apr_hash_make(pool);
@@ -749,7 +800,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  struct path_driver_cb_baton cb_baton;
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
   int i;
@@ -1107,24 +1157,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
-  /* Setup the callback baton. */
-  cb_baton.editor = editor;
-  cb_baton.edit_baton = edit_baton;
-  cb_baton.action_hash = action_hash;
-  cb_baton.is_move = is_move;
-
-  /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
-                              path_driver_cb_func, &cb_baton, pool);
-  if (err)
-    {
-      /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_trace(err);
-    }
-
-  /* Close the edit. */
-  return svn_error_trace(editor->close_edit(edit_baton, pool));
+  return svn_error_trace(drive_editor(editor, edit_baton, paths, action_hash,
+                                      is_move, youngest, ctx->cancel_func,
+                                      ctx->cancel_baton, pool));
 }
 
 /* Baton for check_url_kind */
