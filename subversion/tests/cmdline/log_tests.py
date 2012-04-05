@@ -2217,7 +2217,6 @@ def log_xml_old(sbox):
                                          expected_paths=paths)
 
 
-@XFail()
 @Issue(4153)
 def log_diff_moved(sbox):
   "log --diff on moved file"

@@ -1494,6 +1494,44 @@ check_diff_target_exists(const char *url,
   return SVN_NO_ERROR;
 }
 
+
+/* Resolve PATH_OR_URL@PEG_REVISION to a possibly different *RESOLVED_URL
+ * which the corresponding object has in REVISION. If the object has no
+ * location in REVISION, set *RESOLVED_URL to NULL. */
+static svn_error_t *
+resolve_pegged_diff_target_url(const char **resolved_url,
+                               svn_ra_session_t *ra_session,
+                               const char *path_or_url,
+                               const svn_opt_revision_t *peg_revision,
+                               const svn_opt_revision_t *revision,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  /* Check if the PATH_OR_URL exists at REVISION. */
+  err = svn_client__repos_locations(resolved_url, NULL,
+                                    NULL, NULL,
+                                    ra_session,
+                                    path_or_url,
+                                    peg_revision,
+                                    revision,
+                                    NULL,
+                                    ctx, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+        {
+          svn_error_clear(err);
+          *resolved_url = NULL;
+        }
+      else
+        return svn_error_trace(err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /** Prepare a repos repos diff between PATH_OR_URL1 and
  * PATH_OR_URL2@PEG_REVISION, in the revision range REVISION1:REVISION2.
  * Return URLs and peg revisions in *URL1, *REV1 and in *URL2, *REV2.
@@ -1560,34 +1598,38 @@ diff_prepare_repos_repos(const char **url1,
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
-      svn_error_t *err;
+      const char *resolved_url1;
+      const char *resolved_url2;
 
-      err = svn_client__repos_locations(url1, NULL,
-                                        url2, NULL,
-                                        *ra_session,
-                                        path_or_url2,
-                                        peg_revision,
-                                        revision1,
-                                        revision2,
-                                        ctx, pool);
-      if (err)
+      SVN_ERR(resolve_pegged_diff_target_url(&resolved_url2, *ra_session,
+                                             path_or_url2, peg_revision,
+                                             revision2, ctx, pool));
+
+      SVN_ERR(svn_ra_reparent(*ra_session, *url1, pool));
+      SVN_ERR(resolve_pegged_diff_target_url(&resolved_url1, *ra_session,
+                                             path_or_url1, peg_revision,
+                                             revision1, ctx, pool));
+
+      /* Either or both URLs might have changed as a result of resolving
+       * the PATH_OR_URL@PEG_REVISION's history. If only one of the URLs
+       * could be resolved, use the same URL for URL1 and URL2, so we can
+       * show diff that 'adds' the object (see issue #4153). */
+      if (resolved_url2)
         {
-          if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
-            {
-              /* Don't give up just yet. A missing path might translate
-               * into an addition in the diff. Below, we verify that each
-               * URL exists on at least one side of the diff. */
-              svn_error_clear(err);
-            }
-          else
-            return svn_error_trace(err);
+          *url2 = resolved_url2;
+          if (!resolved_url1)
+            *url1 = resolved_url2;
         }
-      else
+      if (resolved_url1)
         {
-          /* Reparent the session, since *URL2 might have changed as a result
-             the above call. */
-          SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
+          *url1 = resolved_url1;
+          if (!resolved_url2)
+            *url2 = resolved_url1;
         }
+
+      /* Reparent the session, since *URL2 might have changed as a result
+         the above call. */
+      SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
     }
 
   /* Resolve revision and get path kind for the second target. */
