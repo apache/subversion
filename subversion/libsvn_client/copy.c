@@ -1408,12 +1408,19 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                             commit_items, pool));
 
 #if ENABLE_EV2_SHIMS
-  common_wc_abspath = APR_ARRAY_IDX(commit_items, 0,
-                                    svn_client_commit_item3_t *)->path;
-  for (i = 1; i < commit_items->nelts; i++)
+  for (i = 0; !common_wc_abspath && i < commit_items->nelts; i++)
+    {
+      common_wc_abspath = APR_ARRAY_IDX(commit_items, i,
+                                        svn_client_commit_item3_t *)->path;
+    }
+
+  for (; i < commit_items->nelts; i++)
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+      if (!item->path)
+        continue;
 
       common_wc_abspath = svn_dirent_get_longest_ancestor(common_wc_abspath,
                                                           item->path, pool);
