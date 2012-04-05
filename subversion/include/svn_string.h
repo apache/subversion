@@ -200,7 +200,7 @@ svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
 
-/** Create a truely empty string object (length and blocksize are 0)
+/** Create a new, empty bytestring.
  * @since New in 1.8.
  */
 svn_stringbuf_t *
