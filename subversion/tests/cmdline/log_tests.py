@@ -2218,6 +2218,7 @@ def log_xml_old(sbox):
 
 
 @Issue(4153)
+@XFail(svntest.main.is_ra_type_dav)
 def log_diff_moved(sbox):
   "log --diff on moved file"
 
