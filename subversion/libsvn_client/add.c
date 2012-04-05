@@ -740,34 +740,15 @@ add_url_parents(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-drive_editor(const svn_delta_editor_t *deditor,
-             void *dedit_baton,
+drive_editor(svn_editor_t *editor,
              apr_array_header_t *targets,
              apr_hash_t *children_hash,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
              apr_pool_t *scratch_pool)
 {
-  svn_editor_t *editor;
-  struct svn_delta__extra_baton *exb;
-  svn_delta_unlock_func_t unlock_func;
-  void *unlock_baton;
-  svn_boolean_t send_abs_paths;
   apr_hash_t *empty_props = apr_hash_make(scratch_pool);
   apr_pool_t *iterpool;
   svn_error_t *err;
   int i;
-
-  /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
-  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
-                                       &unlock_func, &unlock_baton,
-                                       deditor, dedit_baton, &send_abs_paths,
-                                       cancel_func, cancel_baton,
-                                       NULL, NULL, NULL, NULL,
-                                       scratch_pool, scratch_pool));
-
-  if (exb->start_edit)
-    SVN_ERR(exb->start_edit(exb->baton, SVN_INVALID_REVNUM));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -811,8 +792,7 @@ mkdir_urls(const apr_array_header_t *urls,
            apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session = NULL;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
+  svn_editor_t *editor;
   const char *log_msg;
   apr_array_header_t *targets;
   apr_hash_t *targets_hash;
@@ -969,16 +949,15 @@ mkdir_urls(const apr_array_header_t *urls,
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        NULL, pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
-                                    pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
-  return svn_error_trace(drive_editor(editor, edit_baton, targets,
-                                      children_hash,
-                                      ctx->cancel_func, ctx->cancel_baton,
+  return svn_error_trace(drive_editor(editor, targets, children_hash,
                                       pool));
 }
 

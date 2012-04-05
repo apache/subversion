@@ -865,8 +865,28 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
- * @since New in 1.5.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_ra_get_commit_editor4(svn_ra_session_t *session,
+                          svn_editor_t **editor,
+                          apr_hash_t *revprop_table,
+                          svn_commit_callback2_t callback,
+                          void *callback_baton,
+                          apr_hash_t *lock_tokens,
+                          svn_boolean_t keep_locks,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *scratch_pool,
+                          apr_pool_t *result_pool);
+
+/**
+ * Same as svn_ra_get_commit_editor4(), but returns a #svn_delta_editor_t.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_commit_editor3(svn_ra_session_t *session,
                           const svn_delta_editor_t **editor,

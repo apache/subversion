@@ -733,6 +733,63 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                             lock_tokens, keep_locks, pool);
 }
 
+svn_error_t *
+svn_ra_get_commit_editor4(svn_ra_session_t *session,
+                          svn_editor_t **editor,
+                          apr_hash_t *revprop_table,
+                          svn_commit_callback2_t callback,
+                          void *callback_baton,
+                          apr_hash_t *lock_tokens,
+                          svn_boolean_t keep_locks,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *scratch_pool,
+                          apr_pool_t *result_pool)
+{
+  const svn_delta_editor_t *deditor;
+  void *dedit_baton;
+  /* Allocate this in a pool, since the callback will be called long after
+     this function as returned. */
+  struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
+  struct svn_delta__extra_baton *exb;
+  svn_delta_unlock_func_t unlock_func;
+  void *unlock_baton;
+  svn_boolean_t send_abs_paths;
+
+  ccwb->original_callback = callback;
+  ccwb->original_baton = callback_baton;
+  ccwb->session = session;
+
+  SVN_ERR(session->vtable->get_commit_editor(session, &deditor, &dedit_baton,
+                                             revprop_table,
+                                             callback
+                                                 ? commit_callback_wrapper
+                                                 : NULL,
+                                             callback ? ccwb : NULL,
+                                             lock_tokens, keep_locks,
+                                             result_pool));
+
+  /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
+  SVN_ERR(svn_delta__editor_from_delta(editor, &exb,
+                                       &unlock_func, &unlock_baton,
+                                       deditor, dedit_baton, &send_abs_paths,
+                                       cancel_func, cancel_baton,
+                                       NULL, NULL, NULL, NULL,
+                                       scratch_pool, result_pool));
+
+  /* Since we're (currently) just wrapping an existing Ev1 editor, we have
+     to call any start_edit handler it may provide.  We've got a couple of
+     options to do so: Implement a wrapper editor and call the start_edit
+     callback upon the first invocation of any of the underlying editor's
+     functions; or, just assume our consumer is going to eventually use the
+     editor it is asking for, and call the start edit callback now.  For
+     simplicity's sake, we do the latter. */
+  if (exb->start_edit)
+    SVN_ERR(exb->start_edit(exb->baton, SVN_INVALID_REVNUM));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
                              const char *path,
                              svn_revnum_t revision,
