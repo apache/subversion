@@ -141,14 +141,14 @@ Veto-blocked changes:
    Justification:
      Allow testing against current stable httpd.
    Votes:
-     -1: danielsh (hangs with bdb)
+     -1: danielsh (needs issue #4157 to work on bdb)
 
  * r1232267
    Allow building mod_dav_svn against httpd-2.4.
    Justification:
      Support current stable httpd.
    Votes:
-     -1: danielsh (davautocheck hangs with bdb)
+     -1: danielsh (needs issue #4157 to work on bdb)
 
 Approved changes:
 =================
