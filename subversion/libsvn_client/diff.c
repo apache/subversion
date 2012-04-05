@@ -1495,9 +1495,9 @@ check_diff_target_exists(const char *url,
 }
 
 
-/* Resolve PATH_OR_URL@PEG_REVISION to a possibly different *RESOLVED_URL
- * which the corresponding object has in REVISION. If the object has no
- * location in REVISION, set *RESOLVED_URL to NULL. */
+/* Return in *RESOLVED_URL the URL which PATH_OR_URL@PEG_REVISION has in
+ * REVISION. If the object has no location in REVISION, set *RESOLVED_URL
+ * to NULL. */
 static svn_error_t *
 resolve_pegged_diff_target_url(const char **resolved_url,
                                svn_ra_session_t *ra_session,
