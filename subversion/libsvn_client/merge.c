@@ -1087,8 +1087,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           svn_mergeinfo_t implicit_mergeinfo;
 
           SVN_ERR(svn_client__get_history_as_mergeinfo(
-            &implicit_mergeinfo, NULL, target_base.url,
-            target_base.rev, target_base.rev, SVN_INVALID_REVNUM,
+            &implicit_mergeinfo, NULL,
+            &target_base, target_base.rev, SVN_INVALID_REVNUM,
             ra_session, ctx, iterpool));
 
           /* Remove PATH's implicit mergeinfo from the incoming mergeinfo. */
@@ -3518,8 +3518,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
   if (implicit_mergeinfo)
     {
-      svn_revnum_t target_rev;
-      const char *target_url;
+      svn_client__pathrev_t *target;
 
       /* Assert that we have sane input. */
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start) && SVN_IS_VALID_REVNUM(end)
@@ -3527,18 +3526,16 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       /* Retrieve the origin (original_*) of the node, or just the
          url if the node was not copied. */
-      SVN_ERR(svn_client__wc_node_get_origin(NULL, NULL,
-                                             &target_rev, &target_url,
-                                             target_abspath, ctx,
+      SVN_ERR(svn_client__wc_node_get_origin(&target, target_abspath, ctx,
                                              scratch_pool, scratch_pool));
 
-      if (! target_url)
+      if (! target->url)
         {
           /* We've been asked to operate on a locally added target, so its
            * implicit mergeinfo is empty. */
           *implicit_mergeinfo = apr_hash_make(result_pool);
         }
-      else if (target_rev <= end)
+      else if (target->rev <= end)
         {
           /* We're asking about a range outside our natural history
              altogether.  That means our implicit mergeinfo is empty. */
@@ -3553,14 +3550,13 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
              TARGET_ABSPATH might not even exist, and even if it does the
              working copy is *at* TARGET_REV so its implicit history ends
              at TARGET_REV! */
-          if (target_rev < start)
-            start = target_rev;
+          if (target->rev < start)
+            start = target->rev;
 
           /* Fetch the implicit mergeinfo. */
           SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo,
                                                        NULL,
-                                                       target_url, target_rev,
-                                                       start, end,
+                                                       target, start, end,
                                                        ra_session, ctx,
                                                        result_pool));
         }
@@ -4144,10 +4140,9 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                   apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t implicit_src_mergeinfo;
-  svn_revnum_t young_rev = MAX(source->loc1->rev, source->loc2->rev);
   svn_revnum_t old_rev = MIN(source->loc1->rev, source->loc2->rev);
-  const char *primary_url = (source->loc1->rev < source->loc2->rev)
-                            ? source->loc2->url : source->loc1->url;
+  const svn_client__pathrev_t *primary_src
+    = (source->loc1->rev < source->loc2->rev) ? source->loc2 : source->loc1;
   const char *merge_src_fspath;
   apr_array_header_t *rangelist;
 
@@ -4156,12 +4151,13 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
 
   /* Get SOURCE as mergeinfo. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, NULL,
-                                               primary_url, young_rev,
-                                               young_rev, old_rev, ra_session,
+                                               primary_src,
+                                               primary_src->rev, old_rev,
+                                               ra_session,
                                                merge_b->ctx, scratch_pool));
 
   SVN_ERR(svn_ra__get_fspath_relative_to_root(
-            ra_session, &merge_src_fspath, primary_url, scratch_pool));
+            ra_session, &merge_src_fspath, primary_src->url, scratch_pool));
   rangelist = apr_hash_get(implicit_src_mergeinfo,
                            merge_src_fspath,
                            APR_HASH_KEY_STRING);
@@ -7780,10 +7776,12 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
               svn_error_t *err;
               svn_mergeinfo_t subtree_history_as_mergeinfo;
               apr_array_header_t *child_merge_src_rangelist;
-              const char *subtree_mergeinfo_url =
-                svn_path_url_add_component2(merge_b->target->loc.repos_root_url,
-                                            child_merge_src_fspath + 1,
-                                            iterpool);
+              svn_client__pathrev_t *subtree_mergeinfo_pathrev
+                = svn_client__pathrev_create_with_relpath(
+                    merge_b->target->loc.repos_root_url,
+                    merge_b->target->loc.repos_uuid,
+                    merged_range->end, child_merge_src_fspath + 1,
+                    iterpool);
 
               /* Confirm that the naive mergeinfo we want to set on
                  CHILD->ABSPATH both exists and is part of
@@ -7793,7 +7791,7 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                  because we only do this for forward merges. */
               err = svn_client__get_history_as_mergeinfo(
                 &subtree_history_as_mergeinfo, NULL,
-                subtree_mergeinfo_url, merged_range->end,
+                subtree_mergeinfo_pathrev,
                 merged_range->end, merged_range->start,
                 merge_b->ra_session2, merge_b->ctx, iterpool);
 
@@ -7941,7 +7939,7 @@ record_mergeinfo_for_added_subtrees(
           apr_array_header_t *rangelist;
           const char *rel_added_path;
           const char *added_path_mergeinfo_fspath;
-          const char *added_path_mergeinfo_url;
+          svn_client__pathrev_t *added_path_pathrev;
 
           SVN_ERR(svn_wc_read_kind(&added_path_kind, merge_b->ctx->wc_ctx,
                                    added_abspath, FALSE, iterpool));
@@ -7979,14 +7977,14 @@ record_mergeinfo_for_added_subtrees(
              will describe non-existent merge sources. To avoid this we get
              take the intersection of the naive mergeinfo with
              MERGEINFO_PATH/rel_added_path's history. */
-          added_path_mergeinfo_url =
-            svn_path_url_add_component2(merge_b->target->loc.repos_root_url,
-                                        added_path_mergeinfo_fspath + 1,
-                                        iterpool);
+          added_path_pathrev = svn_client__pathrev_create_with_relpath(
+                                 merge_b->target->loc.repos_root_url,
+                                 merge_b->target->loc.repos_uuid,
+                                 MAX(merged_range->start, merged_range->end),
+                                 added_path_mergeinfo_fspath + 1, iterpool);
           SVN_ERR(svn_client__get_history_as_mergeinfo(
             &adds_history_as_mergeinfo, NULL,
-            added_path_mergeinfo_url,
-            MAX(merged_range->start, merged_range->end),
+            added_path_pathrev,
             MAX(merged_range->start, merged_range->end),
             MIN(merged_range->start, merged_range->end),
             merge_b->ra_session2, merge_b->ctx, iterpool));
@@ -9294,17 +9292,15 @@ open_target_wc(merge_target_t **target_p,
                apr_pool_t *scratch_pool)
 {
   merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
+  svn_client__pathrev_t *origin;
 
   target->abspath = apr_pstrdup(result_pool, wc_abspath);
 
   SVN_ERR(svn_wc_read_kind(&target->kind, ctx->wc_ctx, wc_abspath, FALSE,
                            scratch_pool));
-
-  SVN_ERR(svn_client__wc_node_get_origin(&target->loc.repos_root_url,
-                                         &target->loc.repos_uuid,
-                                         &target->loc.rev, &target->loc.url,
-                                         wc_abspath, ctx,
+  SVN_ERR(svn_client__wc_node_get_origin(&origin, wc_abspath, ctx,
                                          result_pool, scratch_pool));
+  target->loc = *origin;
 
   SVN_ERR(ensure_wc_is_suitable_merge_target(
             wc_abspath, ctx,
@@ -9847,10 +9843,6 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
      are not yet merged to it. */
   if (potentially_unmerged_ranges)
     {
-      const char *source_repos_rel_path
-        = svn_client__pathrev_relpath(source_loc, scratch_pool);
-      const char *target_repos_rel_path
-        = svn_client__pathrev_relpath(target_loc, scratch_pool);
       svn_revnum_t oldest_rev =
         (APR_ARRAY_IDX(potentially_unmerged_ranges,
                        0,
@@ -9865,9 +9857,10 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
 
       log_baton.merged_catalog = merged_catalog;
       log_baton.unmerged_catalog = true_unmerged_catalog;
-      log_baton.source_repos_rel_path = source_repos_rel_path;
-      log_baton.target_fspath = apr_psprintf(scratch_pool, "/%s",
-                                             target_repos_rel_path);
+      log_baton.source_repos_rel_path
+        = svn_client__pathrev_relpath(source_loc, scratch_pool);
+      log_baton.target_fspath
+        = svn_client__pathrev_fspath(target_loc, scratch_pool);
       log_baton.result_pool = result_pool;
 
       APR_ARRAY_PUSH(log_targets, const char *) = "";
@@ -9922,9 +9915,9 @@ find_youngest_merged_rev(svn_revnum_t *youngest_merged_rev,
  * that are not present in the source branch.
  *
  * SOURCE_MERGEINFO is the explicit or inherited mergeinfo of the source
- * branch SOURCE_URL@SOURCE_REV.  Extend SOURCE_MERGEINFO, modifying it in
+ * branch SOURCE_PATHREV.  Extend SOURCE_MERGEINFO, modifying it in
  * place, to include the natural history (implicit mergeinfo) of
- * SOURCE_URL@SOURCE_REV.  ### But make these additions in SCRATCH_POOL.
+ * SOURCE_PATHREV.  ### But make these additions in SCRATCH_POOL.
  *
  * ### [JAF] This function is named '..._subroutine' simply because I
  *     factored it out based on code similarity, without knowing what it's
@@ -9934,8 +9927,7 @@ static svn_error_t *
 find_unmerged_mergeinfo_subroutine(svn_mergeinfo_t *filtered_mergeinfo_p,
                                    svn_mergeinfo_t target_history_as_mergeinfo,
                                    svn_mergeinfo_t source_mergeinfo,
-                                   const char *source_url,
-                                   svn_revnum_t source_rev,
+                                   const svn_client__pathrev_t *source_pathrev,
                                    svn_ra_session_t *source_ra_session,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *result_pool,
@@ -9947,7 +9939,7 @@ find_unmerged_mergeinfo_subroutine(svn_mergeinfo_t *filtered_mergeinfo_p,
      path's explicit or inherited mergeinfo. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(
             &source_history_as_mergeinfo, NULL /* has_rev_zero_history */,
-            source_url, source_rev, source_rev, SVN_INVALID_REVNUM,
+            source_pathrev, source_pathrev->rev, SVN_INVALID_REVNUM,
             source_ra_session, ctx, scratch_pool));
   SVN_ERR(svn_mergeinfo_merge2(source_mergeinfo,
                                source_history_as_mergeinfo,
@@ -10054,6 +10046,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
         = svn_relpath_skip_ancestor(target_repos_rel_path, target_path);
       const char *source_path;
       const char *source_url;
+      svn_client__pathrev_t *source_pathrev;
       svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
 
       svn_pool_clear(iterpool);
@@ -10126,12 +10119,15 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
             source_mergeinfo = apr_hash_make(iterpool);
         }
 
+      SVN_ERR(svn_client__pathrev_create_with_session(
+                &source_pathrev, source_ra_session, source_rev, source_url,
+                iterpool));
       /* Use scratch_pool rather than iterpool because filtered_mergeinfo
          is going into new_catalog below and needs to last to the end of
          this function. */
       SVN_ERR(find_unmerged_mergeinfo_subroutine(
                 &filtered_mergeinfo, target_history_as_mergeinfo,
-                source_mergeinfo, source_url, source_rev,
+                source_mergeinfo, source_pathrev,
                 source_ra_session, ctx, scratch_pool, iterpool));
       apr_hash_set(new_catalog,
                    apr_pstrdup(scratch_pool, source_path),
@@ -10154,7 +10150,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       const char *source_url;
       svn_mergeinfo_t source_mergeinfo = svn__apr_hash_index_val(hi);
       svn_mergeinfo_t filtered_mergeinfo;
-      const char *target_url;
+      svn_client__pathrev_t *target_pathrev;
       svn_mergeinfo_t target_history_as_mergeinfo;
       svn_error_t *err;
 
@@ -10162,12 +10158,12 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
 
       source_url = svn_path_url_add_component2(source_session_url,
                                                path_rel_to_session, iterpool);
-      target_url = svn_path_url_add_component2(target->loc.url,
-                                               path_rel_to_session, iterpool);
+      target_pathrev = svn_client__pathrev_join_relpath(
+                         &target->loc, path_rel_to_session, iterpool);
       err = svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
                                                  NULL /* has_rev_zero_history */,
-                                                 target_url,
-                                                 target->loc.rev, target->loc.rev,
+                                                 target_pathrev,
+                                                 target->loc.rev,
                                                  SVN_INVALID_REVNUM,
                                                  target_ra_session,
                                                  ctx, iterpool);
@@ -10188,6 +10184,8 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
         }
       else
         {
+          svn_client__pathrev_t *pathrev;
+
           SVN_ERR(find_youngest_merged_rev(youngest_merged_rev,
                                            target_history_as_mergeinfo,
                                            source_mergeinfo,
@@ -10197,9 +10195,12 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
              is going into new_catalog below and needs to last to the end of
              this function. */
           /* ### Why looking at SOURCE_url at TARGET_rev? */
+          SVN_ERR(svn_client__pathrev_create_with_session(
+                    &pathrev, source_ra_session, target->loc.rev, source_url,
+                    iterpool));
           SVN_ERR(find_unmerged_mergeinfo_subroutine(
                     &filtered_mergeinfo, target_history_as_mergeinfo,
-                    source_mergeinfo, source_url, target->loc.rev,
+                    source_mergeinfo, pathrev,
                     source_ra_session, ctx, scratch_pool, iterpool));
           if (apr_hash_count(filtered_mergeinfo))
             apr_hash_set(new_catalog,
@@ -10299,7 +10300,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
        hi = apr_hash_next(hi))
     {
       const char *absolute_path = svn__apr_hash_index_key(hi);
-      const char *url;
+      svn_client__pathrev_t *target_child;
       const char *path_rel_to_root;
       svn_mergeinfo_t target_history_as_mergeinfo;
 
@@ -10312,12 +10313,13 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
                                                 NULL, FALSE,
                                                 NULL, scratch_pool,
                                                 iterpool));
-      url = svn_path_url_add_component2(target->loc.repos_root_url,
-                                        path_rel_to_root, iterpool);
+      target_child = svn_client__pathrev_create_with_relpath(
+                       target->loc.repos_root_url, target->loc.repos_uuid,
+                       target->loc.rev, path_rel_to_root, iterpool);
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
                                                    NULL /* has_rev_zero_hist */,
-                                                   url,
-                                                   target->loc.rev, target->loc.rev,
+                                                   target_child,
+                                                   target->loc.rev,
                                                    SVN_INVALID_REVNUM,
                                                    target_ra_session,
                                                    ctx, scratch_pool));

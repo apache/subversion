@@ -50,6 +50,9 @@ svn_client__pathrev_create(const char *repos_root_url,
 {
   svn_client__pathrev_t *loc = apr_palloc(result_pool, sizeof(*loc));
 
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(repos_root_url));
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(url));
+
   loc->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
   loc->repos_uuid = apr_pstrdup(result_pool, repos_uuid);
   loc->rev = rev;
@@ -64,6 +67,8 @@ svn_client__pathrev_create_with_relpath(const char *repos_root_url,
                                         const char *relpath,
                                         apr_pool_t *result_pool)
 {
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath));
+
   return svn_client__pathrev_create(
            repos_root_url, repos_uuid, rev,
            svn_path_url_add_component2(repos_root_url, relpath, result_pool),
@@ -72,28 +77,42 @@ svn_client__pathrev_create_with_relpath(const char *repos_root_url,
 
 svn_error_t *
 svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
-                                         svn_ra_session_t *ra_session,
-                                         svn_revnum_t rev,
-                                         const char *url,
-                                         apr_pool_t *result_pool)
+                                        svn_ra_session_t *ra_session,
+                                        svn_revnum_t rev,
+                                        const char *url,
+                                        apr_pool_t *result_pool)
 {
   svn_client__pathrev_t *pathrev = apr_palloc(result_pool, sizeof(*pathrev));
+
+  SVN_ERR_ASSERT(svn_path_is_url(url));
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &pathrev->repos_root_url,
                                  result_pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &pathrev->repos_uuid, result_pool));
   pathrev->rev = rev;
-  pathrev->url = url;
+  pathrev->url = apr_pstrdup(result_pool, url);
   *pathrev_p = pathrev;
   return SVN_NO_ERROR;
 }
 
 svn_client__pathrev_t *
-svn_client__pathrev_dup(const svn_client__pathrev_t *loc,
+svn_client__pathrev_dup(const svn_client__pathrev_t *pathrev,
                         apr_pool_t *result_pool)
 {
-  return svn_client__pathrev_create(loc->repos_root_url, loc->repos_uuid,
-                                    loc->rev, loc->url, result_pool);
+  return svn_client__pathrev_create(
+           pathrev->repos_root_url, pathrev->repos_uuid,
+           pathrev->rev, pathrev->url, result_pool);
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_join_relpath(const svn_client__pathrev_t *pathrev,
+                                 const char *relpath,
+                                 apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(
+           pathrev->repos_root_url, pathrev->repos_uuid, pathrev->rev,
+           svn_path_url_add_component2(pathrev->url, relpath, result_pool),
+           result_pool);
 }
 
 const char *
@@ -103,6 +122,17 @@ svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
   return svn_uri_skip_ancestor(pathrev->repos_root_url, pathrev->url,
                                result_pool);
 }
+
+const char *
+svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
+                           apr_pool_t *result_pool)
+{
+  return svn_fspath__canonicalize(svn_uri_skip_ancestor(
+                                    pathrev->repos_root_url, pathrev->url,
+                                    result_pool),
+                                  result_pool);
+}
+
 
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
@@ -202,26 +232,28 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__wc_node_get_origin(const char **repos_root_url_p,
-                               const char **repos_uuid_p,
-                               svn_revnum_t *rev_p,
-                               const char **url_p,
+svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                const char *wc_abspath,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-  const char *repos_root_url, *relpath;
+  const char *relpath;
 
-  SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */, rev_p, &relpath,
-                                  &repos_root_url, repos_uuid_p,
+  *origin_p = apr_palloc(result_pool, sizeof(**origin_p));
+
+  SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */,
+                                  &(*origin_p)->rev,
+                                  &relpath,
+                                  &(*origin_p)->repos_root_url,
+                                  &(*origin_p)->repos_uuid,
                                   NULL, ctx->wc_ctx, wc_abspath,
                                   FALSE /* scan_deleted */,
                                   result_pool, scratch_pool));
-  if (repos_root_url && relpath)
+  if ((*origin_p)->repos_root_url && relpath)
     {
-      *url_p = svn_path_url_add_component2(repos_root_url, relpath,
-                                           result_pool);
+      (*origin_p)->url = svn_path_url_add_component2(
+                           (*origin_p)->repos_root_url, relpath, result_pool);
     }
   else
     {
@@ -231,17 +263,16 @@ svn_client__wc_node_get_origin(const char **repos_root_url_p,
        * If it's locally added or deleted, find the repository root
        * URL and UUID anyway, and leave the node URL and revision as NULL
        * and INVALID.  If it's unversioned, this will throw an error. */
-      *url_p = NULL;
-      SVN_ERR(svn_client_get_repos_root(&repos_root_url, repos_uuid_p,
-                                        wc_abspath,
-                                        ctx, result_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_repos_info(&(*origin_p)->repos_root_url,
+                                          &(*origin_p)->repos_uuid,
+                                          ctx->wc_ctx, wc_abspath,
+                                          result_pool, scratch_pool));
+      (*origin_p)->rev = SVN_INVALID_REVNUM;
+      (*origin_p)->url = NULL;
     }
 
-  if (repos_root_url_p)
-    *repos_root_url_p = repos_root_url;
-
-  SVN_ERR_ASSERT(!repos_root_url_p || *repos_root_url_p);
-  SVN_ERR_ASSERT(!repos_uuid_p || *repos_uuid_p);
+  SVN_ERR_ASSERT((*origin_p)->repos_root_url);
+  SVN_ERR_ASSERT((*origin_p)->repos_uuid);
   return SVN_NO_ERROR;
 }
 
