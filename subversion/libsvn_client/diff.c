@@ -1613,7 +1613,7 @@ diff_prepare_repos_repos(const char **url1,
       /* Either or both URLs might have changed as a result of resolving
        * the PATH_OR_URL@PEG_REVISION's history. If only one of the URLs
        * could be resolved, use the same URL for URL1 and URL2, so we can
-       * show diff that 'adds' the object (see issue #4153). */
+       * show a diff that adds or removes the object (see issue #4153). */
       if (resolved_url2)
         {
           *url2 = resolved_url2;
