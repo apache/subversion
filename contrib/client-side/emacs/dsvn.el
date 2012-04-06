@@ -1238,6 +1238,8 @@ With prefix arg, prompt for REVISION."
               ((looking-at "At revision \\([0-9]+\\)\\.\n")
                (svn-update-label svn-revision-label (match-string 1))
                (forward-line 1))
+              ((looking-at "Updating '.*':\n")
+               (delete-region (match-beginning 0) (match-end 0)))
               ((and (not svn-merging)
                     (looking-at "Updated to revision \\([0-9]+\\)\\.\n"))
                (svn-update-label svn-revision-label (match-string 1))
