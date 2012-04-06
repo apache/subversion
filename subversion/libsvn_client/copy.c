@@ -617,30 +617,6 @@ find_absent_parents2(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* This should probably be smarter... */
-static svn_error_t *
-fetch_remote_kind_func(svn_kind_t *kind,
-                       void *baton,
-                       const char *path,
-                       svn_revnum_t base_revision,
-                       apr_pool_t *scratch_pool)
-{
-  *kind = svn_kind_unknown;
-  return SVN_NO_ERROR;
-}
-
-/* This should probably be smarter... */
-static svn_error_t *
-fetch_remote_props_func(apr_hash_t **props,
-                        void *baton,
-                        const char *path,
-                        svn_revnum_t base_revision,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  *props = apr_hash_make(result_pool);
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 drive_single_path(svn_editor_t *editor,
@@ -723,35 +699,16 @@ drive_single_path(svn_editor_t *editor,
 }
 
 static svn_error_t *
-drive_editor(const svn_delta_editor_t *deditor,
-             void *dedit_baton,
+drive_editor(svn_editor_t *editor,
              apr_array_header_t *paths,
              apr_hash_t *action_hash,
              svn_boolean_t is_move,
              svn_revnum_t youngest,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
              apr_pool_t *scratch_pool)
 {
-  svn_editor_t *editor;
-  struct svn_delta__extra_baton *exb;
-  svn_delta_unlock_func_t unlock_func;
-  void *unlock_baton;
-  svn_boolean_t send_abs_paths;
   svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *iterpool;
   int i;
-
-  /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
-  SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
-                                       &unlock_func, &unlock_baton,
-                                       deditor, dedit_baton, &send_abs_paths,
-                                       cancel_func, cancel_baton,
-                                       fetch_remote_kind_func, NULL,
-                                       fetch_remote_props_func, NULL,
-                                       scratch_pool, scratch_pool));
-  if (exb->start_edit)
-    SVN_ERR(exb->start_edit(exb->baton, youngest));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < paths->nelts; i++)
@@ -798,8 +755,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   const char *message, *repos_root;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session = NULL;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
+  svn_editor_t *editor;
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
   int i;
@@ -1150,16 +1106,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        NULL, pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
-                                    pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
-  return svn_error_trace(drive_editor(editor, edit_baton, paths, action_hash,
-                                      is_move, youngest, ctx->cancel_func,
-                                      ctx->cancel_baton, pool));
+  return svn_error_trace(drive_editor(editor, paths, action_hash,
+                                      is_move, youngest, pool));
 }
 
 /* Baton for check_url_kind */

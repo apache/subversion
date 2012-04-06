@@ -307,6 +307,9 @@ struct svn_ra_session_t {
 
   /* Private data for the RA implementation. */
   void *priv;
+
+  /* A set of shim callbacks for use by libsvn_ra. */
+  svn_delta_shim_callbacks_t *shim_callbacks;
 };
 
 /* Each libsvn_ra_foo defines a function named svn_ra_foo__init of this type.

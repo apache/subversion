@@ -771,11 +771,14 @@ svn_ra_get_commit_editor4(svn_ra_session_t *session,
 
   /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
   SVN_ERR(svn_delta__editor_from_delta(editor, &exb,
-                                       &unlock_func, &unlock_baton,
-                                       deditor, dedit_baton, &send_abs_paths,
-                                       cancel_func, cancel_baton,
-                                       NULL, NULL, NULL, NULL,
-                                       scratch_pool, result_pool));
+                                   &unlock_func, &unlock_baton,
+                                   deditor, dedit_baton, &send_abs_paths,
+                                   cancel_func, cancel_baton,
+                                   session->shim_callbacks->fetch_kind_func,
+                                   session->shim_callbacks->fetch_baton,
+                                   session->shim_callbacks->fetch_props_func,
+                                   session->shim_callbacks->fetch_baton,
+                                   scratch_pool, result_pool));
 
   /* Since we're (currently) just wrapping an existing Ev1 editor, we have
      to call any start_edit handler it may provide.  We've got a couple of
@@ -1365,8 +1368,11 @@ svn_error_t *
 svn_ra__register_editor_shim_callbacks(svn_ra_session_t *session,
                                        svn_delta_shim_callbacks_t *callbacks)
 {
-  SVN_ERR(session->vtable->register_editor_shim_callbacks(session, callbacks));
-  return SVN_NO_ERROR;
+  /* We save these locally, as well as provide them to the RA layers. */
+  session->shim_callbacks = callbacks;
+
+  return svn_error_trace(session->vtable->register_editor_shim_callbacks(
+                                                        session, callbacks));
 }
 
 
