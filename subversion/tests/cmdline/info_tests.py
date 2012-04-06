@@ -301,13 +301,13 @@ def info_wcroot_abspaths(sbox):
       target = "(UNKNOWN)"
 
     if path is None:
-      logger.warn "No WC root path for '%s'" % (target)
+      logger.warn("No WC root path for '%s'", target)
       raise svntest.Failure
 
     if path != wcroot_abspath:
-      logger.warn("For target '%s'..." % (target))
-      logger.warn("   Reported WC root path: %s" % (path))
-      logger.warn("   Expected WC root path: %s" % (wcroot_abspath))
+      logger.warn("For target '%s'...", target)
+      logger.warn("   Reported WC root path: %s", path)
+      logger.warn("   Expected WC root path: %s", wcroot_abspath)
       raise svntest.Failure
 
   sbox.build(read_only=True)
