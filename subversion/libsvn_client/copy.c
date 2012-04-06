@@ -374,7 +374,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
           lock_src = TRUE;
           lock_dst = FALSE;
         }
-      else if (svn_dirent_is_child(pair->dst_parent_abspath, src_parent_abspath,
+      else if (svn_dirent_is_child(pair->dst_parent_abspath,
+                                   src_parent_abspath,
                                    iterpool))
         {
           lock_src = FALSE;
@@ -395,7 +396,8 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
           FALSE, iterpool);
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(pair, pair->dst_parent_abspath,
-                                              lock_src, lock_dst, ctx, iterpool));
+                                              lock_src, lock_dst, ctx,
+                                              iterpool));
 
     }
   svn_pool_destroy(iterpool);
