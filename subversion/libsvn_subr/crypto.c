@@ -182,6 +182,17 @@ wrap_as_string(const unsigned char *data,
 
 /*** Semi-public APIs ***/
 
+/* Return TRUE iff Subversion's cryptographic support is available. */
+svn_boolean_t svn_crypto__is_available(void)
+{
+#ifdef SVN_HAVE_CRYPTO
+  return TRUE;
+#else /* SVN_HAVE_CRYPTO */
+  return FALSE;
+#endif /* SVN_HAVE_CRYPTO */
+}
+
+
 /* Set CTX to a Subversion cryptography context allocated from
    RESULT_POOL.  */
 svn_error_t *
