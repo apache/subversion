@@ -877,8 +877,8 @@ svn_ra_get_commit_editor4(svn_ra_session_t *session,
                           svn_boolean_t keep_locks,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
-                          apr_pool_t *scratch_pool,
-                          apr_pool_t *result_pool);
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /**
  * Same as svn_ra_get_commit_editor4(), but returns a #svn_delta_editor_t.
