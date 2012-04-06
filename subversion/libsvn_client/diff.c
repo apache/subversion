@@ -1773,6 +1773,386 @@ unsupported_diff_error(svn_error_t *child_err)
                             "that is not yet supported"));
 }
 
+/* Produce a diff between two arbitrary files at LOCAL_ABSPATH1 and
+ * LOCAL_ABSPATH2, using the diff callbacks from CALLBACKS.
+ * Use PATH as the name passed to diff callbacks.
+ * FILE1_IS_EMPTY and FILE2_IS_EMPTY are used as hints which diff callback
+ * function to use to compare the files (added/deleted/changed). */
+static svn_error_t *
+do_arbitrary_files_diff(const char *local_abspath1,
+                        const char *local_abspath2,
+                        const char *path,
+                        svn_boolean_t file1_is_empty,
+                        svn_boolean_t file2_is_empty,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        struct diff_cmd_baton *diff_cmd_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
+{
+  apr_hash_t *original_props;
+  apr_hash_t *modified_props;
+  apr_array_header_t *prop_changes;
+  svn_string_t *original_mime_type = NULL;
+  svn_string_t *modified_mime_type = NULL;
+  svn_error_t *err;
+
+  if (diff_cmd_baton->ignore_prop_diff)
+    {
+      original_props = apr_hash_make(scratch_pool);
+      modified_props = apr_hash_make(scratch_pool);
+    }
+  else
+    {
+      /* Try to get properties from either file. It's OK if the files do not
+       * have properties, or if they are unversioned. */
+      err = svn_wc_prop_list2(&original_props, ctx->wc_ctx, local_abspath1,
+                              scratch_pool, scratch_pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+                  err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
+        {
+          svn_error_clear(err);
+          original_props = apr_hash_make(scratch_pool);
+        }
+      else
+        SVN_ERR(err);
+      err = svn_wc_prop_list2(&modified_props, ctx->wc_ctx, local_abspath2,
+                              scratch_pool, scratch_pool);
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+                  err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
+        {
+          svn_error_clear(err);
+          modified_props = apr_hash_make(scratch_pool);
+        }
+      else
+        SVN_ERR(err);
+    }
+
+  SVN_ERR(svn_prop_diffs(&prop_changes, modified_props, original_props,
+                         scratch_pool));
+
+  if (!diff_cmd_baton->force_binary)
+    {
+      /* Try to determine the mime-type of each file. */
+      original_mime_type = apr_hash_get(original_props, SVN_PROP_MIME_TYPE,
+                                        APR_HASH_KEY_STRING);
+      if (!file1_is_empty && !original_mime_type)
+        {
+          const char *mime_type;
+          SVN_ERR(svn_io_detect_mimetype2(&mime_type, local_abspath1,
+                                          ctx->mimetypes_map, scratch_pool));
+
+          if (mime_type)
+            original_mime_type = svn_string_create(mime_type, scratch_pool);
+        }
+
+      modified_mime_type = apr_hash_get(modified_props, SVN_PROP_MIME_TYPE,
+                                        APR_HASH_KEY_STRING);
+      if (!file2_is_empty && !modified_mime_type)
+        {
+          const char *mime_type;
+          SVN_ERR(svn_io_detect_mimetype2(&mime_type, local_abspath1,
+                                          ctx->mimetypes_map, scratch_pool));
+
+          if (mime_type)
+            modified_mime_type = svn_string_create(mime_type, scratch_pool);
+        }
+    }
+
+  /* Produce the diff. */
+  if (file1_is_empty && !file2_is_empty)
+    SVN_ERR(callbacks->file_added(NULL, NULL, NULL, path,
+                                  local_abspath1, local_abspath2,
+                                  /* ### TODO get real revision info
+                                   * for versioned files? */
+                                  SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                                  original_mime_type ?
+                                    original_mime_type->data : NULL,
+                                  modified_mime_type ?
+                                    modified_mime_type->data : NULL,
+                                  /* ### TODO get copyfrom? */
+                                  NULL, SVN_INVALID_REVNUM,
+                                  prop_changes, original_props,
+                                  diff_cmd_baton, scratch_pool));
+  else if (!file1_is_empty && file2_is_empty)
+    SVN_ERR(callbacks->file_deleted(NULL, NULL, path,
+                                    local_abspath1, local_abspath2,
+                                    original_mime_type ?
+                                      original_mime_type->data : NULL,
+                                    modified_mime_type ?
+                                      modified_mime_type->data : NULL,
+                                    original_props,
+                                    diff_cmd_baton, scratch_pool));
+  else
+    SVN_ERR(callbacks->file_changed(NULL, NULL, NULL, path,
+                                    local_abspath1, local_abspath2,
+                                    /* ### TODO get real revision info
+                                     * for versioned files? */
+                                    SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                                    original_mime_type ?
+                                      original_mime_type->data : NULL,
+                                    modified_mime_type ?
+                                      modified_mime_type->data : NULL,
+                                    prop_changes, original_props,
+                                    diff_cmd_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+struct arbitrary_diff_walker_baton {
+  /* The root directories of the trees being compared. */
+  const char *root1_abspath;
+  const char *root2_abspath;
+
+  /* TRUE if recursing withing an added subtree of root2_abspath that
+   * does not exist in root1_abspath. */
+  svn_boolean_t recursing_within_added_subtree;
+
+  /* A path to an empty file used for diffs that add/delete files. */
+  const char *empty_file_abspath;
+
+  const svn_wc_diff_callbacks4_t *callbacks;
+  struct diff_cmd_baton *callback_baton;
+  svn_client_ctx_t *ctx;
+} arbitrary_diff_walker_baton;
+
+/* Forward declaration needed because this function has a cyclic
+ * dependency with do_arbitrary_dirs_diff(). */
+static svn_error_t *
+arbitrary_diff_walker(void *baton, const char *local_abspath1,
+                      const apr_finfo_t *finfo,
+                      apr_pool_t *scratch_pool);
+
+/* Produce a diff between two arbitrary directories at LOCAL_ABSPATH1 and
+ * LOCAL_ABSPATH2, using the provided diff callbacks to show file changes
+ * and, for versioned nodes, property changes. */
+static svn_error_t *
+do_arbitrary_dirs_diff(const char *local_abspath1,
+                       const char *local_abspath2,
+                       const svn_wc_diff_callbacks4_t *callbacks,
+                       struct diff_cmd_baton *callback_baton,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool)
+{
+  apr_file_t *empty_file;
+  svn_node_kind_t kind1;
+
+  struct arbitrary_diff_walker_baton b;
+
+  /* If LOCAL_ABSPATH1 is not a directory, crawl LOCAL_ABSPATH2 instead
+   * and compare it to LOCAL_ABSPATH1, showing only additions.
+   * This case can only happen during recursion from arbitrary_diff_walker(),
+   * because do_arbitrary_nodes_diff() prevents this from happening at
+   * the root of the comparison. */
+  SVN_ERR(svn_io_check_resolved_path(local_abspath1, &kind1, scratch_pool));
+  b.recursing_within_added_subtree = (kind1 != svn_node_dir);
+
+  b.root1_abspath = local_abspath1;
+  b.root2_abspath = local_abspath2;
+  b.callbacks = callbacks;
+  b.callback_baton = callback_baton;
+  b.ctx = ctx;
+
+  SVN_ERR(svn_io_open_unique_file3(&empty_file, &b.empty_file_abspath,
+                                   NULL, svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_io_dir_walk2(b.recursing_within_added_subtree ? local_abspath2
+                                                        : local_abspath1,
+                           0, arbitrary_diff_walker, &b, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* An implementation of svn_io_walk_func_t. */
+static svn_error_t *
+arbitrary_diff_walker(void *baton, const char *local_abspath1,
+                      const apr_finfo_t *finfo,
+                      apr_pool_t *scratch_pool)
+{
+  struct arbitrary_diff_walker_baton *b = baton;
+  const char *local_abspath2;
+  svn_node_kind_t kind2;
+  const char *child_relpath;
+  apr_hash_t *dirents1;
+  apr_hash_t *dirents2;
+  apr_hash_t *merged_dirents;
+  apr_array_header_t *sorted_dirents;
+  int i;
+  apr_pool_t *iterpool;
+
+  if (finfo->filetype != APR_DIR)
+    return SVN_NO_ERROR;
+
+  if (b->recursing_within_added_subtree)
+    child_relpath = svn_dirent_skip_ancestor(b->root2_abspath, local_abspath1);
+  else
+    child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath1);
+  if (!child_relpath)
+      return SVN_NO_ERROR;
+
+  if (b->recursing_within_added_subtree)
+    dirents1 = apr_hash_make(scratch_pool);
+  else
+    SVN_ERR(svn_io_get_dirents3(&dirents1, local_abspath1,
+                                TRUE, /* only_check_type */
+                                scratch_pool, scratch_pool));
+
+  local_abspath2 = svn_dirent_join(b->root2_abspath, child_relpath,
+                                   scratch_pool);
+  SVN_ERR(svn_io_check_resolved_path(local_abspath2, &kind2, scratch_pool));
+  if (kind2 == svn_node_file)
+    {
+      /* Show file as deleted (being replaced by a directory). */
+      SVN_ERR(do_arbitrary_files_diff(local_abspath2, b->empty_file_abspath,
+                                      svn_dirent_skip_ancestor(
+                                        b->root2_abspath,
+                                        local_abspath2),
+                                      FALSE, TRUE,
+                                      b->callbacks, b->callback_baton,
+                                      b->ctx, scratch_pool));
+      dirents2 = apr_hash_make(scratch_pool);
+    }
+
+  if (kind2 == svn_node_none)
+    dirents2 = apr_hash_make(scratch_pool);
+
+  if (kind2 == svn_node_dir)
+    SVN_ERR(svn_io_get_dirents3(&dirents2, local_abspath2,
+                                TRUE, /* only_check_type */
+                                scratch_pool, scratch_pool));
+
+  /* Compare dirents1 to dirents2 and show added/deleted/changed files. */
+  merged_dirents = apr_hash_merge(scratch_pool, dirents1, dirents2,
+                                  NULL, NULL);
+  sorted_dirents = svn_sort__hash(merged_dirents,
+                                  svn_sort_compare_items_as_paths,
+                                  scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < sorted_dirents->nelts; i++)
+    {
+      svn_sort__item_t elt = APR_ARRAY_IDX(sorted_dirents, i, svn_sort__item_t);
+      const char *name = elt.key;
+      svn_io_dirent2_t *dirent1;
+      svn_io_dirent2_t *dirent2;
+      const char *child1_abspath;
+      const char *child2_abspath;
+
+      svn_pool_clear(iterpool);
+
+      dirent1 = apr_hash_get(dirents1, name, APR_HASH_KEY_STRING);
+      if (!dirent1)
+        {
+          dirent1 = svn_io_dirent2_create(iterpool);
+          dirent1->kind = svn_node_none;
+        }
+      dirent2 = apr_hash_get(dirents2, name, APR_HASH_KEY_STRING);
+      if (!dirent2)
+        {
+          dirent2 = svn_io_dirent2_create(iterpool);
+          dirent2->kind = svn_node_none;
+        }
+
+      child1_abspath = svn_dirent_join(local_abspath1, name, iterpool);
+      child2_abspath = svn_dirent_join(local_abspath2, name, iterpool);
+
+      if (dirent1->special)
+        SVN_ERR(svn_io_check_resolved_path(child1_abspath, &dirent1->kind,
+                                           iterpool));
+      if (dirent2->special)
+        SVN_ERR(svn_io_check_resolved_path(child1_abspath, &dirent2->kind,
+                                           iterpool));
+
+      if (dirent1->kind == svn_node_dir &&
+          dirent2->kind == svn_node_dir)
+        continue;
+
+      /* Files that exist only in dirents1. */
+      if (dirent1->kind == svn_node_file &&
+          (dirent2->kind == svn_node_dir || dirent2->kind == svn_node_none))
+        SVN_ERR(do_arbitrary_files_diff(child1_abspath, b->empty_file_abspath,
+                                        svn_relpath_join(child_relpath, name,
+                                                         iterpool),
+                                        FALSE, TRUE,
+                                        b->callbacks, b->callback_baton,
+                                        b->ctx, iterpool));
+
+      /* Files that exist only in dirents2. */
+      if (dirent2->kind == svn_node_file &&
+          (dirent1->kind == svn_node_dir || dirent1->kind == svn_node_none))
+        SVN_ERR(do_arbitrary_files_diff(b->empty_file_abspath, child2_abspath,
+                                        svn_relpath_join(child_relpath, name,
+                                                         iterpool),
+                                        TRUE, FALSE,
+                                        b->callbacks, b->callback_baton,
+                                        b->ctx, iterpool));
+
+      /* Files that exist in dirents1 and dirents2. */
+      if (dirent1->kind == svn_node_file && dirent2->kind == svn_node_file)
+        SVN_ERR(do_arbitrary_files_diff(child1_abspath, child2_abspath,
+                                        svn_relpath_join(child_relpath, name,
+                                                         iterpool),
+                                        FALSE, FALSE,
+                                        b->callbacks, b->callback_baton,
+                                        b->ctx, scratch_pool));
+
+      /* Directories that only exist in dirents2. These aren't crawled
+       * by this walker so we have to crawl them separately. */
+      if (dirent2->kind == svn_node_dir &&
+          (dirent1->kind == svn_node_file || dirent1->kind == svn_node_none))
+        SVN_ERR(do_arbitrary_dirs_diff(child1_abspath, child2_abspath,
+                                       b->callbacks, b->callback_baton,
+                                       b->ctx, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Produce a diff between two files or two directories at LOCAL_ABSPATH1
+ * and LOCAL_ABSPATH2, using the provided diff callbacks to show changes
+ * in files. The files and directories involved may be part of a working
+ * copy or they may be unversioned. For versioned files, show property
+ * changes, too. */ 
+static svn_error_t *
+do_arbitrary_nodes_diff(const char *local_abspath1,
+                        const char *local_abspath2,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        struct diff_cmd_baton *callback_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind1;
+  svn_node_kind_t kind2;
+
+  SVN_ERR(svn_io_check_resolved_path(local_abspath1, &kind1, scratch_pool));
+  SVN_ERR(svn_io_check_resolved_path(local_abspath2, &kind2, scratch_pool));
+  if (kind1 != kind2)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("'%s' is not the same node kind as '%s'"),
+                             local_abspath1, local_abspath2);
+
+  if (kind1 == svn_node_file)
+    SVN_ERR(do_arbitrary_files_diff(local_abspath1, local_abspath2,
+                                    svn_dirent_basename(local_abspath2,
+                                                        scratch_pool),
+                                    FALSE, FALSE,
+                                    callbacks, callback_baton,
+                                    ctx, scratch_pool));
+  else if (kind1 == svn_node_dir)
+    SVN_ERR(do_arbitrary_dirs_diff(local_abspath1, local_abspath2,
+                                   callbacks, callback_baton,
+                                   ctx, scratch_pool));
+  else
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("'%s' is not a file or directory"),
+                             kind1 == svn_node_none ?
+                              local_abspath1 : local_abspath2);
+  return SVN_NO_ERROR;
+}
+
 
 /* Perform a diff between two working-copy paths.
 
@@ -1804,16 +2184,18 @@ diff_wc_wc(const char *path1,
 
   SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
 
-  /* Currently we support only the case where path1 and path2 are the
-     same path. */
   if ((strcmp(path1, path2) != 0)
       || (! ((revision1->kind == svn_opt_revision_base)
              && (revision2->kind == svn_opt_revision_working))))
-    return unsupported_diff_error
-      (svn_error_create
-       (SVN_ERR_INCORRECT_PARAMS, NULL,
-        _("Only diffs between a path's text-base "
-          "and its working files are supported at this time")));
+    {
+      const char *abspath2;
+
+      SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, pool));
+      return svn_error_trace(do_arbitrary_nodes_diff(abspath1, abspath2,
+                                                     callbacks,
+                                                     callback_baton,
+                                                     ctx, pool));
+    }
 
   /* Resolve named revisions to real numbers. */
   err = svn_client__get_revision_number(&callback_baton->revnum1, NULL,
@@ -2209,8 +2591,8 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
     return unsupported_diff_error
       (svn_error_create
        (SVN_ERR_INCORRECT_PARAMS, NULL,
-        _("Only diffs between a path's text-base "
-          "and its working files are supported at this time")));
+        _("Summarized diffs are only supported between a path's text-base "
+          "and its working files at this time")));
 
   /* Find the node kind of PATH1 so that we know whether the diff drive will
      be anchored at PATH1 or its parent dir. */
