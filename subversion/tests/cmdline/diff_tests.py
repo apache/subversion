@@ -26,7 +26,9 @@
 ######################################################################
 
 # General modules
-import sys, re, os, time, shutil
+import sys, re, os, time, shutil, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -268,8 +270,8 @@ def verify_excluded_output(diff_output, excluded):
   "verify given line does not exist in diff output as diff line"
   for line in diff_output:
     if re.match("^(\\+|-)%s" % re.escape(excluded), line):
-      print('Sought: %s' % excluded)
-      print('Found:  %s' % line)
+      logger.warn('Sought: %s' % excluded)
+      logger.warn('Found:  %s' % line)
       raise svntest.Failure
 
 def extract_diff_path(line):
@@ -1570,7 +1572,7 @@ def check_for_omitted_prefix_in_path_component(sbox):
   good_dest = ".../prefix_other/mytag"
 
   if ((src != good_src) or (dest != good_dest)):
-    print("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
+    logger.warn("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
           (src, good_src, dest, good_dest))
     raise svntest.Failure
 
