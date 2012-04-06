@@ -29,8 +29,6 @@
 #include "../svn_test.h"
 #include "../../libsvn_subr/crypto.h"
 
-#if APU_HAVE_CRYPTO
-
 /* Helper function:  encrypt PASSWORD within CTX using MASTER, then
    decrypt those results and ensure the original PASSWORD comes out
    the other end. */
@@ -74,12 +72,11 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-#endif  /* APU_HAVE_CRYPTO */
 
 static svn_error_t *
 test_encrypt_decrypt_password(apr_pool_t *pool)
 {
-#if APU_HAVE_CRYPTO
+#ifdef SVN_HAVE_CRYPTO
   svn_crypto__ctx_t *ctx;
   const svn_string_t *master = svn_string_create("Pastor Massword", pool);
   int i;
@@ -102,9 +99,9 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
-#else
+#else /* SVN_HAVE_CRYPTO */
   return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
-#endif  /* APU_HAVE_CRYPTO */
+#endif /* SVN_HAVE_CRYPTO */
 }
 
 

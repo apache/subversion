@@ -24,9 +24,15 @@
 #ifndef SVN_LIBSVN_SUBR_CRYPTO_H
 #define SVN_LIBSVN_SUBR_CRYPTO_H
 
-#include <apu.h>  /* for APU_HAVE_CRYPTO */
-
+/* Test for APR crypto and RNG support */
+#undef SVN_HAVE_CRYPTO
+#include <apr.h> /* for APR_HAS_RANDOM */
+#include <apu.h> /* for APU_HAVE_CRYPTO */
+#if APR_HAS_RANDOM
 #if APU_HAVE_CRYPTO
+#define SVN_HAVE_CRYPTO
+#endif
+#endif
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -89,6 +95,4 @@ svn_crypto__decrypt_password(const char **plaintext,
 }
 #endif /* __cplusplus */
 
-#endif  /* APU_HAVE_CRYPTO */
-
-#endif  /* SVN_CRYPTO_H */
+#endif  /* SVN_LIBSVN_SUBR_CRYPTO_H */

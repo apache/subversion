@@ -23,9 +23,10 @@
 
 #include "crypto.h"
 
-#if APU_HAVE_CRYPTO
+#ifdef SVN_HAVE_CRYPTO
 #include <apr_random.h>
 #include <apr_crypto.h>
+#endif /* SVN_HAVE_CRYPTO */
 
 #include "svn_types.h"
 
@@ -44,6 +45,7 @@
 /* A structure for containing Subversion's cryptography-related bits
    (so we can avoid passing around APR-isms outside this module). */
 struct svn_crypto__ctx_t {
+#ifdef SVN_HAVE_CRYPTO
   apr_crypto_t *crypto;  /* APR cryptography context. */
 
 #if 0
@@ -53,12 +55,16 @@ struct svn_crypto__ctx_t {
      ### apr_generate_random_bytes() to generate entropy for seeding
      ### apr_random_t. See httpd/server/core.c:ap_init_rng()  */
   apr_random_t *rand;
-#endif
+#endif /* 0 */
+#else /* SVN_HAVE_CRYPTO */
+  int unused_but_required_to_satisfy_c_compilers;
+#endif /* SVN_HAVE_CRYPTO */
 };
 
 
 
-/*** Initialization ***/
+/*** Helper Functions ***/
+#ifdef SVN_HAVE_CRYPTO
 
 
 /* One-time initialization of the cryptography subsystem. */
@@ -88,10 +94,6 @@ crypto_init(void *baton, apr_pool_t *any_pool)
 
   return SVN_NO_ERROR;
 }
-
-
-
-/*** Helper Functions ***/
 
 
 /* If APU_ERR is non-NULL, create and return a Subversion error using
@@ -142,7 +144,6 @@ get_random_bytes(const unsigned char **rand_bytes,
                  apr_size_t rand_len,
                  apr_pool_t *result_pool)
 {
-#if APR_HAS_RANDOM
   apr_status_t apr_err;
   unsigned char *bytes;
 
@@ -153,12 +154,33 @@ get_random_bytes(const unsigned char **rand_bytes,
 
   *rand_bytes = bytes;
   return SVN_NO_ERROR;
-#else
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                          _("No support for random data generation found"));
-#endif
 }
 
+
+/* Return an svn_string_t allocated from RESULT_POOL, with its .data
+   and .len members set to DATA and LEN, respective.
+
+   WARNING: No lifetime management of DATA is offered here, so you
+   probably want to ensure that that information is allocated in a
+   sufficiently long-lived pool (such as, for example, RESULT_POOL). */
+static const svn_string_t *
+wrap_as_string(const unsigned char *data,
+               apr_size_t len,
+               apr_pool_t *result_pool)
+{
+  svn_string_t *s = apr_palloc(result_pool, sizeof(*s));
+
+  s->data = (const char *)data;  /* better already be in RESULT_POOL  */
+  s->len = len;
+  return s;
+}
+
+
+#endif /* SVN_HAVE_CRYPTO */
+
+
+
+/*** Semi-public APIs ***/
 
 /* Set CTX to a Subversion cryptography context allocated from
    RESULT_POOL.  */
@@ -166,6 +188,7 @@ svn_error_t *
 svn_crypto__context_create(svn_crypto__ctx_t **ctx,
                            apr_pool_t *result_pool)
 {
+#ifdef SVN_HAVE_CRYPTO
   apr_status_t apr_err;
   const apu_err_t *apu_err = NULL;
   apr_crypto_t *apr_crypto;
@@ -203,25 +226,10 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
   (*ctx)->crypto = apr_crypto;
 
   return SVN_NO_ERROR;
-}
-
-
-/* Return an svn_string_t allocated from RESULT_POOL, with its .data
-   and .len members set to DATA and LEN, respective.
-
-   WARNING: No lifetime management of DATA is offered here, so you
-   probably want to ensure that that information is allocated in a
-   sufficiently long-lived pool (such as, for example, RESULT_POOL). */
-static const svn_string_t *
-wrap_as_string(const unsigned char *data,
-               apr_size_t len,
-               apr_pool_t *result_pool)
-{
-  svn_string_t *s = apr_palloc(result_pool, sizeof(*s));
-
-  s->data = (const char *)data;  /* better already be in RESULT_POOL  */
-  s->len = len;
-  return s;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
 }
 
 
@@ -235,6 +243,7 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+#ifdef SVN_HAVE_CRYPTO
   svn_error_t *err = SVN_NO_ERROR;
   const unsigned char *salt_vector;
   const unsigned char *iv_vector;
@@ -359,6 +368,10 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
  cleanup:
   apr_crypto_block_cleanup(block_ctx);
   return err;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
 }
 
 
@@ -372,6 +385,7 @@ svn_crypto__decrypt_password(const char **plaintext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+#ifdef SVN_HAVE_CRYPTO
   svn_error_t *err = SVN_NO_ERROR;
   apr_status_t apr_err;
   apr_crypto_block_t *block_ctx = NULL;
@@ -448,6 +462,8 @@ svn_crypto__decrypt_password(const char **plaintext,
  cleanup:
   apr_crypto_block_cleanup(block_ctx);
   return err;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
 }
-
-#endif  /* APU_HAVE_CRYPTO */
