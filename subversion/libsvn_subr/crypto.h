@@ -46,6 +46,10 @@ extern "C" {
 typedef struct svn_crypto__ctx_t svn_crypto__ctx_t;
 
 
+/* Return TRUE iff Subversion's cryptographic support is available. */
+svn_boolean_t svn_crypto__is_available(void);
+
+
 /* Set *CTX to new Subversion cryptographic context, based on an
    APR-managed OpenSSL cryptography context object allocated
    within RESULT_POOL.  */
