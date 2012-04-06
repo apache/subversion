@@ -76,7 +76,6 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
 static svn_error_t *
 test_encrypt_decrypt_password(apr_pool_t *pool)
 {
-#ifdef SVN_HAVE_CRYPTO
   svn_crypto__ctx_t *ctx;
   const svn_string_t *master = svn_string_create("Pastor Massword", pool);
   int i;
@@ -87,6 +86,9 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
     "mypassphrase", /* with 4-byte padding, should align on block boundary */
   };
 
+  /* Skip this test if the crypto subsystem is unavailable. */
+  if (! svn_crypto__is_available())
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 
   SVN_ERR(svn_crypto__context_create(&ctx, pool));
 
@@ -99,9 +101,6 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
-#else /* SVN_HAVE_CRYPTO */
-  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
-#endif /* SVN_HAVE_CRYPTO */
 }
 
 
