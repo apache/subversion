@@ -532,7 +532,6 @@ typedef struct path_driver_info_t
   svn_node_kind_t src_kind;
   svn_revnum_t src_revnum;
   svn_boolean_t resurrection;
-  svn_boolean_t dir_add;
   svn_string_t *mergeinfo;  /* the new mergeinfo for the target */
 } path_driver_info_t;
 
@@ -627,18 +626,8 @@ drive_single_path(svn_editor_t *editor,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = apr_hash_make(scratch_pool);
-  apr_array_header_t *children = apr_array_make(scratch_pool, 1,
-                                                sizeof(const char *));
   svn_boolean_t do_delete = FALSE;
   svn_boolean_t do_add = FALSE;
-
-  /* Check to see if we need to add the path as a directory. */
-  if (path_info->dir_add)
-    {
-      return svn_error_trace(svn_editor_add_directory(editor, path, children,
-                                                      props,
-                                                      SVN_INVALID_REVNUM));
-     }
 
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
@@ -702,6 +691,7 @@ static svn_error_t *
 drive_editor(svn_editor_t *editor,
              apr_array_header_t *paths,
              apr_hash_t *action_hash,
+             apr_array_header_t *new_dirs,
              svn_boolean_t is_move,
              svn_revnum_t youngest,
              apr_pool_t *scratch_pool)
@@ -709,6 +699,23 @@ drive_editor(svn_editor_t *editor,
   svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *iterpool;
   int i;
+
+  if (new_dirs)
+    {
+      apr_array_header_t *children = apr_array_make(scratch_pool, 1,
+                                                sizeof(const char *));
+      apr_hash_t *props = apr_hash_make(scratch_pool);
+
+      /* These are directories which we just need to add. */
+      for (i = 0; i < new_dirs->nelts; i++)
+        {
+          const char *dir = APR_ARRAY_IDX(new_dirs, i, const char *);
+         
+          /* ### The children param needs to be populated correctly. */
+          SVN_ERR(svn_editor_add_directory(editor, dir, children, props,
+                                           SVN_INVALID_REVNUM));
+        }
+    }
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < paths->nelts; i++)
@@ -1071,24 +1078,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   else
     message = "";
 
-  /* Setup our PATHS for the path-based editor drive. */
-  /* First any intermediate directories. */
-  if (make_parents)
-    {
-      for (i = 0; i < new_dirs->nelts; i++)
-        {
-          const char *relpath = APR_ARRAY_IDX(new_dirs, i, const char *);
-          path_driver_info_t *info = apr_pcalloc(pool, sizeof(*info));
-
-          info->dst_path = relpath;
-          info->dir_add = TRUE;
-
-          APR_ARRAY_PUSH(paths, const char *) = relpath;
-          apr_hash_set(action_hash, relpath, APR_HASH_KEY_STRING, info);
-        }
-    }
-
-  /* Then our copy destinations and move sources (if any). */
+  /* Setup our copy destinations and move sources (if any). */
   for (i = 0; i < path_infos->nelts; i++)
     {
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
@@ -1114,7 +1104,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
-  return svn_error_trace(drive_editor(editor, paths, action_hash,
+  return svn_error_trace(drive_editor(editor, paths, action_hash, new_dirs,
                                       is_move, youngest, pool));
 }
 
