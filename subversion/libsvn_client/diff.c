@@ -1926,10 +1926,17 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
 
 /* Produce a diff between two arbitrary directories at LOCAL_ABSPATH1 and
  * LOCAL_ABSPATH2, using the provided diff callbacks to show file changes
- * and, for versioned nodes, property changes. */
+ * and, for versioned nodes, property changes.
+ *
+ * If ROOT_ABSPATH1 and ROOT_ABSPATH2 are not NULL, show paths in diffs
+ * relative to these roots, rather than relative to LOCAL_ABSPATH1 and
+ * LOCAL_ABSPATH2. This is needed when crawling a subtree that exists
+ * only within LOCAL_ABSPATH2. */
 static svn_error_t *
 do_arbitrary_dirs_diff(const char *local_abspath1,
                        const char *local_abspath2,
+                       const char *root_abspath1,
+                       const char *root_abspath2,
                        const svn_wc_diff_callbacks4_t *callbacks,
                        struct diff_cmd_baton *callback_baton,
                        svn_client_ctx_t *ctx,
@@ -1948,8 +1955,8 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
   SVN_ERR(svn_io_check_resolved_path(local_abspath1, &kind1, scratch_pool));
   b.recursing_within_added_subtree = (kind1 != svn_node_dir);
 
-  b.root1_abspath = local_abspath1;
-  b.root2_abspath = local_abspath2;
+  b.root1_abspath = root_abspath1 ? root_abspath1 : local_abspath1;
+  b.root2_abspath = root_abspath2 ? root_abspath2 : local_abspath2;
   b.callbacks = callbacks;
   b.callback_baton = callback_baton;
   b.ctx = ctx;
@@ -1959,7 +1966,7 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
                                    scratch_pool, scratch_pool));
 
   SVN_ERR(svn_io_dir_walk2(b.recursing_within_added_subtree ? local_abspath2
-                                                        : local_abspath1,
+                                                            : local_abspath1,
                            0, arbitrary_diff_walker, &b, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2102,6 +2109,7 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
       if (dirent2->kind == svn_node_dir &&
           (dirent1->kind == svn_node_file || dirent1->kind == svn_node_none))
         SVN_ERR(do_arbitrary_dirs_diff(child1_abspath, child2_abspath,
+                                       b->root1_abspath, b->root2_abspath,
                                        b->callbacks, b->callback_baton,
                                        b->ctx, iterpool));
     }
@@ -2143,6 +2151,7 @@ do_arbitrary_nodes_diff(const char *local_abspath1,
                                     ctx, scratch_pool));
   else if (kind1 == svn_node_dir)
     SVN_ERR(do_arbitrary_dirs_diff(local_abspath1, local_abspath2,
+                                   NULL, NULL,
                                    callbacks, callback_baton,
                                    ctx, scratch_pool));
   else
