@@ -403,8 +403,10 @@ svn_editor_add_directory(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(children != NULL);
   SVN_ERR_ASSERT(props != NULL);
+  /* ### validate children are just basenames?  */
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
@@ -453,6 +455,7 @@ svn_editor_add_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(checksum != NULL
                     && checksum->kind == SVN_EDITOR_CHECKSUM_KIND);
   SVN_ERR_ASSERT(contents != NULL);
@@ -489,6 +492,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
@@ -520,6 +524,7 @@ svn_editor_add_absent(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, relpath);
   CHECK_UNKNOWN_CHILD(editor, relpath);
@@ -550,6 +555,7 @@ svn_editor_alter_directory(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(props != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
@@ -582,6 +588,7 @@ svn_editor_alter_file(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT((checksum != NULL && contents != NULL)
                  || (checksum == NULL && contents == NULL));
   SVN_ERR_ASSERT(props != NULL || checksum != NULL);
@@ -618,6 +625,7 @@ svn_editor_alter_symlink(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SVN_ERR_ASSERT(props != NULL || target != NULL);
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
@@ -648,6 +656,7 @@ svn_editor_delete(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_NOT_BE_COMPLETED(editor, relpath);
 
@@ -677,6 +686,8 @@ svn_editor_copy(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(dst_relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
 
@@ -708,6 +719,8 @@ svn_editor_move(svn_editor_t *editor,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(dst_relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_NOT_BE_COMPLETED(editor, src_relpath);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
@@ -746,6 +759,8 @@ svn_editor_rotate(svn_editor_t *editor,
     for (i = 0; i < relpaths->nelts; i++)
       {
         const char *relpath = APR_ARRAY_IDX(relpaths, i, const char *);
+
+        SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
         SHOULD_NOT_BE_COMPLETED(editor, relpath);
       }
   }
