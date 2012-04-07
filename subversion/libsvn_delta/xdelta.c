@@ -29,8 +29,6 @@
 
 #include "svn_delta.h"
 #include "delta.h"
-
-#include "private/svn_adler32.h"
 
 /* This is pseudo-adler32. It is adler32 without the prime modulus.
    The idea is borrowed from monotone, and is a translation of the C++
@@ -67,7 +65,7 @@ adler32_replace(apr_uint32_t adler32, const char c_out, const char c_in)
   return adler32 + adler32 * 0x10000;
 }
 
-/* Calculate an peudo-adler32 checksum for MATCH_BLOCKSIZE bytes starting
+/* Calculate an pseudo-adler32 checksum for MATCH_BLOCKSIZE bytes starting
    at DATA.  Return the checksum value.  */
 
 static APR_INLINE apr_uint32_t
@@ -182,7 +180,7 @@ init_blocks_table(const char *data,
   apr_size_t nblocks;
   apr_size_t nslots = 1;
 
-  /* Be pesimistic about the block count. */
+  /* Be pessimistic about the block count. */
   nblocks = datalen / MATCH_BLOCKSIZE + 1;
   /* Find nearest larger power of two. */
   while (nslots <= nblocks)
@@ -235,9 +233,10 @@ match_length(const char *a, const char *b, apr_size_t max_len)
   return pos;
 }
 
-/* Return the smallest byte index at which positions left of A and B differ
- * (A[-result] != B[-result]).  If no difference can be found in the first
- * MAX_LEN characters, MAX_LEN will be returned.
+/* Return the number of bytes before A and B that don't differ.  If no
+ * difference can be found in the first MAX_LEN characters,  MAX_LEN will
+ * be returned.  Please note that A-MAX_LEN and B-MAX_LEN must both be
+ * valid addresses.
  */
 static apr_size_t
 reverse_match_length(const char *a, const char *b, apr_size_t max_len)
@@ -266,7 +265,7 @@ reverse_match_length(const char *a, const char *b, apr_size_t max_len)
     if (a[0-pos] != b[0-pos])
       return pos - 1;
 
-  /* No mismatch found -> at least MAX_LEN machting chars.
+  /* No mismatch found -> at least MAX_LEN matching chars.
    */
   return max_len;
 }
@@ -275,7 +274,7 @@ reverse_match_length(const char *a, const char *b, apr_size_t max_len)
 /* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in A we ended up in (in
-   case we extended it backwards) in APOSP and update the correspnding
+   case we extended it backwards) in APOSP and update the corresponding
    position within B given in BPOSP. PENDING_INSERT_START sets the
    lower limit to BPOSP.
    Return number of matching bytes starting at ASOP.  Return 0 if
