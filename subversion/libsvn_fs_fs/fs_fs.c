@@ -71,7 +71,7 @@
 
 /* The default maximum number of files per directory to store in the
    rev and revprops directory.  The number below is somewhat arbitrary,
-   and can be overriden by defining the macro while compiling; the
+   and can be overridden by defining the macro while compiling; the
    figure of 1000 is reasonable for VFAT filesystems, which are by far
    the worst performers in this area. */
 #ifndef SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
@@ -80,7 +80,7 @@
 
 /* Begin deltification after a node history exceeded this this limit.
    Useful values are 4 to 64 with 16 being a good compromise between
-   computational overhead and pository size savings.
+   computational overhead and repository size savings.
    Should be a power of 2.
    Values < 2 will result in standard skip-delta behavior. */
 #define SVN_FS_FS_MAX_LINEAR_DELTIFICATION 16
@@ -432,7 +432,7 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 }
 
 
-
+
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
@@ -851,7 +851,7 @@ purge_shared_txn(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return with_txnlist_lock(fs, purge_shared_txn_body, txn_id, pool);
 }
-
+
 
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
@@ -7492,7 +7492,7 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
 }
 
 
-
+
 /*** Revisions ***/
 
 svn_error_t *
@@ -7577,7 +7577,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
 }
 
 
-
+
 /*** Transactions ***/
 
 svn_error_t *
@@ -7594,7 +7594,7 @@ svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
-
+
 /* Generic transaction operations.  */
 
 svn_error_t *
@@ -7660,7 +7660,7 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
   return svn_fs_fs__change_txn_props(*txn_p, props, pool);
 }
 
-
+
 /****** Packing FSFS shards *********/
 
 /* Write a file FILENAME in directory FS_PATH, containing a single line
@@ -7893,7 +7893,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }
 
-
+
 /** Verifying. **/
 
 /* Used by svn_fs_fs__verify().
@@ -7960,7 +7960,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
         svn_pool_clear(iterpool);
 
       	/* ### TODO: Make sure caches are disabled.
-      	   
+
       	   When this code is called in the library, we want to ensure we
       	   use the on-disk data --- rather than some data that was read
       	   in the possibly-distance past and cached since. */
@@ -7974,7 +7974,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
 }
 
 
-
+
 /** Hotcopy. **/
 
 /* Like svn_io_dir_file_copy(), but doesn't copy files that exist at
