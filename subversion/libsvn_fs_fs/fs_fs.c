@@ -851,7 +851,7 @@ purge_shared_txn(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return with_txnlist_lock(fs, purge_shared_txn_body, txn_id, pool);
 }
-
+
 
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
@@ -7492,7 +7492,7 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
 }
 
 
-
+
 /*** Revisions ***/
 
 svn_error_t *
@@ -7577,7 +7577,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
 }
 
 
-
+
 /*** Transactions ***/
 
 svn_error_t *
@@ -7594,7 +7594,7 @@ svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
-
+
 /* Generic transaction operations.  */
 
 svn_error_t *
@@ -7660,7 +7660,7 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
   return svn_fs_fs__change_txn_props(*txn_p, props, pool);
 }
 
-
+
 /****** Packing FSFS shards *********/
 
 /* Write a file FILENAME in directory FS_PATH, containing a single line
@@ -7893,7 +7893,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
   return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
 }
 
-
+
 /** Verifying. **/
 
 /* Used by svn_fs_fs__verify().
@@ -7974,7 +7974,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
 }
 
 
-
+
 /** Hotcopy. **/
 
 /* Like svn_io_dir_file_copy(), but doesn't copy files that exist at
