@@ -362,7 +362,7 @@ init_test_shm(apr_pool_t *pool)
 
 /* our thread function type
  */
-typedef svn_error_t *(*thread_func_t)(int, int, apr_pool_t *);
+typedef svn_error_t *(*thread_func_t)(int, int, int, apr_pool_t *);
 
 /* Per-thread input and output data.
  */
@@ -370,6 +370,7 @@ struct thread_baton
 {
   int thread_count;
   int thread_no;
+  int iterations;
   svn_error_t *result;
   thread_func_t func;
 };
@@ -385,6 +386,7 @@ APR_THREAD_FUNC test_thread(apr_thread_t *thread, void *baton)
 
   params->result = (*params->func)(params->thread_no,
                                    params->thread_count,
+                                   params->iterations,
                                    pool);
   apr_pool_destroy(pool);
 
@@ -394,7 +396,7 @@ APR_THREAD_FUNC test_thread(apr_thread_t *thread, void *baton)
 /* Runs FUNC in THREAD_COUNT concurrent threads and combine the results.
  */
 static svn_error_t *
-run_threads(apr_pool_t *pool, thread_func_t func)
+run_threads(apr_pool_t *pool, int iterations, thread_func_t func)
 {
   apr_status_t status;
   int i;
@@ -409,6 +411,7 @@ run_threads(apr_pool_t *pool, thread_func_t func)
     {
       batons[i].thread_count = THREAD_COUNT;
       batons[i].thread_no = i;
+      batons[i].iterations = iterations;
       batons[i].func = func;
 
       status = apr_thread_create(&threads[i],
@@ -440,10 +443,8 @@ run_threads(apr_pool_t *pool, thread_func_t func)
  * one input and one output bucket that form a ring spanning all threads.
  */
 static svn_error_t *
-test_pipeline_thread(int thread_no, int thread_count, apr_pool_t *pool)
+test_pipeline_thread(int thread_no, int thread_count, int iterations, apr_pool_t *pool)
 {
-  enum {ITERATIONS = 10000};
-
   svn_atomic_namespace__t *anamespace;
   svn_named_atomic__t *atomicIn;
   svn_named_atomic__t *atomicOut;
@@ -492,32 +493,32 @@ test_pipeline_thread(int thread_no, int thread_count, apr_pool_t *pool)
      {
        /* Wait for and consume incoming token. */
        do
-       {
-         SVN_ERR(svn_named_atomic__write(&value, 0, atomicIn));
-         SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
-       }
-       while ((value == 0) && (counter < ITERATIONS));
+         {
+           SVN_ERR(svn_named_atomic__write(&value, 0, atomicIn));
+           SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
+         }
+       while ((value == 0) && (counter < iterations));
 
        /* All tokes must come in in the same order */
-       if (counter < ITERATIONS)
+       if (counter < iterations)
          SVN_TEST_ASSERT((last_value % thread_count) == (value - 1));
        last_value = value;
 
        /* Wait for the target atomic to become vacant and write the token */
        do
-       {
-         SVN_ERR(svn_named_atomic__cmpxchg(&old_value,
-                                           value,
-                                           0,
-                                           atomicOut));
-         SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
-       }
-       while ((old_value != 0) && (counter < ITERATIONS));
+         {
+           SVN_ERR(svn_named_atomic__cmpxchg(&old_value,
+                                             value,
+                                             0,
+                                             atomicOut));
+           SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
+         }
+       while ((old_value != 0) && (counter < iterations));
 
        /* Count the number of operations */
        SVN_ERR(svn_named_atomic__add(&counter, 1, atomicCounter));
      }
-   while (counter < ITERATIONS);
+   while (counter < iterations);
 
    /* done */
 
@@ -528,9 +529,20 @@ test_pipeline_thread(int thread_no, int thread_count, apr_pool_t *pool)
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
+  apr_time_t start;
+  int iterations;
+  
   SVN_ERR(init_test_shm(pool));
-  SVN_ERR(run_threads(pool, test_pipeline_thread));
 
+  /* calibrate */
+  start = apr_time_now();
+  SVN_ERR(run_threads(pool, 100, test_pipeline_thread));
+  iterations = 2000000 / (int)((apr_time_now() - start) / 100 + 1);
+
+  /* run test for 2 seconds */
+  SVN_ERR(init_test_shm(pool));
+  SVN_ERR(run_threads(pool, iterations, test_pipeline_thread));
+  
   return SVN_NO_ERROR;
 }
 #endif
