@@ -21,7 +21,12 @@
  * @endcopyright
  *
  * @file svn_named_atomics.h
- * @brief Strutures and functions for machine-wide named atomics
+ * @brief Structures and functions for machine-wide named atomics.
+ *        These atomics store 64 bit signed integer values and provide
+ *        a number of basic operations on them. Instead of an address,
+ *        these atomics are identified by strings / names.  We also support
+ *        namespaces - mainly to separate debug from production data.
+ *        SVN-internal functionality uses the default namespace (see below).
  */
 
 #ifndef SVN_NAMED_ATOMICS_H
@@ -33,30 +38,57 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** An opaque structure that represents a namespace, i.e. a container
+ * for named atomics.
+ */
+typedef struct svn_atomic_namespace__t svn_atomic_namespace__t;
+
 /** An opaque structure that represents a named, system-wide visible
  * 64 bit integer with atomic access routines.
  */
 typedef struct svn_named_atomic__t svn_named_atomic__t;
 
+/** Maximum length of the name of any atomic (excluding the terminal NUL).
+ */
 #define SVN_NAMED_ATOMIC__MAX_NAME_LENGTH 30
 
-/** Find the atomic with the specified @a name and return it in @a *atomic.
- * If no object with that name can be found, the behavior depends on 
- * @a auto_create. If it is @c FALSE, @a *atomic will be set to @c NULL.
- * Otherwise, a new atomic will be created, its value set to 0 and the
- * access structure be returned in @a *atomic.
- * 
- * Note that @a name must be short and should not exceeed 
- * @ref SVN_NAMED_ATOMIC__MAX_NAME_LENGTH characters. The actual limit is
- * implementation-dependent and may change in the future. This function
- * will return an error if the specified name is longer than supported.
+/** Create a namespace (i.e. access object) with the given @a name and
+ * return it in @a *anamespace.  If @a name is @c NULL, return the name
+ * of the default namespace will be used.
  *
- * This function will automatically initialize the shared memory region,
- * if that hadn't been attempted before. Therefore, this may fail with
- * a variety of errors.
+ * Multiple access objects with the same name may be created.  They access
+ * the same shared memory region but have independent lifetimes.
+ *
+ * The access object will be allocated in @a pool and atomics gotten
+ * from this object will become invalid when the pool is being cleaned.
+ */
+svn_error_t *
+svn_atomic_namespace__create(svn_atomic_namespace__t **anamespace,
+                             const char *name,
+                             apr_pool_t *pool);
+
+/** Find the atomic with the specified @a name in @a anamespace and return
+ * it in @a *atomic.  If @a namespace is @c NULL, the default namespace
+ * will be used.  If no object with that name can be found, the behavior
+ * depends on @a auto_create.  If it is @c FALSE, @a *atomic will be set
+ * to @c NULL. Otherwise, a new atomic will be created, its value set to 0
+ * and the access structure be returned in @a *atomic.
+ * 
+ * Note that @a name must not exceed @ref SVN_NAMED_ATOMIC__MAX_NAME_LENGTH
+ * characters and an error will be returned if the specified name is longer
+ * than supported.
+ *
+ * If necessary, this function will automatically initialize the default
+ * shared memory region. Therefore, this may fail with a variety of errors.
+ *
+ * Please note that the lifetime of the atomic is bound to the lifetime
+ * of the @a anamespace object, i.e. the pool the latter was created in.
+ * The default namespace (for @c anamespace=NULL) remains valid until APR
+ * gets cleaned up.
  */
 svn_error_t *
 svn_named_atomic__get(svn_named_atomic__t **atomic,
+                      svn_atomic_namespace__t *anamespace,
                       const char *name,
                       svn_boolean_t auto_create);
 
