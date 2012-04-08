@@ -593,6 +593,43 @@ run_ev2_actions(struct ev2_edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
+
+static const char *
+map_to_relpath(struct ev2_edit_baton *eb,
+               const char *path_or_url,
+               apr_pool_t *result_pool)
+{
+  if (svn_relpath_is_canonical(path_or_url))
+    return apr_pstrdup(result_pool, path_or_url);
+
+#ifdef SVN_DEBUG
+  SVN_DBG(("path='%s'\n", path_or_url));
+#endif
+
+  /* ### do something here  */
+
+  return path_or_url;
+}
+
+
+static const char *
+map_to_repos_relpath(struct ev2_edit_baton *eb,
+                     const char *path_or_url,
+                     apr_pool_t *result_pool)
+{
+  if (svn_relpath_is_canonical(path_or_url))
+    return apr_pstrdup(result_pool, path_or_url);
+
+#ifdef SVN_DEBUG
+  SVN_DBG(("repos_path='%s'\n", path_or_url));
+#endif
+
+  /* ### do something here  */
+
+  return path_or_url;
+}
+
+
 static svn_error_t *
 ev2_set_target_revision(void *edit_baton,
                         svn_revnum_t target_revision,
@@ -636,14 +673,15 @@ ev2_delete_entry(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_revnum_t *revnum = apr_palloc(pb->eb->edit_pool, sizeof(*revnum));
-  struct change_node *change = locate_change(pb->eb, path);
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
+  struct change_node *change = locate_change(pb->eb, relpath);
 
   if (SVN_IS_VALID_REVNUM(revision))
     *revnum = revision;
   else
     *revnum = pb->base_revision;
 
-  SVN_ERR(add_action(pb->eb, path, ACTION_DELETE, revnum));
+  SVN_ERR(add_action(pb->eb, relpath, ACTION_DELETE, revnum));
 
   /* ### note: cannot switch to CHANGES just yet. the action loop needs
      ### to see a delete action, and set NEED_DELETE. that is used for
@@ -670,15 +708,18 @@ ev2_add_directory(const char *path,
                   apr_pool_t *result_pool,
                   void **child_baton)
 {
+  /* ### fix this?  */
+  apr_pool_t *scratch_pool = result_pool;
   struct ev2_dir_baton *pb = parent_baton;
   struct ev2_dir_baton *cb = apr_pcalloc(result_pool, sizeof(*cb));
-  struct change_node *change = locate_change(pb->eb, path);
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
+  struct change_node *change = locate_change(pb->eb, relpath);
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD;
 
   cb->eb = pb->eb;
-  cb->path = apr_pstrdup(result_pool, path);
+  cb->path = apr_pstrdup(result_pool, relpath);
   cb->base_revision = pb->base_revision;
   *child_baton = cb;
 
@@ -688,11 +729,11 @@ ev2_add_directory(const char *path,
       svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
 
       *kind = svn_kind_dir;
-      SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
+      SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD, kind));
 
       if (pb->copyfrom_path)
         {
-          const char *name = svn_relpath_basename(path, result_pool);
+          const char *name = svn_relpath_basename(relpath, scratch_pool);
           cb->copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
                                           "/", name, NULL);
           cb->copyfrom_rev = pb->copyfrom_rev;
@@ -703,15 +744,16 @@ ev2_add_directory(const char *path,
       /* A copy */
       struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
 
-      args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
-      args->copyfrom_rev = copyfrom_revision;
-      SVN_ERR(add_action(pb->eb, path, ACTION_COPY, args));
-
-      cb->copyfrom_path = args->copyfrom_path;
-      cb->copyfrom_rev = args->copyfrom_rev;
-
-      change->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
+      change->copyfrom_path = map_to_repos_relpath(pb->eb, copyfrom_path,
+                                                   pb->eb->edit_pool);
       change->copyfrom_rev = copyfrom_revision;
+
+      args->copyfrom_path = change->copyfrom_path;
+      args->copyfrom_rev = change->copyfrom_rev;
+      SVN_ERR(add_action(pb->eb, relpath, ACTION_COPY, args));
+
+      cb->copyfrom_path = change->copyfrom_path;
+      cb->copyfrom_rev = change->copyfrom_rev;
     }
 
   return SVN_NO_ERROR;
@@ -724,17 +766,20 @@ ev2_open_directory(const char *path,
                    apr_pool_t *result_pool,
                    void **child_baton)
 {
+  /* ### fix this?  */
+  apr_pool_t *scratch_pool = result_pool;
   struct ev2_dir_baton *pb = parent_baton;
   struct ev2_dir_baton *db = apr_pcalloc(result_pool, sizeof(*db));
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
 
   db->eb = pb->eb;
-  db->path = apr_pstrdup(result_pool, path);
+  db->path = apr_pstrdup(result_pool, relpath);
   db->base_revision = base_revision;
 
   if (pb->copyfrom_path)
     {
       /* We are inside a copy. */
-      const char *name = svn_relpath_basename(path, result_pool);
+      const char *name = svn_relpath_basename(relpath, scratch_pool);
 
       db->copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
                                       "/", name, NULL);
@@ -773,9 +818,10 @@ ev2_absent_directory(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
 
   *kind = svn_kind_dir;
-  SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
+  SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD_ABSENT, kind));
 
   return SVN_NO_ERROR;
 }
@@ -788,15 +834,18 @@ ev2_add_file(const char *path,
              apr_pool_t *result_pool,
              void **file_baton)
 {
+  /* ### fix this?  */
+  apr_pool_t *scratch_pool = result_pool;
   struct ev2_file_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
-  struct change_node *change = locate_change(pb->eb, path);
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
+  struct change_node *change = locate_change(pb->eb, relpath);
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD;
 
   fb->eb = pb->eb;
-  fb->path = apr_pstrdup(result_pool, path);
+  fb->path = apr_pstrdup(result_pool, relpath);
   fb->base_revision = pb->base_revision;
   *file_baton = fb;
 
@@ -809,24 +858,26 @@ ev2_add_file(const char *path,
       fb->delta_base = NULL;
 
       *kind = svn_kind_file;
-      SVN_ERR(add_action(pb->eb, path, ACTION_ADD, kind));
+      SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD, kind));
     }
   else
     {
       /* A copy */
       struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
 
+      change->copyfrom_path = map_to_repos_relpath(fb->eb, copyfrom_path,
+                                                   fb->eb->edit_pool);
+      change->copyfrom_rev = copyfrom_revision;
+
       SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                       fb->eb->fetch_base_baton,
-                                      copyfrom_path, copyfrom_revision,
-                                      result_pool, result_pool));
+                                      change->copyfrom_path,
+                                      change->copyfrom_rev,
+                                      result_pool, scratch_pool));
 
-      args->copyfrom_path = apr_pstrdup(pb->eb->edit_pool, copyfrom_path);
-      args->copyfrom_rev = copyfrom_revision;
-      SVN_ERR(add_action(pb->eb, path, ACTION_COPY, args));
-
-      change->copyfrom_path = apr_pstrdup(fb->eb->edit_pool, copyfrom_path);
-      change->copyfrom_rev = copyfrom_revision;
+      args->copyfrom_path = change->copyfrom_path;
+      args->copyfrom_rev = change->copyfrom_rev;
+      SVN_ERR(add_action(pb->eb, relpath, ACTION_COPY, args));
     }
 
   return SVN_NO_ERROR;
@@ -839,32 +890,35 @@ ev2_open_file(const char *path,
               apr_pool_t *result_pool,
               void **file_baton)
 {
+  /* ### fix this?  */
+  apr_pool_t *scratch_pool = result_pool;
   struct ev2_file_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
   struct ev2_dir_baton *pb = parent_baton;
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
 
   fb->eb = pb->eb;
-  fb->path = apr_pstrdup(result_pool, path);
+  fb->path = apr_pstrdup(result_pool, relpath);
   fb->base_revision = base_revision;
 
   if (pb->copyfrom_path)
     {
       /* We're in a copied directory, so the delta base is going to be
          based up on the copy source. */
-      const char *name = svn_relpath_basename(path, result_pool);
+      const char *name = svn_relpath_basename(relpath, scratch_pool);
       const char *copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
                                               "/", name, NULL);
 
       SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                       fb->eb->fetch_base_baton,
                                       copyfrom_path, pb->copyfrom_rev,
-                                      result_pool, result_pool));
+                                      result_pool, scratch_pool));
     }
   else
     {
       SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                       fb->eb->fetch_base_baton,
-                                      path, base_revision,
-                                      result_pool, result_pool));
+                                      relpath, base_revision,
+                                      result_pool, scratch_pool));
     }
 
   *file_baton = fb;
@@ -977,9 +1031,10 @@ ev2_absent_file(const char *path,
 {
   struct ev2_dir_baton *pb = parent_baton;
   svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
+  const char *relpath = map_to_relpath(pb->eb, path, scratch_pool);
 
   *kind = svn_kind_file;
-  SVN_ERR(add_action(pb->eb, path, ACTION_ADD_ABSENT, kind));
+  SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD_ABSENT, kind));
 
   return SVN_NO_ERROR;
 }
