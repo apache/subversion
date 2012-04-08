@@ -153,12 +153,14 @@ extern "C" {
  * "should", "should not", "recommended", "may", and "optional" in this
  * document are to be interpreted as described in RFC 2119.
  *
- * @note The editor is *not* reentrant. The receiver should not directly
- * or indirectly invoke an editor API unless it has been marked as
- * explicitly supporting reentrancy during a receiver's callback. This
- * limitation extends to the cancellation callback, too. (This limitation
- * is due to the scratch_pool shared by all callbacks, and cleared after
- * each callback; a reentrant call could clear the outer call's pool)
+ * @note The editor objects are *not* reentrant. The receiver should not
+ * directly or indirectly invoke an editor API with the same object unless
+ * it has been marked as explicitly supporting reentrancy during a
+ * receiver's callback. This limitation extends to the cancellation
+ * callback, too. (This limitation is due to the scratch_pool shared by
+ * all callbacks, and cleared after each callback; a reentrant call could
+ * clear the outer call's pool). Note that the code itself is reentrant, so
+ * there is no problem using the APIs on different editor objects.
  *
  * \n
  * <h3>Life-Cycle</h3>
@@ -254,9 +256,8 @@ extern "C" {
  *   This allows the parent directory to properly mark the child as
  *   "incomplete" until the child's add_* call arrives.
  *
- * - A path should
- *   never be referenced more than once by the add_*, alter_*, and
- *   delete operations (the "Once Rule"). The source path of a copy (and
+ * - A path should never be referenced more than once by the add_*, alter_*,
+ *   and delete operations (the "Once Rule"). The source path of a copy (and
  *   its children, if a directory) may be copied many times, and are
  *   otherwise subject to the Once Rule. The destination path of a copy
  *   or move may have alter_* operations applied, but not add_* or delete.
@@ -340,14 +341,19 @@ extern "C" {
  *
  * <h3>Paths</h3>
  * Each driver/receiver implementation of this editor interface must
- * establish the expected root path for the paths sent and received via the
- * callbacks' @a relpath arguments.
+ * establish the expected root for all the paths sent and received via
+ * the callbacks' @a relpath arguments.
  *
- * For example, during an "update", the driver has a working copy checked
- * out at a specific repository URL. The receiver sees the repository as a
- * whole. Here, the receiver could tell the driver which repository
- * URL the working copy refers to, and thus the driver could send
- * @a relpath arguments that are relative to the receiver's working copy.
+ * For example, during an "update", the driver is the repository, as a
+ * whole. The receiver may have just a portion of that repository. Here,
+ * the receiver could tell the driver which repository URL the working
+ * copy refers to, and thus the driver could send @a relpath arguments
+ * that are relative to the receiver's working copy.
+ *
+ * @note Because the source of a copy may be located *anywhere* in the
+ * repository, editor drives should typically use the repository root
+ * as the negotiated root. This allows the @a src_relpath argument in
+ * svn_editor_copy() to specify any possible source.
  * \n\n
  *
  * <h3>Pool Usage</h3>
@@ -955,6 +961,11 @@ svn_editor_delete(svn_editor_t *editor,
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
+ * @note See the general instructions on paths for this API. Since the
+ * @a src_relpath argument must generally be able to reference any node
+ * in the repository, the implication is that the editor's root must be
+ * the repository root.
+ *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
  */
@@ -970,6 +981,9 @@ svn_editor_copy(svn_editor_t *editor,
  * src_revision of that path, to @a dst_relpath.
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
+ *
+ * ### what happens if one side of this move is not "within" the receiver's
+ * ### set of paths?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -999,6 +1013,9 @@ svn_editor_move(svn_editor_t *editor,
  * (which had already by edited by the move from A). In order to keep the
  * restrictions against multiple moves of a single node, the rotation
  * operation is needed for certain types of tree edits.
+ *
+ * ### what happens if one of the paths of the rotation is not "within" the
+ * ### receiver's set of paths?
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
