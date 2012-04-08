@@ -39,7 +39,7 @@
  * an short header followed by a fixed-capacity array of named atomics. The
  * number of entries currently in use is stored in the header part.
  * 
- * Finding / creating the SHM object as well as additing new array entries
+ * Finding / creating the SHM object as well as adding new array entries
  * is being guarded by an APR global mutex.
  * 
  * The array is append-only.  Once a process mapped the block into its
@@ -66,18 +66,26 @@
  */
 #define CACHE_LINE_LENGTH 64
 
-/* We need 8 bytes for the actual value and the remainer is used to
+/* We need 8 bytes for the actual value and the remainder is used to
  * store the NUL-terminated name.
+ *
+ * Must not be smaller than SVN_NAMED_ATOMIC__MAX_NAME_LENGTH.
  */
 #define MAX_NAME_LENGTH (CACHE_LINE_LENGTH - sizeof(apr_int64_t) - 1)
 
-/* Name of the global mutex that we will use.
+/* Name of the default namespace.
  */
-#define MUTEX_NAME "SvnNamedAtomicsMutex"
+#define DEFAULT_NAMESPACE_NAME "SvnNamedAtomics"
 
-/* Name of the shared memory file that we will use.
+/* Name of the mutex used for global serialization - where global
+ * serialization is necessary.
  */
-#define SHM_NAME "SvnNamedAtomicsShm"
+#define MUTEX_NAME "SvnAtomicsMutex"
+
+/* Particle that will be appended to the namespace name to form the
+ * name of the shared memory file that backs that namespace.
+ */
+#define SHM_NAME_SUFFIX "Shm"
 
 /* Platform-dependent implementations of our basic atomic operations.
  * SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
@@ -104,7 +112,7 @@
 /* GCC provides atomic intrinsics for most common CPU types
  */
 #define synched_read(value) value
-#define synched_write(mem, value) (*mem = value)
+#define synched_write(mem, value) __sync_lock_test_and_set(mem, value)
 #define synched_add(mem, delta) __sync_add_and_fetch(mem, delta)
 #define synched_cmpxchg(mem, value, comperand) \
   __sync_val_compare_and_swap(mem, comperand, value)
@@ -149,9 +157,9 @@ synched_cmpxchg(volatile apr_int64_t *mem,
 }
 
 #define SYNCHRONIZE(op)\
-  SVN_ERR(lock(&access));\
+  SVN_ERR(lock());\
   op;\
-  SVN_ERR(unlock(&access, SVN_NO_ERROR));
+  SVN_ERR(unlock(SVN_NO_ERROR));
 
 #endif
 
@@ -166,7 +174,7 @@ struct svn_named_atomic__t
 /* Content of our shared memory buffer.  COUNT is the number
  * of used entries in ATOMICS.  Insertion is append-only.
  * PADDING is used to align the header information with the
- * atomics to create a favourable data alignment.
+ * atomics to create a favorable data alignment.
  */
 struct shared_data_t
 {
@@ -180,40 +188,63 @@ struct shared_data_t
  * information necessary to initialize and access the shared
  * memory.
  */
-struct shared_mem_access_t
+struct svn_atomic_namespace__t
 {
   /* Init flag used by svn_atomic__init_once */
   svn_atomic_t initialized;
 
+  /* Name of the namespace.
+   * Will only be used to during creation. */
+  const char *name;
+
   /* Pointer to the shared data mapped into our process */
   struct shared_data_t *data;
-
-  /* Named mutex to control access to the shared mem */
-  apr_global_mutex_t *mutex;
 
   /* Named APR shared memory object */
   apr_shm_t *shared_mem;
 
   /* Last time we checked, this was the number of used
    * (i.e. fully initialized) items.  I.e. we can read
-   * their names without futher sync. */
+   * their names without further sync. */
   volatile svn_atomic_t min_used;
 
   /* Pool for APR objects */
   apr_pool_t *pool;
 };
 
-/* Global / singleton instance to access our shared memory.
+/* Global / singleton instance to access our default shared memory.
  */
-static struct shared_mem_access_t access = {FALSE};
+static struct svn_atomic_namespace__t default_namespace = {FALSE, NULL};
 
-/* Utility that aquires a lock for ACCESS->MUTEX and converts
- * error types when necessary.
+/* Named global mutex to control access to the shared memory structures.
+ */
+static apr_global_mutex_t *mutex = NULL;
+
+/* Initialization flag for the above used by svn_atomic__init_once.
+ */
+static volatile svn_atomic_t mutex_initialized = FALSE;
+
+/* Mutex initialization called via svn_atomic__init_once.
  */
 static svn_error_t *
-lock(struct shared_mem_access_t *access)
+init_mutex(void *baton, apr_pool_t *_pool)
 {
-  apr_status_t apr_err = apr_global_mutex_lock(access->mutex);
+  apr_pool_t *pool = svn_pool_create(NULL);
+  apr_status_t apr_err = apr_global_mutex_create(&mutex,
+                                                 MUTEX_NAME,
+                                                 APR_LOCK_DEFAULT,
+                                                 pool);
+  return apr_err
+    ? svn_error_wrap_apr(apr_err, _("Can't create mutex for named atomics"))
+    : SVN_NO_ERROR;
+}
+
+/* Utility that acquires our global mutex and converts error types.
+ */
+static svn_error_t *
+lock()
+{
+  apr_status_t apr_err = apr_global_mutex_lock(mutex);
   if (apr_err)
     return svn_error_wrap_apr(apr_err,
               _("Can't lock mutex for named atomics"));
@@ -221,15 +252,14 @@ lock(struct shared_mem_access_t *access)
   return SVN_NO_ERROR;
 }
 
-/* Utility that releases a lock for ACCESS->MUTEX and converts
- * error types when necessary.  If the unlock succeeds, OUTER_ERR
- * will be returned.  If it fails, the unlock error will only be
- * returned if the OUTER_ERR is NULL and ignored, otherwise.
+/* Utility that releases the lock previously acquired via lock().  If the
+ * unlock succeeds and OUTER_ERR is not NULL, OUTER_ERR will be returned.
+ * Otherwise, return the result of the unlock operation.
  */
 static svn_error_t *
-unlock(struct shared_mem_access_t *access, svn_error_t * outer_err)
+unlock(svn_error_t * outer_err)
 {
-  apr_status_t apr_err = apr_global_mutex_unlock(access->mutex);
+  apr_status_t apr_err = apr_global_mutex_unlock(mutex);
   if (apr_err && !outer_err)
     return svn_error_wrap_apr(apr_err,
               _("Can't unlock mutex for named atomics"));
@@ -237,71 +267,82 @@ unlock(struct shared_mem_access_t *access, svn_error_t * outer_err)
   return outer_err;
 }
 
-/* Initialize the shared_mem_access_t given as BATON.  POOL is unused.
+/* Initialize the shared_mem_access_t given as BATON.
+ * POOL will be used by the namespace for allocations and may be NULL
+ * (in which case a new root pool will be created).
  */
 static svn_error_t *
 initialize(void *baton, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   const char *temp_dir, *shm_name;
-  struct shared_mem_access_t *access = baton;
+  struct svn_atomic_namespace__t *anamespace = baton;
 
-  /* Since this function will be called through svn_atomic__init_once,
-   * providing a new root pool each time this is called, is not feasible.
-   * -> Create our own root pool here.
+  SVN_ERR(svn_atomic__init_once(&mutex_initialized,
+                                init_mutex,
+                                NULL,
+                                NULL));
+
+  /* The namespace will use its own (sub-)pool for all allocations.
    */
-  access->pool = svn_pool_create(NULL);
+  anamespace->pool = svn_pool_create(pool);
 
-  /* construct the name of the SHM file */
-  SVN_ERR(svn_io_temp_dir(&temp_dir, access->pool));
-  shm_name = svn_dirent_join(temp_dir, SHM_NAME, access->pool);
-
-  /* Next, we must ensure that no-one else tries to initialize the shared
-   * memory while we are about to do the same.
+  /* Use the default namespace if none has been given.
+   * All namespaces sharing the same name are equivalent and see
+   * the same data, even within the same process.
    */
-  apr_err = apr_global_mutex_create(&access->mutex,
-                                    MUTEX_NAME,
-                                    APR_LOCK_DEFAULT,
-                                    access->pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err,
-              _("Can't create global mutex for named atomics"));
+  if (anamespace->name == NULL)
+    anamespace->name = DEFAULT_NAMESPACE_NAME;
 
-  SVN_ERR(lock(access));
+  /* Construct the name of the SHM file.  If the namespace is not
+   * absolute, we put it into the temp dir.
+   */
+  shm_name = anamespace->name;
+  if (!svn_dirent_is_absolute(shm_name))
+    {
+      SVN_ERR(svn_io_temp_dir(&temp_dir, anamespace->pool));
+      shm_name = svn_dirent_join(temp_dir, shm_name, anamespace->pool);
+    }
+
+  shm_name = apr_pstrcat(anamespace->pool, shm_name, SHM_NAME_SUFFIX, NULL);
+
+  /* Prevent concurrent initialization.
+   */
+  SVN_ERR(lock());
 
   /* First, look for an existing shared memory object.  If it doesn't
    * exist, create one.
    */
-  apr_err = apr_shm_attach(&access->shared_mem, shm_name, access->pool);
+  apr_err = apr_shm_attach(&anamespace->shared_mem, shm_name, anamespace->pool);
   if (apr_err)
     {
-      apr_err = apr_shm_create(&access->shared_mem,
-                               sizeof(*access->data),
+      apr_err = apr_shm_create(&anamespace->shared_mem,
+                               sizeof(*anamespace->data),
                                shm_name,
-                               access->pool);
+                               anamespace->pool);
       if (apr_err)
-        return unlock(access, svn_error_wrap_apr(apr_err,
+        return unlock(svn_error_wrap_apr(apr_err,
                   _("Can't get shared memory for named atomics")));
 
-      access->data = apr_shm_baseaddr_get(access->shared_mem);
+      anamespace->data = apr_shm_baseaddr_get(anamespace->shared_mem);
 
       /* Zero all counters, values and names.
        */
-      memset(access->data, 0, sizeof(*access->data));
+      memset(anamespace->data, 0, sizeof(*anamespace->data));
     }
   else
-    access->data = apr_shm_baseaddr_get(access->shared_mem);
+    anamespace->data = apr_shm_baseaddr_get(anamespace->shared_mem);
 
   /* Cache the number of existing, complete entries.  There can't be incomplete
-   * onces from other processe because we hold the mutex.  Our process may also
+   * onces from other processes because we hold the mutex.  Our process may also
    * not access this information since we are being called from within
    * svn_atomic__init_once.
    */
-  access->min_used = access->data->count;
+  anamespace->min_used = anamespace->data->count;
 
   /* Unlock to allow other processes may access the shared memory as well.
    */
-  return unlock(access, SVN_NO_ERROR);
+  return unlock(SVN_NO_ERROR);
 }
 
 /* Validate the ATOMIC parameter, i.e it's address.
@@ -310,8 +351,6 @@ static svn_error_t *
 validate(svn_named_atomic__t *atomic)
 {
   return atomic 
-      && atomic >= &access.data->atomics[0]
-      && atomic < &access.data->atomics[access.data->count]
     ? SVN_NO_ERROR
     : svn_error_create(SVN_ERR_BAD_ATOMIC, 0, _("Not a valid atomic"));
 }
@@ -319,7 +358,24 @@ validate(svn_named_atomic__t *atomic)
 /* Implement API */
 
 svn_error_t *
+svn_atomic_namespace__create(svn_atomic_namespace__t **anamespace,
+                             const char *name,
+                             apr_pool_t *pool)
+{
+  svn_atomic_namespace__t *new_namespace
+      = apr_pcalloc(pool, sizeof(*new_namespace));
+
+  new_namespace->name = apr_pstrdup(pool, name);
+  SVN_ERR(initialize(new_namespace, pool));
+
+  *anamespace = new_namespace;
+  
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_named_atomic__get(svn_named_atomic__t **atomic,
+                      svn_atomic_namespace__t *anamespace,
                       const char *name,
                       svn_boolean_t auto_create)
 {
@@ -331,58 +387,64 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
    * in case of failure.
    */
   *atomic = NULL;
-  if (len > MAX_NAME_LENGTH)
+  if (len > SVN_NAMED_ATOMIC__MAX_NAME_LENGTH)
     return svn_error_create(SVN_ERR_BAD_ATOMIC, 0,
-                            _("Atomic name too long."));
+                            _("Atomic's name is too long."));
 
   /* Auto-initialize our access to the shared memory
    */
-  SVN_ERR(svn_atomic__init_once(&access.initialized,
-                                initialize,
-                                &access,
-                                NULL));
+  if (anamespace == NULL)
+    {
+      SVN_ERR(svn_atomic__init_once(&default_namespace.initialized,
+                                    initialize,
+                                    &default_namespace,
+                                    NULL));
+      anamespace = &default_namespace;
+    }
 
   /* Optimistic lookup.
    * Because we never change the name of existing atomics and may only
    * append new ones, we can safely compare the name of existing ones
    * with the name that we are looking for.
    */
-  for (i = 0, count = svn_atomic_read(&access.min_used); i < count; ++i)
-    if (strncmp(access.data->atomics[i].name, name, len + 1) == 0)
+  for (i = 0, count = svn_atomic_read(&anamespace->min_used); i < count; ++i)
+    if (strncmp(anamespace->data->atomics[i].name, name, len + 1) == 0)
       {
-        *atomic = &access.data->atomics[i];
+        *atomic = &anamespace->data->atomics[i];
         return SVN_NO_ERROR;
       }
 
   /* Try harder:
    * Serialize all lookup and insert the item, if necessary and allowed.
    */
-  SVN_ERR(lock(&access));
+  SVN_ERR(lock(anamespace));
 
   /* We only need to check for new entries.
    */
-  for (i = count; i < access.data->count; ++i)
-    if (strcmp(access.data->atomics[i].name, name))
+  for (i = count; i < anamespace->data->count; ++i)
+    if (strcmp(anamespace->data->atomics[i].name, name) == 0)
       {
-        *atomic = &access.data->atomics[i];
+        *atomic = &anamespace->data->atomics[i];
         
         /* Update our cached number of complete entries. */
-        svn_atomic_set(&access.min_used, access.data->count);
+        svn_atomic_set(&anamespace->min_used, anamespace->data->count);
 
-        return unlock(&access, error);
+        return unlock(error);
       }
 
   /* Not found.  Append a new entry, if allowed & possible.
    */
   if (auto_create)
     {
-      if (access.data->count < MAX_ATOMIC_COUNT)
+      if (anamespace->data->count < MAX_ATOMIC_COUNT)
         {
-          access.data->atomics[access.data->count].value = 0;
-          memcpy(access.data->atomics[access.data->count].name, name, len+1);
+          anamespace->data->atomics[anamespace->data->count].value = 0;
+          memcpy(anamespace->data->atomics[anamespace->data->count].name,
+                 name,
+                 len+1);
           
-          *atomic = &access.data->atomics[access.data->count];
-          ++access.data->count;
+          *atomic = &anamespace->data->atomics[anamespace->data->count];
+          ++anamespace->data->count;
         }
         else
           error = svn_error_create(SVN_ERR_BAD_ATOMIC, 0,
@@ -391,12 +453,12 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
 
   /* We are mainly done here.  Let others continue their work.
    */
-  SVN_ERR(unlock(&access, error));
+  SVN_ERR(unlock(error));
 
   /* Only now can we be sure that a full memory barrier has been set
    * and that the new entry has been written to memory in full.
    */
-  svn_atomic_set(&access.min_used, access.data->count);
+  svn_atomic_set(&anamespace->min_used, anamespace->data->count);
 
   return SVN_NO_ERROR;
 }

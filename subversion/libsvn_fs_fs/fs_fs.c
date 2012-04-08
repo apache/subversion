@@ -2719,6 +2719,7 @@ ensure_revprop_generation(svn_fs_t *fs)
   
   return ffd->revprop_generation == NULL
     ? svn_named_atomic__get(&ffd->revprop_generation,
+                            NULL,
                             ATOMIC_REVPROP_GENERATION,
                             TRUE)
     : SVN_NO_ERROR;
@@ -2732,6 +2733,7 @@ ensure_revprop_timeout(svn_fs_t *fs)
   
   return ffd->revprop_timeout == NULL
     ? svn_named_atomic__get(&ffd->revprop_timeout,
+                            NULL,
                             ATOMIC_REVPROP_TIMEOUT,
                             TRUE)
     : SVN_NO_ERROR;
