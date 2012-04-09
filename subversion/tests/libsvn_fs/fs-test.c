@@ -3529,7 +3529,7 @@ get_file_checksum(svn_checksum_t **checksum,
 
 /* Return a pseudo-random number in the range [0,SCALAR) i.e. return
    a number N such that 0 <= N < SCALAR */
-static int my_rand(int scalar, apr_uint32_t *seed)
+static int my_rand(apr_uint64_t scalar, apr_uint32_t *seed)
 {
   static const apr_uint32_t TEST_RAND_MAX = 0xffffffffUL;
   /* Assumes TEST_RAND_MAX+1 can be exactly represented in a double */
@@ -3555,7 +3555,7 @@ random_data_to_buffer(char *buf,
 
   int ds_off = 0;
   const char *dataset = "0123456789";
-  int dataset_size = strlen(dataset);
+  apr_size_t dataset_size = strlen(dataset);
 
   if (full)
     {
