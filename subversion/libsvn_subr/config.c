@@ -697,6 +697,33 @@ svn_config_set_bool(svn_config_t *cfg,
 }
 
 svn_error_t *
+svn_config_get_int64(svn_config_t *cfg,
+                     apr_int64_t *valuep,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t default_value)
+{
+  const char *tmp_value;
+  svn_config_get(cfg, &tmp_value, section, option, NULL);
+  if (tmp_value)
+    return svn_cstring_strtoui64(valuep, tmp_value,
+                                 APR_INT64_MIN, APR_INT64_MAX, 10);
+
+  *valuep = default_value;
+  return SVN_NO_ERROR;
+}
+
+void
+svn_config_set_int64(svn_config_t *cfg,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t value)
+{
+  svn_config_set(cfg, section, option,
+                 apr_psprintf(cfg->pool, "%" APR_INT64_T_FMT, value));
+}
+
+svn_error_t *
 svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
                           const char *section, const char *option,
                           const char* default_value)
