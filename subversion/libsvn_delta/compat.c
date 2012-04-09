@@ -138,6 +138,9 @@ struct ev2_edit_baton
   apr_array_header_t *path_order;
   int paths_processed;
 
+  /* For calculating relpaths from Ev1 copyfrom urls. */
+  const char *repos_root;
+
   apr_pool_t *edit_pool;
   struct extra_baton *exb;
   svn_boolean_t closed;
@@ -624,9 +627,7 @@ map_to_repos_relpath(struct ev2_edit_baton *eb,
   SVN_DBG(("repos_path='%s'\n", path_or_url));
 #endif
 
-  /* ### do something here  */
-
-  return path_or_url;
+  return svn_uri_skip_ancestor(eb->repos_root, path_or_url, result_pool);
 }
 
 
@@ -1090,6 +1091,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
                   unlock_func_t unlock_func,
                   void *unlock_baton,
                   svn_boolean_t *found_abs_paths,
+                  const char *repos_root,
                   svn_delta_fetch_props_func_t fetch_props_func,
                   void *fetch_props_baton,
                   svn_delta_fetch_base_func_t fetch_base_func,
@@ -1126,6 +1128,7 @@ delta_from_editor(const svn_delta_editor_t **deditor,
   eb->found_abs_paths = found_abs_paths;
   *eb->found_abs_paths = FALSE;
   eb->exb = exb;
+  eb->repos_root = apr_pstrdup(pool, repos_root);
 
   eb->fetch_props_func = fetch_props_func;
   eb->fetch_props_baton = fetch_props_baton;
@@ -1184,6 +1187,7 @@ struct editor_baton
 
   struct operation root;
   svn_boolean_t *make_abs_paths;
+  const char *repos_root;
 
   apr_hash_t *paths;
   apr_pool_t *edit_pool;
@@ -1343,8 +1347,11 @@ build(struct editor_baton *eb,
                                     url, rev, scratch_pool));
       else
         operation->kind = kind;
-      operation->copyfrom_url = url;
+
       operation->copyfrom_revision = rev;
+      operation->copyfrom_url = svn_path_url_add_component2(eb->repos_root,
+                                                            url,
+                                                            eb->edit_pool);
     }
   /* Handle mkdir operations (which can be adds or replacements). */
   else if (action == ACTION_MKDIR)
@@ -1991,6 +1998,7 @@ editor_from_delta(svn_editor_t **editor_p,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
                   svn_boolean_t *send_abs_paths,
+                  const char *repos_root,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   svn_delta_fetch_kind_func_t fetch_kind_func,
@@ -2024,6 +2032,7 @@ editor_from_delta(svn_editor_t **editor_p,
   eb->dedit_baton = dedit_baton;
   eb->edit_pool = result_pool;
   eb->paths = apr_hash_make(result_pool);
+  eb->repos_root = apr_pstrdup(result_pool, repos_root);
 
   eb->fetch_kind_func = fetch_kind_func;
   eb->fetch_kind_baton = fetch_kind_baton;
@@ -2075,6 +2084,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
+                         const char *repos_root,
                          svn_delta_shim_callbacks_t *shim_callbacks,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
@@ -2110,7 +2120,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
 
   SVN_ERR(editor_from_delta(&editor, &exb, &unlock_func, &unlock_baton,
                             deditor_in, dedit_baton_in,
-                            found_abs_paths, NULL, NULL,
+                            found_abs_paths, repos_root,
+                            NULL, NULL,
                             shim_callbacks->fetch_kind_func,
                             shim_callbacks->fetch_baton,
                             shim_callbacks->fetch_props_func,
@@ -2119,6 +2130,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   SVN_ERR(delta_from_editor(deditor_out, dedit_baton_out, editor,
                             unlock_func, unlock_baton,
                             found_abs_paths,
+                            repos_root,
                             shim_callbacks->fetch_props_func,
                             shim_callbacks->fetch_baton,
                             shim_callbacks->fetch_base_func,
