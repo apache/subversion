@@ -30,6 +30,9 @@ import re
 import shutil
 import sys
 import threading
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -458,7 +461,7 @@ def hotcopy_format(sbox):
                                                         sbox.repo_dir,
                                                         backup_dir)
   if errput:
-    print("Error: hotcopy failed")
+    logger.warn("Error: hotcopy failed")
     raise svntest.Failure
 
   # verify that the db/format files are the same
@@ -471,7 +474,7 @@ def hotcopy_format(sbox):
   fp2.close()
 
   if contents1 != contents2:
-    print("Error: db/format file contents do not match after hotcopy")
+    logger.warn("Error: db/format file contents do not match after hotcopy")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -488,7 +491,7 @@ def setrevprop(sbox):
                                                         "--bypass-hooks",
                                                         iota_path)
   if errput:
-    print("Error: 'setlog' failed")
+    logger.warn("Error: 'setlog' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -507,7 +510,7 @@ def setrevprop(sbox):
                                                         "-r0", "svn:author",
                                                         foo_path)
   if errput:
-    print("Error: 'setrevprop' failed")
+    logger.warn("Error: 'setrevprop' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -860,7 +863,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
-    print("Error: new UUID matches the original one")
+    logger.warn("Error: new UUID matches the original one")
     raise svntest.Failure
 
   # Now, try setting the UUID back to the original value.
@@ -871,7 +874,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
-    print("Error: new UUID doesn't match the original one")
+    logger.warn("Error: new UUID doesn't match the original one")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
