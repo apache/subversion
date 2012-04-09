@@ -82,6 +82,11 @@ extern "C" {
 #define CONFIG_OPTION_FAIL_STOP          "fail-stop"
 #define CONFIG_SECTION_REP_SHARING       "rep-sharing"
 #define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
+#define CONFIG_SECTION_DELTIFICATION     "deltification"
+#define CONFIG_OPTION_ENABLE_DIR_DELTIFICATION   "enable-dir-deltification"
+#define CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION "enable-props-deltification"
+#define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
+#define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -117,6 +122,10 @@ extern "C" {
 
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
+
+/* 1.8 deltification options should work with any FSFS repo but to avoid
+ * issues with very old servers, restrict those options to the 1.6+ format*/
+#define SVN_FS_FS__MIN_DELTIFICATION_FORMAT 4
 
 /* The 1.7-dev format, never released, that packed revprops into SQLite
    revprops.db . */
@@ -275,6 +284,19 @@ typedef struct fs_fs_data_t
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
   svn_boolean_t rep_sharing_allowed;
+
+  /* Whether directory nodes shall be deltified just like file nodes. */
+  svn_boolean_t deltify_directories;
+
+  /* Whether nodes properties shall be deltified. */
+  svn_boolean_t deltify_properties;
+
+  /* Restart deltification histories after each multiple of this value */
+  apr_int64_t max_deltification_walk;
+
+  /* Maximum number of length of the linear part at the top of the
+   * deltification history after which skip deltas will be used. */
+  apr_int64_t max_linear_deltification;
 } fs_fs_data_t;
 
 
