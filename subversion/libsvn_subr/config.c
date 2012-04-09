@@ -34,6 +34,7 @@
 #include "config_impl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 
 
 
