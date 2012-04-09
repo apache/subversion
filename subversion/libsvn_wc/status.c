@@ -2588,7 +2588,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks,
+                                   NULL, shim_callbacks,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
