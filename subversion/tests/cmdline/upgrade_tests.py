@@ -35,6 +35,9 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import logging
+
+logger = logging.getLogger()
 
 import svntest
 from svntest import wc
@@ -179,15 +182,15 @@ def simple_property_verify(dir_path, expected_props):
           v2 = node2.get(prop, None)
 
           if not v2:
-            print('\'%s\' property on \'%s\' not found in %s' %
-                  (prop, key, name))
+            logger.warn('\'%s\' property on \'%s\' not found in %s',
+                  prop, key, name)
             equal = False
           if match and v1 != v2:
-            print('Expected \'%s\' on \'%s\' to be \'%s\', but found \'%s\'' %
-                  (prop, key, v1, v2))
+            logger.warn('Expected \'%s\' on \'%s\' to be \'%s\', but found \'%s\'',
+                  prop, key, v1, v2)
             equal = False
       else:
-        print('\'%s\': %s not found in %s' % (key, dict1[key], name))
+        logger.warn('\'%s\': %s not found in %s', key, dict1[key], name)
         equal = False
 
     return equal
@@ -214,7 +217,7 @@ def simple_property_verify(dir_path, expected_props):
   v2 = diff_props(actual_props, expected_props, 'expected', False)
 
   if not v1 or not v2:
-    print('Actual properties: %s' % actual_props)
+    logger.warn('Actual properties: %s', actual_props)
     raise svntest.Failure("Properties unequal")
 
 def simple_checksum_verify(expected_checksums):
@@ -244,7 +247,7 @@ def run_and_verify_status_no_server(wc_dir, expected_status):
   except svntest.tree.SVNTreeError:
     svntest.verify.display_trees(None, 'STATUS OUTPUT TREE',
                                  expected_status.old_tree(), actual)
-    print("ACTUAL STATUS TREE:")
+    logger.warn("ACTUAL STATUS TREE:")
     svntest.tree.dump_tree_script(actual, wc_dir + os.sep)
     raise
 
