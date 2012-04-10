@@ -1796,6 +1796,9 @@ do_arbitrary_files_diff(const char *local_abspath1,
   svn_string_t *modified_mime_type = NULL;
   svn_error_t *err;
 
+  if (ctx->cancel_func)
+    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
   if (diff_cmd_baton->ignore_prop_diff)
     {
       original_props = apr_hash_make(scratch_pool);
@@ -1989,6 +1992,9 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
   int i;
   apr_pool_t *iterpool;
 
+  if (b->ctx->cancel_func)
+    SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+
   if (finfo->filetype != APR_DIR)
     return SVN_NO_ERROR;
 
@@ -2047,6 +2053,9 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
       const char *child2_abspath;
 
       svn_pool_clear(iterpool);
+
+      if (b->ctx->cancel_func)
+        SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
 
       dirent1 = apr_hash_get(dirents1, name, APR_HASH_KEY_STRING);
       if (!dirent1)
