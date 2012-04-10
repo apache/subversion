@@ -140,6 +140,13 @@ Candidate changes:
    Votes:
      +1: joeswatosh
 
+ * r1311702
+   Prevent out-of-bounds array access during 'svn diff' arguments processing.
+   Justification:
+    'svn diff --old path/to/.svn --new path/to/.svn' segfaults.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
