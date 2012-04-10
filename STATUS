@@ -133,6 +133,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1310535, r1310594
+   Handle APR Hash order changes in Ruby bindings test expectations.
+   Justification:
+     Avoid spurious test failures.
+   Votes:
+     +1: joeswatosh
+
 Veto-blocked changes:
 =====================
 
