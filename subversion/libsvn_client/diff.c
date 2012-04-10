@@ -1773,6 +1773,36 @@ unsupported_diff_error(svn_error_t *child_err)
                             "that is not yet supported"));
 }
 
+/* Try to get properties for LOCAL_ABSPATH and return them in the property
+ * hash *PROPS. If there are no properties because LOCAL_ABSPATH is not
+ * versioned, return an empty property hash. */
+static svn_error_t *
+get_props(apr_hash_t **props,
+          const char *local_abspath,
+          svn_wc_context_t *wc_ctx,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = svn_wc_prop_list2(props, wc_ctx, local_abspath, result_pool,
+                          scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+          err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+          err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+        {
+          svn_error_clear(err);
+          *props = apr_hash_make(result_pool);
+        }
+      else
+        return svn_error_trace(err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Produce a diff between two arbitrary files at LOCAL_ABSPATH1 and
  * LOCAL_ABSPATH2, using the diff callbacks from CALLBACKS.
  * Use PATH as the name passed to diff callbacks.
@@ -1794,7 +1824,6 @@ do_arbitrary_files_diff(const char *local_abspath1,
   apr_array_header_t *prop_changes;
   svn_string_t *original_mime_type = NULL;
   svn_string_t *modified_mime_type = NULL;
-  svn_error_t *err;
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -1808,28 +1837,10 @@ do_arbitrary_files_diff(const char *local_abspath1,
     {
       /* Try to get properties from either file. It's OK if the files do not
        * have properties, or if they are unversioned. */
-      err = svn_wc_prop_list2(&original_props, ctx->wc_ctx, local_abspath1,
-                              scratch_pool, scratch_pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
-                  err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
-                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
-        {
-          svn_error_clear(err);
-          original_props = apr_hash_make(scratch_pool);
-        }
-      else
-        SVN_ERR(err);
-      err = svn_wc_prop_list2(&modified_props, ctx->wc_ctx, local_abspath2,
-                              scratch_pool, scratch_pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
-                  err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
-                  err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
-        {
-          svn_error_clear(err);
-          modified_props = apr_hash_make(scratch_pool);
-        }
-      else
-        SVN_ERR(err);
+      SVN_ERR(get_props(&original_props, local_abspath1, ctx->wc_ctx,
+                        scratch_pool, scratch_pool));
+      SVN_ERR(get_props(&modified_props, local_abspath2, ctx->wc_ctx,
+                        scratch_pool, scratch_pool));
     }
 
   SVN_ERR(svn_prop_diffs(&prop_changes, modified_props, original_props,
