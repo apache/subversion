@@ -2055,21 +2055,6 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
   local_abspath2 = svn_dirent_join(b->root2_abspath, child_relpath,
                                    scratch_pool);
   SVN_ERR(svn_io_check_resolved_path(local_abspath2, &kind2, scratch_pool));
-  if (kind2 == svn_node_file)
-    {
-      /* Show file as deleted (being replaced by a directory). */
-      SVN_ERR(do_arbitrary_files_diff(local_abspath2, b->empty_file_abspath,
-                                      svn_dirent_skip_ancestor(
-                                        b->root2_abspath,
-                                        local_abspath2),
-                                      FALSE, TRUE,
-                                      b->callbacks, b->callback_baton,
-                                      b->ctx, scratch_pool));
-      dirents2 = apr_hash_make(scratch_pool);
-    }
-
-  if (kind2 == svn_node_none)
-    dirents2 = apr_hash_make(scratch_pool);
 
   if (kind2 == svn_node_dir)
     {
@@ -2095,6 +2080,8 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
                                   TRUE, /* only_check_type */
                                   scratch_pool, scratch_pool));
     }
+  else
+    dirents2 = apr_hash_make(scratch_pool);
 
   /* Compare dirents1 to dirents2 and show added/deleted/changed files. */
   merged_dirents = apr_hash_merge(scratch_pool, dirents1, dirents2,
