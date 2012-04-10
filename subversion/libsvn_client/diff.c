@@ -2007,7 +2007,9 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
   return SVN_NO_ERROR;
 }
 
-/* An implementation of svn_io_walk_func_t. */
+/* An implementation of svn_io_walk_func_t.
+ * Note: LOCAL_ABSPATH is the path being crawled and can be on either side
+ * of the diff depending on baton->recursing_within_added_subtree. */
 static svn_error_t *
 arbitrary_diff_walker(void *baton, const char *local_abspath,
                       const apr_finfo_t *finfo,
@@ -2032,13 +2034,6 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
   if (finfo->filetype != APR_DIR)
     return SVN_NO_ERROR;
 
-  if (b->recursing_within_added_subtree)
-    child_relpath = svn_dirent_skip_ancestor(b->root2_abspath, local_abspath);
-  else
-    child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath);
-  if (!child_relpath)
-    return SVN_NO_ERROR;
-
   if (b->recursing_within_adm_dir)
     {
       if (svn_dirent_skip_ancestor(b->adm_dir_abspath, local_abspath))
@@ -2056,6 +2051,13 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
       b->adm_dir_abspath = apr_pstrdup(b->pool, local_abspath);
       return SVN_NO_ERROR;
     }
+
+  if (b->recursing_within_added_subtree)
+    child_relpath = svn_dirent_skip_ancestor(b->root2_abspath, local_abspath);
+  else
+    child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath);
+  if (!child_relpath)
+    return SVN_NO_ERROR;
 
   local_abspath1 = svn_dirent_join(b->root1_abspath, child_relpath,
                                    scratch_pool);
