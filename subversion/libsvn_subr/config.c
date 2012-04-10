@@ -707,8 +707,8 @@ svn_config_get_int64(svn_config_t *cfg,
   const char *tmp_value;
   svn_config_get(cfg, &tmp_value, section, option, NULL);
   if (tmp_value)
-    return svn_cstring_strtoui64(valuep, tmp_value,
-                                 APR_INT64_MIN, APR_INT64_MAX, 10);
+    return svn_cstring_strtoi64(valuep, tmp_value,
+                                APR_INT64_MIN, APR_INT64_MAX, 10);
 
   *valuep = default_value;
   return SVN_NO_ERROR;
