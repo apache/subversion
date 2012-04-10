@@ -3780,11 +3780,11 @@ def diff_two_working_copies(sbox):
   wc_dir = sbox.wc_dir
 
   # Create a pristine working copy that will remain mostly unchanged
-  wc_dir2 = sbox.add_wc_path('2')
-  svntest.main.run_svn(None, 'co', sbox.repo_url, wc_dir2)
+  wc_dir_old = sbox.add_wc_path('old')
+  svntest.main.run_svn(None, 'co', sbox.repo_url, wc_dir_old)
   # Add a property to A/B/F in the pristine working copy
   svntest.main.run_svn(None, 'propset', 'newprop', 'propval-old\n',
-                       os.path.join(wc_dir2, 'A', 'B', 'F'))
+                       os.path.join(wc_dir_old, 'A', 'B', 'F'))
 
   # Make changes to the first working copy:
 
@@ -3809,7 +3809,7 @@ def diff_two_working_copies(sbox):
   sbox.simple_add('A/B/F')
   sbox.simple_propset('newprop', 'propval-new\n', 'A/B/F')
 
-  src_label = os.path.basename(wc_dir2)
+  src_label = os.path.basename(wc_dir_old)
   dst_label = os.path.basename(wc_dir)
   expected_output = make_diff_header('newdir/newfile', 'working copy',
                                      'working copy',
@@ -3862,7 +3862,7 @@ def diff_two_working_copies(sbox):
                     ]
                     
   svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', '--old', wc_dir2,
+                                     'diff', '--old', wc_dir_old,
                                      '--new', wc_dir)
 
 ########################################################################
