@@ -9728,7 +9728,7 @@ log_find_operative_revs(void *baton,
       if (!in_catalog)
         {
           svn_mergeinfo_t unmerged_for_key;
-          const char *missing_path;
+          const char *suffix, *missing_path;
 
           /* If there is no mergeinfo on the source tree we'll say
              the "subtree" missing this revision is the root of the
@@ -9736,12 +9736,10 @@ log_find_operative_revs(void *baton,
           if (!subtree_missing_this_rev)
             subtree_missing_this_rev = log_baton->source_repos_rel_path;
 
-          if (subtree_missing_this_rev
-              && strcmp(subtree_missing_this_rev, source_rel_path))
+          suffix = svn_relpath_skip_ancestor(subtree_missing_this_rev,
+                                             source_rel_path);
+          if (suffix)
             {
-              const char *suffix =
-                svn_relpath_skip_ancestor(subtree_missing_this_rev,
-                                          source_rel_path);
               missing_path = apr_pstrmemdup(pool, path,
                                             strlen(path) - strlen(suffix) - 1);
             }
