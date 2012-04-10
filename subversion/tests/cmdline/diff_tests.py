@@ -3871,6 +3871,8 @@ def diff_two_working_copies(sbox):
                       "-This is the file 'psi'.\n",
                     ]
                     
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--old', wc_dir_old,
                                      '--new', wc_dir)
