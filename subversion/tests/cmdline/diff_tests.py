@@ -3779,9 +3779,12 @@ def diff_two_working_copies(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Create a second working copy that will remain unchanged
+  # Create a pristine working copy that will remain mostly unchanged
   wc_dir2 = sbox.add_wc_path('2')
   svntest.main.run_svn(None, 'co', sbox.repo_url, wc_dir2)
+  # Add a property to A/B/F in the pristine working copy
+  svntest.main.run_svn(None, 'propset', 'newprop', 'propval-old\n',
+                       os.path.join(wc_dir2, 'A', 'B', 'F'))
 
   # Make changes to the first working copy:
 
@@ -3800,6 +3803,12 @@ def diff_two_working_copies(sbox):
   sbox.simple_propset('newprop', 'propval', 'A/D/gamma')
   svntest.main.file_append(sbox.ospath('A/B/lambda'), 'new text\n')
 
+  # replaced nodes (files vs. directories) with property mods
+  sbox.simple_rm('A/B/F')
+  svntest.main.file_append(sbox.ospath('A/B/F'), 'new text\n')
+  sbox.simple_add('A/B/F')
+  sbox.simple_propset('newprop', 'propval-new\n', 'A/B/F')
+
   src_label = os.path.basename(wc_dir2)
   dst_label = os.path.basename(wc_dir)
   expected_output = make_diff_header('newdir/newfile', 'working copy',
@@ -3812,7 +3821,15 @@ def diff_two_working_copies(sbox):
                                          src_label, dst_label) + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'mu'.\n",
-                    ] + make_diff_header('A/B/lambda', 'working copy',
+                    ] + make_diff_header('A/B/F', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -0,0 +1 @@\n",
+                      "+new text\n",
+                    ] + make_diff_prop_header('A/B/F') + \
+                        make_diff_prop_modified("newprop", "propval-old\n",
+                                                "propval-new\n") + \
+                    make_diff_header('A/B/lambda', 'working copy',
                                          'working copy',
                                          src_label, dst_label) + [
                       "@@ -1 +1,2 @@\n",

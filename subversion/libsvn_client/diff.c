@@ -1807,13 +1807,20 @@ get_props(apr_hash_t **props,
  * LOCAL_ABSPATH2, using the diff callbacks from CALLBACKS.
  * Use PATH as the name passed to diff callbacks.
  * FILE1_IS_EMPTY and FILE2_IS_EMPTY are used as hints which diff callback
- * function to use to compare the files (added/deleted/changed). */
+ * function to use to compare the files (added/deleted/changed).
+ *
+ * If ORIGINAL_PROPS_OVERRIDE is not NULL, use it as original properties
+ * instead of reading properties from LOCAL_ABSPATH1. This is required when
+ * a file replaces a directory, where LOCAL_ABSPATH1 is an empty file that
+ * file content must be diffed against, but properties to diff against come
+ * from the replaced directory. */
 static svn_error_t *
 do_arbitrary_files_diff(const char *local_abspath1,
                         const char *local_abspath2,
                         const char *path,
                         svn_boolean_t file1_is_empty,
                         svn_boolean_t file2_is_empty,
+                        apr_hash_t *original_props_override,
                         const svn_wc_diff_callbacks4_t *callbacks,
                         struct diff_cmd_baton *diff_cmd_baton,
                         svn_client_ctx_t *ctx,
@@ -1837,8 +1844,11 @@ do_arbitrary_files_diff(const char *local_abspath1,
     {
       /* Try to get properties from either file. It's OK if the files do not
        * have properties, or if they are unversioned. */
-      SVN_ERR(get_props(&original_props, local_abspath1, ctx->wc_ctx,
-                        scratch_pool, scratch_pool));
+      if (original_props_override)
+        original_props = original_props_override;
+      else
+        SVN_ERR(get_props(&original_props, local_abspath1, ctx->wc_ctx,
+                          scratch_pool, scratch_pool));
       SVN_ERR(get_props(&modified_props, local_abspath2, ctx->wc_ctx,
                         scratch_pool, scratch_pool));
     }
@@ -2140,26 +2150,32 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
         SVN_ERR(do_arbitrary_files_diff(child1_abspath, b->empty_file_abspath,
                                         svn_relpath_join(child_relpath, name,
                                                          iterpool),
-                                        FALSE, TRUE,
+                                        FALSE, TRUE, NULL,
                                         b->callbacks, b->callback_baton,
                                         b->ctx, iterpool));
 
       /* Files that exist only in dirents2. */
       if (dirent2->kind == svn_node_file &&
           (dirent1->kind == svn_node_dir || dirent1->kind == svn_node_none))
-        SVN_ERR(do_arbitrary_files_diff(b->empty_file_abspath, child2_abspath,
-                                        svn_relpath_join(child_relpath, name,
-                                                         iterpool),
-                                        TRUE, FALSE,
-                                        b->callbacks, b->callback_baton,
-                                        b->ctx, iterpool));
+        {
+          apr_hash_t *original_props;
+
+          SVN_ERR(get_props(&original_props, child1_abspath, b->ctx->wc_ctx,
+                            scratch_pool, scratch_pool));
+          SVN_ERR(do_arbitrary_files_diff(b->empty_file_abspath, child2_abspath,
+                                          svn_relpath_join(child_relpath, name,
+                                                           iterpool),
+                                          TRUE, FALSE, original_props,
+                                          b->callbacks, b->callback_baton,
+                                          b->ctx, iterpool));
+        }
 
       /* Files that exist in dirents1 and dirents2. */
       if (dirent1->kind == svn_node_file && dirent2->kind == svn_node_file)
         SVN_ERR(do_arbitrary_files_diff(child1_abspath, child2_abspath,
                                         svn_relpath_join(child_relpath, name,
                                                          iterpool),
-                                        FALSE, FALSE,
+                                        FALSE, FALSE, NULL,
                                         b->callbacks, b->callback_baton,
                                         b->ctx, scratch_pool));
 
@@ -2205,7 +2221,7 @@ do_arbitrary_nodes_diff(const char *local_abspath1,
     SVN_ERR(do_arbitrary_files_diff(local_abspath1, local_abspath2,
                                     svn_dirent_basename(local_abspath2,
                                                         scratch_pool),
-                                    FALSE, FALSE,
+                                    FALSE, FALSE, NULL,
                                     callbacks, callback_baton,
                                     ctx, scratch_pool));
   else if (kind1 == svn_node_dir)
