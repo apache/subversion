@@ -745,8 +745,8 @@ ev2_add_directory(const char *path,
       if (pb->copyfrom_path)
         {
           const char *name = svn_relpath_basename(relpath, scratch_pool);
-          cb->copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
-                                          "/", name, NULL);
+          cb->copyfrom_path = svn_relpath_join(pb->copyfrom_path, name,
+                                               scratch_pool);
           cb->copyfrom_rev = pb->copyfrom_rev;
         }
     }
@@ -792,8 +792,8 @@ ev2_open_directory(const char *path,
       /* We are inside a copy. */
       const char *name = svn_relpath_basename(relpath, scratch_pool);
 
-      db->copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
-                                      "/", name, NULL);
+      db->copyfrom_path = svn_relpath_join(pb->copyfrom_path, name,
+                                           scratch_pool);
       db->copyfrom_rev = pb->copyfrom_rev;
     }
 
@@ -916,8 +916,8 @@ ev2_open_file(const char *path,
       /* We're in a copied directory, so the delta base is going to be
          based up on the copy source. */
       const char *name = svn_relpath_basename(relpath, scratch_pool);
-      const char *copyfrom_path = apr_pstrcat(result_pool, pb->copyfrom_path,
-                                              "/", name, NULL);
+      const char *copyfrom_path = svn_relpath_join(pb->copyfrom_path, name,
+                                                   scratch_pool);
 
       SVN_ERR(fb->eb->fetch_base_func(&fb->delta_base,
                                       fb->eb->fetch_base_baton,
