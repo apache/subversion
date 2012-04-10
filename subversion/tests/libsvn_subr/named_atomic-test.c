@@ -73,19 +73,19 @@ fail(apr_pool_t *pool, const char *fmt, ...)
 static svn_error_t *
 test_basics(apr_pool_t *pool)
 {
-  svn_atomic_namespace__t *anamespace;
+  svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
   /* Use a separate namespace for our tests isolate them from production */
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE, pool));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
 
   /* Test a non-exisiting atomic */
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME "x", FALSE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "x", FALSE));
   SVN_TEST_ASSERT(atomic == NULL);
   
   /* Now, we auto-create it */
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_TEST_ASSERT(atomic != NULL);
 
   /* The default value should be 0 */
@@ -151,15 +151,15 @@ test_basics(apr_pool_t *pool)
 static svn_error_t *
 test_bignums(apr_pool_t *pool)
 {
-  svn_atomic_namespace__t *anamespace;
+  svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
   /* Use a separate namespace for our tests isolate them from production */
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE, pool));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
 
   /* Auto-create our atomic variable */
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_TEST_ASSERT(atomic != NULL);
 
   /* Write should return the previous value. */
@@ -197,7 +197,7 @@ test_bignums(apr_pool_t *pool)
 static svn_error_t *
 test_multiple_atomics(apr_pool_t *pool)
 {
-  svn_atomic_namespace__t *anamespace;
+  svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomic1;
   svn_named_atomic__t *atomic2;
   svn_named_atomic__t *atomic1_alias;
@@ -206,18 +206,18 @@ test_multiple_atomics(apr_pool_t *pool)
   apr_int64_t value2;
 
   /* Use a separate namespace for our tests isolate them from production */
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE, pool));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
 
   /* Create two atomics */
-  SVN_ERR(svn_named_atomic__get(&atomic1, anamespace, ATOMIC_NAME "1", TRUE));
-  SVN_ERR(svn_named_atomic__get(&atomic2, anamespace, ATOMIC_NAME "2", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic1, ns, ATOMIC_NAME "1", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic2, ns, ATOMIC_NAME "2", TRUE));
   SVN_TEST_ASSERT(atomic1 != NULL);
   SVN_TEST_ASSERT(atomic2 != NULL);
   SVN_TEST_ASSERT(atomic1 != atomic2);
 
   /* Get aliases to those */
-  SVN_ERR(svn_named_atomic__get(&atomic1_alias, anamespace, ATOMIC_NAME "1", TRUE));
-  SVN_ERR(svn_named_atomic__get(&atomic2_alias, anamespace, ATOMIC_NAME "2", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic1_alias, ns, ATOMIC_NAME "1", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic2_alias, ns, ATOMIC_NAME "2", TRUE));
   SVN_TEST_ASSERT(atomic1 == atomic1_alias);
   SVN_TEST_ASSERT(atomic2 == atomic2_alias);
 
@@ -317,35 +317,35 @@ test_namespaces(apr_pool_t *pool)
 static svn_error_t *
 init_test_shm(apr_pool_t *pool)
 {
-  svn_atomic_namespace__t *anamespace;
+  svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomic;
   apr_pool_t *scratch = svn_pool_create(pool);
 
   /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE, scratch));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, scratch));
 
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME "0", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "0", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME "1", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "1", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME "2", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "2", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME "3", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "3", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, "counter", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, "counter", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
 
   apr_pool_clear(scratch);
 
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE "1", scratch));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE "1", scratch));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
   apr_pool_clear(scratch);
 
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE "2", scratch));
-  SVN_ERR(svn_named_atomic__get(&atomic, anamespace, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE "2", scratch));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
   apr_pool_clear(scratch);
 
@@ -445,7 +445,7 @@ run_threads(apr_pool_t *pool, int iterations, thread_func_t func)
 static svn_error_t *
 test_pipeline_thread(int thread_no, int thread_count, int iterations, apr_pool_t *pool)
 {
-  svn_atomic_namespace__t *anamespace;
+  svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomicIn;
   svn_named_atomic__t *atomicOut;
   svn_named_atomic__t *atomicCounter;
@@ -453,9 +453,9 @@ test_pipeline_thread(int thread_no, int thread_count, int iterations, apr_pool_t
   apr_int64_t i, counter;
 
   /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&anamespace, TEST_NAMESPACE, pool));
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
   SVN_ERR(svn_named_atomic__get(&atomicIn,
-                                anamespace,
+                                ns,
                                 apr_pstrcat(pool,
                                             ATOMIC_NAME,
                                             apr_itoa(pool,
@@ -463,7 +463,7 @@ test_pipeline_thread(int thread_no, int thread_count, int iterations, apr_pool_t
                                             NULL),
                                 TRUE));
   SVN_ERR(svn_named_atomic__get(&atomicOut,
-                                anamespace,
+                                ns,
                                 apr_pstrcat(pool,
                                             ATOMIC_NAME,
                                             apr_itoa(pool,
@@ -471,7 +471,7 @@ test_pipeline_thread(int thread_no, int thread_count, int iterations, apr_pool_t
                                             NULL),
                                 TRUE));
 
-  SVN_ERR(svn_named_atomic__get(&atomicCounter, anamespace, "counter", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomicCounter, ns, "counter", TRUE));
 
   if (thread_no == 0)
     {

@@ -53,22 +53,22 @@ typedef struct svn_named_atomic__t svn_named_atomic__t;
 #define SVN_NAMED_ATOMIC__MAX_NAME_LENGTH 30
 
 /** Create a namespace (i.e. access object) with the given @a name and
- * return it in @a *anamespace.  If @a name is @c NULL, return the name
- * of the default namespace will be used.
+ * return it in @a *ns.  If @a name is @c NULL, return the name of the
+ * default namespace will be used.
  *
  * Multiple access objects with the same name may be created.  They access
  * the same shared memory region but have independent lifetimes.
  *
- * The access object will be allocated in @a pool and atomics gotten
+ * The access object will be allocated in @a result_pool and atomics gotten
  * from this object will become invalid when the pool is being cleaned.
  */
 svn_error_t *
-svn_atomic_namespace__create(svn_atomic_namespace__t **anamespace,
+svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                              const char *name,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool);
 
-/** Find the atomic with the specified @a name in @a anamespace and return
- * it in @a *atomic.  If @a namespace is @c NULL, the default namespace
+/** Find the atomic with the specified @a name in namespace @a ns and
+ * return it in @a *atomic.  If @a ns is @c NULL, the default namespace
  * will be used.  If no object with that name can be found, the behavior
  * depends on @a auto_create.  If it is @c FALSE, @a *atomic will be set
  * to @c NULL. Otherwise, a new atomic will be created, its value set to 0
@@ -82,13 +82,13 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **anamespace,
  * shared memory region. Therefore, this may fail with a variety of errors.
  *
  * Please note that the lifetime of the atomic is bound to the lifetime
- * of the @a anamespace object, i.e. the pool the latter was created in.
- * The default namespace (for @c anamespace=NULL) remains valid until APR
- * gets cleaned up.
+ * of the @a ns object, i.e. the pool the latter was created in.
+ * The default namespace (for @c ns = NULL) remains valid until APR gets
+ * cleaned up.
  */
 svn_error_t *
 svn_named_atomic__get(svn_named_atomic__t **atomic,
-                      svn_atomic_namespace__t *anamespace,
+                      svn_atomic_namespace__t *ns,
                       const char *name,
                       svn_boolean_t auto_create);
 
