@@ -3808,6 +3808,9 @@ def diff_two_working_copies(sbox):
   svntest.main.file_append(sbox.ospath('A/B/F'), 'new text\n')
   sbox.simple_add('A/B/F')
   sbox.simple_propset('newprop', 'propval-new\n', 'A/B/F')
+  sbox.simple_rm('A/D/G/pi')
+  sbox.simple_mkdir('A/D/G/pi')
+  sbox.simple_propset('newprop', 'propval', 'A/D/G/pi')
 
   src_label = os.path.basename(wc_dir_old)
   dst_label = os.path.basename(wc_dir)
@@ -3843,6 +3846,13 @@ def diff_two_working_copies(sbox):
                                          'working copy',
                                          src_label, dst_label) + \
                         make_diff_prop_header('A/D/gamma') + \
+                        make_diff_prop_added("newprop", "propval") + \
+                    make_diff_header('A/D/G/pi', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'pi'.\n",
+                    ] + make_diff_prop_header('A/D/G/pi') + \
                         make_diff_prop_added("newprop", "propval") + \
                     make_diff_header('A/D/H/chi', 'working copy',
                                          'working copy',
