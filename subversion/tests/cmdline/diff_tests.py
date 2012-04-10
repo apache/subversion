@@ -3796,6 +3796,7 @@ def diff_two_working_copies(sbox):
   sbox.simple_mkdir('newdir/newdir2') # should not show up in the diff
 
   # modified nodes
+  sbox.simple_propset('newprop', 'propval', 'A/D')
   sbox.simple_propset('newprop', 'propval', 'A/D/gamma')
   svntest.main.file_append(sbox.ospath('A/B/lambda'), 'new text\n')
 
@@ -3817,7 +3818,11 @@ def diff_two_working_copies(sbox):
                       "@@ -1 +1,2 @@\n",
                       " This is the file 'lambda'.\n",
                       "+new text\n",
-                    ] + make_diff_header('A/D/gamma', 'working copy',
+                    ] + make_diff_header('A/D', 'working copy', 'working copy',
+                                         src_label, dst_label) + \
+                        make_diff_prop_header('A/D') + \
+                        make_diff_prop_added("newprop", "propval") + \
+                    make_diff_header('A/D/gamma', 'working copy',
                                          'working copy',
                                          src_label, dst_label) + \
                         make_diff_prop_header('A/D/gamma') + \
