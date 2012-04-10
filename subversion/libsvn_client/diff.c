@@ -1908,9 +1908,16 @@ struct arbitrary_diff_walker_baton {
   const char *root1_abspath;
   const char *root2_abspath;
 
-  /* TRUE if recursing withing an added subtree of root2_abspath that
+  /* TRUE if recursing within an added subtree of root2_abspath that
    * does not exist in root1_abspath. */
   svn_boolean_t recursing_within_added_subtree;
+
+  /* TRUE if recursing within an administrative (.i.e. .svn) directory. */
+  svn_boolean_t recursing_within_adm_dir;
+
+  /* The absolute path of the adm dir if RECURSING_WITHIN_ADM_DIR is TRUE.
+   * Else this is NULL.*/
+  const char *adm_dir_abspath;
 
   /* A path to an empty file used for diffs that add/delete files. */
   const char *empty_file_abspath;
@@ -1918,6 +1925,7 @@ struct arbitrary_diff_walker_baton {
   const svn_wc_diff_callbacks4_t *callbacks;
   struct diff_cmd_baton *callback_baton;
   svn_client_ctx_t *ctx;
+  apr_pool_t *pool;
 } arbitrary_diff_walker_baton;
 
 /* Forward declaration needed because this function has a cyclic
@@ -1960,9 +1968,12 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
 
   b.root1_abspath = root_abspath1 ? root_abspath1 : local_abspath1;
   b.root2_abspath = root_abspath2 ? root_abspath2 : local_abspath2;
+  b.recursing_within_adm_dir = FALSE;
+  b.adm_dir_abspath = NULL;
   b.callbacks = callbacks;
   b.callback_baton = callback_baton;
   b.ctx = ctx;
+  b.pool = scratch_pool;
 
   SVN_ERR(svn_io_open_unique_file3(&empty_file, &b.empty_file_abspath,
                                    NULL, svn_io_file_del_on_pool_cleanup,
@@ -2004,6 +2015,24 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
     child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath1);
   if (!child_relpath)
       return SVN_NO_ERROR;
+
+  if (b->recursing_within_adm_dir)
+    {
+      if (svn_dirent_skip_ancestor(b->adm_dir_abspath, local_abspath1))
+        return SVN_NO_ERROR;
+      else
+        {
+          b->recursing_within_adm_dir = FALSE;
+          b->adm_dir_abspath = NULL;
+        }
+    }
+  else if (strcmp(svn_dirent_basename(local_abspath1, scratch_pool),
+                  SVN_WC_ADM_DIR_NAME) == 0)
+    {
+      b->recursing_within_adm_dir = TRUE;
+      b->adm_dir_abspath = apr_pstrdup(b->pool, local_abspath1);
+      return SVN_NO_ERROR;
+    }
 
   if (b->recursing_within_added_subtree)
     dirents1 = apr_hash_make(scratch_pool);
@@ -2056,6 +2085,9 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
 
       if (b->ctx->cancel_func)
         SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+
+      if (strcmp(name, SVN_WC_ADM_DIR_NAME) == 0)
+        continue;
 
       dirent1 = apr_hash_get(dirents1, name, APR_HASH_KEY_STRING);
       if (!dirent1)
