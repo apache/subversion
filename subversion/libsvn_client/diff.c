@@ -2072,9 +2072,29 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
     dirents2 = apr_hash_make(scratch_pool);
 
   if (kind2 == svn_node_dir)
-    SVN_ERR(svn_io_get_dirents3(&dirents2, local_abspath2,
-                                TRUE, /* only_check_type */
-                                scratch_pool, scratch_pool));
+    {
+      apr_hash_t *original_props;
+      apr_hash_t *modified_props;
+      apr_array_header_t *prop_changes;
+
+      /* Show any property changes for this directory. */
+      SVN_ERR(get_props(&original_props, local_abspath1, b->ctx->wc_ctx,
+                        scratch_pool, scratch_pool));
+      SVN_ERR(get_props(&modified_props, local_abspath2, b->ctx->wc_ctx,
+                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_prop_diffs(&prop_changes, modified_props, original_props,
+                             scratch_pool));
+      if (prop_changes->nelts > 0)
+        SVN_ERR(diff_props_changed(NULL, NULL, child_relpath,
+                                   b->recursing_within_added_subtree,
+                                   prop_changes, original_props,
+                                   b->callback_baton, scratch_pool));
+
+      /* Read directory entries. */
+      SVN_ERR(svn_io_get_dirents3(&dirents2, local_abspath2,
+                                  TRUE, /* only_check_type */
+                                  scratch_pool, scratch_pool));
+    }
 
   /* Compare dirents1 to dirents2 and show added/deleted/changed files. */
   merged_dirents = apr_hash_merge(scratch_pool, dirents1, dirents2,
