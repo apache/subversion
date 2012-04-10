@@ -805,6 +805,17 @@ struct diff_cmd_baton {
 };
 
 
+/* A helper function that marks a path as visited. It copies PATH
+ * into the correct pool before referencing it from the hash table. */
+static void
+mark_path_as_visited(struct diff_cmd_baton *diff_cmd_baton, const char *path)
+{
+  const char *p;
+
+  p = apr_pstrdup(apr_hash_pool_get(diff_cmd_baton->visited_paths), path);
+  apr_hash_set(diff_cmd_baton->visited_paths, p, APR_HASH_KEY_STRING, p);
+}
+
 /* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
  */
 static svn_error_t *
@@ -855,8 +866,7 @@ diff_props_changed(svn_wc_notify_state_t *state,
       /* We've printed the diff header so now we can mark the path as
        * visited. */
       if (show_diff_header)
-        apr_hash_set(diff_cmd_baton->visited_paths, path,
-                     APR_HASH_KEY_STRING, path);
+        mark_path_as_visited(diff_cmd_baton, path);
     }
 
   if (state)
@@ -1072,9 +1082,7 @@ diff_content_changed(const char *path,
                      subpool));
 
           /* We have a printed a diff for this path, mark it as visited. */
-          apr_hash_set(diff_cmd_baton->visited_paths, path,
-                       APR_HASH_KEY_STRING, path);
-
+          mark_path_as_visited(diff_cmd_baton, path);
         }
     }
 
