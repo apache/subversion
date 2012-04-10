@@ -1952,7 +1952,7 @@ struct arbitrary_diff_walker_baton {
 /* Forward declaration needed because this function has a cyclic
  * dependency with do_arbitrary_dirs_diff(). */
 static svn_error_t *
-arbitrary_diff_walker(void *baton, const char *local_abspath1,
+arbitrary_diff_walker(void *baton, const char *local_abspath,
                       const apr_finfo_t *finfo,
                       apr_pool_t *scratch_pool);
 
@@ -2009,12 +2009,14 @@ do_arbitrary_dirs_diff(const char *local_abspath1,
 
 /* An implementation of svn_io_walk_func_t. */
 static svn_error_t *
-arbitrary_diff_walker(void *baton, const char *local_abspath1,
+arbitrary_diff_walker(void *baton, const char *local_abspath,
                       const apr_finfo_t *finfo,
                       apr_pool_t *scratch_pool)
 {
   struct arbitrary_diff_walker_baton *b = baton;
+  const char *local_abspath1;
   const char *local_abspath2;
+  svn_node_kind_t kind1;
   svn_node_kind_t kind2;
   const char *child_relpath;
   apr_hash_t *dirents1;
@@ -2031,15 +2033,15 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
     return SVN_NO_ERROR;
 
   if (b->recursing_within_added_subtree)
-    child_relpath = svn_dirent_skip_ancestor(b->root2_abspath, local_abspath1);
+    child_relpath = svn_dirent_skip_ancestor(b->root2_abspath, local_abspath);
   else
-    child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath1);
+    child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath);
   if (!child_relpath)
     return SVN_NO_ERROR;
 
   if (b->recursing_within_adm_dir)
     {
-      if (svn_dirent_skip_ancestor(b->adm_dir_abspath, local_abspath1))
+      if (svn_dirent_skip_ancestor(b->adm_dir_abspath, local_abspath))
         return SVN_NO_ERROR;
       else
         {
@@ -2047,24 +2049,28 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
           b->adm_dir_abspath = NULL;
         }
     }
-  else if (strcmp(svn_dirent_basename(local_abspath1, scratch_pool),
+  else if (strcmp(svn_dirent_basename(local_abspath, scratch_pool),
                   SVN_WC_ADM_DIR_NAME) == 0)
     {
       b->recursing_within_adm_dir = TRUE;
-      b->adm_dir_abspath = apr_pstrdup(b->pool, local_abspath1);
+      b->adm_dir_abspath = apr_pstrdup(b->pool, local_abspath);
       return SVN_NO_ERROR;
     }
 
-  if (b->recursing_within_added_subtree)
-    dirents1 = apr_hash_make(scratch_pool);
-  else
-    SVN_ERR(svn_io_get_dirents3(&dirents1, local_abspath1,
-                                TRUE, /* only_check_type */
-                                scratch_pool, scratch_pool));
+  local_abspath1 = svn_dirent_join(b->root1_abspath, child_relpath,
+                                   scratch_pool);
+  SVN_ERR(svn_io_check_resolved_path(local_abspath1, &kind1, scratch_pool));
 
   local_abspath2 = svn_dirent_join(b->root2_abspath, child_relpath,
                                    scratch_pool);
   SVN_ERR(svn_io_check_resolved_path(local_abspath2, &kind2, scratch_pool));
+
+  if (kind1 == svn_node_dir)
+    SVN_ERR(svn_io_get_dirents3(&dirents1, local_abspath1,
+                                TRUE, /* only_check_type */
+                                scratch_pool, scratch_pool));
+  else
+    dirents1 = apr_hash_make(scratch_pool);
 
   if (kind2 == svn_node_dir)
     {
