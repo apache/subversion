@@ -21,6 +21,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new --ignore-properties option for 'svn diff' (r1239553. -617)
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
+    * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
 
   - Client-side bugfixes:
     *
