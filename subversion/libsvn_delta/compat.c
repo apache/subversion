@@ -627,7 +627,17 @@ map_to_repos_relpath(struct ev2_edit_baton *eb,
   SVN_DBG(("repos_path='%s'\n", path_or_url));
 #endif
 
-  return svn_uri_skip_ancestor(eb->repos_root, path_or_url, result_pool);
+  if (svn_path_is_url(path_or_url))
+    {
+      return svn_uri_skip_ancestor(eb->repos_root, path_or_url, result_pool);
+    }
+  else
+    {
+      if (path_or_url[0] == '/')
+        return path_or_url + 1;
+      else
+        return path_or_url;
+    }
 }
 
 
@@ -1349,9 +1359,13 @@ build(struct editor_baton *eb,
         operation->kind = kind;
 
       operation->copyfrom_revision = rev;
-      operation->copyfrom_url = svn_path_url_add_component2(eb->repos_root,
-                                                            url,
-                                                            eb->edit_pool);
+
+      if (eb->repos_root)
+        operation->copyfrom_url = svn_path_url_add_component2(eb->repos_root,
+                                                              url,
+                                                              eb->edit_pool);
+      else
+        operation->copyfrom_url = apr_pstrcat(eb->edit_pool, "/", url, NULL);
     }
   /* Handle mkdir operations (which can be adds or replacements). */
   else if (action == ACTION_MKDIR)
