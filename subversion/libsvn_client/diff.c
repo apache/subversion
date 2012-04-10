@@ -2025,7 +2025,7 @@ arbitrary_diff_walker(void *baton, const char *local_abspath1,
   else
     child_relpath = svn_dirent_skip_ancestor(b->root1_abspath, local_abspath1);
   if (!child_relpath)
-      return SVN_NO_ERROR;
+    return SVN_NO_ERROR;
 
   if (b->recursing_within_adm_dir)
     {
