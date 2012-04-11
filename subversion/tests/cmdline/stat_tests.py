@@ -29,6 +29,9 @@ import os
 import re
 import time
 import datetime
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -644,7 +647,7 @@ def get_last_changed_date(path):
   for line in out:
     if re.match("^Last Changed Date", line):
       return line
-  print("Didn't find Last Changed Date for " + path)
+  logger.warn("Didn't find Last Changed Date for %s", path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -655,7 +658,7 @@ def get_text_timestamp(path):
   for line in out:
     if re.match("^Text Last Updated", line):
       return line
-  print("Didn't find text-time for " + path)
+  logger.warn("Didn't find text-time for %s", path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -789,9 +792,9 @@ use-commit-times = yes
       or fmt[23:25] != iota_ts[23:25]):
     # NOTE: the two strings below won't *exactly* match (see just above),
     #   but the *numeric* portions of them should.
-    print("File timestamp on 'iota' does not match.")
-    print("  EXPECTED: %s" % iota_ts)
-    print("    ACTUAL: %s" % fmt)
+    logger.warn("File timestamp on 'iota' does not match.")
+    logger.warn("  EXPECTED: %s", iota_ts)
+    logger.warn("    ACTUAL: %s", fmt)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1750,18 +1753,19 @@ def status_with_tree_conflicts(sbox):
       # check if the path should be a victim
       m = re.search('tree-conflicted="true"', entry)
       if (m is None) and should_be_victim[path]:
-        print("ERROR: expected '%s' to be a tree conflict victim." % path)
-        print("ACTUAL STATUS OUTPUT:")
-        print(output_str)
+        logger.warn("ERROR: expected '%s' to be a tree conflict victim.", path)
+        logger.warn("ACTUAL STATUS OUTPUT:")
+        logger.warn(output_str)
         raise svntest.Failure
       if m and not should_be_victim[path]:
-        print("ERROR: did NOT expect '%s' to be a tree conflict victim." % path)
-        print("ACTUAL STATUS OUTPUT:")
-        print(output_str)
+        logger.warn("ERROR: did NOT expect '%s' to be a tree conflict victim.",
+                    path)
+        logger.warn("ACTUAL STATUS OUTPUT:")
+        logger.warn(output_str)
         raise svntest.Failure
 
   if real_entry_count != len(should_be_victim):
-    print("ERROR: 'status --xml' output is incomplete.")
+    logger.warn("ERROR: 'status --xml' output is incomplete.")
     raise svntest.Failure
 
 

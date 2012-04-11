@@ -654,6 +654,19 @@ AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 
+dnl Ev2 experimental feature ----------------------
+dnl Note: The Ev2 compat code will be built unconditionally, but by providing
+dnl this flag, users can enforce Ev2 compliance for testing purposes
+AC_ARG_ENABLE(ev2-shims,
+  AS_HELP_STRING([--enable-ev2-shims],
+                 [Compile with Ev2 translation [EXPERIMENTAL]]),
+  [enable_ev2_shims=$enableval],[enable_ev2_shims=no])
+if test "$enable_ev2_shims" = "yes"; then
+  AC_DEFINE(ENABLE_EV2_SHIMS, 1,
+            [Define to 1 if Ev2 should be interjected into editor stacks.])
+fi
+
+
 dnl I18n -------------------
 
 AC_ARG_ENABLE(nls,

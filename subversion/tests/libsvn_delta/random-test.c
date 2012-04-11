@@ -57,7 +57,7 @@ static void init_params(apr_uint32_t *seed,
                         apr_uint32_t *maxlen, int *iterations,
                         int *dump_files, int *print_windows,
                         const char **random_bytes,
-                        apr_uint32_t *bytes_range,
+                        apr_size_t *bytes_range,
                         apr_pool_t *pool)
 {
   apr_getopt_t *opt;
@@ -80,7 +80,7 @@ static void init_params(apr_uint32_t *seed,
       switch (optch)
         {
         case 's':
-          *seed = atol(opt_arg);
+          *seed = (apr_uint32_t) atol(opt_arg);
           break;
         case 'l':
           *maxlen = atoi(opt_arg);
@@ -160,7 +160,7 @@ generate_random_file(apr_uint32_t maxlen,
                      apr_uint32_t subseed_base,
                      apr_uint32_t *seed,
                      const char *random_bytes,
-                     apr_uint32_t bytes_range,
+                     apr_size_t bytes_range,
                      int dump_files,
                      apr_pool_t *pool)
 {
@@ -287,7 +287,8 @@ copy_tempfile(apr_file_t *fp, apr_pool_t *pool)
 static svn_error_t *
 random_test(apr_pool_t *pool)
 {
-  apr_uint32_t seed, bytes_range, maxlen;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
@@ -365,7 +366,8 @@ static svn_error_t *
 do_random_combine_test(apr_pool_t *pool,
                        apr_uint32_t *last_seed)
 {
-  apr_uint32_t seed, bytes_range, maxlen;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 

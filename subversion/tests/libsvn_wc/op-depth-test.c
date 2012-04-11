@@ -342,12 +342,12 @@ print_row(const nodes_row_t *row,
     return "(null)";
 
   if (row->moved_to)
-    moved_to_str = apr_psprintf(result_pool, ", to %s", row->moved_to);
+    moved_to_str = apr_psprintf(result_pool, ", moved-to %s", row->moved_to);
   else
     moved_to_str = "";
 
   if (row->moved_here)
-    moved_here_str = ", here";
+    moved_here_str = ", moved-here";
   else
     moved_here_str = "";
 
@@ -362,8 +362,9 @@ print_row(const nodes_row_t *row,
                         moved_here_str, moved_to_str,
                         file_external_str);
   else
-    return apr_psprintf(result_pool, "%d, %s, %s, from ^/%s@%d%s%s%s",
+    return apr_psprintf(result_pool, "%d, %s, %s, %s ^/%s@%d%s%s%s",
                         row->op_depth, row->local_relpath, row->presence,
+                        row->op_depth == 0 ? "base" : "copyfrom",
                         row->repo_relpath, (int)row->repo_revnum,
                         moved_here_str, moved_to_str,
                         file_external_str);
@@ -4495,7 +4496,7 @@ move_added(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A/B",      "base-deleted", NO_COPY_FROM},
       {1, "A2",       "normal",       1, "A",   MOVED_HERE},
       {1, "A2/B",     "normal",       1, "A/B", MOVED_HERE},
-      {3, "A2/B/C",   "normal",       NO_COPY_FROM},          /* XFAIL */
+      {3, "A2/B/C",   "normal",       NO_COPY_FROM},
       {3, "A2/B/C2",  "normal",       NO_COPY_FROM},
       {0}
     };
@@ -4665,7 +4666,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_on_move"),
     SVN_TEST_OPTS_PASS(move_on_move2,
                        "move_on_move2"),
-    SVN_TEST_OPTS_XFAIL(move_added,
+    SVN_TEST_OPTS_PASS(move_added,
                        "move_added"),
     SVN_TEST_OPTS_XFAIL(move_update,
                        "move_update"),

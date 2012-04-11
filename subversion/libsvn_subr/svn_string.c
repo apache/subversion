@@ -132,7 +132,9 @@ create_string(const char *data, apr_size_t size,
   return new_string;
 }
 
-static char empty_buffer[1] = {0};
+/* A data buffer for a zero-length string (just a null terminator).  Many
+ * svn_string_t instances may share this same buffer. */
+static const char empty_buffer[1] = {0};
 
 svn_string_t *
 svn_string_create_empty(apr_pool_t *pool)
@@ -255,7 +257,7 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
    */
 #ifdef SVN_DEBUG
   strbuf->pool = NULL;
-  strbuf->blocksize = strbuf->len;
+  strbuf->blocksize = strbuf->len + 1;
 #endif
 
   /* Both, svn_string_t and svn_stringbuf_t are public API structures
@@ -281,6 +283,9 @@ svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf)
 
 /* svn_stringbuf functions */
 
+/* Create a stringbuf referring to (not copying) an existing block of memory
+ * at DATA, of which SIZE bytes are the user data and BLOCKSIZE bytes are
+ * allocated in total.  DATA[SIZE] must be a zero byte. */
 static svn_stringbuf_t *
 create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
                  apr_pool_t *pool)
@@ -288,6 +293,9 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
   svn_stringbuf_t *new_string;
 
   new_string = apr_palloc(pool, sizeof(*new_string));
+
+  SVN_ERR_ASSERT_NO_RETURN(size < blocksize);
+  SVN_ERR_ASSERT_NO_RETURN(data[size] == '\0');
 
   new_string->data = data;
   new_string->len = size;
@@ -300,12 +308,7 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
 svn_stringbuf_t *
 svn_stringbuf_create_empty(apr_pool_t *pool)
 {
-  /* All instances share the same zero-length buffer.
-   * Some algorithms, however, assume that they may write
-   * the terminating zero. So, empty_buffer must be writable
-   * (a simple (char *)"" will cause SEGFAULTs). */
-
-  return create_stringbuf(empty_buffer, 0, 0, pool);
+  return svn_stringbuf_create_ensure(0, pool);
 }
 
 svn_stringbuf_t *
@@ -441,6 +444,8 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str)
 void
 svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 {
+  ++minimum_size;  /* + space for '\0' */
+
   /* Keep doubling capacity until have enough. */
   if (str->blocksize < minimum_size)
     {

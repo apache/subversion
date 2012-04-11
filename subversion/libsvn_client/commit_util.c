@@ -628,21 +628,20 @@ harvest_committables(const char *local_abspath,
       /* We should check if we should really add a delete operation */
       if (check_url_func)
         {
-          svn_revnum_t revision;
+          svn_client__pathrev_t *origin;
           const char *repos_url;
           svn_node_kind_t kind;
 
           /* Determine from what parent we would be the deleted child */
           SVN_ERR(svn_client__wc_node_get_origin(
-                    NULL, NULL, &revision, &repos_url,
-                    svn_dirent_dirname(local_abspath, scratch_pool),
+                    &origin, svn_dirent_dirname(local_abspath, scratch_pool),
                     ctx, scratch_pool, scratch_pool));
 
           repos_url = svn_path_url_add_component2(
-                        repos_url, svn_dirent_basename(local_abspath, NULL),
+                        origin->url, svn_dirent_basename(local_abspath, NULL),
                         scratch_pool);
 
-          SVN_ERR(check_url_func(check_url_baton, &kind, repos_url, revision,
+          SVN_ERR(check_url_func(check_url_baton, &kind, repos_url, origin->rev,
                                  scratch_pool));
 
           if (kind == svn_node_none)

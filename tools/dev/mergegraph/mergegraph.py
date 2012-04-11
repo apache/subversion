@@ -228,11 +228,11 @@ class MergeDot(MergeGraph, pydot.Dot):
     """Initialize a MergeDot graph's input data from a config file."""
     import ConfigParser
     if config_filename.endswith('.txt'):
-      default_filename = config_filename[:-4] + '.png'
+      default_basename = config_filename[:-4]
     else:
-      default_filename = config_filename + '.png'
+      default_basename = config_filename
 
-    config = ConfigParser.SafeConfigParser({ 'filename': default_filename,
+    config = ConfigParser.SafeConfigParser({ 'basename': default_basename,
                                              'title': None,
                                              'merges': '[]',
                                              'annotations': '[]' })
@@ -240,7 +240,7 @@ class MergeDot(MergeGraph, pydot.Dot):
     if len(files_read) == 0:
       print >> sys.stderr, 'graph: unable to read graph config from "' + config_filename + '"'
       sys.exit(1)
-    graph.filename = config.get('graph', 'filename')
+    graph.basename = config.get('graph', 'basename')
     graph.title = config.get('graph', 'title')
     graph.branches = eval(config.get('graph', 'branches'))
     graph.changes = eval(config.get('graph', 'changes'))
@@ -294,3 +294,11 @@ class MergeDot(MergeGraph, pydot.Dot):
     if graph.title:
       graph.add_node(Node('title', shape='plaintext', label='"' + graph.title + '"'))
 
+  def save(graph, format='png', filename=None):
+    """Save this merge graph to the given file format. If filename is None,
+       construct a filename from the basename of the original file (as passed
+       to the constructor and then stored in graph.basename) and the suffix
+       according to the given format."""
+    if not filename:
+      filename = graph.basename + '.' + format
+    pydot.Dot.write(graph, filename, format=format)

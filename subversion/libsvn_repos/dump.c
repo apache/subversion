@@ -1009,7 +1009,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks, pool, pool));
+                                   NULL, shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1406,7 +1406,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
-      svn_delta_editor_t *dump_editor;
+      const svn_delta_editor_t *dump_editor;
       void *dump_edit_baton;
       const svn_delta_editor_t *cancel_editor;
       void *cancel_edit_baton;
@@ -1416,8 +1416,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       svn_pool_clear(iterpool);
 
       /* Get cancellable dump editor, but with our close_directory handler. */
-      SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
-                              &dump_edit_baton, fs, rev, "",
+      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
+                              fs, rev, "",
                               svn_stream_empty(iterpool),
                               NULL, NULL,
                               verify_close_directory,
