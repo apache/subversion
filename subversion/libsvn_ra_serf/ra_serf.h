@@ -1383,6 +1383,13 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                              svn_revnum_t *revision_deleted,
                              apr_pool_t *pool);
 
+/* Implements the get_inherited_props RA layer function. */
+svn_error_t * svn_ra_serf__get_inherited_props(svn_ra_session_t *session,
+                                               apr_array_header_t **iprops,
+                                               const char *path,
+                                               svn_revnum_t revision,
+                                               apr_pool_t *pool);
+
 /*** Authentication handler declarations ***/
 
 /**

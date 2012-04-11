@@ -2772,7 +2772,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
-                      svn_revnum_t revision,
+                      svn_revnum_t peg_rev,
                       svn_stream_t *stream,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
@@ -2784,6 +2784,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   const char *fetch_url;
   apr_hash_t *fetch_props;
   svn_node_kind_t res_kind;
+  svn_revnum_t revision = peg_rev;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
@@ -2860,6 +2861,24 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
 
       SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+    }
+
+  if (inherited_props)
+    {
+      svn_boolean_t supports_iprops;
+
+      SVN_ERR(svn_ra_serf__has_capability(ra_session, &supports_iprops,
+                                          SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                          pool));
+      if (!supports_iprops)
+        {
+          *inherited_props = NULL;
+        }
+      else
+        {
+          SVN_ERR(svn_ra_serf__get_inherited_props(ra_session, inherited_props,
+                                                   path, peg_rev, pool));
+        }
     }
 
   return SVN_NO_ERROR;

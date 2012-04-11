@@ -773,6 +773,24 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
         }
     }
 
+  if (inherited_props)
+    {
+      svn_boolean_t supports_iprops;
+
+      SVN_ERR(svn_ra_neon__has_capability(session, &supports_iprops,
+                                          SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                          pool));
+      if (!supports_iprops)
+        {
+          *inherited_props = NULL;
+        }
+      else
+        {
+          SVN_ERR(svn_ra_neon__get_inherited_props(session, inherited_props,
+                                                   path, revision, pool));
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1058,6 +1076,24 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
 
       *props = apr_hash_make(pool);
       SVN_ERR(filter_props(*props, rsrc, TRUE, pool));
+    }
+
+  if (inherited_props)
+    {
+      svn_boolean_t supports_iprops;
+
+      SVN_ERR(svn_ra_neon__has_capability(session, &supports_iprops,
+                                          SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                          pool));
+      if (!supports_iprops)
+        {
+          *inherited_props = NULL;
+        }
+      else
+        {
+          SVN_ERR(svn_ra_neon__get_inherited_props(session, inherited_props,
+                                                   path, revision, pool));
+        }
     }
 
   return SVN_NO_ERROR;

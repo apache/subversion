@@ -962,7 +962,8 @@ static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
 }
 
 /* ### This really belongs in libsvn_repos. */
-/* Get the properties for a path, with hardcoded committed-info values. */
+/* Get the properties and/or inherited properties for a PATH in ROOT, with
+   hardcoded committed-info values. */
 static svn_error_t *
 get_props(apr_hash_t **props,
           apr_array_header_t **iprops,
@@ -970,29 +971,34 @@ get_props(apr_hash_t **props,
           const char *path,
           apr_pool_t *pool)
 {
-  svn_string_t *str;
-  svn_revnum_t crev;
-  const char *cdate, *cauthor, *uuid;
-
   /* Get the properties. */
   SVN_ERR(svn_fs_node_proplist2(props, iprops, root, path, pool, pool));
 
-  /* Hardcode the values for the committed revision, date, and author. */
-  SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
-                                       path, pool));
-  str = svn_string_create(apr_psprintf(pool, "%ld", crev),
-                          pool);
-  apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING, str);
-  str = (cdate) ? svn_string_create(cdate, pool) : NULL;
-  apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
-               str);
-  str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
-  apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING, str);
+  if (props)
+    {
+      svn_string_t *str;
+      svn_revnum_t crev;
+      const char *cdate, *cauthor, *uuid;
 
-  /* Hardcode the values for the UUID. */
-  SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
-  str = (uuid) ? svn_string_create(uuid, pool) : NULL;
-  apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+      /* Hardcode the values for the committed revision, date, and author. */
+      SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
+                                           path, pool));
+      str = svn_string_create(apr_psprintf(pool, "%ld", crev),
+                              pool);
+      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_REV, APR_HASH_KEY_STRING,
+                   str);
+      str = (cdate) ? svn_string_create(cdate, pool) : NULL;
+      apr_hash_set(*props, SVN_PROP_ENTRY_COMMITTED_DATE, APR_HASH_KEY_STRING,
+                   str);
+      str = (cauthor) ? svn_string_create(cauthor, pool) : NULL;
+      apr_hash_set(*props, SVN_PROP_ENTRY_LAST_AUTHOR, APR_HASH_KEY_STRING,
+                   str);
+
+      /* Hardcode the values for the UUID. */
+      SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
+      str = (uuid) ? svn_string_create(uuid, pool) : NULL;
+      apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2884,6 +2890,59 @@ get_deleted_rev(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_inherited_props(svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool,
+                    apr_array_header_t *params,
+                    void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t rev;
+  svn_fs_root_t *root;
+  apr_array_header_t *inherited_props;
+  int i;
+
+  /* Parse arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)", &path, &rev));
+
+  full_path = svn_fspath__join(b->fs_path->data,
+                               svn_relpath_canonicalize(path, pool), pool);
+
+  /* Check authorizations */
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
+                           full_path, FALSE));
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+
+  SVN_ERR(log_command(b, conn, pool, "%s",
+                      svn_log__get_inherited_props(full_path, rev, pool)));
+
+  /* Fetch the properties and a stream for the contents. */
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(get_props(NULL, &inherited_props, root, full_path, pool));
+
+  /* Send successful command response with revision and props. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(?!"));
+  for (i = 0; i < inherited_props->nelts; i++)
+    {
+      svn_prop_inherited_item_t *iprop =
+        APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(c(!",
+                                     iprop->path_or_url));
+      SVN_ERR(svn_ra_svn_write_proplist(conn, pool, iprop->prop_hash));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))!",
+                                     iprop->path_or_url));
+    }  
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  return SVN_NO_ERROR;
+}
+
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "reparent",        reparent },
   { "get-latest-rev",  get_latest_rev },
@@ -2915,6 +2974,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "replay",          replay },
   { "replay-range",    replay_range },
   { "get-deleted-rev", get_deleted_rev },
+  { "get-iprops",      get_inherited_props },
   { NULL }
 };
 
