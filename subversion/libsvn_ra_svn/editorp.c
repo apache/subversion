@@ -437,7 +437,7 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
   *edit_baton = eb;
 
   svn_error_clear(svn_editor__insert_shims(editor, edit_baton, *editor,
-                                           *edit_baton, NULL,
+                                           *edit_baton, NULL, NULL,
                                            conn->shim_callbacks,
                                            pool, pool));
 }
