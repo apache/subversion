@@ -380,3 +380,17 @@ svn_log__replay(const char *path, svn_revnum_t rev, apr_pool_t *pool)
     log_path = "/";
   return apr_psprintf(pool, "replay %s r%ld", log_path, rev);
 }
+
+const char *
+svn_log__get_inherited_props(const char *path,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool)
+{
+  const char *log_path;
+
+  if (path && path[0] != '\0')
+    log_path = svn_path_uri_encode(path, pool);
+  else
+    log_path = "/";
+  return apr_psprintf(pool, "get-inherited-props %s r%ld", log_path, rev);
+}
