@@ -244,6 +244,15 @@ svn_log__unlock_one_path(const char *path, svn_boolean_t break_lock,
 const char *
 svn_log__replay(const char *path, svn_revnum_t rev, apr_pool_t *pool);
 
+/**
+ * Return a log string for a get-inherited-props action.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_log__get_inherited_props(const char *path,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
