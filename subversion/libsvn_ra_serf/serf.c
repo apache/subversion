@@ -956,12 +956,13 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                      apr_hash_t **ret_props,
                      apr_array_header_t **inherited_props,
                      const char *rel_path,
-                     svn_revnum_t revision,
+                     svn_revnum_t peg_rev,
                      apr_uint32_t dirent_fields,
                      apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   const char *path;
+  svn_revnum_t revision = peg_rev;
 
   path = session->session_url.path;
 
@@ -1059,6 +1060,24 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_ra_serf__flatten_props(ret_props, props, path, revision,
                                          pool, pool));
+    }
+
+  if (inherited_props)
+    {
+      svn_boolean_t supports_iprops;
+
+      SVN_ERR(svn_ra_serf__has_capability(ra_session, &supports_iprops,
+                                          SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                          pool));
+      if (!supports_iprops)
+        {
+          *inherited_props = NULL;
+        }
+      else
+        {
+          SVN_ERR(svn_ra_serf__get_inherited_props(ra_session, inherited_props,
+                                                   rel_path, peg_rev, pool));
+        }
     }
 
   return SVN_NO_ERROR;

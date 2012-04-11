@@ -1041,9 +1041,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Iterate backwards over the array to preserve the depth-first ordering
-     of the parent paths as we create *INHERITED_PROPS. */
-  for (i = iproplist->nelts - 1; i >= 0; i--)
+  for (i = 0; i < iproplist->nelts; i++)
     {
       apr_array_header_t *iprop_list;
       char *parent_rel_path;
@@ -2597,6 +2595,26 @@ ra_svn_register_editor_shim_callbacks(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_svn_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **iprops,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  apr_array_header_t *iproplist;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-iprops", "c(?r)", path,
+                               revision));
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &iproplist));
+  SVN_ERR(parse_iproplist(iprops, iproplist, session, pool, pool));
+  //SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
 
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
@@ -2634,7 +2652,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_has_capability,
   ra_svn_replay_range,
   ra_svn_get_deleted_rev,
-  ra_svn_register_editor_shim_callbacks
+  ra_svn_register_editor_shim_callbacks,
+  ra_svn_get_inherited_props
 };
 
 svn_error_t *

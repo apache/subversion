@@ -394,6 +394,11 @@ svn_error_t *svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                                         void *handler_baton,
                                         apr_pool_t *pool);
 
+svn_error_t * svn_ra_neon__get_inherited_props(svn_ra_session_t *session,
+                                               apr_array_header_t **iprops,
+                                               const char *path,
+                                               svn_revnum_t revision,
+                                               apr_pool_t *pool);
 
 /* Local duplicate of svn_ra_get_path_relative_to_root(). */
 svn_error_t *svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
@@ -863,7 +868,12 @@ enum {
   ELEM_has_children,
   ELEM_merged_revision,
   ELEM_deleted_rev_report,
-  ELEM_subtractive_merge
+  ELEM_subtractive_merge,
+  ELEM_iprop_report,
+  ELEM_iprop_item,
+  ELEM_iprop_path,
+  ELEM_iprop_propname,
+  ELEM_iprop_propval
 };
 
 /* ### docco */

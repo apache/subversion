@@ -1385,6 +1385,31 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   return err;
 }
 
+svn_error_t *
+svn_ra_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **iprops,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *pool)
+{
+  svn_boolean_t iprop_capable;
+
+  /* Path must be relative. */
+  SVN_ERR_ASSERT(*path != '/');
+
+  SVN_ERR(svn_ra_has_capability(session, &iprop_capable,
+                                SVN_RA_CAPABILITY_INHERITED_PROPS, pool));
+
+  if (iprop_capable)
+    return svn_error_trace(session->vtable->get_inherited_props(session,
+                                                                iprops,
+                                                                path,
+                                                                revision,
+                                                                pool));
+  /* Fallback for legacy servers. */
+  return svn_error_trace(get_inherited_props(session, path, revision,
+                                             iprops, pool));
+}
 
 
 svn_error_t *

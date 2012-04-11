@@ -1950,6 +1950,24 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        apr_pool_t *pool);
 
 /**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a path at @a revision (or the 'head' revision if
+ * @a revision is @c SVN_INVALID_REVNUM).  Interpret @a path relative to
+ * the URL in @a session.  Use @a pool for all allocations.  If no
+ * inheritable properties are found, then set @a *inherited_props to
+ * an empty array.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_ra_get_inherited_props(svn_ra_session_t *session,
+                           apr_array_header_t **inherited_props,
+                           const char *path,
+                           svn_revnum_t revision,
+                           apr_pool_t *pool);
+
+/**
  * @defgroup Capabilities Dynamically query the server's capabilities.
  *
  * @{

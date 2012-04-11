@@ -297,7 +297,12 @@ typedef struct svn_ra__vtable_t {
                                   apr_pool_t *pool);
   svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
-
+  /* See svn_ra_get_inherited_props(). */
+  svn_error_t *(*get_inherited_props)(svn_ra_session_t *session,
+                                      apr_array_header_t **iprops,
+                                      const char *path,
+                                      svn_revnum_t revision,
+                                      apr_pool_t *pool);
 } svn_ra__vtable_t;
 
 /* The RA session object. */
