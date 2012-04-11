@@ -383,7 +383,7 @@ convert_db_kind_to_node_kind2(svn_kind_t *kind,
         SVN_ERR_MALFUNCTION();
     }
 
-  /* Make sure hidden nodes return svn_node_none. */
+  /* Make sure hidden nodes return svn_kind_none. */
   if (! show_hidden)
     switch (db_status)
       {
@@ -419,7 +419,7 @@ svn_wc_read_base_kind(svn_kind_t *kind,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
-      *kind = svn_node_none;
+      *kind = svn_kind_none;
       return SVN_NO_ERROR;
     }
   else
@@ -451,7 +451,7 @@ svn_wc_read_kind2(svn_kind_t *kind,
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
-      *kind = svn_node_none;
+      *kind = svn_kind_none;
       return SVN_NO_ERROR;
     }
   else
