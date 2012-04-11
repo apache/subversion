@@ -1409,7 +1409,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
                                             commit_items, pool));
 
-#if ENABLE_EV2_SHIMS
+#ifdef ENABLE_EV2_SHIMS
   for (i = 0; !common_wc_abspath && i < commit_items->nelts; i++)
     {
       common_wc_abspath = APR_ARRAY_IDX(commit_items, i,
