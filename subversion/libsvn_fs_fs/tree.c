@@ -49,6 +49,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
 #include "fs.h"
 #include "key-gen.h"
@@ -1051,8 +1052,8 @@ fs_node_proplist(apr_hash_t **table_p,
               i_props->path_or_url =
                 apr_pstrdup(result_pool, parent_path + 1);
               i_props->prop_hash = parent_properties;
-              APR_ARRAY_PUSH(*inherited_props,
-                             svn_prop_inherited_item_t *) = i_props;
+              /* Build the output array in depth-first order. */
+              svn_sort__array_insert(&i_props, *inherited_props, 0);
             }
         }
     }
