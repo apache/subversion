@@ -1068,7 +1068,7 @@ svn_fs_fs__dag_dup(const dag_node_t *node,
 }
 
 svn_error_t *
-svn_fs_fs__dag_serialize(char **data,
+svn_fs_fs__dag_serialize(void **data,
                          apr_size_t *data_len,
                          void *in,
                          apr_pool_t *pool)
@@ -1109,7 +1109,7 @@ svn_fs_fs__dag_serialize(char **data,
 
 svn_error_t *
 svn_fs_fs__dag_deserialize(void **out,
-                           char *data,
+                           void *data,
                            apr_size_t data_len,
                            apr_pool_t *pool)
 {

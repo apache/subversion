@@ -1501,9 +1501,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *full_path, *file_path, *cdate;
+  const char *path, *full_path;
   svn_revnum_t rev;
-  apr_hash_t *entries, *props = NULL, *file_props;
+  apr_hash_t *entries, *props = NULL;
   apr_array_header_t *inherited_props;
   apr_hash_index_t *hi;
   svn_fs_root_t *root;
@@ -1582,7 +1582,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the directory entries if requested and send them immediately. */
   if (want_contents)
     {
-      const char *zero_date = svn_time_to_cstring(0, pool);
+      /* Use epoch for a placeholder for a missing date.  */
+      const char *missing_date = svn_time_to_cstring(0, pool);
+
       SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
 
       /* Transform the hash table's FS entries into dirents.  This probably
@@ -1592,9 +1594,15 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         {
           const char *name = svn__apr_hash_index_key(hi);
           svn_fs_dirent_t *fsent = svn__apr_hash_index_val(hi);
+          const char *file_path;
 
-          svn_dirent_t entry;
-          memset(&entry, 0, sizeof(entry));
+          /* The fields in the entry tuple.  */
+          svn_node_kind_t entry_kind = svn_node_none;
+          svn_filesize_t entry_size = 0;
+          svn_boolean_t has_props = FALSE;
+          svn_revnum_t created_rev = 0; /* ### SVN_INVALID_REVNUM  */
+          const char *cdate = NULL;
+          const char *last_author = NULL;
 
           svn_pool_clear(subpool);
 
@@ -1604,44 +1612,49 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
             continue;
 
           if (dirent_fields & SVN_DIRENT_KIND)
-              entry.kind = fsent->kind;
+              entry_kind = fsent->kind;
 
           if (dirent_fields & SVN_DIRENT_SIZE)
-              if (entry.kind != svn_node_dir)
-                SVN_CMD_ERR(svn_fs_file_length(&entry.size, root, file_path,
+              if (entry_kind != svn_node_dir)
+                SVN_CMD_ERR(svn_fs_file_length(&entry_size, root, file_path,
                                                subpool));
 
           if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             {
+              apr_hash_t *file_props;
+
               /* has_props */
               SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
                                                subpool));
-              entry.has_props = (apr_hash_count(file_props) > 0);
+              has_props = (apr_hash_count(file_props) > 0);
             }
 
-          cdate = NULL;
           if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)
               || (dirent_fields & SVN_DIRENT_TIME)
               || (dirent_fields & SVN_DIRENT_CREATED_REV))
             {
               /* created_rev, last_author, time */
-              SVN_CMD_ERR(svn_repos_get_committed_info(&entry.created_rev,
+              SVN_CMD_ERR(svn_repos_get_committed_info(&created_rev,
                                                        &cdate,
-                                                       &entry.last_author, 
+                                                       &last_author, 
                                                        root,
                                                        file_path,
                                                        subpool));
             }
 
+          /* The client does not properly handle a missing CDATE. For
+             interoperability purposes, we must fill in some junk.
+
+             See libsvn_ra_svn/client.c:ra_svn_get_dir()  */
           if (cdate == NULL)
-            cdate = zero_date;
+            cdate = missing_date;
 
           /* Send the entry. */
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwnbr(?c)(?c)", name,
-                                         svn_node_kind_to_word(entry.kind),
-                                         (apr_uint64_t) entry.size,
-                                         entry.has_props, entry.created_rev,
-                                         cdate, entry.last_author));
+                                         svn_node_kind_to_word(entry_kind),
+                                         (apr_uint64_t) entry_size,
+                                         has_props, created_rev,
+                                         cdate, last_author));
         }
       svn_pool_destroy(subpool);
     }

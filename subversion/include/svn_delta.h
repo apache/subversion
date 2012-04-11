@@ -1170,6 +1170,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
+                         const char *repos_root,
                          svn_delta_shim_callbacks_t *shim_callbacks,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
@@ -1291,6 +1292,8 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  *
  * Use @a revision as the revision number passed to intermediate
  * directory openings.
+ *
+ * Each path in @a paths is a const char *.
  *
  * Use @a pool for all necessary allocations.
  */

@@ -1236,7 +1236,7 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
                                            export_editor, edit_baton,
-                                           shim_callbacks, pool, pool));
+                                           NULL, shim_callbacks, pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,
