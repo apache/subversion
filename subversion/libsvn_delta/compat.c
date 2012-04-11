@@ -746,7 +746,7 @@ ev2_add_directory(const char *path,
         {
           const char *name = svn_relpath_basename(relpath, scratch_pool);
           cb->copyfrom_path = svn_relpath_join(pb->copyfrom_path, name,
-                                               scratch_pool);
+                                               result_pool);
           cb->copyfrom_rev = pb->copyfrom_rev;
         }
     }
@@ -793,7 +793,7 @@ ev2_open_directory(const char *path,
       const char *name = svn_relpath_basename(relpath, scratch_pool);
 
       db->copyfrom_path = svn_relpath_join(pb->copyfrom_path, name,
-                                           scratch_pool);
+                                           result_pool);
       db->copyfrom_rev = pb->copyfrom_rev;
     }
 
