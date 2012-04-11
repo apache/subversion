@@ -6234,7 +6234,7 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
     {
       svn_location_segment_t *segment =
         APR_ARRAY_IDX(segments, i, svn_location_segment_t *);
-      svn_client__pathrev_t loc1, loc2;
+      svn_client__pathrev_t *loc1, *loc2;
       merge_source_t *merge_source;
       const char *path1 = NULL;
       svn_revnum_t rev1;
@@ -6282,25 +6282,17 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
         continue;
 
       /* Build our merge source structure. */
-      loc1.repos_root_url = source_loc->repos_root_url;
-      loc1.repos_uuid = source_loc->repos_uuid;
-      loc1.rev = rev1;
-      loc1.url = svn_path_url_add_component2(source_loc->repos_root_url,
-                                             path1, pool);
-      loc2.repos_root_url = source_loc->repos_root_url;
-      loc2.repos_uuid = source_loc->repos_uuid;
-      loc2.rev = MIN(segment->range_end, maxrev);
-      loc2.url = svn_path_url_add_component2(source_loc->repos_root_url,
-                                             segment->path, pool);
-      merge_source = merge_source_create(&loc1, &loc2, pool);
-
+      loc1 = svn_client__pathrev_create_with_relpath(
+               source_loc->repos_root_url, source_loc->repos_uuid,
+               rev1, path1, pool);
+      loc2 = svn_client__pathrev_create_with_relpath(
+               source_loc->repos_root_url, source_loc->repos_uuid,
+               MIN(segment->range_end, maxrev), segment->path, pool);
       /* If this is subtractive, reverse the whole calculation. */
       if (subtractive)
-        {
-          const svn_client__pathrev_t *tmploc = merge_source->loc1;
-          merge_source->loc1 = merge_source->loc2;
-          merge_source->loc2 = tmploc;
-        }
+        merge_source = merge_source_create(loc2, loc1, pool);
+      else
+        merge_source = merge_source_create(loc1, loc2, pool);
 
       APR_ARRAY_PUSH(merge_source_ts, merge_source_t *) = merge_source;
     }
