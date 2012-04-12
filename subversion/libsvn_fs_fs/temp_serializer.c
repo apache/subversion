@@ -852,7 +852,7 @@ svn_fs_fs__get_sharded_offset(void **out,
                               void *baton,
                               apr_pool_t *pool)
 {
-  apr_off_t *manifest = (apr_off_t *)data;
+  const apr_off_t *manifest = data;
   apr_int64_t shard_pos = *(apr_int64_t *)baton;
 
   *(apr_off_t *)out = manifest[shard_pos];
@@ -913,7 +913,7 @@ svn_fs_fs__extract_dir_entry(void **out,
                              void *baton,
                              apr_pool_t *pool)
 {
-  hash_data_t *hash_data = (hash_data_t *)data;
+  const hash_data_t *hash_data = data;
   const char* name = baton;
   svn_boolean_t found;
 
