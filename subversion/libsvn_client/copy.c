@@ -1206,7 +1206,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   /* Verify that all the source paths exist, are versioned, etc.
      We'll do so by querying the base revisions of those things (which
-     we'll need to know later anyway). */
+     we'll need to know later anyway).
+     ### Should we use the 'origin' revision instead of 'base'?
+    */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
