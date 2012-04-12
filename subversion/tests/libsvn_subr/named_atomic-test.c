@@ -50,22 +50,287 @@
 /* Factor used to create non-trivial 64 bit numbers */
 #define HUGE_VALUE 1234567890123456ll
 
-/* Number of concurrent threads / processes in sync. tests.
- * The test code is not generic enough, yet, to support larger values. */
-#define THREAD_COUNT 4
+/* Name of the worker process executable */
+#define TEST_PROC "named_atomic-test-proc"
 
-/* A quick way to create error messages.  */
+/* shared test implementation */
+#include "named_atomic-test-common.h"
+
+/* number of hardware threads (logical cores) that we may use.
+ * Will be set to at least 2 - even on unicore machines. */
+static int hw_thread_count = 0;
+
+/* number of iterations that we should perform on concurrency tests
+ * (will be calibrated to about 2s runtime)*/
+static int suggested_iterations = 0;
+
+/* Bring shared memory to a defined state. This is very useful in case of
+ * lingering problems from previous tests or test runs.
+ */
 static svn_error_t *
-fail(apr_pool_t *pool, const char *fmt, ...)
+init_test_shm(apr_pool_t *pool)
 {
-  va_list ap;
-  char *msg;
+  svn_atomic_namespace__t *ns;
+  svn_named_atomic__t *atomic;
+  apr_pool_t *scratch = svn_pool_create(pool);
 
-  va_start(ap, fmt);
-  msg = apr_pvsprintf(pool, fmt, ap);
-  va_end(ap);
+  /* get the two I/O atomics for this thread */
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, scratch));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "1", TRUE));
+  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "2", TRUE));
+  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
 
-  return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
+  apr_pool_clear(scratch);
+
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE "1", scratch));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
+  apr_pool_clear(scratch);
+
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE "2", scratch));
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
+  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
+  apr_pool_clear(scratch);
+
+  /* done */
+
+  return SVN_NO_ERROR;
+}
+
+/* Prepare the shared memory for a run with COUNT workers.
+ */
+static svn_error_t *
+init_concurrency_test_shm(apr_pool_t *pool, int count)
+{
+  svn_atomic_namespace__t *ns;
+  svn_named_atomic__t *atomic;
+  apr_pool_t *scratch = svn_pool_create(pool);
+  int i;
+
+  /* get the two I/O atomics for this thread */
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, scratch));
+
+  /* reset the I/O atomics for all threads */
+  for (i = 0; i < count; ++i)
+    {
+      SVN_ERR(svn_named_atomic__get(&atomic,
+                                    ns,
+                                    apr_pstrcat(scratch,
+                                                ATOMIC_NAME,
+                                                apr_itoa(scratch, i),
+                                                NULL),
+                                    TRUE));
+      SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
+    }
+
+  SVN_ERR(svn_named_atomic__get(&atomic, ns, "counter", TRUE));
+  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
+
+  apr_pool_clear(scratch);
+
+  return SVN_NO_ERROR;
+}
+
+#ifdef APR_HAS_THREADS
+
+/* our thread function type
+ */
+typedef svn_error_t *(*thread_func_t)(int, int, int, apr_pool_t *);
+
+/* Per-thread input and output data.
+ */
+struct thread_baton
+{
+  int thread_count;
+  int thread_no;
+  int iterations;
+  svn_error_t *result;
+  thread_func_t func;
+};
+
+/* APR thread function implementation: A wrapper around baton->func that
+ * handles the svn_error_t return value.
+ */
+static void *
+APR_THREAD_FUNC test_thread(apr_thread_t *thread, void *baton)
+{
+  struct thread_baton *params = baton;
+  apr_pool_t *pool = svn_pool_create_ex(NULL, NULL);
+
+  params->result = (*params->func)(params->thread_no,
+                                   params->thread_count,
+                                   params->iterations,
+                                   pool);
+  apr_pool_destroy(pool);
+
+  return NULL;
+}
+
+/* Runs FUNC in COUNT concurrent threads ITERATION times and combines the
+ * results.
+ */
+static svn_error_t *
+run_threads(apr_pool_t *pool, int count, int iterations, thread_func_t func)
+{
+  apr_status_t status;
+  int i;
+  svn_error_t *error = SVN_NO_ERROR;
+
+  /* all threads and their I/O data */
+  apr_thread_t **threads = apr_palloc(pool, count * sizeof(*threads));
+  struct thread_baton *batons = apr_palloc(pool, count * sizeof(*batons));
+
+  /* start threads */
+  for (i = 0; i < count; ++i)
+    {
+      batons[i].thread_count = count;
+      batons[i].thread_no = i;
+      batons[i].iterations = iterations;
+      batons[i].func = func;
+
+      status = apr_thread_create(&threads[i],
+                                 NULL,
+                                 test_thread,
+                                 &batons[i],
+                                 pool);
+      if (status != APR_SUCCESS)
+        SVN_ERR(svn_error_wrap_apr(status, "could not create a thread"));
+    }
+
+  /* Wait for threads to finish and return result. */
+  for (i = 0; i < count; ++i)
+    {
+      apr_status_t retval;
+      status = apr_thread_join(&retval, threads[i]);
+      if (status != APR_SUCCESS)
+        SVN_ERR(svn_error_wrap_apr(status, "waiting for thread's end failed"));
+
+      if (batons[i].result)
+        error = svn_error_compose_create (error, svn_error_quick_wrap
+           (batons[i].result, apr_psprintf(pool, "Thread %d failed", i)));
+    }
+
+  return error;
+}
+#endif
+
+/* Runs PROC in COUNT concurrent worker processes and check the results.
+ */
+static svn_error_t *
+run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
+{
+  int i;
+  svn_error_t *error = SVN_NO_ERROR;
+
+  /* all processes and their I/O data */
+  apr_proc_t *process = apr_palloc(pool, count * sizeof(*process));
+
+  /* start threads */
+  for (i = 0; i < count; ++i)
+    {
+      const char * args[5] =
+        {
+          proc,
+          apr_itoa(pool, i),
+          apr_itoa(pool, count),
+          apr_itoa(pool, iterations),
+          NULL
+        };
+
+      SVN_ERR(svn_io_start_cmd3(&process[i],
+                                NULL,  /* path */
+                                args[0],
+                                args,
+                                NULL,  /* environment */
+                                FALSE, /* no handle inheritance */
+                                FALSE, /* no STDIN pipe */
+                                NULL,
+                                FALSE, /* no STDOUT pipe */
+                                NULL,
+                                FALSE, /* no STDERR pipe */
+                                NULL,
+                                pool));
+    }
+
+  /* Wait for threads to finish and return result. */
+  for (i = 0; i < count; ++i)
+    {
+      const char *cmd = apr_psprintf(pool,
+                                     "named_atomic-test-proc %d %d %d",
+                                     i, count, iterations);
+      SVN_ERR(svn_io_wait_for_cmd(&process[i], cmd, NULL, NULL, pool));
+    }
+
+  return error;
+}
+
+/* Set SUGGESTED_ITERATIONS to a value that COUNT workers will take
+ * about 2 seconds to execute.
+ */
+static svn_error_t *
+calibrate_iterations(apr_pool_t *pool, int count)
+{
+  apr_time_t start;
+  apr_time_t overhead;
+  int calib_iterations;
+  double taken = 0.0;
+
+  /* measure start-up overhead */
+
+  SVN_ERR(init_concurrency_test_shm(pool, count));
+
+  start = apr_time_now();
+  SVN_ERR(run_procs(pool, TEST_PROC, count, 10));
+  overhead = apr_time_now() - start;
+
+  /* increase iterations until we pass the 10ms mark */
+  
+  for (calib_iterations = 100; taken < 10000.0; calib_iterations *= 2)
+    {
+      SVN_ERR(init_concurrency_test_shm(pool, count));
+
+      start = apr_time_now();
+      SVN_ERR(run_procs(pool, TEST_PROC, count, calib_iterations + 10));
+
+      taken = (int)(apr_time_now() - start - overhead);
+    }
+
+  /* scale that to 2s */
+    
+  suggested_iterations = (int)(2000000.0 / taken * calib_iterations);
+
+  return SVN_NO_ERROR;
+}
+
+/* Find out how far the system will scale, i.e. how many workers can be
+ * run concurrently without experiencing significant slowdowns.
+ * Sets HW_THREAD_COUNT to a value of 2 .. 32 (limit the system impact in
+ * case our heuristics fail) and determines the number of iterations.
+ * Can be called multiple times but will skip the calculations after the
+ * first successful run.
+ */
+static svn_error_t *
+calibrate_concurrency(apr_pool_t *pool)
+{
+  if (hw_thread_count == 0)
+    {
+      SVN_ERR(calibrate_iterations(pool, 2));
+      for (hw_thread_count = 2; hw_thread_count < 32; hw_thread_count *= 2)
+        {
+          int saved_suggestion = suggested_iterations;
+          SVN_ERR(calibrate_iterations(pool, hw_thread_count * 2));
+          if (suggested_iterations < 10000)
+            {
+              suggested_iterations = saved_suggestion;
+              break;
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* The individual tests */
@@ -77,6 +342,8 @@ test_basics(apr_pool_t *pool)
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
+  init_test_shm(pool);
+  
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
 
@@ -311,237 +578,15 @@ test_namespaces(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Bring shared memory to a defined state. This is very useful in case of
- * lingering problems from previous tests or test runs.
- */
-static svn_error_t *
-init_test_shm(apr_pool_t *pool)
-{
-  svn_atomic_namespace__t *ns;
-  svn_named_atomic__t *atomic;
-  apr_pool_t *scratch = svn_pool_create(pool);
-
-  /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, scratch));
-
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "0", TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "1", TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "2", TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "3", TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, "counter", TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-
-  apr_pool_clear(scratch);
-
-  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE "1", scratch));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  apr_pool_clear(scratch);
-
-  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE "2", scratch));
-  SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
-  SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-  apr_pool_clear(scratch);
-
-  /* done */
-
-  return SVN_NO_ERROR;
-}
-
 #ifdef APR_HAS_THREADS
-
-/* Pass tokens around in a ring buffer with each station being handled
- * by a separate thread. Try to provoke token loss caused by faulty sync.
- */
-
-/* our thread function type
- */
-typedef svn_error_t *(*thread_func_t)(int, int, int, apr_pool_t *);
-
-/* Per-thread input and output data.
- */
-struct thread_baton
-{
-  int thread_count;
-  int thread_no;
-  int iterations;
-  svn_error_t *result;
-  thread_func_t func;
-};
-
-/* APR thread function implementation: A wrapper around baton->func that
- * handles the svn_error_t return value.
- */
-static void *
-APR_THREAD_FUNC test_thread(apr_thread_t *thread, void *baton)
-{
-  struct thread_baton *params = baton;
-  apr_pool_t *pool = svn_pool_create_ex(NULL, NULL);
-
-  params->result = (*params->func)(params->thread_no,
-                                   params->thread_count,
-                                   params->iterations,
-                                   pool);
-  apr_pool_destroy(pool);
-
-  return NULL;
-}
-
-/* Runs FUNC in THREAD_COUNT concurrent threads and combine the results.
- */
-static svn_error_t *
-run_threads(apr_pool_t *pool, int iterations, thread_func_t func)
-{
-  apr_status_t status;
-  int i;
-  svn_error_t *error = SVN_NO_ERROR;
-
-  /* all threads and their I/O data */
-  apr_thread_t *threads[THREAD_COUNT];
-  struct thread_baton batons[THREAD_COUNT];
-
-  /* start threads */
-  for (i = 0; i < THREAD_COUNT; ++i)
-    {
-      batons[i].thread_count = THREAD_COUNT;
-      batons[i].thread_no = i;
-      batons[i].iterations = iterations;
-      batons[i].func = func;
-
-      status = apr_thread_create(&threads[i],
-                                 NULL,
-                                 test_thread,
-                                 &batons[i],
-                                 pool);
-      if (status != APR_SUCCESS)
-        SVN_ERR(svn_error_wrap_apr(status, "could not create a thread"));
-    }
-
-  /* Wait for threads to finish and return result. */
-  for (i = 0; i < THREAD_COUNT; ++i)
-    {
-      apr_status_t retval;
-      status = apr_thread_join(&retval, threads[i]);
-      if (status != APR_SUCCESS)
-        SVN_ERR(svn_error_wrap_apr(status, "waiting for thread's end failed"));
-
-      if (batons[i].result)
-        error = svn_error_compose_create (error, svn_error_quick_wrap
-           (batons[i].result, apr_psprintf(pool, "Thread %d failed", i)));
-    }
-
-  return error;
-}
-
-/* test thread code: thread 0 initializes the data; all threads have one
- * one input and one output bucket that form a ring spanning all threads.
- */
-static svn_error_t *
-test_pipeline_thread(int thread_no, int thread_count, int iterations, apr_pool_t *pool)
-{
-  svn_atomic_namespace__t *ns;
-  svn_named_atomic__t *atomicIn;
-  svn_named_atomic__t *atomicOut;
-  svn_named_atomic__t *atomicCounter;
-  apr_int64_t value, old_value, last_value = 0;
-  apr_int64_t i, counter;
-
-  /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
-  SVN_ERR(svn_named_atomic__get(&atomicIn,
-                                ns,
-                                apr_pstrcat(pool,
-                                            ATOMIC_NAME,
-                                            apr_itoa(pool,
-                                                     thread_no),
-                                            NULL),
-                                TRUE));
-  SVN_ERR(svn_named_atomic__get(&atomicOut,
-                                ns,
-                                apr_pstrcat(pool,
-                                            ATOMIC_NAME,
-                                            apr_itoa(pool,
-                                                     (thread_no + 1) % thread_count),
-                                            NULL),
-                                TRUE));
-
-  SVN_ERR(svn_named_atomic__get(&atomicCounter, ns, "counter", TRUE));
-
-  if (thread_no == 0)
-    {
-      /* Initialize values in thread 0, pass them along in other threads */
-
-      for (i = 1; i <= thread_count; ++i)
-        do
-          /* Generate new token (once the old one has been removed)*/
-          SVN_ERR(svn_named_atomic__cmpxchg(&old_value,
-                                            i,
-                                            0,
-                                            atomicOut));
-        while (old_value != 0);
-     }
-
-   /* Pass the tokens along */
-
-   do
-     {
-       /* Wait for and consume incoming token. */
-       do
-         {
-           SVN_ERR(svn_named_atomic__write(&value, 0, atomicIn));
-           SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
-         }
-       while ((value == 0) && (counter < iterations));
-
-       /* All tokes must come in in the same order */
-       if (counter < iterations)
-         SVN_TEST_ASSERT((last_value % thread_count) == (value - 1));
-       last_value = value;
-
-       /* Wait for the target atomic to become vacant and write the token */
-       do
-         {
-           SVN_ERR(svn_named_atomic__cmpxchg(&old_value,
-                                             value,
-                                             0,
-                                             atomicOut));
-           SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
-         }
-       while ((old_value != 0) && (counter < iterations));
-
-       /* Count the number of operations */
-       SVN_ERR(svn_named_atomic__add(&counter, 1, atomicCounter));
-     }
-   while (counter < iterations);
-
-   /* done */
-
-   return SVN_NO_ERROR;
-}
-
-/* test interface */
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
-  apr_time_t start;
-  int iterations;
-  
-  SVN_ERR(init_test_shm(pool));
+  SVN_ERR(calibrate_concurrency(pool));
 
-  /* calibrate */
-  start = apr_time_now();
-  SVN_ERR(run_threads(pool, 100, test_pipeline_thread));
-  iterations = 2000000 / (int)((apr_time_now() - start) / 100 + 1);
-
-  /* run test for 2 seconds */
-  SVN_ERR(init_test_shm(pool));
-  SVN_ERR(run_threads(pool, iterations, test_pipeline_thread));
+  printf("%d %d\n", hw_thread_count, suggested_iterations);
+  SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
+  SVN_ERR(run_threads(pool, hw_thread_count, suggested_iterations, test_pipeline));
   
   return SVN_NO_ERROR;
 }
@@ -550,7 +595,13 @@ test_multithreaded(apr_pool_t *pool)
 static svn_error_t *
 test_multiprocess(apr_pool_t *pool)
 {
-  return fail(pool, "Not implemented");
+  SVN_ERR(calibrate_concurrency(pool));
+
+  printf("%d %d\n", hw_thread_count, suggested_iterations);
+  SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
+  SVN_ERR(run_procs(pool, TEST_PROC, hw_thread_count, suggested_iterations));
+
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -563,8 +614,7 @@ test_multiprocess(apr_pool_t *pool)
 /* An array of all test functions */
 struct svn_test_descriptor_t test_funcs[] =
   {
-    SVN_TEST_PASS2(init_test_shm,
-                   "initialization"),
+    SVN_TEST_NULL,
     SVN_TEST_PASS2(test_basics,
                    "basic r/w access to a single atomic"),
     SVN_TEST_PASS2(test_bignums,
@@ -577,7 +627,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_multithreaded,
                    "multithreaded access to atomics"),
 #endif                   
-    SVN_TEST_XFAIL2(test_multiprocess,
+    SVN_TEST_PASS2(test_multiprocess,
                    "multi-process access to atomics"),
     SVN_TEST_NULL
   };
