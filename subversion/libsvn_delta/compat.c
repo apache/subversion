@@ -603,10 +603,6 @@ map_to_repos_relpath(struct ev2_edit_baton *eb,
                      const char *path_or_url,
                      apr_pool_t *result_pool)
 {
-#ifdef SVN_DEBUG
-  SVN_DBG(("repos_path='%s'\n", path_or_url));
-#endif
-
   if (svn_path_is_url(path_or_url))
     {
       return svn_uri_skip_ancestor(eb->repos_root, path_or_url, result_pool);
