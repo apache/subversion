@@ -1542,7 +1542,6 @@ int
 main(int argc, const char *argv[])
 {
   svn_error_t *err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   int opt_id;
   apr_getopt_t *os;
@@ -1567,14 +1566,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
-
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
