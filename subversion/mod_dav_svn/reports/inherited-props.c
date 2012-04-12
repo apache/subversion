@@ -114,9 +114,11 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                 "couldn't retrieve revision root",
                                 resource->pool);
 
-  serr = svn_fs_node_proplist2(NULL, &inherited_props, root, path,
-                               resource->pool, iterpool);
-
+  serr = svn_repos_fs_get_inherited_props(&inherited_props,
+                                          resource->info->repos->repos,
+                                          path, rev,
+                                          dav_svn__authz_read_func(&arb),
+                                          &arb, resource->pool, iterpool);
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,

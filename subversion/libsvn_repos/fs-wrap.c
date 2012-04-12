@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_repos.h"
 #include "svn_time.h"
+#include "svn_sorts.h"
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_repos_private.h"
@@ -740,7 +741,42 @@ svn_repos_fs_pack2(svn_repos_t *repos,
                      cancel_func, cancel_baton, pool);
 }
 
+svn_error_t *
+svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props,
+                                 svn_repos_t *repos,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_fs_root_t *root;
+  int i;
 
+  if (!SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR(svn_fs_youngest_rev(&revision, repos->fs, scratch_pool));
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, revision, scratch_pool));
+  SVN_ERR(svn_fs_node_proplist2(NULL, inherited_props, root, path,
+                                result_pool, scratch_pool));
+  for (i = 0; i < (*inherited_props)->nelts; i++)
+    {
+      svn_boolean_t allowed = TRUE;
+      svn_prop_inherited_item_t *iprop =
+        APR_ARRAY_IDX(*inherited_props, i, svn_prop_inherited_item_t *);
+
+      if (authz_read_func)
+        SVN_ERR(authz_read_func(&allowed, root, iprop->path_or_url,
+                                authz_read_baton, scratch_pool));
+      if (!allowed)
+        {
+          svn_sort__array_delete(*inherited_props, i, 1);
+          i--;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /*
  * vim:ts=4:sw=2:expandtab:tw=80:fo=tcroq
