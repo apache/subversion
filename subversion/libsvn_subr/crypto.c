@@ -504,17 +504,10 @@ svn_crypto__generate_secret_checktext(const svn_string_t **ciphertext,
   apr_size_t result_len;
   unsigned char *result;
   apr_size_t ignored_result_len = 0;
+  apr_size_t stuff_len;
   svn_checksum_t *stuff_sum;
 
   SVN_ERR_ASSERT(ctx != NULL);
-
-  /* Generate 32 bytes of random stuff. */
-#define STUFF_LEN 32
-  SVN_ERR(get_random_bytes(&stuff_vector, ctx, STUFF_LEN, scratch_pool));
-
-  /* ### FIXME:  This should be a SHA-256.  */
-  SVN_ERR(svn_checksum(&stuff_sum, svn_checksum_sha1, stuff_vector,
-                       STUFF_LEN, scratch_pool));
 
   /* Generate the salt. */
   SVN_ERR(get_random_bytes(&salt_vector, ctx, SALT_LEN, result_pool));
@@ -549,9 +542,23 @@ svn_crypto__generate_secret_checktext(const svn_string_t **ciphertext,
                              ctx, apr_err,
                              _("Error initializing block encryption")));
 
+  /* Generate a blob of random data, block-aligned per the
+     requirements of the encryption algorithm, but with a minimum size
+     of our choosing.  */
+#define MIN_STUFF_LEN 32
+  if (MIN_STUFF_LEN % block_size)
+    stuff_len = MIN_STUFF_LEN + (block_size - (MIN_STUFF_LEN % block_size));
+  else
+    stuff_len = MIN_STUFF_LEN;
+  SVN_ERR(get_random_bytes(&stuff_vector, ctx, stuff_len, scratch_pool));
+
+  /* ### FIXME:  This should be a SHA-256.  */
+  SVN_ERR(svn_checksum(&stuff_sum, svn_checksum_sha1, stuff_vector,
+                       stuff_len, scratch_pool));
+
   /* Get the length that we need to allocate.  */
   apr_err = apr_crypto_block_encrypt(NULL, &result_len, stuff_vector,
-                                     STUFF_LEN, block_ctx);
+                                     stuff_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
       err = crypto_error_create(ctx, apr_err,
@@ -564,7 +571,7 @@ svn_crypto__generate_secret_checktext(const svn_string_t **ciphertext,
 
   /* Encrypt the block. */
   apr_err = apr_crypto_block_encrypt(&result, &result_len, stuff_vector,
-                                     STUFF_LEN, block_ctx);
+                                     stuff_len, block_ctx);
   if (apr_err != APR_SUCCESS)
     {
       err = crypto_error_create(ctx, apr_err,
