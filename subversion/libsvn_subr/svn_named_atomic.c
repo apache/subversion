@@ -242,7 +242,7 @@ init_mutex(void *baton, apr_pool_t *_pool)
 /* Utility that acquires our global mutex and converts error types.
  */
 static svn_error_t *
-lock()
+lock(void)
 {
   apr_status_t apr_err = apr_global_mutex_lock(mutex);
   if (apr_err)
@@ -364,7 +364,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                              apr_pool_t *result_pool)
 {
   svn_atomic_namespace__t *new_namespace
-      = apr_pcalloc(pool, sizeof(*new_namespace));
+      = apr_pcalloc(result_pool, sizeof(*new_namespace));
 
   new_namespace->name = apr_pstrdup(result_pool, name);
   SVN_ERR(initialize(new_namespace, result_pool));
@@ -418,7 +418,7 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
   /* Try harder:
    * Serialize all lookup and insert the item, if necessary and allowed.
    */
-  SVN_ERR(lock(ns));
+  SVN_ERR(lock());
 
   /* We only need to check for new entries.
    */
