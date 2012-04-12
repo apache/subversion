@@ -117,12 +117,12 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1311702
-   Prevent out-of-bounds array access during 'svn diff' arguments processing.
+ * r1325361
+   Avoid reading unitialised variable in propset.
    Justification:
-    'svn diff --old path/to/.svn --new path/to/.svn' segfaults.
+     Undefined behaviour.
    Votes:
-     +1: stsp, hwright
+     +1: philip
 
 Veto-blocked changes:
 =====================
@@ -177,3 +177,10 @@ Approved changes:
      buildbot total time too.
    Votes:
      +1: rhuijben, hwright, philip
+
+ * r1311702
+   Prevent out-of-bounds array access during 'svn diff' arguments processing.
+   Justification:
+    'svn diff --old path/to/.svn --new path/to/.svn' segfaults.
+   Votes:
+     +1: stsp, hwright, philip
