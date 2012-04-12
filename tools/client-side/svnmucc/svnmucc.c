@@ -69,8 +69,6 @@ static void handle_error(svn_error_t *err, apr_pool_t *pool)
 static apr_pool_t *
 init(const char *application)
 {
-  apr_allocator_t *allocator;
-  apr_pool_t *pool;
   svn_error_t *err;
   const svn_version_checklist_t checklist[] = {
     {"svn_client", svn_client_version},
@@ -81,19 +79,14 @@ init(const char *application)
 
   SVN_VERSION_DEFINE(my_version);
 
-  if (svn_cmdline_init(application, stderr)
-      || apr_allocator_create(&allocator))
+  if (svn_cmdline_init(application, stderr))
     exit(EXIT_FAILURE);
 
   err = svn_ver_check_list(&my_version, checklist);
   if (err)
     handle_error(err, NULL);
 
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
-
-  return pool;
+  return apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 }
 
 static svn_error_t *
