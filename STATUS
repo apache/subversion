@@ -71,7 +71,7 @@ Candidate changes:
      vc6-build.bat.in is actually used by some people --- and if I'm wrong,
      this would be harmless.
    Votes:
-     +1: danielsh
+     +1: danielsh, hwright
 
  * r1210913, r1211048
    Fix issue 4073, assert on svn:externals path with drive letter on Windows.
@@ -92,13 +92,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1298343
-   Return an error when attempting to MERGE a resource that does not exist.
-   Justification:
-     Avoid asserting.
-   Votes:
-     +1: philip, stsp
-
  * r1306111
    Handle NULL dates in libsvn_ra_svn.
    Justification:
@@ -115,7 +108,7 @@ Candidate changes:
      Reported as raw performance data on AnkhSVN. Probably noticable on the
      buildbot total time too.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, hwright
 
  * r1307177
    Move mod_dontdothat to install-tools.
@@ -133,19 +126,12 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1310535, r1310594
-   Handle APR Hash order changes in Ruby bindings test expectations.
-   Justification:
-     Avoid spurious test failures.
-   Votes:
-     +1: joeswatosh
-
  * r1311702
    Prevent out-of-bounds array access during 'svn diff' arguments processing.
    Justification:
     'svn diff --old path/to/.svn --new path/to/.svn' segfaults.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
  * r1311935
    Fix a pool lifetime problem in the diff code.
@@ -155,7 +141,7 @@ Candidate changes:
      a problem in 1.7.x we're just lucky if it isn't. The problem should be
      fixed before somebody gets hurt.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
 Veto-blocked changes:
 =====================
@@ -176,3 +162,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1298343
+   Return an error when attempting to MERGE a resource that does not exist.
+   Justification:
+     Avoid asserting.
+   Votes:
+     +1: philip, stsp, hwright
+
+ * r1310535, r1310594
+   Handle APR Hash order changes in Ruby bindings test expectations.
+   Justification:
+     Avoid spurious test failures.
+   Votes:
+     +1: joeswatosh
+     +0: hwright
