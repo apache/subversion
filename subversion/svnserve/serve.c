@@ -1674,10 +1674,10 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
 
           svn_pool_clear(iterpool);
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(c(!",
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!(c(!",
                                          iprop->path_or_url));
-          SVN_ERR(svn_ra_svn_write_proplist(conn, pool, iprop->prop_hash));
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))!",
+          SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, iprop->prop_hash));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!))!",
                                          iprop->path_or_url));
         }
       svn_pool_destroy(iterpool);
