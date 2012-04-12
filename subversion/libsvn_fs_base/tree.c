@@ -1255,14 +1255,45 @@ base_node_proplist(apr_hash_t **table_p,
 
   args.table_p = &table;
   args.root = root;
-  args.path = path;
 
-  /* ### TODO: Get inherited props. */
+  /* Get explicit properties if requested. */
+  if (table_p)
+    {
+      args.path = path;
+      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist, &args,
+                                     FALSE, result_pool));
+      *table_p = table;
+    }
 
-  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist, &args,
-                                 FALSE, result_pool));
 
-  *table_p = table;
+  /* If the caller requested PATH's inherited properties, then walk from
+     PATH to the repository root to gather PATH's inherited props. */
+  if (inherited_props)
+    {
+      const char *parent_path = path;
+
+      *inherited_props = apr_array_make(result_pool, 1,
+                                        sizeof(svn_prop_inherited_item_t *));
+      while (!(parent_path[0] == '/' && parent_path[1] == '\0'))
+        {
+          parent_path = svn_fspath__dirname(parent_path, scratch_pool);
+          table = NULL;
+          args.path = parent_path;
+          SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_proplist,
+                                         &args, FALSE, result_pool));
+          if (apr_hash_count(table))
+            {
+              svn_prop_inherited_item_t *i_props =
+                apr_pcalloc(result_pool, sizeof(*i_props));
+              i_props->path_or_url =
+                apr_pstrdup(result_pool, parent_path + 1);
+              i_props->prop_hash = table;
+              /* Build the output array in depth-first order. */
+              svn_sort__array_insert(&i_props, *inherited_props, 0);
+            }
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
