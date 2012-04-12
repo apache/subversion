@@ -101,15 +101,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1306334
-   Optimize failure of opening wc.db files.
-   Justification:
-     Takes far too much CPU when performing status on not-working copies.
-     Reported as raw performance data on AnkhSVN. Probably noticable on the
-     buildbot total time too.
-   Votes:
-     +1: rhuijben, hwright
-
  * r1307177
    Move mod_dontdothat to install-tools.
    Justification:
@@ -177,3 +168,12 @@ Approved changes:
      fixed before somebody gets hurt.
    Votes:
      +1: stsp, hwright, philip
+
+ * r1306334
+   Optimize failure of opening wc.db files.
+   Justification:
+     Takes far too much CPU when performing status on not-working copies.
+     Reported as raw performance data on AnkhSVN. Probably noticable on the
+     buildbot total time too.
+   Votes:
+     +1: rhuijben, hwright, philip
