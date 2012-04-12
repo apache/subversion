@@ -54,6 +54,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * ra_serf: convert assertions to errors: MERGE fails (r1302417)
     * mod_dav_svn: error on MERGE of non-existent resource (r1298343)
     * fix undefined behaviour during multi-segment reverse merges (issue #4144)
+    * fix potential pool lifetime problem in the diff code (r1311935)
 
   Developer-visible changes:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
