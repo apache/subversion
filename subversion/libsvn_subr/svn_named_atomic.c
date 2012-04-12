@@ -28,6 +28,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_atomic.h"
+#include "private/svn_mutex.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_io.h"
@@ -99,7 +100,7 @@
 
 /* Interlocked API / intrinsics guarantee full data synchronization 
  */
-#define synched_read(value) value
+#define synched_read(mem) *mem
 #define synched_write(mem, value) InterlockedExchange64(mem, value)
 #define synched_add(mem, delta) InterlockedAdd64(mem, delta)
 #define synched_cmpxchg(mem, value, comperand) \
@@ -111,7 +112,7 @@
 
 /* GCC provides atomic intrinsics for most common CPU types
  */
-#define synched_read(value) value
+#define synched_read(mem) *mem
 #define synched_write(mem, value) __sync_lock_test_and_set(mem, value)
 #define synched_add(mem, delta) __sync_add_and_fetch(mem, delta)
 #define synched_cmpxchg(mem, value, comperand) \
@@ -124,9 +125,9 @@
 /* Default implementation
  */
 static apr_int64_t
-synched_read(apr_int64_t value)
+synched_read(volatile apr_int64_t *mem)
 {
-  return value;
+  return *mem;
 }
 
 static apr_int64_t
@@ -216,9 +217,12 @@ struct svn_atomic_namespace__t
  */
 static struct svn_atomic_namespace__t default_namespace = {FALSE, NULL};
 
-/* Named global mutex to control access to the shared memory structures.
+/* Process sync. is handled by a lock file. Local thread sync. is done
+ * by an svn_mutex__t. They will all be initialized in init_mutex.
  */
-static apr_global_mutex_t *mutex = NULL;
+static apr_pool_t *mutex_pool = NULL;
+static svn_mutex__t *mutex = NULL;
+static apr_file_t *lock_file = NULL;
 
 /* Initialization flag for the above used by svn_atomic__init_once.
  */
@@ -229,14 +233,20 @@ static volatile svn_atomic_t mutex_initialized = FALSE;
 static svn_error_t *
 init_mutex(void *baton, apr_pool_t *_pool)
 {
-  apr_pool_t *pool = svn_pool_create(NULL);
-  apr_status_t apr_err = apr_global_mutex_create(&mutex,
-                                                 MUTEX_NAME,
-                                                 APR_LOCK_DEFAULT,
-                                                 pool);
-  return apr_err
-    ? svn_error_wrap_apr(apr_err, _("Can't create mutex for named atomics"))
-    : SVN_NO_ERROR;
+  const char *temp_dir, *fname;
+
+  if (mutex_pool == NULL)
+    mutex_pool = svn_pool_create(NULL);
+  if (mutex == NULL)
+    SVN_ERR(svn_mutex__init(&mutex, TRUE, mutex_pool));
+
+  SVN_ERR(svn_io_temp_dir(&temp_dir, mutex_pool));
+  fname = svn_dirent_join(temp_dir, MUTEX_NAME, mutex_pool);
+
+  return svn_io_file_open(&lock_file, fname,
+                          APR_READ | APR_WRITE | APR_CREATE,
+                          APR_OS_DEFAULT,
+                          mutex_pool);
 }
 
 /* Utility that acquires our global mutex and converts error types.
@@ -244,12 +254,15 @@ init_mutex(void *baton, apr_pool_t *_pool)
 static svn_error_t *
 lock(void)
 {
-  apr_status_t apr_err = apr_global_mutex_lock(mutex);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err,
-              _("Can't lock mutex for named atomics"));
+  svn_error_t *err;
+  
+  /* Get lock on the filehandle. */
+  SVN_ERR(svn_mutex__lock(mutex));
+  err = svn_io_lock_open_file(lock_file, TRUE, FALSE, mutex_pool);
 
-  return SVN_NO_ERROR;
+  return err
+    ? svn_mutex__unlock(mutex, err)
+    : err;
 }
 
 /* Utility that releases the lock previously acquired via lock().  If the
@@ -259,12 +272,8 @@ lock(void)
 static svn_error_t *
 unlock(svn_error_t * outer_err)
 {
-  apr_status_t apr_err = apr_global_mutex_unlock(mutex);
-  if (apr_err && !outer_err)
-    return svn_error_wrap_apr(apr_err,
-              _("Can't unlock mutex for named atomics"));
-
-  return outer_err;
+  return svn_mutex__unlock(mutex,
+                           svn_io_unlock_open_file(lock_file, mutex_pool));
 }
 
 /* Initialize the shared_mem_access_t given as BATON.
@@ -469,7 +478,7 @@ svn_named_atomic__read(apr_int64_t *value,
                        svn_named_atomic__t *atomic)
 {
   SVN_ERR(validate(atomic));
-  SYNCHRONIZE(*value = synched_read(atomic->value));
+  SYNCHRONIZE(*value = synched_read(&atomic->value));
   
   return SVN_NO_ERROR;
 }
