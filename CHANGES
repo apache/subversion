@@ -43,6 +43,21 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     *
 
 
+Version 1.7.5
+(26 Mar 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.5
+
+  User-visible changes:
+    * avoid potential segfault when canonicalizing properties (r1296369)
+    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
+    * improve memory and file-handle management with externals (issue #4130)
+    * convert a few ra_serf assertions to errors: MERGE fails (r1302417)
+    * fix: undefined behaviour during multi-segment reverse merges (issue #4144)
+
+  Developer-visible changes:
+    * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
+
+
 Version 1.7.4
 (08 Mar 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.4
