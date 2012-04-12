@@ -882,7 +882,6 @@ get_base_rev(svn_revnum_t *base_revision,
              const char *local_abspath,
              apr_pool_t *scratch_pool)
 {
-  svn_boolean_t have_base;
   svn_error_t *err;
 
   err = svn_wc__db_base_get_info(NULL, NULL, base_revision, NULL,
@@ -896,13 +895,7 @@ get_base_rev(svn_revnum_t *base_revision,
 
   svn_error_clear(err);
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, base_revision,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &have_base, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+  *base_revision = SVN_INVALID_REVNUM;
 
   return SVN_NO_ERROR;
 }

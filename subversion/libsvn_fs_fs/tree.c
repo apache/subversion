@@ -58,6 +58,7 @@
 #include "tree.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "temp_serializer.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
@@ -155,8 +156,8 @@ locate_cache(svn_cache__t **cache,
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
       if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key = apr_psprintf(pool, "%ld%s",
-                                           root->rev, path);
+      if (key && path) *key 
+        = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
     }
 }
 

@@ -332,7 +332,6 @@ password_get_gpg_agent(svn_boolean_t *done,
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
      to other password caching mechanisms. */
-  digest = svn_checksum_create(svn_checksum_md5, pool);
   svn_checksum(&digest, svn_checksum_md5, realmstring, strlen(realmstring),
                pool);
   cache_id = svn_checksum_to_cstring(digest, pool);
