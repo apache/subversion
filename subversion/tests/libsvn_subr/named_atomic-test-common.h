@@ -39,55 +39,49 @@
 /* Factor used to create non-trivial 64 bit numbers */
 #define HUGE_VALUE 1234567890123456ll
 
-/* "pipeline" test: worker with ID 0 initializes the data; all workers
- * (COUNT in total) have one input and one output bucket that form a ring
- * spanning all workers. Each worker passes the value along ITERATIONS times.
+/* "pipeline" test: initialization code executed by the worker with ID 0.
+ * Pushes COUNT tokens into ATOMICOUT and checks for ATOMICCOUNTER not to
+ * exceed ITERATIONS (early termination).
  */
 static svn_error_t *
-test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
+test_pipeline_prepare(svn_named_atomic__t *atomicOut,
+                      svn_named_atomic__t *atomicCounter,
+                      int count,
+                      int iterations)
 {
-  svn_atomic_namespace__t *ns;
-  svn_named_atomic__t *atomicIn;
-  svn_named_atomic__t *atomicOut;
-  svn_named_atomic__t *atomicCounter;
-  apr_int64_t value, old_value, last_value = 0;
-  apr_int64_t i, counter;
+  apr_int64_t value = 0, counter;
+  int i;
 
-  /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
-  SVN_ERR(svn_named_atomic__get(&atomicIn,
-                                ns,
-                                apr_pstrcat(pool,
-                                            ATOMIC_NAME,
-                                            apr_itoa(pool,
-                                                     id),
-                                            NULL),
-                                TRUE));
-  SVN_ERR(svn_named_atomic__get(&atomicOut,
-                                ns,
-                                apr_pstrcat(pool,
-                                            ATOMIC_NAME,
-                                            apr_itoa(pool,
-                                                     (id + 1) % count),
-                                            NULL),
-                                TRUE));
+  /* Initialize values in thread 0, pass them along in other threads */
 
-  /* our iteration counter */
-  SVN_ERR(svn_named_atomic__get(&atomicCounter, ns, "counter", TRUE));
-
-  if (id == 0)
+  for (i = 1; i <= count; ++i)
+    do
     {
-      /* Initialize values in thread 0, pass them along in other threads */
+      /* Generate new token (once the old one has been removed)*/
+      SVN_ERR(svn_named_atomic__cmpxchg(&value,
+                                        i,
+                                        0,
+                                        atomicOut));
+      SVN_ERR(svn_named_atomic__read(&counter, atomicCounter));
+    }
+    while ((value != 0) && (counter < iterations));
 
-      for (i = 1; i <= count; ++i)
-        do
-          /* Generate new token (once the old one has been removed)*/
-          SVN_ERR(svn_named_atomic__cmpxchg(&old_value,
-                                            i,
-                                            0,
-                                            atomicOut));
-        while (old_value != 0);
-     }
+  return SVN_NO_ERROR;
+}
+
+/* "pipeline" test: the main loop. Each one of the COUNT workers receives
+ * data in its ATOMICIN and passes it on to ATOMICOU until ATOMICCOUNTER
+ * exceeds ITERATIONS.
+ */
+static svn_error_t *
+test_pipeline_loop(svn_named_atomic__t *atomicIn,
+                   svn_named_atomic__t *atomicOut,
+                   svn_named_atomic__t *atomicCounter,
+                   int count,
+                   int iterations)
+{
+  apr_int64_t value = 0, old_value, last_value = 0;
+  apr_int64_t counter;
 
    /* Pass the tokens along */
 
@@ -125,4 +119,57 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
    /* done */
 
    return SVN_NO_ERROR;
+}
+
+/* "pipeline" test: worker with ID 0 initializes the data; all workers
+ * (COUNT in total) have one input and one output bucket that form a ring
+ * spanning all workers. Each worker passes the value along ITERATIONS times.
+ */
+static svn_error_t *
+test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
+{
+  svn_atomic_namespace__t *ns;
+  svn_named_atomic__t *atomicIn;
+  svn_named_atomic__t *atomicOut;
+  svn_named_atomic__t *atomicCounter;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* get the two I/O atomics for this thread */
+  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
+  SVN_ERR(svn_named_atomic__get(&atomicIn,
+                                ns,
+                                apr_pstrcat(pool,
+                                            ATOMIC_NAME,
+                                            apr_itoa(pool,
+                                                     id),
+                                            NULL),
+                                TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomicOut,
+                                ns,
+                                apr_pstrcat(pool,
+                                            ATOMIC_NAME,
+                                            apr_itoa(pool,
+                                                     (id + 1) % count),
+                                            NULL),
+                                TRUE));
+
+  /* our iteration counter */
+  SVN_ERR(svn_named_atomic__get(&atomicCounter, ns, "counter", TRUE));
+
+  /* fill pipeline */
+  if (id == 0)
+    err = test_pipeline_prepare(atomicOut, atomicCounter, count, iterations);
+
+   /* Pass the tokens along */
+   if (!err)
+     err = test_pipeline_loop(atomicIn, atomicOut, atomicCounter,
+                              count, iterations);
+
+   /* if we experienced an error, cause everybody to exit */
+   if (err)
+     svn_error_clear(svn_named_atomic__write(NULL, iterations, atomicCounter));
+
+   /* done */
+
+   return err;
 }
