@@ -2622,7 +2622,6 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &iproplist));
   SVN_ERR(parse_iproplist(iprops, iproplist, session, pool, pool));
-  //SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;
 }
