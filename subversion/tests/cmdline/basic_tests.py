@@ -25,7 +25,9 @@
 ######################################################################
 
 # General modules
-import shutil, stat, re, os
+import shutil, stat, re, os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -659,8 +661,8 @@ def basic_conflict(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # logger.warn("Not all extra reject files have been accounted for:")
+    # logger.warn(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -780,17 +782,17 @@ def basic_revert(sbox):
   fp = open(beta_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(iota_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(rho_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(zeta_path, 'r')
   lines = fp.readlines()
@@ -989,7 +991,7 @@ def verify_file_deleted(message, path):
   except IOError:
     return
   if message is not None:
-    print(message)
+    logger.warn(message)
   ###TODO We should raise a less generic error here. which?
   raise svntest.Failure
 
@@ -1168,11 +1170,11 @@ def basic_delete(sbox):
 
   # check unversioned and added dirs has been removed
   if verify_dir_deleted(Q_path):
-    print("Failed to remove unversioned dir")
+    logger.warn("Failed to remove unversioned dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
   if verify_dir_deleted(X_path):
-    print("Failed to remove added dir")
+    logger.warn("Failed to remove added dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -1673,8 +1675,8 @@ def basic_info(sbox):
       if line.startswith('Path: '):
         paths.append(line[6:].rstrip())
     if paths != expected_paths:
-      print("Reported paths: %s" % paths)
-      print("Expected paths: %s" % expected_paths)
+      logger.warn("Reported paths: %s" % paths)
+      logger.warn("Expected paths: %s" % expected_paths)
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1697,7 +1699,7 @@ def repos_root(sbox):
       if line == "Repository Root: " + sbox.repo_url + "\n":
         break
     else:
-      print("Bad or missing repository root")
+      logger.warn("Bad or missing repository root")
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1920,7 +1922,7 @@ def delete_keep_local_twice(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
 
   if not os.path.isdir(dir):
-    print('Directory was really deleted')
+    logger.warn('Directory was really deleted')
     raise svntest.Failure
 
 def windows_paths_in_repos(sbox):
@@ -2194,8 +2196,8 @@ def automatic_conflict_resolution(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # logger.warn("Not all extra reject files have been accounted for:")
+    # logger.warn(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 

@@ -2600,10 +2600,10 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    MOVED_TO_ABSPATH will specify the path where this node was moved to
    if the node has moved-away.
 
-   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
-   of the copy operation that created the move destination.
-   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
-   equals MOVED_TO_ABSPATH.
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the
+   target path of the root of the move operation.  If LOCAL_ABSPATH itself
+   is the source path of the root of the move operation, then
+   MOVED_TO_OP_ROOT_ABSPATH equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.
