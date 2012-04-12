@@ -24,6 +24,21 @@
 
 
 
+#include "../svn_test.h"
+#include "svn_pools.h"
+#include "private/svn_named_atomic.h"
+
+/* Some constants that we will use in our tests */
+
+/* to separate this code from any production environment */
+#define TEST_NAMESPACE "SvnTests"
+
+/* All our atomics start with that name */
+#define ATOMIC_NAME "MyTestAtomic"
+
+/* Factor used to create non-trivial 64 bit numbers */
+#define HUGE_VALUE 1234567890123456ll
+
 /* "pipeline" test: worker with ID 0 initializes the data; all workers
  * (COUNT in total) have one input and one output bucket that form a ring
  * spanning all workers. Each worker passes the value along ITERATIONS times.
