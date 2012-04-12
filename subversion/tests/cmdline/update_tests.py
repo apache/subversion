@@ -27,6 +27,9 @@
 # General modules
 import sys, re, os, subprocess
 import time
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -92,7 +95,7 @@ def detect_extra_files(node, extra_files):
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
 
-  print("Found unexpected object: %s" % node.name)
+  logger.warn("Found unexpected object: %s", node.name)
   raise svntest.tree.SVNTreeUnequal
 
 
@@ -197,8 +200,8 @@ def update_binary_file(sbox):
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
-    print("Not all extra reject files have been accounted for:")
-    print(extra_files)
+    logger.warn("Not all extra reject files have been accounted for:")
+    logger.warn(extra_files)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -695,7 +698,7 @@ def update_to_resolve_text_conflicts(sbox):
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
-    print("didn't get expected extra files")
+    logger.warn("didn't get expected extra files")
     raise svntest.Failure
 
   # remove the conflicting files to clear text conflict but not props conflict
@@ -708,7 +711,7 @@ def update_to_resolve_text_conflicts(sbox):
   exit_code, stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up',
                                                                wc_backup)
   if len (stdout_lines) > 0:
-    print("update 2 failed")
+    logger.warn("update 2 failed")
     raise svntest.Failure
 
   # Create expected status tree
@@ -5375,7 +5378,7 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   sbox.simple_update()
   mu_ts_after_update = os.path.getmtime(mu_path)
   if (mu_ts_before_update != mu_ts_after_update):
-    print("The timestamp of 'mu' before and after update does not match.")
+    logger.warn("The timestamp of 'mu' before and after update does not match.")
     raise svntest.Failure
 
 #----------------------------------------------------------------------

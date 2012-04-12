@@ -3169,9 +3169,7 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(wc_update(&b, "", 2));
   SVN_ERR(wc_copy(&b, "A", "A_tmp"));
   SVN_ERR(wc_update(&b, "", 1));
-  SVN_ERR(wc_move(&b, "A_tmp", "A")); /* ### XFAIL: sets moved-here on
-                                         A but A_tmp is removed and so
-                                         does not have moved-to. */
+  SVN_ERR(wc_move(&b, "A_tmp", "A"));
 
   SVN_ERR(wc_mkdir(&b, "K"));
   SVN_ERR(wc_mkdir(&b, "K/L"));
@@ -4626,7 +4624,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_op_delete"),
     SVN_TEST_OPTS_PASS(test_child_replace_with_same_origin,
                        "test_child_replace_with_same"),
-    SVN_TEST_OPTS_XFAIL(test_shadowed_update,
+    SVN_TEST_OPTS_PASS(test_shadowed_update,
                        "test_shadowed_update"),
     SVN_TEST_OPTS_PASS(test_copy_of_deleted,
                        "test_copy_of_deleted (issue #3873)"),

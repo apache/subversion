@@ -23,11 +23,13 @@
 
 #include "crypto.h"
 
-#if APU_HAVE_CRYPTO
+#ifdef SVN_HAVE_CRYPTO
 #include <apr_random.h>
 #include <apr_crypto.h>
+#endif /* SVN_HAVE_CRYPTO */
 
 #include "svn_types.h"
+#include "svn_checksum.h"
 
 #include "svn_private_config.h"
 #include "private/svn_atomic.h"
@@ -44,6 +46,7 @@
 /* A structure for containing Subversion's cryptography-related bits
    (so we can avoid passing around APR-isms outside this module). */
 struct svn_crypto__ctx_t {
+#ifdef SVN_HAVE_CRYPTO
   apr_crypto_t *crypto;  /* APR cryptography context. */
 
 #if 0
@@ -53,12 +56,16 @@ struct svn_crypto__ctx_t {
      ### apr_generate_random_bytes() to generate entropy for seeding
      ### apr_random_t. See httpd/server/core.c:ap_init_rng()  */
   apr_random_t *rand;
-#endif
+#endif /* 0 */
+#else /* SVN_HAVE_CRYPTO */
+  int unused_but_required_to_satisfy_c_compilers;
+#endif /* SVN_HAVE_CRYPTO */
 };
 
 
 
-/*** Initialization ***/
+/*** Helper Functions ***/
+#ifdef SVN_HAVE_CRYPTO
 
 
 /* One-time initialization of the cryptography subsystem. */
@@ -88,10 +95,6 @@ crypto_init(void *baton, apr_pool_t *any_pool)
 
   return SVN_NO_ERROR;
 }
-
-
-
-/*** Helper Functions ***/
 
 
 /* If APU_ERR is non-NULL, create and return a Subversion error using
@@ -142,7 +145,6 @@ get_random_bytes(const unsigned char **rand_bytes,
                  apr_size_t rand_len,
                  apr_pool_t *result_pool)
 {
-#if APR_HAS_RANDOM
   apr_status_t apr_err;
   unsigned char *bytes;
 
@@ -153,10 +155,42 @@ get_random_bytes(const unsigned char **rand_bytes,
 
   *rand_bytes = bytes;
   return SVN_NO_ERROR;
-#else
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                          _("No support for random data generation found"));
-#endif
+}
+
+
+/* Return an svn_string_t allocated from RESULT_POOL, with its .data
+   and .len members set to DATA and LEN, respective.
+
+   WARNING: No lifetime management of DATA is offered here, so you
+   probably want to ensure that that information is allocated in a
+   sufficiently long-lived pool (such as, for example, RESULT_POOL). */
+static const svn_string_t *
+wrap_as_string(const unsigned char *data,
+               apr_size_t len,
+               apr_pool_t *result_pool)
+{
+  svn_string_t *s = apr_palloc(result_pool, sizeof(*s));
+
+  s->data = (const char *)data;  /* better already be in RESULT_POOL  */
+  s->len = len;
+  return s;
+}
+
+
+#endif /* SVN_HAVE_CRYPTO */
+
+
+
+/*** Semi-public APIs ***/
+
+/* Return TRUE iff Subversion's cryptographic support is available. */
+svn_boolean_t svn_crypto__is_available(void)
+{
+#ifdef SVN_HAVE_CRYPTO
+  return TRUE;
+#else /* SVN_HAVE_CRYPTO */
+  return FALSE;
+#endif /* SVN_HAVE_CRYPTO */
 }
 
 
@@ -166,6 +200,7 @@ svn_error_t *
 svn_crypto__context_create(svn_crypto__ctx_t **ctx,
                            apr_pool_t *result_pool)
 {
+#ifdef SVN_HAVE_CRYPTO
   apr_status_t apr_err;
   const apu_err_t *apu_err = NULL;
   apr_crypto_t *apr_crypto;
@@ -203,25 +238,10 @@ svn_crypto__context_create(svn_crypto__ctx_t **ctx,
   (*ctx)->crypto = apr_crypto;
 
   return SVN_NO_ERROR;
-}
-
-
-/* Return an svn_string_t allocated from RESULT_POOL, with its .data
-   and .len members set to DATA and LEN, respective.
-
-   WARNING: No lifetime management of DATA is offered here, so you
-   probably want to ensure that that information is allocated in a
-   sufficiently long-lived pool (such as, for example, RESULT_POOL). */
-static const svn_string_t *
-wrap_as_string(const unsigned char *data,
-               apr_size_t len,
-               apr_pool_t *result_pool)
-{
-  svn_string_t *s = apr_palloc(result_pool, sizeof(*s));
-
-  s->data = (const char *)data;  /* better already be in RESULT_POOL  */
-  s->len = len;
-  return s;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
 }
 
 
@@ -235,6 +255,7 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+#ifdef SVN_HAVE_CRYPTO
   svn_error_t *err = SVN_NO_ERROR;
   const unsigned char *salt_vector;
   const unsigned char *iv_vector;
@@ -359,6 +380,10 @@ svn_crypto__encrypt_password(const svn_string_t **ciphertext,
  cleanup:
   apr_crypto_block_cleanup(block_ctx);
   return err;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
 }
 
 
@@ -372,6 +397,7 @@ svn_crypto__decrypt_password(const char **plaintext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+#ifdef SVN_HAVE_CRYPTO
   svn_error_t *err = SVN_NO_ERROR;
   apr_status_t apr_err;
   apr_crypto_block_t *block_ctx = NULL;
@@ -448,6 +474,232 @@ svn_crypto__decrypt_password(const char **plaintext,
  cleanup:
   apr_crypto_block_cleanup(block_ctx);
   return err;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
 }
 
-#endif  /* APU_HAVE_CRYPTO */
+
+svn_error_t *
+svn_crypto__generate_secret_checktext(const svn_string_t **ciphertext,
+                                      const svn_string_t **iv,
+                                      const svn_string_t **salt,
+                                      const char **checktext,
+                                      svn_crypto__ctx_t *ctx,
+                                      const svn_string_t *master,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+#ifdef SVN_HAVE_CRYPTO
+  svn_error_t *err = SVN_NO_ERROR;
+  const unsigned char *salt_vector;
+  const unsigned char *iv_vector;
+  const unsigned char *stuff_vector;
+  apr_size_t iv_len;
+  apr_crypto_key_t *key = NULL;
+  apr_status_t apr_err;
+  apr_crypto_block_t *block_ctx = NULL;
+  apr_size_t block_size;
+  apr_size_t result_len;
+  unsigned char *result;
+  apr_size_t ignored_result_len = 0;
+  apr_size_t stuff_len;
+  svn_checksum_t *stuff_sum;
+
+  SVN_ERR_ASSERT(ctx != NULL);
+
+  /* Generate the salt. */
+  SVN_ERR(get_random_bytes(&salt_vector, ctx, SALT_LEN, result_pool));
+
+  /* Initialize the passphrase.  */
+  apr_err = apr_crypto_passphrase(&key, &iv_len,
+                                  master->data, master->len,
+                                  salt_vector, SALT_LEN,
+                                  APR_KEY_AES_256, APR_MODE_CBC,
+                                  FALSE /* doPad */, NUM_ITERATIONS,
+                                  ctx->crypto,
+                                  scratch_pool);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_trace(crypto_error_create(
+                               ctx, apr_err,
+                               _("Error creating derived key")));
+  if (! key)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Error creating derived key"));
+  if (iv_len == 0)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Unexpected IV length returned"));
+
+  /* Generate the proper length IV.  */
+  SVN_ERR(get_random_bytes(&iv_vector, ctx, iv_len, result_pool));
+
+  /* Initialize block encryption. */
+  apr_err = apr_crypto_block_encrypt_init(&block_ctx, &iv_vector, key,
+                                          &block_size, scratch_pool);
+  if ((apr_err != APR_SUCCESS) || (! block_ctx))
+    return svn_error_trace(crypto_error_create(
+                             ctx, apr_err,
+                             _("Error initializing block encryption")));
+
+  /* Generate a blob of random data, block-aligned per the
+     requirements of the encryption algorithm, but with a minimum size
+     of our choosing.  */
+#define MIN_STUFF_LEN 32
+  if (MIN_STUFF_LEN % block_size)
+    stuff_len = MIN_STUFF_LEN + (block_size - (MIN_STUFF_LEN % block_size));
+  else
+    stuff_len = MIN_STUFF_LEN;
+  SVN_ERR(get_random_bytes(&stuff_vector, ctx, stuff_len, scratch_pool));
+
+  /* ### FIXME:  This should be a SHA-256.  */
+  SVN_ERR(svn_checksum(&stuff_sum, svn_checksum_sha1, stuff_vector,
+                       stuff_len, scratch_pool));
+
+  /* Get the length that we need to allocate.  */
+  apr_err = apr_crypto_block_encrypt(NULL, &result_len, stuff_vector,
+                                     stuff_len, block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error fetching result length"));
+      goto cleanup;
+    }
+
+  /* Allocate our result buffer.  */
+  result = apr_palloc(result_pool, result_len);
+
+  /* Encrypt the block. */
+  apr_err = apr_crypto_block_encrypt(&result, &result_len, stuff_vector,
+                                     stuff_len, block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error during block encryption"));
+      goto cleanup;
+    }
+
+  /* Finalize the block encryption. Since we padded everything, this should
+     not produce any more encrypted output.  */
+  apr_err = apr_crypto_block_encrypt_finish(NULL,
+                                            &ignored_result_len,
+                                            block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error finalizing block encryption"));
+      goto cleanup;
+    }
+
+  *ciphertext = wrap_as_string(result, result_len, result_pool);
+  *iv = wrap_as_string(iv_vector, iv_len, result_pool);
+  *salt = wrap_as_string(salt_vector, SALT_LEN, result_pool);
+  *checktext = svn_checksum_to_cstring(stuff_sum, result_pool);
+
+ cleanup:
+  apr_crypto_block_cleanup(block_ctx);
+  return err;
+#else /* SVN_HAVE_CRYPTO */
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
+}
+
+
+svn_error_t *
+svn_crypto__verify_secret(svn_boolean_t *is_valid,
+                          svn_crypto__ctx_t *ctx,
+                          const svn_string_t *master,
+                          const svn_string_t *ciphertext,
+                          const svn_string_t *iv,
+                          const svn_string_t *salt,
+                          const char *checktext,
+                          apr_pool_t *scratch_pool)
+{
+#ifdef SVN_HAVE_CRYPTO
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_status_t apr_err;
+  apr_crypto_block_t *block_ctx = NULL;
+  apr_size_t block_size, iv_len;
+  apr_crypto_key_t *key = NULL;
+  unsigned char *result;
+  apr_size_t result_len = 0, final_len = 0;
+  svn_checksum_t *result_sum;
+
+  *is_valid = FALSE;
+
+  /* Initialize the passphrase.  */
+  apr_err = apr_crypto_passphrase(&key, &iv_len,
+                                  master->data, master->len,
+                                  (unsigned char *)salt->data, salt->len,
+                                  APR_KEY_AES_256, APR_MODE_CBC,
+                                  FALSE /* doPad */, NUM_ITERATIONS,
+                                  ctx->crypto, scratch_pool);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_trace(crypto_error_create(
+                               ctx, apr_err,
+                               _("Error creating derived key")));
+  if (! key)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Error creating derived key"));
+  if (iv_len == 0)
+    return svn_error_create(APR_EGENERAL, NULL,
+                            _("Unexpected IV length returned"));
+  if (iv_len != iv->len)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Provided IV has incorrect length"));
+  
+  apr_err = apr_crypto_block_decrypt_init(&block_ctx, &block_size,
+                                          (unsigned char *)iv->data,
+                                          key, scratch_pool);
+  if ((apr_err != APR_SUCCESS) || (! block_ctx))
+    return svn_error_trace(crypto_error_create(
+                             ctx, apr_err,
+                             _("Error initializing block decryption")));
+
+  apr_err = apr_crypto_block_decrypt(NULL, &result_len,
+                                     (unsigned char *)ciphertext->data,
+                                     ciphertext->len, block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error fetching result length"));
+      goto cleanup;
+    }
+
+  result = apr_palloc(scratch_pool, result_len);
+  apr_err = apr_crypto_block_decrypt(&result, &result_len,
+                                     (unsigned char *)ciphertext->data,
+                                     ciphertext->len, block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error during block decryption"));
+      goto cleanup;
+    }
+
+  apr_err = apr_crypto_block_decrypt_finish(result + result_len, &final_len,
+                                            block_ctx);
+  if (apr_err != APR_SUCCESS)
+    {
+      err = crypto_error_create(ctx, apr_err,
+                                _("Error finalizing block decryption"));
+      goto cleanup;
+    }
+
+  /* ### FIXME:  This should be a SHA-256.  */
+  SVN_ERR(svn_checksum(&result_sum, svn_checksum_sha1, result,
+                       result_len + final_len, scratch_pool));
+
+  *is_valid = strcmp(checktext,
+                     svn_checksum_to_cstring(result_sum, scratch_pool)) == 0;
+
+ cleanup:
+  apr_crypto_block_cleanup(block_ctx);
+  return err;
+#else /* SVN_HAVE_CRYPTO */
+  *is_valid = FALSE;
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                          "Cryptographic support is not available");
+#endif /* SVN_HAVE_CRYPTO */
+}

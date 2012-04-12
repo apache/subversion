@@ -3662,11 +3662,42 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                     dst_parent_relpath,
                     presence_map, dst_presence));
 
-      /* ### What about other results from scan_addition()?
-       * ### 'cp A B; mv B C' currently results in C being marked moved-here
-       * ### with no corresponding moved-from. */
-      if (is_move && status != svn_wc__db_status_added)
-        SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
+      if (is_move)
+        {
+          if (dst_op_depth == relpath_depth(dst_relpath))
+            {
+              /* We're moving the root of the move operation.
+               *
+               * When an added node or the op-root of a copy is moved,
+               * there is no 'moved-from' corresponding to the moved-here
+               * node. So the net effect is the same as copy+delete.
+               * Perform a normal copy operation in these cases. */
+              if (!(status == svn_wc__db_status_added ||
+                    (status == svn_wc__db_status_copied && op_root)))
+                SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
+            }
+          else
+            {
+              svn_sqlite__stmt_t *info_stmt;
+              svn_boolean_t have_row;
+
+              /* We're moving a child along with the root of the move.
+               *
+               * Set moved-here depending on dst_parent, propagating
+               * the above decision to moved-along children.
+               * We can't use scan_addition() to detect moved-here because
+               * the delete-half of the move might not yet exist. */
+              SVN_ERR(svn_sqlite__get_statement(&info_stmt, dst_wcroot->sdb,
+                                                STMT_SELECT_NODE_INFO));
+              SVN_ERR(svn_sqlite__bindf(info_stmt, "is", dst_wcroot->wc_id,
+                                        dst_parent_relpath));
+              SVN_ERR(svn_sqlite__step(&have_row, info_stmt));
+              SVN_ERR_ASSERT(have_row);
+              if (svn_sqlite__column_boolean(info_stmt, 15))
+                SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
+              SVN_ERR(svn_sqlite__reset(info_stmt));
+            }
+        }
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 

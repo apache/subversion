@@ -29,8 +29,6 @@
 #include "../svn_test.h"
 #include "../../libsvn_subr/crypto.h"
 
-#if APU_HAVE_CRYPTO
-
 /* Helper function:  encrypt PASSWORD within CTX using MASTER, then
    decrypt those results and ensure the original PASSWORD comes out
    the other end. */
@@ -74,12 +72,10 @@ encrypt_decrypt(svn_crypto__ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-#endif  /* APU_HAVE_CRYPTO */
 
 static svn_error_t *
 test_encrypt_decrypt_password(apr_pool_t *pool)
 {
-#if APU_HAVE_CRYPTO
   svn_crypto__ctx_t *ctx;
   const svn_string_t *master = svn_string_create("Pastor Massword", pool);
   int i;
@@ -90,6 +86,9 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
     "mypassphrase", /* with 4-byte padding, should align on block boundary */
   };
 
+  /* Skip this test if the crypto subsystem is unavailable. */
+  if (! svn_crypto__is_available())
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 
   SVN_ERR(svn_crypto__context_create(&ctx, pool));
 
@@ -102,11 +101,69 @@ test_encrypt_decrypt_password(apr_pool_t *pool)
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
-#else
-  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
-#endif  /* APU_HAVE_CRYPTO */
 }
 
+
+static svn_error_t *
+test_passphrase_check(apr_pool_t *pool)
+{
+  svn_crypto__ctx_t *ctx;
+  int i;
+  apr_pool_t *iterpool;
+  const char *passwords[] = {
+    "3ncryptm!3", /* fits in one block */
+    "this is a particularly long password", /* spans blocks */
+    "mypassphrase", /* with 4-byte padding, should align on block boundary */
+  };
+  const svn_string_t *ciphertext, *iv, *salt, *secret;
+  const char *checktext;
+  svn_boolean_t is_valid;
+  int num_passwords = sizeof(passwords) / sizeof(const char *);
+
+  /* Skip this test if the crypto subsystem is unavailable. */
+  if (! svn_crypto__is_available())
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  SVN_ERR(svn_crypto__context_create(&ctx, pool));
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < num_passwords; i++)
+    {
+      svn_pool_clear(iterpool);
+      secret = svn_string_create(passwords[i], iterpool);
+      SVN_ERR(svn_crypto__generate_secret_checktext(&ciphertext, &iv, &salt,
+                                                    &checktext, ctx, secret,
+                                                    iterpool, iterpool));
+      SVN_ERR(svn_crypto__verify_secret(&is_valid, ctx, secret, ciphertext,
+                                        iv, salt, checktext, iterpool));
+      if (! is_valid)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Error validating secret against checktext");
+    }
+
+  for (i = 0; i < num_passwords; i++)
+    {
+      int test_secret_index = (i + 1) % num_passwords;
+
+      svn_pool_clear(iterpool);
+      secret = svn_string_create(passwords[i], iterpool);
+      SVN_ERR(svn_crypto__generate_secret_checktext(&ciphertext, &iv, &salt,
+                                                    &checktext, ctx, secret,
+                                                    iterpool, iterpool));
+      secret = svn_string_create(passwords[test_secret_index], iterpool);
+      SVN_ERR(svn_crypto__verify_secret(&is_valid, ctx, secret, ciphertext,
+                                        iv, salt, checktext, iterpool));
+      if (is_valid)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "Expected secret validation failure; "
+                                "got success");
+    }
+
+  /* Now check that a bogus secret causes the validation to fail. */
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -118,5 +175,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_encrypt_decrypt_password,
                    "basic password encryption/decryption test"),
+    SVN_TEST_PASS2(test_passphrase_check,
+                   "password checktext generation/validation"),
     SVN_TEST_NULL
   };

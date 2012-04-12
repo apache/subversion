@@ -141,7 +141,7 @@ prev_log_path(const char **prev_path_p,
               svn_sort__item_t item = APR_ARRAY_IDX(paths,
                                                     i - 1, svn_sort__item_t);
               const char *ch_path = item.key;
-              int len = strlen(ch_path);
+              size_t len = strlen(ch_path);
 
               /* See if our path is the child of this change path.  If
                  not, keep looking.  */
