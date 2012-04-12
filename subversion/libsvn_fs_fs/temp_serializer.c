@@ -184,7 +184,7 @@ serialize_checksum(svn_temp_serializer__context_t *context,
 /* Utility function to deserialize the checksum CS inside the BUFFER.
  */
 static void
-deserialize_checksum(void *buffer, svn_checksum_t * const *cs)
+deserialize_checksum(void *buffer, svn_checksum_t **cs)
 {
   svn_temp_deserializer__resolve(buffer, (void **)cs);
   if (*cs == NULL)
