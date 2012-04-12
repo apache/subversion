@@ -866,9 +866,10 @@ svn_editor_add_absent(svn_editor_t *editor,
 
 /** Drive @a editor's #svn_editor_cb_alter_directory_t callback.
  *
- * Alter the properties of the directory at @a relpath. @a revision
- * specifies the expected revision of the directory. This is used to
- * catched attempts at altering out-of-date directories. If the
+ * Alter the properties of the directory at @a relpath.
+ *
+ * @a revision specifies the expected revision of the directory and is
+ * used to catch attempts at altering out-of-date directories. If the
  * directory does not have a corresponding revision in the repository
  * (e.g. it has not yet been committed), then @a revision should be
  * #SVN_INVALID_REVNUM.
