@@ -893,8 +893,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   if (is_added)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_client_url_from_path2(&target_base.url, target_abspath,
-                                    ctx, pool, pool));
+  SVN_ERR(svn_wc__node_get_url(&target_base.url, ctx->wc_ctx, target_abspath,
+                               pool, pool));
   SVN_ERR(svn_wc__node_get_base_rev(&target_base.rev, ctx->wc_ctx,
                                     target_abspath, pool));
   SVN_ERR(svn_wc__node_get_repos_info(&target_base.repos_root_url,
