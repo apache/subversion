@@ -1281,10 +1281,21 @@ build(struct editor_baton *eb,
       if (operation->operation == OP_REPLACE)
         current_props = apr_hash_make(scratch_pool);
       else if (operation->copyfrom_url)
-        SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
-                                     operation->copyfrom_url,
-                                     operation->copyfrom_revision,
-                                     scratch_pool, scratch_pool));
+        {
+          const char *copyfrom_relpath;
+
+          if (eb->repos_root)
+            copyfrom_relpath = svn_uri_skip_ancestor(eb->repos_root,
+                                                     operation->copyfrom_url,
+                                                     scratch_pool);
+          else
+            copyfrom_relpath = operation->copyfrom_url;
+
+          SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
+                                       copyfrom_relpath,
+                                       operation->copyfrom_revision,
+                                       scratch_pool, scratch_pool));
+        }
       else
         SVN_ERR(eb->fetch_props_func(&current_props, eb->fetch_props_baton,
                                      svn_relpath_join(eb->base_relpath,
