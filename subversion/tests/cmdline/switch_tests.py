@@ -680,7 +680,6 @@ def failed_anchor_is_target(sbox):
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'switch', '--ignore-ancestry',
                                      G_url, H_path)
-  return None
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', switched='S', wc_rev=2)
