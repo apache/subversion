@@ -49,8 +49,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
                                     ap_filter_t *output)
 {
-  /* ### IPROS TODO: Subpool */
-  /* ### IPROS TODO: Authz   */
+  /* ### IPROPS TODO: Authz   */
   svn_error_t *serr;
   dav_error *derr = NULL;
   apr_xml_elem *child;
@@ -62,6 +61,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
   svn_fs_root_t *root;
   int i;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
+  apr_pool_t *iterpool;
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -75,6 +75,8 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
+  iterpool = svn_pool_create(resource->pool);
+
   for (child = doc->root->first_child;
        child != NULL;
        child = child->next)
@@ -85,12 +87,12 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
 
       if (strcmp(child->name, SVN_DAV__REVISION) == 0)
         {
-          rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
+          rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, iterpool, 1));
         }
       else if (strcmp(child->name, SVN_DAV__PATH) == 0)
         {
           path = dav_xml_get_cdata(child, resource->pool, 0);
-          if ((derr = dav_svn__test_canonical(path, resource->pool)))
+          if ((derr = dav_svn__test_canonical(path, iterpool)))
             return derr;
           path = svn_fspath__join(resource->info->repos_path, path,
                                   resource->pool);
@@ -113,7 +115,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                 resource->pool);
 
   serr = svn_fs_node_proplist2(NULL, &inherited_props, root, path,
-                               resource->pool, resource->pool);
+                               resource->pool, iterpool);
 
   if (serr)
     {
@@ -139,6 +141,8 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
       svn_prop_inherited_item_t *elt =
         APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
 
+      svn_pool_clear(iterpool);
+
       serr = dav_svn__brigade_printf(
         bb, output,
         "<S:" SVN_DAV__IPROP_ITEM ">"
@@ -163,7 +167,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                 bb, output,
                 "<S:" SVN_DAV__IPROP_PROPNAME ">%s</S:"
                 SVN_DAV__IPROP_PROPNAME ">" DEBUG_CR,
-                apr_xml_quote_string(resource->pool, propname, 0));
+                apr_xml_quote_string(iterpool, propname, 0));
 
               if (!serr)
                 {
@@ -171,7 +175,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                     {
                       svn_stringbuf_t *tmp = NULL;
                       svn_xml_escape_cdata_string(&tmp, propval,
-                                                  resource->pool);
+                                                  iterpool);
                       xml_safe = tmp->data;
                       serr = dav_svn__brigade_printf(
                         bb, output,
@@ -181,7 +185,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                   else
                     {
                       xml_safe = svn_base64_encode_string2(
-                        propval, TRUE, resource->pool)->data;
+                        propval, TRUE, iterpool)->data;
                       serr = dav_svn__brigade_printf(
                         bb, output,
                         "<S:" SVN_DAV__IPROP_PROPVAL
@@ -224,7 +228,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
   dav_svn__operational_log(resource->info,
                            svn_log__get_inherited_props(path, rev,
                                                         resource->pool));
-
+  svn_pool_destroy(iterpool);
   return dav_svn__final_flush_or_error(resource->info->r, bb, output,
                                        derr, resource->pool);
 }
