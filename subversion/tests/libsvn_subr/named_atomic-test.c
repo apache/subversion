@@ -42,7 +42,7 @@
 static int hw_thread_count = 0;
 
 /* number of iterations that we should perform on concurrency tests
- * (will be calibrated to about 2s runtime)*/
+ * (will be calibrated to about 1s runtime)*/
 static int suggested_iterations = 0;
 
 /* Bring shared memory to a defined state. This is very useful in case of
@@ -249,39 +249,30 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
 }
 
 /* Set SUGGESTED_ITERATIONS to a value that COUNT workers will take
- * about 2 seconds to execute.
+ * about 1 second to execute.
  */
 static svn_error_t *
 calibrate_iterations(apr_pool_t *pool, int count)
 {
   apr_time_t start;
-  apr_time_t overhead;
   int calib_iterations;
   double taken = 0.0;
 
-  /* measure start-up overhead */
-
-  SVN_ERR(init_concurrency_test_shm(pool, count));
-
-  start = apr_time_now();
-  SVN_ERR(run_procs(pool, TEST_PROC, count, 10));
-  overhead = apr_time_now() - start;
-
   /* increase iterations until we pass the 10ms mark */
   
-  for (calib_iterations = 100; taken < 10000.0; calib_iterations *= 2)
+  for (calib_iterations = 10; taken < 100000.0; calib_iterations *= 2)
     {
       SVN_ERR(init_concurrency_test_shm(pool, count));
 
       start = apr_time_now();
-      SVN_ERR(run_procs(pool, TEST_PROC, count, calib_iterations + 10));
+      SVN_ERR(run_procs(pool, TEST_PROC, count, calib_iterations));
 
-      taken = (int)(apr_time_now() - start - overhead);
+      taken = apr_time_now() - start;
     }
 
-  /* scale that to 2s */
+  /* scale that to 1s */
     
-  suggested_iterations = (int)(2000000.0 / taken * calib_iterations);
+  suggested_iterations = (int)(1000000.0 / taken * calib_iterations);
 
   return SVN_NO_ERROR;
 }
@@ -303,13 +294,16 @@ calibrate_concurrency(apr_pool_t *pool)
         {
           int saved_suggestion = suggested_iterations;
           SVN_ERR(calibrate_iterations(pool, hw_thread_count * 2));
-          if (suggested_iterations < 10000)
+          if (suggested_iterations < 100000)
             {
               suggested_iterations = saved_suggestion;
               break;
             }
         }
-    }
+        
+      printf("using %d cores for %d iterations\n", hw_thread_count,
+                                                   suggested_iterations);
+  }
 
   return SVN_NO_ERROR;
 }
@@ -565,7 +559,6 @@ test_multithreaded(apr_pool_t *pool)
 {
   SVN_ERR(calibrate_concurrency(pool));
 
-  printf("%d %d\n", hw_thread_count, suggested_iterations);
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
   SVN_ERR(run_threads(pool, hw_thread_count, suggested_iterations, test_pipeline));
   
@@ -578,7 +571,6 @@ test_multiprocess(apr_pool_t *pool)
 {
   SVN_ERR(calibrate_concurrency(pool));
 
-  printf("%d %d\n", hw_thread_count, suggested_iterations);
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
   SVN_ERR(run_procs(pool, TEST_PROC, hw_thread_count, suggested_iterations));
 
