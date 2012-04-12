@@ -28,12 +28,6 @@
 
 #include <stdio.h>
 
-#include <apr_pools.h>
-
-#include "svn_io.h"
-#include "svn_error.h"
-#include "svn_pools.h"
-
 /* shared test implementation */
 #include "named_atomic-test-common.h"
 
@@ -71,7 +65,7 @@ main(int argc, const char *argv[])
 
   /* run test routine */
 
-  err = test(id, count, iterations, pool);
+  err = test_pipeline(id, count, iterations, pool);
   if (err)
   {
     got_error = TRUE;

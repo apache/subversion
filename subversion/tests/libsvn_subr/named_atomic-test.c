@@ -27,34 +27,15 @@
 
 
 #include <stdio.h>
-#include <string.h>
-
-#include <apr_pools.h>
 #include <apr_file_io.h>
 
-#include "../svn_test.h"
-
 #include "svn_io.h"
-#include "svn_error.h"
-#include "svn_pools.h"
-#include "private/svn_named_atomic.h"
-
-/* Some constants that we will use in our tests */
-
-/* to separate this code from any production environment */
-#define TEST_NAMESPACE "SvnTests"
-
-/* All our atomics start with that name */
-#define ATOMIC_NAME "MyTestAtomic"
-
-/* Factor used to create non-trivial 64 bit numbers */
-#define HUGE_VALUE 1234567890123456ll
-
-/* Name of the worker process executable */
-#define TEST_PROC "named_atomic-test-proc"
 
 /* shared test implementation */
 #include "named_atomic-test-common.h"
+
+/* Name of the worker process executable */
+#define TEST_PROC "named_atomic-test-proc"
 
 /* number of hardware threads (logical cores) that we may use.
  * Will be set to at least 2 - even on unicore machines. */
