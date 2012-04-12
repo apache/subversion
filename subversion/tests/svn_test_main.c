@@ -461,7 +461,7 @@ main(int argc, const char *argv[])
         case server_minor_version_opt:
           {
             char *end;
-            opts.server_minor_version = strtol(opt_arg, &end, 10);
+            opts.server_minor_version = (int) strtol(opt_arg, &end, 10);
             if (end == opt_arg || *end != '\0')
               {
                 fprintf(stderr, "FAIL: Non-numeric minor version given\n");
