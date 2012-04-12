@@ -962,23 +962,29 @@ static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
 }
 
 /* ### This really belongs in libsvn_repos. */
-/* Get the properties and/or inherited properties for a PATH in ROOT, with
-   hardcoded committed-info values. */
+/* Get the explicit properties and/or inherited properties for a PATH in
+   ROOT, with hardcoded committed-info values. */
 static svn_error_t *
 get_props(apr_hash_t **props,
           apr_array_header_t **iprops,
+          server_baton_t *b,
           svn_fs_root_t *root,
           const char *path,
           apr_pool_t *pool)
 {
-  /* Get the properties. */
-  SVN_ERR(svn_fs_node_proplist2(props, iprops, root, path, pool, pool));
-
+  /* Get the explicit properties. */
   if (props)
     {
       svn_string_t *str;
       svn_revnum_t crev;
       const char *cdate, *cauthor, *uuid;
+
+      /* Yes, we could grab the inherited properties here too, but while we
+         already know the user has read access to PATH, we don't know that
+         the same holds true for PATH's parents, so we call
+         svn_repos_fs_get_inherited_props below, which performs the necessary
+         authz checks. */
+      SVN_ERR(svn_fs_node_proplist2(props, NULL, root, path, pool, pool));
 
       /* Hardcode the values for the committed revision, date, and author. */
       SVN_ERR(svn_repos_get_committed_info(&crev, &cdate, &cauthor, root,
@@ -999,6 +1005,13 @@ get_props(apr_hash_t **props,
       str = (uuid) ? svn_string_create(uuid, pool) : NULL;
       apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
     }
+
+  /* Get any inherited properties the user is authorized to. */
+  if (iprops)
+    SVN_ERR(svn_repos_fs_get_inherited_props(
+      iprops, b->repos, path,
+      svn_fs_revision_root_revision(root),
+      authz_check_access_cb_func(b), b, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1435,7 +1448,8 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    full_path, TRUE, pool));
   hex_digest = svn_checksum_to_cstring_display(checksum, pool);
   if (want_props || wants_inherited_props)
-    SVN_CMD_ERR(get_props(&props, &inherited_props, root, full_path, pool));
+    SVN_CMD_ERR(get_props(&props, &inherited_props, b, root, full_path,
+                          pool));
   if (want_contents)
     SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
@@ -1576,7 +1590,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the directory's explicit and/or inherited properties
      if requested. */
   if (want_props || wants_inherited_props)
-    SVN_CMD_ERR(get_props(&props, &inherited_props, root, full_path, pool));
+    SVN_CMD_ERR(get_props(&props, &inherited_props, b, root, full_path,
+                          pool));
 
   /* Begin response ... */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
@@ -2942,7 +2957,7 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
 
   /* Fetch the properties and a stream for the contents. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
-  SVN_CMD_ERR(get_props(NULL, &inherited_props, root, full_path, pool));
+  SVN_CMD_ERR(get_props(NULL, &inherited_props, b, root, full_path, pool));
 
   /* Send successful command response with revision and props. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
