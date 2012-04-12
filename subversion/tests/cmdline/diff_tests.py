@@ -1782,6 +1782,7 @@ def diff_prop_on_named_dir(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propdel', 'p', 'A')
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 

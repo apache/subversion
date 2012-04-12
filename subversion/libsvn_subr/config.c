@@ -562,6 +562,7 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
                const char *section, const char *option,
                const char *default_value)
 {
+  *valuep = default_value;
   if (cfg)
     {
       cfg_section_t *sec;
@@ -571,23 +572,21 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
           make_string_from_option(valuep, cfg, sec, opt, NULL);
         }
       else
-        {
-          apr_pool_t *tmp_pool = svn_pool_create(cfg->x_pool);
-          const char *x_default;
-          expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
-          if (x_default)
-            {
-              svn_stringbuf_set(cfg->tmp_value, x_default);
-              *valuep = cfg->tmp_value->data;
-            }
-          else
-            *valuep = default_value;
-          svn_pool_destroy(tmp_pool);
-        }
-    }
-  else
-    {
-      *valuep = default_value;
+        /* before attempting to expand an option, check for the placeholder.
+         * If none is there, there is no point in calling expand_option_value.
+         */
+        if (default_value && strchr(default_value, '%'))
+          {
+            apr_pool_t *tmp_pool = svn_pool_create(cfg->x_pool);
+            const char *x_default;
+            expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
+            if (x_default)
+              {
+                svn_stringbuf_set(cfg->tmp_value, x_default);
+                *valuep = cfg->tmp_value->data;
+              }
+            svn_pool_destroy(tmp_pool);
+          }
     }
 }
 

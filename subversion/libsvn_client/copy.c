@@ -1165,7 +1165,8 @@ check_url_kind(void *baton,
 
 /* ### Copy ...
  * COMMIT_INFO_P is ...
- * COPY_PAIRS is ...
+ * COPY_PAIRS is ... such that each 'src_abspath_or_url' is a local abspath
+ * and each 'dst_abspath_or_url' is a URL.
  * MAKE_PARENTS is ...
  * REVPROP_TABLE is ...
  * CTX is ... */
@@ -1205,7 +1206,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   /* Verify that all the source paths exist, are versioned, etc.
      We'll do so by querying the base revisions of those things (which
-     we'll need to know later anyway). */
+     we'll need to know later anyway).
+     ### Should we use the 'origin' revision instead of 'base'?
+    */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
@@ -1409,7 +1412,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
                                             commit_items, pool));
 
-#if ENABLE_EV2_SHIMS
+#ifdef ENABLE_EV2_SHIMS
   for (i = 0; !common_wc_abspath && i < commit_items->nelts; i++)
     {
       common_wc_abspath = APR_ARRAY_IDX(commit_items, i,

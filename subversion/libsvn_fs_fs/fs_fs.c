@@ -3624,8 +3624,9 @@ read_representation(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          fulltext_cache_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
-                                      rep->revision, rep->offset);
+          fulltext_cache_key = svn_fs_fs__combine_two_numbers(rep->revision,
+                                                              rep->offset,
+                                                              pool);
           SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
                                  ffd->fulltext_cache, fulltext_cache_key,
                                  pool));
