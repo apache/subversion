@@ -1087,6 +1087,11 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
     };
   struct ev2_edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
 
+  if (!base_relpath)
+    base_relpath = "";
+  else if (base_relpath[0] == '/')
+    base_relpath += 1;
+
   eb->editor = editor;
   eb->changes = apr_hash_make(pool);
   eb->paths = apr_hash_make(pool);
@@ -2019,6 +2024,11 @@ svn_delta__editor_from_delta(svn_editor_t **editor_p,
   struct svn_delta__extra_baton *extra_baton = apr_pcalloc(result_pool,
                                                 sizeof(*extra_baton));
 
+  if (!base_relpath)
+    base_relpath = "";
+  else if (base_relpath[0] == '/')
+    base_relpath += 1;
+
   eb->deditor = deditor;
   eb->dedit_baton = dedit_baton;
   eb->edit_pool = result_pool;
@@ -2110,11 +2120,6 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   SVN_ERR_ASSERT(shim_callbacks->fetch_kind_func != NULL);
   SVN_ERR_ASSERT(shim_callbacks->fetch_props_func != NULL);
   SVN_ERR_ASSERT(shim_callbacks->fetch_base_func != NULL);
-
-  if (!base_relpath)
-    base_relpath = "";
-  else if (base_relpath[0] == '/')
-    base_relpath += 1;
 
   SVN_ERR(svn_delta__editor_from_delta(&editor, &exb,
                             &unlock_func, &unlock_baton,
