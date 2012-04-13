@@ -144,16 +144,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1311935
-   Fix a pool lifetime problem in the diff code.
-   Justification:
-     The diff callbacks implementation relies on the diff callback driver to
-     allocate path arguments from a persistent pool. While this might not be
-     a problem in 1.7.x we're just lucky if it isn't. The problem should be
-     fixed before somebody gets hurt.
-   Votes:
-     +1: stsp, hwright, philip
-
  * r1306334
    Optimize failure of opening wc.db files.
    Justification:
