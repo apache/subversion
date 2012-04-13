@@ -909,6 +909,7 @@ get_editor(const svn_delta_editor_t **export_editor,
 
   SVN_ERR(svn_delta__delta_from_editor(export_editor, edit_baton,
                                        editor, NULL, NULL, found_abs_paths,
+                                       NULL, NULL,
                                        fetch_props_func, eb,
                                        fetch_base_func, eb,
                                        exb, result_pool));
