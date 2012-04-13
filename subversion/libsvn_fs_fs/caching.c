@@ -330,7 +330,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            memcache,
                            membuffer,
                            0, 0, /* Do not use inprocess cache */
-                           /* Values are svn_string_t */
+                           /* Values are svn_stringbuf_t */
                            NULL, NULL,
                            APR_HASH_KEY_STRING,
                            apr_pstrcat(pool, prefix, "TEXT", (char *)NULL),
