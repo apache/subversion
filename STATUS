@@ -84,14 +84,6 @@ Candidate changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
- * r1296251, r1296303, r1297522
-   Resolve issue 4136, "Deep commit followed by --depth immediates update
-   triggers checksum failure"
-   Justification:
-     User reported regression since 1.7.0
-   Votes:
-     +1: stsp, rhuijben
-
  * r1306111
    Handle NULL dates in libsvn_ra_svn.
    Justification:
@@ -124,6 +116,13 @@ Candidate changes:
    Votes:
      +1: philip, hwright
 
+ * r1190463
+   Issue 4046, "svn update --depth=empty" against 1.4 servers.
+   Justification:
+     Regression from 1.6.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
@@ -143,3 +142,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1296251, r1296303, r1297522
+   Resolve issue 4136, "Deep commit followed by --depth immediates update
+   triggers checksum failure"
+   Justification:
+     User reported regression since 1.7.0
+   Votes:
+     +1: stsp, rhuijben, philip
