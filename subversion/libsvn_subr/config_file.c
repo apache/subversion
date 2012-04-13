@@ -123,7 +123,7 @@ parser_ungetc(parse_context_t *ctx, int c)
 static APR_INLINE svn_error_t *
 skip_whitespace(parse_context_t *ctx, int *c, int *pcount)
 {
-  int ch;
+  int ch = 0;
   int count = 0;
 
   SVN_ERR(parser_getc(ctx, &ch));
