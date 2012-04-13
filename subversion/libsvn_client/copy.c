@@ -625,11 +625,13 @@ drive_single_path(svn_editor_t *editor,
                   path_driver_info_t *path_info,
                   svn_boolean_t is_move,
                   svn_revnum_t youngest,
+                  const char *repos_root,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = apr_hash_make(scratch_pool);
   svn_boolean_t do_delete = FALSE;
   svn_boolean_t do_add = FALSE;
+  const char *dst_relpath;
 
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
@@ -658,14 +660,19 @@ drive_single_path(svn_editor_t *editor,
         }
     }
 
+  dst_relpath = svn_uri_skip_ancestor(repos_root, path, scratch_pool);
+
   /* ### We need to handle moves here, rather than just pretend they are
          a delete + add. */
   if (do_delete)
     {
-      SVN_ERR(svn_editor_delete(editor, path, youngest));
+      SVN_ERR(svn_editor_delete(editor, dst_relpath, youngest));
     }
   if (do_add)
     {
+      const char *src_relpath = svn_uri_skip_ancestor(repos_root,
+                                                      path_info->src_url,
+                                                      scratch_pool);
       SVN_ERR(svn_path_check_valid(path, scratch_pool));
 
       /* ### Need to get existing props, rather than just set mergeinfo
@@ -675,15 +682,15 @@ drive_single_path(svn_editor_t *editor,
                      path_info->mergeinfo);
 
       SVN_ERR(svn_editor_copy(editor,
-                              path_info->src_url, path_info->src_revnum,
-                              path, SVN_INVALID_REVNUM));
+                              src_relpath, path_info->src_revnum,
+                              dst_relpath, SVN_INVALID_REVNUM));
 
       if (path_info->src_kind == svn_node_file)
-        SVN_ERR(svn_editor_alter_file(editor, path, SVN_INVALID_REVNUM,
+        SVN_ERR(svn_editor_alter_file(editor, dst_relpath, SVN_INVALID_REVNUM,
                                       props, NULL, NULL));
       else
-        SVN_ERR(svn_editor_alter_directory(editor, path, SVN_INVALID_REVNUM,
-                                           props));
+        SVN_ERR(svn_editor_alter_directory(editor, dst_relpath,
+                                           SVN_INVALID_REVNUM, props));
     }
 
   return SVN_NO_ERROR;
@@ -696,6 +703,7 @@ drive_editor(svn_editor_t *editor,
              apr_array_header_t *new_dirs,
              svn_boolean_t is_move,
              svn_revnum_t youngest,
+             const char *repos_root,
              apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -729,7 +737,7 @@ drive_editor(svn_editor_t *editor,
       svn_pool_clear(iterpool);
 
       err = drive_single_path(editor, path, path_info, is_move, youngest,
-                              iterpool);
+                              repos_root, iterpool);
       if (err)
         break;
     }
@@ -756,8 +764,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
 {
-  apr_array_header_t *paths = apr_array_make(pool, 2 * copy_pairs->nelts,
-                                             sizeof(const char *));
+  apr_array_header_t *paths;
   apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
   const char *top_url, *top_url_all, *top_url_dst;
@@ -1023,9 +1030,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       info->src_path = src_rel;
       info->dst_path = dst_rel;
 
-      apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING, info);
+      apr_hash_set(action_hash, svn_path_url_add_component2(
+                                    top_url, info->dst_path, pool),
+                   APR_HASH_KEY_STRING, info);
       if (is_move && (! info->resurrection))
-        apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING, info);
+        apr_hash_set(action_hash, svn_path_url_add_component2(
+                                    top_url, info->src_path, pool),
+                     APR_HASH_KEY_STRING, info);
     }
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -1081,14 +1092,17 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     message = "";
 
   /* Setup our copy destinations and move sources (if any). */
+  paths = apr_array_make(pool, 2 * copy_pairs->nelts, sizeof(const char *));
   for (i = 0; i < path_infos->nelts; i++)
     {
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
 
-      APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
+      APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
+                                    top_url, info->dst_path, pool);
       if (is_move && (! info->resurrection))
-        APR_ARRAY_PUSH(paths, const char *) = info->src_path;
+        APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
+                                    top_url, info->src_path, pool);
     }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
@@ -1107,7 +1121,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     pool, pool));
 
   return svn_error_trace(drive_editor(editor, paths, action_hash, new_dirs,
-                                      is_move, youngest, pool));
+                                      is_move, youngest, repos_root, pool));
 }
 
 /* Baton for check_url_kind */
