@@ -247,6 +247,12 @@ svn_cl__diff(apr_getopt_t *os,
 
       SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp,
                                                           ctx, FALSE, pool));
+
+      /* Check if either or both targets were skipped (e.g. because they
+       * were .svn directories). */
+      if (tmp2->nelts < 2)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
+
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
