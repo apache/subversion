@@ -743,6 +743,7 @@ static svn_error_t *
 drive_editor(svn_editor_t *editor,
              apr_array_header_t *targets,
              apr_hash_t *children_hash,
+             const char *base_relpath,
              apr_pool_t *scratch_pool)
 {
   apr_hash_t *empty_props = apr_hash_make(scratch_pool);
@@ -757,6 +758,7 @@ drive_editor(svn_editor_t *editor,
       apr_array_header_t *children;
 
       svn_pool_clear(iterpool);
+      path = svn_relpath_join(base_relpath, path, iterpool);
 
       children = apr_hash_get(children_hash, path, APR_HASH_KEY_STRING);
       if (!children)
@@ -798,6 +800,8 @@ mkdir_urls(const apr_array_header_t *urls,
   apr_hash_t *targets_hash;
   apr_hash_t *commit_revprops;
   apr_hash_t *children_hash;
+  const char *repos_root;
+  const char *base_relpath;
   const char *common;
   int i;
 
@@ -945,6 +949,10 @@ mkdir_urls(const apr_array_header_t *urls,
       APR_ARRAY_PUSH(children, const char *) = basename;
     }
 
+  /* Calculate the base_relpath. */
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+  base_relpath = svn_uri_skip_ancestor(repos_root, common, pool);
+
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
@@ -958,7 +966,7 @@ mkdir_urls(const apr_array_header_t *urls,
                                     pool, pool));
 
   return svn_error_trace(drive_editor(editor, targets, children_hash,
-                                      pool));
+                                      base_relpath, pool));
 }
 
 
