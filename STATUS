@@ -144,15 +144,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1306334
-   Optimize failure of opening wc.db files.
-   Justification:
-     Takes far too much CPU when performing status on not-working copies.
-     Reported as raw performance data on AnkhSVN. Probably noticable on the
-     buildbot total time too.
-   Votes:
-     +1: rhuijben, hwright, philip
-
  * r1311702
    Prevent out-of-bounds array access during 'svn diff' arguments processing.
    Justification:
