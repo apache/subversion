@@ -313,6 +313,11 @@ SVN_ERROR_START
              SVN_ERR_NODE_CATEGORY_START + 1,
              "Unexpected node kind found")
 
+  /* @since New in 1.8 */
+  SVN_ERRDEF(SVN_ERR_NODE_NOT_FOUND,
+             SVN_ERR_NODE_CATEGORY_START + 2,
+             "Node not found")
+
   /* entry errors */
 
   SVN_ERRDEF(SVN_ERR_ENTRY_NOT_FOUND,
