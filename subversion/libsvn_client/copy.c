@@ -100,10 +100,12 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       SVN_ERR(svn_client__wc_node_get_origin(&origin,
                                              local_abspath, ctx,
                                              pool, pool));
-      src_revnum = origin->rev;
-      src_url = origin->url;
-
-      if (! src_url)
+      if (origin)
+        {
+          src_revnum = origin->rev;
+          src_url = origin->url;
+        }
+      else
         locally_added = TRUE;
     }
 
