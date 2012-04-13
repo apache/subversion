@@ -633,6 +633,8 @@ drive_single_path(svn_editor_t *editor,
   svn_boolean_t do_add = FALSE;
   const char *dst_relpath;
 
+  dst_relpath = svn_uri_skip_ancestor(repos_root, path, scratch_pool);
+
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
   if (path_info->resurrection)
@@ -648,7 +650,7 @@ drive_single_path(svn_editor_t *editor,
          or the destination of the move. */
       if (is_move)
         {
-          if (strcmp(path_info->src_path, path) == 0)
+          if (strcmp(path_info->src_path, dst_relpath) == 0)
             do_delete = TRUE;
           else
             do_add = TRUE;
@@ -659,8 +661,6 @@ drive_single_path(svn_editor_t *editor,
           do_add = TRUE;
         }
     }
-
-  dst_relpath = svn_uri_skip_ancestor(repos_root, path, scratch_pool);
 
   /* ### We need to handle moves here, rather than just pretend they are
          a delete + add. */
