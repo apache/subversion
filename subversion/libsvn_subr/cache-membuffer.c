@@ -1143,7 +1143,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 {
   apr_uint32_t group_index;
   void *buffer = NULL;
-  apr_size_t size;
+  apr_size_t size = 0;
 
   /* find the entry group that will hold the key.
    */
