@@ -920,3 +920,108 @@ svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
   return apr_strtoff(offset, buf, end, base);
 #endif
 }
+
+/* "Precalculated" itoa values for 2 places (including leading zeros).
+ * For maximum performance, make sure all table entries are word-aligned.
+ */
+static const char decimal_table[100][4]
+    = { "00", "01", "02", "03", "04", "05", "06", "07", "08", "09"
+      , "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"
+      , "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
+      , "30", "31", "32", "33", "34", "35", "36", "37", "38", "39"
+      , "40", "41", "42", "43", "44", "45", "46", "47", "48", "49"
+      , "50", "51", "52", "53", "54", "55", "56", "57", "58", "59"
+      , "60", "61", "62", "63", "64", "65", "66", "67", "68", "69"
+      , "70", "71", "72", "73", "74", "75", "76", "77", "78", "79"
+      , "80", "81", "82", "83", "84", "85", "86", "87", "88", "89"
+      , "90", "91", "92", "93", "94", "95", "96", "97", "98", "99"};
+
+/* Copy the two bytes at SOURCE[0] and SOURCE[1] to DEST[0] and DEST[1] */
+#if SVN_UNALIGNED_ACCESS_IS_OK
+#define COPY_TWO_BYTES(dest,source)\
+      *(apr_uint16_t*)(dest) = *(apr_uint16_t*)(source);
+#else
+#define COPY_TWO_BYTES(dest,source) \
+      dest[0] = source[0]; \
+      dest[1] = source[1];
+#endif
+
+apr_size_t
+svn__ui64toa(char * dest, apr_uint64_t number)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_uint32_t reduced;   /* used for 32 bit DIV */
+  char* target;
+
+  /* Small numbers are by far the most common case.
+   * Therefore, we use special code.
+   */
+  if (number < 100)
+    {
+      if (number < 10)
+        {
+          dest[0] = (char)('0' + number);
+          dest[1] = 0;
+          return 1;
+        }
+      else
+        {
+          COPY_TWO_BYTES(dest, decimal_table[(apr_size_t)number]);
+          dest[2] = 0;
+          return 2;
+        }
+    }
+
+  /* Standard code. Write string in pairs of chars back-to-front */
+  buffer[SVN_INT64_BUFFER_SIZE - 1] = 0;
+  target = &buffer[SVN_INT64_BUFFER_SIZE - 3];
+
+  /* Loop may be executed 0 .. 2 times. */
+  while (number >= 100000000)
+    {
+      /* Number is larger than 100^4, i.e. we can write 4x2 chars.
+       * Also, use 32 bit DIVs as these are about twice as fast.
+       */
+      reduced = number % 100000000;
+      number /= 100000000;
+
+      COPY_TWO_BYTES(target - 0, decimal_table[reduced % 100]);
+      reduced /= 100;
+      COPY_TWO_BYTES(target - 2, decimal_table[reduced % 100]);
+      reduced /= 100;
+      COPY_TWO_BYTES(target - 4, decimal_table[reduced % 100]);
+      reduced /= 100;
+      COPY_TWO_BYTES(target - 6, decimal_table[reduced % 100]);
+      target -= 8;
+    }
+
+  /* Now, the number fits into 32 bits, but is larger than 1 */
+  reduced = (apr_uint32_t)(number);
+  while (reduced >= 100)
+    {
+      COPY_TWO_BYTES(target, decimal_table[reduced % 100]);
+      reduced /= 100;
+      target -= 2;
+    }
+
+  /* The number is now smaller than 100 but larger than 1 */
+  COPY_TWO_BYTES(target, decimal_table[reduced]);
+
+  /* Correction for uneven count of places. */
+  if (reduced < 10)
+    ++target;
+
+  /* Copy to target */
+  memcpy(dest, target, &buffer[SVN_INT64_BUFFER_SIZE] - target);
+  return &buffer[SVN_INT64_BUFFER_SIZE] - target - 1;
+}
+
+apr_size_t
+svn__i64toa(char * dest, apr_int64_t number)
+{
+  if (number >= 0)
+    return svn__ui64toa(dest, (apr_uint64_t)number);
+
+  *dest = '-';
+  return svn__ui64toa(dest + 1, (apr_uint64_t)(0-number)) + 1;
+}
