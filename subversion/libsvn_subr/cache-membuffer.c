@@ -584,13 +584,12 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
     }
 }
 
-/* Map a KEY of length LEN to the CACHE and group that shall contain the
- * respective item. Return the hash value in TO_FIND. Returns -1 upon error.
+/* Map a KEY of 16 bytes to the CACHE and group that shall contain the
+ * respective item.
  */
 static apr_uint32_t
 get_group_index(svn_membuffer_t **cache,
-                const apr_uint32_t *key,
-                apr_pool_t *pool)
+                const apr_uint32_t *key)
 {
   apr_uint32_t hash;
 
@@ -1148,7 +1147,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(&cache, key, scratch_pool);
+  group_index = get_group_index(&cache, key);
 
   /* Serialize data data.
    */
@@ -1252,7 +1251,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(&cache, key, result_pool);
+  group_index = get_group_index(&cache, key);
   SVN_MUTEX__WITH_LOCK(cache->mutex,
                        membuffer_cache_get_internal(cache,
                                                     group_index,
@@ -1338,7 +1337,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     }
 }
 
-/* Look for the cache entry identified by KEY and KEY_LEN. FOUND indicates
+/* Look for the cache entry identified by KEY. FOUND indicates
  * whether that entry exists. If not found, *ITEM will be NULL. Otherwise,
  * the DESERIALIZER is called with that entry and the BATON provided
  * and will extract the desired information. The result is set in *ITEM.
@@ -1354,7 +1353,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                             DEBUG_CACHE_MEMBUFFER_TAG_ARG
                             apr_pool_t *result_pool)
 {
-  apr_uint32_t group_index = get_group_index(&cache, key, result_pool);
+  apr_uint32_t group_index = get_group_index(&cache, key);
 
   SVN_MUTEX__WITH_LOCK(cache->mutex,
                        membuffer_cache_get_partial_internal
@@ -1471,7 +1470,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
   return SVN_NO_ERROR;
 }
 
-/* Look for the cache entry identified by KEY and KEY_LEN. If no entry
+/* Look for the cache entry identified by KEY. If no entry
  * has been found, the function returns without modifying the cache.
  * Otherwise, FUNC is called with that entry and the BATON provided
  * and may modify the cache entry. Allocations will be done in POOL.
@@ -1486,7 +1485,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 {
   /* cache item lookup
    */
-  apr_uint32_t group_index = get_group_index(&cache, key, scratch_pool);
+  apr_uint32_t group_index = get_group_index(&cache, key);
   SVN_MUTEX__WITH_LOCK(cache->mutex,
                        membuffer_cache_set_partial_internal
                            (cache, group_index, key, func, baton,
@@ -1577,8 +1576,8 @@ typedef struct svn_membuffer_cache_t
 #define ALLOCATIONS_PER_POOL_CLEAR 10
 
 
-/* Basically concatenate PREFIX and KEY and return the result in FULL_KEY.
- * Allocations will be made in POOL.
+/* Basically calculate a hash value for KEY of length KEY_LEN, combine it
+ * with the CACHE->PREFIX and write the result in CACHE->COMBINED_KEY.
  */
 static void
 combine_key(svn_membuffer_cache_t *cache,
