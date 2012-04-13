@@ -144,14 +144,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1310535, r1310594
-   Handle APR Hash order changes in Ruby bindings test expectations.
-   Justification:
-     Avoid spurious test failures.
-   Votes:
-     +1: joeswatosh
-     +0: hwright
-
  * r1311935
    Fix a pool lifetime problem in the diff code.
    Justification:
