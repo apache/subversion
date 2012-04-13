@@ -755,6 +755,9 @@ svn_ra_get_commit_editor4(svn_ra_session_t *session,
   svn_delta_unlock_func_t unlock_func;
   void *unlock_baton;
   svn_boolean_t send_abs_paths;
+  const char *repos_root;
+  const char *session_url;
+  const char *base_relpath;
 
   ccwb->original_callback = callback;
   ccwb->original_baton = callback_baton;
@@ -769,11 +772,16 @@ svn_ra_get_commit_editor4(svn_ra_session_t *session,
                                              lock_tokens, keep_locks,
                                              result_pool));
 
+  /* Get or calculate the appropriate repos root and base relpath. */
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, scratch_pool));
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
+  base_relpath = svn_uri_skip_ancestor(repos_root, session_url, scratch_pool);
+
   /* Create the Ev2 editor from the Ev1 editor provided by the RA layer. */
   SVN_ERR(svn_delta__editor_from_delta(editor, &exb,
                                    &unlock_func, &unlock_baton,
                                    deditor, dedit_baton, &send_abs_paths,
-                                   NULL, NULL,
+                                   repos_root, base_relpath,
                                    cancel_func, cancel_baton,
                                    session->shim_callbacks->fetch_kind_func,
                                    session->shim_callbacks->fetch_baton,
