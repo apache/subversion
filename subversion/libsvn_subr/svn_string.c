@@ -938,12 +938,12 @@ static const char decimal_table[100][4]
 
 /* Copy the two bytes at SOURCE[0] and SOURCE[1] to DEST[0] and DEST[1] */
 #if SVN_UNALIGNED_ACCESS_IS_OK
-#define COPY_TWO_BYTES(dest,source)\
+#  define COPY_TWO_BYTES(dest,source)\
       *(apr_uint16_t*)(dest) = *(apr_uint16_t*)(source);
 #else
-#define COPY_TWO_BYTES(dest,source) \
-      dest[0] = source[0]; \
-      dest[1] = source[1];
+#  define COPY_TWO_BYTES(dest,source) \
+      (dest)[0] = (source)[0]; \
+      (dest)[1] = (source)[1];
 #endif
 
 apr_size_t
