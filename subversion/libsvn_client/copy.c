@@ -697,7 +697,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *path_infos;
   const char *top_url, *top_url_all, *top_url_dst;
   const char *message, *repos_root;
-  svn_revnum_t youngest = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -951,7 +950,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       /* Figure out the basename that will result from this operation,
          and ensure that we aren't trying to overwrite existing paths.  */
       dst_rel = svn_uri_skip_ancestor(top_url, pair->dst_abspath_or_url, pool);
-      SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest,
+      SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
@@ -1067,7 +1066,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   cb_baton.is_move = is_move;
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
+  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM, paths,
                               path_driver_cb_func, &cb_baton, pool);
   if (err)
     {
