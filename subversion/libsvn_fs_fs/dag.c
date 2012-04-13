@@ -155,11 +155,11 @@ static svn_error_t *
 get_node_revision(node_revision_t **noderev_p,
                   dag_node_t *node)
 {
-  node_revision_t *noderev;
-
   /* If we've already got a copy, there's no need to read it in.  */
   if (! node->node_revision)
     {
+      node_revision_t *noderev;
+
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, node->fs,
                                            node->id, node->node_pool));
       node->node_revision = noderev;
