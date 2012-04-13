@@ -144,13 +144,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1298343
-   Return an error when attempting to MERGE a resource that does not exist.
-   Justification:
-     Avoid asserting.
-   Votes:
-     +1: philip, stsp, hwright
-
  * r1310535, r1310594
    Handle APR Hash order changes in Ruby bindings test expectations.
    Justification:
