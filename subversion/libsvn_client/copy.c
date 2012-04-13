@@ -631,9 +631,11 @@ drive_single_path(svn_editor_t *editor,
   apr_hash_t *props = apr_hash_make(scratch_pool);
   svn_boolean_t do_delete = FALSE;
   svn_boolean_t do_add = FALSE;
-  const char *dst_relpath;
-
-  dst_relpath = svn_uri_skip_ancestor(repos_root, path, scratch_pool);
+  const char *dst_relpath = svn_uri_skip_ancestor(repos_root, path,
+                                                  scratch_pool);
+  const char *src_relpath = svn_uri_skip_ancestor(repos_root,
+                                                  path_info->src_url,
+                                                  scratch_pool);
 
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
@@ -650,7 +652,7 @@ drive_single_path(svn_editor_t *editor,
          or the destination of the move. */
       if (is_move)
         {
-          if (strcmp(path_info->src_path, dst_relpath) == 0)
+          if (strcmp(src_relpath, dst_relpath) == 0)
             do_delete = TRUE;
           else
             do_add = TRUE;
@@ -670,9 +672,6 @@ drive_single_path(svn_editor_t *editor,
     }
   if (do_add)
     {
-      const char *src_relpath = svn_uri_skip_ancestor(repos_root,
-                                                      path_info->src_url,
-                                                      scratch_pool);
       SVN_ERR(svn_path_check_valid(path, scratch_pool));
 
       /* ### Need to get existing props, rather than just set mergeinfo
