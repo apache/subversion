@@ -687,9 +687,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
      UPDATE_ROOT        FALSE
 
-   If the STATUS is normal, and the REPOS_* values are NULL, then the
-   caller should use svn_wc__db_scan_base_repos() to scan up the BASE
-   tree for the repository information.
+   If the STATUS is normal, the REPOS_* values will be non-NULL.
 
    If DEPTH is requested, and the node is NOT a directory, then the
    value will be set to svn_depth_unknown. If LOCAL_ABSPATH is a link,
