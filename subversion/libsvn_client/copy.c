@@ -672,8 +672,6 @@ drive_single_path(svn_editor_t *editor,
     }
   if (do_add)
     {
-      SVN_ERR(svn_path_check_valid(path, scratch_pool));
-
       /* ### Need to get existing props, rather than just set mergeinfo
              on an empty set of props. */
       if (path_info->mergeinfo)
@@ -1097,11 +1095,15 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
 
+      SVN_ERR(svn_path_check_valid(info->dst_path, pool));
       APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
                                     top_url, info->dst_path, pool);
       if (is_move && (! info->resurrection))
-        APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
-                                    top_url, info->src_path, pool);
+        {
+          SVN_ERR(svn_path_check_valid(info->src_path, pool));
+          APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
+                                      top_url, info->src_path, pool);
+        }
     }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
