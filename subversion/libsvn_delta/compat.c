@@ -1644,7 +1644,25 @@ move_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
-  SVN__NOT_IMPLEMENTED();
+  struct editor_baton *eb = baton;
+
+  /* Delete the move source. */
+  SVN_ERR(build(eb, ACTION_DELETE, src_relpath, svn_kind_unknown,
+                NULL, src_revision, NULL, NULL, NULL, SVN_INVALID_REVNUM,
+                scratch_pool));
+
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      /* We need to add the delete action for the replaced target. */
+      SVN_ERR(build(eb, ACTION_DELETE, dst_relpath, svn_kind_unknown,
+                    NULL, SVN_INVALID_REVNUM,
+                    NULL, NULL, NULL, SVN_INVALID_REVNUM, scratch_pool));
+    }
+
+  SVN_ERR(build(eb, ACTION_COPY, dst_relpath, svn_kind_unknown,
+                src_relpath, src_revision, NULL, NULL, NULL,
+                SVN_INVALID_REVNUM, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
