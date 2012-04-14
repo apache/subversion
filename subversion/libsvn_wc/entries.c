@@ -236,15 +236,6 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                        entry_abspath,
                                        result_pool,
                                        scratch_pool));
-
-      if (*repos_relpath == NULL)
-        SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath,
-                                           &entry->repos,
-                                           &entry->uuid,
-                                           db,
-                                           entry_abspath,
-                                           result_pool,
-                                           scratch_pool));
     }
   else
     {

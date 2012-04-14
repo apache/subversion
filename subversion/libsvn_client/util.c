@@ -257,22 +257,8 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
     }
   else
     {
-      /* The node has no location in the repository. It's unversioned or
-       * locally added or locally deleted.
-       *
-       * If it's locally added or deleted, find the repository root
-       * URL and UUID anyway, and leave the node URL and revision as NULL
-       * and INVALID.  If it's unversioned, this will throw an error. */
-      SVN_ERR(svn_wc__node_get_repos_info(&(*origin_p)->repos_root_url,
-                                          &(*origin_p)->repos_uuid,
-                                          ctx->wc_ctx, wc_abspath,
-                                          result_pool, scratch_pool));
-      (*origin_p)->rev = SVN_INVALID_REVNUM;
-      (*origin_p)->url = NULL;
+      *origin_p = NULL;
     }
-
-  SVN_ERR_ASSERT((*origin_p)->repos_root_url);
-  SVN_ERR_ASSERT((*origin_p)->repos_uuid);
   return SVN_NO_ERROR;
 }
 

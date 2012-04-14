@@ -26,6 +26,7 @@
 #include "id.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_temp_serializer.h"
+#include "private/svn_string_private.h"
 
 
 typedef struct id_private_t {
@@ -88,22 +89,25 @@ svn_string_t *
 svn_fs_fs__id_unparse(const svn_fs_id_t *id,
                       apr_pool_t *pool)
 {
-  const char *txn_rev_id;
   id_private_t *pvt = id->fsap_data;
 
   if ((! pvt->txn_id))
     {
-      txn_rev_id = apr_psprintf(pool, "%ld/%"
-                                APR_OFF_T_FMT, pvt->rev, pvt->offset);
+      char rev_string[SVN_INT64_BUFFER_SIZE];
+      char offset_string[SVN_INT64_BUFFER_SIZE];
+
+      svn__i64toa(rev_string, pvt->rev);
+      svn__i64toa(offset_string, pvt->offset);
+      return svn_string_createf(pool, "%s.%s.r%s/%s",
+                                pvt->node_id, pvt->copy_id,
+                                rev_string, offset_string);
     }
   else
     {
-      txn_rev_id = pvt->txn_id;
+      return svn_string_createf(pool, "%s.%s.t%s",
+                                pvt->node_id, pvt->copy_id,
+                                pvt->txn_id);
     }
-  return svn_string_createf(pool, "%s.%s.%c%s",
-                            pvt->node_id, pvt->copy_id,
-                            (pvt->txn_id ? 't' : 'r'),
-                            txn_rev_id);
 }
 
 
