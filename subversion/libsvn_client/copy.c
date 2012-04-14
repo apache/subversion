@@ -768,6 +768,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
+      const char *relpath;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
       if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
@@ -808,22 +809,21 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                 pool);
       info->src_revnum = pair->src_revnum;
       info->resurrection = FALSE;
-      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
-    }
-
-  /* Check each src/dst pair for resurrection, and verify that TOP_URL
-     is anchored high enough to cover all the editor_t activities
-     required for this operation.  */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
-                                               path_driver_info_t *);
 
       /* Source and destination are the same?  It's a resurrection. */
       if (strcmp(pair->src_abspath_or_url, pair->dst_abspath_or_url) == 0)
         info->resurrection = TRUE;
+
+      relpath = svn_uri_skip_ancestor(pair->dst_abspath_or_url,
+                                      pair->src_abspath_or_url,
+                                      pool);
+      if ((strcmp(pair->dst_abspath_or_url, repos_root) != 0)
+          && (relpath != NULL && *relpath != '\0'))
+        {
+          info->resurrection = TRUE;
+        }
+
+      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
 
   /* If we're allowed to create nonexistent parent directories of our
@@ -848,28 +848,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       qsort(new_dirs->elts, new_dirs->nelts, new_dirs->elt_size,
             svn_sort_compare_paths);
-    }
-
-  /* For each src/dst pair, check to see if that SRC_URL is a child of
-     the DST_URL (excepting the case where DST_URL is the repo root).
-     If it is, and the parent of DST_URL is the current TOP_URL, then we
-     need to reparent the session one directory higher, the parent of
-     the DST_URL. */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
-                                               path_driver_info_t *);
-      const char *relpath = svn_uri_skip_ancestor(pair->dst_abspath_or_url,
-                                                  pair->src_abspath_or_url,
-                                                  pool);
-
-      if ((strcmp(pair->dst_abspath_or_url, repos_root) != 0)
-          && (relpath != NULL && *relpath != '\0'))
-        {
-          info->resurrection = TRUE;
-        }
     }
 
   /* Get the portions of the SRC and DST URLs that are relative to
