@@ -771,6 +771,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                 pair->dst_abspath_or_url,
                                                 pool);
       info->src_revnum = pair->src_revnum;
+      SVN_ERR(svn_path_check_valid(info->dst_relpath, pool));
+      SVN_ERR(svn_path_check_valid(info->src_relpath, pool));
 
       /* Verify that the source exists and the proposed destination does not,
          and toss what we've learned into the INFO array.  (For copies --
