@@ -643,6 +643,7 @@ drive_editor(svn_editor_t *editor,
              apr_array_header_t *paths,
              apr_hash_t *action_hash,
              apr_array_header_t *new_dirs,
+             apr_array_header_t *path_infos,
              svn_boolean_t is_move,
              const char *repos_root,
              apr_pool_t *scratch_pool)
@@ -653,19 +654,43 @@ drive_editor(svn_editor_t *editor,
 
   if (new_dirs)
     {
-      apr_array_header_t *children = apr_array_make(scratch_pool, 1,
-                                                sizeof(const char *));
       apr_hash_t *props = apr_hash_make(scratch_pool);
 
       /* These are directories which we just need to add. */
       for (i = 0; i < new_dirs->nelts; i++)
         {
           const char *dir = APR_ARRAY_IDX(new_dirs, i, const char *);
+          apr_array_header_t *children = apr_array_make(scratch_pool, 1,
+                                                        sizeof(const char *));
          
-          /* ### The children param needs to be populated correctly. */
+          if (i < new_dirs->nelts - 1)
+            {
+              /* The only child of this directory is the next one in the
+                 list. */
+              APR_ARRAY_PUSH(children, const char *) =
+                    svn_relpath_basename(APR_ARRAY_IDX(new_dirs, i + 1,
+                                                       const char *),
+                                         scratch_pool);
+            }
+          else
+            {
+              /* Handle the last directory.  It's children list needs to
+                 include all the of the various dest paths. */
+              int j;
+
+              for (j = 0; j < path_infos->nelts; j++)
+                {
+                  path_driver_info_t *info = APR_ARRAY_IDX(path_infos, j,
+                                                        path_driver_info_t *);
+
+                  APR_ARRAY_PUSH(children, const char *) =
+                    svn_relpath_basename(info->dst_relpath, scratch_pool);
+                }
+            }
           SVN_ERR(svn_editor_add_directory(editor, dir, children, props,
                                            SVN_INVALID_REVNUM));
         }
+
     }
 
   iterpool = svn_pool_create(scratch_pool);
@@ -806,6 +831,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      directories of the destination that don't yet exist.  */
   if (make_parents)
     {
+      const char *dir;
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, 0,
                                                path_driver_info_t *);
 
@@ -817,8 +843,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
          another.  Therefore, we need only to check for the
          nonexistent paths between TOP_URL and *one* of our
          destinations to find nonexistent parents of all of them.  */
-      SVN_ERR(find_absent_parents1(ra_session, info->dst_relpath, new_dirs,
-                                   pool));
+      dir = svn_relpath_dirname(info->dst_relpath, pool);
+      SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
 
       qsort(new_dirs->elts, new_dirs->nelts, new_dirs->elt_size,
             svn_sort_compare_paths);
@@ -969,7 +995,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     pool, pool));
 
   return svn_error_trace(drive_editor(editor, paths, action_hash, new_dirs,
-                                      is_move, repos_root, pool));
+                                      path_infos, is_move, repos_root, pool));
 }
 
 /* Baton for check_url_kind */
