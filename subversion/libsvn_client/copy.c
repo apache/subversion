@@ -582,8 +582,15 @@ drive_single_path(svn_editor_t *editor,
          a delete + add. */
   if (is_move)
     {
-      SVN_ERR(svn_editor_delete(editor, path_info->src_relpath,
-                                SVN_INVALID_REVNUM));
+      SVN_ERR(svn_editor_move(editor, path_info->src_relpath,
+                              path_info->src_revnum, path_info->dst_relpath,
+                              SVN_INVALID_REVNUM));
+    }
+  else
+    {
+      SVN_ERR(svn_editor_copy(editor, path_info->src_relpath,
+                              path_info->src_revnum, path_info->dst_relpath,
+                              SVN_INVALID_REVNUM));
     }
 
   /* ### Need to get existing props, rather than just set mergeinfo
@@ -591,10 +598,6 @@ drive_single_path(svn_editor_t *editor,
   if (path_info->mergeinfo)
     apr_hash_set(props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
                  path_info->mergeinfo);
-
-  SVN_ERR(svn_editor_copy(editor, path_info->src_relpath,
-                          path_info->src_revnum, path_info->dst_relpath,
-                          SVN_INVALID_REVNUM));
 
   if (path_info->src_kind == svn_node_file)
     SVN_ERR(svn_editor_alter_file(editor, path_info->dst_relpath,
