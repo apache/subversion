@@ -123,6 +123,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1200896, r1203977, r1205968, r1309992, r1310378 and r1310428
+   Various updates to the Emacs client code (dsvn.el and vc-svn.el).
+   Justification:
+     Make the elisp code work better with svn 1.7 and modern Emacs
+     versions, and general improvements for the benefit of Emacs users.
+   Votes:
+     +1: mattiase
+
 Veto-blocked changes:
 =====================
 
