@@ -484,7 +484,6 @@ typedef struct path_driver_info_t
   const char *dst_relpath;
   svn_node_kind_t src_kind;
   svn_revnum_t src_revnum;
-  svn_boolean_t resurrection;
   svn_string_t *mergeinfo;  /* the new mergeinfo for the target */
 } path_driver_info_t;
 
@@ -572,76 +571,43 @@ find_absent_parents2(svn_ra_session_t *ra_session,
 
 static svn_error_t *
 drive_single_path(svn_editor_t *editor,
-                  const char *dst_relpath,
                   path_driver_info_t *path_info,
                   svn_boolean_t is_move,
                   const char *repos_root,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = apr_hash_make(scratch_pool);
-  svn_boolean_t do_delete = FALSE;
-  svn_boolean_t do_add = FALSE;
-
-  /* If this is a resurrection, we know the source and dest paths are
-     the same, and that our driver will only be calling us once.  */
-  if (path_info->resurrection)
-    {
-      /* If this is a move, we do nothing.  Otherwise, we do the copy.  */
-      if (!is_move)
-        do_add = TRUE;
-    }
-  /* Not a resurrection. */
-  else
-    {
-      /* If this is a move, we check PATH to see if it is the source
-         or the destination of the move. */
-      if (is_move)
-        {
-          if (strcmp(path_info->src_relpath, dst_relpath) == 0)
-            do_delete = TRUE;
-          else
-            do_add = TRUE;
-        }
-      /* Not a move?  This must just be the copy addition. */
-      else
-        {
-          do_add = TRUE;
-        }
-    }
 
   /* ### We need to handle moves here, rather than just pretend they are
          a delete + add. */
-  if (do_delete)
+  if (is_move)
     {
-      SVN_ERR(svn_editor_delete(editor, dst_relpath, SVN_INVALID_REVNUM));
+      SVN_ERR(svn_editor_delete(editor, path_info->src_relpath,
+                                SVN_INVALID_REVNUM));
     }
-  if (do_add)
-    {
-      /* ### Need to get existing props, rather than just set mergeinfo
-             on an empty set of props. */
-      if (path_info->mergeinfo)
-        apr_hash_set(props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
-                     path_info->mergeinfo);
 
-      SVN_ERR(svn_editor_copy(editor,
-                              path_info->src_relpath, path_info->src_revnum,
-                              dst_relpath, SVN_INVALID_REVNUM));
+  /* ### Need to get existing props, rather than just set mergeinfo
+         on an empty set of props. */
+  if (path_info->mergeinfo)
+    apr_hash_set(props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
+                 path_info->mergeinfo);
 
-      if (path_info->src_kind == svn_node_file)
-        SVN_ERR(svn_editor_alter_file(editor, dst_relpath, SVN_INVALID_REVNUM,
-                                      props, NULL, NULL));
-      else
-        SVN_ERR(svn_editor_alter_directory(editor, dst_relpath,
-                                           SVN_INVALID_REVNUM, props));
-    }
+  SVN_ERR(svn_editor_copy(editor, path_info->src_relpath,
+                          path_info->src_revnum, path_info->dst_relpath,
+                          SVN_INVALID_REVNUM));
+
+  if (path_info->src_kind == svn_node_file)
+    SVN_ERR(svn_editor_alter_file(editor, path_info->dst_relpath,
+                                  SVN_INVALID_REVNUM, props, NULL, NULL));
+  else
+    SVN_ERR(svn_editor_alter_directory(editor, path_info->dst_relpath,
+                                       SVN_INVALID_REVNUM, props));
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 drive_editor(svn_editor_t *editor,
-             apr_array_header_t *paths,
-             apr_hash_t *action_hash,
              apr_array_header_t *new_dirs,
              apr_array_header_t *path_infos,
              svn_boolean_t is_move,
@@ -694,15 +660,14 @@ drive_editor(svn_editor_t *editor,
     }
 
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < paths->nelts; i++)
+  for (i = 0; i < path_infos->nelts; i++)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      path_driver_info_t *path_info = apr_hash_get(action_hash, path,
-                                                   APR_HASH_KEY_STRING);
+      path_driver_info_t *path_info = APR_ARRAY_IDX(path_infos, i,
+                                                    path_driver_info_t *);
 
       svn_pool_clear(iterpool);
 
-      err = drive_single_path(editor, path, path_info, is_move, repos_root,
+      err = drive_single_path(editor, path_info, is_move, repos_root,
                               iterpool);
       if (err)
         break;
@@ -730,8 +695,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
 {
-  apr_array_header_t *paths;
-  apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
   const char *message, *repos_root;
   svn_ra_session_t *ra_session = NULL;
@@ -768,7 +731,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
-      const char *relpath;
       svn_node_kind_t dst_kind;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
@@ -809,22 +771,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                 pair->dst_abspath_or_url,
                                                 pool);
       info->src_revnum = pair->src_revnum;
-      info->resurrection = FALSE;
-
-      /* Source and destination are the same?  It's a resurrection. */
-      if (strcmp(pair->src_abspath_or_url, pair->dst_abspath_or_url) == 0)
-        info->resurrection = TRUE;
-
-      relpath = svn_uri_skip_ancestor(pair->dst_abspath_or_url,
-                                      pair->src_abspath_or_url,
-                                      pool);
-      if ((strcmp(pair->dst_abspath_or_url, repos_root) != 0)
-          && (relpath != NULL && *relpath != '\0'))
-        {
-          info->resurrection = TRUE;
-        }
-
-      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
 
       /* Verify that the source exists and the proposed destination does not,
          and toss what we've learned into the INFO array.  (For copies --
@@ -846,10 +792,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                  _("Path '%s' already exists"),
                                  info->dst_relpath);
 
-      apr_hash_set(action_hash, info->dst_relpath, APR_HASH_KEY_STRING, info);
-      if (is_move && (! info->resurrection))
-        apr_hash_set(action_hash, info->src_relpath, APR_HASH_KEY_STRING,
-                     info);
+      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
 
   /* If we're allowed to create nonexistent parent directories of our
@@ -911,7 +854,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
-          if (is_move && (! info->resurrection))
+          if (is_move)
             {
               item = apr_pcalloc(pool, sizeof(*item));
               item->url = svn_path_url_add_component2(repos_root,
@@ -929,22 +872,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   else
     message = "";
 
-  /* Setup our copy destinations and move sources (if any). */
-  paths = apr_array_make(pool, 2 * copy_pairs->nelts, sizeof(const char *));
-  for (i = 0; i < path_infos->nelts; i++)
-    {
-      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
-                                               path_driver_info_t *);
-
-      SVN_ERR(svn_path_check_valid(info->dst_relpath, pool));
-      APR_ARRAY_PUSH(paths, const char *) = info->dst_relpath;
-      if (is_move && (! info->resurrection))
-        {
-          SVN_ERR(svn_path_check_valid(info->src_relpath, pool));
-          APR_ARRAY_PUSH(paths, const char *) = info->src_relpath;
-        }
-    }
-
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, pool));
 
@@ -960,8 +887,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
-  return svn_error_trace(drive_editor(editor, paths, action_hash, new_dirs,
-                                      path_infos, is_move, repos_root, pool));
+  return svn_error_trace(drive_editor(editor, new_dirs, path_infos, is_move,
+                                      repos_root, pool));
 }
 
 /* Baton for check_url_kind */
