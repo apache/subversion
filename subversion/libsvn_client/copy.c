@@ -37,6 +37,8 @@
 #include "svn_time.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_pools.h"
 
 #include "client.h"
@@ -478,9 +480,8 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
 /* Path-specific state used as part of path_driver_cb_baton. */
 typedef struct path_driver_info_t
 {
-  const char *src_url;
-  const char *src_path;
-  const char *dst_path;
+  const char *src_relpath;
+  const char *dst_relpath;
   svn_node_kind_t src_kind;
   svn_revnum_t src_revnum;
   svn_boolean_t resurrection;
@@ -571,7 +572,7 @@ find_absent_parents2(svn_ra_session_t *ra_session,
 
 static svn_error_t *
 drive_single_path(svn_editor_t *editor,
-                  const char *path,
+                  const char *dst_relpath,
                   path_driver_info_t *path_info,
                   svn_boolean_t is_move,
                   const char *repos_root,
@@ -580,11 +581,6 @@ drive_single_path(svn_editor_t *editor,
   apr_hash_t *props = apr_hash_make(scratch_pool);
   svn_boolean_t do_delete = FALSE;
   svn_boolean_t do_add = FALSE;
-  const char *dst_relpath = svn_uri_skip_ancestor(repos_root, path,
-                                                  scratch_pool);
-  const char *src_relpath = svn_uri_skip_ancestor(repos_root,
-                                                  path_info->src_url,
-                                                  scratch_pool);
 
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
@@ -601,7 +597,7 @@ drive_single_path(svn_editor_t *editor,
          or the destination of the move. */
       if (is_move)
         {
-          if (strcmp(src_relpath, dst_relpath) == 0)
+          if (strcmp(path_info->src_relpath, dst_relpath) == 0)
             do_delete = TRUE;
           else
             do_add = TRUE;
@@ -628,7 +624,7 @@ drive_single_path(svn_editor_t *editor,
                      path_info->mergeinfo);
 
       SVN_ERR(svn_editor_copy(editor,
-                              src_relpath, path_info->src_revnum,
+                              path_info->src_relpath, path_info->src_revnum,
                               dst_relpath, SVN_INVALID_REVNUM));
 
       if (path_info->src_kind == svn_node_file)
@@ -712,7 +708,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *paths;
   apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
-  const char *top_url, *top_url_all, *top_url_dst;
   const char *message, *repos_root;
   svn_ra_session_t *ra_session = NULL;
   svn_editor_t *editor;
@@ -731,6 +726,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+
+  /* We're going to reparent the session to the repos_root, and then drive
+     the Ev2 from there.  This might have issue #3242 implications. */
+  SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
   /* Verify that sources and destinations are all at or under
      REPOS_ROOT.  While here, create a path_info struct for each
@@ -755,6 +754,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Run the history function to get the source's URL and revnum in the
          operational revision. */
+      /* ### Gah!  We have to wrap this call in a reparent... */
       SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
       SVN_ERR(svn_client__repos_locations(&pair->src_abspath_or_url,
                                           &pair->src_revnum,
@@ -764,9 +764,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                           &pair->src_peg_revision,
                                           &pair->src_op_revision, NULL,
                                           ctx, pool));
+      SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
       /* Go ahead and grab mergeinfo from the source, too. */
-      SVN_ERR(svn_ra_reparent(ra_session, pair->src_abspath_or_url, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(
                 &mergeinfo, ra_session,
                 pair->src_abspath_or_url, pair->src_revnum,
@@ -775,23 +775,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
 
       /* Plop an INFO structure onto our array thereof. */
-      info->src_url = pair->src_abspath_or_url;
+      info->src_relpath = svn_uri_skip_ancestor(repos_root,
+                                                pair->src_abspath_or_url,
+                                                pool);
+      info->dst_relpath = svn_uri_skip_ancestor(repos_root,
+                                                pair->dst_abspath_or_url,
+                                                pool);
       info->src_revnum = pair->src_revnum;
       info->resurrection = FALSE;
       APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
-
-  /* If this is a move, we have to open our session to the longest
-     path common to all SRC_URLS and DST_URLS in the repository so we
-     can do existence checks on all paths, and so we can operate on
-     all paths in the case of a move.  But if this is *not* a move,
-     then opening our session at the longest path common to sources
-     *and* destinations might be an optimization when the user is
-     authorized to access all that stuff, but could cause the
-     operation to fail altogether otherwise.  See issue #3242.  */
-  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all,
-                                  pool));
-  top_url = is_move ? top_url_all : top_url_dst;
 
   /* Check each src/dst pair for resurrection, and verify that TOP_URL
      is anchored high enough to cover all the editor_t activities
@@ -806,95 +799,29 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       /* Source and destination are the same?  It's a resurrection. */
       if (strcmp(pair->src_abspath_or_url, pair->dst_abspath_or_url) == 0)
         info->resurrection = TRUE;
-
-      /* We need to add each dst_URL, and (in a move) we'll need to
-         delete each src_URL.  Our selection of TOP_URL so far ensures
-         that all our destination URLs (and source URLs, for moves)
-         are at least as deep as TOP_URL, but we need to make sure
-         that TOP_URL is an *ancestor* of all our to-be-edited paths.
-
-         Issue #683 is demonstrates this scenario.  If you're
-         resurrecting a deleted item like this: 'svn cp -rN src_URL
-         dst_URL', then src_URL == dst_URL == top_url.  In this
-         situation, we want to open an RA session to be at least the
-         *parent* of all three. */
-      if ((strcmp(top_url, pair->dst_abspath_or_url) == 0)
-          && (strcmp(top_url, repos_root) != 0))
-        {
-          top_url = svn_uri_dirname(top_url, pool);
-        }
-      if (is_move
-          && (strcmp(top_url, pair->src_abspath_or_url) == 0)
-          && (strcmp(top_url, repos_root) != 0))
-        {
-          top_url = svn_uri_dirname(top_url, pool);
-        }
     }
-
-  /* Point the RA session to our current TOP_URL. */
-  SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
 
   /* If we're allowed to create nonexistent parent directories of our
      destinations, then make a list in NEW_DIRS of the parent
      directories of the destination that don't yet exist.  */
   if (make_parents)
     {
+      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, 0,
+                                               path_driver_info_t *);
+
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
 
-      /* If this is a move, TOP_URL is at least the common ancestor of
-         all the paths (sources and destinations) involved.  Assuming
-         the sources exist (which is fair, because if they don't, this
-         whole operation will fail anyway), TOP_URL must also exist.
-         So it's the paths between TOP_URL and the destinations which
-         we have to check for existence.  But here, we take advantage
-         of the knowledge of our caller.  We know that if there are
-         multiple copy/move operations being requested, then the
+      /* We take advantage of the knowledge of our caller.  We know that
+         if there are multiple copy/move operations being requested, then the
          destinations of the copies/moves will all be siblings of one
          another.  Therefore, we need only to check for the
          nonexistent paths between TOP_URL and *one* of our
          destinations to find nonexistent parents of all of them.  */
-      if (is_move)
-        {
-          /* Imagine a situation where the user tries to copy an
-             existing source directory to nonexistent directory with
-             --parents options specified:
+      SVN_ERR(find_absent_parents1(ra_session, info->dst_relpath, new_dirs,
+                                   pool));
 
-                svn copy --parents URL/src URL/dst
-
-             where src exists and dst does not.  If the dirname of the
-             destination path is equal to TOP_URL,
-             do not try to add dst to the NEW_DIRS list since it
-             will be added to the commit items array later in this
-             function. */
-          const char *dir = svn_uri_skip_ancestor(
-                              top_url,
-                              svn_uri_dirname(first_pair->dst_abspath_or_url,
-                                              pool),
-                              pool);
-          if (dir && *dir)
-            SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
-        }
-      /* If, however, this is *not* a move, TOP_URL only points to the
-         common ancestor of our destination path(s), or possibly one
-         level higher.  We'll need to do an existence crawl toward the
-         root of the repository, starting with one of our destinations
-         (see "... take advantage of the knowledge of our caller ..."
-         above), and possibly adjusting TOP_URL as we go. */
-      else
-        {
-          apr_array_header_t *new_urls =
-            apr_array_make(pool, 0, sizeof(const char *));
-          SVN_ERR(find_absent_parents2(ra_session, &top_url, new_urls, pool));
-
-          /* Convert absolute URLs into relpaths relative to TOP_URL. */
-          for (i = 0; i < new_urls->nelts; i++)
-            {
-              const char *new_url = APR_ARRAY_IDX(new_urls, i, const char *);
-              const char *dir = svn_uri_skip_ancestor(top_url, new_url, pool);
-
-              APR_ARRAY_PUSH(new_dirs, const char *) = dir;
-            }
-        }
+      qsort(new_dirs->elts, new_dirs->nelts, new_dirs->elt_size,
+            svn_sort_compare_paths);
     }
 
   /* For each src/dst pair, check to see if that SRC_URL is a child of
@@ -916,8 +843,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           && (relpath != NULL && *relpath != '\0'))
         {
           info->resurrection = TRUE;
-          top_url = svn_uri_dirname(top_url, pool);
-          SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
         }
     }
 
@@ -935,28 +860,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       path_driver_info_t *info =
         APR_ARRAY_IDX(path_infos, i, path_driver_info_t *);
       svn_node_kind_t dst_kind;
-      const char *src_rel, *dst_rel;
 
-      src_rel = svn_uri_skip_ancestor(top_url, pair->src_abspath_or_url, pool);
-      if (src_rel)
-        {
-          SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
-                                    &info->src_kind, pool));
-        }
-      else
-        {
-          const char *old_url;
+      SVN_ERR(svn_ra_check_path(ra_session, info->src_relpath,
+                                pair->src_revnum, &info->src_kind, pool));
 
-          src_rel = NULL;
-          SVN_ERR_ASSERT(! is_move);
-
-          SVN_ERR(svn_client__ensure_ra_session_url(&old_url, ra_session,
-                                                    pair->src_abspath_or_url,
-                                                    pool));
-          SVN_ERR(svn_ra_check_path(ra_session, "", pair->src_revnum,
-                                    &info->src_kind, pool));
-          SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
-        }
       if (info->src_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("Path '%s' does not exist in revision %ld"),
@@ -964,24 +871,17 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Figure out the basename that will result from this operation,
          and ensure that we aren't trying to overwrite existing paths.  */
-      dst_rel = svn_uri_skip_ancestor(top_url, pair->dst_abspath_or_url, pool);
-      SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
-                                &dst_kind, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, info->dst_relpath,
+                                SVN_INVALID_REVNUM, &dst_kind, pool));
       if (dst_kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Path '%s' already exists"), dst_rel);
+                                 _("Path '%s' already exists"),
+                                 info->dst_relpath);
 
-      /* More info for our INFO structure.  */
-      info->src_path = src_rel;
-      info->dst_path = dst_rel;
-
-      apr_hash_set(action_hash, svn_path_url_add_component2(
-                                    top_url, info->dst_path, pool),
-                   APR_HASH_KEY_STRING, info);
+      apr_hash_set(action_hash, info->dst_relpath, APR_HASH_KEY_STRING, info);
       if (is_move && (! info->resurrection))
-        apr_hash_set(action_hash, svn_path_url_add_component2(
-                                    top_url, info->src_path, pool),
-                     APR_HASH_KEY_STRING, info);
+        apr_hash_set(action_hash, info->src_relpath, APR_HASH_KEY_STRING,
+                     info);
     }
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -1001,7 +901,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
               const char *relpath = APR_ARRAY_IDX(new_dirs, i, const char *);
 
               item = svn_client_commit_item3_create(pool);
-              item->url = svn_path_url_add_component2(top_url, relpath, pool);
+              item->url = svn_path_url_add_component2(repos_root, relpath,
+                                                      pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1013,16 +914,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                    path_driver_info_t *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_url_add_component2(top_url, info->dst_path,
-                                                  pool);
+          item->url = svn_path_url_add_component2(repos_root,
+                                                  info->dst_relpath, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
           if (is_move && (! info->resurrection))
             {
               item = apr_pcalloc(pool, sizeof(*item));
-              item->url = svn_path_url_add_component2(top_url, info->src_path,
-                                                      pool);
+              item->url = svn_path_url_add_component2(repos_root,
+                                                      info->src_relpath, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1043,14 +944,12 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
 
-      SVN_ERR(svn_path_check_valid(info->dst_path, pool));
-      APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
-                                    top_url, info->dst_path, pool);
+      SVN_ERR(svn_path_check_valid(info->dst_relpath, pool));
+      APR_ARRAY_PUSH(paths, const char *) = info->dst_relpath;
       if (is_move && (! info->resurrection))
         {
-          SVN_ERR(svn_path_check_valid(info->src_path, pool));
-          APR_ARRAY_PUSH(paths, const char *) = svn_path_url_add_component2(
-                                      top_url, info->src_path, pool);
+          SVN_ERR(svn_path_check_valid(info->src_relpath, pool));
+          APR_ARRAY_PUSH(paths, const char *) = info->src_relpath;
         }
     }
 
