@@ -21,6 +21,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new --ignore-properties option for 'svn diff' (r1239553. -617)
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
+    * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
 
   - Client-side bugfixes:
     *
@@ -40,6 +41,27 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
   - Bindings:
     *
+
+
+Version 1.7.5
+(26 Apr 2012, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.5
+
+  User-visible changes:
+    * avoid potential segfault when canonicalizing properties (r1296369)
+    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
+    * improve memory and file-handle management with externals (issue #4130)
+    * ra_serf: convert assertions to errors: MERGE fails (r1302417)
+    * mod_dav_svn: error on MERGE of non-existent resource (r1298343)
+    * fix undefined behaviour during multi-segment reverse merges (issue #4144)
+    * fix potential pool lifetime problem in the diff code (r1311935)
+    * libsvn_wc: reduce resources use while looking for the wc root (r1306334)
+    * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
+    * fix regression with deep commit followed by depthy update (issue #4136)
+
+  Developer-visible changes:
+    * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
+    * swig-rb tests: avoid FAILs on APR hash order (r1310535, r1310594)
 
 
 Version 1.7.4

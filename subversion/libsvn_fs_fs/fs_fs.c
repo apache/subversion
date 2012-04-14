@@ -1082,6 +1082,34 @@ read_config(svn_fs_t *fs,
   else
     ffd->rep_sharing_allowed = FALSE;
 
+  /* Initialize ffd->deltify_directories. */
+  if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
+    {
+      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
+                                  CONFIG_SECTION_DELTIFICATION,
+                                  CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
+                                  FALSE));
+      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
+                                  CONFIG_SECTION_DELTIFICATION,
+                                  CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
+                                  FALSE));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
+                                   CONFIG_SECTION_DELTIFICATION,
+                                   CONFIG_OPTION_MAX_DELTIFICATION_WALK,
+                                   SVN_FS_FS_MAX_DELTIFICATION_WALK));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_linear_deltification,
+                                   CONFIG_SECTION_DELTIFICATION,
+                                   CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
+                                   SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
+    }
+  else
+    {
+      ffd->deltify_directories = FALSE;
+      ffd->deltify_properties = FALSE;
+      ffd->max_deltification_walk = SVN_FS_FS_MAX_DELTIFICATION_WALK;
+      ffd->max_linear_deltification = SVN_FS_FS_MAX_LINEAR_DELTIFICATION;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1130,7 +1158,67 @@ write_config(svn_fs_t *fs,
 "### 'svnadmin verify' will check the rep-cache regardless of this setting." NL
 "### rep-sharing is enabled by default."                                     NL
 "# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
-
+""                                                                           NL
+"[" CONFIG_SECTION_DELTIFICATION "]"                                         NL
+"### To conserve space, the filesystem stores data as differences against"   NL
+"### existing representations.  This comes at a slight cost in performance," NL
+"### as calculating differences can increase commit times.  Reading data"    NL
+"### will also create higher CPU load and the data will be fragmented."      NL
+"### Since deltification tends to save significant amounts of disk space,"   NL
+"### the overall I/O load can actually be lower."                            NL
+"###"                                                                        NL
+"### The options in this section allow for tuning the deltification"         NL
+"### strategy.  Their effects on data size and server performance may vary"  NL
+"### from one repository to another.  Versions prior to 1.8 will ignore"     NL
+"### this section."                                                          NL
+"###"                                                                        NL
+"### The following parameter enables deltification for directories. It can"  NL
+"### be switched on and off at will, but for best space-saving results"      NL
+"### should be enabled consistently over the life of the repository."        NL
+"### Repositories containing large directories will benefit greatly."        NL
+"### In rarely read repositories, the I/O overhead may be significant as"    NL
+"### cache hit rates will most likely be low"                                NL
+"### directory deltification is disabled by default."                        NL
+"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
+"###"                                                                        NL
+"### The following parameter enables deltification for properties on files"  NL
+"### and directories.  Overall, this is a minor tuning option but can save"  NL
+"### some disk space if frequently merge or if you frequently change node"   NL
+"### properties.  You should not activate this if rep-sharing has been"      NL
+"### disabled."                                                              NL
+"### property deltification is disabled by default."                         NL
+"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
+"###"                                                                        NL
+"### During commit, the server may need to walk the whole change history of" NL
+"### of a given node to find a suitable deltification base.  This linear"    NL
+"### process can impact commit times, svnadmin load and similar operations." NL
+"### This setting limits the depth of the deltification history.  If the"    NL
+"### threshold has been reached, the node will be stored as fulltext and a"  NL
+"### new deltification history begins."                                      NL
+"### Note, this is unrelated to svn log."                                    NL
+"### Very large values rarely provide significant additional savings but"    NL
+"### can impact performance greatly - in particular if directory"            NL
+"### deltification has been activated.  Very small values may be useful in"  NL
+"### repositories that are dominated by large, changing binaries."           NL
+"### Should be a power of two minus 1.  A value of 0 will effectively"       NL
+"### disable deltification."                                                 NL
+"### For 1.8, the default value is 1023; earlier versions have no limit."    NL
+"# " CONFIG_OPTION_MAX_DELTIFICATION_WALK " = 1023"                          NL
+"###"                                                                        NL
+"### The skip-delta scheme used by FSFS tends to repeatably store redundant" NL
+"### delta information where a simple delta against the latest version is"   NL
+"### often smaller.  By default, 1.8+ will therefore use skip deltas only"   NL
+"### after the linear chain of deltas has grown beyond the threshold"        NL
+"### specified by this setting."                                             NL
+"### Values up to 64 can result in some reduction in repository size for"    NL
+"### the cost of quickly increasing I/O and CPU costs. Similarly, smaller"   NL
+"### numbers can reduce those costs at the cost of more disk space.  For"    NL
+"### rarely read repositories or those containing larger binaries, this may" NL
+"### present a better trade-off."                                            NL
+"### Should be a power of two.  A value of 1 or smaller will cause the"      NL
+"### exclusive use of skip-deltas (as in pre-1.8)."                          NL
+"### For 1.8, the default value is 16; earlier versions use 1."              NL
+"# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -3536,8 +3624,9 @@ read_representation(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          fulltext_cache_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
-                                      rep->revision, rep->offset);
+          fulltext_cache_key = svn_fs_fs__combine_two_numbers(rep->revision,
+                                                              rep->offset,
+                                                              pool);
           SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
                                  ffd->fulltext_cache, fulltext_cache_key,
                                  pool));
@@ -5265,6 +5354,7 @@ choose_delta_base(representation_t **rep,
   int count;
   int walk;
   node_revision_t *base;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   /* If we have no predecessors, then use the empty stream as a
      base. */
@@ -5285,14 +5375,14 @@ choose_delta_base(representation_t **rep,
      along very long node histories.  Close to HEAD however, we create
      a linear history to minimize delta size.  */
   walk = noderev->predecessor_count - count;
-  if (walk < SVN_FS_FS_MAX_LINEAR_DELTIFICATION)
+  if (walk < (int)ffd->max_linear_deltification)
     count = noderev->predecessor_count - 1;
 
   /* Finding the delta base over a very long distance can become extremely
      expensive for very deep histories, possibly causing client timeouts etc.
      OTOH, this is a rare operation and its gains are minimal. Lets simply
      start deltification anew close every other 1000 changes or so.  */
-  if (walk > SVN_FS_FS_MAX_DELTIFICATION_WALK)
+  if (walk > (int)ffd->max_deltification_walk)
     {
       *rep = NULL;
       return SVN_NO_ERROR;
@@ -5772,7 +5862,6 @@ write_hash_rep(representation_t *rep,
    earlier reps with the same content.  When such existing reps can be found,
    we will truncate the one just written from the file and return the existing
    rep.  Perform temporary allocations in POOL. */
-#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
                      apr_file_t *file,
@@ -5873,7 +5962,6 @@ write_hash_delta_rep(representation_t *rep,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
    of (not yet committed) revision REV in FS.  Use POOL for temporary
@@ -6026,14 +6114,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           noderev->data_rep->txn_id = NULL;
           noderev->data_rep->revision = rev;
 
-#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
-          SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
-                                       str_entries, fs, noderev, NULL,
-                                       pool));
-#else
-          SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
-                                 fs, NULL, pool));
-#endif
+          if (ffd->deltify_directories)
+            SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
+                                         str_entries, fs, noderev, NULL,
+                                         pool));
+          else
+            SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
+                                   fs, NULL, pool));
         }
     }
   else
@@ -6066,14 +6153,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
 
-#ifdef SVN_FS_FS_DELTIFY_PROPS
-      SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
-                                   proplist, fs, noderev, reps_hash,
-                                   pool));
-#else
-      SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
-                             fs, reps_hash, pool));
-#endif
+      if (ffd->deltify_properties)
+        SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
+                                     proplist, fs, noderev, reps_hash,
+                                     pool));
+      else
+        SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
+                               fs, reps_hash, pool));
     }
 
 

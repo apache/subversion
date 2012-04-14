@@ -687,9 +687,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
      UPDATE_ROOT        FALSE
 
-   If the STATUS is normal, and the REPOS_* values are NULL, then the
-   caller should use svn_wc__db_scan_base_repos() to scan up the BASE
-   tree for the repository information.
+   If the STATUS is normal, the REPOS_* values will be non-NULL.
 
    If DEPTH is requested, and the node is NOT a directory, then the
    value will be set to svn_depth_unknown. If LOCAL_ABSPATH is a link,
@@ -2600,10 +2598,10 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    MOVED_TO_ABSPATH will specify the path where this node was moved to
    if the node has moved-away.
 
-   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
-   of the copy operation that created the move destination.
-   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
-   equals MOVED_TO_ABSPATH.
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the
+   target path of the root of the move operation.  If LOCAL_ABSPATH itself
+   is the source path of the root of the move operation, then
+   MOVED_TO_OP_ROOT_ABSPATH equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.

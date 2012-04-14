@@ -47,16 +47,28 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Generate expected output
 
-def make_diff_header(path, old_tag, new_tag):
+def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
   """Generate the expected diff header for file PATH, with its old and new
-  versions described in parentheses by OLD_TAG and NEW_TAG. Return the header
-  as an array of newline-terminated strings."""
+  versions described in parentheses by OLD_TAG and NEW_TAG. SRC_LABEL and
+  DST_LABEL are paths or urls that are added to the diff labels if we're
+  diffing against the repository or diffing two arbitrary paths.
+  Return the header as an array of newline-terminated strings."""
+  if src_label:
+    src_label = src_label.replace('\\', '/')
+    src_label = '\t(.../' + src_label + ')'
+  else:
+    src_label = ''
+  if dst_label:
+    dst_label = dst_label.replace('\\', '/')
+    dst_label = '\t(.../' + dst_label + ')'
+  else:
+    dst_label = ''
   path_as_shown = path.replace('\\', '/')
   return [
     "Index: " + path_as_shown + "\n",
     "===================================================================\n",
-    "--- " + path_as_shown + "\t(" + old_tag + ")\n",
-    "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
+    "--- " + path_as_shown + src_label + "\t(" + old_tag + ")\n",
+    "+++ " + path_as_shown + dst_label + "\t(" + new_tag + ")\n",
     ]
 
 def make_no_diff_deleted_header(path, old_tag, new_tag):
@@ -1770,6 +1782,7 @@ def diff_prop_on_named_dir(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propdel', 'p', 'A')
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 
@@ -3762,6 +3775,108 @@ def no_spurious_conflict(sbox):
   expected_status.tweak('3449_spurious', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def diff_two_working_copies(sbox):
+  "diff between two working copies"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a pristine working copy that will remain mostly unchanged
+  wc_dir_old = sbox.add_wc_path('old')
+  svntest.main.run_svn(None, 'co', sbox.repo_url, wc_dir_old)
+  # Add a property to A/B/F in the pristine working copy
+  svntest.main.run_svn(None, 'propset', 'newprop', 'propval-old\n',
+                       os.path.join(wc_dir_old, 'A', 'B', 'F'))
+
+  # Make changes to the first working copy:
+
+  # removed nodes
+  sbox.simple_rm('A/mu')
+  sbox.simple_rm('A/D/H')
+
+  # new nodes
+  sbox.simple_mkdir('newdir')
+  svntest.main.file_append(sbox.ospath('newdir/newfile'), 'new text\n')
+  sbox.simple_add('newdir/newfile')
+  sbox.simple_mkdir('newdir/newdir2') # should not show up in the diff
+
+  # modified nodes
+  sbox.simple_propset('newprop', 'propval', 'A/D')
+  sbox.simple_propset('newprop', 'propval', 'A/D/gamma')
+  svntest.main.file_append(sbox.ospath('A/B/lambda'), 'new text\n')
+
+  # replaced nodes (files vs. directories) with property mods
+  sbox.simple_rm('A/B/F')
+  svntest.main.file_append(sbox.ospath('A/B/F'), 'new text\n')
+  sbox.simple_add('A/B/F')
+  sbox.simple_propset('newprop', 'propval-new\n', 'A/B/F')
+  sbox.simple_rm('A/D/G/pi')
+  sbox.simple_mkdir('A/D/G/pi')
+  sbox.simple_propset('newprop', 'propval', 'A/D/G/pi')
+
+  src_label = os.path.basename(wc_dir_old)
+  dst_label = os.path.basename(wc_dir)
+  expected_output = make_diff_header('newdir/newfile', 'working copy',
+                                     'working copy',
+                                     src_label, dst_label) + [
+                      "@@ -0,0 +1 @@\n",
+                      "+new text\n",
+                    ] + make_diff_header('A/mu', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'mu'.\n",
+                    ] + make_diff_header('A/B/F', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -0,0 +1 @@\n",
+                      "+new text\n",
+                    ] + make_diff_prop_header('A/B/F') + \
+                        make_diff_prop_modified("newprop", "propval-old\n",
+                                                "propval-new\n") + \
+                    make_diff_header('A/B/lambda', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +1,2 @@\n",
+                      " This is the file 'lambda'.\n",
+                      "+new text\n",
+                    ] + make_diff_header('A/D', 'working copy', 'working copy',
+                                         src_label, dst_label) + \
+                        make_diff_prop_header('A/D') + \
+                        make_diff_prop_added("newprop", "propval") + \
+                    make_diff_header('A/D/gamma', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + \
+                        make_diff_prop_header('A/D/gamma') + \
+                        make_diff_prop_added("newprop", "propval") + \
+                    make_diff_header('A/D/G/pi', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'pi'.\n",
+                    ] + make_diff_prop_header('A/D/G/pi') + \
+                        make_diff_prop_added("newprop", "propval") + \
+                    make_diff_header('A/D/H/chi', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'chi'.\n",
+                    ] + make_diff_header('A/D/H/omega', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'omega'.\n",
+                    ] + make_diff_header('A/D/H/psi', 'working copy',
+                                         'working copy',
+                                         src_label, dst_label) + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'psi'.\n",
+                    ]
+                    
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', wc_dir_old,
+                                     '--new', wc_dir)
 
 ########################################################################
 #Run the tests
@@ -3830,6 +3945,7 @@ test_list = [ None,
               diff_abs_localpath_from_wc_folder,
               no_spurious_conflict,
               diff_correct_wc_base_revnum,
+              diff_two_working_copies,
               ]
 
 if __name__ == '__main__':

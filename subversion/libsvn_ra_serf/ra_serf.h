@@ -1425,6 +1425,12 @@ svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
                               apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
+                            const char **url,
+                            apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

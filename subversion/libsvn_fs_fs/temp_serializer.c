@@ -64,10 +64,6 @@ encode_number(apr_int64_t number, char *key_buffer)
   return key_buffer;
 }
 
-/* Prepend the NUMBER to the STRING in a space efficient way that no other
- * (number,string) combination can produce the same result.
- * Allocate temporaries as well as the result from POOL.
- */
 const char*
 svn_fs_fs__combine_number_and_string(apr_int64_t number,
                                      const char *string,
@@ -91,10 +87,6 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
   return key;
 }
 
-/* Combine the numbers A and B a space efficient way that no other
- * combination of numbers can produce the same result.
- * Allocate temporaries as well as the result from POOL.
- */
 const char*
 svn_fs_fs__combine_two_numbers(apr_int64_t a,
                                apr_int64_t b,
@@ -184,7 +176,7 @@ serialize_checksum(svn_temp_serializer__context_t *context,
 /* Utility function to deserialize the checksum CS inside the BUFFER.
  */
 static void
-deserialize_checksum(void *buffer, svn_checksum_t * const *cs)
+deserialize_checksum(void *buffer, svn_checksum_t **cs)
 {
   svn_temp_deserializer__resolve(buffer, (void **)cs);
   if (*cs == NULL)
@@ -852,7 +844,7 @@ svn_fs_fs__get_sharded_offset(void **out,
                               void *baton,
                               apr_pool_t *pool)
 {
-  apr_off_t *manifest = (apr_off_t *)data;
+  const apr_off_t *manifest = data;
   apr_int64_t shard_pos = *(apr_int64_t *)baton;
 
   *(apr_off_t *)out = manifest[shard_pos];
@@ -879,9 +871,9 @@ find_entry(svn_fs_dirent_t **entries,
   for (middle = upper / 2; lower < upper; middle = (upper + lower) / 2)
     {
       const svn_fs_dirent_t *entry =
-          svn_temp_deserializer__ptr(entries, (const void **)&entries[middle]);
+          svn_temp_deserializer__ptr(entries, (const void *const *)&entries[middle]);
       const char* entry_name =
-          svn_temp_deserializer__ptr(entry, (const void **)&entry->name);
+          svn_temp_deserializer__ptr(entry, (const void *const *)&entry->name);
 
       int diff = strcmp(entry_name, name);
       if (diff < 0)
@@ -895,9 +887,9 @@ find_entry(svn_fs_dirent_t **entries,
   if (lower < count)
     {
       const svn_fs_dirent_t *entry =
-          svn_temp_deserializer__ptr(entries, (const void **)&entries[lower]);
+          svn_temp_deserializer__ptr(entries, (const void *const *)&entries[lower]);
       const char* entry_name =
-          svn_temp_deserializer__ptr(entry, (const void **)&entry->name);
+          svn_temp_deserializer__ptr(entry, (const void *const *)&entry->name);
 
       if (strcmp(entry_name, name) == 0)
         *found = TRUE;
@@ -913,17 +905,17 @@ svn_fs_fs__extract_dir_entry(void **out,
                              void *baton,
                              apr_pool_t *pool)
 {
-  hash_data_t *hash_data = (hash_data_t *)data;
+  const hash_data_t *hash_data = data;
   const char* name = baton;
   svn_boolean_t found;
 
   /* resolve the reference to the entries array */
   const svn_fs_dirent_t * const *entries =
-    svn_temp_deserializer__ptr(data, (const void **)&hash_data->entries);
+    svn_temp_deserializer__ptr(data, (const void *const *)&hash_data->entries);
 
   /* resolve the reference to the lengths array */
   const apr_uint32_t *lengths =
-    svn_temp_deserializer__ptr(data, (const void **)&hash_data->lengths);
+    svn_temp_deserializer__ptr(data, (const void *const *)&hash_data->lengths);
 
   /* binary search for the desired entry by name */
   apr_size_t pos = find_entry((svn_fs_dirent_t **)entries,
@@ -936,7 +928,7 @@ svn_fs_fs__extract_dir_entry(void **out,
   if (found)
     {
       const svn_fs_dirent_t *source =
-          svn_temp_deserializer__ptr(entries, (const void **)&entries[pos]);
+          svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
 
       /* Entries have been serialized one-by-one, each time including all
        * nestes structures and strings. Therefore, they occupy a single
@@ -1007,12 +999,12 @@ svn_fs_fs__replace_dir_entry(void **data,
   /* resolve the reference to the entries array */
   entries = (svn_fs_dirent_t **)
     svn_temp_deserializer__ptr((const char *)hash_data,
-                               (const void **)&hash_data->entries);
+                               (const void *const *)&hash_data->entries);
 
   /* resolve the reference to the lengths array */
   lengths = (apr_uint32_t *)
     svn_temp_deserializer__ptr((const char *)hash_data,
-                               (const void **)&hash_data->lengths);
+                               (const void *const *)&hash_data->lengths);
 
   /* binary search for the desired entry by name */
   pos = find_entry(entries, replace_baton->name, hash_data->count, &found);
@@ -1081,7 +1073,7 @@ svn_fs_fs__replace_dir_entry(void **data,
   hash_data = (hash_data_t *)*data;
   lengths = (apr_uint32_t *)
     svn_temp_deserializer__ptr((const char *)hash_data,
-                               (const void **)&hash_data->lengths);
+                               (const void *const *)&hash_data->lengths);
   lengths[pos] = length;
 
   return SVN_NO_ERROR;

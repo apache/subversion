@@ -222,9 +222,15 @@ svn_stream_printf(svn_stream_t *stream,
   va_list ap;
   apr_size_t len;
 
-  va_start(ap, fmt);
-  message = apr_pvsprintf(pool, fmt, ap);
-  va_end(ap);
+  /* any format controls or is this a static string? */
+  if (strchr(fmt, '%'))
+    {
+      va_start(ap, fmt);
+      message = apr_pvsprintf(pool, fmt, ap);
+      va_end(ap);
+    }
+  else
+    message = fmt;
 
   len = strlen(message);
   return svn_stream_write(stream, message, &len);

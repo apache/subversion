@@ -95,6 +95,45 @@ svn_crypto__decrypt_password(const char **plaintext,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Generate the stuff Subversion needs to store in order to validate a
+   user-provided MASTER password:
+
+   Set *CIPHERTEXT to a block of encrypted data.
+
+   Set *IV and *SALT to the initialization vector and salt used for
+   encryption.
+
+   Set *CHECKTEXT to the check text used for validation.
+
+   CTX is a Subversion cryptographic context.  MASTER is the
+   encryption secret.
+*/
+svn_error_t *
+svn_crypto__generate_secret_checktext(const svn_string_t **ciphertext,
+                                      const svn_string_t **iv,
+                                      const svn_string_t **salt,
+                                      const char **checktext,
+                                      svn_crypto__ctx_t *ctx,
+                                      const svn_string_t *master,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
+/* Set *IS_VALID to TRUE iff the encryption secret MASTER successfully
+   validates using Subversion cryptographic context CTX against
+   CIPHERTEXT, IV, SALT, and CHECKTEXT (which where probably generated
+   via previous call to svn_crypto__generate_secret_checktext()).
+
+   Use SCRATCH_POOL for necessary allocations. */
+svn_error_t *
+svn_crypto__verify_secret(svn_boolean_t *is_valid,
+                          svn_crypto__ctx_t *ctx,
+                          const svn_string_t *master,
+                          const svn_string_t *ciphertext,
+                          const svn_string_t *iv,
+                          const svn_string_t *salt,
+                          const char *checktext,
+                          apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
