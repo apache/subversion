@@ -769,6 +769,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
       apr_hash_t *mergeinfo;
       const char *relpath;
+      svn_node_kind_t dst_kind;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
       if (! (svn_uri__is_ancestor(repos_root, pair->src_abspath_or_url)
@@ -824,6 +825,31 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
 
       APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
+
+      /* Verify that the source exists and the proposed destination does not,
+         and toss what we've learned into the INFO array.  (For copies --
+         that is, non-moves -- the relative source URL NULL because it isn't
+         a child of the TOP_URL at all.  That's okay, we'll deal with it.)  */
+      SVN_ERR(svn_ra_check_path(ra_session, info->src_relpath,
+                                pair->src_revnum, &info->src_kind, pool));
+
+      if (info->src_kind == svn_node_none)
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("Path '%s' does not exist in revision %ld"),
+                                 pair->src_abspath_or_url, pair->src_revnum);
+
+      /* Ensure that we aren't trying to overwrite existing paths.  */
+      SVN_ERR(svn_ra_check_path(ra_session, info->dst_relpath,
+                                SVN_INVALID_REVNUM, &dst_kind, pool));
+      if (dst_kind != svn_node_none)
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                 _("Path '%s' already exists"),
+                                 info->dst_relpath);
+
+      apr_hash_set(action_hash, info->dst_relpath, APR_HASH_KEY_STRING, info);
+      if (is_move && (! info->resurrection))
+        apr_hash_set(action_hash, info->src_relpath, APR_HASH_KEY_STRING,
+                     info);
     }
 
   /* If we're allowed to create nonexistent parent directories of our
@@ -848,44 +874,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       qsort(new_dirs->elts, new_dirs->nelts, new_dirs->elt_size,
             svn_sort_compare_paths);
-    }
-
-  /* Get the portions of the SRC and DST URLs that are relative to
-     TOP_URL (URI-decoding them while we're at it), verify that the
-     source exists and the proposed destination does not, and toss
-     what we've learned into the INFO array.  (For copies -- that is,
-     non-moves -- the relative source URL NULL because it isn't a
-     child of the TOP_URL at all.  That's okay, we'll deal with
-     it.)  */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair =
-        APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-      path_driver_info_t *info =
-        APR_ARRAY_IDX(path_infos, i, path_driver_info_t *);
-      svn_node_kind_t dst_kind;
-
-      SVN_ERR(svn_ra_check_path(ra_session, info->src_relpath,
-                                pair->src_revnum, &info->src_kind, pool));
-
-      if (info->src_kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 _("Path '%s' does not exist in revision %ld"),
-                                 pair->src_abspath_or_url, pair->src_revnum);
-
-      /* Figure out the basename that will result from this operation,
-         and ensure that we aren't trying to overwrite existing paths.  */
-      SVN_ERR(svn_ra_check_path(ra_session, info->dst_relpath,
-                                SVN_INVALID_REVNUM, &dst_kind, pool));
-      if (dst_kind != svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Path '%s' already exists"),
-                                 info->dst_relpath);
-
-      apr_hash_set(action_hash, info->dst_relpath, APR_HASH_KEY_STRING, info);
-      if (is_move && (! info->resurrection))
-        apr_hash_set(action_hash, info->src_relpath, APR_HASH_KEY_STRING,
-                     info);
     }
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
