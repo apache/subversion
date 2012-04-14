@@ -758,13 +758,13 @@ drive_editor(svn_editor_t *editor,
       apr_array_header_t *children;
 
       svn_pool_clear(iterpool);
-      path = svn_relpath_join(base_relpath, path, iterpool);
 
       children = apr_hash_get(children_hash, path, APR_HASH_KEY_STRING);
       if (!children)
         children = apr_array_make(iterpool, 1, sizeof(const char *));
 
       SVN_ERR(svn_path_check_valid(path, iterpool));
+      path = svn_relpath_join(base_relpath, path, iterpool);
       err = svn_editor_add_directory(editor, path, children, empty_props,
                                      SVN_INVALID_REVNUM);
       if (err)
