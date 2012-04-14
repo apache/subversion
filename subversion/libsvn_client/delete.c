@@ -131,18 +131,6 @@ svn_client__can_delete(const char *path,
 
 
 static svn_error_t *
-path_driver_cb_func(void **dir_baton,
-                    void *parent_baton,
-                    void *callback_baton,
-                    const char *path,
-                    apr_pool_t *pool)
-{
-  const svn_delta_editor_t *editor = callback_baton;
-  *dir_baton = NULL;
-  return editor->delete_entry(path, SVN_INVALID_REVNUM, parent_baton, pool);
-}
-
-static svn_error_t *
 single_repos_delete(svn_ra_session_t *ra_session,
                     const char *repos_root,
                     const apr_array_header_t *relpaths,
@@ -152,9 +140,8 @@ single_repos_delete(svn_ra_session_t *ra_session,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  const svn_delta_editor_t *editor;
+  svn_editor_t *editor;
   apr_hash_t *commit_revprops;
-  void *edit_baton;
   const char *log_msg;
   int i;
   svn_error_t *err;
@@ -191,27 +178,33 @@ single_repos_delete(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        NULL, pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
-                                    pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
-  /* Call the path-based editor driver. */
-  err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                              relpaths, path_driver_cb_func,
-                              (void *)editor, pool);
+  for (i = 0; i < relpaths->nelts; i++)
+    {
+      const char *relpath = APR_ARRAY_IDX(relpaths, i, const char *);
+      
+      err = svn_editor_delete(editor, relpath, SVN_INVALID_REVNUM);
+
+      if (err)
+        break;
+    }
 
   if (err)
     {
-      return svn_error_trace(
-               svn_error_compose_create(err,
-                                        editor->abort_edit(edit_baton, pool)));
+      /* At least try to abort the edit (and fs txn) before throwing err. */
+      svn_error_clear(svn_editor_abort(editor));
+      return svn_error_trace(err);
     }
 
-  /* Close the edit. */
-  return svn_error_trace(editor->close_edit(edit_baton, pool));
+  /* Complete the edit. */
+  return svn_error_trace(svn_editor_complete(editor));
 }
 
 static svn_error_t *
