@@ -1,0 +1,13 @@
+This branch exists for the implementation of Compressed Pristines feature.
+The relevant issue is filed under bug #908.
+The feature's design is documented at https://docs.google.com/document/d/1ktIsewfMBMVBxbn-Ng8NwkNwAS_QJ6eC7GOygsbBeEc/edit
+
+This branch is being managed as a reintegratable branch,
+with regular catch-up merges from the trunk.
+
+TODO:
+
+  * create an sqlite db (pristine.db)     []
+  * insert pristines in pristine.db       []
+  * pass pristines via zlib               []
+  * discriminate pristines by size        []
