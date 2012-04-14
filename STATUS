@@ -142,11 +142,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1296251, r1296303, r1297522
-   Resolve issue 4136, "Deep commit followed by --depth immediates update
-   triggers checksum failure"
-   Justification:
-     User reported regression since 1.7.0
-   Votes:
-     +1: stsp, rhuijben, philip
