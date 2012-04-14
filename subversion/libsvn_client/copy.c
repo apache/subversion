@@ -574,7 +574,6 @@ drive_single_path(svn_editor_t *editor,
                   const char *path,
                   path_driver_info_t *path_info,
                   svn_boolean_t is_move,
-                  svn_revnum_t youngest,
                   const char *repos_root,
                   apr_pool_t *scratch_pool)
 {
@@ -618,7 +617,7 @@ drive_single_path(svn_editor_t *editor,
          a delete + add. */
   if (do_delete)
     {
-      SVN_ERR(svn_editor_delete(editor, dst_relpath, youngest));
+      SVN_ERR(svn_editor_delete(editor, dst_relpath, SVN_INVALID_REVNUM));
     }
   if (do_add)
     {
@@ -649,7 +648,6 @@ drive_editor(svn_editor_t *editor,
              apr_hash_t *action_hash,
              apr_array_header_t *new_dirs,
              svn_boolean_t is_move,
-             svn_revnum_t youngest,
              const char *repos_root,
              apr_pool_t *scratch_pool)
 {
@@ -683,8 +681,8 @@ drive_editor(svn_editor_t *editor,
 
       svn_pool_clear(iterpool);
 
-      err = drive_single_path(editor, path, path_info, is_move, youngest,
-                              repos_root, iterpool);
+      err = drive_single_path(editor, path, path_info, is_move, repos_root,
+                              iterpool);
       if (err)
         break;
     }
@@ -1072,8 +1070,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     pool, pool));
 
   return svn_error_trace(drive_editor(editor, paths, action_hash, new_dirs,
-                                      is_move, SVN_INVALID_REVNUM, repos_root,
-                                      pool));
+                                      is_move, repos_root, pool));
 }
 
 /* Baton for check_url_kind */
