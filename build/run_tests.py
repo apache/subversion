@@ -88,9 +88,8 @@ def _get_term_width():
   if not cr:
     try:
       cr = (os.environ['SVN_MAKE_CHECK_LINES'],
-	          os.environ['SVN_MAKE_CHECK_COLUMNS'])
+            os.environ['SVN_MAKE_CHECK_COLUMNS'])
     except:
-      raise Exception(`cr`)
       cr = None
   if not cr:
     cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
