@@ -289,13 +289,6 @@ calibrate_concurrency(apr_pool_t *pool)
 {
   if (hw_thread_count == 0)
     {
-      int i = 0;
-      for (i = 0; i < 100000; ++i)
-        {
-          printf("%8d", i);
-          SVN_ERR(init_concurrency_test_shm(pool, 2));
-          SVN_ERR(run_procs(pool, TEST_PROC, 2, 100000));
-        }
       SVN_ERR(calibrate_iterations(pool, 2));
       for (hw_thread_count = 2; hw_thread_count < 32; hw_thread_count *= 2)
         {
