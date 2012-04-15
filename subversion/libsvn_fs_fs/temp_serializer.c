@@ -690,10 +690,10 @@ svn_fs_fs__deserialize_properties(void **out,
   for (i = 0; i < properties->count; ++i)
     {
       apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
-      svn_temp_deserializer__resolve(properties->keys, 
+      svn_temp_deserializer__resolve((void*)properties->keys, 
                                      (void**)&properties->keys[i]);
       
-      deserialize_svn_string(properties->values, 
+      deserialize_svn_string((void*)properties->values, 
                              (svn_string_t **)&properties->values[i]);
       
       apr_hash_set(hash, 
