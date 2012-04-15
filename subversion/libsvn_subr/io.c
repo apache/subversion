@@ -1962,7 +1962,6 @@ svn_io_file_lock2(const char *lock_file,
   int locktype = APR_FLOCK_SHARED;
   apr_file_t *lockfile_handle;
   apr_int32_t flags;
-  apr_status_t apr_err;
 
   if (exclusive)
     locktype = APR_FLOCK_EXCLUSIVE;
