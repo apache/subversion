@@ -2868,8 +2868,8 @@ has_revprop_cache(svn_fs_t *fs)
    Also, detect aborted / crashed writers and recover from that.
    Use the access object in FS to set the shared mem values. */
 static svn_error_t *
-read_revprop_generation(svn_fs_t *fs,
-                        apr_int64_t *generation)
+read_revprop_generation(apr_int64_t *generation,
+                        svn_fs_t *fs)
 {
   apr_int64_t current = 0;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -3032,7 +3032,7 @@ revision_proplist(apr_hash_t **proplist_p,
       apr_int64_t generation;
       svn_boolean_t is_cached;
 
-      SVN_ERR(read_revprop_generation(fs, &generation));
+      SVN_ERR(read_revprop_generation(&generation, fs));
 
       key = svn_fs_fs__combine_two_numbers(rev, generation, pool);
       SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
