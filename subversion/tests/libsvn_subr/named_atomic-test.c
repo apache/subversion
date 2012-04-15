@@ -35,7 +35,7 @@
 #include "named_atomic-test-common.h"
 
 /* Name of the worker process executable */
-#define TEST_PROC "named_atomic-test-proc"
+#define TEST_PROC "named_atomic-proc-test"
 
 /* number of hardware threads (logical cores) that we may use.
  * Will be set to at least 2 - even on unicore machines. */
