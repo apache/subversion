@@ -94,7 +94,7 @@ def _get_term_width():
       pass
   if not cr:
     try:
-      cr = (env['LINES'], env['COLUMNS'])
+      cr = (os.environ['LINES'], os.environ['COLUMNS'])
     except:
       cr = None
   if not cr:
