@@ -88,7 +88,7 @@
  */
 #define SHM_NAME_SUFFIX "Shm"
 
-/* Prevent macro re-definition warning (on Windows in particluar).
+/* Prevent macro re-definition warning (on Windows in particular).
  */
 #ifdef SYNCHRONIZE
 #undef SYNCHRONIZE
@@ -349,7 +349,7 @@ initialize(void *baton, apr_pool_t *pool)
     ns->data = apr_shm_baseaddr_get(ns->shared_mem);
 
   /* Cache the number of existing, complete entries.  There can't be
-   * incomplete onces from other processes because we hold the mutex.
+   * incomplete ones from other processes because we hold the mutex.
    * Our process will also not access this information since we are
    * wither being called from within svn_atomic__init_once or by
    * svn_atomic_namespace__create for a new object.
