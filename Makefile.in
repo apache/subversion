@@ -510,7 +510,7 @@ davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
 # run make check.
 davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
-	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
+	@APXS=$(APXS) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
