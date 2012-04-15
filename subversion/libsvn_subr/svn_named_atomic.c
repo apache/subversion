@@ -88,6 +88,12 @@
  */
 #define SHM_NAME_SUFFIX "Shm"
 
+/* Prevent macro re-definition warning (on Windows in particluar).
+ */
+#ifdef SYNCHRONIZE
+#undef SYNCHRONIZE
+#endif
+
 /* Platform-dependent implementations of our basic atomic operations.
  * SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
  * This will be zero-overhead if OP itself is already atomic.
