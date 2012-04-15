@@ -2154,6 +2154,10 @@ get_resource(request_rec *r,
                    SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                    APR_HASH_KEY_STRING,
                    dav_svn__get_fulltext_cache_flag(r) ? "1" : "0");
+      apr_hash_set(fs_config,
+                   SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                   APR_HASH_KEY_STRING,
+                   dav_svn__get_revprop_cache_flag(r) ? "1" : "0");
 
       /* open the FS */
       serr = svn_repos_open2(&(repos->repos), fs_path, fs_config,

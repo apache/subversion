@@ -54,7 +54,9 @@ extern "C" {
   } while (0)
 
 /** Handy macro for testing an expected svn_error_t return value.
- * EXPECTED must be a real error (neither SVN_NO_ERROR nor APR_SUCCESS). */
+ * EXPECTED must be a real error (neither SVN_NO_ERROR nor APR_SUCCESS).
+ * The error returned by EXPR will be cleared.
+ */
 #define SVN_TEST_ASSERT_ERROR(expr, expected)                             \
   do {                                                                    \
     svn_error_t *err__ = (expr);                                          \
@@ -68,6 +70,7 @@ extern "C" {
                                         "Expected error %d but got %s",   \
                                         (expected),                       \
                                         "SVN_NO_ERROR");                  \
+    svn_error_clear(err__);                                               \
   } while (0)
 
 /** Handy macro for testing string equality.

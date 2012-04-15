@@ -116,6 +116,9 @@ typedef struct serve_params_t {
   /* Enable full-text caching for all FSFS repositories. */
   svn_boolean_t cache_fulltexts;
 
+  /* Enable revprop caching for all FSFS repositories. */
+  svn_boolean_t cache_revprops;
+
   /* Size of the in-memory cache (used by FSFS only). */
   apr_uint64_t memory_cache_size;
 
