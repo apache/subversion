@@ -52,6 +52,14 @@ typedef struct svn_named_atomic__t svn_named_atomic__t;
  */
 #define SVN_NAMED_ATOMIC__MAX_NAME_LENGTH 30
 
+/** Returns #TRUE on platforms that don't need expensive synchronization
+ * objects to serialize access to named atomics. If this returns #FALSE,
+ * reading from or modifying a #svn_named_atomic__t may be as expensive
+ * as a file system operation.
+ */
+svn_boolean_t
+svn_named_atomic__is_efficient();
+
 /** Create a namespace (i.e. access object) with the given @a name and
  * return it in @a *ns.  If @a name is @c NULL, return the name of the
  * default namespace will be used.

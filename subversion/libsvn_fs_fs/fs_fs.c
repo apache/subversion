@@ -2839,6 +2839,16 @@ has_revprop_cache(svn_fs_t *fs)
   if (ffd->revprop_cache == NULL)
     return FALSE;
 
+  /* is it efficient? */
+  if (!svn_named_atomic__is_efficient())
+    {
+      /* access to it would be quite slow
+       * -> disable the revprop cache for good
+       */
+      ffd->revprop_cache = NULL;
+      return FALSE;
+    }
+
   /* try to access our SHM-backed infrastructure */
   error = ensure_revprop_generation(fs);
   if (error)
