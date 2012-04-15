@@ -113,6 +113,7 @@
   InterlockedCompareExchange64(mem, value, comperand)
 
 #define SYNCHRONIZE(op) op;
+#define SYNCHRONIZE_IS_FAST TRUE
 
 #elif SVN_HAS_ATOMIC_BUILTINS
 
@@ -125,6 +126,7 @@
   __sync_val_compare_and_swap(mem, comperand, value)
 
 #define SYNCHRONIZE(op) op;
+#define SYNCHRONIZE_IS_FAST TRUE
 
 #else
 
@@ -167,6 +169,8 @@ synched_cmpxchg(volatile apr_int64_t *mem,
   SVN_ERR(lock());\
   op;\
   SVN_ERR(unlock(SVN_NO_ERROR));
+
+#define SYNCHRONIZE_IS_FAST FALSE
 
 #endif
 
@@ -372,6 +376,12 @@ validate(svn_named_atomic__t *atomic)
 }
 
 /* Implement API */
+
+svn_boolean_t
+svn_named_atomic__is_efficient()
+{
+  return SYNCHRONIZE_IS_FAST;
+}
 
 svn_error_t *
 svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
