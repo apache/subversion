@@ -96,7 +96,7 @@
  * as well as any type of data access.  This is quite expensive and we
  * can do much better on most platforms.
  */
-#ifdef _WIN32
+#if defined(_WIN32) && ((_WIN32_WINNT >= 0x0502) || defined(InterlockedAdd64))
 
 /* Interlocked API / intrinsics guarantee full data synchronization 
  */
