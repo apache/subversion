@@ -60,20 +60,50 @@ proplist_receiver_xml(void *baton,
 {
   svn_cl__opt_state_t *opt_state = ((proplist_baton_t *)baton)->opt_state;
   svn_boolean_t is_url = ((proplist_baton_t *)baton)->is_url;
-  svn_stringbuf_t *sb = NULL;
+  svn_stringbuf_t *sb;
   const char *name_local;
+
+  if (inherited_props && inherited_props->nelts)
+    {
+      int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+
+          sb = NULL;
+
+          if (svn_path_is_url(iprop->path_or_url))
+            name_local = iprop->path_or_url;
+          else
+            name_local = svn_dirent_local_style(iprop->path_or_url, iterpool);
+
+          svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
+                            "path", name_local, NULL);
+          SVN_ERR(svn_cl__print_xml_prop_hash(&sb, iprop->prop_hash,
+                                              (! opt_state->verbose),
+                                              TRUE, iterpool));
+          svn_xml_make_close_tag(&sb, iterpool, "target");
+          svn_cl__error_checked_fputs(sb->data, stdout);
+        }
+      svn_pool_destroy(iterpool);
+    }
 
   if (! is_url)
     name_local = svn_dirent_local_style(path, pool);
   else
     name_local = path;
 
+  sb = NULL;
+
   /* "<target ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
                         "path", name_local, NULL);
 
   SVN_ERR(svn_cl__print_xml_prop_hash(&sb, prop_hash, (! opt_state->verbose),
-                                      pool));
+                                      FALSE, pool));
 
   /* "</target>" */
   svn_xml_make_close_tag(&sb, pool, "target");
@@ -178,8 +208,9 @@ svn_cl__proplist(apr_getopt_t *os,
           svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal,
                                 "revprops",
                                 "rev", revstr, NULL);
-          SVN_ERR(svn_cl__print_xml_prop_hash
-                  (&sb, proplist, (! opt_state->verbose), scratch_pool));
+          SVN_ERR(svn_cl__print_xml_prop_hash(&sb, proplist,
+                                              (! opt_state->verbose), FALSE,
+                                              scratch_pool));
           svn_xml_make_close_tag(&sb, scratch_pool, "revprops");
 
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));

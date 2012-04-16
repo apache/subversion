@@ -151,6 +151,7 @@ svn_error_t *
 svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             apr_hash_t *prop_hash,
                             svn_boolean_t names_only,
+                            svn_boolean_t inherited_props,
                             apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -165,8 +166,10 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
       if (names_only)
         {
-          svn_xml_make_open_tag(outstr, pool, svn_xml_self_closing, "property",
-                                "name", pname, NULL);
+          svn_xml_make_open_tag(
+            outstr, pool, svn_xml_self_closing,
+            inherited_props ? "inherited_property" : "property",
+            "name", pname, NULL);
         }
       else
         {
@@ -178,7 +181,8 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
           SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_out, pname, pool));
 
-          svn_cmdline__print_xml_prop(outstr, pname_out, propval, pool);
+          svn_cmdline__print_xml_prop(outstr, pname_out, propval,
+                                      inherited_props, pool);
         }
     }
 
