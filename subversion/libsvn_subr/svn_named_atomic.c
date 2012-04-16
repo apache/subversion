@@ -282,8 +282,8 @@ lock(void)
 static svn_error_t *
 unlock(svn_error_t * outer_err)
 {
-  return svn_mutex__unlock(mutex,
-                           svn_io_unlock_open_file(lock_file, mutex_pool));
+  svn_error_t *unlock_err = svn_io_unlock_open_file(lock_file, mutex_pool);
+  return svn_mutex__unlock(mutex, outer_err ? outer_err : unlock_err);
 }
 
 /* Initialize the shared_mem_access_t given as BATON.
