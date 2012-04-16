@@ -1980,6 +1980,14 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
 
+/**
+ * The capability to respond to requests using Ev2, as well as accept
+ * data provided by Ev2 drivers.  See svn_editor.h for further details.
+ *
+ * @since New in 1.8 (?)
+ */
+#define SVN_RA_CAPABILITY_EDITOR_V2 "editor-v2"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any
