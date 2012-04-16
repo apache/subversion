@@ -754,24 +754,16 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                           &pair->src_peg_revision,
                                           &pair->src_op_revision, NULL,
                                           ctx, pool));
+      info->src_revnum = pair->src_revnum;
       SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
-      /* Go ahead and grab mergeinfo from the source, too. */
-      SVN_ERR(svn_client__get_repos_mergeinfo(
-                &mergeinfo, ra_session,
-                pair->src_abspath_or_url, pair->src_revnum,
-                svn_mergeinfo_inherited, TRUE /*squelch_incapable*/, pool));
-      if (mergeinfo)
-        SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
-
-      /* Plop an INFO structure onto our array thereof. */
+      /* Calculate and check relpaths. */
       info->src_relpath = svn_uri_skip_ancestor(repos_root,
                                                 pair->src_abspath_or_url,
                                                 pool);
       info->dst_relpath = svn_uri_skip_ancestor(repos_root,
                                                 pair->dst_abspath_or_url,
                                                 pool);
-      info->src_revnum = pair->src_revnum;
       SVN_ERR(svn_path_check_valid(info->dst_relpath, pool));
       SVN_ERR(svn_path_check_valid(info->src_relpath, pool));
 
@@ -795,6 +787,15 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                  _("Path '%s' already exists"),
                                  info->dst_relpath);
 
+      /* Go ahead and grab mergeinfo from the source, too. */
+      SVN_ERR(svn_client__get_repos_mergeinfo(
+                &mergeinfo, ra_session,
+                pair->src_abspath_or_url, pair->src_revnum,
+                svn_mergeinfo_inherited, TRUE /*squelch_incapable*/, pool));
+      if (mergeinfo)
+        SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
+
+      /* Plop an INFO structure onto our array thereof. */
       APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
 
