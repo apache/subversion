@@ -1318,9 +1318,8 @@ authz(apr_pool_t *pool)
   contents =
     "[greek:/dir2//secret]"                                                  NL
     "* ="                                                                    NL;
-  err = authz_get_handle(&authz_cfg, contents, subpool);
-  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_INVALID_CONFIG);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, subpool),
+                        SVN_ERR_AUTHZ_INVALID_CONFIG);
 
   /* That's a wrap! */
   svn_pool_destroy(subpool);
@@ -1480,10 +1479,7 @@ test_path_authz(svn_repos_t *repos,
 
   /* Check for potential errors. */
   if (path_action->authz_error_expected)
-    {
-      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_UNWRITABLE);
-      svn_error_clear(err);
-    }
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_UNWRITABLE);
   else
     SVN_ERR(err);
 

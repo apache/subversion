@@ -1070,8 +1070,8 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
       SVN_ERR(svn_client__wc_node_get_origin(&origin, local_abspath, ctx,
                                              scratch_pool, scratch_pool));
-      rev = origin->rev;
-      if (!origin->url
+      rev = origin ? origin->rev : SVN_INVALID_REVNUM;
+      if (!origin
           || strcmp(origin->url, url) != 0
           || peg_rev != rev)
       {

@@ -934,8 +934,19 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                      final_url, SVN_RA_NEON__DEPTH_ONE,
                                      NULL, which_props, pool));
 
-      /* Count the number of path components in final_url. */
-      final_url_n_components = svn_path_component_count(final_url);
+      /* In the loop below we will want to skip the effective '.' entry that
+         comes back from SVN_RA_NEON__DEPTH_ONE. To perform this skip we use
+         the component count of the FINAL_URL and compare it to the component
+         count of the keys in RESOURCES.  But this only works if REVISION
+         was a valid revnum and FINAL_URL is a baseline collection (i.e. no
+         scheme://host prefix).  If REVISION was SVN_INVALID_REVNUM then
+         FINAL_URL is a fully qualified URL, so we need to ignore the scheme
+         and host portions. */
+      if (SVN_IS_VALID_REVNUM(revision))
+        final_url_n_components = svn_path_component_count(final_url);
+      else
+        final_url_n_components = svn_path_component_count(
+          svn_path_url_add_component2(ras->root.path, path, pool));
 
       /* Now we have a hash that maps a bunch of url children to resource
          objects.  Each resource object contains the properties of the

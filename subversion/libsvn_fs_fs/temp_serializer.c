@@ -64,10 +64,6 @@ encode_number(apr_int64_t number, char *key_buffer)
   return key_buffer;
 }
 
-/* Prepend the NUMBER to the STRING in a space efficient way that no other
- * (number,string) combination can produce the same result.
- * Allocate temporaries as well as the result from POOL.
- */
 const char*
 svn_fs_fs__combine_number_and_string(apr_int64_t number,
                                      const char *string,
@@ -91,10 +87,6 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
   return key;
 }
 
-/* Combine the numbers A and B a space efficient way that no other
- * combination of numbers can produce the same result.
- * Allocate temporaries as well as the result from POOL.
- */
 const char*
 svn_fs_fs__combine_two_numbers(apr_int64_t a,
                                apr_int64_t b,
@@ -698,10 +690,10 @@ svn_fs_fs__deserialize_properties(void **out,
   for (i = 0; i < properties->count; ++i)
     {
       apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
-      svn_temp_deserializer__resolve(properties->keys, 
+      svn_temp_deserializer__resolve((void*)properties->keys, 
                                      (void**)&properties->keys[i]);
       
-      deserialize_svn_string(properties->values, 
+      deserialize_svn_string((void*)properties->values, 
                              (svn_string_t **)&properties->values[i]);
       
       apr_hash_set(hash, 

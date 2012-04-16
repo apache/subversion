@@ -56,6 +56,7 @@ taskkill /im svnserve.exe /f 2> nul:
 taskkill /im svnrdump.exe /f 2> nul:
 taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
+taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"

@@ -55,6 +55,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * mod_dav_svn: error on MERGE of non-existent resource (r1298343)
     * fix undefined behaviour during multi-segment reverse merges (issue #4144)
     * fix potential pool lifetime problem in the diff code (r1311935)
+    * libsvn_wc: reduce resources use while looking for the wc root (r1306334)
+    * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
+    * fix regression with deep commit followed by depthy update (issue #4136)
 
   Developer-visible changes:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)

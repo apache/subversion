@@ -85,6 +85,12 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
 
+/** Enable / disable revprop caching for a FSFS repository.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
+
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
