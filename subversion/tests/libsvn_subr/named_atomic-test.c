@@ -332,7 +332,7 @@ test_basics(apr_pool_t *pool)
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
-  init_test_shm(pool);
+  SVN_ERR(init_test_shm(pool));
   
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
