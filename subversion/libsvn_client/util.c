@@ -365,7 +365,7 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
 struct shim_callbacks_baton
 {
   svn_wc_context_t *wc_ctx;
-  const char *session_url;
+  const char *repos_root_url;
   const char *anchor_abspath;
 };
 
@@ -379,7 +379,7 @@ rationalize_shim_path(const char **local_abspath,
   const char *wcroot_abspath;
   const char *wcroot_url;
   const char *relpath;
-  const char *node_url = svn_path_url_add_component2(scb->session_url,
+  const char *node_url = svn_path_url_add_component2(scb->repos_root_url,
                                                      repos_relpath,
                                                      scratch_pool);
 
@@ -515,7 +515,7 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
 
   scb->wc_ctx = wc_ctx;
   scb->anchor_abspath = apr_pstrdup(result_pool, anchor_abspath);
-  svn_error_clear(svn_ra_get_session_url(ra_session, &scb->session_url,
+  svn_error_clear(svn_ra_get_repos_root2(ra_session, &scb->repos_root_url,
                                          result_pool));
 
   callbacks->fetch_props_func = fetch_props_func;
