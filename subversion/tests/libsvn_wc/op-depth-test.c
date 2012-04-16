@@ -4594,7 +4594,7 @@ test_scan_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(wc_update(&b, "", 1));
 
   SVN_ERR(wc_move(&b, "A2", "X"));
-  SVN_ERR(wc_delete(&b, "X/B"));
+  SVN_ERR(wc_move(&b, "X/B", "Z"));
   SVN_ERR(wc_move(&b, "A/B", "X/B"));
   SVN_ERR(wc_move(&b, "X/B/C", "Y"));
   SVN_ERR(wc_move(&b, "C2", "X/B/C"));
@@ -4610,11 +4610,12 @@ test_scan_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "C2",       "normal",       1, "C2"},
       {1, "A2",       "base-deleted", NO_COPY_FROM, "X"},
       {1, "A2/B",     "base-deleted", NO_COPY_FROM},
+      {1, "Z",        "normal",       1, "A2/B", MOVED_HERE},
       {1, "X",        "normal",       1, "A2", MOVED_HERE},
       {1, "X/B",      "normal",       1, "A2/B", MOVED_HERE},
       {2, "A/B",      "base-deleted", NO_COPY_FROM, "X/B"},
       {2, "A/B/C",    "base-deleted", NO_COPY_FROM},
-      {2, "X/B",      "normal",       1, "A/B", MOVED_HERE},
+      {2, "X/B",      "normal",       1, "A/B", FALSE, "Z", TRUE},
       {2, "X/B/C",    "normal",       1, "A/B/C", MOVED_HERE},
       {1, "Y",        "normal",       1, "A/B/C", MOVED_HERE},
       {1, "C2",       "base-deleted", NO_COPY_FROM, "X/B/C"},
@@ -4638,13 +4639,28 @@ test_scan_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "X/B"));
   SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "X/B"));
 
-  /* XFAIL here as it gives moved-to X/Y/Z rather than Y. */
+  /* Not clear what this should give: Y or A/B/C or ... ? */
   SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
                                    NULL, &moved_to_op_root_abspath,
                                    b.wc_ctx->db, wc_path(&b, "A/B/C"),
                                    pool, pool));
   SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "Y"));
   SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "Y"));
+
+  SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
+                                   NULL, &moved_to_op_root_abspath,
+                                   b.wc_ctx->db, wc_path(&b, "A2"),
+                                   pool, pool));
+  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "X"));
+  SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "X"));
+
+  /* Not clear what this should give: Z or X/B or ... ? */
+  SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
+                                   NULL, &moved_to_op_root_abspath,
+                                   b.wc_ctx->db, wc_path(&b, "A2/B"),
+                                   pool, pool));
+  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "Z"));
+  SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "Z"));
 
   return SVN_NO_ERROR;
 }
