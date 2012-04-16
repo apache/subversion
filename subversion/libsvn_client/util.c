@@ -365,33 +365,34 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
 struct shim_callbacks_baton
 {
   svn_wc_context_t *wc_ctx;
+  const char *session_url;
   const char *anchor_abspath;
 };
 
 static svn_error_t *
 rationalize_shim_path(const char **local_abspath,
                       struct shim_callbacks_baton *scb,
-                      const char *path,
+                      const char *repos_relpath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL */
-      const char *wcroot_abspath;
-      const char *wcroot_url;
-      const char *relpath;
+  const char *wcroot_abspath;
+  const char *wcroot_url;
+  const char *relpath;
+  const char *node_url = svn_path_url_add_component2(scb->session_url,
+                                                     repos_relpath,
+                                                     scratch_pool);
 
-      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
-                                  scb->anchor_abspath,
-                                  scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
-                                   scratch_pool, scratch_pool));
-      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
-      *local_abspath = svn_dirent_join(wcroot_abspath, relpath, result_pool);
-    }
-  else
-    *local_abspath = svn_dirent_join(scb->anchor_abspath, path, result_pool);
+  /* ### We could probably calculate some of this once, and then cache it for
+         use in this function. */
+  SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
+                              scb->anchor_abspath,
+                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
+                               scratch_pool, scratch_pool));
+
+  relpath = svn_uri_skip_ancestor(wcroot_url, node_url, scratch_pool);
+  *local_abspath = svn_dirent_join(wcroot_abspath, relpath, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -504,6 +505,7 @@ fetch_base_func(const char **filename,
 
 svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
+                               svn_ra_session_t *ra_session,
                                const char *anchor_abspath,
                                apr_pool_t *result_pool)
 {
@@ -513,6 +515,8 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
 
   scb->wc_ctx = wc_ctx;
   scb->anchor_abspath = apr_pstrdup(result_pool, anchor_abspath);
+  svn_error_clear(svn_ra_get_session_url(ra_session, &scb->session_url,
+                                         result_pool));
 
   callbacks->fetch_props_func = fetch_props_func;
   callbacks->fetch_kind_func = fetch_kind_func;
