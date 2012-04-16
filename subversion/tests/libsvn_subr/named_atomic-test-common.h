@@ -30,14 +30,16 @@
 
 /* Some constants that we will use in our tests */
 
-/* to separate this code from any production environment */
-#define TEST_NAMESPACE "SvnTests"
-
 /* All our atomics start with that name */
 #define ATOMIC_NAME "MyTestAtomic"
 
 /* Factor used to create non-trivial 64 bit numbers */
 #define HUGE_VALUE 1234567890123456ll
+
+/* to separate this code from any production environment */
+const char *name_namespace = NULL;
+const char *name_namespace1 = NULL;
+const char *name_namespace2 = NULL;
 
 /* "pipeline" test: initialization code executed by the worker with ID 0.
  * Pushes COUNT tokens into ATOMIC_OUT and checks for ATOMIC_COUNTER not to
@@ -135,7 +137,7 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
   svn_error_t *err = SVN_NO_ERROR;
 
   /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
+  SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, pool));
   SVN_ERR(svn_named_atomic__get(&atomic_in,
                                 ns,
                                 apr_pstrcat(pool,

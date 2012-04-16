@@ -248,6 +248,10 @@ typedef struct fs_fs_data_t
      rep key (revision/offset) to svn_string_t. */
   svn_cache__t *fulltext_cache;
 
+  /* Access object to the atomics namespace used by revprop caching.
+     Will be NULL until the first access. */
+  svn_atomic_namespace__t *revprop_namespace;
+
   /* Access object to the revprop "generation". Will be NULL until
      the first access. */
   svn_named_atomic__t *revprop_generation;
