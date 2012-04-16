@@ -276,7 +276,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
 
   /* increase iterations until we pass the 10ms mark */
   
-  for (calib_iterations = 10; taken < 100000.0; calib_iterations *= 2)
+  for (calib_iterations = 1000; taken < 100000.0; calib_iterations *= 2)
     {
       SVN_ERR(init_concurrency_test_shm(pool, count));
 
@@ -305,15 +305,32 @@ calibrate_concurrency(apr_pool_t *pool)
 {
   if (hw_thread_count == 0)
     {
-      SVN_ERR(calibrate_iterations(pool, 2));
-      for (hw_thread_count = 2; hw_thread_count < 32; hw_thread_count *= 2)
+      /* these parameters should be ok even on very slow machines */
+      hw_thread_count = 2;
+      suggested_iterations = 200;
+
+      /* if we've got a proper machine and OS setup, let's prepare for
+       * some real testing */
+      if (svn_named_atomic__is_efficient())
         {
-          int saved_suggestion = suggested_iterations;
-          SVN_ERR(calibrate_iterations(pool, hw_thread_count * 2));
-          if (suggested_iterations < 100000)
+          SVN_ERR(calibrate_iterations(pool, 2));
+          for (; hw_thread_count < 32; hw_thread_count *= 2)
             {
-              suggested_iterations = saved_suggestion;
-              break;
+              int saved_suggestion = suggested_iterations;
+
+              /* run with an additional core to spare
+               * (even low CPU usage might cause heavy context switching) */
+              SVN_ERR(calibrate_iterations(pool, hw_thread_count * 2 + 1));
+              if (suggested_iterations < 100000)
+                {
+                  /* Machines with only a small number of cores are prone
+                   * to inconsistent performance due context switching.
+                   * Reduce the number of iterations on those machines. */
+                  suggested_iterations = hw_thread_count > 2
+                                       ? saved_suggestion
+                                       : saved_suggestion / 2;
+                  break;
+                }
             }
         }
         
