@@ -58,7 +58,7 @@ typedef struct svn_named_atomic__t svn_named_atomic__t;
  * as a file system operation.
  */
 svn_boolean_t
-svn_named_atomic__is_efficient();
+svn_named_atomic__is_efficient(void);
 
 /** Create a namespace (i.e. access object) with the given @a name and
  * return it in @a *ns.  If @a name is @c NULL, return the name of the
