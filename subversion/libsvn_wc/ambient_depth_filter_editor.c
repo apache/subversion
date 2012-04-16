@@ -113,8 +113,12 @@ struct dir_baton
   void *wrapped_baton;
 };
 
-/* Helper to call either svn_wc__db_base_get_info or svn_wc__db_read_info for
-   obtaining information for the ambient depth editor */
+/* Fetch the STATUS, KIND and DEPTH of the base node at LOCAL_ABSPATH.
+ * If there is no such base node, report 'normal', 'unknown' and 'unknown'
+ * respectively.
+ *
+ * STATUS and/or DEPTH may be NULL if not wanted; KIND must not be NULL.
+ */
 static svn_error_t *
 ambient_read_info(svn_wc__db_status_t *status,
                   svn_kind_t *kind,

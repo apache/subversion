@@ -3529,7 +3529,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       SVN_ERR(svn_client__wc_node_get_origin(&target, target_abspath, ctx,
                                              scratch_pool, scratch_pool));
 
-      if (! target->url)
+      if (! target)
         {
           /* We've been asked to operate on a locally added target, so its
            * implicit mergeinfo is empty. */
@@ -9292,7 +9292,25 @@ open_target_wc(merge_target_t **target_p,
                            scratch_pool));
   SVN_ERR(svn_client__wc_node_get_origin(&origin, wc_abspath, ctx,
                                          result_pool, scratch_pool));
-  target->loc = *origin;
+  if (origin)
+    {
+      target->loc = *origin;
+    }
+  else
+    {
+      /* The node has no location in the repository. It's unversioned or
+       * locally added or locally deleted.
+       *
+       * If it's locally added or deleted, find the repository root
+       * URL and UUID anyway, and leave the node URL and revision as NULL
+       * and INVALID.  If it's unversioned, this will throw an error. */
+      SVN_ERR(svn_wc__node_get_repos_info(&target->loc.repos_root_url,
+                                          &target->loc.repos_uuid,
+                                          ctx->wc_ctx, wc_abspath,
+                                          result_pool, scratch_pool));
+      target->loc.rev = SVN_INVALID_REVNUM;
+      target->loc.url = NULL;
+    }
 
   SVN_ERR(ensure_wc_is_suitable_merge_target(
             wc_abspath, ctx,

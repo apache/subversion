@@ -26,7 +26,7 @@
 #include "fs.h"
 
 /**
- * Prepend the @a number to the @a string in a space efficient way that
+ * Prepend the @a number to the @a string in a space efficient way such that
  * no other (number,string) combination can produce the same result.
  * Allocate temporaries as well as the result from @a pool.
  */
@@ -36,8 +36,8 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
                                      apr_pool_t *pool);
 
 /**
- * Combine the numbers @a a and @a b a space efficient way that no other
- * combination of numbers can produce the same result.
+ * Combine the numbers @a a and @a b in a space efficient way such that no
+ * other combination of numbers can produce the same result.
  * Allocate temporaries as well as the result from @a pool.
  */
 const char*

@@ -481,7 +481,9 @@ def post_candidates(args):
     proc = subprocess.Popen(['svn', 'import', '-m',
                              'Add %s candidate release artifacts' 
                                % args.version.base,
-                            get_deploydir(args.base_dir), dist_dev_url])
+                             '--auto-props', '--config-option',
+                             'config:auto-props:*.asc=svn:eol-style=native',
+                             get_deploydir(args.base_dir), dist_dev_url])
     (stdout, stderr) = proc.communicate()
     proc.wait()
 

@@ -1241,6 +1241,7 @@ merge(svn_stringbuf_t *conflict_p,
   svn_fs_t *fs;
   apr_pool_t *iterpool;
   apr_int64_t mergeinfo_increment = 0;
+  svn_boolean_t fs_supports_mergeinfo;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_fs__dag_get_fs(ancestor);
@@ -1388,6 +1389,8 @@ merge(svn_stringbuf_t *conflict_p,
   SVN_ERR(svn_fs_fs__dag_dir_entries(&t_entries, target, pool));
   SVN_ERR(svn_fs_fs__dag_dir_entries(&a_entries, ancestor, pool));
 
+  fs_supports_mergeinfo = svn_fs_fs__fs_supports_mergeinfo(fs);
+
   /* for each entry E in a_entries... */
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, a_entries);
@@ -1419,7 +1422,7 @@ merge(svn_stringbuf_t *conflict_p,
           dag_node_t *t_ent_node;
           SVN_ERR(svn_fs_fs__dag_get_node(&t_ent_node, fs,
                                           t_entry->id, iterpool));
-          if (svn_fs_fs__fs_supports_mergeinfo(fs))
+          if (fs_supports_mergeinfo)
             {
               apr_int64_t mergeinfo_start;
               SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_start,
@@ -1433,7 +1436,7 @@ merge(svn_stringbuf_t *conflict_p,
               SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                               s_entry->id, iterpool));
 
-              if (svn_fs_fs__fs_supports_mergeinfo(fs))
+              if (fs_supports_mergeinfo)
                 {
                   apr_int64_t mergeinfo_end;
                   SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_end,
@@ -1510,7 +1513,7 @@ merge(svn_stringbuf_t *conflict_p,
                         txn_id,
                         &sub_mergeinfo_increment,
                         iterpool));
-          if (svn_fs_fs__fs_supports_mergeinfo(fs))
+          if (fs_supports_mergeinfo)
             mergeinfo_increment += sub_mergeinfo_increment;
         }
 
@@ -1546,7 +1549,7 @@ merge(svn_stringbuf_t *conflict_p,
 
       SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                       s_entry->id, iterpool));
-      if (svn_fs_fs__fs_supports_mergeinfo(fs))
+      if (fs_supports_mergeinfo)
         {
           apr_int64_t mergeinfo_s;
           SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_s,
@@ -1562,7 +1565,7 @@ merge(svn_stringbuf_t *conflict_p,
 
   SVN_ERR(svn_fs_fs__dag_update_ancestry(target, source, pool));
 
-  if (svn_fs_fs__fs_supports_mergeinfo(fs))
+  if (fs_supports_mergeinfo)
     SVN_ERR(svn_fs_fs__dag_increment_mergeinfo_count(target,
                                                      mergeinfo_increment,
                                                      pool));

@@ -146,10 +146,7 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
 
 /* Set *ORIGIN_P to the origin of the WC node at WC_ABSPATH.  If the node
  * is a local copy, give the copy-from location.  If the node is locally
- * added or deleted, set the REV and URL fields to SVN_INVALID_REVNUM and
- * NULL respectively, but still give the correct repository root URL and
- * UUID.
- */
+ * added or deleted, set *ORIGIN_P to NULL. */
 svn_error_t *
 svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                const char *wc_abspath,
