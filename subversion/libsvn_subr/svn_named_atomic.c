@@ -378,7 +378,7 @@ validate(svn_named_atomic__t *atomic)
 /* Implement API */
 
 svn_boolean_t
-svn_named_atomic__is_efficient()
+svn_named_atomic__is_efficient(void)
 {
   return SYNCHRONIZE_IS_FAST;
 }
