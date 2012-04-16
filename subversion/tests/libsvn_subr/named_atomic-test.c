@@ -341,6 +341,35 @@ calibrate_concurrency(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_boolean_t
+has_sufficient_privileges(void)
+{
+#ifdef _WIN32
+  static svn_tristate_t result = svn_tristate_unknown;
+
+  if (result == svn_tristate_unknown)
+    {
+      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
+                                         NULL,
+                                         PAGE_READONLY,
+                                         0,
+                                         1,
+                                         "Global\\__RandomXZY_svn");
+      if (handle != NULL)
+        {
+          CloseHandle(handle);
+          result = svn_tristate_true;
+        }
+      else
+        result = svn_tristate_false;
+    }
+
+  return result == svn_tristate_true ? TRUE : FALSE;
+#else
+  return TRUE;
+#endif
+}
+
 /* The individual tests */
 
 static svn_error_t *
@@ -349,6 +378,10 @@ test_basics(apr_pool_t *pool)
   svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomic;
   apr_int64_t value;
+
+  /* skip tests if the current user does not have the requried privileges */
+  if (!has_sufficient_privileges())
+    return SVN_NO_ERROR;
 
   SVN_ERR(init_test_shm(pool));
   
@@ -430,6 +463,10 @@ test_bignums(apr_pool_t *pool)
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
+  /* skip tests if the current user does not have the requried privileges */
+  if (!has_sufficient_privileges())
+    return SVN_NO_ERROR;
+
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
 
@@ -479,6 +516,10 @@ test_multiple_atomics(apr_pool_t *pool)
   svn_named_atomic__t *atomic2_alias;
   apr_int64_t value1;
   apr_int64_t value2;
+
+  /* skip tests if the current user does not have the requried privileges */
+  if (!has_sufficient_privileges())
+    return SVN_NO_ERROR;
 
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, TEST_NAMESPACE, pool));
@@ -545,6 +586,10 @@ test_namespaces(apr_pool_t *pool)
   svn_named_atomic__t *atomic_default;
   apr_int64_t value;
 
+  /* skip tests if the current user does not have the requried privileges */
+  if (!has_sufficient_privileges())
+    return SVN_NO_ERROR;
+
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&test_namespace1, TEST_NAMESPACE "1", pool));
   SVN_ERR(svn_atomic_namespace__create(&test_namespace1_alias, TEST_NAMESPACE "1", pool));
@@ -590,6 +635,10 @@ test_namespaces(apr_pool_t *pool)
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
+  /* skip tests if the current user does not have the requried privileges */
+  if (!has_sufficient_privileges())
+    return SVN_NO_ERROR;
+
   SVN_ERR(calibrate_concurrency(pool));
 
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
@@ -602,6 +651,10 @@ test_multithreaded(apr_pool_t *pool)
 static svn_error_t *
 test_multiprocess(apr_pool_t *pool)
 {
+  /* skip tests if the current user does not have the requried privileges */
+  if (!has_sufficient_privileges())
+    return SVN_NO_ERROR;
+
   SVN_ERR(calibrate_concurrency(pool));
 
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
