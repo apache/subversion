@@ -484,7 +484,7 @@ typedef struct path_driver_info_t
   const char *dst_relpath;
   svn_node_kind_t src_kind;
   svn_revnum_t src_revnum;
-  svn_string_t *mergeinfo;  /* the new mergeinfo for the target */
+  apr_hash_t *props;
 } path_driver_info_t;
 
 
@@ -576,8 +576,6 @@ drive_single_path(svn_editor_t *editor,
                   const char *repos_root,
                   apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props = apr_hash_make(scratch_pool);
-
   if (is_move)
     {
       SVN_ERR(svn_editor_move(editor, path_info->src_relpath,
@@ -591,18 +589,17 @@ drive_single_path(svn_editor_t *editor,
                               SVN_INVALID_REVNUM));
     }
 
-  /* ### Need to get existing props, rather than just set mergeinfo
-         on an empty set of props. */
-  if (path_info->mergeinfo)
-    apr_hash_set(props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
-                 path_info->mergeinfo);
-
-  if (path_info->src_kind == svn_node_file)
-    SVN_ERR(svn_editor_alter_file(editor, path_info->dst_relpath,
-                                  SVN_INVALID_REVNUM, props, NULL, NULL));
-  else
-    SVN_ERR(svn_editor_alter_directory(editor, path_info->dst_relpath,
-                                       SVN_INVALID_REVNUM, props));
+  if (path_info->props)
+    {
+      if (path_info->src_kind == svn_node_file)
+        SVN_ERR(svn_editor_alter_file(editor, path_info->dst_relpath,
+                                      SVN_INVALID_REVNUM, path_info->props,
+                                      NULL, NULL));
+      else
+        SVN_ERR(svn_editor_alter_directory(editor, path_info->dst_relpath,
+                                           SVN_INVALID_REVNUM,
+                                           path_info->props));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -792,10 +789,35 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                 &mergeinfo, ra_session,
                 pair->src_abspath_or_url, pair->src_revnum,
                 svn_mergeinfo_inherited, TRUE /*squelch_incapable*/, pool));
-      if (mergeinfo)
-        SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
 
-      /* Plop an INFO structure onto our array thereof. */
+      if (mergeinfo)
+        {
+          apr_hash_t *props;
+          apr_array_header_t *proplist;
+          svn_string_t *mergeinfo_str;
+
+          /* We need to fetch and filter props, so we can set props together,
+             as dictated by Ev2. */
+          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_str, mergeinfo, pool));
+
+          if (info->src_kind == svn_node_file)
+            SVN_ERR(svn_ra_get_file(ra_session, info->src_relpath,
+                                    info->src_revnum, NULL, NULL, &props,
+                                    pool));
+          else
+            SVN_ERR(svn_ra_get_dir2(ra_session, NULL, NULL, &props,
+                                    info->src_relpath, info->src_revnum, 0,
+                                    pool));
+
+          proplist = svn_prop_hash_to_array(props, pool);
+          SVN_ERR(svn_categorize_props(proplist, NULL, NULL, &proplist, pool));
+          info->props = svn_prop_array_to_hash(proplist, pool);
+
+          apr_hash_set(info->props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
+                       mergeinfo_str);
+        }
+
+      /* Finally, plop an INFO structure onto our array thereof. */
       APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
 
