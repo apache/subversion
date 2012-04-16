@@ -53,15 +53,16 @@ main(int argc, const char *argv[])
   pool = svn_pool_create(NULL);
 
   /* lean & mean parameter parsing */
-  if (argc != 4)
+  if (argc != 5)
     {
-      printf("Usage: named_atomic-test-proc ID COUNT ITERATIONS.\n");
+      printf("Usage: named_atomic-proc-test ID COUNT ITERATIONS NS.\n");
       exit(1);
     }
 
   id = (int)apr_atoi64(argv[1]);
   count = (int)apr_atoi64(argv[2]);
   iterations = (int)apr_atoi64(argv[3]);
+  name_namespace = argv[4];
 
   /* run test routine */
 

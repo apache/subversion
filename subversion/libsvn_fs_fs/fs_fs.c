@@ -101,6 +101,7 @@
  * revprop updates across all processes on this machine. */
 #define ATOMIC_REVPROP_GENERATION "RevPropGeneration"
 #define ATOMIC_REVPROP_TIMEOUT    "RevPropTimeout"
+#define ATOMIC_REVPROP_NAMESPACE  "RevPropAtomics"
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -2799,15 +2800,32 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
+/* Make sure the revprop_namespace member in FS is set. */
+static svn_error_t *
+ensure_revprop_namespace(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return ffd->revprop_namespace == NULL
+    ? svn_atomic_namespace__create(&ffd->revprop_namespace,
+                                   apr_pstrcat(fs->pool,
+                                               fs->path,
+                                               ATOMIC_REVPROP_NAMESPACE,
+                                               (char *)NULL),
+                                   fs->pool)
+    : SVN_NO_ERROR;
+}
+
 /* Make sure the revprop_generation member in FS is set. */
 static svn_error_t *
 ensure_revprop_generation(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  
+
+  SVN_ERR(ensure_revprop_namespace(fs));
   return ffd->revprop_generation == NULL
     ? svn_named_atomic__get(&ffd->revprop_generation,
-                            NULL,
+                            ffd->revprop_namespace,
                             ATOMIC_REVPROP_GENERATION,
                             TRUE)
     : SVN_NO_ERROR;
@@ -2819,9 +2837,10 @@ ensure_revprop_timeout(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   
+  SVN_ERR(ensure_revprop_namespace(fs));
   return ffd->revprop_timeout == NULL
     ? svn_named_atomic__get(&ffd->revprop_timeout,
-                            NULL,
+                            ffd->revprop_namespace,
                             ATOMIC_REVPROP_TIMEOUT,
                             TRUE)
     : SVN_NO_ERROR;
