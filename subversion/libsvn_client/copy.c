@@ -578,8 +578,6 @@ drive_single_path(svn_editor_t *editor,
 {
   apr_hash_t *props = apr_hash_make(scratch_pool);
 
-  /* ### We need to handle moves here, rather than just pretend they are
-         a delete + add. */
   if (is_move)
     {
       SVN_ERR(svn_editor_move(editor, path_info->src_relpath,
