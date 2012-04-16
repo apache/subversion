@@ -146,6 +146,7 @@ APR_THREAD_FUNC test_thread(apr_thread_t *thread, void *baton)
                                    params->iterations,
                                    pool);
   apr_pool_destroy(pool);
+  apr_thread_exit(thread, APR_SUCCESS);
 
   return NULL;
 }
