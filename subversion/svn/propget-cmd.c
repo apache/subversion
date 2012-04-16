@@ -69,28 +69,58 @@ stream_write(svn_stream_t *out,
 static svn_error_t *
 print_properties_xml(const char *pname,
                      apr_hash_t *props,
+                     apr_array_header_t *inherited_props,
                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = NULL;
+  int i;
+  svn_stringbuf_t *sb;
+
+  if (inherited_props && inherited_props->nelts)
+    {
+      iterpool = svn_pool_create(pool);
+
+      for (i = 0; i < inherited_props->nelts; i++)
+        {
+          svn_prop_inherited_item_t *iprop =
+           APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
+          svn_string_t *propval = svn__apr_hash_index_val(
+            apr_hash_first(pool, iprop->prop_hash));
+
+          sb = NULL;
+          svn_pool_clear(iterpool);
+          svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
+                            "path", iprop->path_or_url, NULL);
+
+          svn_cmdline__print_xml_prop(&sb, pname, propval, TRUE, iterpool);
+          svn_xml_make_close_tag(&sb, iterpool, "target");
+
+          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+        }
+    }
+
+  if (iterpool == NULL)
+    iterpool = svn_pool_create(iterpool);
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
       const char *filename = svn__apr_hash_index_key(hi);
       svn_string_t *propval = svn__apr_hash_index_val(hi);
-      svn_stringbuf_t *sb = NULL;
 
+      sb = NULL;
       svn_pool_clear(iterpool);
 
       svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
                         "path", filename, NULL);
-      svn_cmdline__print_xml_prop(&sb, pname, propval, iterpool);
+      svn_cmdline__print_xml_prop(&sb, pname, propval, FALSE, iterpool);
       svn_xml_make_close_tag(&sb, iterpool, "target");
 
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
 
-  svn_pool_destroy(iterpool);
+  if (iterpool)
+    svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -317,7 +347,8 @@ svn_cl__propget(apr_getopt_t *os,
                                     "revprops",
                                     "rev", revstr, NULL);
 
-              svn_cmdline__print_xml_prop(&sb, pname_utf8, propval, pool);
+              svn_cmdline__print_xml_prop(&sb, pname_utf8, propval, FALSE,
+                                          pool);
 
               svn_xml_make_close_tag(&sb, pool, "revprops");
 
@@ -407,7 +438,10 @@ svn_cl__propget(apr_getopt_t *os,
           like_proplist = opt_state->verbose && !opt_state->strict;
 
           if (opt_state->xml)
-            SVN_ERR(print_properties_xml(pname_utf8, props, subpool));
+            SVN_ERR(print_properties_xml(
+              pname_utf8, props,
+              opt_state->show_inherited_props ? inherited_props : NULL,
+              subpool));
           else
             SVN_ERR(print_properties(
               out, pname_utf8,
