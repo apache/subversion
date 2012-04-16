@@ -428,6 +428,13 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
       ns = &default_namespace;
     }
 
+  /* This should never happen:
+   * Some undetected error in the namespace initialization.
+   */
+  if (ns == NULL || ns->data == NULL)
+    return svn_error_create(SVN_ERR_BAD_ATOMIC, 0,
+                            _("Namespace has not been initialized."));
+
   /* Optimistic lookup.
    * Because we never change the name of existing atomics and may only
    * append new ones, we can safely compare the name of existing ones
