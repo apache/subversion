@@ -267,7 +267,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
       start = apr_time_now();
       SVN_ERR(run_procs(pool, TEST_PROC, count, calib_iterations));
 
-      taken = apr_time_now() - start;
+      taken = (double)(apr_time_now() - start);
     }
 
   /* scale that to 1s */
