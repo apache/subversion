@@ -1481,9 +1481,11 @@ def _create_parser():
   """Return a parser for our test suite."""
   def set_log_level(option, opt, value, parser, level=None):
     if level:
+      # called from --verbose
       logger.setLevel(level)
     else:
-      logger.setLevel(value)
+      # called from --set-log-level
+      logger.setLevel(getattr(logging, value, None) or int(value))
 
   # set up the parser
   _default_http_library = 'serf'
@@ -1535,7 +1537,8 @@ def _create_parser():
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
-                    callback=set_log_level)
+                    callback=set_log_level,
+		    help="Set log level (numerically or symbolically)")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
