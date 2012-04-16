@@ -115,41 +115,6 @@ get_file_for_validation(const svn_string_t **mime_type,
   return SVN_NO_ERROR;
 }
 
-
-static
-svn_error_t *
-do_url_propset(const char *url,
-               const char *propname,
-               const svn_string_t *propval,
-               const svn_node_kind_t kind,
-               const svn_revnum_t base_revision_for_url,
-               const svn_delta_editor_t *editor,
-               void *edit_baton,
-               apr_pool_t *pool)
-{
-  void *root_baton;
-
-  SVN_ERR(editor->open_root(edit_baton, base_revision_for_url, pool,
-                            &root_baton));
-
-  if (kind == svn_node_file)
-    {
-      void *file_baton;
-      const char *uri_basename = svn_uri_basename(url, pool);
-
-      SVN_ERR(editor->open_file(uri_basename, root_baton,
-                                base_revision_for_url, pool, &file_baton));
-      SVN_ERR(editor->change_file_prop(file_baton, propname, propval, pool));
-      SVN_ERR(editor->close_file(file_baton, NULL, pool));
-    }
-  else
-    {
-      SVN_ERR(editor->change_dir_prop(root_baton, propname, propval, pool));
-    }
-
-  return editor->close_directory(root_baton, pool);
-}
-
 static svn_error_t *
 propset_on_url(const char *propname,
                const svn_string_t *propval,
@@ -166,9 +131,12 @@ propset_on_url(const char *propname,
   svn_ra_session_t *ra_session;
   svn_node_kind_t node_kind;
   const char *message;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
+  svn_editor_t *editor;
   apr_hash_t *commit_revprops;
+  const char *repos_root;
+  const char *relpath;
+  apr_array_header_t *proplist;
+  apr_hash_t *props;
   svn_error_t *err;
 
   if (prop_kind != svn_prop_regular_kind)
@@ -181,26 +149,17 @@ propset_on_url(const char *propname,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, target,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
+  relpath = svn_uri_skip_ancestor(repos_root, target, pool);
 
-  SVN_ERR(svn_ra_check_path(ra_session, "", base_revision_for_url,
+  SVN_ERR(svn_ra_check_path(ra_session, relpath, base_revision_for_url,
                             &node_kind, pool));
   if (node_kind == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
        _("Path '%s' does not exist in revision %ld"),
        target, base_revision_for_url);
-
-  if (node_kind == svn_node_file)
-    {
-      /* We need to reparent our session one directory up, since editor
-         semantics require the root is a directory.
-
-         ### How does this interact with authz? */
-      const char *parent_url;
-      parent_url = svn_uri_dirname(target, pool);
-
-      SVN_ERR(svn_ra_reparent(ra_session, parent_url, pool));
-    }
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
@@ -219,6 +178,25 @@ propset_on_url(const char *propname,
                                            get_file_for_validation, &gb, pool));
       propval = new_value;
     }
+
+  /* With Ev2 we change all the props simultaneously, so we need to get
+     any existing ones first. */
+  /* ### Need to handle symlink? */
+  if (node_kind == svn_node_file)
+    SVN_ERR(svn_ra_get_file(ra_session, relpath, base_revision_for_url,
+                            NULL, NULL, &props, pool));
+  else
+    SVN_ERR(svn_ra_get_dir2(ra_session, NULL, NULL, &props, relpath,
+                            base_revision_for_url, 0, pool));
+
+  /* Need to filter props returned from the above APIs, which involves a bit
+     of dancing.  :(  */
+  proplist = svn_prop_hash_to_array(props, pool);
+  SVN_ERR(svn_categorize_props(proplist, NULL, NULL, &proplist, pool));
+  props = svn_prop_array_to_hash(proplist, pool);
+
+  /* Set the new value in the nodes set of props. */
+  apr_hash_set(props, propname, APR_HASH_KEY_STRING, propval);
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -246,25 +224,31 @@ propset_on_url(const char *propname,
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        NULL, pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
-                                    pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
-  err = do_url_propset(target, propname, propval, node_kind,
-                       base_revision_for_url, editor, edit_baton, pool);
+  /* ### Need to handle symlink? */
+  if (node_kind == svn_node_file)
+    err = svn_editor_alter_file(editor, relpath, base_revision_for_url,
+                                props, NULL, NULL);
+  else
+    err = svn_editor_alter_directory(editor, relpath, base_revision_for_url,
+                                     props);
 
   if (err)
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
+      svn_error_clear(svn_editor_abort(editor));
       return svn_error_trace(err);
     }
 
-  /* Close the edit. */
-  return editor->close_edit(edit_baton, pool);
+  /* Complete the edit. */
+  return svn_error_trace(svn_editor_complete(editor));
 }
 
 /* Check that PROPNAME is a valid name for a versioned property.  Return an
