@@ -208,6 +208,21 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
 
   /* all processes and their I/O data */
   apr_proc_t *process = apr_palloc(pool, count * sizeof(*process));
+  const char * directory = NULL;
+
+#ifdef _WIN32
+  /* Under Windows, the test will not be in the current directory
+   * and neither will be PROC. Therefore, determine its full path */
+  char path [MAX_PATH] = { 0 };
+  GetModuleFileNameA(NULL, path, sizeof(path));
+  *(strrchr(path, '\\') + 1) = 0;
+  proc = apr_pstrcat(pool, path, proc, ".exe", NULL);
+
+  /* And we need to set the working dir to our working dir to make
+   * our sub-processes find all DLLs. */
+  GetCurrentDirectoryA(sizeof(path), path);
+  directory = path;
+#endif
 
   /* start threads */
   for (i = 0; i < count; ++i)
@@ -222,16 +237,16 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
         };
 
       SVN_ERR(svn_io_start_cmd3(&process[i],
-                                NULL,  /* path */
+                                directory,  /* working directory */
                                 args[0],
                                 args,
-                                NULL,  /* environment */
-                                FALSE, /* no handle inheritance */
-                                FALSE, /* no STDIN pipe */
+                                NULL,       /* environment */
+                                FALSE,      /* no handle inheritance */
+                                FALSE,      /* no STDIN pipe */
                                 NULL,
-                                FALSE, /* no STDOUT pipe */
+                                FALSE,      /* no STDOUT pipe */
                                 NULL,
-                                FALSE, /* no STDERR pipe */
+                                FALSE,      /* no STDERR pipe */
                                 NULL,
                                 pool));
     }
