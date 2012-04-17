@@ -130,7 +130,7 @@ init_concurrency_test_shm(apr_pool_t *pool, int count)
   return SVN_NO_ERROR;
 }
 
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 
 /* our thread function type
  */
@@ -643,7 +643,7 @@ test_namespaces(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
@@ -698,7 +698,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "basic r/w access to multiple atomics"),
     SVN_TEST_PASS2(test_namespaces,
                    "use different namespaces"),
-#ifdef APR_HAS_THREADS                
+#if APR_HAS_THREADS
     SVN_TEST_PASS2(test_multithreaded,
                    "multithreaded access to atomics"),
 #endif                   
