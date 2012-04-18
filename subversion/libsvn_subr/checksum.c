@@ -291,6 +291,9 @@ svn_checksum_t *
 svn_checksum_dup(const svn_checksum_t *checksum,
                  apr_pool_t *pool)
 {
+  svn_checksum_t *out;
+  apr_size_t digest_size;
+
   /* The duplicate of a NULL checksum is a NULL... */
   if (checksum == NULL)
     return NULL;
@@ -303,15 +306,19 @@ svn_checksum_dup(const svn_checksum_t *checksum,
   switch (checksum->kind)
     {
       case svn_checksum_md5:
+        digest_size = APR_MD5_DIGESTSIZE;
         break;
       case svn_checksum_sha1:
+        digest_size = APR_SHA1_DIGESTSIZE;
         break;
       default:
         SVN_ERR_MALFUNCTION_NO_RETURN();
         break;
     }
 
-  return svn_checksum__from_digest(checksum->digest, checksum->kind, pool);
+  out = checksum_create(checksum->kind, digest_size, pool);
+  memcpy((unsigned char *)out->digest, checksum->digest, digest_size);
+  return out;
 }
 
 svn_error_t *
