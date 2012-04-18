@@ -56,25 +56,43 @@ validate_kind(svn_checksum_kind_t kind)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
 }
 
+/* Create a svn_checksum_t with everything but the contents of the
+   digest populated. */
+static svn_checksum_t *
+checksum_create(svn_checksum_kind_t kind,
+                apr_size_t digest_size,
+                apr_pool_t *pool)
+{
+  // Use apr_palloc() instead of apr_pcalloc() so that the digest
+  // contents are only set once by the caller.
+  svn_checksum_t *checksum = apr_palloc(pool, sizeof(*checksum) + digest_size);
+  checksum->digest = (unsigned char *)checksum + sizeof(*checksum);
+  checksum->kind = kind;
+  return checksum;
+}
 
 svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
+  apr_size_t digest_size;
 
   switch (kind)
     {
       case svn_checksum_md5:
+        digest_size = APR_MD5_DIGESTSIZE;
+        break;
       case svn_checksum_sha1:
-        checksum = apr_pcalloc(pool, sizeof(*checksum) + DIGESTSIZE(kind));
-        checksum->digest = (unsigned char *)checksum + sizeof(*checksum);
-        checksum->kind = kind;
-        return checksum;
-
+        digest_size = APR_SHA1_DIGESTSIZE;
+        break;
       default:
         return NULL;
     }
+
+  checksum = checksum_create(kind, digest_size, pool);
+  memset((unsigned char *) checksum->digest, 0, digest_size);
+  return checksum;
 }
 
 svn_checksum_t *
