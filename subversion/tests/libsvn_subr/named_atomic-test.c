@@ -702,14 +702,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_namespaces,
                    "use different namespaces"),
 #if APR_HAS_THREADS
-#ifdef WIN32
-#define IS_UNIX 0
-#else
-#define IS_UNIX 1
-#endif
-    SVN_TEST_WIMP_COND(test_multithreaded, IS_UNIX,
-                   "multithreaded access to atomics",
-                   "thread locking on unix"),
+    SVN_TEST_PASS2(test_multithreaded,
+                   "multithreaded access to atomics"),
 #endif                   
     SVN_TEST_PASS2(test_multiprocess,
                    "multi-process access to atomics"),

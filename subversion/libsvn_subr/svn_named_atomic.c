@@ -98,7 +98,7 @@
  * as well as any type of data access.  This is quite expensive and we
  * can do much better on most platforms.
  */
-#if defined(_WIN32) && ((_WIN32_WINNT >= 0x0502) || defined(InterlockedAdd64))
+#if defined(WIN32) && ((_WIN32_WINNT >= 0x0502) || defined(InterlockedAdd64))
 
 /* Interlocked API / intrinsics guarantee full data synchronization 
  */
@@ -195,9 +195,6 @@ struct shared_data_t
  */
 struct mutex_t
 {
-  /* Used for process-local thread sync. */
-  svn_mutex__t *mutex;
-
   /* Inter-process sync. is handled by through lock file. */
   apr_file_t *lock_file;
 
@@ -238,9 +235,34 @@ struct svn_atomic_namespace__t
   struct mutex_t mutex;
 };
 
+/* On most operating systems APR implements file locks per process, not
+ * per file. I.e. the lock file will only sync. among processes but within
+ * a process, we must use a mutex to sync the threads. */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define USE_THREAD_MUTEX 1
+#else
+#define USE_THREAD_MUTEX 0
+#endif
+
+/* Used for process-local thread sync.
+ */
+static svn_mutex__t *thread_mutex = NULL;
+
 /* Initialization flag for the above used by svn_atomic__init_once.
  */
 static volatile svn_atomic_t mutex_initialized = FALSE;
+
+/* Initialize the thread sync. structures.
+ * To be called by svn_atomic__init_once.
+ */
+static svn_error_t *
+init_thread_mutex(void *baton, apr_pool_t *pool)
+{
+  /* let the mutex live as long as the APR */
+  apr_pool_t *global_pool = svn_pool_create(NULL);
+
+  return svn_mutex__init(&thread_mutex, USE_THREAD_MUTEX, global_pool);
+}
 
 /* Utility that acquires our global mutex and converts error types.
  */
@@ -250,11 +272,11 @@ lock(struct mutex_t *mutex)
   svn_error_t *err;
   
   /* Get lock on the filehandle. */
-  SVN_ERR(svn_mutex__lock(mutex->mutex));
+  SVN_ERR(svn_mutex__lock(thread_mutex));
   err = svn_io_lock_open_file(mutex->lock_file, TRUE, FALSE, mutex->pool);
 
   return err
-    ? svn_mutex__unlock(mutex->mutex, err)
+    ? svn_mutex__unlock(thread_mutex, err)
     : err;
 }
 
@@ -267,7 +289,7 @@ unlock(struct mutex_t *mutex, svn_error_t * outer_err)
 {
   svn_error_t *unlock_err
       = svn_io_unlock_open_file(mutex->lock_file, mutex->pool);
-  return svn_mutex__unlock(mutex->mutex,
+  return svn_mutex__unlock(thread_mutex,
                            svn_error_compose_create(outer_err,
                                                     unlock_err));
 }
@@ -325,8 +347,12 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   /* initialize the lock objects
    */
+  svn_atomic__init_once(&mutex_initialized,
+                        init_thread_mutex,
+                        NULL,
+                        result_pool);
+
   new_ns->mutex.pool = result_pool;
-  SVN_ERR(svn_mutex__init(&new_ns->mutex.mutex, TRUE, result_pool));
   SVN_ERR(svn_io_file_open(&new_ns->mutex.lock_file, lock_name,
                            APR_READ | APR_WRITE | APR_CREATE,
                            APR_OS_DEFAULT,
