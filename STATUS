@@ -64,15 +64,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * r1295007
-   Include svnrdump in the Windows build.
-   Justification:
-     I do not know for sure, but I assume that either make-dist.py or
-     vc6-build.bat.in is actually used by some people --- and if I'm wrong,
-     this would be harmless.
-   Votes:
-     +1: danielsh, hwright
-
  * r1210913, r1211048
    Fix issue 4073, assert on svn:externals path with drive letter on Windows.
    Justification:
@@ -109,13 +100,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1325361
-   Avoid reading unitialised variable in propset.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, hwright
-
  * r1190463
    Issue 4046, "svn update --depth=empty" against 1.4 servers.
    Justification:
@@ -130,6 +114,14 @@ Candidate changes:
      versions, and general improvements for the benefit of Emacs users.
    Votes:
      +1: mattiase
+
+ * r1327474, r1327490, r1327495
+   Allow an optional value of the delta editor to be transfered via
+   mod_dav_svn, ra_serf and ra_neon.
+   Justification:
+     The ra layers should behave as similar as possible
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -150,3 +142,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1325361
+   Avoid reading unitialised variable in propset.
+   Justification:
+     Undefined behaviour.
+   Votes:
+     +1: philip, hwright, rhuijben
+
+ * r1295007
+   Include svnrdump in the Windows build.
+   Justification:
+     I do not know for sure, but I assume that either make-dist.py or
+     vc6-build.bat.in is actually used by some people --- and if I'm wrong,
+     this would be harmless.
+   Votes:
+     +1: danielsh, hwright, rhuijben
