@@ -841,9 +841,8 @@ window_handler(svn_txdelta_window_t *window,
 
   if (!window)
     {
-      b->result_md5_checksum = svn_checksum__from_digest(b->result_digest,
-                                                         svn_checksum_md5,
-                                                         b->pool);
+      b->result_md5_checksum = svn_checksum__from_digest_md5(b->result_digest,
+                                                             b->pool);
     }
 
   return SVN_NO_ERROR;

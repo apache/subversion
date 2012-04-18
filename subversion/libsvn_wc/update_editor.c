@@ -962,8 +962,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* Tell the file baton about the new text base's checksums. */
       fb->new_text_base_md5_checksum =
-        svn_checksum__from_digest(hb->new_text_base_md5_digest,
-                                  svn_checksum_md5, fb->pool);
+        svn_checksum__from_digest_md5(hb->new_text_base_md5_digest, fb->pool);
       fb->new_text_base_sha1_checksum =
         svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
 

@@ -561,7 +561,7 @@ svn_stringbuf_t *
 svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
 {
   svn_checksum_t *checksum
-    = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+    = svn_checksum__from_digest_md5(digest, pool);
 
   return base64_from_checksum(checksum, pool);
 }
