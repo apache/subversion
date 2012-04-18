@@ -106,6 +106,16 @@ svn_checksum__from_digest_md5(const unsigned char *digest,
 }
 
 svn_checksum_t *
+svn_checksum__from_digest_sha1(const unsigned char *digest,
+                               apr_pool_t *result_pool)
+{
+  svn_checksum_t *checksum = checksum_create(svn_checksum_sha1,
+                                             APR_SHA1_DIGESTSIZE, result_pool);
+  memcpy((unsigned char *)checksum->digest, digest, APR_SHA1_DIGESTSIZE);
+  return checksum;
+}
+
+svn_checksum_t *
 svn_checksum__from_digest(const unsigned char *digest,
                           svn_checksum_kind_t kind,
                           apr_pool_t *result_pool)

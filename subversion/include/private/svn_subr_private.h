@@ -211,6 +211,16 @@ svn_checksum__from_digest_md5(const unsigned char *digest,
                               apr_pool_t *result_pool);
 
 /**
+ * Internal function for creating a SHA1 checksum from a binary
+ * digest.
+ *
+ * @since New in 1.8
+ */
+svn_checksum_t *
+svn_checksum__from_digest_sha1(const unsigned char *digest,
+                               apr_pool_t *result_pool);
+
+/**
  * Internal function for creating a checksum from a binary digest.
  *
  * @since New in 1.6
