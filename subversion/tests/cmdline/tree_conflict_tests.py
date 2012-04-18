@@ -1398,7 +1398,8 @@ def update_dir_with_not_present(sbox):
   sbox.simple_rm('A/B')
 
   # We can't commit this without updating (ra_svn produces its own error)
-  run_and_verify_svn(None, None, "svn: (E155011|E160028): Dir.*B.*out of date",
+  run_and_verify_svn(None, None,
+                    "svn: (E155011|E160028|E170004): (Dir|Item).*B.*out of date",
                      'ci', '-m', '', wc_dir)
 
   # So we run update
