@@ -521,9 +521,9 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
         {
           checksum_skel = header_skel->children->next->next->next;
           rep->sha1_checksum =
-            svn_checksum__from_digest((const unsigned char *)
-                                      (checksum_skel->children->next->data),
-                                      svn_checksum_sha1, pool);
+            svn_checksum__from_digest_sha1(
+              (const unsigned char *)(checksum_skel->children->next->data),
+              pool);
         }
     }
 
