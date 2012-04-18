@@ -45,6 +45,101 @@ static int hw_thread_count = 0;
  * (will be calibrated to about 1s runtime)*/
 static int suggested_iterations = 0;
 
+/* Return FALSE if we can't create SHMs due to missing privileges
+ */
+static svn_boolean_t
+has_sufficient_privileges(void)
+{
+#ifdef _WIN32
+  static svn_tristate_t result = svn_tristate_unknown;
+
+  if (result == svn_tristate_unknown)
+    {
+      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
+                                         NULL,
+                                         PAGE_READONLY,
+                                         0,
+                                         1,
+                                         "Global\\__RandomXZY_svn");
+      if (handle != NULL)
+        {
+          CloseHandle(handle);
+          result = svn_tristate_true;
+        }
+      else
+        result = svn_tristate_false;
+    }
+
+  return result == svn_tristate_true ? TRUE : FALSE;
+#else
+  return TRUE;
+#endif
+}
+
+/* If possible, translate PROC to a global path and set DIRECTORY to
+ * the current directory.
+ */
+static svn_error_t *
+adjust_proc_path(const char **proc, const char **directory, apr_pool_t *pool)
+{
+#ifdef WIN32
+  /* Under Windows, the test will not be in the current directory
+   * and neither will be PROC. Therefore, determine its full path */
+  char path [MAX_PATH] = { 0 };
+  GetModuleFileNameA(NULL, path, sizeof(path));
+  *(strrchr(path, '\\') + 1) = 0;
+  proc = apr_pstrcat(pool, path, proc, ".exe", NULL);
+
+  /* And we need to set the working dir to our working dir to make
+   * our sub-processes find all DLLs. */
+  GetCurrentDirectoryA(sizeof(path), path);
+  directory = path;
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+/* Returns true if PROC can be found and executed.
+ */
+static svn_boolean_t
+proc_found(const char *proc, apr_pool_t *pool)
+{
+  static svn_tristate_t result = svn_tristate_unknown;
+
+  if (result == svn_tristate_unknown)
+    {
+      svn_error_t *error = SVN_NO_ERROR;
+      const char * directory = NULL;
+
+      /* all processes and their I/O data */
+      apr_proc_t process;
+      const char * args[2] = {proc, NULL};
+      svn_error_clear(adjust_proc_path(&args[0], &directory, pool));
+
+      /* try to start the process */
+      error = svn_io_start_cmd3(&process,
+                                directory,  /* working directory */
+                                args[0],
+                                args,
+                                NULL,       /* environment */
+                                FALSE,      /* no handle inheritance */
+                                FALSE,      /* no STDIN pipe */
+                                NULL,
+                                FALSE,      /* no STDOUT pipe */
+                                NULL,
+                                FALSE,      /* no STDERR pipe */
+                                NULL,
+                                pool);
+      if (!error)
+        error = svn_io_wait_for_cmd(&process, proc, NULL, NULL, pool);
+
+      result = error ? svn_tristate_false : svn_tristate_true;
+      svn_error_clear(error);
+    }
+
+  return result == svn_tristate_true;
+}
+
 /* Bring shared memory to a defined state. This is very useful in case of
  * lingering problems from previous tests or test runs.
  */
@@ -70,6 +165,11 @@ init_test_shm(apr_pool_t *pool)
       name_namespace2 = apr_pstrcat(global_pool, name_namespace, "2", NULL);
     }
     
+  /* skip tests if the current user does not have the required privileges */
+  if (!has_sufficient_privileges())
+    return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
+                              "user has insufficient privileges");
+
   /* get the two I/O atomics for this thread */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, scratch));
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
@@ -226,24 +326,11 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
   /* all processes and their I/O data */
   apr_proc_t *process = apr_palloc(pool, count * sizeof(*process));
   apr_file_t *common_stdout = NULL;
-
-#ifdef _WIN32
-  /* Under Windows, the test will not be in the current directory
-   * and neither will be PROC. Therefore, determine its full path */
-  char path [MAX_PATH] = { 0 };
-  GetModuleFileNameA(NULL, path, sizeof(path));
-  *(strrchr(path, '\\') + 1) = 0;
-  proc = apr_pstrcat(pool, path, proc, ".exe", NULL);
-
-  /* And we need to set the working dir to our working dir to make
-   * our sub-processes find all DLLs. */
-  GetCurrentDirectoryA(sizeof(path), path);
-  directory = path;
-#endif
-
   apr_file_open_stdout(&common_stdout, pool);
+
+  SVN_ERR(adjust_proc_path(&proc, &directory, pool));
   
-  /* start threads */
+  /* start sub-processes */
   for (i = 0; i < count; ++i)
     {
       const char * args[6] =
@@ -271,7 +358,7 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
                                 pool));
     }
 
-  /* Wait for threads to finish and return result. */
+  /* Wait for sub-processes to finish and return result. */
   for (i = 0; i < count; ++i)
     {
       const char *cmd = apr_psprintf(pool,
@@ -330,7 +417,7 @@ calibrate_concurrency(apr_pool_t *pool)
 
       /* if we've got a proper machine and OS setup, let's prepare for
        * some real testing */
-      if (svn_named_atomic__is_efficient())
+      if (svn_named_atomic__is_efficient() && proc_found(TEST_PROC, pool))
         {
           SVN_ERR(calibrate_iterations(pool, 2));
           for (; hw_thread_count < 32; hw_thread_count *= 2)
@@ -360,35 +447,6 @@ calibrate_concurrency(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-has_sufficient_privileges(void)
-{
-#ifdef _WIN32
-  static svn_tristate_t result = svn_tristate_unknown;
-
-  if (result == svn_tristate_unknown)
-    {
-      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
-                                         NULL,
-                                         PAGE_READONLY,
-                                         0,
-                                         1,
-                                         "Global\\__RandomXZY_svn");
-      if (handle != NULL)
-        {
-          CloseHandle(handle);
-          result = svn_tristate_true;
-        }
-      else
-        result = svn_tristate_false;
-    }
-
-  return result == svn_tristate_true ? TRUE : FALSE;
-#else
-  return TRUE;
-#endif
-}
-
 /* The individual tests */
 
 static svn_error_t *
@@ -398,16 +456,12 @@ test_basics(apr_pool_t *pool)
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
-  /* skip tests if the current user does not have the requried privileges */
-  if (!has_sufficient_privileges())
-    return SVN_NO_ERROR;
-
   SVN_ERR(init_test_shm(pool));
   
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, pool));
 
-  /* Test a non-exisiting atomic */
+  /* Test a non-existing atomic */
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "x", FALSE));
   SVN_TEST_ASSERT(atomic == NULL);
   
@@ -482,10 +536,6 @@ test_bignums(apr_pool_t *pool)
   svn_named_atomic__t *atomic;
   apr_int64_t value;
 
-  /* skip tests if the current user does not have the requried privileges */
-  if (!has_sufficient_privileges())
-    return SVN_NO_ERROR;
-
   SVN_ERR(init_test_shm(pool));
   
   /* Use a separate namespace for our tests isolate them from production */
@@ -537,10 +587,6 @@ test_multiple_atomics(apr_pool_t *pool)
   svn_named_atomic__t *atomic2_alias;
   apr_int64_t value1;
   apr_int64_t value2;
-
-  /* skip tests if the current user does not have the requried privileges */
-  if (!has_sufficient_privileges())
-    return SVN_NO_ERROR;
 
   SVN_ERR(init_test_shm(pool));
   
@@ -606,10 +652,6 @@ test_namespaces(apr_pool_t *pool)
   svn_named_atomic__t *atomic2_alias;
   apr_int64_t value;
 
-  /* skip tests if the current user does not have the requried privileges */
-  if (!has_sufficient_privileges())
-    return SVN_NO_ERROR;
-
   SVN_ERR(init_test_shm(pool));
   
   /* Use a separate namespace for our tests isolate them from production */
@@ -650,10 +692,6 @@ test_namespaces(apr_pool_t *pool)
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
-  /* skip tests if the current user does not have the requried privileges */
-  if (!has_sufficient_privileges())
-    return SVN_NO_ERROR;
-
   SVN_ERR(init_test_shm(pool));
   
   SVN_ERR(calibrate_concurrency(pool));
@@ -668,9 +706,9 @@ test_multithreaded(apr_pool_t *pool)
 static svn_error_t *
 test_multiprocess(apr_pool_t *pool)
 {
-  /* skip tests if the current user does not have the requried privileges */
-  if (!has_sufficient_privileges())
-    return SVN_NO_ERROR;
+  if (!proc_found(TEST_PROC, pool))
+    return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
+                              "executable '%s' not found", TEST_PROC);
 
   SVN_ERR(init_test_shm(pool));
   

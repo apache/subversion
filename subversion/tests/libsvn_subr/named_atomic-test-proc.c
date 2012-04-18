@@ -55,6 +55,9 @@ main(int argc, const char *argv[])
   /* lean & mean parameter parsing */
   if (argc != 5)
     {
+      if (argc == 1) /* used to test that this executable can be started */
+        exit(0);
+
       printf("Usage: named_atomic-proc-test ID COUNT ITERATIONS NS.\n");
       exit(1);
     }
