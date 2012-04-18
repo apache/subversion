@@ -223,8 +223,8 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
   /* our iteration counter */
   SVN_ERR(svn_named_atomic__get(&atomic_counter, ns, "counter", TRUE));
 
-  /* safeguard our execution time. Limit it to 5s */
-  init_watchdog(&watchdog, atomic_counter, iterations, 5000000);
+  /* safeguard our execution time. Limit it to 20s */
+  init_watchdog(&watchdog, atomic_counter, iterations, 20000000);
 
   /* fill pipeline */
   if (id == 0)

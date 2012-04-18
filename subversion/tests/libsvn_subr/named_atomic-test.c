@@ -397,7 +397,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
 
   /* increase iterations until we pass the 100ms mark */
   
-  for (calib_iterations = 100; taken < 100000.0; calib_iterations *= 2)
+  for (calib_iterations = 10; taken < 100000.0; calib_iterations *= 2)
     {
       SVN_ERR(init_concurrency_test_shm(pool, count));
 
@@ -428,7 +428,7 @@ calibrate_concurrency(apr_pool_t *pool)
     {
       /* these parameters should be ok even on very slow machines */
       hw_thread_count = 2;
-      suggested_iterations = 200;
+      suggested_iterations = 100;
 
       /* if we've got a proper machine and OS setup, let's prepare for
        * some real testing */
