@@ -98,13 +98,13 @@
  * as well as any type of data access.  This is quite expensive and we
  * can do much better on most platforms.
  */
-#if defined(WIN32) && ((_WIN32_WINNT >= 0x0502) || defined(InterlockedAdd64))
+#if defined(WIN32) && ((_WIN32_WINNT >= 0x0502) || defined(InterlockedExchangeAdd64))
 
 /* Interlocked API / intrinsics guarantee full data synchronization 
  */
 #define synched_read(mem) *mem
 #define synched_write(mem, value) InterlockedExchange64(mem, value)
-#define synched_add(mem, delta) InterlockedAdd64(mem, delta)
+#define synched_add(mem, delta) InterlockedExchangeAdd64(mem, delta)
 #define synched_cmpxchg(mem, value, comperand) \
   InterlockedCompareExchange64(mem, value, comperand)
 
