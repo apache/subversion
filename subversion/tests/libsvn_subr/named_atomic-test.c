@@ -319,7 +319,7 @@ run_threads(apr_pool_t *pool, int count, int iterations, thread_func_t func)
 static svn_error_t *
 run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
 {
-  int i;
+  int i, k;
   svn_error_t *error = SVN_NO_ERROR;
   const char * directory = NULL;
 
@@ -343,7 +343,7 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
           NULL
         };
 
-      SVN_ERR(svn_io_start_cmd3(&process[i],
+      error = svn_io_start_cmd3(&process[i],
                                 directory,  /* working directory */
                                 args[0],
                                 args,
@@ -355,7 +355,19 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
                                 common_stdout,
                                 FALSE,      /* no STDERR pipe */
                                 NULL,
-                                pool));
+                                pool);
+      if (error)
+        {
+          /* dump program name and parameters */
+          for (k = 0; k < sizeof(args) / sizeof(args[0]); ++k)
+            if (args[k])
+              printf(k == 0 ? "%s\n" : "    %s\n", args[k]);
+
+          if (directory)
+            printf("working folder %s:\n", directory);
+            
+          return error;
+        }
     }
 
   /* Wait for sub-processes to finish and return result. */
