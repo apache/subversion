@@ -100,7 +100,8 @@ svn_checksum_match(const svn_checksum_t *checksum1,
 
 
 /**
- * Return a deep copy of @a checksum, allocated in @a pool.
+ * Return a deep copy of @a checksum, allocated in @a pool.  If @a
+ * checksum is NULL then NULL is returned.
  *
  * @since New in 1.6.
  */
