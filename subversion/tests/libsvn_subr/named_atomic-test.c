@@ -364,7 +364,10 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
       const char *cmd = apr_psprintf(pool,
                                      "named_atomic-test-proc %d %d %d",
                                      i, count, iterations);
-      SVN_ERR(svn_io_wait_for_cmd(&process[i], cmd, NULL, NULL, pool));
+      error = svn_error_compose_create(error,
+                                       svn_io_wait_for_cmd(&process[i],
+                                                           cmd, NULL, NULL,
+                                                           pool));
     }
 
   return error;
@@ -382,7 +385,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
 
   /* increase iterations until we pass the 100ms mark */
   
-  for (calib_iterations = 1000; taken < 100000.0; calib_iterations *= 2)
+  for (calib_iterations = 100; taken < 100000.0; calib_iterations *= 2)
     {
       SVN_ERR(init_concurrency_test_shm(pool, count));
 

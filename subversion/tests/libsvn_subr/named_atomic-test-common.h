@@ -91,9 +91,10 @@ check_watchdog(watchdog_t *watchdog, svn_boolean_t *done)
     {
       watchdog->call_count = 100;
       if (apr_time_now() > watchdog->deadline)
-        return svn_error_create(SVN_ERR_TEST_FAILED,
+        return svn_error_createf(SVN_ERR_TEST_FAILED,
                                 0,
-                                "Deadline has passed.");
+                                "Deadline has passed at iteration %d/%d",
+                                (int)counter, watchdog->iterations);
     }
 
   /* no problem so far */
