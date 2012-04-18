@@ -397,11 +397,6 @@ fetch_base_func(const char **filename,
   svn_stream_t *fstream;
   svn_error_t *err;
 
-  if (svn_path_is_url(path))
-    path = svn_uri_skip_ancestor(rb->pb->root_url, path, scratch_pool);
-  else if (path[0] == '/')
-    path += 1;
-
   if (! SVN_IS_VALID_REVNUM(base_revision))
     base_revision = rb->rev - 1;
 
@@ -437,11 +432,6 @@ fetch_props_func(apr_hash_t **props,
 {
   struct revision_baton *rb = baton;
   svn_node_kind_t node_kind;
-
-  if (svn_path_is_url(path))
-    path = svn_uri_skip_ancestor(rb->pb->root_url, path, scratch_pool);
-  else if (path[0] == '/')
-    path += 1;
 
   if (! SVN_IS_VALID_REVNUM(base_revision))
     base_revision = rb->rev - 1;
@@ -483,11 +473,6 @@ fetch_kind_func(svn_kind_t *kind,
 {
   struct revision_baton *rb = baton;
   svn_node_kind_t node_kind;
-
-  if (svn_path_is_url(path))
-    path = svn_uri_skip_ancestor(rb->pb->root_url, path, scratch_pool);
-  else if (path[0] == '/')
-    path += 1;
 
   if (! SVN_IS_VALID_REVNUM(base_revision))
     base_revision = rb->rev - 1;
