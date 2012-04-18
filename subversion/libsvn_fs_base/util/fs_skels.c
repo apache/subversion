@@ -32,6 +32,7 @@
 
 #include "private/svn_skel.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_checksum.h"
 #include "fs_skels.h"
