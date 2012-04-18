@@ -153,16 +153,24 @@ init_test_shm(apr_pool_t *pool)
   if (name_namespace == NULL)
     {
       apr_pool_t *global_pool = svn_pool_create(NULL);
-      SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                        &name_namespace,
-                                        NULL,
-                                        NULL,
-                                        NULL,
-                                        svn_io_file_del_on_pool_cleanup,
-                                        global_pool,
-                                        pool));
-      name_namespace1 = apr_pstrcat(global_pool, name_namespace, "1", NULL);
-      name_namespace2 = apr_pstrcat(global_pool, name_namespace, "2", NULL);
+      SVN_ERR(svn_io_open_unique_file3(NULL,
+                                       &name_namespace,
+                                       NULL,
+                                       svn_io_file_del_none,
+                                       global_pool,
+                                       pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL,
+                                       &name_namespace1,
+                                       NULL,
+                                       svn_io_file_del_none,
+                                       global_pool,
+                                       pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL,
+                                       &name_namespace2,
+                                       NULL,
+                                       svn_io_file_del_none,
+                                       global_pool,
+                                       pool));
     }
     
   /* skip tests if the current user does not have the required privileges */
