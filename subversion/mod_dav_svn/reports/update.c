@@ -734,18 +734,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-
-/* This implements 'svn_txdelta_window_handler_t'.
-   During a resource walk, the driver sends an empty window as a
-   boolean indicating that a change happened to this file, but we
-   don't want to send anything over the wire as a result. */
-static svn_error_t *
-dummy_window_handler(svn_txdelta_window_t *window, void *baton)
-{
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 upd_apply_textdelta(void *file_baton,
                     const char *base_checksum,
@@ -765,7 +753,7 @@ upd_apply_textdelta(void *file_baton,
      we don't actually want to transmit text-deltas. */
   if (file->uc->resource_walk || (! file->uc->send_all))
     {
-      *handler = dummy_window_handler;
+      *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
