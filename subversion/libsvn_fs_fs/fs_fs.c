@@ -99,9 +99,9 @@
 
 /* The following are names of atomics that will be used to communicate
  * revprop updates across all processes on this machine. */
-#define ATOMIC_REVPROP_GENERATION "RevPropGeneration"
-#define ATOMIC_REVPROP_TIMEOUT    "RevPropTimeout"
-#define ATOMIC_REVPROP_NAMESPACE  "RevPropAtomics"
+#define ATOMIC_REVPROP_GENERATION "rev-prop-generation"
+#define ATOMIC_REVPROP_TIMEOUT    "rev-prop-timeout"
+#define ATOMIC_REVPROP_NAMESPACE  "rev-prop-atomics"
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -2808,10 +2808,9 @@ ensure_revprop_namespace(svn_fs_t *fs)
 
   return ffd->revprop_namespace == NULL
     ? svn_atomic_namespace__create(&ffd->revprop_namespace,
-                                   apr_pstrcat(fs->pool,
-                                               fs->path,
-                                               ATOMIC_REVPROP_NAMESPACE,
-                                               (char *)NULL),
+                                   svn_dirent_join(fs->path,
+                                                   ATOMIC_REVPROP_NAMESPACE,
+                                                   fs->pool),
                                    fs->pool)
     : SVN_NO_ERROR;
 }
