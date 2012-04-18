@@ -295,6 +295,22 @@ svn_checksum_dup(const svn_checksum_t *checksum,
   if (checksum == NULL)
     return NULL;
 
+  /* Without this check on valid checksum kind a NULL svn_checksum_t
+   * pointer is returned which could cause a core dump at an
+   * indeterminate time in the future because callers are not
+   * expecting a NULL pointer.  This commit forces an early abort() so
+   * it's easier to track down where the issue arose. */
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        break;
+      case svn_checksum_sha1:
+        break;
+      default:
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+        break;
+    }
+
   return svn_checksum__from_digest(checksum->digest, checksum->kind, pool);
 }
 
