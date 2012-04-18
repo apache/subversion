@@ -727,7 +727,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       *ra_session,
                                                        relpath_map, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
                                     commit_revprops, commit_callback,

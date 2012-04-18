@@ -1082,7 +1082,6 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 /* Return a set of callbacks to use with the Ev2 shims. */
 svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
-                               svn_ra_session_t *ra_session,
                                apr_hash_t *relpath_map,
                                apr_pool_t *result_pool);
 
