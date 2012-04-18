@@ -34,6 +34,8 @@
 #include "sha1.h"
 #include "md5.h"
 
+#include "private/svn_subr_private.h"
+
 #include "svn_private_config.h"
 
 

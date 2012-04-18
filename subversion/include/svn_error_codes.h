@@ -224,6 +224,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 14,
              "Invalid changelist name")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_BAD_ATOMIC,
+             SVN_ERR_BAD_CATEGORY_START + 15,
+             "Invalid atomic")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,

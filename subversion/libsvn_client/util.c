@@ -363,34 +363,6 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
 }
 
 
-static svn_error_t *
-rationalize_shim_path(const char **local_abspath,
-                      struct svn_client__shim_callbacks_baton *scb,
-                      const char *path,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  if (svn_path_is_url(path))
-    {
-      /* This is a copyfrom URL */
-      const char *wcroot_abspath;
-      const char *wcroot_url;
-      const char *relpath;
-
-      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, scb->wc_ctx,
-                                  scb->anchor_abspath,
-                                  scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&wcroot_url, scb->wc_ctx, wcroot_abspath,
-                                   scratch_pool, scratch_pool));
-      relpath = svn_uri_skip_ancestor(wcroot_url, path, scratch_pool);
-      *local_abspath = svn_dirent_join(wcroot_abspath, relpath, result_pool);
-    }
-  else
-    *local_abspath = svn_dirent_join(scb->anchor_abspath, path, result_pool);
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client__shim_fetch_props_func(apr_hash_t **props,
                                   void *baton,
@@ -402,16 +374,12 @@ svn_client__shim_fetch_props_func(apr_hash_t **props,
   struct svn_client__shim_callbacks_baton *scb = baton;
   const char *local_abspath;
 
-  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
-     working copy, and hence no method of fetching the requisite information. */
-  if (!scb->anchor_abspath)
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
     {
       *props = apr_hash_make(result_pool);
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
-                                scratch_pool));
 
   SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
                                     result_pool, scratch_pool));
@@ -433,16 +401,12 @@ svn_client__shim_fetch_kind_func(svn_kind_t *kind,
   svn_node_kind_t node_kind;
   const char *local_abspath;
 
-  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
-     working copy, and hence no method of fetching the requisite information. */
-  if (!scb->anchor_abspath)
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
     {
       *kind = svn_kind_unknown;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
-                                scratch_pool));
 
   SVN_ERR(svn_wc_read_kind(&node_kind, scb->wc_ctx, local_abspath, FALSE,
                            scratch_pool));
@@ -465,16 +429,12 @@ svn_client__shim_fetch_base_func(const char **filename,
   svn_stream_t *temp_stream;
   svn_error_t *err;
 
-  /* Early out: if we didn't get an anchor_abspath, it means we don't have a
-     working copy, and hence no method of fetching the requisite information. */
-  if (!scb->anchor_abspath)
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
     {
       *filename = NULL;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(rationalize_shim_path(&local_abspath, scb, path, scratch_pool,
-                                scratch_pool));
 
   err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
                                       local_abspath, scratch_pool,
@@ -499,7 +459,7 @@ svn_client__shim_fetch_base_func(const char **filename,
 
 svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
-                               const char *anchor_abspath,
+                               apr_hash_t *relpath_map,
                                apr_pool_t *result_pool)
 {
   svn_delta_shim_callbacks_t *callbacks =
@@ -508,7 +468,10 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
                                                              sizeof(*scb));
 
   scb->wc_ctx = wc_ctx;
-  scb->anchor_abspath = apr_pstrdup(result_pool, anchor_abspath);
+  if (relpath_map)
+    scb->relpath_map = relpath_map;
+  else
+    scb->relpath_map = apr_hash_make(result_pool);
 
   callbacks->fetch_props_func = svn_client__shim_fetch_props_func;
   callbacks->fetch_kind_func = svn_client__shim_fetch_kind_func;

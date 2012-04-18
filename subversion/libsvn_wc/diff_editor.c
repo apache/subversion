@@ -61,6 +61,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 #include "wc.h"

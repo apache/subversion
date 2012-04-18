@@ -2323,6 +2323,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   commit_context_t *ctx;
   apr_hash_index_t *hi;
   const char *repos_root;
+  const char *base_relpath;
 
   ctx = apr_pcalloc(pool, sizeof(*ctx));
 
@@ -2370,9 +2371,11 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   *edit_baton = ctx;
 
   SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &repos_root, pool));
+  base_relpath = svn_uri_skip_ancestor(repos_root, session->session_url_str,
+                                       pool);
 
   SVN_ERR(svn_editor__insert_shims(ret_editor, edit_baton, *ret_editor,
-                                   *edit_baton, repos_root, NULL,
+                                   *edit_baton, repos_root, base_relpath,
                                    session->shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;

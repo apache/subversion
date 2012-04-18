@@ -44,6 +44,7 @@ read_config(svn_memcache_t **memcache_p,
             svn_boolean_t *fail_stop,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
+            svn_boolean_t *cache_revprops,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
@@ -73,6 +74,16 @@ read_config(svn_memcache_t **memcache_p,
     = svn_hash__get_bool(fs->config,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
+
+  /* don't cache revprops by default.
+   * Revprop caching significantly speeds up operations like
+   * svn ls -v. However, it requires synchronization that may
+   * not be available or efficient in the current server setup.
+   */
+  *cache_revprops
+    = svn_hash__get_bool(fs->config,
+                         SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                         FALSE);
 
   return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
@@ -249,12 +260,14 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t no_handler;
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
+  svn_boolean_t cache_revprops;
 
   /* Evaluating the cache configuration. */
   SVN_ERR(read_config(&memcache,
                       &no_handler,
                       &cache_txdeltas,
                       &cache_fulltexts,
+                      &cache_revprops,
                       fs,
                       pool));
 
@@ -338,6 +351,27 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     }
 
   SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
+
+  /* initialize revprop cache, if full-text caching has been enabled */
+  if (cache_revprops)
+    {
+      SVN_ERR(create_cache(&(ffd->revprop_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_properties,
+                           svn_fs_fs__deserialize_properties,
+                           APR_HASH_KEY_STRING,
+                           apr_pstrcat(pool, prefix, "REVPROP",
+                                       (char *)NULL),
+                           fs->pool));
+    }
+  else
+    {
+      ffd->revprop_cache = NULL;
+    }
+
+  SVN_ERR(init_callbacks(ffd->revprop_cache, fs, no_handler, pool));
 
   /* initialize txdelta window cache, if that has been enabled */
   if (cache_txdeltas)

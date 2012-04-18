@@ -50,6 +50,7 @@
 #include "translate.h"
 #include "workqueue.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */

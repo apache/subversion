@@ -84,7 +84,15 @@ def _get_term_width():
       return None
     return cr
 
-  cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+  cr = None
+  if not cr:
+    try:
+      cr = (os.environ['SVN_MAKE_CHECK_LINES'],
+            os.environ['SVN_MAKE_CHECK_COLUMNS'])
+    except:
+      cr = None
+  if not cr:
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
   if not cr:
     try:
       fd = os.open(os.ctermid(), os.O_RDONLY)
@@ -94,7 +102,7 @@ def _get_term_width():
       pass
   if not cr:
     try:
-      cr = (env['LINES'], env['COLUMNS'])
+      cr = (os.environ['LINES'], os.environ['COLUMNS'])
     except:
       cr = None
   if not cr:
@@ -113,7 +121,7 @@ class TestHarness:
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
-               milestone_filter=None):
+               milestone_filter=None, set_log_level=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -160,6 +168,7 @@ class TestHarness:
       self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
     self.milestone_filter = milestone_filter
+    self.set_log_level = set_log_level
     self.svn_bin = svn_bin
     self.mode_filter = mode_filter
     self.log = None
@@ -440,6 +449,8 @@ class TestHarness:
       svntest.main.options.list_tests = True
     if self.milestone_filter is not None:
       svntest.main.options.milestone_filter = self.milestone_filter
+    if self.set_log_level is not None:
+      svntest.main.logger.setLevel(self.set_log_level)
     if self.svn_bin is not None:
       svntest.main.options.svn_bin = self.svn_bin
     if self.fsfs_sharding is not None:
@@ -604,7 +615,7 @@ def main():
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
-                            'mode-filter='])
+                            'mode-filter=', 'set-log-level='])
   except getopt.GetoptError:
     args = []
 
@@ -614,9 +625,10 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter= \
+    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
+    set_log_level = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None
+            None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -648,6 +660,8 @@ def main():
       milestone_filter = val
     elif opt in ['--mode-filter']:
       mode_filter = val
+    elif opt in ['--set-log-level']:
+      set_log_level = val
     else:
       raise getopt.GetoptError
 
@@ -662,7 +676,8 @@ def main():
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing, list_tests,
-                   mode_filter=mode_filter, milestone_filter=milestone_filter)
+                   mode_filter=mode_filter, milestone_filter=milestone_filter,
+                   set_log_level=set_log_level)
 
   failed = th.run(args[2:])
   if failed:
