@@ -201,6 +201,15 @@ svn_stream__from_spillbuf(apr_size_t blocksize,
 
 /** @} */
 
+/**
+ * Internal function for creating a checksum from a binary digest.
+ *
+ * @since New in 1.6
+ */
+svn_checksum_t *
+svn_checksum__from_digest(const unsigned char *digest,
+                          svn_checksum_kind_t kind,
+                          apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

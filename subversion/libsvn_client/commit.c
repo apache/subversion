@@ -49,6 +49,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
 

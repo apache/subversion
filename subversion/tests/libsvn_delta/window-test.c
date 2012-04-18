@@ -29,6 +29,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 
+#include "private/svn_subr_private.h"
 
 static svn_error_t *
 stream_window_test(apr_pool_t *pool)
