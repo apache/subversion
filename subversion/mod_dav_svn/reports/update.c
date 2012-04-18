@@ -544,8 +544,8 @@ upd_delete_entry(const char *path,
                                            svn_relpath_basename(path, NULL),
                                            1);
   return dav_svn__brigade_printf(parent->uc->bb, parent->uc->output,
-                                 "<S:delete-entry name=\"%s\"/>" DEBUG_CR,
-                                 qname);
+                                 "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
+                                   DEBUG_CR, qname, revision);
 }
 
 
