@@ -672,7 +672,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               apr_pool_t *pool)
 {
   apr_hash_t *commit_revprops;
-  const char *anchor_abspath;
+  apr_hash_t *relpath_map = NULL;
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, base_url,
@@ -698,28 +698,37 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                            log_msg, ctx, pool));
 
 #ifdef ENABLE_EV2_SHIMS
-  /* We need this for the shims. */
-  if (base_dir_abspath)
+  if (commit_items)
     {
-      const char *relpath;
-      const char *wcroot_abspath;
+      int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
-                                  base_dir_abspath, pool, pool));
+      relpath_map = apr_hash_make(pool);
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item3_t *item = APR_ARRAY_IDX(commit_items, i,
+                                                  svn_client_commit_item3_t *);
+          const char *relpath;
 
-      SVN_ERR(svn_ra_get_path_relative_to_root(*ra_session, &relpath, base_url,
-                                               pool));
-      anchor_abspath = svn_dirent_join(wcroot_abspath, relpath, pool);
+          if (!item->path)
+            continue;
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL, NULL,
+                                          ctx->wc_ctx, item->path, FALSE, pool,
+                                          iterpool));
+          if (relpath)
+            apr_hash_set(relpath_map, relpath, APR_HASH_KEY_STRING, item->path);
+        }
+      svn_pool_destroy(iterpool);
     }
-  else
 #endif
-    anchor_abspath = NULL;
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        *ra_session,
-                                                       anchor_abspath, pool)));
+                                                       relpath_map, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
                                     commit_revprops, commit_callback,
                                     commit_baton, lock_tokens, keep_locks,
