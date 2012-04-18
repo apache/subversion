@@ -63,8 +63,8 @@ checksum_create(svn_checksum_kind_t kind,
                 apr_size_t digest_size,
                 apr_pool_t *pool)
 {
-  // Use apr_palloc() instead of apr_pcalloc() so that the digest
-  // contents are only set once by the caller.
+  /* Use apr_palloc() instead of apr_pcalloc() so that the digest
+   * contents are only set once by the caller. */
   svn_checksum_t *checksum = apr_palloc(pool, sizeof(*checksum) + digest_size);
   checksum->digest = (unsigned char *)checksum + sizeof(*checksum);
   checksum->kind = kind;
