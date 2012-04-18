@@ -358,15 +358,19 @@ svn_checksum_t *
 svn_checksum_empty_checksum(svn_checksum_kind_t kind,
                             apr_pool_t *pool)
 {
+  svn_checksum_t *checksum;
+  apr_size_t digest_size;
   const unsigned char *digest;
 
   switch (kind)
     {
       case svn_checksum_md5:
+        digest_size = APR_MD5_DIGESTSIZE;
         digest = svn_md5__empty_string_digest();
         break;
 
       case svn_checksum_sha1:
+        digest_size = APR_SHA1_DIGESTSIZE;
         digest = svn_sha1__empty_string_digest();
         break;
 
@@ -375,7 +379,9 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
         return NULL;
     }
 
-  return svn_checksum__from_digest(digest, kind, pool);
+  checksum = checksum_create(kind, digest_size, pool);
+  memcpy((unsigned char *)checksum->digest, digest, digest_size);
+  return checksum;
 }
 
 struct svn_checksum_ctx_t
