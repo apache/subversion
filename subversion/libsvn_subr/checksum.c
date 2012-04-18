@@ -115,17 +115,6 @@ svn_checksum__from_digest_sha1(const unsigned char *digest,
   return checksum;
 }
 
-svn_checksum_t *
-svn_checksum__from_digest(const unsigned char *digest,
-                          svn_checksum_kind_t kind,
-                          apr_pool_t *result_pool)
-{
-  svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
-
-  memcpy((unsigned char *)checksum->digest, digest, DIGESTSIZE(kind));
-  return checksum;
-}
-
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum)
 {
