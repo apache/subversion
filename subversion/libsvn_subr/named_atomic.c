@@ -294,6 +294,28 @@ unlock(struct mutex_t *mutex, svn_error_t * outer_err)
                                                     unlock_err));
 }
 
+/* The last user to close a particular namespace should also remove the
+ * lock file.  Failure to do so, however, does not affect further uses
+ * of the same namespace.
+ */
+static apr_status_t
+delete_lock_file(void *arg)
+{
+  struct mutex_t *mutex = arg;
+  const char *lock_name = NULL;
+
+  /* locks have already been cleaned up. Simply close the file */
+  apr_file_close(mutex->lock_file);
+
+  /* Remove the file from disk. This will fail if there ares still other
+   * users of this lock file, i.e. namespace. */
+  apr_file_name_get(&lock_name, mutex->lock_file);
+  if (lock_name)
+    apr_file_remove(lock_name, mutex->pool);
+
+  return 0;
+}
+
 /* Validate the ATOMIC parameter, i.e it's address.
  */
 static svn_error_t *
@@ -357,6 +379,12 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                            APR_READ | APR_WRITE | APR_CREATE,
                            APR_OS_DEFAULT,
                            result_pool));
+
+  /* Make sure the last user of our lock file will actually remove it
+   */
+  apr_pool_cleanup_register(result_pool, &new_ns->mutex,
+                            delete_lock_file,
+                            apr_pool_cleanup_null);
 
   /* Prevent concurrent initialization.
    */
