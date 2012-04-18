@@ -69,8 +69,9 @@ main(int argc, const char *argv[])
   err = test_pipeline(id, count, iterations, pool);
   if (err)
   {
+    const char *prefix = apr_psprintf(pool, "Process %d: ", id);
     got_error = TRUE;
-    svn_handle_error2(err, stderr, FALSE, "svn:");
+    svn_handle_error2(err, stdout, FALSE, prefix);
     svn_error_clear(err);
   }
 
