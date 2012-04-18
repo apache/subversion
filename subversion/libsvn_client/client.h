@@ -1083,7 +1083,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
                                svn_ra_session_t *ra_session,
-                               const char *anchor_abspath,
+                               apr_hash_t *relpath_map,
                                apr_pool_t *result_pool);
 
 /* Return true if KIND is a revision kind that is dependent on the working
