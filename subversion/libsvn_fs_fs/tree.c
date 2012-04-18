@@ -2468,17 +2468,8 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
-
-  if (base_checksum)
-    tb->base_checksum = svn_checksum_dup(base_checksum, pool);
-  else
-    tb->base_checksum = NULL;
-
-  if (result_checksum)
-    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
-  else
-    tb->result_checksum = NULL;
-
+  tb->base_checksum = svn_checksum_dup(base_checksum, pool);
+  tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
   SVN_ERR(apply_textdelta(tb, pool));
 
@@ -2610,11 +2601,7 @@ fs_apply_text(svn_stream_t **contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
-
-  if (result_checksum)
-    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
-  else
-    tb->result_checksum = NULL;
+  tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
   SVN_ERR(apply_text(tb, pool));
 
