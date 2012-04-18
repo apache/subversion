@@ -88,12 +88,12 @@ adjust_proc_path(const char **proc, const char **directory, apr_pool_t *pool)
   char path [MAX_PATH] = { 0 };
   GetModuleFileNameA(NULL, path, sizeof(path));
   *(strrchr(path, '\\') + 1) = 0;
-  proc = apr_pstrcat(pool, path, proc, ".exe", NULL);
+  *proc = apr_pstrcat(pool, path, *proc, ".exe", NULL);
 
   /* And we need to set the working dir to our working dir to make
    * our sub-processes find all DLLs. */
   GetCurrentDirectoryA(sizeof(path), path);
-  directory = path;
+  *directory = path;
 #endif
 
   return SVN_NO_ERROR;
