@@ -221,10 +221,11 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
 {
   int i;
   svn_error_t *error = SVN_NO_ERROR;
+  const char * directory = NULL;
 
   /* all processes and their I/O data */
   apr_proc_t *process = apr_palloc(pool, count * sizeof(*process));
-  const char * directory = NULL;
+  apr_file_t *common_stdout = NULL;
 
 #ifdef _WIN32
   /* Under Windows, the test will not be in the current directory
@@ -240,6 +241,8 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
   directory = path;
 #endif
 
+  apr_file_open_stdout(&common_stdout, pool);
+  
   /* start threads */
   for (i = 0; i < count; ++i)
     {
@@ -261,8 +264,8 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
                                 FALSE,      /* no handle inheritance */
                                 FALSE,      /* no STDIN pipe */
                                 NULL,
-                                FALSE,      /* no STDOUT pipe */
-                                NULL,
+                                FALSE,      /* consolidate into 1 STDOUT */
+                                common_stdout,
                                 FALSE,      /* no STDERR pipe */
                                 NULL,
                                 pool));
