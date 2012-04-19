@@ -3736,7 +3736,8 @@ make_txn_root(svn_fs_root_t **root_p,
                                       svn_fs_fs__dag_deserialize,
                                       APR_HASH_KEY_STRING,
                                       32, 20, FALSE,
-                                      apr_pstrcat(pool, txn, ":TXN", (char *)NULL),
+                                      apr_pstrcat(pool, txn, ":TXN",
+                                                  (char *)NULL),
                                       root->pool));
 
   /* Initialize transaction-local caches in FS.
@@ -3804,7 +3805,8 @@ verify_node(dag_node_t *node,
                                  "Predecessor count mismatch: "
                                  "%s has %d, but %s has %d",
                                  stringify_node(node, iterpool), pred_count, 
-                                 stringify_node(pred, iterpool), pred_pred_count);
+                                 stringify_node(pred, iterpool),
+                                 pred_pred_count);
     }
 
   /* Kind-dependent verifications. */
