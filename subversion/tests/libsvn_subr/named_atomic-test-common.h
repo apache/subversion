@@ -147,7 +147,7 @@ test_pipeline_loop(svn_named_atomic__t *atomic_in,
   apr_int64_t value = 0, old_value, last_value = 0;
   apr_int64_t counter;
   svn_boolean_t done = FALSE;
-  
+
   /* Pass the tokens along */
 
   do

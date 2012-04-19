@@ -79,9 +79,9 @@ main(int argc, const char *argv[])
   }
 
   /* Clean up APR */
-  svn_pool_destroy(pool); 
+  svn_pool_destroy(pool);
   apr_terminate();
 
   return got_error;
 }
-  
+

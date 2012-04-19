@@ -172,7 +172,7 @@ init_test_shm(apr_pool_t *pool)
                                        global_pool,
                                        pool));
     }
-    
+
   /* skip tests if the current user does not have the required privileges */
   if (!has_sufficient_privileges())
     return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
@@ -337,7 +337,7 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
   apr_file_open_stdout(&common_stdout, pool);
 
   SVN_ERR(adjust_proc_path(&proc, &directory, pool));
-  
+
   /* start sub-processes */
   for (i = 0; i < count; ++i)
     {
@@ -373,7 +373,7 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
 
           if (directory)
             printf("working folder %s:\n", directory);
-            
+
           return error;
         }
     }
@@ -404,7 +404,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
   double taken = 0.0;
 
   /* increase iterations until we pass the 100ms mark */
-  
+
   for (calib_iterations = 10; taken < 100000.0; calib_iterations *= 2)
     {
       SVN_ERR(init_concurrency_test_shm(pool, count));
@@ -416,7 +416,7 @@ calibrate_iterations(apr_pool_t *pool, int count)
     }
 
   /* scale that to 1s */
-    
+
   suggested_iterations = (int)(1000000.0 / taken * calib_iterations);
 
   return SVN_NO_ERROR;
@@ -462,7 +462,7 @@ calibrate_concurrency(apr_pool_t *pool)
                 }
             }
         }
-        
+
       printf("using %d cores for %d iterations\n", hw_thread_count,
                                                    suggested_iterations);
   }
@@ -480,14 +480,14 @@ test_basics(apr_pool_t *pool)
   apr_int64_t value;
 
   SVN_ERR(init_test_shm(pool));
-  
+
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, pool));
 
   /* Test a non-existing atomic */
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME "x", FALSE));
   SVN_TEST_ASSERT(atomic == NULL);
-  
+
   /* Now, we auto-create it */
   SVN_ERR(svn_named_atomic__get(&atomic, ns, ATOMIC_NAME, TRUE));
   SVN_TEST_ASSERT(atomic != NULL);
@@ -560,7 +560,7 @@ test_bignums(apr_pool_t *pool)
   apr_int64_t value;
 
   SVN_ERR(init_test_shm(pool));
-  
+
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, pool));
 
@@ -612,7 +612,7 @@ test_multiple_atomics(apr_pool_t *pool)
   apr_int64_t value2;
 
   SVN_ERR(init_test_shm(pool));
-  
+
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, pool));
 
@@ -676,7 +676,7 @@ test_namespaces(apr_pool_t *pool)
   apr_int64_t value;
 
   SVN_ERR(init_test_shm(pool));
-  
+
   /* Use a separate namespace for our tests isolate them from production */
   SVN_ERR(svn_atomic_namespace__create(&test_namespace1, name_namespace1, pool));
   SVN_ERR(svn_atomic_namespace__create(&test_namespace1_alias, name_namespace1, pool));
@@ -716,12 +716,12 @@ static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
   SVN_ERR(init_test_shm(pool));
-  
+
   SVN_ERR(calibrate_concurrency(pool));
 
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
   SVN_ERR(run_threads(pool, hw_thread_count, suggested_iterations, test_pipeline));
-  
+
   return SVN_NO_ERROR;
 }
 #endif
@@ -734,7 +734,7 @@ test_multiprocess(apr_pool_t *pool)
                               "executable '%s' not found", TEST_PROC);
 
   SVN_ERR(init_test_shm(pool));
-  
+
   SVN_ERR(calibrate_concurrency(pool));
 
   SVN_ERR(init_concurrency_test_shm(pool, hw_thread_count));
@@ -765,7 +765,7 @@ struct svn_test_descriptor_t test_funcs[] =
 #if APR_HAS_THREADS
     SVN_TEST_PASS2(test_multithreaded,
                    "multithreaded access to atomics"),
-#endif                   
+#endif
     SVN_TEST_PASS2(test_multiprocess,
                    "multi-process access to atomics"),
     SVN_TEST_NULL

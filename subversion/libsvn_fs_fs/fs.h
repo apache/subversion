@@ -255,11 +255,11 @@ typedef struct fs_fs_data_t
   /* Access object to the revprop "generation". Will be NULL until
      the first access. */
   svn_named_atomic__t *revprop_generation;
-  
+
   /* Access object to the revprop update timeout. Will be NULL until
      the first access. */
   svn_named_atomic__t *revprop_timeout;
-  
+
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
 

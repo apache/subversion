@@ -536,7 +536,7 @@ test24(apr_pool_t *pool)
   length = svn__ui64toa(buffer, 0xffffffffffffffffll);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
-  
+
   return test_stringbuf_unequal("abc", "abb", pool);
 }
 
