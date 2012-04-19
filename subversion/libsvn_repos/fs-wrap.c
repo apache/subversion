@@ -740,6 +740,15 @@ svn_repos_fs_pack2(svn_repos_t *repos,
                      cancel_func, cancel_baton, pool);
 }
 
+svn_error_t *
+svn_repos__fs_type(const char **fs_type,
+                   const char *repos_path,
+                   apr_pool_t *pool)
+{
+  return svn_fs_type(fs_type,
+                     svn_dirent_join(repos_path, SVN_REPOS__DB_DIR, pool),
+                     pool);
+}
 
 
 /*
