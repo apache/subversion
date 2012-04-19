@@ -613,7 +613,7 @@ import(const char *local_abspath,
        apr_pool_t *pool)
 {
   void *root_baton;
-  apr_array_header_t *ignores;
+  apr_array_header_t *ignores = NULL;
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
