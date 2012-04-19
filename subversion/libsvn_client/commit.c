@@ -270,8 +270,7 @@ import_file(const svn_delta_editor_t *editor,
 
   /* Finally, close the file. */
   text_checksum =
-    svn_checksum_to_cstring(svn_checksum__from_digest(digest, svn_checksum_md5,
-                                                      pool), pool);
+    svn_checksum_to_cstring(svn_checksum__from_digest_md5(digest, pool), pool);
 
   return editor->close_file(file_baton, text_checksum, pool);
 }
@@ -656,16 +655,13 @@ capture_commit_info(const svn_commit_info_t *commit_info,
 
 
 static svn_error_t *
-get_ra_editor(svn_ra_session_t **ra_session,
-              const svn_delta_editor_t **editor,
+get_ra_editor(const svn_delta_editor_t **editor,
               void **edit_baton,
+              svn_ra_session_t *ra_session,
               svn_client_ctx_t *ctx,
-              const char *base_url,
-              const char *base_dir_abspath,
               const char *log_msg,
               const apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
-              svn_boolean_t is_commit,
               apr_hash_t *lock_tokens,
               svn_boolean_t keep_locks,
               svn_commit_callback2_t commit_callback,
@@ -674,26 +670,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
 {
   apr_hash_t *commit_revprops;
   apr_hash_t *relpath_map = NULL;
-
-  /* Open an RA session to URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, base_url,
-                                               base_dir_abspath, commit_items,
-                                               is_commit, !is_commit,
-                                               ctx, pool));
-
-  /* If this is an import (aka, not a commit), we need to verify that
-     our repository URL exists. */
-  if (! is_commit)
-    {
-      svn_node_kind_t kind;
-
-      SVN_ERR(svn_ra_check_path(*ra_session, "", SVN_INVALID_REVNUM,
-                                &kind, pool));
-      if (kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
-                                 _("Path '%s' does not exist"),
-                                 base_url);
-    }
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
@@ -726,10 +702,10 @@ get_ra_editor(svn_ra_session_t **ra_session,
 #endif
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(*ra_session,
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        relpath_map, pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, editor, edit_baton,
                                     commit_revprops, commit_callback,
                                     commit_baton, lock_tokens, keep_locks,
                                     pool));
@@ -766,7 +742,8 @@ svn_client_import5(const char *path,
                                                    sizeof(const char *));
   const char *temp;
   const char *dir;
-  apr_pool_t *subpool;
+  apr_hash_t *commit_revprops;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -804,37 +781,34 @@ svn_client_import5(const char *path,
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url, NULL,
+                                               NULL, FALSE, TRUE, ctx,
+                                               scratch_pool));
+
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
-  subpool = svn_pool_create(scratch_pool);
-  do
+  SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
+                            iterpool));
+
+  /* We can import into directories, but if a file already exists, that's
+     an error. */
+  if (kind == svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_EXISTS, NULL,
+       _("Path '%s' already exists"), url);
+
+  while (kind == svn_node_none)
     {
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
-      /* See if the user is interested in cancelling this operation. */
-      if (ctx->cancel_func)
-        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-      if (err)
-        {
-          /* If get_ra_editor below failed we either tried to open
-             an invalid url, or else some other kind of error.  In case
-             the url was bad we back up a directory and try again. */
-
-          if (err->apr_err != SVN_ERR_FS_NO_SUCH_ENTRY)
-            return err;
-          else
-            svn_error_clear(err);
-
-          svn_uri_split(&temp, &dir, url, scratch_pool);
-          APR_ARRAY_PUSH(new_entries, const char *) = dir;
-          url = temp;
-        }
+      svn_uri_split(&temp, &dir, url, scratch_pool);
+      APR_ARRAY_PUSH(new_entries, const char *) = dir;
+      url = temp;
+      SVN_ERR(svn_ra_reparent(ra_session, url, iterpool));
+  
+      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
+                                iterpool));
     }
-  while ((err = get_ra_editor(&ra_session,
-                              &editor, &edit_baton, ctx, url, NULL,
-                              log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
-                              commit_callback, commit_baton, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -853,14 +827,6 @@ svn_client_import5(const char *path,
         }
     }
 
-  /* An empty NEW_ENTRIES list the first call to get_ra_editor() above
-     succeeded.  That means that URL corresponds to an already
-     existing filesystem entity. */
-  if (kind == svn_node_file && (! new_entries->nelts))
-    return svn_error_createf
-      (SVN_ERR_ENTRY_EXISTS, NULL,
-       _("Path '%s' already exists"), url);
-
   /* The repository doesn't know about the reserved administrative
      directory. */
   if (new_entries->nelts
@@ -877,6 +843,17 @@ svn_client_import5(const char *path,
        _("'%s' is a reserved name and cannot be imported"),
        svn_dirent_local_style(temp, scratch_pool));
 
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
+                                           log_msg, ctx, scratch_pool));
+
+  /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, scratch_pool)));
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    commit_revprops, commit_callback,
+                                    commit_baton, NULL, TRUE,
+                                    scratch_pool));
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
@@ -884,13 +861,13 @@ svn_client_import5(const char *path,
                     depth, excludes, no_ignore,
                     ignore_unknown_node_types,
                     filter_callback, filter_baton,
-                    ctx, subpool)))
+                    ctx, iterpool)))
     {
-      svn_error_clear(editor->abort_edit(edit_baton, subpool));
+      svn_error_clear(editor->abort_edit(edit_baton, iterpool));
       return svn_error_trace(err);
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1683,10 +1660,17 @@ svn_client_commit6(const apr_array_header_t *targets,
   cb.pool = pool;
 
   cmt_err = svn_error_trace(
-                 get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
-                               base_url, base_abspath, log_msg,
-                               commit_items, revprop_table, TRUE, lock_tokens,
-                               keep_locks, capture_commit_info,
+          svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
+                                               base_abspath, commit_items,
+                                               TRUE, FALSE, ctx, pool));
+
+  if (cmt_err)
+    goto cleanup;
+
+  cmt_err = svn_error_trace(
+                 get_ra_editor(&editor, &edit_baton, ra_session, ctx,
+                               log_msg, commit_items, revprop_table,
+                               lock_tokens, keep_locks, capture_commit_info,
                                &cb, pool));
 
   if (cmt_err)

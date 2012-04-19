@@ -3098,6 +3098,16 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   apr_pool_t *scratch_pool);
 
 
+/* Set *FINAL_ABSPATH to the final moved-to location for LOCAL_ABSPATH
+ * after following any and all nested moves or set *FINAL_ABSPATH to
+ * NULL if LOCAL_ABSPATH is not moved. */
+svn_error_t *
+svn_wc__db_final_moved_to(const char **final_abspath,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 /* @} */
 
 
