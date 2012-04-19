@@ -81,6 +81,12 @@ const char *
 svn_repos__post_commit_error_str(svn_error_t *err,
                                  apr_pool_t *pool);
 
+/* A repos version of svn_fs_type */
+svn_error_t *
+svn_repos__fs_type(const char **fs_type,
+                   const char *repos_path,
+                   apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
