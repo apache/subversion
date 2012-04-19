@@ -357,7 +357,7 @@ svn_client_propset_local(const char *propname,
                              iterpool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          || kind == svn_node_unknown || kind == svn_node_none)
+          || (!err && (kind == svn_node_unknown || kind == svn_node_none)))
         {
           if (ctx->notify_func2)
             {

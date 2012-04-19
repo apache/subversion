@@ -143,13 +143,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1325361
-   Avoid reading unitialised variable in propset.
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: philip, hwright, rhuijben
-
  * r1295007
    Include svnrdump in the Windows build.
    Justification:
