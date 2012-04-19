@@ -276,6 +276,99 @@ import_file(const svn_delta_editor_t *editor,
 }
 
 
+/* Return in CHILDREN a mapping of basenames to dirents for the importable
+ * children of DIR_ABSPATH.  EXCLUDES is a hash of absolute paths to filter
+ * out.  IGNORES, if non-NULL, is a list of basenames to filter out.
+ * FILTER_CALLBACK and FILTER_BATON will be called for each absolute path,
+ * allowing users to further filter the list of returned entries.
+ *
+ * Results are returned in RESULT_POOL; use SCRATCH_POOL for temporary data.*/
+static svn_error_t *
+get_filtered_children(apr_hash_t **children,
+                      const char *dir_abspath,
+                      apr_hash_t *excludes,
+                      apr_array_header_t *ignores,
+                      svn_client_import_filter_func_t filter_callback,
+                      void *filter_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *dirents;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE, result_pool,
+                              scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
+    {
+      const char *basename = svn__apr_hash_index_key(hi);
+      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *local_abspath;
+
+      svn_pool_clear(iterpool);
+
+      local_abspath = svn_dirent_join(dir_abspath, basename, iterpool);
+
+      if (svn_wc_is_adm_dir(basename, iterpool))
+        {
+          /* If someone's trying to import a directory named the same
+             as our administrative directories, that's probably not
+             what they wanted to do.  If they are importing a file
+             with that name, something is bound to blow up when they
+             checkout what they've imported.  So, just skip items with
+             that name.  */
+          if (ctx->notify_func2)
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify(svn_dirent_join(local_abspath, basename,
+                                                       iterpool),
+                                       svn_wc_notify_skip, iterpool);
+              notify->kind = svn_node_dir;
+              notify->content_state = notify->prop_state
+                = svn_wc_notify_state_inapplicable;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+            }
+
+          apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
+            /* If this is an excluded path, exclude it. */
+      if (apr_hash_get(excludes, local_abspath, APR_HASH_KEY_STRING))
+        {
+          apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
+
+      if (ignores && svn_wc_match_ignore_list(basename, ignores, iterpool))
+        {
+          apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
+
+      if (filter_callback)
+        {
+          svn_boolean_t filter = FALSE;
+
+          SVN_ERR(filter_callback(filter_baton, &filter, local_abspath,
+                                  dirent, iterpool));
+
+          if (filter)
+            {
+              apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+              continue;
+            }
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  *children = dirents;
+  return SVN_NO_ERROR;
+}
+
+
 /* Import directory LOCAL_ABSPATH into the repository directory indicated by
  * DIR_BATON in EDITOR.  EDIT_PATH is the path imported as the root
  * directory, so all edits are relative to that.
@@ -317,14 +410,16 @@ import_dir(const svn_delta_editor_t *editor,
   apr_pool_t *subpool = svn_pool_create(pool);  /* iteration pool */
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
-  apr_array_header_t *ignores;
+  apr_array_header_t *ignores = NULL;
 
   SVN_ERR(svn_path_check_valid(local_abspath, pool));
 
   if (!no_ignore)
     SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
 
-  SVN_ERR(svn_io_get_dirents3(&dirents, local_abspath, TRUE, pool, pool));
+  SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes, ignores,
+                                filter_callback, filter_baton, ctx,
+                                pool, pool));
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
@@ -337,53 +432,11 @@ import_dir(const svn_delta_editor_t *editor,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      if (svn_wc_is_adm_dir(filename, subpool))
-        {
-          /* If someone's trying to import a directory named the same
-             as our administrative directories, that's probably not
-             what they wanted to do.  If they are importing a file
-             with that name, something is bound to blow up when they
-             checkout what they've imported.  So, just skip items with
-             that name.  */
-          if (ctx->notify_func2)
-            {
-              svn_wc_notify_t *notify
-                = svn_wc_create_notify(svn_dirent_join(local_abspath, filename,
-                                                       subpool),
-                                       svn_wc_notify_skip, subpool);
-              notify->kind = svn_node_dir;
-              notify->content_state = notify->prop_state
-                = svn_wc_notify_state_inapplicable;
-              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
-            }
-          continue;
-        }
-
       /* Typically, we started importing from ".", in which case
          edit_path is "".  So below, this_path might become "./blah",
          and this_edit_path might become "blah", for example. */
       this_abspath = svn_dirent_join(local_abspath, filename, subpool);
       this_edit_path = svn_relpath_join(edit_path, filename, subpool);
-
-      /* If this is an excluded path, exclude it. */
-      if (apr_hash_get(excludes, this_abspath, APR_HASH_KEY_STRING))
-        continue;
-
-      if ((!no_ignore) && svn_wc_match_ignore_list(filename, ignores,
-                                                   subpool))
-        continue;
-
-      if (filter_callback != NULL)
-        {
-          svn_boolean_t filter = FALSE;
-
-          SVN_ERR(filter_callback(filter_baton, &filter, this_abspath,
-                                  dirent, subpool));
-
-          if (filter)
-            continue;
-        }
 
       if (dirent->kind == svn_node_dir && depth >= svn_depth_immediates)
         {
