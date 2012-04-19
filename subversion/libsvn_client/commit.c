@@ -1659,9 +1659,13 @@ svn_client_commit6(const apr_array_header_t *targets,
   cb.info = &commit_info;
   cb.pool = pool;
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
+  cmt_err = svn_error_trace(
+          svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
                                                base_abspath, commit_items,
                                                TRUE, FALSE, ctx, pool));
+
+  if (cmt_err)
+    goto cleanup;
 
   cmt_err = svn_error_trace(
                  get_ra_editor(&editor, &edit_baton, ra_session, ctx,
