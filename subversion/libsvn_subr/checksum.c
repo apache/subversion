@@ -71,6 +71,18 @@ checksum_create_without_digest(svn_checksum_kind_t kind,
   return checksum;
 }
 
+static svn_checksum_t *
+checksum_create(svn_checksum_kind_t kind,
+                apr_size_t digest_size,
+                const unsigned char *digest,
+                apr_pool_t *pool)
+{
+  svn_checksum_t *checksum = checksum_create_without_digest(kind, digest_size,
+                                                            pool);
+  memcpy((unsigned char *)checksum->digest, digest, digest_size);
+  return checksum;  
+}
+
 svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool)
@@ -99,22 +111,16 @@ svn_checksum_t *
 svn_checksum__from_digest_md5(const unsigned char *digest,
                               apr_pool_t *result_pool)
 {
-  svn_checksum_t *checksum = checksum_create_without_digest(svn_checksum_md5,
-                                                            APR_MD5_DIGESTSIZE,
-                                                            result_pool);
-  memcpy((unsigned char *)checksum->digest, digest, APR_MD5_DIGESTSIZE);
-  return checksum;
+  return checksum_create(svn_checksum_md5, APR_MD5_DIGESTSIZE, digest,
+                         result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_sha1(const unsigned char *digest,
                                apr_pool_t *result_pool)
 {
-  svn_checksum_t *checksum = checksum_create_without_digest(
-                               svn_checksum_sha1, APR_SHA1_DIGESTSIZE,
-                               result_pool);
-  memcpy((unsigned char *)checksum->digest, digest, APR_SHA1_DIGESTSIZE);
-  return checksum;
+  return checksum_create(svn_checksum_sha1, APR_SHA1_DIGESTSIZE, digest,
+                         result_pool);
 }
 
 svn_error_t *
@@ -307,9 +313,7 @@ svn_checksum_dup(const svn_checksum_t *checksum,
         break;
     }
 
-  out = checksum_create_without_digest(checksum->kind, digest_size, pool);
-  memcpy((unsigned char *)out->digest, checksum->digest, digest_size);
-  return out;
+  return checksum_create(checksum->kind, digest_size, checksum->digest, pool);
 }
 
 svn_error_t *
@@ -370,9 +374,7 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
         return NULL;
     }
 
-  checksum = checksum_create_without_digest(kind, digest_size, pool);
-  memcpy((unsigned char *)checksum->digest, digest, digest_size);
-  return checksum;
+  return checksum_create(kind, digest_size, digest, pool);
 }
 
 struct svn_checksum_ctx_t
