@@ -58,10 +58,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * libsvn_wc: reduce resources use while looking for the wc root (r1306334)
     * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
     * fix regression with deep commit followed by depthy update (issue #4136)
+    * propset: avoid reading unitialised variable in error path (r1325361)
 
   Developer-visible changes:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
     * swig-rb tests: avoid FAILs on APR hash order (r1310535, r1310594)
+    * windows distribution scripts: include svnrdump (r1295007)
 
 
 Version 1.7.4
