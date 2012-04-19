@@ -551,7 +551,7 @@ import_dir(const svn_delta_editor_t *editor,
 
   /* Now import the children recursively. */
   SVN_ERR(import_children(local_abspath, edit_path, dirents, editor,
-                          this_dir_baton, depth, excludes, no_ignore, 
+                          this_dir_baton, depth, excludes, no_ignore,
                           ignore_unknown_node_types,
                           filter_callback, filter_baton,
                           import_ctx, ctx, pool));
@@ -909,7 +909,7 @@ svn_client_import5(const char *path,
       APR_ARRAY_PUSH(new_entries, const char *) = dir;
       url = temp;
       SVN_ERR(svn_ra_reparent(ra_session, url, iterpool));
-  
+
       SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
                                 iterpool));
     }

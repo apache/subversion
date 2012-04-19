@@ -34,22 +34,22 @@
 #include "svn_io.h"
 
 /* Implementation aspects.
- * 
+ *
  * We use a single shared memory block that will be created by the first
  * user and merely mapped by all subsequent ones. The memory block contains
  * an short header followed by a fixed-capacity array of named atomics. The
  * number of entries currently in use is stored in the header part.
- * 
+ *
  * Finding / creating the SHM object as well as adding new array entries
  * is being guarded by an APR global mutex.
- * 
+ *
  * The array is append-only.  Once a process mapped the block into its
  * address space, it may freely access any of the used entries.  However,
  * it must synchronize access to the volatile data within the entries.
  * On Windows and where otherwise supported by GCC, lightweight "lock-free"
  * synchronization will be used. Other targets serialize all access using
  * a global mutex.
- * 
+ *
  * Atomics will be identified by their name (a short string) and lookup
  * takes linear time. But even that takes only about 10 microseconds for a
  * full array scan -- which is in the same order of magnitude than e.g. a
@@ -93,14 +93,14 @@
 /* Platform-dependent implementations of our basic atomic operations.
  * SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
  * This will be zero-overhead if OP itself is already atomic.
- * 
+ *
  * The default implementation will use the same mutex for initialization
  * as well as any type of data access.  This is quite expensive and we
  * can do much better on most platforms.
  */
 #if defined(WIN32) && ((_WIN32_WINNT >= 0x0502) || defined(InterlockedExchangeAdd64))
 
-/* Interlocked API / intrinsics guarantee full data synchronization 
+/* Interlocked API / intrinsics guarantee full data synchronization
  */
 #define synched_read(mem) *mem
 #define synched_write(mem, value) InterlockedExchange64(mem, value)
@@ -139,7 +139,7 @@ synched_write(volatile apr_int64_t *mem, apr_int64_t value)
 {
   apr_int64_t old_value = *mem;
   *mem = value;
-  
+
   return old_value;
 }
 
@@ -157,7 +157,7 @@ synched_cmpxchg(volatile apr_int64_t *mem,
   apr_int64_t old_value = *mem;
   if (old_value == comperand)
     *mem = value;
-    
+
   return old_value;
 }
 
@@ -187,7 +187,7 @@ struct shared_data_t
 {
   volatile apr_int32_t count;
   char padding [sizeof(struct named_atomic_data_t) - sizeof(apr_int32_t)];
-  
+
   struct named_atomic_data_t atomics[MAX_ATOMIC_COUNT];
 };
 
@@ -227,7 +227,7 @@ struct svn_atomic_namespace__t
    * their names without further sync. */
   volatile svn_atomic_t min_used;
 
-  /* for each atomic in the shared memory, we hand out 
+  /* for each atomic in the shared memory, we hand out
    * at most one API-level object. */
   struct svn_named_atomic__t atomics[MAX_ATOMIC_COUNT];
 
@@ -270,7 +270,7 @@ static svn_error_t *
 lock(struct mutex_t *mutex)
 {
   svn_error_t *err;
-  
+
   /* Get lock on the filehandle. */
   SVN_ERR(svn_mutex__lock(thread_mutex));
   err = svn_io_lock_open_file(mutex->lock_file, TRUE, FALSE, mutex->pool);
@@ -492,7 +492,7 @@ svn_named_atomic__get(svn_named_atomic__t **atomic,
           memcpy(ns->data->atomics[ns->data->count].name,
                  name,
                  len+1);
-          
+
           return_atomic(atomic, ns, ns->data->count);
           ++ns->data->count;
         }
@@ -519,7 +519,7 @@ svn_named_atomic__read(apr_int64_t *value,
 {
   SVN_ERR(validate(atomic));
   SYNCHRONIZE(atomic, *value = synched_read(&atomic->data->value));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -548,7 +548,7 @@ svn_named_atomic__add(apr_int64_t *new_value,
 
   SVN_ERR(validate(atomic));
   SYNCHRONIZE(atomic, temp = synched_add(&atomic->data->value, delta));
-  
+
   if (new_value)
     *new_value = temp;
 
@@ -567,7 +567,7 @@ svn_named_atomic__cmpxchg(apr_int64_t *old_value,
   SYNCHRONIZE(atomic, temp = synched_cmpxchg(&atomic->data->value,
                                              new_value,
                                              comperand));
-  
+
   if (old_value)
     *old_value = temp;
 

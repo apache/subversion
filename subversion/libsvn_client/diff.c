@@ -2214,7 +2214,7 @@ arbitrary_diff_walker(void *baton, const char *local_abspath,
  * and LOCAL_ABSPATH2, using the provided diff callbacks to show changes
  * in files. The files and directories involved may be part of a working
  * copy or they may be unversioned. For versioned files, show property
- * changes, too. */ 
+ * changes, too. */
 static svn_error_t *
 do_arbitrary_nodes_diff(const char *local_abspath1,
                         const char *local_abspath2,

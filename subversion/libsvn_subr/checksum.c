@@ -80,7 +80,7 @@ checksum_create(svn_checksum_kind_t kind,
   svn_checksum_t *checksum = checksum_create_without_digest(kind, digest_size,
                                                             pool);
   memcpy((unsigned char *)checksum->digest, digest, digest_size);
-  return checksum;  
+  return checksum;
 }
 
 svn_checksum_t *
