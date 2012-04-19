@@ -216,7 +216,7 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
       if (kind == svn_node_dir)
         {
           svn_error_clear(err);
-          *fs_type = apr_pstrdup(pool, SVN_FS_TYPE_BDB);
+          *fs_type = SVN_FS_TYPE_BDB;
           return SVN_NO_ERROR;
         }
       return err;
