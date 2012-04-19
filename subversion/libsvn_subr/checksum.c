@@ -288,9 +288,6 @@ svn_checksum_t *
 svn_checksum_dup(const svn_checksum_t *checksum,
                  apr_pool_t *pool)
 {
-  svn_checksum_t *out;
-  apr_size_t digest_size;
-
   /* The duplicate of a NULL checksum is a NULL... */
   if (checksum == NULL)
     return NULL;
@@ -303,17 +300,15 @@ svn_checksum_dup(const svn_checksum_t *checksum,
   switch (checksum->kind)
     {
       case svn_checksum_md5:
-        digest_size = APR_MD5_DIGESTSIZE;
+        return svn_checksum__from_digest_md5(checksum->digest, pool);
         break;
       case svn_checksum_sha1:
-        digest_size = APR_SHA1_DIGESTSIZE;
+        return svn_checksum__from_digest_sha1(checksum->digest, pool);
         break;
       default:
         SVN_ERR_MALFUNCTION_NO_RETURN();
         break;
     }
-
-  return checksum_create(checksum->kind, digest_size, checksum->digest, pool);
 }
 
 svn_error_t *
@@ -353,28 +348,20 @@ svn_checksum_t *
 svn_checksum_empty_checksum(svn_checksum_kind_t kind,
                             apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
-  apr_size_t digest_size;
-  const unsigned char *digest;
-
   switch (kind)
     {
       case svn_checksum_md5:
-        digest_size = APR_MD5_DIGESTSIZE;
-        digest = svn_md5__empty_string_digest();
-        break;
+        return svn_checksum__from_digest_md5(svn_md5__empty_string_digest(),
+                                             pool);
 
       case svn_checksum_sha1:
-        digest_size = APR_SHA1_DIGESTSIZE;
-        digest = svn_sha1__empty_string_digest();
-        break;
+        return svn_checksum__from_digest_sha1(svn_sha1__empty_string_digest(),
+                                              pool);
 
       default:
         /* We really shouldn't get here, but if we do... */
         return NULL;
     }
-
-  return checksum_create(kind, digest_size, digest, pool);
 }
 
 struct svn_checksum_ctx_t
