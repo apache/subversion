@@ -742,6 +742,7 @@ svn_client_import5(const char *path,
                                                    sizeof(const char *));
   const char *temp;
   const char *dir;
+  apr_hash_t *commit_revprops;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (svn_path_is_url(path))
@@ -809,10 +810,6 @@ svn_client_import5(const char *path,
                                 iterpool));
     }
 
-  SVN_ERR(get_ra_editor(&editor, &edit_baton, ra_session, ctx, log_msg, NULL,
-                        revprop_table, NULL, TRUE,
-                        commit_callback, commit_baton, iterpool));
-
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
     {
@@ -846,6 +843,17 @@ svn_client_import5(const char *path,
        _("'%s' is a reserved name and cannot be imported"),
        svn_dirent_local_style(temp, scratch_pool));
 
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
+                                           log_msg, ctx, scratch_pool));
+
+  /* Fetch RA commit editor. */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx,
+                                                       NULL, scratch_pool)));
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    commit_revprops, commit_callback,
+                                    commit_baton, NULL, TRUE,
+                                    scratch_pool));
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
