@@ -63,7 +63,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
   Developer-visible changes:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
     * swig-rb tests: avoid FAILs on APR hash order (r1310535, r1310594)
-    * windows distribution scripts: include svnrdump (r1295007)
+    * windows example distribution scripts: include svnrdump (r1295007)
 
 
 Version 1.7.4
