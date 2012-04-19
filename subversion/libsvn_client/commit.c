@@ -788,6 +788,14 @@ svn_client_import5(const char *path,
      a place to stick our imported tree. */
   SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
                             iterpool));
+
+  /* We can import into directories, but if a file already exists, that's
+     an error. */
+  if (kind == svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_EXISTS, NULL,
+       _("Path '%s' already exists"), url);
+
   while (kind == svn_node_none)
     {
       svn_pool_clear(iterpool);
@@ -821,14 +829,6 @@ svn_client_import5(const char *path,
             component;
         }
     }
-
-  /* An empty NEW_ENTRIES list the first call to get_ra_editor() above
-     succeeded.  That means that URL corresponds to an already
-     existing filesystem entity. */
-  if (kind == svn_node_file && (! new_entries->nelts))
-    return svn_error_createf
-      (SVN_ERR_ENTRY_EXISTS, NULL,
-       _("Path '%s' already exists"), url);
 
   /* The repository doesn't know about the reserved administrative
      directory. */
