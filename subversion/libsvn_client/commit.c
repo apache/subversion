@@ -584,11 +584,23 @@ import(const char *local_abspath,
   /* Import a file or a directory tree. */
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, FALSE, pool, pool));
 
+  if (!no_ignore)
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
+
   /* Make the intermediate directory components necessary for properly
      rooting our import source tree.  */
   if (new_entries->nelts)
     {
       int i;
+      apr_hash_t *dirents;
+
+      if (dirent->kind == svn_node_dir)
+        {
+          SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes,
+                                        ignores, filter_callback, filter_baton,
+                                        ctx, pool, pool));
+        }
+
 
       for (i = 0; i < new_entries->nelts; i++)
         {
@@ -602,13 +614,14 @@ import(const char *local_abspath,
           if ((i == new_entries->nelts - 1) && (dirent->kind == svn_node_file))
             break;
 
-          children = apr_array_make(pool, 1, sizeof(const char *));
           if (i < new_entries->nelts - 1)
-            APR_ARRAY_PUSH(children, const char *) =
-                              APR_ARRAY_IDX(new_entries, i + 1, const char *);
-          /* ### Still need to handle the "else" case, for which we need to
-                 know more about the operations and the children we are
-                 fetching. */
+            {
+              children = apr_array_make(pool, 1, sizeof(const char *));
+              APR_ARRAY_PUSH(children, const char *) =
+                               APR_ARRAY_IDX(new_entries, i + 1, const char *);
+            }
+          else
+            SVN_ERR(svn_hash_keys(&children, dirents, pool));
 
           SVN_ERR(svn_editor_add_directory(editor, relpath, children, props,
                                            SVN_INVALID_REVNUM));
@@ -639,11 +652,7 @@ import(const char *local_abspath,
       svn_boolean_t ignores_match = FALSE;
 
       if (!no_ignore)
-        {
-          SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-          ignores_match = svn_wc_match_ignore_list(local_abspath,
-                                                   ignores, pool);
-        }
+        ignores_match = svn_wc_match_ignore_list(local_abspath, ignores, pool);
       if (!ignores_match)
         SVN_ERR(import_file(editor, local_abspath, relpath,
                             dirent, import_ctx, ctx, pool));
@@ -651,9 +660,6 @@ import(const char *local_abspath,
   else if (dirent->kind == svn_node_dir)
     {
       apr_hash_t *dirents;
-
-      if (!no_ignore)
-        SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
 
       SVN_ERR(get_filtered_children(&dirents, local_abspath, excludes, ignores,
                                     filter_callback, filter_baton, ctx,
