@@ -123,31 +123,33 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1327979, r1328002, r1328038, r1328144
-   Avoid issue 4157: Disallow BDB with the event MPM at runtime.
-   Justication:
-     BDB/event causes Apache 2.4 to SEGV
-   Votes:
-     +1: philip
-
-Veto-blocked changes:
-=====================
-
  * r1291594, r1328267, r1328268
    Support httpd-2.4 in davautocheck.
    Justification:
      Allow testing against current stable httpd.
+   Notes:
+     Depends on the r1327979 group.
    Votes:
-     +1: philip
-     -1: danielsh (needs issue #4157 to work on bdb)
+     +1: philip, danielsh
 
  * r1232267
    Allow building mod_dav_svn against httpd-2.4.
    Justification:
      Support current stable httpd.
+   Notes:
+     Depends on the r1327979 group.
    Votes:
-     +1: philip
-     -1: danielsh (needs issue #4157 to work on bdb)
+     +1: philip, danielsh
+
+ * r1327979, r1328002, r1328038, r1328144
+   Avoid issue 4157: Disallow BDB with the event MPM at runtime.
+   Justication:
+     BDB/event causes Apache 2.4 to SEGV or spin
+   Votes:
+     +1: philip, danielsh
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
