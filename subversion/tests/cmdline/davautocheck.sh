@@ -71,6 +71,9 @@
 # To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
 # appropriate value in the environment.
 #
+# To load an MPM module for Apache 2.4 use APACHE_MPM=event in the
+# environment.
+#
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.
 
