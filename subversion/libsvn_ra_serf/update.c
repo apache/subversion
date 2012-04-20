@@ -1576,7 +1576,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       rev_str = svn_xml_get_attr_value("rev", attrs);
       if (rev_str) /* Not available on older repositories! */
-        delete_rev = (svn_revnum_t)apr_strtoi64(rev_str, NULL, 0);
+        delete_rev = SVN_STR_TO_REV(rev_str);
 
       info = parser->state->private;
 
