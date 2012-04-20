@@ -121,7 +121,7 @@ Candidate changes:
    Justification:
      The ra layers should behave as similar as possible
    Votes:
-     +1: rhuijben (not r1328353), philip
+     +1: rhuijben, philip
 
  * r1291594, r1328267, r1328268
    Support httpd-2.4 in davautocheck.
@@ -132,6 +132,12 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1232267
    Allow building mod_dav_svn against httpd-2.4.
    Justification:
@@ -139,17 +145,11 @@ Candidate changes:
    Notes:
      Depends on the r1327979 group.
    Votes:
-     +1: philip, danielsh
+     +1: philip, danielsh, rhuijben
 
  * r1327979, r1328002, r1328038, r1328144
    Avoid issue 4157: Disallow BDB with the event MPM at runtime.
    Justication:
      BDB/event causes Apache 2.4 to SEGV or spin
    Votes:
-     +1: philip, danielsh
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: philip, danielsh, rhuijben
