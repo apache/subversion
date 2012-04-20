@@ -154,37 +154,89 @@ mergeinfo for the merge is set on the deepest directories present.</p>
 <div class="h2" id="switched-paths">
 <h2>Switched Paths</h2>
 
-<p>Switched paths are treated as the root of the working copy regarding
-merge info inheritance and elision, specifically:</p>
+<p>Switched paths are treated as the root of a working copy regarding
+mergeinfo inheritance, recording, and elision.  Specifically, for a
+merge target with an arbitrary switched subtree:</p>
+
+<pre>
+  WC-Root
+     |
+  Target
+     |
+    SSP
+     | \
+     |  \
+    SS   SSS
+
+  Target - The WC target of the merge operation (may be same as WC-Root)
+  SSP    - Switched Subtree Parent (may be same as Target)
+  SSPS   - Switched Subtree Sibling (zero or more)
+  SS     - Switched Subtree</pre>
+
+<p>Note: If SS is itself the target of the merge, then the no special
+handling is needed, the merge takes place as if SS is the root of the WC.</p>
 
 <ul>
- <li>Merge rev N to switched PATH which has no explicit merge info: PATH
-   does not inherit merge info from its working copy ancestors.  PATH gets
-   merge info for rev N plus any inherited mergeinfo from the repository.</li>
+ <li><strong>Inheritance:</strong> If SS has no explicit mergeinfo of its
+   own, it inherits mergeinfo not from its WC parent (SSP) but from its
+   repository parent:</li>
 
- <li>Merge rev N to PATH with switched CHILD:  If CHILD has no explicit
-   mergeinfo it does not inherit merge info from its working copy ancestors.
-   Instead CHILD gets merge info for rev N plus any inherited mergeinfo from
-   the repository.  Regardless of wether CHILD has explicit mergeinfo,
-   CHILD's immediate PARENT (which may be the same as PATH) gets
-   non-inheritable mergeinfo added for rev N.  If PARENT didn't have
-   pre-existing mergeinfo it will have mergeinfo added.  If CHILD has an
-   unswitched SIBLING, then SIBLING will get a full set of mergeinfo since
-   SIBLING and CHILD's common PARENT gets non-inheritable mergeinfo for this
-   merge.  Again,  like PARENT, if SIBLING does not have pre-existing
-   mergeinfo it will have mergeinfo added.
-   </li>
+<pre>
+      WC-Root
+         |
+      Target
+         |
+         V
+        SSP
+SSRP..   | \
+      \  |  \
+       V x   V
+        SS  SSS
 
- <li>Elision: Merge info on switched paths never elides.</li>
+SSRP - Switched subtree's repository parent
+-->    Mergeinfo inheritance
+--x    No mergeinfo inheritance</pre>
 
- <li>Switch PATH which has <em>committed</em> merge info or switch PATH which
-   has a CHILD with <em>committed</em> mergeinfo: PATH's / CHILD's mergeinfo
-   is <em>replaced</em> by the explicit mergeinfo from the repository.</li>
+ <li><strong>Recording a Merge:</strong> If we merge revision N from ^/SRC,
+   mergeinfo is recorded like so (note that mergeinfo source '/SRC' is not
+   literal for children of 'Target' but would be adjusted for the path-wise
+   differences between the root of the merge target and the subtree in
+   question):</li>
 
- <li>Switch PATH which has <em>local</em> merge info or switch PATH which has
-   a CHILD with <em>local</em> mergeinfo: PATH's / CHILDS's local mergeinfo
-   is <em>merged</em> with explicit or inherited mergeinfo from the repository.
-   </li>
+<pre>
+  WC-Root
+     |
+  Target ('/SRC:N')
+     |
+    SSP('/SRC:N*')
+     | \
+     |  \
+     |   SSS('/SRC:N')
+     |
+    SS('/SRC:N' and possibly the mergeinfo
+                inherited from SSRP if SS
+                had no pre-existing explicit
+                mergeinfo)</pre>
+
+ <li><strong>Elision:</strong> Mergeinfo on switched paths never elides to
+   its working copy parents:</li>
+
+<pre>
+      WC-Root
+         ^
+         |
+      Target
+         ^
+         |
+        SSP
+         x ^
+         |  \
+         |   \
+        SS   SSS
+
+-->    Mergeinfo elision possible
+--x    No mergeinfo elision possible</pre>
+
 </ul>
 
 </div>  <!-- switched-paths -->
