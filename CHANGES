@@ -59,6 +59,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
     * fix regression with deep commit followed by depthy update (issue #4136)
     * propset: avoid reading unitialised variable in error path (r1325361)
+    * mod_dav_svn: support httpd-2.4 (r1232267)
+    * mod_dav_svn: forbid BDB repositories under event MPM (issue #4157)
 
   Developer-visible changes:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)

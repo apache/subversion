@@ -594,7 +594,7 @@ serialize_cstring_array(svn_temp_serializer__context_t *context,
 {
   apr_size_t i;
   const char **entries = *strings;
-  
+
   /* serialize COUNT entries pointers (the array) */
   svn_temp_serializer__push(context,
                             (const void * const *)strings,
@@ -615,7 +615,7 @@ serialize_svn_string_array(svn_temp_serializer__context_t *context,
 {
   apr_size_t i;
   const svn_string_t **entries = *strings;
-  
+
   /* serialize COUNT entries pointers (the array) */
   svn_temp_serializer__push(context,
                             (const void * const *)strings,
@@ -645,14 +645,14 @@ svn_fs_fs__serialize_properties(void **data,
   properties.count = apr_hash_count(hash);
   properties.keys = apr_palloc(pool, sizeof(const char*) * (properties.count + 1));
   properties.values = apr_palloc(pool, sizeof(const char*) * properties.count);
-  
+
   /* populate it with the hash entries */
   for (hi = apr_hash_first(pool, hash), i=0; hi; hi = apr_hash_next(hi), ++i)
     {
       properties.keys[i] = svn__apr_hash_index_key(hi);
       properties.values[i] = svn__apr_hash_index_val(hi);
     }
-  
+
   /* serialize it */
   context = svn_temp_serializer__init(&properties,
                                       sizeof(properties),
@@ -685,19 +685,19 @@ svn_fs_fs__deserialize_properties(void **out,
   /* de-serialize our auxilliary data structure */
   svn_temp_deserializer__resolve(properties, (void**)&properties->keys);
   svn_temp_deserializer__resolve(properties, (void**)&properties->values);
-  
+
   /* de-serialize each entry and put it into the hash */
   for (i = 0; i < properties->count; ++i)
     {
       apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
-      svn_temp_deserializer__resolve((void*)properties->keys, 
+      svn_temp_deserializer__resolve((void*)properties->keys,
                                      (void**)&properties->keys[i]);
-      
-      deserialize_svn_string((void*)properties->values, 
+
+      deserialize_svn_string((void*)properties->values,
                              (svn_string_t **)&properties->values[i]);
-      
-      apr_hash_set(hash, 
-                   properties->keys[i], len, 
+
+      apr_hash_set(hash,
+                   properties->keys[i], len,
                    properties->values[i]);
     }
 

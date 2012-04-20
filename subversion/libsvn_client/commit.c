@@ -274,15 +274,15 @@ get_filtered_children(apr_hash_t **children,
 
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *basename = svn__apr_hash_index_key(hi);
+      const char *base_name = svn__apr_hash_index_key(hi);
       const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
       const char *local_abspath;
 
       svn_pool_clear(iterpool);
 
-      local_abspath = svn_dirent_join(dir_abspath, basename, iterpool);
+      local_abspath = svn_dirent_join(dir_abspath, base_name, iterpool);
 
-      if (svn_wc_is_adm_dir(basename, iterpool))
+      if (svn_wc_is_adm_dir(base_name, iterpool))
         {
           /* If someone's trying to import a directory named the same
              as our administrative directories, that's probably not
@@ -293,7 +293,7 @@ get_filtered_children(apr_hash_t **children,
           if (ctx->notify_func2)
             {
               svn_wc_notify_t *notify
-                = svn_wc_create_notify(svn_dirent_join(local_abspath, basename,
+                = svn_wc_create_notify(svn_dirent_join(local_abspath, base_name,
                                                        iterpool),
                                        svn_wc_notify_skip, iterpool);
               notify->kind = svn_node_dir;
@@ -303,19 +303,19 @@ get_filtered_children(apr_hash_t **children,
               (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
 
-          apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
           continue;
         }
             /* If this is an excluded path, exclude it. */
       if (apr_hash_get(excludes, local_abspath, APR_HASH_KEY_STRING))
         {
-          apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
           continue;
         }
 
-      if (ignores && svn_wc_match_ignore_list(basename, ignores, iterpool))
+      if (ignores && svn_wc_match_ignore_list(base_name, ignores, iterpool))
         {
-          apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+          apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
           continue;
         }
 
@@ -328,7 +328,7 @@ get_filtered_children(apr_hash_t **children,
 
           if (filter)
             {
-              apr_hash_set(dirents, basename, APR_HASH_KEY_STRING, NULL);
+              apr_hash_set(dirents, base_name, APR_HASH_KEY_STRING, NULL);
               continue;
             }
         }
@@ -573,7 +573,7 @@ import(const char *local_abspath,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
-  apr_array_header_t *ignores;
+  apr_array_header_t *ignores = NULL;
   const char *relpath = "";
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
   const svn_io_dirent2_t *dirent;
@@ -856,7 +856,7 @@ svn_client_import5(const char *path,
       APR_ARRAY_PUSH(new_entries, const char *) = dir;
       url = temp;
       SVN_ERR(svn_ra_reparent(ra_session, url, iterpool));
-  
+
       SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
                                 iterpool));
     }

@@ -1146,7 +1146,7 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
   const svn_fs_id_t *node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
-  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, 
+  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name,
                                  scratch_pool, scratch_pool));
   if (! node_id)
     return svn_error_createf

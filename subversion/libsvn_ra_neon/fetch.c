@@ -1831,7 +1831,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
       att = svn_xml_get_attr_value("rev", atts);
       if (att) /* Not available on older repositories! */
-        crev = (svn_revnum_t)apr_strtoi64(att, NULL, 0);
+        crev = SVN_STR_TO_REV(att);
 
       parent_dir = &TOP_DIR(rb);
 

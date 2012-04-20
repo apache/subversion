@@ -80,7 +80,7 @@ checksum_create(svn_checksum_kind_t kind,
   svn_checksum_t *checksum = checksum_create_without_digest(kind, digest_size,
                                                             pool);
   memcpy((unsigned char *)checksum->digest, digest, digest_size);
-  return checksum;  
+  return checksum;
 }
 
 svn_checksum_t *
@@ -197,6 +197,8 @@ svn_checksum_serialize(const svn_checksum_t *checksum,
 {
   const char *ckind_str;
 
+  SVN_ERR_ASSERT_NO_RETURN(checksum->kind == svn_checksum_md5
+                           || checksum->kind == svn_checksum_sha1);
   ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
   return apr_pstrcat(result_pool,
                      ckind_str,
@@ -360,7 +362,7 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
 
       default:
         /* We really shouldn't get here, but if we do... */
-        return NULL;
+        SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 }
 
@@ -390,7 +392,7 @@ svn_checksum_ctx_create(svn_checksum_kind_t kind,
         break;
 
       default:
-        return NULL;
+        SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
   return ctx;
@@ -493,6 +495,6 @@ svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
 
       default:
         /* We really shouldn't get here, but if we do... */
-        return FALSE;
+        SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 }

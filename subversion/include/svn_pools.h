@@ -94,8 +94,8 @@ svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
  * for each of these threads may not be feasible. Set the @a thread_safe
  * parameter to @c TRUE in that case.  Pools will still not thread-safe, i.e.
  * access to them may require explicit serialization.  Set the parameter to
- * @c FALSE, otherwise, to maximize performance. 
- * 
+ * @c FALSE, otherwise, to maximize performance.
+ *
  * To access the owner pool, which can also serve as the root pool for your
  * sub-pools, call @c apr_allocator_get_owner().
  *

@@ -155,7 +155,7 @@ locate_cache(svn_cache__t **cache,
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
       if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key 
+      if (key && path) *key
         = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
     }
 }
@@ -3736,7 +3736,8 @@ make_txn_root(svn_fs_root_t **root_p,
                                       svn_fs_fs__dag_deserialize,
                                       APR_HASH_KEY_STRING,
                                       32, 20, FALSE,
-                                      apr_pstrcat(pool, txn, ":TXN", (char *)NULL),
+                                      apr_pstrcat(pool, txn, ":TXN",
+                                                  (char *)NULL),
                                       root->pool));
 
   /* Initialize transaction-local caches in FS.
@@ -3803,8 +3804,9 @@ verify_node(dag_node_t *node,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  "Predecessor count mismatch: "
                                  "%s has %d, but %s has %d",
-                                 stringify_node(node, iterpool), pred_count, 
-                                 stringify_node(pred, iterpool), pred_pred_count);
+                                 stringify_node(node, iterpool), pred_count,
+                                 stringify_node(pred, iterpool),
+                                 pred_pred_count);
     }
 
   /* Kind-dependent verifications. */

@@ -994,10 +994,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   max_entry_size = data_size / 4 > MAX_ITEM_SIZE
                  ? MAX_ITEM_SIZE
                  : data_size / 4;
-  
+
   /* to keep the entries small, we use 32 bit indices only
    * -> we need to ensure that no more then 4G entries exist.
-   * 
+   *
    * Note, that this limit could only be exceeded in a very
    * theoretical setup with about 1EB of cache.
    */
@@ -1611,7 +1611,7 @@ svn_membuffer_cache_get(void **value_p,
     {
       *value_p = NULL;
       *found = FALSE;
-      
+
       return SVN_NO_ERROR;
     }
 

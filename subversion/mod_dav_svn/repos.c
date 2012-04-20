@@ -2166,18 +2166,23 @@ get_resource(request_rec *r,
                    dav_svn__get_revprop_cache_flag(r) ? "1" : "0");
 
       /* Disallow BDB/event until issue 4157 is fixed. */
-      serr = svn_repos__fs_type(&fs_type, fs_path, r->connection->pool);
-      if (serr)
+      if (!strcmp(ap_show_mpm(), "event"))
         {
-          /* svn_repos_open2 is going to fail, use that error. */
-          svn_error_clear(serr);
-          serr = NULL;
+          serr = svn_repos__fs_type(&fs_type, fs_path, r->connection->pool);
+          if (serr)
+            {
+              /* svn_repos_open2 is going to fail, use that error. */
+              svn_error_clear(serr);
+              serr = NULL;
+            }
+          else if (!strcmp(fs_type, "bdb"))
+            serr = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                     "BDB repository at '%s' is not compatible "
+                                     "with event MPM",
+                                     fs_path);
         }
-      else if (!strcmp(fs_type, "bdb") && !strcmp(ap_show_mpm(), "event"))
-        serr = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 "BDB repository at '%s' is not compatible "
-                                 "with event MPM",
-                                 fs_path);
+      else
+        serr = NULL;
 
       /* open the FS */
       if (!serr)
