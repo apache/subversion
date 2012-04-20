@@ -123,14 +123,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1327979, r1328002, r1328038, r1328144
+   Avoid issue 4157: Disallow BDB with the event MPM at runtime.
+   Justication:
+     BDB/event causes Apache 2.4 to SEGV
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
- * r1291594
+ * r1291594, r1328267, r1328268
    Support httpd-2.4 in davautocheck.
    Justification:
      Allow testing against current stable httpd.
    Votes:
+     +1: philip
      -1: danielsh (needs issue #4157 to work on bdb)
 
  * r1232267
@@ -138,6 +146,7 @@ Veto-blocked changes:
    Justification:
      Support current stable httpd.
    Votes:
+     +1: philip
      -1: danielsh (needs issue #4157 to work on bdb)
 
 Approved changes:
