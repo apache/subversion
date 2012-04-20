@@ -267,6 +267,10 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
+if [ ${APACHE_MPM:+set} ]; then
+    LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
+      || fail "MPM module not found"
+fi
 
 random_port() {
   if [ -n "$BASH_VERSION" ]; then
@@ -301,6 +305,7 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
+$LOAD_MOD_MPM
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
