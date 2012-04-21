@@ -138,15 +138,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1232267
-   Allow building mod_dav_svn against httpd-2.4.
-   Justification:
-     Support current stable httpd.
-   Notes:
-     Depends on the r1327979 group.
-   Votes:
-     +1: philip, danielsh, rhuijben
-
  * r1327979, r1328002, r1328038, r1328144
    Avoid issue 4157: Disallow BDB with the event MPM at runtime.
    Justication:
