@@ -1414,6 +1414,50 @@ does_node_exist(svn_boolean_t *exists,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+/*
+ * ** COMPRESSED PRISTINE **
+ * TODO: moved into separate file.
+ */
+
+/* Create a pristine sqlite database at DIR_ABSPATH/PDB_FNAME and
+   initializes it.  Return the DB connection
+   in *PDB. */
+static svn_error_t *
+create_pristine_db(svn_sqlite__db_t **pdb,
+          const char *dir_abspath,
+          const char *repos_root_url,
+          const char *pdb_fname,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  const char **my_statements;
+  int i;
+
+  /* TODO: Sqlite statements must be auto-generated from an SQL file. */
+  /* Temporarily hardcoded here.
+  
+  /* Allocate MY_STATEMENTS in RESULT_POOL because the PDB will continue to
+   * refer to it over its lifetime. */
+  my_statements = apr_palloc(result_pool, 6 * sizeof(const char *));
+  i = 0;
+  my_statements[i++] = "PRAGMA encoding = 'UTF-8'; PRAGMA page_size = 1024;";
+  my_statements[i++] = "CREATE TABLE pristine (digest CHAR(40) PRIMARY KEY, data BLOB)";
+  my_statements[i++] = "INSERT INTO pristine (digest, data) VALUES (?, ?)";
+  my_statements[i] = NULL;
+  
+  SVN_ERR(svn_wc__db_util_open_db(pdb, dir_abspath, pdb_fname,
+                                  svn_sqlite__mode_rwcreate,
+                                  my_statements,
+                                  result_pool, scratch_pool));
+
+  /* Initialize the database. */
+  SVN_ERR(svn_sqlite__exec_statements(*pdb, 0)); /* HACK: Use auto-gen consts! */
+  SVN_ERR(svn_sqlite__exec_statements(*pdb, 1)); /* HACK: Use auto-gen consts! */
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Create an sqlite database at DIR_ABSPATH/SDB_FNAME and insert
    records for REPOS_ID (using REPOS_ROOT_URL and REPOS_UUID) into
