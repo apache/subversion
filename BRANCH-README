@@ -11,3 +11,4 @@ TODO:
   * insert pristines in pristine.db       []
   * pass pristines via zlib               []
   * discriminate pristines by size        []
+  * added cp-specific tests               []
