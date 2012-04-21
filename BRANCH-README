@@ -7,7 +7,7 @@ with regular catch-up merges from the trunk.
 
 TODO:
 
-  * create an sqlite db (pristine.db)     []
+  * create an sqlite db (pristine.db)     [STARTED]
   * insert pristines in pristine.db       []
   * pass pristines via zlib               []
   * discriminate pristines by size        []
