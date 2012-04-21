@@ -137,10 +137,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1327979, r1328002, r1328038, r1328144
-   Avoid issue 4157: Disallow BDB with the event MPM at runtime.
-   Justication:
-     BDB/event causes Apache 2.4 to SEGV or spin
-   Votes:
-     +1: philip, danielsh, rhuijben
