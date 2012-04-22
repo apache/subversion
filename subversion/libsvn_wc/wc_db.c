@@ -12876,9 +12876,16 @@ has_local_mods(svn_boolean_t *is_modified,
           svn_filesize_t recorded_size;
           apr_time_t recorded_mod_time;
           svn_boolean_t skip_check = FALSE;
+		  svn_error_t *err;
 
           if (cancel_func)
-            SVN_ERR(cancel_func(cancel_baton));
+		    {
+              err = cancel_func(cancel_baton);
+			  if (err)
+				return svn_error_trace(svn_error_compose_create(
+													err,
+													svn_sqlite__reset(stmt)));
+		    }
 
           svn_pool_clear(iterpool);
 
@@ -12895,8 +12902,12 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               const svn_io_dirent2_t *dirent;
 
-              SVN_ERR(svn_io_stat_dirent(&dirent, node_abspath, TRUE,
-                                         iterpool, iterpool));
+			  err = svn_io_stat_dirent(&dirent, node_abspath, TRUE,
+                                       iterpool, iterpool);
+			  if (err)
+				return svn_error_trace(svn_error_compose_create(
+													err,
+													svn_sqlite__reset(stmt)));
 
               if (dirent->kind != svn_node_file)
                 {
@@ -12913,9 +12924,15 @@ has_local_mods(svn_boolean_t *is_modified,
 
           if (! skip_check)
             {
-              SVN_ERR(svn_wc__internal_file_modified_p(is_modified,
-                                                       db, node_abspath,
-                                                       FALSE, iterpool));
+              err = svn_wc__internal_file_modified_p(is_modified,
+                                                     db, node_abspath,
+                                                     FALSE, iterpool));
+
+			  if (err)
+				return svn_error_trace(svn_error_compose_create(
+													err,
+													svn_sqlite__reset(stmt)));
+
               if (*is_modified)
                 break;
             }
