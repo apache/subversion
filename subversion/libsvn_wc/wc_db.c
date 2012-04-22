@@ -12576,35 +12576,25 @@ get_min_max_revisions(svn_revnum_t *min_revision,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
   svn_revnum_t min_rev, max_rev;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_MIN_MAX_REVISIONS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
+  SVN_ERR(svn_sqlite__step_row(stmt));
+
+  if (committed)
     {
-      if (committed)
-        {
-          min_rev = svn_sqlite__column_revnum(stmt, 2);
-          max_rev = svn_sqlite__column_revnum(stmt, 3);
-        }
-      else
-        {
-          min_rev = svn_sqlite__column_revnum(stmt, 0);
-          max_rev = svn_sqlite__column_revnum(stmt, 1);
-        }
+      min_rev = svn_sqlite__column_revnum(stmt, 2);
+      max_rev = svn_sqlite__column_revnum(stmt, 3);
     }
   else
     {
-      min_rev = SVN_INVALID_REVNUM;
-      max_rev = SVN_INVALID_REVNUM;
+      min_rev = svn_sqlite__column_revnum(stmt, 0);
+      max_rev = svn_sqlite__column_revnum(stmt, 1);
     }
 
-  /* The statement should only return at most one row. */
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR_ASSERT(! have_row);
+  /* The statement returns exactly one row. */
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (min_revision)
@@ -12926,7 +12916,7 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               err = svn_wc__internal_file_modified_p(is_modified,
                                                      db, node_abspath,
-                                                     FALSE, iterpool));
+                                                     FALSE, iterpool);
 
               if (err)
                 return svn_error_trace(svn_error_compose_create(
