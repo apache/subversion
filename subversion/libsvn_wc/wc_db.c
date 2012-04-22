@@ -396,7 +396,7 @@ wclock_owns_lock(svn_boolean_t *own_lock,
                  apr_pool_t *scratch_pool);
 
 
-
+ 
 /* Return the absolute path, in local path style, of LOCAL_RELPATH
    in WCROOT.  */
 static const char *
@@ -12876,16 +12876,16 @@ has_local_mods(svn_boolean_t *is_modified,
           svn_filesize_t recorded_size;
           apr_time_t recorded_mod_time;
           svn_boolean_t skip_check = FALSE;
-		  svn_error_t *err;
+          svn_error_t *err;
 
           if (cancel_func)
-		    {
+            {
               err = cancel_func(cancel_baton);
-			  if (err)
-				return svn_error_trace(svn_error_compose_create(
-													err,
-													svn_sqlite__reset(stmt)));
-		    }
+              if (err)
+                return svn_error_trace(svn_error_compose_create(
+                                                    err,
+                                                    svn_sqlite__reset(stmt)));
+            }
 
           svn_pool_clear(iterpool);
 
@@ -12902,12 +12902,12 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               const svn_io_dirent2_t *dirent;
 
-			  err = svn_io_stat_dirent(&dirent, node_abspath, TRUE,
+              err = svn_io_stat_dirent(&dirent, node_abspath, TRUE,
                                        iterpool, iterpool);
-			  if (err)
-				return svn_error_trace(svn_error_compose_create(
-													err,
-													svn_sqlite__reset(stmt)));
+              if (err)
+                return svn_error_trace(svn_error_compose_create(
+                                                    err,
+                                                    svn_sqlite__reset(stmt)));
 
               if (dirent->kind != svn_node_file)
                 {
@@ -12928,10 +12928,10 @@ has_local_mods(svn_boolean_t *is_modified,
                                                      db, node_abspath,
                                                      FALSE, iterpool));
 
-			  if (err)
-				return svn_error_trace(svn_error_compose_create(
-													err,
-													svn_sqlite__reset(stmt)));
+              if (err)
+                return svn_error_trace(svn_error_compose_create(
+                                                    err,
+                                                    svn_sqlite__reset(stmt)));
 
               if (*is_modified)
                 break;
