@@ -107,7 +107,10 @@ def _get_term_width():
       cr = None
   if not cr:
     # Default
-    cr = (25, 80)
+    if sys.platform == 'win32':
+      cr = (25, 79)
+    else:
+      cr = (25, 80)
   return int(cr[1])
 
 
