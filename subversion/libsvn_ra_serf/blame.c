@@ -33,7 +33,6 @@
 #include "svn_xml.h"
 #include "svn_config.h"
 #include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_props.h"
@@ -55,7 +54,7 @@ typedef enum blame_state_e {
   SET_PROP,
   REMOVE_PROP,
   MERGED_REVISION,
-  TXDELTA,
+  TXDELTA
 } blame_state_e;
 
 typedef struct blame_info_t {
@@ -152,7 +151,7 @@ create_propval(blame_info_t *info)
 
   if (!info->prop_attr)
     {
-      return svn_string_create("", info->pool);
+      return svn_string_create_empty(info->pool);
     }
   else
     {
@@ -160,8 +159,7 @@ create_propval(blame_info_t *info)
                                     info->prop_attr_len + 1);
     }
 
-  /* Include the null term. */
-  s = svn_string_ncreate(info->prop_attr, info->prop_attr_len + 1, info->pool);
+  s = svn_string_ncreate(info->prop_attr, info->prop_attr_len, info->pool);
   if (info->prop_base64)
     {
       s = svn_base64_decode_string(s, info->pool);
@@ -491,5 +489,5 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                          parser_ctx->location),
             err);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

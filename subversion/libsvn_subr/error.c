@@ -64,8 +64,9 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #undef svn_error_quick_wrap
 #undef svn_error_wrap_apr
 
-/* Note: This function was historically in the public API, so we need
- * to define it even when !SVN_DEBUG. */
+/* Note: Although this is a "__" function, it was historically in the
+ * public ABI, so we can never change it or remove its signature, even
+ * though it is now only used in SVN_DEBUG mode. */
 void
 svn_error__locate(const char *file, long line)
 {
@@ -378,7 +379,7 @@ svn_error_purge_tracing(svn_error_t *err)
          error chain with trace only links would map into SVN_NO_ERROR. */
       if (! err)
         return svn_error_create(
-                 SVN_ERR_ASSERTION_ONLY_TRACING_LINKS, 
+                 SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
                  svn_error_compose_create(
                    svn_error__malfunction(TRUE, __FILE__, __LINE__,
                                           NULL /* ### say something? */),
@@ -663,6 +664,8 @@ svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func)
   return old_malfunction_handler;
 }
 
+/* Note: Although this is a "__" function, it is in the public ABI, so
+ * we can never remove it or change its signature. */
 svn_error_t *
 svn_error__malfunction(svn_boolean_t can_return,
                        const char *file, int line,

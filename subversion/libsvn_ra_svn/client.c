@@ -40,14 +40,17 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_ra.h"
-#include "../libsvn_ra/ra_loader.h"
 #include "svn_ra_svn.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "svn_version.h"
+
+#include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_svn.h"
 
@@ -452,7 +455,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
     return;
 
   conn = svn_ra_svn_create_conn2(NULL, in_file, out_file,
-                                 SVN_DEFAULT_COMPRESSION_LEVEL, pool);
+                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
   svn_error_clear(err);
@@ -520,7 +523,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
 
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn2(NULL, proc->out, proc->in,
-                                  SVN_DEFAULT_COMPRESSION_LEVEL, pool);
+                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
   err = svn_ra_svn_skip_leading_garbage(*conn, pool);
   if (err)
     return svn_error_quick_wrap(
@@ -590,7 +593,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     {
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
       conn = svn_ra_svn_create_conn2(sock, NULL, NULL,
-                                     SVN_DEFAULT_COMPRESSION_LEVEL, pool);
+                                     SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                                     pool);
     }
 
   /* Make sure we set conn->session before reading from it,
@@ -635,7 +639,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  SVN_RA_SVN_CAP_DEPTH,
                                  SVN_RA_SVN_CAP_MERGEINFO,
                                  SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                 url, "SVN/" SVN_VERSION, client_string));
+                                 url, "SVN/" SVN_VER_NUMBER, client_string));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* This is where the security layer would go into effect if we
@@ -1175,15 +1179,13 @@ optbool_to_tristate(apr_uint64_t v)
 
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
-static svn_error_t *ra_svn_get_mergeinfo(
-  svn_ra_session_t *session,
-  svn_mergeinfo_catalog_t *catalog,
-  const apr_array_header_t *paths,
-  svn_revnum_t revision,
-  svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t *validate_inherited_mergeinfo,
-  svn_boolean_t include_descendants,
-  apr_pool_t *pool)
+static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
+                                         svn_mergeinfo_catalog_t *catalog,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
+                                         apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1191,7 +1193,6 @@ static svn_error_t *ra_svn_get_mergeinfo(
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path;
-  apr_uint64_t validated_inherited_mergeinfo;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1199,17 +1200,12 @@ static svn_error_t *ra_svn_get_mergeinfo(
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wbb)", revision,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
                                  svn_inheritance_to_word(inherit),
-                                 include_descendants,
-                                 *validate_inherited_mergeinfo));
+                                 include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l?B", &mergeinfo_tuple,
-                                       &validated_inherited_mergeinfo));
-
-  *validate_inherited_mergeinfo =
-    (optbool_to_tristate(validated_inherited_mergeinfo) == svn_tristate_true);
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
 
   *catalog = NULL;
   if (mergeinfo_tuple->nelts > 0)
@@ -2280,19 +2276,12 @@ static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
   const char *root_url;
 
   SVN_ERR(ra_svn_get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
   return SVN_NO_ERROR;
 }
 
@@ -2351,7 +2340,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
         }
       else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
         {
-          const char *relpath = svn_fspath__is_child(abs_path, lock->path, pool);
+          const char *relpath = svn_fspath__skip_ancestor(abs_path, lock->path);
           if (relpath && (svn_path_component_count(relpath) == 1))
             apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
         }

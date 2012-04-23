@@ -116,13 +116,11 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   else
     {
       if (n->path_prefix)
-        path_local = svn_dirent_skip_ancestor(n->path_prefix, n->path);
-      else if (nb->path_prefix)
-        path_local = svn_dirent_skip_ancestor(nb->path_prefix, n->path);
-      else
-        path_local = n->path;
-
-      path_local = svn_dirent_local_style(path_local, pool);
+        path_local = svn_cl__local_style_skip_ancestor(n->path_prefix, n->path,
+                                                       pool);
+      else /* skip nb->path_prefix, if it's non-null */
+        path_local = svn_cl__local_style_skip_ancestor(nb->path_prefix, n->path,
+                                                       pool);
     }
 
   switch (n->action)
@@ -161,6 +159,20 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->skipped_paths++;
       if ((err = svn_cmdline_printf(
             pool, _("Skipped '%s' -- Has no versioned parent\n"),
+            path_local)))
+        goto print_error;
+      break;
+    case svn_wc_notify_update_skip_access_denied:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Access denied\n"),
+            path_local)))
+        goto print_error;
+      break;
+    case svn_wc_notify_skip_conflicted:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Node remains in conflict\n"),
             path_local)))
         goto print_error;
       break;
@@ -346,7 +358,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
-                                                       " and fuzz %d (%s)\n",
+                                                       " and fuzz %lu (%s)\n",
                                                        (char *)NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
@@ -363,7 +375,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
-                                                       " and fuzz %d\n",
+                                                       " and fuzz %lu\n",
                                                        (char *)NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
@@ -416,7 +428,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           if (n->prop_name)
             err = svn_cmdline_printf(pool,
                           _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
-                                        "with fuzz %d (%s)\n"),
+                                        "with fuzz %lu (%s)\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
@@ -426,7 +438,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           else
             err = svn_cmdline_printf(pool,
                           _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
-                                        "with fuzz %d\n"),
+                                        "with fuzz %lu\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
@@ -685,9 +697,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_modified:
       /* xgettext: Align the %s's on this and the following 4 messages */
       if ((err = svn_cmdline_printf(pool,
-                                    _("Sending %s       %s\n"),
                                     nb->is_wc_to_repos_copy
-                                      ? _("copy of") : "",
+                                      ? _("Sending copy of       %s\n")
+                                      : _("Sending        %s\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -697,27 +709,28 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       if (n->mime_type && svn_mime_type_is_binary(n->mime_type))
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding %s (bin)  %s\n"),
                                         nb->is_wc_to_repos_copy
-                                          ? _("copy of") : "",
+                                          ? _("Adding copy of (bin)  %s\n")
+                                          : _("Adding  (bin)  %s\n"),
                                         path_local)))
           goto print_error;
         }
       else
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding %s        %s\n"),
                                         nb->is_wc_to_repos_copy
-                                          ? _("copy of") : "",
+                                          ? _("Adding copy of        %s\n")
+                                          : _("Adding         %s\n"),
                                         path_local)))
             goto print_error;
         }
       break;
 
     case svn_wc_notify_commit_deleted:
-      if ((err = svn_cmdline_printf(pool, _("Deleting %s      %s\n"),
+      if ((err = svn_cmdline_printf(pool,
                                     nb->is_wc_to_repos_copy
-                                      ? _("copy of") : "",
+                                      ? _("Deleting copy of      %s\n")
+                                      : _("Deleting       %s\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -725,9 +738,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_replaced:
     case svn_wc_notify_commit_copied_replaced:
       if ((err = svn_cmdline_printf(pool,
-                                    _("Replacing %s     %s\n"),
                                     nb->is_wc_to_repos_copy
-                                      ? _("copy of") : "",
+                                      ? _("Replacing copy of     %s\n")
+                                      : _("Replacing      %s\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -951,7 +964,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_upgraded_path:
-        err = svn_cmdline_printf(pool, _("Upgraded '%s'.\n"), path_local);
+        err = svn_cmdline_printf(pool, _("Upgraded '%s'\n"), path_local);
         if (err)
           goto print_error;
       break;

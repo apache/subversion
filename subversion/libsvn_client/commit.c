@@ -49,6 +49,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_magic.h"
 
 #include "svn_private_config.h"
 
@@ -70,6 +71,8 @@ typedef struct import_ctx_t
   /* Whether any changes were made to the repository */
   svn_boolean_t repos_changed;
 
+  /* A magic cookie for mime-type detection. */
+  svn_magic__cookie_t *magic_cookie;
 } import_ctx_t;
 
 
@@ -162,9 +165,9 @@ send_file_contents(const char *path,
     }
 
   /* Send the file's contents to the delta-window handler. */
-  return svn_error_return(svn_txdelta_send_stream(contents, handler,
-                                                  handler_baton, digest,
-                                                  pool));
+  return svn_error_trace(svn_txdelta_send_stream(contents, handler,
+                                                 handler_baton, digest,
+                                                 pool));
 }
 
 
@@ -211,8 +214,9 @@ import_file(const svn_delta_editor_t *editor,
   if (! is_special)
     {
       /* add automatic properties */
-      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
-                                         pool));
+      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path,
+                                         import_ctx->magic_cookie,
+                                         ctx, pool));
     }
   else
     properties = apr_hash_make(pool);
@@ -495,6 +499,8 @@ import(const char *path,
   const char *edit_path = "";
   import_ctx_t *import_ctx = apr_pcalloc(pool, sizeof(*import_ctx));
 
+  svn_magic__init(&import_ctx->magic_cookie, pool);
+
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
      SVN_YOUNGEST_REVNUM defined for these purposes? */
@@ -661,10 +667,12 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
-  return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   commit_revprops, commit_callback,
-                                   commit_baton, lock_tokens, keep_locks,
-                                   pool);
+  SVN_ERR(svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
+                                    commit_revprops, commit_callback,
+                                    commit_baton, lock_tokens, keep_locks,
+                                    pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -690,7 +698,6 @@ svn_client_import4(const char *path,
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
   const char *local_abspath;
-  const char *base_dir_abspath;
   apr_array_header_t *new_entries = apr_array_make(pool, 4,
                                                    sizeof(const char *));
   const char *temp;
@@ -702,7 +709,6 @@ svn_client_import4(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  base_dir_abspath = local_abspath;
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -733,8 +739,6 @@ svn_client_import4(const char *path,
     }
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
-  if (kind == svn_node_file)
-    base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
@@ -764,7 +768,7 @@ svn_client_import4(const char *path,
         }
     }
   while ((err = get_ra_editor(&ra_session,
-                              &editor, &edit_baton, ctx, url, base_dir_abspath,
+                              &editor, &edit_baton, ctx, url, NULL,
                               log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
                               commit_callback, commit_baton, subpool)));
 
@@ -897,13 +901,11 @@ collect_lock_tokens(apr_hash_t **result,
     {
       const char *url = svn__apr_hash_index_key(hi);
       const char *token = svn__apr_hash_index_val(hi);
+      const char *relpath = svn_uri_skip_ancestor(base_url, url, pool);
 
-      if (svn_uri_is_ancestor(base_url, url))
+      if (relpath)
         {
-          url = svn_path_uri_decode(svn_uri_skip_ancestor(base_url, url),
-                                    pool);
-
-          apr_hash_set(*result, url, APR_HASH_KEY_STRING, token);
+          apr_hash_set(*result, relpath, APR_HASH_KEY_STRING, token);
         }
     }
 
@@ -997,10 +999,12 @@ check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
                                             scratch_pool, scratch_pool));
 
           if (children->nelts > 0)
-            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                    _("Cannot non-recursively commit a "
-                                      "directory deletion of a directory "
-                                      "with child nodes"));
+            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                     _("Cannot delete the directory '%s' "
+                                       "in a non-recursive commit "
+                                       "because it has children"),
+                                     svn_dirent_local_style(target_abspath,
+                                                            scratch_pool));
         }
     }
 
@@ -1044,8 +1048,8 @@ determine_lock_targets(apr_array_header_t **lock_targets,
       target_abspath = svn_dirent_join(base_abspath, target_relpath,
                                        scratch_pool);
 
-      err = svn_wc_get_wc_root(&wcroot_abspath, wc_ctx, target_abspath,
-                               iterpool, iterpool);
+      err = svn_wc__get_wc_root(&wcroot_abspath, wc_ctx, target_abspath,
+                                iterpool, iterpool);
 
       if (err)
         {
@@ -1054,7 +1058,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
               svn_error_clear(err);
               continue;
             }
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       wc_targets = apr_hash_get(wc_items, wcroot_abspath, APR_HASH_KEY_STRING);
@@ -1062,7 +1066,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
       if (! wc_targets)
         {
           wc_targets = apr_array_make(scratch_pool, 4, sizeof(const char *));
-          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath), 
+          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath),
                        APR_HASH_KEY_STRING, wc_targets);
         }
 
@@ -1096,7 +1100,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
           else
             {
               /* Lock the parent to allow deleting the target */
-              APR_ARRAY_PUSH(*lock_targets, const char *) 
+              APR_ARRAY_PUSH(*lock_targets, const char *)
                       = svn_dirent_dirname(target_abspath, result_pool);
             }
         }
@@ -1112,13 +1116,13 @@ determine_lock_targets(apr_array_header_t **lock_targets,
               || !svn_path_is_empty(APR_ARRAY_IDX(wc_targets, 0, const char*))
               || !strcmp(common, wcroot_abspath))
             {
-              APR_ARRAY_PUSH(*lock_targets, const char *) 
+              APR_ARRAY_PUSH(*lock_targets, const char *)
                     = apr_pstrdup(result_pool, common);
             }
           else
             {
               /* Lock the parent to allow deleting the target */
-              APR_ARRAY_PUSH(*lock_targets, const char *) 
+              APR_ARRAY_PUSH(*lock_targets, const char *)
                        = svn_dirent_dirname(common, result_pool);
             }
         }
@@ -1148,7 +1152,7 @@ check_url_kind(void *baton,
   struct check_url_kind_baton *cukb = baton;
 
   /* If we don't have a session or can't use the session, get one */
-  if (!cukb->session || !svn_uri_is_ancestor(cukb->repos_root_url, url))
+  if (!cukb->session || !svn_uri__is_ancestor(cukb->repos_root_url, url))
     {
       SVN_ERR(svn_client_open_ra_session(&cukb->session, url, cukb->ctx,
                                          cukb->pool));
@@ -1158,17 +1162,118 @@ check_url_kind(void *baton,
   else
     SVN_ERR(svn_ra_reparent(cukb->session, url, scratch_pool));
 
-  return svn_error_return(
+  return svn_error_trace(
                 svn_ra_check_path(cukb->session, "", revision,
                                   kind, scratch_pool));
 }
 
+/* Recurse into every target in REL_TARGETS, finding committable externals
+ * nested within. Append these to REL_TARGETS itself. The paths in REL_TARGETS
+ * are assumed to be / will be created relative to BASE_ABSPATH. The remaining
+ * arguments correspond to those of svn_client_commit6(). */
+static svn_error_t*
+append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
+                                     const char *base_abspath,
+                                     svn_boolean_t include_file_externals,
+                                     svn_boolean_t include_dir_externals,
+                                     svn_depth_t depth,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  int rel_targets_nelts_fixed;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Easy part of applying DEPTH to externals. */
+  if (depth == svn_depth_empty)
+     {
+       /* Don't recurse. */
+       return SVN_NO_ERROR;
+     }
+   else if (depth != svn_depth_infinity)
+     {
+       include_dir_externals = FALSE;
+       /* We slip in dir externals as explicit targets. When we do that,
+       * depth_immediates should become depth_empty for dir externals targets.
+       * But adding the dir external to the list of targets makes it get
+       * handled with depth_immediates itself, and thus will also include the
+       * immediate children of the dir external. So do dir externals only with
+       * depth_infinity or not at all.
+       * ### TODO: Maybe rework this (and svn_client_commit6()) into separate
+       * ### target lists, "duplicating" REL_TARGETS: one for the user's
+       * ### targets and one for the overlayed externals targets, and pass an
+       * ### appropriate depth for the externals targets in a separate call to
+       * ### svn_client__harvest_committables(). The only gain is correct
+       * ### handling of this very specific case: during 'svn commit
+       * ### --depth=immediates --include-externals', commit dir externals
+       * ### (only immediate children of a target) with depth_empty instead of
+       * ### not at all. No other effect. So not doing that for now. */
+     }
+
+  if (! (include_file_externals || include_dir_externals))
+    return SVN_NO_ERROR;
+
+  /* Iterate *and* grow REL_TARGETS at the same time. */
+  rel_targets_nelts_fixed = rel_targets->nelts;
+
+  for (i = 0; i < rel_targets_nelts_fixed; i++)
+    {
+      int j;
+      const char *target;
+      apr_array_header_t *externals = NULL;
+
+      svn_pool_clear(iterpool);
+
+      target = svn_dirent_join(base_abspath,
+                               APR_ARRAY_IDX(rel_targets, i, const char *),
+                               iterpool);
+
+      /* ### TODO: Possible optimization: No need to do this for file targets.
+       * ### But what's cheaper, stat'ing the file system or querying the db?
+       * ### --> future. */
+
+      SVN_ERR(svn_wc__committable_externals_below(&externals, ctx->wc_ctx,
+                                                  target, depth,
+                                                  iterpool, iterpool));
+
+      if (externals != NULL)
+        {
+          const char *rel_target;
+
+          for (j = 0; j < externals->nelts; j++)
+            {
+              svn_wc__committable_external_info_t *xinfo =
+                         APR_ARRAY_IDX(externals, j,
+                                       svn_wc__committable_external_info_t *);
+
+              if ((xinfo->kind == svn_kind_file && ! include_file_externals)
+                  || (xinfo->kind == svn_kind_dir && ! include_dir_externals))
+                continue;
+
+              rel_target = svn_dirent_skip_ancestor(base_abspath,
+                                                    xinfo->local_abspath);
+              
+              SVN_ERR_ASSERT(rel_target != NULL && *rel_target != '\0');
+
+              APR_ARRAY_PUSH(rel_targets, const char *) =
+                                         apr_pstrdup(result_pool, rel_target);
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
-svn_client_commit5(const apr_array_header_t *targets,
+svn_client_commit6(const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    svn_boolean_t commit_as_operations,
+                   svn_boolean_t include_file_externals,
+                   svn_boolean_t include_dir_externals,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
                    svn_commit_callback2_t commit_callback,
@@ -1186,7 +1291,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   apr_array_header_t *rel_targets;
   apr_array_header_t *lock_targets;
   apr_array_header_t *locks_obtained;
-  apr_hash_t *committables;
+  svn_client__committables_t *committables;
   apr_hash_t *lock_tokens;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
@@ -1228,6 +1333,12 @@ svn_client_commit5(const apr_array_header_t *targets,
   if (rel_targets->nelts == 0)
     APR_ARRAY_PUSH(rel_targets, const char *) = "";
 
+  SVN_ERR(append_externals_as_explicit_targets(rel_targets, base_abspath,
+                                               include_file_externals,
+                                               include_dir_externals,
+                                               depth, ctx,
+                                               pool, pool));
+
   SVN_ERR(determine_lock_targets(&lock_targets, ctx->wc_ctx, base_abspath,
                                  rel_targets, pool, iterpool));
 
@@ -1241,7 +1352,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 
       svn_pool_clear(iterpool);
 
-      cmt_err = svn_error_return(
+      cmt_err = svn_error_trace(
                     svn_wc__acquire_write_lock(&lock_root, ctx->wc_ctx, target,
                                            FALSE, pool, iterpool));
 
@@ -1257,7 +1368,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   base_abspath,
                                                   pool);
 
-  /* If a non-recursive commit is desired, do not allow a deleted directory 
+  /* If a non-recursive commit is desired, do not allow a deleted directory
      as one of the targets. */
   if (depth != svn_depth_infinity && ! commit_as_operations)
     for (i = 0; i < rel_targets->nelts; i++)
@@ -1269,7 +1380,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 
         target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
 
-        cmt_err = svn_error_return(
+        cmt_err = svn_error_trace(
           check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
                                         depth, iterpool));
 
@@ -1287,7 +1398,7 @@ svn_client_commit5(const apr_array_header_t *targets,
     cukb.repos_root_url = NULL;
     cukb.ctx = ctx;
 
-    cmt_err = svn_error_return(
+    cmt_err = svn_error_trace(
                    svn_client__harvest_committables(&committables,
                                                     &lock_tokens,
                                                     base_abspath,
@@ -1307,11 +1418,11 @@ svn_client_commit5(const apr_array_header_t *targets,
   if (cmt_err)
     goto cleanup;
 
-  if (apr_hash_count(committables) == 0)
+  if (apr_hash_count(committables->by_repository) == 0)
     {
       goto cleanup; /* Nothing to do */
     }
-  else if (apr_hash_count(committables) > 1)
+  else if (apr_hash_count(committables->by_repository) > 1)
     {
       cmt_err = svn_error_create(
              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1321,7 +1432,8 @@ svn_client_commit5(const apr_array_header_t *targets,
     }
 
   {
-    apr_hash_index_t *hi = apr_hash_first(iterpool, committables);
+    apr_hash_index_t *hi = apr_hash_first(iterpool,
+                                          committables->by_repository);
 
     commit_items = svn__apr_hash_index_val(hi);
   }
@@ -1348,12 +1460,134 @@ svn_client_commit5(const apr_array_header_t *targets,
       goto cleanup;
   }
 
+  /* For every target that was moved verify that both halves of the
+   * move are part of the commit. */
+  for (i = 0; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+      svn_pool_clear(iterpool);
+
+      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+        {
+          const char *moved_from_abspath;
+          const char *delete_op_root_abspath;
+
+          cmt_err = svn_error_trace(svn_wc__node_was_moved_here(
+                                      &moved_from_abspath,
+                                      &delete_op_root_abspath,
+                                      ctx->wc_ctx, item->path,
+                                      iterpool, iterpool));
+          if (cmt_err)
+            goto cleanup;
+
+          if (moved_from_abspath && delete_op_root_abspath &&
+              strcmp(moved_from_abspath, delete_op_root_abspath) == 0)
+
+            {
+              svn_boolean_t found_delete_half =
+                (apr_hash_get(committables->by_path, delete_op_root_abspath,
+                               APR_HASH_KEY_STRING) != NULL);
+              
+              if (!found_delete_half)
+                {
+                  const char *delete_half_parent_abspath;
+
+                  /* The delete-half isn't in the commit target list.
+                   * However, it might itself be the child of a deleted node,
+                   * either because of another move or a deletion.
+                   *
+                   * For example, consider: mv A/B B; mv B/C C; commit;
+                   * C's moved-from A/B/C is a child of the deleted A/B.
+                   * A/B/C does not appear in the commit target list, but
+                   * A/B does appear.
+                   * (Note that moved-from information is always stored
+                   * relative to the BASE tree, so we have 'C moved-from
+                   * A/B/C', not 'C moved-from B/C'.)
+                   *
+                   * An example involving a move and a delete would be:
+                   * mv A/B C; rm A; commit;
+                   * Now C is moved-from A/B which does not appear in the
+                   * commit target list, but A does appear.
+                   */
+
+                  /* Scan upwards for a deletion op-root from the
+                   * delete-half's parent directory. */
+                  delete_half_parent_abspath =
+                    svn_dirent_dirname(delete_op_root_abspath, iterpool);
+                  if (strcmp(delete_op_root_abspath,
+                             delete_half_parent_abspath) != 0)
+                    {
+                      const char *parent_delete_op_root_abspath;
+
+                      cmt_err = svn_error_trace(
+                                  svn_wc__node_get_deleted_ancestor(
+                                    &parent_delete_op_root_abspath,
+                                    ctx->wc_ctx, delete_half_parent_abspath,
+                                    iterpool, iterpool));
+                      if (cmt_err)
+                        goto cleanup;
+
+                      if (parent_delete_op_root_abspath)
+                        found_delete_half =
+                          (apr_hash_get(committables->by_path,
+                                        parent_delete_op_root_abspath,
+                                        APR_HASH_KEY_STRING) != NULL);
+                    }
+                }
+
+              if (!found_delete_half)
+                {
+                  cmt_err = svn_error_createf(
+                              SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Cannot commit '%s' because it was moved from "
+                                "'%s' which is not part of the commit; both "
+                                "sides of the move must be committed together"),
+                              svn_dirent_local_style(item->path, iterpool),
+                              svn_dirent_local_style(delete_op_root_abspath,
+                                                     iterpool));
+                  goto cleanup;
+                }
+            }
+        }
+      else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        {
+          const char *moved_to_abspath;
+          const char *copy_op_root_abspath;
+
+          cmt_err = svn_error_trace(svn_wc__node_was_moved_away(
+                                      &moved_to_abspath,
+                                      &copy_op_root_abspath,
+                                      ctx->wc_ctx, item->path,
+                                      iterpool, iterpool));
+          if (cmt_err)
+            goto cleanup;
+
+          if (moved_to_abspath && copy_op_root_abspath &&
+              strcmp(moved_to_abspath, copy_op_root_abspath) == 0 &&
+              apr_hash_get(committables->by_path, copy_op_root_abspath,
+                           APR_HASH_KEY_STRING) == NULL)
+            {
+              cmt_err = svn_error_createf(
+                          SVN_ERR_ILLEGAL_TARGET, NULL,
+                         _("Cannot commit '%s' because it was moved to '%s' "
+                           "which is not part of the commit; both sides of "
+                           "the move must be committed together"),
+                         svn_dirent_local_style(item->path, iterpool),
+                         svn_dirent_local_style(copy_op_root_abspath,
+                                                iterpool));
+              goto cleanup;
+            }
+        }
+    }
+
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       const char *tmp_file;
-      cmt_err = svn_error_return(
+      cmt_err = svn_error_trace(
                      svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                              ctx, pool));
 
@@ -1364,16 +1598,16 @@ svn_client_commit5(const apr_array_header_t *targets,
     log_msg = "";
 
   /* Sort and condense our COMMIT_ITEMS. */
-  cmt_err = svn_error_return(svn_client__condense_commit_items(&base_url,
-                                                               commit_items,
-                                                               pool));
+  cmt_err = svn_error_trace(svn_client__condense_commit_items(&base_url,
+                                                              commit_items,
+                                                              pool));
 
   if (cmt_err)
     goto cleanup;
 
   /* Collect our lock tokens with paths relative to base_url. */
-  cmt_err = svn_error_return(collect_lock_tokens(&lock_tokens, lock_tokens,
-                                                 base_url, pool));
+  cmt_err = svn_error_trace(collect_lock_tokens(&lock_tokens, lock_tokens,
+                                                base_url, pool));
 
   if (cmt_err)
     goto cleanup;
@@ -1383,7 +1617,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   cb.info = &commit_info;
   cb.pool = pool;
 
-  cmt_err = svn_error_return(
+  cmt_err = svn_error_trace(
                  get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
                                base_url, base_abspath, log_msg,
                                commit_items, revprop_table, TRUE, lock_tokens,
@@ -1397,7 +1631,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   commit_in_progress = TRUE;
 
   /* Perform the commit. */
-  cmt_err = svn_error_return(
+  cmt_err = svn_error_trace(
             svn_client__do_commit(base_url, commit_items, editor, edit_baton,
                                   notify_prefix, NULL,
                                   &sha1_checksums, ctx, pool, iterpool));
@@ -1407,11 +1641,6 @@ svn_client_commit5(const apr_array_header_t *targets,
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
-      svn_client__external_func_baton_t efb = {0};
-
-      efb.externals_old = apr_hash_make(pool);
-      efb.externals_new = apr_hash_make(pool);
-      efb.result_pool = pool;
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
@@ -1439,21 +1668,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                    commit_info->revision,
                    commit_info->date,
                    commit_info->author,
-                   svn_client__external_info_gatherer,
-                   &efb,
                    ctx->cancel_func, ctx->cancel_baton,
                    iterpool);
-
-      if (apr_hash_count(efb.externals_old))
-        {
-          /* Ok, we should process externals changes; but now we have */
-
-          SVN_ERR(svn_client__handle_externals(efb.externals_old,
-                                               efb.externals_new,
-                                               NULL, NULL,
-                                               svn_depth_unknown, TRUE,
-                                               NULL, ctx, iterpool));
-        }
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -1461,8 +1677,10 @@ svn_client_commit5(const apr_array_header_t *targets,
 
  cleanup:
   /* Abort the commit if it is still in progress. */
+  svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)
-    svn_error_clear(editor->abort_edit(edit_baton, pool));
+    cmt_err = svn_error_compose_create(cmt_err,
+                                       editor->abort_edit(edit_baton, pool));
 
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in
@@ -1488,6 +1706,28 @@ svn_client_commit5(const apr_array_header_t *targets,
 
   svn_pool_destroy(iterpool);
 
-  return svn_error_return(reconcile_errors(cmt_err, unlock_err, bump_err,
-                                           pool));
+  return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
+                                          pool));
 }
+
+svn_error_t *
+svn_client_commit5(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_commit6(targets, depth, keep_locks, keep_changelists,
+                            commit_as_operations,
+                            TRUE,  /* include_file_externals */
+                            FALSE, /* include_dir_externals */
+                            changelists, revprop_table, commit_callback,
+                            commit_baton, ctx, pool);
+}
+

@@ -4467,7 +4467,7 @@ msgstr "(메시지 없는 오류)"
 
 #: ../libsvn_repos/commit.c:664
 #, c-format
-msgid "post-commit FS processing had error '%s'."
+msgid "post commit FS processing had error '%s'."
 msgstr "커밋 이후 파일시스템 후처리 오류 '%s'."
 
 #: ../libsvn_repos/delta.c:191

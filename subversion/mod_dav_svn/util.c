@@ -37,6 +37,7 @@
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
@@ -263,6 +264,11 @@ dav_svn__build_uri(const dav_svn_repos *repos,
                           href1, root_path, special_uri,
                           revision, path_uri, href2);
 
+    case DAV_SVN__BUILD_URI_REVROOT:
+      return apr_psprintf(pool, "%s%s/%s/rvr/%ld%s%s",
+                          href1, root_path, special_uri,
+                          revision, path_uri, href2);
+
     case DAV_SVN__BUILD_URI_VCC:
       return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN__DEFAULT_VCC_NAME "%s",
                           href1, root_path, special_uri, href2);
@@ -375,7 +381,8 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
       /* an activity */
       info->activity_id = path + 5;
     }
-  else if (len2 == 4 && memcmp(path, "/ver/", 5) == 0)
+  else if (len2 == 4 &&
+           (memcmp(path, "/ver/", 5) == 0 || memcmp(path, "/rvr/", 5) == 0))
     {
       /* a version resource */
       path += 5;
@@ -496,9 +503,9 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
     return NULL;
   if ((path[0] == '/') && svn_fspath__is_canonical(path))
     return NULL;
-  if (svn_relpath_is_canonical(path, pool))
+  if (svn_relpath_is_canonical(path))
     return NULL;
-      
+
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
   return dav_svn__new_error_tag
     (pool, HTTP_BAD_REQUEST, 0,
@@ -677,7 +684,7 @@ request_body_to_string(svn_string_t **request_str,
   content_length_str = apr_table_get(r->headers_in, "Content-Length");
   if (content_length_str)
     {
-      if (apr_strtoff(&content_length, content_length_str, &endp, 10)
+      if (svn__strtoff(&content_length, content_length_str, &endp, 10)
           || endp == content_length_str || *endp || content_length < 0)
         {
           ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Invalid Content-Length");
@@ -702,7 +709,7 @@ request_body_to_string(svn_string_t **request_str,
     }
   else
     {
-      buf = svn_stringbuf_create("", pool);
+      buf = svn_stringbuf_create_empty(pool);
     }
 
   brigade = apr_brigade_create(r->pool, r->connection->bucket_alloc);
@@ -758,7 +765,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create("", pool);
+  *request_str = svn_string_create_empty(pool);
   (*request_str)->data = buf->data;
   (*request_str)->len = buf->len;
   return OK;

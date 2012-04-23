@@ -603,11 +603,15 @@ def replace_symlink_with_dir(sbox):
   # I'd expect a failed commit here, but replacing a file locally with a
   # directory seems to make svn think the file is unchanged.
   os.chdir(was_cwd)
-  exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
-                                                               'log msg',
-                                                               wc_dir)
-  if not (stdout_lines == [] or stderr_lines == []):
-    raise svntest.Failure
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+
+  if svntest.main.is_posix_os():
+    error_re_string = '.*E145001: Entry.*has unexpectedly changed special.*'
+  else:
+    error_re_string = None
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, error_re_string, wc_dir)
 
 # test for issue #1808: svn up deletes local symlink that obstructs
 # versioned file
@@ -707,6 +711,7 @@ def unrelated_changed_special_status(sbox):
                                      '-m', 'psi changed special status')
 
 
+@Issue(3972)
 @SkipUnless(svntest.main.is_posix_os)
 def symlink_destination_change(sbox):
   "revert a symlink destination change"
@@ -743,7 +748,162 @@ def symlink_destination_change(sbox):
   expected_status.tweak('newfile', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+  # Issue 3972, repeat revert produces no output
+  svntest.actions.run_and_verify_svn(None, [], [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
   # Now replace the symlink with a normal file and try to commit, we
+
+#----------------------------------------------------------------------
+# This used to lose the special status in the target working copy
+# (disk and metadata).
+@Issue(3884)
+@SkipUnless(svntest.main.is_posix_os)
+@XFail()
+def merge_foreign_symlink(sbox):
+  "merge symlink-add from foreign repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a copy of this repository and associated working copy.  Both
+  # should have nothing but a Greek tree in them, and the two
+  # repository UUIDs should differ.
+  sbox2 = sbox.clone_dependent(True)
+  sbox2.build()
+  wc_dir2 = sbox2.wc_dir
+
+  # convenience variables
+  zeta_path = sbox.ospath('A/zeta')
+  zeta2_path = sbox2.ospath('A/zeta')
+
+  # sbox2 r2: create zeta2 in sbox2
+  os.symlink('target', zeta2_path)
+  sbox2.simple_add('A/zeta')
+  sbox2.simple_commit('A/zeta')
+
+
+  # sbox1: merge that
+  svntest.main.run_svn(None, 'merge', '-c', '2', sbox2.repo_url,
+                       sbox.ospath(''))
+
+  # Verify special status.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/zeta': Item(props={ 'svn:special': '*' })
+  })
+  svntest.actions.verify_disk(sbox.ospath(''), expected_disk, True)
+
+  # TODO: verify status:
+  #   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  #   expected_status.add({
+  #     'A/zeta' : Item(status='A ', wc_rev='-', props={'svn:special': '*'}),
+  #     })
+
+#----------------------------------------------------------------------
+# See also symlink_to_wc_svnversion().
+@Issue(2557,3987)
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_to_wc_basic(sbox):
+  "operate on symlink to wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink
+  symlink_path = sbox.add_wc_path('2')
+  assert not os.path.islink(symlink_path)
+  os.symlink(os.path.basename(wc_dir), symlink_path) ### implementation detail
+  symlink_basename = os.path.basename(symlink_path)
+
+  # Some basic tests
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
+  expected_info = [{
+      'Path' : re.escape(os.path.join(symlink_path)),
+      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Revision' : '1',
+      'Node Kind' : 'directory',
+      'Schedule' : 'normal',
+  }, {
+      'Name' : 'iota',
+      'Path' : re.escape(os.path.join(symlink_path, 'iota')),
+      'Working Copy Root Path' : re.escape(os.path.abspath(symlink_path)),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : wc_uuid,
+      'Revision' : '1',
+      'Node Kind' : 'file',
+      'Schedule' : 'normal',
+  }]
+  svntest.actions.run_and_verify_info(expected_info,
+                                      symlink_path, symlink_path + '/iota')
+
+#----------------------------------------------------------------------
+# Similar to #2557/#3987; see symlink_to_wc_basic().
+@Issue(2557,3987)
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_to_wc_svnversion(sbox):
+  "svnversion on symlink to wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink
+  symlink_path = sbox.add_wc_path('2')
+  assert not os.path.islink(symlink_path)
+  os.symlink(os.path.basename(wc_dir), symlink_path) ### implementation detail
+  symlink_basename = os.path.basename(symlink_path)
+
+  # Some basic tests
+  svntest.actions.run_and_verify_svnversion("Unmodified symlink to wc",
+                                            symlink_path, sbox.repo_url,
+                                            [ "1\n" ], [])
+
+# Regression in 1.7.0: Update fails to change a symlink
+@SkipUnless(svntest.main.is_posix_os)
+def update_symlink(sbox):
+  "update a symlink"
+
+  svntest.actions.do_sleep_for_timestamps()
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = sbox.ospath('A/mu')
+  iota_path = sbox.ospath('iota')
+  symlink_path = sbox.ospath('symlink')
+
+  # create a symlink to /A/mu
+  os.symlink("A/mu", symlink_path)
+  sbox.simple_add('symlink')
+  sbox.simple_commit()
+
+  # change the symlink to /iota
+  os.remove(symlink_path)
+  os.symlink("iota", symlink_path)
+  sbox.simple_commit()
+
+  # update back to r2
+  svntest.main.run_svn(False, 'update', '-r', '2', wc_dir)
+
+  # now update to head; 1.7.0 throws an assertion here
+  expected_output = svntest.wc.State(wc_dir, {
+    'symlink'          : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'symlink': Item(contents="This is the file 'iota'.\n",
+                                     props={'svn:special' : '*'})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'symlink'           : Item(status='  ', wc_rev='3'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -767,6 +927,10 @@ test_list = [ None,
               propvalue_normalized,
               unrelated_changed_special_status,
               symlink_destination_change,
+              merge_foreign_symlink,
+              symlink_to_wc_basic,
+              symlink_to_wc_svnversion,
+              update_symlink,
              ]
 
 if __name__ == '__main__':

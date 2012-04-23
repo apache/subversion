@@ -589,22 +589,33 @@ def export_file_to_explicit_cwd(sbox):
                                         '.', expected_output,
                                         expected_disk)
 
-@XFail()
 @Issue(3799)
 def export_file_overwrite_fails(sbox):
   "exporting a file refuses to silently overwrite"
   sbox.build(create_wc = True, read_only = True)
 
   iota_path = os.path.abspath(os.path.join(sbox.wc_dir, 'iota'))
+  iota_url = sbox.repo_url + '/iota'
   not_iota_contents = "This obstructs 'iota'.\n"
 
   tmpdir = sbox.get_tempname('file-overwrites')
   os.mkdir(tmpdir)
 
-  # Run it
+  # Run it for source local
   open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
   svntest.actions.run_and_verify_svn(None, [], '.*exist.*',
                                      'export', iota_path, tmpdir)
+
+  # Verify it failed
+  expected_disk = svntest.wc.State('', {
+      'iota': Item(contents=not_iota_contents),
+      })
+  svntest.actions.verify_disk(tmpdir, expected_disk)
+
+  # Run it for source URL
+  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  svntest.actions.run_and_verify_svn(None, [], '.*exist.*',
+                                     'export', iota_url, tmpdir)
 
   # Verify it failed
   expected_disk = svntest.wc.State('', {
@@ -867,6 +878,36 @@ def export_to_current_dir(sbox):
 
   os.chdir(orig_dir)
 
+def export_file_overwrite_with_force(sbox):
+  "exporting a file with force option"
+  sbox.build(create_wc = True, read_only = True)
+
+  iota_path = os.path.abspath(os.path.join(sbox.wc_dir, 'iota'))
+  iota_url = sbox.repo_url + '/iota'
+  not_iota_contents = "This obstructs 'iota'.\n"
+  iota_contents = "This is the file 'iota'.\n"
+
+  tmpdir = sbox.get_tempname('file-overwrites')
+  os.mkdir(tmpdir)
+
+  expected_disk = svntest.wc.State('', {
+      'iota': Item(contents=iota_contents),
+      })
+
+  # Run it for WC export
+  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
+                                     [], 'export', '--force',
+                                     iota_path, tmpdir)
+  svntest.actions.verify_disk(tmpdir, expected_disk)
+
+  # Run it for URL export
+  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
+                                     [], 'export', '--force',
+                                     iota_url, tmpdir)
+  svntest.actions.verify_disk(tmpdir, expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -899,6 +940,7 @@ test_list = [ None,
               export_working_copy_with_depths,
               export_externals_with_native_eol,
               export_to_current_dir,
+              export_file_overwrite_with_force,
              ]
 
 if __name__ == '__main__':

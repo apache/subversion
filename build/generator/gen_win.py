@@ -288,7 +288,7 @@ class WinGeneratorBase(GeneratorBase):
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
     self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
+    self.rootpath = self.find_rootpath()
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
@@ -332,6 +332,10 @@ class WinGeneratorBase(GeneratorBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
+  def find_rootpath(self):
+    "Gets the root path as understand by the project system"
+    return ".." + "\\.." * self.projfilesdir.count(os.sep) + "\\"
+
   def makeguid(self, data):
     "Generate a windows style GUID"
     ### blah. this function can generate invalid GUIDs. leave it for now,
@@ -348,7 +352,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
-    return msvc_path_join(self.rootpath, *list(map(msvc_path, paths)))
+    return self.rootpath + msvc_path_join(*list(map(msvc_path, paths)))
 
   def apath(self, path, *paths):
     """Convert build path to msvc path and prepend root if not absolute"""
@@ -357,8 +361,8 @@ class WinGeneratorBase(GeneratorBase):
     if os.path.isabs(path):
       return msvc_path_join(msvc_path(path), *list(map(msvc_path, paths)))
     else:
-      return msvc_path_join(self.rootpath, msvc_path(path),
-                            *list(map(msvc_path, paths)))
+      return self.rootpath + msvc_path_join(msvc_path(path),
+                                            *list(map(msvc_path, paths)))
 
   def get_install_targets(self):
     "Generate the list of targets"
@@ -588,7 +592,7 @@ class WinGeneratorBase(GeneratorBase):
         deps.append(self.path('subversion/include', header))
 
       cbuild = "%s $(InputPath) %s > %s" \
-               % (sys.executable, " ".join(deps), def_file)
+               % (self.quote(sys.executable), " ".join(deps), def_file)
 
       cdesc = 'Generating %s ' % def_file
 
@@ -830,7 +834,8 @@ class WinGeneratorBase(GeneratorBase):
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
                    "_CRT_SECURE_NO_DEPRECATE=",
-                   "_CRT_NONSTDC_NO_DEPRECATE="]
+                   "_CRT_NONSTDC_NO_DEPRECATE=",
+                   "_CRT_SECURE_NO_WARNINGS="]
 
     if self.sqlite_inline:
       fakedefines.append("SVN_SQLITE_INLINE")
@@ -854,7 +859,7 @@ class WinGeneratorBase(GeneratorBase):
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
-      
+
     if self.static_apr:
       fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
 
@@ -1017,7 +1022,10 @@ class WinGeneratorBase(GeneratorBase):
       neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if self.serf_lib:
-      serflib = 'serf.lib'
+      if self.serf_ver_maj != 0:
+        serflib = 'serf-%d.lib' % self.serf_ver_maj
+      else:
+        serflib = 'serf.lib'
 
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
@@ -1174,6 +1182,11 @@ class WinGeneratorBase(GeneratorBase):
       return
 
     serf_path = os.path.abspath(self.serf_path)
+    if self.serf_ver_maj != 0:
+      serflib = 'serf-%d.lib' % self.serf_ver_maj
+    else:
+      serflib = 'serf.lib'
+
     self.move_proj_file(self.serf_path, name,
                         (('serf_sources',
                           glob.glob(os.path.join(serf_path, '*.c'))
@@ -1194,6 +1207,7 @@ class WinGeneratorBase(GeneratorBase):
                          ('apr_util_path', os.path.abspath(self.apr_util_path)),
                          ('project_guid', self.makeguid('serf')),
                          ('apr_static', self.static_apr),
+                         ('serf_lib', serflib),
                         ))
 
   def move_proj_file(self, path, name, params=()):
@@ -1429,13 +1443,13 @@ class WinGeneratorBase(GeneratorBase):
     # shouldn't be called unless serf is there
     assert self.serf_path and os.path.exists(self.serf_path)
 
+    self.serf_ver_maj = None
+    self.serf_ver_min = None
+    self.serf_ver_patch = None
+
     # serf.h should be present
     if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
       return None, None, None
-
-    ver_maj = None
-    ver_min = None
-    ver_patch = None
 
     txt = open(os.path.join(self.serf_path, 'serf.h')).read()
 
@@ -1443,13 +1457,13 @@ class WinGeneratorBase(GeneratorBase):
     min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
     patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
     if maj_match:
-      ver_maj = int(maj_match.group(1))
+      self.serf_ver_maj = int(maj_match.group(1))
     if min_match:
-      ver_min = int(min_match.group(1))
+      self.serf_ver_min = int(min_match.group(1))
     if patch_match:
-      ver_patch = int(patch_match.group(1))
+      self.serf_ver_patch = int(patch_match.group(1))
 
-    return ver_maj, ver_min, ver_patch
+    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
 
   def _find_serf(self):
     "Check if serf and its dependencies are available"
@@ -1494,11 +1508,11 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
-    
+
     suffix = ''
     if major_ver > 0:
         suffix = '-%d' % major_ver
-    
+
     if self.static_apr:
       self.apr_lib = 'apr%s.lib' % suffix
     else:

@@ -318,9 +318,9 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
 
   /* If the connection does not support SVNDIFF1 or if we don't want to use
-   * compression, use the non-compressing "version 0" implementation */ 
+   * compression, use the non-compressing "version 0" implementation */
   if (   svn_ra_svn_compression_level(b->conn) > 0
-      && svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1)) 
+      && svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
     svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 1,
                             b->conn->compression_level, pool);
   else
@@ -408,6 +408,8 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 {
   svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor(pool);
   ra_svn_edit_baton_t *eb;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
   eb = apr_palloc(pool, sizeof(*eb));
   eb->conn = conn;
@@ -435,6 +437,10 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
   *editor = ra_svn_editor;
   *edit_baton = eb;
+
+  svn_error_clear(svn_editor__insert_shims(editor, edit_baton, *editor,
+                                           *edit_baton, shim_callbacks,
+                                           pool, pool));
 }
 
 /* --- DRIVING AN EDITOR --- */
@@ -914,6 +920,17 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
         }
       if (ra_svn_edit_cmds[i].cmd)
         err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
+      else if (strcmp(cmd, "failure") == 0)
+        {
+          /* While not really an editor command this can occur when
+             reporter->finish_report() fails before the first editor command */
+          if (aborted)
+            *aborted = TRUE;
+          err = svn_ra_svn__handle_failure_status(params, pool);
+          return svn_error_compose_create(
+                            err,
+                            editor->abort_edit(edit_baton, subpool));
+        }
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,

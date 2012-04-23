@@ -49,6 +49,7 @@
 #include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_diff.h"
+#include "svn_version.h"
 #include "svn_xml.h"
 
 #include "private/svn_cmdline_private.h"
@@ -175,7 +176,11 @@ static const apr_getopt_option_t options_table[] =
       "                            "
       "    --ignore-eol-style:\n"
       "                            "
-      "       Ignore changes in EOL style")},
+      "       Ignore changes in EOL style\n"
+      "                            "
+      "    -p (--show-c-function):\n"
+      "                            "
+      "       Show C function name in diff output.")},
 
   {"quiet",             'q', 0,
    N_("no progress (only errors) to stderr")},
@@ -862,11 +867,11 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
            Since the diff is not useful anyway for patching properties an
            eol character is appended when needed to remove those pescious
            ' \ No newline at end of file' lines. */
-        tmp = orig_value ? orig_value : svn_string_create("", pool);
+        tmp = orig_value ? orig_value : svn_string_create_empty(pool);
         orig = maybe_append_eol(tmp, pool);
 
         tmp = pc->value ? pc->value :
-                                  svn_string_create("", pool);
+                                  svn_string_create_empty(pool);
         val = maybe_append_eol(tmp, pool);
 
         SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
@@ -916,7 +921,7 @@ print_diff_tree(svn_fs_root_t *root,
   if (! node)
     return SVN_NO_ERROR;
 
-  header = svn_stringbuf_create("", pool);
+  header = svn_stringbuf_create_empty(pool);
 
   /* Print copyfrom history for the top node of a copied tree. */
   if ((SVN_IS_VALID_REVNUM(node->copyfrom_rev))
@@ -1077,7 +1082,8 @@ print_diff_tree(svn_fs_root_t *root,
               SVN_ERR(svn_diff_file_output_unified3
                       (ostream, diff, orig_path, new_path,
                        orig_label, new_label,
-                       svn_cmdline_output_encoding(pool), NULL, FALSE, pool));
+                       svn_cmdline_output_encoding(pool), NULL,
+                       opts->show_c_function, pool));
               SVN_ERR(svn_stream_close(ostream));
               SVN_ERR(svn_cmdline_printf(pool, "\n"));
               diff_header_printed = TRUE;
@@ -1725,8 +1731,8 @@ do_plist(svnlook_ctxt_t *c,
   if (xml)
     {
       char *revstr = apr_psprintf(pool, "%ld", c->rev_id);
-      /* <?xml version="1.0"?> */
-      svn_xml_make_header(&sb, pool);
+      /* <?xml version="1.0" encoding="UTF-8"?> */
+      svn_xml_make_header2(&sb, "UTF-8", pool);
 
       /* "<properties>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "properties", NULL);
@@ -1771,12 +1777,16 @@ do_plist(svnlook_ctxt_t *c,
 
       if (verbose)
         {
-          const char *pname_stdout;
-          SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
           if (xml)
-            svn_cmdline__print_xml_prop(&sb, pname_stdout, propval, pool);
+            svn_cmdline__print_xml_prop(&sb, pname, propval, pool);
           else
-            printf("  %s : %s\n", pname_stdout, propval->data);
+            {
+              const char *pname_stdout;
+
+              SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname,
+                                                    pool));
+              printf("  %s : %s\n", pname_stdout, propval->data);
+            }
         }
       else if (xml)
         svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
@@ -1872,7 +1882,8 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
 {
   svnlook_ctxt_t *baton = apr_pcalloc(pool, sizeof(*baton));
 
-  SVN_ERR(svn_repos_open(&(baton->repos), opt_state->repos_path, pool));
+  SVN_ERR(svn_repos_open2(&(baton->repos), opt_state->repos_path, NULL,
+                          pool));
   baton->fs = svn_repos_fs(baton->repos);
   svn_fs_set_warning_func(baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;

@@ -154,7 +154,7 @@ prev_log_path(const char **prev_path_p,
                  path, to the change's copyfrom path.  Otherwise, this
                  change isn't really interesting to us, and our search
                  continues. */
-              change = apr_hash_get(changed_paths, ch_path, len);
+              change = item.value;
               if (change->copyfrom_path)
                 {
                   if (action_p)
@@ -317,7 +317,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
 
   /* Fetch the absolute FS path associated with PATH. */
   SVN_ERR(get_fs_path(&fs_path, session, path, pool));
-  
+
   /* Sanity check: verify that the peg-object exists in repos. */
   SVN_ERR(svn_ra_check_path(session, path, peg_revision, &kind, pool));
   if (kind == svn_node_none)

@@ -42,7 +42,7 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
+  svn_wc_revision_status_t *result = apr_pcalloc(result_pool, sizeof(*result));
 
   *result_p = result;
 

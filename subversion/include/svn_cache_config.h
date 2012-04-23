@@ -38,7 +38,7 @@ extern "C" {
  * @{
  * @since New in 1.7. */
 
-/** Cache ressource settings. It controls what caches, in what size and
+/** Cache resource settings. It controls what caches, in what size and
    how they will be created. The settings apply for the whole process.
 
    @since New in 1.7.
@@ -54,12 +54,6 @@ typedef struct svn_cache_config_t
   /** maximum number of files kept open */
   apr_size_t file_handle_count;
 
-  /** shall fulltexts be cached? */
-  svn_boolean_t cache_fulltexts;
-
-  /** shall text deltas be cached? */
-  svn_boolean_t cache_txdeltas;
-
   /** is this application guaranteed to be single-threaded? */
   svn_boolean_t single_threaded;
 } svn_cache_config_t;
@@ -70,7 +64,7 @@ typedef struct svn_cache_config_t
    @since New in 1.7.
  */
 const svn_cache_config_t *
-svn_get_cache_config(void);
+svn_cache_config_get(void);
 
 /** Set the cache configuration. Please note that it may not change
    the actual configuration *in use*. Therefore, call it before reading
@@ -82,7 +76,7 @@ svn_get_cache_config(void);
    @since New in 1.7.
  */
 void
-svn_set_cache_config(const svn_cache_config_t *settings);
+svn_cache_config_set(const svn_cache_config_t *settings);
 
 /** @} */
 

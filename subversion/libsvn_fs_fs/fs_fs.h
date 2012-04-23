@@ -38,6 +38,12 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
+/* Verify the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
 /* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
@@ -71,6 +77,7 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
 /* Write the node-revision NODEREV into the stream OUTFILE, compatible with
    filesystem format FORMAT.  Only write mergeinfo-related metadata if
    INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
+/* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
@@ -80,6 +87,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
 
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
    allocated in POOL. */
+/* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
@@ -109,7 +117,7 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          apr_pool_t *pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
-   by NODEREV in filesystem FS.  The returned object is allocated in POOL, 
+   by NODEREV in filesystem FS.  The returned object is allocated in POOL,
    which is also used for temporary allocations. */
 svn_error_t *
 svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
@@ -383,15 +391,6 @@ svn_error_t *svn_fs_fs__txn_changes_fetch(apr_hash_t **changes,
                                           apr_pool_t *pool);
 
 
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL. */
-svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
-                                        const char *new_filename,
-                                        const char *perms_reference,
-                                        apr_pool_t *pool);
-
 /* Set *PATH to the path of REV in FS, whether in a pack file or not.
    Allocate *PATH in POOL.
 
@@ -505,13 +504,20 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            apr_pool_t *pool);
 
 
-/* Sets up the non-transaction-local svn_cache__t structures in FS.
-   POOL is used for temporary allocations. */
+/* Initialize all session-local caches in FS according to the global
+   cache settings. Use POOL for allocations.
+
+   Please note that it is permissible for this function to set some
+   or all of these caches to NULL, regardless of any setting. */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
-/* Sets up the svn_cache__t structures local to transaction TXN_ID in FS.
-   POOL is used for temporary allocations. */
+/* Initialize all transaction-local caches in FS according to the global
+   cache settings and make TXN_ID part of their key space. Use POOL for
+   allocations.
+
+   Please note that it is permissible for this function to set some or all
+   of these caches to NULL, regardless of any setting. */
 svn_error_t *
 svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                  const char *txn_id,

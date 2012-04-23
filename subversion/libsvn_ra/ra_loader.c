@@ -201,14 +201,13 @@ load_ra_module(svn_ra__init_func_t *func,
   return SVN_NO_ERROR;
 }
 
-/* If DEFN may support URL, return the scheme.  Else, return NULL. */
+/* If SCHEMES contains URL, return the scheme.  Else, return NULL. */
 static const char *
-has_scheme_of(const struct ra_lib_defn *defn, const char *url)
+has_scheme_of(const char * const *schemes, const char *url)
 {
-  const char * const *schemes;
   apr_size_t len;
 
-  for (schemes = defn->schemes; *schemes != NULL; ++schemes)
+  for ( ; *schemes != NULL; ++schemes)
     {
       const char *scheme = *schemes;
       len = strlen(scheme);
@@ -286,7 +285,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   apr_uri_t repos_URI;
   apr_status_t apr_err;
 #ifdef CHOOSABLE_DAV_MODULE
-  const char *http_library = "serf";
+  const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
   /* Auth caching parameters. */
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
@@ -412,7 +411,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
             = svn_config_get_server_setting(servers,
                                             server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
-                                            "serf");
+                                            DEFAULT_HTTP_LIBRARY);
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
@@ -454,7 +453,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
     {
       const char *scheme;
 
-      if ((scheme = has_scheme_of(defn, repos_URL)))
+      if ((scheme = has_scheme_of(defn->schemes, repos_URL)))
         {
           svn_ra__init_func_t initfunc = defn->initfunc;
 
@@ -474,6 +473,11 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
           SVN_ERR(initfunc(svn_ra_version(), &vtable, sesspool));
 
           SVN_ERR(check_ra_version(vtable->get_version(), scheme));
+
+          if (! has_scheme_of(vtable->get_schemes(sesspool), repos_URL))
+            /* Library doesn't support the scheme at runtime. */
+            continue;
+
 
           break;
         }
@@ -549,7 +553,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
   SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
-  if (! svn_uri_is_ancestor(repos_root, url))
+  if (! svn_uri__is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
                              url, repos_root);
@@ -570,19 +574,13 @@ svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
                                                  apr_pool_t *pool)
 {
   const char *sess_url;
+
   SVN_ERR(session->vtable->get_session_url(session, &sess_url, pool));
-  if (strcmp(sess_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(sess_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of session URL '%s'"),
-                                 url, sess_url);
-    }
+  *rel_path = svn_uri_skip_ancestor(sess_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of session URL '%s'"),
+                             url, sess_url);
   return SVN_NO_ERROR;
 }
 
@@ -592,21 +590,30 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
                                               apr_pool_t *pool)
 {
   const char *root_url;
-  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-    }
 
+  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
+  *rel_path = svn_uri_skip_ancestor(root_url, url, pool);
+  if (! *rel_path)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             url, root_url);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
+                                    const char **fspath,
+                                    const char *url,
+                                    apr_pool_t *pool)
+{
+  const char *relpath;
+
+  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &relpath, url, pool));
+  if (*relpath)
+    *fspath = apr_pstrcat(pool, "/", relpath, (char *)NULL);
+  else
+    *fspath = "/";
   return SVN_NO_ERROR;
 }
 
@@ -766,14 +773,13 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
-svn_error_t *svn_ra_get_mergeinfo2(svn_ra_session_t *session,
-                                   svn_mergeinfo_catalog_t *catalog,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t revision,
-                                   svn_mergeinfo_inheritance_t inherit,
-                                   svn_boolean_t *validate_inherited_mergeinfo,
-                                   svn_boolean_t include_descendants,
-                                   apr_pool_t *pool)
+svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
+                                  svn_mergeinfo_catalog_t *catalog,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t revision,
+                                  svn_mergeinfo_inheritance_t inherit,
+                                  svn_boolean_t include_descendants,
+                                  apr_pool_t *pool)
 {
   svn_error_t *err;
   int i;
@@ -795,7 +801,6 @@ svn_error_t *svn_ra_get_mergeinfo2(svn_ra_session_t *session,
 
   return session->vtable->get_mergeinfo(session, catalog, paths,
                                         revision, inherit,
-                                        validate_inherited_mergeinfo,
                                         include_descendants, pool);
 }
 
@@ -1296,7 +1301,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
                           void *ra_baton,
                           apr_pool_t *pool)
 {
-  *descriptions = svn_stringbuf_create("", pool);
+  *descriptions = svn_stringbuf_create_empty(pool);
   return svn_ra_print_modules(*descriptions, pool);
 }
 
@@ -1332,7 +1337,7 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
     {
       const char *scheme;
-      if ((scheme = has_scheme_of(defn, url)))
+      if ((scheme = has_scheme_of(defn->schemes, url)))
         {
           svn_ra_init_func_t compat_initfunc = defn->compat_initfunc;
 

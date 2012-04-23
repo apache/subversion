@@ -117,6 +117,9 @@ print_properties(svn_stream_t *out,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *path_prefix;
+
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", pool));
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
@@ -132,7 +135,8 @@ print_properties(svn_stream_t *out,
           /* Print the file name. */
 
           if (! is_url)
-            filename = svn_dirent_local_style(filename, iterpool);
+            filename = svn_cl__local_style_skip_ancestor(path_prefix, filename,
+                                                         iterpool);
 
           /* In verbose mode, print exactly same as "proplist" does;
            * otherwise, print a brief header. */
@@ -209,7 +213,7 @@ svn_cl__propget(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -307,11 +311,15 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
 
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
+          if (!svn_path_is_url(truepath))
+            SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       NULL, opt_state->depth,
-                                      opt_state->changelists, ctx, subpool));
+                                      opt_state->changelists, ctx, subpool,
+                                      subpool));
 
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,

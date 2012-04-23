@@ -46,15 +46,15 @@ sub committed {
 
 my $editor = SVN::Delta::Editor->
     new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				      '/', 'root', 'FOO', \&committed));
+                                      '/', 'root', 'FOO', \&committed));
 
 my $rootbaton = $editor->open_root(0);
 
-my $dirbaton = $editor->add_directory ('trunk', $rootbaton, undef, 0);
+my $dirbaton = $editor->add_directory('trunk', $rootbaton, undef, 0);
 
-my $fbaton = $editor->add_file ('trunk/filea', $dirbaton, undef, -1);
+my $fbaton = $editor->add_file('trunk/filea', $dirbaton, undef, -1);
 
-my $ret = $editor->apply_textdelta ($fbaton, undef);
+my $ret = $editor->apply_textdelta($fbaton, undef);
 
 SVN::TxDelta::send_string("FILEA CONTENT", @$ret);
 
@@ -63,13 +63,13 @@ $editor->close_edit();
 cmp_ok($fs->youngest_rev, '==', 1);
 {
 $editor = SVN::Delta::Editor->
-    new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				       '/', 'root', 'FOO', \&committed));
+    new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
+                                      '/', 'root', 'FOO', \&committed));
 my $rootbaton = $editor->open_root(1);
 
-my $dirbaton = $editor->add_directory ('tags', $rootbaton, undef, 1);
-my $subdirbaton = $editor->add_directory ('tags/foo', $dirbaton, 
-					  "file://$repospath/trunk", 1);
+my $dirbaton = $editor->add_directory('tags', $rootbaton, undef, 1);
+my $subdirbaton = $editor->add_directory('tags/foo', $dirbaton,
+                                         "file://$repospath/trunk", 1);
 
 $editor->close_edit();
 }
@@ -77,27 +77,27 @@ cmp_ok($fs->youngest_rev, '==', 2);
 
 my @history;
 
-SVN::Repos::history ($fs, 'tags/foo/filea',
-		     sub {push @history, [@_[0,1]]}, 0, 2, 1);
+SVN::Repos::history($fs, 'tags/foo/filea',
+                    sub {push @history, [@_[0,1]]}, 0, 2, 1);
 
-is_deeply (\@history, [['/tags/foo/filea',2],['/trunk/filea',1]],
-	   'repos_history');
+is_deeply(\@history, [['/tags/foo/filea',2],['/trunk/filea',1]],
+          'repos_history');
 
 {
 my $pool = SVN::Pool->new_default;
 my $something = bless {}, 'something';
 $editor = SVN::Delta::Editor->
-    new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				       '/', 'root', 'FOO', sub {committed(@_);
-                                                                $something;
-                                                            }));
+    new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
+                                      '/', 'root', 'FOO', sub {committed(@_);
+                                                               $something;
+                                                          }));
 
 my $rootbaton = $editor->open_root(2);
 $editor->delete_entry('tags', 2, $rootbaton);
 
 $editor->close_edit();
 }
-ok ($main::something_destroyed, 'callback properly destroyed');
+ok($main::something_destroyed, 'callback properly destroyed');
 
 cmp_ok($fs->youngest_rev, '==', 3);
 

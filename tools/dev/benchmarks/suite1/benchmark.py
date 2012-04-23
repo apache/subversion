@@ -99,7 +99,7 @@ class Timings:
   def toc(self):
     if self.current_name and self.tic_at:
       toc_at = datetime.datetime.now()
-      self.submit_timing(self.current_name, 
+      self.submit_timing(self.current_name,
                          timedelta_to_seconds(toc_at - self.tic_at))
     self.current_name = None
     self.tic_at = None
@@ -141,7 +141,7 @@ class Timings:
     return '\n'.join(s)
 
 
-  def compare_to(self, other):
+  def compare_to(self, other, verbose):
     def do_div(a, b):
       if b:
         return float(a) / float(b)
@@ -162,15 +162,18 @@ class Timings:
     othertotal = other.min_max_avg(TOTAL_RUN)[2]
 
     s = ['COMPARE %s to %s' % (othername, selfname)]
-           
+
     if TOTAL_RUN in self.timings and TOTAL_RUN in other.timings:
-      s.append('  %s times: %5.1f seconds avg for %s' % (TOTAL_RUN,
-                                                         othertotal, othername))
-      s.append('  %s        %5.1f seconds avg for %s' % (' ' * len(TOTAL_RUN),
-                                                         selftotal, selfname))
+      s.append('  %s timings: %5.1f seconds avg for %s'
+               % (TOTAL_RUN, othertotal, othername))
+      s.append('  %s          %5.1f seconds avg for %s'
+               % (' ' * len(TOTAL_RUN), selftotal, selfname))
 
 
-    s.append('      min              max              avg         operation')
+    if not verbose:
+      s.append('      avg         operation')
+    else:
+      s.append('      min              max              avg         operation')
 
     names = sorted(self.timings.keys())
 
@@ -182,28 +185,23 @@ class Timings:
       min_me, max_me, avg_me = self.min_max_avg(name)
       min_other, max_other, avg_other = other.min_max_avg(name)
 
-      s.append('%-16s %-16s %-16s  %s' % (
-                 '%7.2f|%+7.3f' % (
-                     do_div(min_me, min_other),
-                     do_diff(min_me, min_other)
-                   ),
+      avg_str = '%7.2f|%+7.3f' % (do_div(avg_me, avg_other),
+                                  do_diff(avg_me, avg_other))
 
-                 '%7.2f|%+7.3f' % (
-                     do_div(max_me, max_other),
-                     do_diff(max_me, max_other)
-                   ),
+      if not verbose:
+        s.append('%-16s  %s' % (avg_str, name))
+      else:
+        min_str = '%7.2f|%+7.3f' % (do_div(min_me, min_other),
+                                    do_diff(min_me, min_other))
+        max_str = '%7.2f|%+7.3f' % (do_div(max_me, max_other),
+                                    do_diff(max_me, max_other))
 
-                 '%7.2f|%+7.3f' % (
-                     do_div(avg_me, avg_other),
-                     do_diff(avg_me, avg_other)
-                   ),
-
-                 name))
+        s.append('%-16s %-16s %-16s  %s' % (min_str, max_str, avg_str, name))
 
     s.extend([
-         '("1.23|+0.45"  means factor=1.23, difference in seconds = 0.45',
-         'factor < 1 or difference < 0 means \'%s\' is faster than \'%s\')'
-           % (self.name, othername)])
+      '(legend: "1.23|+0.45" means: slower by factor 1.23 and by 0.45 seconds;',
+      ' factor < 1 and difference < 0 means \'%s\' is faster than \'%s\')'
+      % (self.name, othername)])
 
     return '\n'.join(s)
 
@@ -254,7 +252,7 @@ def svn(*args):
   cmd = [options.svn] + list(args)
   if options.verbose:
     print 'svn cmd:', ' '.join(cmd)
- 
+
   stdin = None
   if stdin:
     stdin_arg = subprocess.PIPE
@@ -295,6 +293,9 @@ def up(*args):
 
 def st(*args):
   return svn('status', *args)
+
+def info(*args):
+  return svn('info', *args)
 
 _chars = [chr(x) for x in range(ord('a'), ord('z') +1)]
 
@@ -354,7 +355,7 @@ def _del(path):
   svn('delete', path)
 
 _mod_funcs = (_mod, _add, _propmod, _propadd, )#_copy,) # _move, _del)
-  
+
 def modify_tree(in_dir, fraction):
   child_names = os.listdir(in_dir)
   for child_name in child_names:
@@ -369,7 +370,7 @@ def modify_tree(in_dir, fraction):
     path = j(in_dir, child_name)
     if os.path.isdir(path):
       modify_tree(path, fraction)
-  
+
 def propadd_tree(in_dir, fraction):
   for child_name in os.listdir(in_dir):
     if child_name[0] == '.': continue
@@ -418,7 +419,8 @@ def run(levels, spread, N):
 
       so, se = svn('--version')
       if not so:
-        print "Can't find svn."
+        ### options comes from the global namespace; it should be passed
+        print "Can't find svn at", options.svn
         exit(1)
       version = ', '.join([s.strip() for s in so.split('\n')[:2]])
 
@@ -443,6 +445,7 @@ def run(levels, spread, N):
         ci(wc)
         up(wc)
         st(wc)
+        info('-R', wc)
 
         trunk_url = file_url + '/trunk'
         branch_url = file_url + '/branch'
@@ -452,6 +455,7 @@ def run(levels, spread, N):
 
         up(wc)
         st(wc)
+        info('-R', wc)
 
         svn('checkout', trunk_url, wc2)
         st(wc2)
@@ -464,6 +468,7 @@ def run(levels, spread, N):
         svn('switch', branch_url, wc2)
         modify_tree(wc2, 0.5)
         st(wc2)
+        info('-R', wc2)
         ci(wc2)
         up(wc2)
         up(wc)
@@ -476,10 +481,12 @@ def run(levels, spread, N):
 
         svn('merge', '--accept=postpone', trunk_url, wc2)
         st(wc2)
+        info('-R', wc2)
         svn('resolve', '--accept=mine-conflict', wc2)
         st(wc2)
         svn('resolved', '-R', wc2)
         st(wc2)
+        info('-R', wc2)
         ci(wc2)
         up(wc2)
         up(wc)
@@ -541,11 +548,12 @@ def cmd_compare(path1, path2):
   t1 = read_from_file(path1)
   t2 = read_from_file(path2)
 
-  print t1.summary()
-  print '---'
-  print t2.summary()
-  print '---'
-  print t2.compare_to(t1)
+  if options.verbose:
+    print t1.summary()
+    print '---'
+    print t2.summary()
+    print '---'
+  print t2.compare_to(t1, options.verbose)
 
 def cmd_combine(dest, *paths):
   total = Timings('--version');
@@ -561,10 +569,13 @@ def cmd_run(timings_path, levels, spread, N=1):
   levels = int(levels)
   spread = int(spread)
   N = int(N)
-      
+
   print '\n\nHi, going to run a Subversion benchmark series of %d runs...' % N
 
   ### UGH! should pass to run()
+  ### neels: Today I contemplated doing that, but at the end of the day
+  ###        it merely blows up the code without much benefit. If this
+  ###        ever becomes part of an imported python package, call again.
   global timings
 
   if os.path.isfile(timings_path):

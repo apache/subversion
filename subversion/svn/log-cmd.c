@@ -60,6 +60,9 @@ struct log_receiver_baton
   /* Whether to show diffs in the log. (maps to --diff) */
   svn_boolean_t show_diff;
 
+  /* Depth applied to diff output. */
+  svn_depth_t depth;
+
   /* Diff arguments received from command line. */
   const char *diff_extensions;
 
@@ -224,8 +227,7 @@ log_entry_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path2_t *log_item
-            = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
+          svn_log_changed_path2_t *log_item = item->value;
           const char *copy_data = "";
 
           if (lb->ctx->cancel_func)
@@ -274,18 +276,15 @@ log_entry_receiver(void *baton,
   /* Print a diff if requested. */
   if (lb->show_diff)
     {
-      apr_file_t *outfile;
-      apr_file_t *errfile;
+      svn_stream_t *outstream;
+      svn_stream_t *errstream;
       apr_array_header_t *diff_options;
-      apr_status_t status;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
       svn_error_t *err;
 
-      if ((status = apr_file_open_stdout(&outfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stdout"));
-      if ((status = apr_file_open_stderr(&errfile, pool)))
-        return svn_error_wrap_apr(status, _("Can't open stderr"));
+      SVN_ERR(svn_stream_for_stdout(&outstream, pool));
+      SVN_ERR(svn_stream_for_stderr(&errstream, pool));
 
       /* Fall back to "" to get options initialized either way. */
       if (lb->diff_extensions)
@@ -300,21 +299,21 @@ log_entry_receiver(void *baton,
       end_revision.value.number = log_entry->revision;
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
-      err = svn_client_diff5(diff_options,
+      err = svn_client_diff6(diff_options,
                              lb->target_url,
                              &start_revision,
                              lb->target_url,
                              &end_revision,
                              NULL,
-                             svn_depth_infinity,
+                             lb->depth,
                              FALSE, /* ignore ancestry */
                              TRUE, /* no diff deleted */
                              FALSE, /* show copies as adds */
                              FALSE, /* ignore content type */
                              FALSE, /* use git diff format */
                              svn_cmdline_output_encoding(pool),
-                             outfile,
-                             errfile,
+                             outstream,
+                             errstream,
                              NULL,
                              lb->ctx, pool);
       if (err)
@@ -333,21 +332,21 @@ log_entry_receiver(void *baton,
               while (strcmp(parent, lb->target_url) != 0)
                 {
                   svn_pool_clear(iterpool);
-                  err = svn_client_diff5(diff_options,
+                  err = svn_client_diff6(diff_options,
                                          parent,
                                          &start_revision,
                                          parent,
                                          &end_revision,
                                          NULL,
-                                         svn_depth_infinity,
+                                         lb->depth,
                                          FALSE, /* ignore ancestry */
                                          TRUE, /* no diff deleted */
                                          FALSE, /* show copies as adds */
                                          FALSE, /* ignore content type */
                                          FALSE, /* use git diff format */
                                          svn_cmdline_output_encoding(iterpool),
-                                         outfile,
-                                         errfile,
+                                         outstream,
+                                         errstream,
                                          NULL,
                                          lb->ctx, iterpool);
                   if (err == SVN_NO_ERROR)
@@ -367,13 +366,13 @@ log_entry_receiver(void *baton,
                           svn_error_clear(err);
                           break;
                         }
-                      return svn_error_return(err);
+                      return svn_error_trace(err);
                     }
                 }
               svn_pool_destroy(iterpool);
             }
           else
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
@@ -432,7 +431,7 @@ log_entry_receiver_xml(void *baton,
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   char *revstr;
   const char *author;
   const char *date;
@@ -509,9 +508,9 @@ log_entry_receiver_xml(void *baton,
                                     "copyfrom-rev", revstr,
                                     "kind", svn_cl__node_kind_str_xml(
                                                      log_item->node_kind),
-                                    "text-mods", svn_tristate_to_word(
+                                    "text-mods", svn_tristate__to_word(
                                                      log_item->text_modified),
-                                    "prop-mods", svn_tristate_to_word(
+                                    "prop-mods", svn_tristate__to_word(
                                                      log_item->props_modified),
                                     NULL);
             }
@@ -612,9 +611,13 @@ svn_cl__log(apr_getopt_t *os,
                             _("'extensions' option requires 'diff' "
                               "option"));
 
+  if (opt_state->depth != svn_depth_unknown && (! opt_state->show_diff))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'depth' option requires 'diff' option"));
+
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -666,6 +669,8 @@ svn_cl__log(apr_getopt_t *os,
   SVN_ERR(svn_client_url_from_path2(&lb.target_url, true_path, ctx,
                                     pool, pool));
   lb.show_diff = opt_state->show_diff;
+  lb.depth = opt_state->depth == svn_depth_unknown ? svn_depth_infinity
+                                                   : opt_state->depth;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;

@@ -307,8 +307,9 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                            apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
-  svn_string_t bc_url, bc_relative;
+  svn_stringbuf_t *request_body = svn_stringbuf_create_empty(pool);
+  const char *bc_url;
+  const char *bc_relative;
   const char *final_bc_url;
   int http_status = 0;
   struct report_baton rb;
@@ -348,7 +349,7 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   /* Initialize the baton. */
   rb.handler = handler;
   rb.handler_baton = handler_baton;
-  rb.cdata_accum = svn_stringbuf_create("", pool);
+  rb.cdata_accum = svn_stringbuf_create_empty(pool);
   rb.subpool = svn_pool_create(pool);
   reset_file_rev(&rb);
 
@@ -356,11 +357,9 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from END. */
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, ras->url->data, end,
-                                         pool));
-  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                             pool);
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                         ras->url->data, end, pool));
+  final_bc_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
 
   /* Dispatch the request. */
   err = svn_ra_neon__parsed_request(ras, "REPORT", final_bc_url,

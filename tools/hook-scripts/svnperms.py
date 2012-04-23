@@ -285,7 +285,7 @@ Options:
     -s NAME    Use section NAME as permission section (default is
                repository name, extracted from repository path)
     -R REV     Query revision REV for commit information (for tests)
-    -A AUTHOR  Check commit as if AUTHOR had commited it (for tests)
+    -A AUTHOR  Check commit as if AUTHOR had committed it (for tests)
     -h         Show this message
 """
 

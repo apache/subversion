@@ -602,17 +602,6 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
 
 /* EOL conversion and character encodings */
 
-/** Similar to svn_subst_translate_string2(), except that the information about
- * whether re-encoding or line ending translation were performed is discarded.
- *
- * @deprecated Provided for backward compatibility with the 1.6 API.
- */
-SVN_DEPRECATED
-svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
-                                        const svn_string_t *value,
-                                        const char *encoding,
-                                        apr_pool_t *pool);
-
 /** Translate the string @a value from character encoding @a encoding to
  * UTF8, and also from its current line-ending style to LF line-endings.  If
  * @a encoding is @c NULL, translate from the system-default encoding.
@@ -645,6 +634,17 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             svn_boolean_t repair,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/** Similar to svn_subst_translate_string2(), except that the information about
+ * whether re-encoding or line ending translation were performed is discarded.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
+                                        const svn_string_t *value,
+                                        const char *encoding,
+                                        apr_pool_t *pool);
 
 /** Translate the string @a value from UTF8 and LF line-endings into native
  * character encoding and native line-endings.  If @a for_output is TRUE,

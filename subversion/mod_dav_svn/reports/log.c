@@ -244,8 +244,8 @@ log_receiver(void *baton,
                      " text-mods=\"%s\""
                      " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
                      svn_node_kind_to_word(log_item->node_kind),
-                     svn_tristate_to_word(log_item->text_modified),
-                     svn_tristate_to_word(log_item->props_modified),
+                     svn_tristate__to_word(log_item->text_modified),
+                     svn_tristate__to_word(log_item->props_modified),
                      apr_xml_quote_string(iterpool, path, 0),
                      close_element));
         }

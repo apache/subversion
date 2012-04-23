@@ -26,10 +26,10 @@
 #include "svn_pools.h"
 #include "svn_private_config.h"
 
+#include "private/svn_mutex.h"
+
 /* A mutex to protect our global pool and cache. */
-#if APR_HAS_THREADS
-static apr_thread_mutex_t *dso_mutex;
-#endif
+static svn_mutex__t *dso_mutex = NULL;
 
 /* Global pool to allocate DSOs in. */
 static apr_pool_t *dso_pool;
@@ -49,40 +49,21 @@ static int not_there_sentinel;
 svn_error_t *
 svn_dso_initialize2(void)
 {
-#if APR_HAS_THREADS
-  apr_status_t status;
-#endif
   if (dso_pool)
     return SVN_NO_ERROR;
 
   dso_pool = svn_pool_create(NULL);
 
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_create(&dso_mutex,
-                                   APR_THREAD_MUTEX_DEFAULT, dso_pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't create DSO mutex"));
-#endif
+  SVN_ERR(svn_mutex__init(&dso_mutex, TRUE, dso_pool));
 
   dso_cache = apr_hash_make(dso_pool);
   return SVN_NO_ERROR;
 }
 
 #if APR_HAS_DSO
-svn_error_t *
-svn_dso_load(apr_dso_handle_t **dso, const char *fname)
+static svn_error_t *
+svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
 {
-  apr_status_t status;
-
-  if (! dso_pool)
-    SVN_ERR(svn_dso_initialize2());
-
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_lock(dso_mutex);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't grab DSO mutex"));
-#endif
-
   *dso = apr_hash_get(dso_cache, fname, APR_HASH_KEY_STRING);
 
   /* First check to see if we've been through this before...  We do this
@@ -91,23 +72,21 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
   if (*dso == NOT_THERE)
     {
       *dso = NULL;
-#if APR_HAS_THREADS
-      status = apr_thread_mutex_unlock(dso_mutex);
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't ungrab DSO mutex"));
-#endif
       return SVN_NO_ERROR;
     }
 
   /* If we got nothing back from the cache, try and load the library. */
   if (! *dso)
     {
-      status = apr_dso_load(dso, fname, dso_pool);
+      apr_status_t status = apr_dso_load(dso, fname, dso_pool);
       if (status)
         {
-#ifdef SVN_DEBUG
+#ifdef SVN_DEBUG_DSO
           char buf[1024];
-          fprintf(stderr, "%s\n", apr_dso_error(*dso, buf, 1024));
+          fprintf(stderr,
+                  "Dynamic loading of '%s' failed with the following error:\n%s\n",
+                  fname,
+                  apr_dso_error(*dso, buf, 1024));
 #endif
           *dso = NULL;
 
@@ -117,11 +96,6 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
                        APR_HASH_KEY_STRING,
                        NOT_THERE);
 
-#if APR_HAS_THREADS
-          status = apr_thread_mutex_unlock(dso_mutex);
-          if (status)
-            return svn_error_wrap_apr(status, _("Can't ungrab DSO mutex"));
-#endif
           return SVN_NO_ERROR;
         }
 
@@ -132,11 +106,16 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
                    *dso);
     }
 
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_unlock(dso_mutex);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't ungrab DSO mutex"));
-#endif
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_dso_load(apr_dso_handle_t **dso, const char *fname)
+{
+  if (! dso_pool)
+    SVN_ERR(svn_dso_initialize2());
+
+  SVN_MUTEX__WITH_LOCK(dso_mutex, svn_dso_load_internal(dso, fname));
 
   return SVN_NO_ERROR;
 }

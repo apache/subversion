@@ -73,7 +73,7 @@ import svntest
 # Working revision, last-changed revision, and last author are whitespace
 # only if the item is missing.
 #
-_re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
+_re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
                               '([SX ])'
@@ -91,7 +91,8 @@ _re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
                                 '([B ])'
                                 '([CAUD ])\s+'
                                 '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'( --.*)?')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
+                                  '\s+\'(.+)\'(( --|: ).*)?')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
@@ -134,9 +135,17 @@ class State:
       self.desc[path] = item
 
   def remove(self, *paths):
-    "Remove a path from the state (the path must exist)."
+    "Remove PATHS from the state (the paths must exist)."
     for path in paths:
       del self.desc[to_relpath(path)]
+
+  def remove_subtree(self, *paths):
+    "Remove PATHS recursively from the state (the paths must exist)."
+    for subtree_path in paths:
+      subtree_path = to_relpath(subtree_path)
+      for path, item in self.desc.items():
+        if path == subtree_path or path[:len(subtree_path) + 1] == subtree_path + '/':
+          del self.desc[path]
 
   def copy(self, new_root=None):
     """Make a deep copy of self.  If NEW_ROOT is not None, then set the
@@ -179,13 +188,12 @@ class State:
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
-    identified by SUBTREE_PATH (which is assumed to contain only one
-    element rooted at the tree of this State object's WC_DIR)."""
+    beneath SUBTREE_PATH (which is assumed to be rooted at the tree of
+    this State object's WC_DIR).  Exclude SUBTREE_PATH itself."""
     desc = { }
     for path, item in self.desc.items():
-      path_elements = path.split("/")
-      if len(path_elements) > 1 and path_elements[0] == subtree_path:
-        desc["/".join(path_elements[1:])] = item.copy()
+      if path[:len(subtree_path) + 1] == subtree_path + '/':
+        desc[path[len(subtree_path) + 1:]] = item.copy()
     return State(self.wc_dir, desc)
 
   def write_to_disk(self, target_dir):
@@ -858,8 +866,13 @@ def text_base_path(file_path):
   dot_svn = svntest.main.get_admin_name()
   fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
 
+  # For SVN_WC__VERSION < 29
   if os.path.isfile(fn):
     return fn
+
+  # For SVN_WC__VERSION >= 29
+  if os.path.isfile(fn + ".svn-base"):
+    return fn + ".svn-base"
 
   raise svntest.Failure("No pristine text for " + relpath)
 

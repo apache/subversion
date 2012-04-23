@@ -131,7 +131,7 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            svn_checksum_t **md5_checksum,
                            svn_checksum_t **sha1_checksum,
                            svn_wc__db_t *db,
-                           const char *local_abspath,
+                           const char *wri_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 

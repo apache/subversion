@@ -573,7 +573,7 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 
 /**
  * A repository access session.  This object is used to perform requests
- * to a repository, identified by an URL.
+ * to a repository, identified by a URL.
  *
  * @since New in 1.2.
  */
@@ -1017,14 +1017,6 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
  *
- * If the mergeinfo for any path is inherited and
- * @a *validate_inherited_mergeinfo is TRUE, then request that the server
- * validate the mergeinfo in @a *catalog, so it contains only merge source
- * path-revisions that actually exist in repository.  If validation is
- * requested and the server supports it, then set
- * @a *validate_inherited_mergeinfo to TRUE on return.  Set it to FALSE
- * in all other cases.
- *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1041,23 +1033,7 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * upgraded), return @c SVN_ERR_UNSUPPORTED_FEATURE in preference to
  * any other error that might otherwise be returned.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_ra_get_mergeinfo2(svn_ra_session_t *session,
-                      svn_mergeinfo_catalog_t *catalog,
-                      const apr_array_header_t *paths,
-                      svn_revnum_t revision,
-                      svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t *validate_inherited_mergeinfo,
-                      svn_boolean_t include_descendants,
-                      apr_pool_t *pool);
-
-/**
- * Similar to svn_ra_get_mergeinfo2(), but with
- * @a validate_inherited_mergeinfo always passed as FALSE.
- *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
@@ -1439,8 +1415,9 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
- * revprops named in the array (i.e. retrieve none if the array is empty).
+ * If @a revprops is NULL, retrieve all revision properties; else, retrieve
+ * only the revision properties named by the (const char *) array elements
+ * (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1696,7 +1673,8 @@ svn_ra_get_file_revs(svn_ra_session_t *session,
 /**
  * Lock each path in @a path_revs, which is a hash whose keys are the
  * paths to be locked, and whose values are the corresponding base
- * revisions for each path.
+ * revisions for each path.  The keys are (const char *) and the
+ * revisions are (svn_revnum_t *).
  *
  * Note that locking is never anonymous, so any server implementing
  * this function will have to "pull" a username from the client, if

@@ -44,9 +44,11 @@
 #include "svn_io.h"
 #include "svn_subst.h"
 #include "svn_pools.h"
+#include "private/svn_io_private.h"
 
 #include "svn_private_config.h"
 
+#include "private/svn_string_private.h"
 
 /**
  * The textual elements of a detranslated special file.  One of these
@@ -229,7 +231,7 @@ keyword_printf(const char *fmt,
       fmt = cur + 2;
     }
 
-  return svn_string_create_from_buf(value, pool);
+  return svn_stringbuf__morph_into_string(value);
 }
 
 svn_error_t *
@@ -1247,29 +1249,6 @@ translated_stream_read(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_skip_fn_t. */
-static svn_error_t *
-translated_stream_skip(void *baton,
-                       apr_size_t *count)
-{
-  apr_size_t total_bytes_read = 0;
-  apr_size_t bytes_read = 1;
-  char buffer[SVN__STREAM_CHUNK_SIZE];
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_size_t to_read = *count;
-
-  while ((to_read > 0) && !err && (bytes_read > 0))
-    {
-      bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
-      err = translated_stream_read(baton, buffer, &bytes_read);
-      total_bytes_read += bytes_read;
-      to_read -= bytes_read;
-    }
-
-  *count = total_bytes_read;
-  return err;
-}
-
 /* Implements svn_write_fn_t. */
 static svn_error_t *
 translated_stream_write(void *baton,
@@ -1288,15 +1267,16 @@ static svn_error_t *
 translated_stream_close(void *baton)
 {
   struct translated_stream_baton *b = baton;
+  svn_error_t *err = NULL;
 
   if (b->written)
-    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
+    err = translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool);
 
-  SVN_ERR(svn_stream_close(b->stream));
+  err = svn_error_compose_create(err, svn_stream_close(b->stream));
 
   svn_pool_destroy(b->iterpool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 
@@ -1310,7 +1290,7 @@ typedef struct mark_translated_t
   svn_stream_mark_t *mark;
 } mark_translated_t;
 
-/* Implements svn_io_mark_fn_t. */
+/* Implements svn_stream_mark_fn_t. */
 static svn_error_t *
 translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
@@ -1335,7 +1315,7 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_io_seek_fn_t. */
+/* Implements svn_stream_seek_fn_t. */
 static svn_error_t *
 translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
 {
@@ -1381,12 +1361,12 @@ translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_io_buffered_fn_t. */
+/* Implements svn_stream__is_buffered_fn_t. */
 static svn_boolean_t
-translated_stream_buffered(void *baton)
+translated_stream_is_buffered(void *baton)
 {
   struct translated_stream_baton *b = baton;
-  return svn_stream_buffered(b->stream);
+  return svn_stream__is_buffered(b->stream);
 }
 
 svn_error_t *
@@ -1487,19 +1467,18 @@ stream_translated(svn_stream_t *stream,
     = create_translation_baton(eol_str, translated_eol, repair, keywords,
                                expand, result_pool);
   baton->written = FALSE;
-  baton->readbuf = svn_stringbuf_create("", result_pool);
+  baton->readbuf = svn_stringbuf_create_empty(result_pool);
   baton->readbuf_off = 0;
   baton->iterpool = svn_pool_create(result_pool);
   baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
 
   /* Setup the stream methods */
   svn_stream_set_read(s, translated_stream_read);
-  svn_stream_set_skip(s, translated_stream_skip);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
-  svn_stream_set_buffered(s, translated_stream_buffered);
+  svn_stream__set_is_buffered(s, translated_stream_is_buffered);
 
   return s;
 }
@@ -1543,7 +1522,7 @@ translate_cstring(const char **dst,
     }
 
   /* Create a stringbuf and wrapper stream to hold the output. */
-  dst_stringbuf = svn_stringbuf_create("", pool);
+  dst_stringbuf = svn_stringbuf_create_empty(pool);
   dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
 
   if (translated_eol)
@@ -1600,7 +1579,7 @@ detranslate_special_file(const char *src, const char *dst,
                            cancel_func, cancel_baton, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_error_return(svn_io_file_rename(dst_tmp, dst, scratch_pool));
+  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, scratch_pool));
 }
 
 /* Creates a special file DST from the "normal form" located in SOURCE.
@@ -1722,20 +1701,20 @@ svn_subst_copy_and_translate4(const char *src,
               SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
             }
 
-          return svn_error_return(create_special_file_from_stream(src_stream,
-                                                                  dst, pool));
+          return svn_error_trace(create_special_file_from_stream(src_stream,
+                                                                 dst, pool));
         }
       /* else !expand */
 
-      return svn_error_return(detranslate_special_file(src, dst,
-                                                       cancel_func,
-                                                       cancel_baton,
-                                                       pool));
+      return svn_error_trace(detranslate_special_file(src, dst,
+                                                      cancel_func,
+                                                      cancel_baton,
+                                                      pool));
     }
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))
-    return svn_error_return(svn_io_copy_file(src, dst, FALSE, pool));
+    return svn_error_trace(svn_io_copy_file(src, dst, FALSE, pool));
 
   /* Open source file. */
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
@@ -1764,7 +1743,7 @@ svn_subst_copy_and_translate4(const char *src,
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
+  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 
@@ -1834,7 +1813,7 @@ svn_subst_create_specialfile(svn_stream_t **stream,
   /* SCRATCH_POOL may not exist after the function returns. */
   baton->pool = result_pool;
 
-  baton->write_content = svn_stringbuf_create("", result_pool);
+  baton->write_content = svn_stringbuf_create_empty(result_pool);
   baton->write_stream = svn_stream_from_stringbuf(baton->write_content,
                                                   result_pool);
 
@@ -1873,7 +1852,7 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
       baton->read_stream = NULL;
     }
 
-  baton->write_content = svn_stringbuf_create("", pool);
+  baton->write_content = svn_stringbuf_create_empty(pool);
   baton->write_stream = svn_stream_from_stringbuf(baton->write_content, pool);
 
   *stream = svn_stream_create(baton, pool);

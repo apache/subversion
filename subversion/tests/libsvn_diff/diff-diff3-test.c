@@ -175,7 +175,7 @@ three_way_merge(const char *filename1,
   SVN_ERR(svn_diff_mem_string_diff3(&diff,
                                     original, modified, latest, options, pool));
 
-  actual = svn_stringbuf_create("", pool);
+  actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
   SVN_ERR(svn_diff_mem_string_output_merge2
@@ -265,7 +265,7 @@ two_way_diff(const char *filename1,
 
   SVN_ERR(svn_diff_mem_string_diff(&diff, original, modified, options, pool));
 
-  actual = svn_stringbuf_create("", pool);
+  actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
   SVN_ERR(svn_diff_mem_string_output_unified(ostream, diff,
@@ -2237,7 +2237,7 @@ random_three_way_merge(apr_pool_t *pool)
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       /* Pick NUM_LINES large enough so that the 'strip identical suffix' code
          gets triggered with reasonable probability.  (Currently it ignores
-         50 lines or more, and empirically N=4000 suffices to trigger that 
+         50 lines or more, and empirically N=4000 suffices to trigger that
          behaviour most of the time.) */
       int num_lines = 4000, num_src = 10, num_dst = 10;
       svn_boolean_t *lines = apr_pcalloc(subpool, sizeof(*lines) * num_lines);

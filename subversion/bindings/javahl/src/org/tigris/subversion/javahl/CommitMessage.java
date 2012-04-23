@@ -25,7 +25,7 @@ package org.tigris.subversion.javahl;
 
 /**
  * This is callback interface which has to implemented by the client
- * to receive which files will be commited and to enter the log
+ * to receive which files will be committed and to enter the log
  * message.
  */
 public interface CommitMessage
@@ -33,8 +33,8 @@ public interface CommitMessage
     /**
      * Retrieve a commit message from the user based on the items to
      * be committed
-     * @param elementsToBeCommited Array of elements to be commited
+     * @param elementsToBeCommitted Array of elements to be committed
      * @return the log message of the commit.
      */
-    String getLogMessage(CommitItem[] elementsToBeCommited);
+    String getLogMessage(CommitItem[] elementsToBeCommitted);
 }

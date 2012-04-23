@@ -317,9 +317,22 @@ public class Status implements java.io.Serializable
         this.changelist = changelist;
     }
 
+    /** Create an empty status struct */
+    public Status(String path)
+    {
+        this(path, null, NodeKind.fromApache(null), Revision.SVN_INVALID_REVNUM,
+             Revision.SVN_INVALID_REVNUM, 0, null, fromAStatusKind(null),
+             fromAStatusKind(null), fromAStatusKind(null),
+             fromAStatusKind(null), false, false, false, null,
+             null, null, null, null, Revision.SVN_INVALID_REVNUM,
+             false, false, null, null, null, 0, null,
+             Revision.SVN_INVALID_REVNUM, 0, NodeKind.fromApache(null),
+             null, null);
+    }
+
     private void
-    populateConflicts(org.apache.subversion.javahl.SVNClient aClient,
-                      String path)
+    populateFromInfo(org.apache.subversion.javahl.SVNClient aClient,
+                     String path)
         throws org.apache.subversion.javahl.ClientException
     {
         class MyInfoCallback
@@ -340,37 +353,51 @@ public class Status implements java.io.Serializable
 
         MyInfoCallback callback = new MyInfoCallback();
 
-        aClient.info2(path,
-                      org.apache.subversion.javahl.types.Revision.HEAD,
-                      org.apache.subversion.javahl.types.Revision.HEAD,
+        aClient.info2(path, null, null,
                       org.apache.subversion.javahl.types.Depth.empty, null,
                       callback);
 
-        if (callback.getInfo() == null
-                || callback.getInfo().getConflicts() == null)
+        org.apache.subversion.javahl.types.Info aInfo = callback.getInfo();
+        if (aInfo == null)
             return;
 
-        for (org.apache.subversion.javahl.ConflictDescriptor conflict
-                : callback.getInfo().getConflicts())
-        {
-           switch (conflict.getKind())
-           {
-             case tree:
-               this.treeConflicted = true;
-               this.conflictDescriptor = new ConflictDescriptor(conflict);
-               break;
+        if (aInfo.getConflicts() != null)
+            for (org.apache.subversion.javahl.ConflictDescriptor conflict
+                    : aInfo.getConflicts())
+            {
+               switch (conflict.getKind())
+               {
+                 case tree:
+                   this.treeConflicted = true;
+                   this.conflictDescriptor = new ConflictDescriptor(conflict);
+                   break;
 
-             case text:
-               this.conflictOld = conflict.getBasePath();
-               this.conflictWorking = conflict.getMergedPath();
-               this.conflictNew = conflict.getMyPath();
-               break;
+                 case text:
+                   this.conflictOld = conflict.getBasePath();
+                   this.conflictWorking = conflict.getMergedPath();
+                   this.conflictNew = conflict.getMyPath();
+                   break;
 
-             case property:
-               // Ignore
-               break;
-           }
-        }
+                 case property:
+                   // Ignore
+                   break;
+               }
+            }
+
+        this.urlCopiedFrom = aInfo.getCopyFromUrl();
+        this.revisionCopiedFrom = aInfo.getCopyFromRev();
+    }
+
+    void
+    populateLocalLock(org.apache.subversion.javahl.types.Lock aLock)
+    {
+        if (aLock == null)
+            return;
+
+        this.lockToken = aLock.getToken();
+        this.lockOwner = aLock.getOwner();
+        this.lockComment = aLock.getComment();
+        this.lockCreationDate = aLock.getCreationDate().getTime() * 1000;;
     }
 
     /**
@@ -389,11 +416,9 @@ public class Status implements java.io.Serializable
              fromAStatusKind(aStatus.getRepositoryTextStatus()),
              fromAStatusKind(aStatus.getRepositoryPropStatus()),
              aStatus.isLocked(), aStatus.isCopied(), false,
-             null, null, null, null, aStatus.getUrlCopiedFrom(),
-             aStatus.getRevisionCopiedFromNumber(), aStatus.isSwitched(),
-             aStatus.isFileExternal(), aStatus.getLockToken(),
-             aStatus.getLockOwner(), aStatus.getLockComment(),
-             aStatus.getLockCreationDateMicros(),
+             null, null, null, null, null, Revision.SVN_INVALID_REVNUM,
+             aStatus.isSwitched(),
+             aStatus.isFileExternal(), null, null, null, 0,
              aStatus.getReposLock() == null ? null
                 : new Lock(aStatus.getReposLock()),
              aStatus.getReposLastCmtRevisionNumber(),
@@ -402,8 +427,9 @@ public class Status implements java.io.Serializable
              aStatus.getReposLastCmtAuthor(), aStatus.getChangelist());
 
         try {
-            if (aStatus.isConflicted())
-                populateConflicts(aClient, aStatus.getPath());
+            populateFromInfo(aClient, aStatus.getPath());
+            if (aStatus.getLocalLock() != null)
+                populateLocalLock(aStatus.getLocalLock());
         } catch (org.apache.subversion.javahl.ClientException ex) {
             // Ignore
         }

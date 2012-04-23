@@ -102,7 +102,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_node_kind_t disk_kind;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
@@ -122,28 +122,26 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  switch (status)
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     wc_ctx->db, local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_copied
+      && status != svn_wc__db_status_moved_here
+      && !(kind == svn_kind_dir
+           && (status == svn_wc__db_status_added
+               || status == svn_wc__db_status_incomplete)))
     {
-      case svn_wc__db_status_added:
-        SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
-                                         wc_ctx->db, local_abspath,
-                                         scratch_pool, scratch_pool));
-        if (status != svn_wc__db_status_added)
-          break; /* Has pristine version */
-      case svn_wc__db_status_deleted:
-      case svn_wc__db_status_not_present:
-      case svn_wc__db_status_absent:
-      case svn_wc__db_status_excluded:
-        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                 _("The node '%s' can not be restored."),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
-      default:
-        break;
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("The node '%s' can not be restored."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
-  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+  if (kind == svn_kind_file || kind == svn_kind_symlink)
     SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times, FALSE,
                          scratch_pool));
   else
@@ -162,19 +160,19 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 restore_node(svn_wc__db_t *db,
              const char *local_abspath,
-             svn_wc__db_kind_t kind,
+             svn_kind_t kind,
              svn_boolean_t use_commit_times,
              svn_wc_notify_func2_t notify_func,
              void *notify_baton,
              apr_pool_t *scratch_pool)
 {
-  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+  if (kind == svn_kind_file || kind == svn_kind_symlink)
     {
       /* Recreate file from text-base */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times, TRUE,
                            scratch_pool));
     }
-  else if (kind == svn_wc__db_kind_dir)
+  else if (kind == svn_kind_dir)
     {
       /* Recreating a directory is just a mkdir */
       SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
@@ -193,51 +191,16 @@ restore_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Check if there is an externals definition stored on LOCAL_ABSPATH
-   using DB.  In that case send the externals definition and DEPTH to
-   EXTERNAL_FUNC.  Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-read_externals_info(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_wc_external_update_t external_func,
-                    void *external_baton,
-                    svn_depth_t depth,
-                    apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-  const svn_string_t *val;
-
-  SVN_ERR_ASSERT(external_func != NULL);
-
-  /* Directly use a DB api here as this code path is extensively used on
-     update. On top of that we already know that this an existing directory. */
-  SVN_ERR(svn_wc__db_base_get_props(&props, db, local_abspath,
-                                    scratch_pool, scratch_pool));
-
-  if (!props)
-    return SVN_NO_ERROR;
-
-  val = apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING);
-
-  if (val)
-    {
-      SVN_ERR((external_func)(external_baton, local_abspath, val, val, depth,
-                              scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
-   This is a depth-first recursive walk of DIR_PATH under ANCHOR_ABSPATH,
-   using DB.  Look at each entry and check if its revision is different
-   than DIR_REV.  If so, report this fact to REPORTER.  If an entry is
-   missing from disk, report its absence to REPORTER.  If an entry has
-   a different URL than expected, report that to REPORTER.  If an
-   entry has a different depth than its parent, report that to
-   REPORTER.
+   This is a depth-first recursive walk of the children of DIR_ABSPATH
+   (not including DIR_ABSPATH itself) using DB.  Look at each node and
+   check if its revision is different than DIR_REV.  If so, report this
+   fact to REPORTER.  If a node has a different URL than expected, or
+   a different depth than its parent, report that to REPORTER.
+
+   Report DIR_ABSPATH to the reporter as REPORT_RELPATH.
 
    Alternatively, if REPORT_EVERYTHING is set, then report all
    children unconditionally.
@@ -267,17 +230,14 @@ read_externals_info(svn_wc__db_t *db,
    DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
    in svn_wc_crawl_revisions5().
 
-   If EXTERNAL_FUNC is non-NULL, then send externals information with
-   the help of EXTERNAL_BATON
-
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
    will be called to report the restoration.  USE_COMMIT_TIMES is
    passed to restore_file() helper. */
 static svn_error_t *
 report_revisions_and_depths(svn_wc__db_t *db,
-                            const char *anchor_abspath,
-                            const char *dir_path,
+                            const char *dir_abspath,
+                            const char *report_relpath,
                             svn_revnum_t dir_rev,
                             const char *dir_repos_relpath,
                             const char *dir_repos_root,
@@ -290,16 +250,12 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
-                            svn_boolean_t had_props,
-                            svn_wc_external_update_t external_func,
-                            void *external_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
                             void *notify_baton,
                             apr_pool_t *scratch_pool)
 {
-  const char *dir_abspath;
   apr_hash_t *base_children;
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -310,7 +266,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
   /* Get both the SVN Entries and the actual on-disk entries.   Also
      notice that we're picking up hidden entries too (read_children never
      hides children). */
-  dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
   SVN_ERR(svn_wc__db_base_get_children_info(&base_children, db, dir_abspath,
                                             scratch_pool, iterpool));
 
@@ -318,7 +273,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
     {
       err = svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
                                 scratch_pool, scratch_pool);
-      
+
       if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
                   || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
         {
@@ -333,19 +288,14 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
   /*** Do the real reporting and recursing. ***/
 
-  /* If "this dir" has "svn:externals" property set on it,
-   * call the external_func callback. */
-  if (external_func && had_props)
-    SVN_ERR(read_externals_info(db, dir_abspath, external_func,
-                                external_baton, dir_depth, iterpool));
-
   /* Looping over current directory's BASE children: */
-  for (hi = apr_hash_first(scratch_pool, base_children); 
+  for (hi = apr_hash_first(scratch_pool, base_children);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
       const char *child = svn__apr_hash_index_key(hi);
-      const char *this_path, *this_abspath;
+      const char *this_report_relpath;
+      const char *this_abspath;
       svn_boolean_t this_switched = FALSE;
       struct svn_wc__db_base_info_t *ths = svn__apr_hash_index_val(hi);
 
@@ -357,8 +307,15 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_pool_clear(iterpool);
 
       /* Compute the paths and URLs we need. */
-      this_path = svn_dirent_join(dir_path, child, iterpool);
+      this_report_relpath = svn_relpath_join(report_relpath, child, iterpool);
       this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
+
+      /*** File Externals **/
+      if (ths->update_root)
+        {
+          /* File externals are ... special.  We ignore them. */;
+          continue;
+        }
 
       /* First check for exclusion */
       if (ths->status == svn_wc__db_status_excluded)
@@ -375,7 +332,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                  path. We explicitly prohibit this situation in
                  svn_wc_crop_tree(). */
               SVN_ERR(reporter->set_path(report_baton,
-                                         this_path,
+                                         this_report_relpath,
                                          dir_rev,
                                          svn_depth_exclude,
                                          FALSE,
@@ -388,13 +345,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
                  deleted, and server will respond properly. */
               if (! report_everything)
                 SVN_ERR(reporter->delete_path(report_baton,
-                                              this_path, iterpool));
+                                              this_report_relpath, iterpool));
             }
           continue;
         }
 
       /*** The Big Tests: ***/
-      if (ths->status == svn_wc__db_status_absent
+      if (ths->status == svn_wc__db_status_server_excluded
           || ths->status == svn_wc__db_status_not_present)
         {
           /* If the entry is 'absent' or 'not-present', make sure the server
@@ -406,7 +363,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
              now available (an addition after a not-present state), or if
              it is now authorized (change in authz for the absent item).  */
           if (! report_everything)
-            SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
+            SVN_ERR(reporter->delete_path(report_baton, this_report_relpath,
+                                          iterpool));
           continue;
         }
 
@@ -415,7 +373,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
           && apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
           svn_wc__db_status_t wrk_status;
-          svn_wc__db_kind_t wrk_kind;
+          svn_kind_t wrk_kind;
 
           SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
@@ -427,15 +385,15 @@ report_revisions_and_depths(svn_wc__db_t *db,
           if (wrk_status == svn_wc__db_status_added)
             SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             db, this_abspath,
+                                             NULL, NULL, db, this_abspath,
                                              iterpool, iterpool));
 
-          if (restore_files
-              && wrk_status != svn_wc__db_status_added
-              && wrk_status != svn_wc__db_status_deleted
-              && wrk_status != svn_wc__db_status_excluded
-              && wrk_status != svn_wc__db_status_not_present
-              && wrk_status != svn_wc__db_status_absent)
+          if (wrk_status == svn_wc__db_status_normal
+              || wrk_status == svn_wc__db_status_copied
+              || wrk_status == svn_wc__db_status_moved_here
+              || (wrk_kind == svn_kind_dir
+                  && (wrk_status == svn_wc__db_status_added
+                      || wrk_status == svn_wc__db_status_incomplete)))
             {
               svn_node_kind_t dirent_kind;
 
@@ -462,9 +420,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
       else
         {
-          const char *childname = svn_relpath_is_child(dir_repos_relpath,
-                                                       ths->repos_relpath,
-                                                       NULL);
+          const char *childname
+            = svn_relpath_skip_ancestor(dir_repos_relpath, ths->repos_relpath);
 
           if (childname == NULL || strcmp(childname, child) != 0)
             {
@@ -476,30 +433,16 @@ report_revisions_and_depths(svn_wc__db_t *db,
       if (ths->depth == svn_depth_unknown)
         ths->depth = svn_depth_infinity;
 
-      /* Obstructed nodes might report SVN_INVALID_REVNUM. Tweak it.
-
-         ### it seems that obstructed nodes should be handled quite a
-         ### bit differently. maybe reported as missing, like not-present
-         ### or absent nodes?  */
-      if (!SVN_IS_VALID_REVNUM(ths->revnum))
-        ths->revnum = dir_rev;
-
-      /*** File Externals **/
-      if (ths->update_root)
-        {
-          /* File externals are ... special.  We ignore them. */;
-        }
-
       /*** Files ***/
-      else if (ths->kind == svn_wc__db_kind_file ||
-               ths->kind == svn_wc__db_kind_symlink)
+      if (ths->kind == svn_kind_file ||
+               ths->kind == svn_kind_symlink)
         {
           if (report_everything)
             {
               /* Report the file unconditionally, one way or another. */
               if (this_switched)
                 SVN_ERR(reporter->link_path(report_baton,
-                                            this_path,
+                                            this_report_relpath,
                                             svn_path_url_add_component2(
                                                 dir_repos_root,
                                                 ths->repos_relpath, iterpool),
@@ -510,7 +453,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton,
-                                           this_path,
+                                           this_report_relpath,
                                            ths->revnum,
                                            ths->depth,
                                            FALSE,
@@ -521,7 +464,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
           /* Possibly report a disjoint URL ... */
           else if (this_switched)
             SVN_ERR(reporter->link_path(report_baton,
-                                        this_path,
+                                        this_report_relpath,
                                         svn_path_url_add_component2(
                                                 dir_repos_root,
                                                 ths->repos_relpath, iterpool),
@@ -536,7 +479,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                    || ths->lock
                    || dir_depth == svn_depth_empty)
             SVN_ERR(reporter->set_path(report_baton,
-                                       this_path,
+                                       this_report_relpath,
                                        ths->revnum,
                                        ths->depth,
                                        FALSE,
@@ -545,7 +488,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
         } /* end file case */
 
       /*** Directories (in recursive mode) ***/
-      else if (ths->kind == svn_wc__db_kind_dir
+      else if (ths->kind == svn_kind_dir
                && (depth > svn_depth_files
                    || depth == svn_depth_unknown))
         {
@@ -554,6 +497,16 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
           is_incomplete = (ths->status == svn_wc__db_status_incomplete);
           start_empty = is_incomplete;
+
+          /* When a <= 1.6 working copy is upgraded without some of its
+             subdirectories we miss some information in the database. If we
+             report the revision as -1, the update editor will receive an
+             add_directory() while it still knows the directory.
+
+             This would raise strange tree conflicts and probably assertions
+             as it would a BASE vs BASE conflict */
+          if (is_incomplete && !SVN_IS_VALID_REVNUM(ths->revnum))
+            ths->revnum = dir_rev;
 
           if (depth_compatibility_trick
               && ths->depth <= svn_depth_files
@@ -567,7 +520,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               /* Report the dir unconditionally, one way or another... */
               if (this_switched)
                 SVN_ERR(reporter->link_path(report_baton,
-                                            this_path,
+                                            this_report_relpath,
                                             svn_path_url_add_component2(
                                                 dir_repos_root,
                                                 ths->repos_relpath, iterpool),
@@ -579,7 +532,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton,
-                                           this_path,
+                                           this_report_relpath,
                                            ths->revnum,
                                            ths->depth,
                                            start_empty,
@@ -590,7 +543,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
             {
               /* ...or possibly report a disjoint URL ... */
               SVN_ERR(reporter->link_path(report_baton,
-                                          this_path,
+                                          this_report_relpath,
                                           svn_path_url_add_component2(
                                               dir_repos_root,
                                               ths->repos_relpath, iterpool),
@@ -608,7 +561,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                    || (dir_depth == svn_depth_immediates
                        && ths->depth != svn_depth_empty)
                    || (ths->depth < svn_depth_infinity
-                       && depth == svn_depth_infinity))
+                       && SVN_DEPTH_IS_RECURSIVE(depth)))
             {
               /* ... or perhaps just a differing revision, lock token,
                  incomplete subdir, the mere presence of the directory
@@ -617,7 +570,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                  depth-empty.  Also describe shallow subdirs if we are
                  trying to set depth to infinity. */
               SVN_ERR(reporter->set_path(report_baton,
-                                         this_path,
+                                         this_report_relpath,
                                          ths->revnum,
                                          ths->depth,
                                          start_empty,
@@ -637,8 +590,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                 }
 
               SVN_ERR(report_revisions_and_depths(db,
-                                                  anchor_abspath,
-                                                  this_path,
+                                                  this_abspath,
+                                                  this_report_relpath,
                                                   ths->revnum,
                                                   repos_relpath,
                                                   dir_repos_root,
@@ -649,9 +602,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                   depth_compatibility_trick,
                                                   start_empty,
                                                   use_commit_times,
-                                                  ths->had_props,
-                                                  external_func,
-                                                  external_baton,
                                                   cancel_func, cancel_baton,
                                                   notify_func, notify_baton,
                                                   iterpool));
@@ -663,67 +613,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
-}
-
-/* Helper for svn_wc_crawl_revisions5() that finds a base revision for a node
-   that doesn't have one itself. */
-static svn_error_t *
-find_base_rev(svn_revnum_t *base_rev,
-              svn_wc__db_t *db,
-              const char *local_abspath,
-              const char *top_local_abspath,
-              apr_pool_t *pool)
-{
-  const char *op_root_abspath;
-  svn_wc__db_status_t status;
-  svn_boolean_t have_base;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, base_rev, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL,
-                               db, local_abspath, pool, pool));
-
-  if (SVN_IS_VALID_REVNUM(*base_rev))
-      return SVN_NO_ERROR;
-
-  if (have_base)
-    return svn_error_return(
-        svn_wc__db_base_get_info(NULL, NULL, base_rev, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL,
-                                 db, local_abspath, pool, pool));
-
-  if (status == svn_wc__db_status_added)
-    {
-      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,  NULL,
-                                       db, local_abspath, pool, pool));
-
-      return svn_error_return(
-                 find_base_rev(base_rev,
-                               db, svn_dirent_dirname(op_root_abspath, pool),
-                               top_local_abspath,
-                               pool));
-    }
-  else if (status == svn_wc__db_status_deleted)
-    {
-      const char *work_del_abspath;
-       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, &work_del_abspath,
-                                       db, local_abspath, pool, pool));
-
-      if (work_del_abspath != NULL)
-        return svn_error_return(
-                 find_base_rev(base_rev,
-                               db, work_del_abspath,
-                               top_local_abspath,
-                               pool));
-    }
-
-  return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                           _("Can't retrieve base revision for %s"),
-                           svn_dirent_local_style(top_local_abspath, pool));
 }
 
 
@@ -741,8 +630,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
-                        svn_wc_external_update_t external_func,
-                        void *external_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,
@@ -754,65 +641,44 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   svn_revnum_t target_rev = SVN_INVALID_REVNUM;
   svn_boolean_t start_empty;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t target_kind = svn_wc__db_kind_unknown;
-  const char *repos_relpath=NULL, *repos_root_url=NULL;
-  svn_depth_t target_depth = svn_depth_unknown;
-  svn_wc__db_lock_t *target_lock = NULL;
+  svn_kind_t target_kind;
+  const char *repos_relpath, *repos_root_url;
+  svn_depth_t target_depth;
+  svn_wc__db_lock_t *target_lock;
   svn_node_kind_t disk_kind;
-  svn_boolean_t explicit_rev;
-  svn_boolean_t had_props;
+  svn_depth_t report_depth;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* The first thing we do is get the base_rev from the working copy's
-     ROOT_DIRECTORY.  This is the first revnum that entries will be
-     compared to. */
+  /* Get the base rev, which is the first revnum that entries will be
+     compared to, and some other WC info about the target. */
   err = svn_wc__db_base_get_info(&status, &target_kind, &target_rev,
                                  &repos_relpath, &repos_root_url,
                                  NULL, NULL, NULL, NULL, &target_depth,
                                  NULL, NULL, &target_lock,
-                                 &had_props, NULL, NULL,
+                                 NULL, NULL,
                                  db, local_abspath, scratch_pool,
                                  scratch_pool);
 
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
-
-      svn_error_clear(err);
-      had_props = FALSE;
-      SVN_ERR(svn_wc__db_read_kind(&target_kind, db, local_abspath, TRUE,
-                                   scratch_pool));
-
-      if (target_kind == svn_wc__db_kind_file
-          || target_kind == svn_wc__db_kind_symlink)
-        status = svn_wc__db_status_absent; /* Crawl via parent dir */
-      else
-        status = svn_wc__db_status_not_present; /* As checkout */
-    }
-  else if (repos_root_url == NULL || repos_relpath == NULL)
-    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
-  if (status == svn_wc__db_status_not_present
-      || status == svn_wc__db_status_absent
-      || (target_kind == svn_wc__db_kind_dir
-          && status != svn_wc__db_status_normal
+  if (err
+      || (status != svn_wc__db_status_normal
           && status != svn_wc__db_status_incomplete))
     {
-      /* The target does not exist or is a local addition */
+      if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
 
-      if (!SVN_IS_VALID_REVNUM(target_rev))
-        target_rev = 0;
+      svn_error_clear(err);
+
+      /* We don't know about this node, so all we have to do is tell
+         the reporter that we don't know this node.
+
+         But first we have to start the report by sending some basic
+         information for the root. */
 
       if (depth == svn_depth_unknown)
         depth = svn_depth_infinity;
 
-      SVN_ERR(reporter->set_path(report_baton, "", target_rev, depth,
-                                 FALSE,
-                                 NULL,
-                                 scratch_pool));
+      SVN_ERR(reporter->set_path(report_baton, "", 0, depth, FALSE,
+                                 NULL, scratch_pool));
       SVN_ERR(reporter->delete_path(report_baton, "", scratch_pool));
 
       /* Finish the report, which causes the update editor to be
@@ -822,14 +688,13 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       return SVN_NO_ERROR;
     }
 
-  if (!SVN_IS_VALID_REVNUM(target_rev))
-    {
-      SVN_ERR(find_base_rev(&target_rev, db, local_abspath, local_abspath,
-                            scratch_pool));
-      explicit_rev = TRUE;
-    }
-  else
-    explicit_rev = FALSE;
+  if (! repos_relpath)
+    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+  if (target_depth == svn_depth_unknown)
+    target_depth = svn_depth_infinity;
 
   start_empty = (status == svn_wc__db_status_incomplete);
   if (depth_compatibility_trick
@@ -838,9 +703,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
     {
       start_empty = TRUE;
     }
-
-  if (target_depth == svn_depth_unknown)
-    target_depth = svn_depth_infinity;
 
   if (restore_files)
     SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
@@ -852,10 +714,12 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       && disk_kind == svn_node_none)
     {
       svn_wc__db_status_t wrk_status;
-      err = svn_wc__db_read_info(&wrk_status, NULL, NULL, NULL, NULL, NULL,
+      svn_kind_t wrk_kind;
+      err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -864,44 +728,46 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         {
           svn_error_clear(err);
           wrk_status = svn_wc__db_status_not_present;
+          wrk_kind = svn_kind_file;
         }
       else
         SVN_ERR(err);
 
       if (wrk_status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
                                          db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-      if (wrk_status != svn_wc__db_status_added
-          && wrk_status != svn_wc__db_status_deleted
-          && wrk_status != svn_wc__db_status_excluded
-          && wrk_status != svn_wc__db_status_not_present
-          && wrk_status != svn_wc__db_status_absent)
+      if (wrk_status == svn_wc__db_status_normal
+          || wrk_status == svn_wc__db_status_copied
+          || wrk_status == svn_wc__db_status_moved_here
+          || (wrk_kind == svn_kind_dir
+              && (wrk_status == svn_wc__db_status_added
+                  || wrk_status == svn_wc__db_status_incomplete)))
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
-                               target_kind, use_commit_times,
+                               wrk_kind, use_commit_times,
                                notify_func, notify_baton,
                                scratch_pool));
         }
     }
 
   {
-    svn_depth_t anchor_depth = target_depth;
+    report_depth = target_depth;
 
-    if (honor_depth_exclude 
+    if (honor_depth_exclude
         && depth != svn_depth_unknown
         && depth < target_depth)
-      anchor_depth = depth;
+      report_depth = depth;
 
     /* The first call to the reporter merely informs it that the
        top-level directory being updated is at BASE_REV.  Its PATH
        argument is ignored. */
-    SVN_ERR(reporter->set_path(report_baton, "", target_rev, anchor_depth,
+    SVN_ERR(reporter->set_path(report_baton, "", target_rev, report_depth,
                                start_empty, NULL, scratch_pool));
   }
-  if (target_kind == svn_wc__db_kind_dir)
+  if (target_kind == svn_kind_dir)
     {
       if (depth != svn_depth_empty)
         {
@@ -913,15 +779,13 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                             target_rev,
                                             repos_relpath,
                                             repos_root_url,
-                                            target_depth,
+                                            report_depth,
                                             reporter, report_baton,
                                             restore_files, depth,
                                             honor_depth_exclude,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
-                                            had_props,
-                                            external_func, external_baton,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
                                             scratch_pool);
@@ -930,10 +794,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         }
     }
 
-  else if (target_kind == svn_wc__db_kind_file ||
-           target_kind == svn_wc__db_kind_symlink)
+  else if (target_kind == svn_kind_file || target_kind == svn_kind_symlink)
     {
-      svn_boolean_t skip_set_path  = FALSE;
       const char *parent_abspath, *base;
       svn_wc__db_status_t parent_status;
       const char *parent_repos_relpath;
@@ -946,7 +808,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       err = svn_wc__db_base_get_info(&parent_status, NULL, NULL,
                                      &parent_repos_relpath, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL,
                                      db, parent_abspath,
                                      scratch_pool, scratch_pool);
 
@@ -969,16 +831,14 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                                     repos_relpath,
                                                     scratch_pool),
                                     target_rev,
-                                    target_depth,
+                                    svn_depth_infinity,
                                     FALSE,
                                     target_lock ? target_lock->token : NULL,
                                     scratch_pool);
           if (err)
             goto abort_report;
-          skip_set_path = TRUE;
         }
-
-      if (!skip_set_path && (explicit_rev || target_lock))
+      else if (target_lock)
         {
           /* If this entry is a file node, we just want to report that
              node's revision.  Since we are looking at the actual target
@@ -986,7 +846,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
           err = reporter->set_path(report_baton, "", target_rev,
-                                   target_depth,
+                                   svn_depth_infinity,
                                    FALSE,
                                    target_lock ? target_lock->token : NULL,
                                    scratch_pool);
@@ -996,7 +856,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  return svn_error_return(reporter->finish_report(report_baton, scratch_pool));
+  return svn_error_trace(reporter->finish_report(report_baton, scratch_pool));
 
  abort_report:
   /* Clean up the fs transaction. */
@@ -1005,7 +865,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       fserr = svn_error_quick_wrap(fserr, _("Error aborting report"));
       svn_error_compose(err, fserr);
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 /*** Copying stream ***/
@@ -1250,21 +1110,12 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                         NULL, NULL,
                         scratch_pool, scratch_pool);
 
-  /* Close the two streams to force writing the digest,
-     if we already have an error, ignore this one. */
-  if (err)
-    {
-      svn_error_clear(svn_stream_close(base_stream));
-      svn_error_clear(svn_stream_close(local_stream));
-    }
-  else
-    {
-      SVN_ERR(svn_stream_close(base_stream));
-      SVN_ERR(svn_stream_close(local_stream));
-    }
+  /* Close the two streams to force writing the digest */
+  err = svn_error_compose_create(err, svn_stream_close(base_stream));
+  err = svn_error_compose_create(err, svn_stream_close(local_stream));
 
-  /* If we have an error, it may be caused by a corrupt text base.
-     Check the checksum and discard `err' if they don't match. */
+  /* If we have an error, it may be caused by a corrupt text base,
+     so check the checksum. */
   if (expected_md5_checksum && verify_checksum
       && !svn_checksum_match(expected_md5_checksum, verify_checksum))
     {
@@ -1280,19 +1131,20 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          investigate.  Other commands could be affected,
          too, such as `svn diff'.  */
 
-      /* Deliberately ignore errors; the error about the
-         checksum mismatch is more important to return. */
-      svn_error_clear(err);
       if (tempfile)
-        svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
+        err = svn_error_compose_create(
+                      err,
+                      svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
 
-      return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE,
-            svn_checksum_mismatch_err(expected_md5_checksum, verify_checksum,
+      err = svn_error_compose_create(
+              svn_checksum_mismatch_err(expected_md5_checksum, verify_checksum,
                             scratch_pool,
                             _("Checksum mismatch for text base of '%s'"),
                             svn_dirent_local_style(local_abspath,
                                                    scratch_pool)),
-            NULL);
+              err);
+
+      return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE, err, NULL);
     }
 
   /* Now, handle that delta transmission error if any, so we can stop
@@ -1316,10 +1168,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     }
 
   /* Close the file baton, and get outta here. */
-  return editor->close_file(file_baton,
-                            svn_checksum_to_cstring(local_md5_checksum,
-                                                    scratch_pool),
-                            scratch_pool);
+  return svn_error_trace(
+             editor->close_file(file_baton,
+                                svn_checksum_to_cstring(local_md5_checksum,
+                                                        scratch_pool),
+                                scratch_pool));
 }
 
 svn_error_t *
@@ -1352,7 +1205,7 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   apr_array_header_t *propmods;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, iterpool));
 
@@ -1367,7 +1220,7 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      if (kind == svn_wc__db_kind_file)
+      if (kind == svn_kind_file)
         SVN_ERR(editor->change_file_prop(baton, p->name, p->value,
                                          iterpool));
       else

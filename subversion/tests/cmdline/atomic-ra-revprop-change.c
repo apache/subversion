@@ -178,7 +178,7 @@ change_rev_prop(const char *url,
                                 "An error was expected but not seen");
       else
       	/* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
-      	return svn_error_return(err);
+      	return svn_error_trace(err);
     }
   else
     /* Running under --server-minor-version? */

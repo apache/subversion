@@ -53,13 +53,6 @@ const char **test_argv;
 /* Test option: Print more output */
 static svn_boolean_t verbose_mode = FALSE;
 
-/* Test option: Trap SVN_ERR_ASSERT failures in the code under test. Default
- * is false so the test can easily be run in a debugger with the debugger
- * catching the assertion failure. Test suites should enable this in order
- * to be able to continue with other sub-tests and report the results even
- * when a test hits an assertion failure. */
-static svn_boolean_t trap_assertion_failures = FALSE;
-
 /* Test option: Print only unexpected results */
 static svn_boolean_t quiet_mode = FALSE;
 
@@ -79,7 +72,6 @@ enum {
   fstype_opt,
   list_opt,
   verbose_opt,
-  trap_assert_opt,
   quiet_opt,
   config_opt,
   server_minor_version_opt,
@@ -106,8 +98,6 @@ static const apr_getopt_option_t cl_options[] =
   {"server-minor-version", server_minor_version_opt, 1,
                     N_("set the minor version for the server ('3', '4',\n"
                        "'5', or '6')")},
-  {"trap-assertion-failures", trap_assert_opt, 0,
-                    N_("catch and report SVN_ERR_ASSERT failures")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {"allow-segfaults", allow_segfault_opt, 0,
@@ -395,6 +385,8 @@ main(int argc, const char *argv[])
 
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
 
+  os->interleave = TRUE; /* Let options and arguments be interleaved */
+
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr(argv[0], '/');
   if (prog_name)
@@ -460,9 +452,6 @@ main(int argc, const char *argv[])
         case verbose_opt:
           verbose_mode = TRUE;
           break;
-        case trap_assert_opt:
-          trap_assertion_failures = TRUE;
-          break;
         case quiet_opt:
           quiet_mode = TRUE;
           break;
@@ -504,7 +493,7 @@ main(int argc, const char *argv[])
   cleanup_pool = svn_pool_create(pool);
   test_pool = svn_pool_create(pool);
 
-  if (trap_assertion_failures)
+  if (!allow_segfaults)
     svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
 
   if (argc >= 2)  /* notice command-line arguments */

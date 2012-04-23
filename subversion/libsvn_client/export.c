@@ -241,7 +241,7 @@ copy_one_versioned_file(const char *from_abspath,
          details into the destination stream. */
       SVN_ERR(svn_subst_create_specialfile(&dst_stream, to_abspath,
                                            scratch_pool, scratch_pool));
-      return svn_error_return(
+      return svn_error_trace(
         svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool));
     }
 
@@ -448,7 +448,7 @@ copy_versioned_files(const char *from_abspath,
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
-            return svn_error_return(err);
+            return svn_error_trace(err);
           if (! force)
             SVN_ERR_W(err, _("Destination directory exists, and will not be "
                              "overwritten unless forced"));
@@ -505,10 +505,20 @@ copy_versioned_files(const char *from_abspath,
           else if (child_kind == svn_node_file
                    && depth >= svn_depth_files)
             {
-              SVN_ERR(copy_one_versioned_file(child_abspath, target_abspath,
-                                              ctx, revision,
-                                              native_eol, ignore_keywords,
-                                              iterpool));
+              svn_node_kind_t external_kind;
+
+              SVN_ERR(svn_wc__read_external_info(&external_kind,
+                                                 NULL, NULL, NULL,
+                                                 NULL, ctx->wc_ctx,
+                                                 child_abspath,
+                                                 child_abspath, TRUE,
+                                                 pool, pool));
+
+              if (external_kind != svn_node_file)
+                SVN_ERR(copy_one_versioned_file(child_abspath, target_abspath,
+                                                ctx, revision,
+                                                native_eol, ignore_keywords,
+                                                iterpool));
             }
         }
 
@@ -569,6 +579,21 @@ copy_versioned_files(const char *from_abspath,
     }
   else if (from_kind == svn_node_file)
     {
+      svn_node_kind_t to_kind;
+
+      SVN_ERR(svn_io_check_path(to_abspath, &to_kind, pool));
+
+      if ((to_kind == svn_node_file || to_kind == svn_node_unknown) && ! force)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Destination file '%s' exists, and "
+                                   "will not be overwritten unless forced"),
+                                 svn_dirent_local_style(to_abspath, pool));
+      else if (to_kind == svn_node_dir)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Destination '%s' exists. Cannot "
+                                   "overwrite directory with non-directory"),
+                                 svn_dirent_local_style(to_abspath, pool));
+
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx,
                                       revision, native_eol, ignore_keywords,
                                       pool));
@@ -818,7 +843,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       svn_error_clear(svn_io_remove_file2(hb->tmppath, TRUE, hb->pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -1014,7 +1039,6 @@ svn_client_export5(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  const char *url;
   svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
 
   SVN_ERR_ASSERT(peg_revision != NULL);
@@ -1031,19 +1055,16 @@ svn_client_export5(svn_revnum_t *result_rev,
   if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
+      const char *url;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
-      const char *repos_root_url;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                                &url, from_path_or_url, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
-
-      /* Get the repository root. */
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
       eb->root_path = to_path;
       eb->root_url = url;
@@ -1064,6 +1085,7 @@ svn_client_export5(svn_revnum_t *result_rev,
           apr_hash_t *props;
           apr_hash_index_t *hi;
           struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
+          svn_node_kind_t to_kind;
 
           if (svn_path_is_empty(to_path))
             {
@@ -1080,6 +1102,19 @@ svn_client_export5(svn_revnum_t *result_rev,
               eb->root_path = to_path;
             }
 
+          SVN_ERR(svn_io_check_path(to_path, &to_kind, pool));
+
+          if ((to_kind == svn_node_file || to_kind == svn_node_unknown) &&
+              ! overwrite)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Destination file '%s' exists, and "
+                                       "will not be overwritten unless forced"),
+                                     svn_dirent_local_style(to_path, pool));
+          else if (to_kind == svn_node_dir)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Destination '%s' exists. Cannot "
+                                       "overwrite directory with non-directory"),
+                                     svn_dirent_local_style(to_path, pool));
 
           /* Since you cannot actually root an editor at a file, we
            * manually drive a few functions of our editor. */
@@ -1125,6 +1160,8 @@ svn_client_export5(svn_revnum_t *result_rev,
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor(pool);
           svn_boolean_t use_sleep = FALSE;
+          svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
           editor->set_target_revision = set_target_revision;
           editor->open_root = open_root;
@@ -1143,6 +1180,9 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                     &edit_baton,
                                                     pool));
 
+          SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
+                                           export_editor, edit_baton,
+                                           shim_callbacks, pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,
@@ -1180,14 +1220,17 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           if (! ignore_externals && depth == svn_depth_infinity)
             {
+              const char *repos_root_url;
               const char *to_abspath;
 
+              SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
               SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
-              SVN_ERR(svn_client__fetch_externals(eb->externals,
-                                                  from_path_or_url, to_abspath,
-                                                  repos_root_url, depth, TRUE,
-                                                  native_eol, &use_sleep,
-                                                  ctx, pool));
+              SVN_ERR(svn_client__export_externals(eb->externals,
+                                                   from_path_or_url,
+                                                   to_abspath, repos_root_url,
+                                                   depth, native_eol,
+                                                   ignore_keywords, &use_sleep,
+                                                   ctx, pool));
             }
         }
       else if (kind == svn_node_none)

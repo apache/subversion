@@ -38,11 +38,32 @@
 #include "private/svn_wc_private.h"
 
 
-/* Helper: build an svn_info_t *INFO struct from svn_dirent_t DIRENT
+svn_client_info2_t *
+svn_client_info2_dup(const svn_client_info2_t *info,
+                     apr_pool_t *pool)
+{
+  svn_client_info2_t *new_info = apr_pmemdup(pool, info, sizeof(*new_info));
+
+  if (new_info->URL)
+    new_info->URL = apr_pstrdup(pool, info->URL);
+  if (new_info->repos_root_URL)
+    new_info->repos_root_URL = apr_pstrdup(pool, info->repos_root_URL);
+  if (new_info->repos_UUID)
+    new_info->repos_UUID = apr_pstrdup(pool, info->repos_UUID);
+  if (info->last_changed_author)
+    new_info->last_changed_author = apr_pstrdup(pool, info->last_changed_author);
+  if (new_info->lock)
+    new_info->lock = svn_lock_dup(info->lock, pool);
+  if (new_info->wc_info)
+    new_info->wc_info = svn_wc_info_dup(info->wc_info, pool);
+  return new_info;
+}
+
+/* Set *INFO to a new info struct built from DIRENT
    and (possibly NULL) svn_lock_t LOCK, all allocated in POOL.
    Pointer fields are copied by reference, not dup'd. */
 static svn_error_t *
-build_info_from_dirent(svn_info2_t **info,
+build_info_from_dirent(svn_client_info2_t **info,
                        const svn_dirent_t *dirent,
                        svn_lock_t *lock,
                        const char *URL,
@@ -51,7 +72,7 @@ build_info_from_dirent(svn_info2_t **info,
                        const char *repos_root,
                        apr_pool_t *pool)
 {
-  svn_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  svn_client_info2_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
 
   tmpinfo->URL                  = URL;
   tmpinfo->rev                  = revision;
@@ -95,7 +116,7 @@ push_dir_info(svn_ra_session_t *ra_session,
               svn_revnum_t rev,
               const char *repos_UUID,
               const char *repos_root,
-              svn_info_receiver2_t receiver,
+              svn_client_info_receiver2_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
               svn_client_ctx_t *ctx,
@@ -113,7 +134,7 @@ push_dir_info(svn_ra_session_t *ra_session,
     {
       const char *path, *URL, *fs_path;
       svn_lock_t *lock;
-      svn_info2_t *info;
+      svn_client_info2_t *info;
       const char *name = svn__apr_hash_index_key(hi);
       svn_dirent_t *the_ent = svn__apr_hash_index_val(hi);
 
@@ -124,8 +145,8 @@ push_dir_info(svn_ra_session_t *ra_session,
 
       path = svn_relpath_join(dir, name, subpool);
       URL = svn_path_url_add_component2(session_URL, name, subpool);
-      fs_path = svn_fspath__canonicalize(svn_uri_is_child(repos_root, URL,
-                                                          subpool), subpool);
+      fs_path = svn_fspath__canonicalize(
+                  svn_uri_skip_ancestor(repos_root, URL, subpool), subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 
@@ -165,20 +186,17 @@ same_resource_in_head(svn_boolean_t *same_p,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_opt_revision_t start_rev, end_rev, peg_rev;
-  svn_opt_revision_t *ignored_rev;
-  const char *head_url, *ignored_url;
+  svn_opt_revision_t start_rev, peg_rev;
+  const char *head_url;
 
   start_rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_number;
   peg_rev.value.number = rev;
-  end_rev.kind = svn_opt_revision_unspecified;
 
-  err = svn_client__repos_locations(&head_url, &ignored_rev,
-                                    &ignored_url, &ignored_rev,
+  err = svn_client__repos_locations(&head_url, NULL, NULL, NULL,
                                     ra_session,
                                     url, &peg_rev,
-                                    &start_rev, &end_rev,
+                                    &start_rev, NULL,
                                     ctx, pool);
   if (err &&
       ((err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES) ||
@@ -198,28 +216,136 @@ same_resource_in_head(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
+/* A baton for wc_info_receiver(), containing the wrapped receiver. */
+typedef struct wc_info_receiver_baton_t
+{
+  svn_client_info_receiver2_t client_receiver_func;
+  void *client_receiver_baton;
+} wc_info_receiver_baton_t;
+
+/* A receiver for WC info, implementing svn_client_info_receiver2_t.
+ * Convert the WC info to client info and pass it to the client info
+ * receiver (BATON->client_receiver_func with BATON->client_receiver_baton). */
+static svn_error_t *
+wc_info_receiver(void *baton,
+                 const char *abspath_or_url,
+                 const svn_wc__info2_t *wc_info,
+                 apr_pool_t *scratch_pool)
+{
+  wc_info_receiver_baton_t *b = baton;
+  svn_client_info2_t client_info;
+
+  /* Make a shallow copy in CLIENT_INFO of the contents of WC_INFO. */
+  client_info.repos_root_URL = wc_info->repos_root_URL;
+  client_info.repos_UUID = wc_info->repos_UUID;
+  client_info.rev = wc_info->rev;
+  client_info.URL = wc_info->URL;
+
+  client_info.kind = wc_info->kind;
+  client_info.size = wc_info->size;
+  client_info.last_changed_rev = wc_info->last_changed_rev;
+  client_info.last_changed_date = wc_info->last_changed_date;
+  client_info.last_changed_author = wc_info->last_changed_author;
+
+  client_info.lock = wc_info->lock;
+
+  client_info.wc_info = wc_info->wc_info;
+
+  return b->client_receiver_func(b->client_receiver_baton,
+                                 abspath_or_url, &client_info, scratch_pool);
+}
+
+/* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
+static svn_error_t *
+ra_stat_compatible(svn_ra_session_t *ra_session,
+                   svn_revnum_t rev,
+                   svn_dirent_t **dirent_p,
+                   apr_uint32_t dirent_fields,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  const char *repos_root_URL, *url;
+  svn_error_t *err;
+  svn_dirent_t *the_ent;
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &url, pool));
+
+  err = svn_ra_stat(ra_session, "", rev, &the_ent, pool);
+
+  /* svn_ra_stat() will work against old versions of mod_dav_svn, but
+     not old versions of svnserve.  In the case of a pre-1.2 svnserve,
+     catch the specific error it throws:*/
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
+      svn_node_kind_t url_kind;
+      svn_ra_session_t *parent_ra_session;
+      apr_hash_t *parent_ents;
+      const char *parent_url, *base_name;
+
+      if (strcmp(url, repos_root_URL) == 0)
+        {
+          /* In this universe, there's simply no way to fetch
+             information about the repository's root directory! */
+          return err;
+        }
+
+      svn_error_clear(err);
+
+      SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));
+      if (url_kind == svn_node_none)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("URL '%s' non-existent in revision %ld"),
+                                 url, rev);
+
+      /* Open a new RA session to the item's parent. */
+      svn_uri_split(&parent_url, &base_name, url, pool);
+      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session, NULL,
+                                                   parent_url, NULL,
+                                                   NULL, FALSE, TRUE,
+                                                   ctx, pool));
+
+      /* Get all parent's entries, and find the item's dirent in the hash. */
+      SVN_ERR(svn_ra_get_dir2(parent_ra_session, &parent_ents, NULL, NULL,
+                              "", rev, dirent_fields, pool));
+      the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
+      if (the_ent == NULL)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("URL '%s' non-existent in revision %ld"),
+                                 url, rev);
+    }
+  else if (err)
+    {
+      return svn_error_trace(err);
+    }
+
+  *dirent_p = the_ent;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 svn_info_receiver2_t receiver,
-                 void *receiver_baton,
                  svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
                  const apr_array_header_t *changelists,
+                 svn_client_info_receiver2_t receiver,
+                 void *receiver_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session, *parent_ra_session;
+  svn_ra_session_t *ra_session;
   svn_revnum_t rev;
   const char *url;
-  svn_node_kind_t url_kind;
   const char *repos_root_URL, *repos_UUID;
   svn_lock_t *lock;
   svn_boolean_t related;
-  apr_hash_t *parent_ents;
-  const char *parent_url, *base_name;
+  const char *base_name;
   svn_dirent_t *the_ent;
-  svn_info2_t *info;
+  svn_client_info2_t *info;
   svn_error_t *err;
 
   if (depth == svn_depth_unknown)
@@ -231,9 +357,11 @@ svn_client_info3(const char *abspath_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      return svn_error_return(
+      wc_info_receiver_baton_t b = { receiver, receiver_baton };
+      return svn_error_trace(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
-                         receiver, receiver_baton, changelists,
+                        fetch_excluded, fetch_actual_only, changelists,
+                         wc_info_receiver, &b,
                          ctx->cancel_func, ctx->cancel_baton, pool));
     }
 
@@ -250,60 +378,30 @@ svn_client_info3(const char *abspath_or_url,
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
-  svn_uri_split(&parent_url, &base_name, url, pool);
+  svn_uri_split(NULL, &base_name, url, pool);
 
   /* Get the dirent for the URL itself. */
-  err = svn_ra_stat(ra_session, "", rev, &the_ent, pool);
-
-  /* svn_ra_stat() will work against old versions of mod_dav_svn, but
-     not old versions of svnserve.  In the case of a pre-1.2 svnserve,
-     catch the specific error it throws:*/
+  err = ra_stat_compatible(ra_session, rev, &the_ent, DIRENT_FIELDS,
+                           ctx, pool);
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
-      /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
       svn_error_clear(err);
 
-      if (strcmp(url, repos_root_URL) == 0)
-        {
-          /* In this universe, there's simply no way to fetch
-             information about the repository's root directory!
-             If we're recursing, degrade gracefully: rather than
-             throw an error, return no information about the
-             repos root. */
-          if (depth > svn_depth_empty)
-            goto pre_1_2_recurse;
+      /* If we're recursing, degrade gracefully: rather than
+         throw an error, return no information about the
+         repos root. */
+      if (depth > svn_depth_empty)
+        goto pre_1_2_recurse;
 
-          /* Otherwise, we really are stuck.  Better tell the user
-             what's going on. */
-          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                   _("Server does not support retrieving "
-                                     "information about the repository root"));
-        }
-
-      SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));
-      if (url_kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision %ld"),
-                                 url, rev);
-
-      /* Open a new RA session to the item's parent. */
-      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session, NULL,
-                                                   parent_url, NULL,
-                                                   NULL, FALSE, TRUE,
-                                                   ctx, pool));
-
-      /* Get all parent's entries, and find the item's dirent in the hash. */
-      SVN_ERR(svn_ra_get_dir2(parent_ra_session, &parent_ents, NULL, NULL,
-                              "", rev, DIRENT_FIELDS, pool));
-      the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
-      if (the_ent == NULL)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision %ld"),
-                                 url, rev);
+      /* Otherwise, we really are stuck.  Better tell the user
+         what's going on. */
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Server does not support retrieving "
+                                 "information about the repository root"));
     }
   else if (err)
     {
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   if (! the_ent)
@@ -333,7 +431,7 @@ svn_client_info3(const char *abspath_or_url,
           lock = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   else
     lock = NULL;
@@ -363,7 +461,7 @@ pre_1_2_recurse:
               locks = apr_hash_make(pool); /* use an empty hash */
             }
           else if (err)
-            return svn_error_return(err);
+            return svn_error_trace(err);
         }
       else
         locks = apr_hash_make(pool); /* use an empty hash */
@@ -377,40 +475,29 @@ pre_1_2_recurse:
   return SVN_NO_ERROR;
 }
 
-svn_info_t *
-svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
+
+svn_error_t *
+svn_client_get_wc_root(const char **wcroot_abspath,
+                       const char *local_abspath,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  svn_info_t *dupinfo = apr_palloc(pool, sizeof(*dupinfo));
+  return svn_wc__get_wc_root(wcroot_abspath, ctx->wc_ctx, local_abspath,
+                             result_pool, scratch_pool);
+}
 
-  /* Perform a trivial copy ... */
-  *dupinfo = *info;
 
-  /* ...and then re-copy stuff that needs to be duped into our pool. */
-  if (info->URL)
-    dupinfo->URL = apr_pstrdup(pool, info->URL);
-  if (info->repos_root_URL)
-    dupinfo->repos_root_URL = apr_pstrdup(pool, info->repos_root_URL);
-  if (info->repos_UUID)
-    dupinfo->repos_UUID = apr_pstrdup(pool, info->repos_UUID);
-  if (info->last_changed_author)
-    dupinfo->last_changed_author = apr_pstrdup(pool,
-                                               info->last_changed_author);
-  if (info->lock)
-    dupinfo->lock = svn_lock_dup(info->lock, pool);
-  if (info->copyfrom_url)
-    dupinfo->copyfrom_url = apr_pstrdup(pool, info->copyfrom_url);
-  if (info->checksum)
-    dupinfo->checksum = apr_pstrdup(pool, info->checksum);
-  if (info->conflict_old)
-    dupinfo->conflict_old = apr_pstrdup(pool, info->conflict_old);
-  if (info->conflict_new)
-    dupinfo->conflict_new = apr_pstrdup(pool, info->conflict_new);
-  if (info->conflict_wrk)
-    dupinfo->conflict_wrk = apr_pstrdup(pool, info->conflict_wrk);
-  if (info->prejfile)
-    dupinfo->prejfile = apr_pstrdup(pool, info->prejfile);
-  if (info->wcroot_abspath)
-    dupinfo->wcroot_abspath = apr_pstrdup(pool, info->wcroot_abspath);
-
-  return dupinfo;
+/* NOTE: This function was requested by the TortoiseSVN project.  See
+   issue #3927. */
+svn_error_t *
+svn_client_min_max_revisions(svn_revnum_t *min_revision,
+                             svn_revnum_t *max_revision,
+                             const char *local_abspath,
+                             svn_boolean_t committed,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool)
+{
+  return svn_wc__min_max_revisions(min_revision, max_revision, ctx->wc_ctx,
+                                   local_abspath, committed, scratch_pool);
 }

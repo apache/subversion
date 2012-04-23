@@ -97,6 +97,19 @@ svn_prop_hash_to_array(apr_hash_t *hash,
                        apr_pool_t *pool);
 
 /**
+ * Given an array of svn_prop_t items, return a hash mapping const char *
+ * property names to const svn_string_t * values.
+ *
+ * @warning The behaviour on #svn_prop_t objects with a @c NULL @c
+ * svn_prop_t.value member is undefined.
+ *
+ * @since New in 1.7.
+ */
+apr_hash_t *
+svn_prop_array_to_hash(const apr_array_header_t *properties,
+                       apr_pool_t *result);
+
+/**
  * Creates a deep copy of @a hash (keys <tt>const char *</tt> and
  * values <tt>const svn_string_t</tt>) in @a pool.
  *
@@ -109,7 +122,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
 /**
  * Return the value of property @a prop_name as it is in @a properties,
  * with values <tt>const svn_string_t</tt>. If @a prop_name is not
- * in @a properties or @ properties is NULL, return NULL.
+ * in @a properties or @a properties is NULL, return NULL.
  *
  * @since New in 1.7.
  */

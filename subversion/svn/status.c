@@ -68,8 +68,15 @@ combined_status(const svn_client_status_t *status)
 
   switch (status->node_status)
     {
-      case svn_wc_status_modified:
       case svn_wc_status_conflicted:
+        if (!status->versioned && status->conflicted)
+          {
+            /* Report unversioned tree conflict victims as missing: '!' */
+            new_status = svn_wc_status_missing;
+            break;
+          }
+        /* fall through */
+      case svn_wc_status_modified:
         /* This value might be the property status */
         new_status = status->text_status;
         break;
@@ -117,6 +124,65 @@ generate_status_desc(enum svn_wc_status_kind status)
     }
 }
 
+/* Make a relative path containing '..' elements as needed.
+   RELATIVE_TO_PATH must be the path to a directory (not a file!) and
+   TARGET_PATH must be the path to any file or directory. Both
+   RELATIVE_TO_PATH and TARGET_PATH must be based on the same parent path,
+   i.e. they can either both be absolute or they can both be relative to the
+   same parent directory. Both paths are expected to be canonical.
+   
+   If above conditions are met, a relative path that leads to TARGET_ABSPATH
+   from RELATIVE_TO_PATH is returned, but there is no error checking involved.
+   
+   The returned path is allocated from RESULT_POOL, all other allocations are
+   made in SCRATCH_POOL. */
+static const char *
+make_relpath(const char *relative_to_path,
+             const char *target_path,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  const char *la;
+  const char *parent_dir_els = "";
+
+  /* An example:
+   *  relative_to_path = /a/b/c
+   *  target_path      = /a/x/y/z
+   *  result           = ../../x/y/z 
+   *
+   * Another example (Windows specific):
+   *  relative_to_path = F:/wc
+   *  target_path      = C:/wc
+   *  result           = C:/wc
+   */
+
+  /* Skip the common ancestor of both paths, here '/a'. */
+  la = svn_dirent_get_longest_ancestor(relative_to_path, target_path,
+                                       scratch_pool);
+  if (*la == '\0')
+    {
+      /* Nothing in common: E.g. C:/ vs F:/ on Windows */
+      return apr_pstrdup(result_pool, target_path);
+    }
+  relative_to_path = svn_dirent_skip_ancestor(la, relative_to_path);
+  target_path = svn_dirent_skip_ancestor(la, target_path);
+
+  /* In above example, we'd now have:
+   *  relative_to_path = b/c
+   *  target_path      = x/y/z */
+
+  /* Count the elements of relative_to_path and prepend as many '..' elements
+   * to target_path. */
+  while (*relative_to_path)
+    {
+      svn_dirent_split(&relative_to_path, NULL, relative_to_path,
+                       scratch_pool);
+      parent_dir_els = svn_dirent_join(parent_dir_els, "..", scratch_pool);
+    }
+
+  return svn_dirent_join(parent_dir_els, target_path, result_pool);
+}
+
 
 /* Print STATUS and PATH in a format determined by DETAILED and
    SHOW_LAST_COMMITTED. */
@@ -136,7 +202,16 @@ print_status(const char *path,
   enum svn_wc_status_kind prop_status = status->prop_status;
   char tree_status_code = ' ';
   const char *tree_desc_line = "";
+  const char *moved_from_line = "";
+  const char *moved_to_line = "";
 
+  /* For historic reasons svn ignores the property status for added nodes, even
+     if these nodes were copied and have local property changes.
+
+     Note that it doesn't do this on replacements, or children of copies.
+
+     ### Our test suite would catch more errors if we reported property
+         changes on copies. */
   if (node_status == svn_wc_status_added)
       prop_status = svn_wc_status_none;
 
@@ -151,22 +226,32 @@ print_status(const char *path,
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
       svn_boolean_t tree_conflicted;
-      svn_error_t *err;
 
-      err = svn_wc_conflicted_p3(&text_conflicted,
-                                 &prop_conflicted,
-                                 &tree_conflicted, ctx->wc_ctx,
-                                 local_abspath, pool);
-
-      if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+      if (status->versioned)
         {
-          svn_error_clear(err);
-          text_conflicted = FALSE;
-          prop_conflicted = FALSE;
-          tree_conflicted = FALSE;
+          svn_error_t *err;
+
+          err = svn_wc_conflicted_p3(&text_conflicted,
+                                     &prop_conflicted,
+                                     &tree_conflicted, ctx->wc_ctx,
+                                     local_abspath, pool);
+
+          if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+            {
+              svn_error_clear(err);
+              text_conflicted = FALSE;
+              prop_conflicted = FALSE;
+              tree_conflicted = FALSE;
+            }
+          else
+            SVN_ERR(err);
         }
       else
-        SVN_ERR(err);
+        {
+          text_conflicted = FALSE;
+          prop_conflicted = FALSE;
+          tree_conflicted = TRUE;
+        }
 
       if (tree_conflicted)
         {
@@ -185,6 +270,36 @@ print_status(const char *path,
         (*text_conflicts)++;
       else if (prop_conflicted)
         (*prop_conflicts)++;
+    }
+
+  /* Note that moved-from and moved-to information is only available in STATUS
+   * for (op-)roots of a move. Those are exactly the nodes we want to show
+   * move info for in 'svn status'. See also comments in svn_wc_status3_t. */
+  if (status->moved_from_abspath || status->moved_to_abspath)
+    {
+      const char *cwd;
+      const char *relpath;
+      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+
+      if (status->moved_from_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          moved_from_line = apr_pstrcat(pool, "\n        > ",
+                                        apr_psprintf(pool, _("moved from %s"),
+                                                     relpath),
+                                        (char *)NULL);
+        }
+
+      if (status->moved_to_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          moved_to_line = apr_pstrcat(pool, "\n        > ",
+                                      apr_psprintf(pool, _("moved to %s"),
+                                                   relpath),
+                                      (char *)NULL);
+        }
     }
 
   if (detailed)
@@ -249,10 +364,10 @@ print_status(const char *path,
 
           SVN_ERR
             (svn_cmdline_printf(pool,
-                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s\n",
+                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s%s%s\n",
                                 generate_status_code(combined_status(status)),
                                 generate_status_code(prop_status),
-                                status->locked ? 'L' : ' ',
+                                status->wc_is_locked ? 'L' : ' ',
                                 status->copied ? '+' : ' ',
                                 generate_switch_column_code(status),
                                 lock_status,
@@ -262,14 +377,16 @@ print_status(const char *path,
                                 commit_rev,
                                 commit_author,
                                 path,
+                                moved_to_line,
+                                moved_from_line,
                                 tree_desc_line));
         }
       else
         SVN_ERR(
-           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s\n",
+           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s%s%s\n",
                               generate_status_code(combined_status(status)),
                               generate_status_code(prop_status),
-                              status->locked ? 'L' : ' ',
+                              status->wc_is_locked ? 'L' : ' ',
                               status->copied ? '+' : ' ',
                               generate_switch_column_code(status),
                               lock_status,
@@ -277,20 +394,24 @@ print_status(const char *path,
                               ood_status,
                               working_rev,
                               path,
+                              moved_to_line,
+                              moved_from_line,
                               tree_desc_line));
     }
   else
     SVN_ERR(
-       svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s\n",
+       svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s%s%s\n",
                           generate_status_code(combined_status(status)),
                           generate_status_code(prop_status),
-                          status->locked ? 'L' : ' ',
+                          status->wc_is_locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
                           generate_switch_column_code(status),
                           ((status->lock)
                            ? 'K' : ' '),
                           tree_status_code,
                           path,
+                          moved_to_line,
+                          moved_from_line,
                           tree_desc_line));
 
   return svn_cmdline_fflush(stdout);
@@ -303,7 +424,7 @@ svn_cl__print_status_xml(const char *path,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   apr_hash_t *att_hash;
   const char *local_abspath = status->local_abspath;
   svn_boolean_t tree_conflicted = FALSE;
@@ -327,7 +448,7 @@ svn_cl__print_status_xml(const char *path,
                      (status->node_status != svn_wc_status_deleted)
                                           ? status->prop_status
                                           : svn_wc_status_none));
-  if (status->locked)
+  if (status->wc_is_locked)
     apr_hash_set(att_hash, "wc-locked", APR_HASH_KEY_STRING, "true");
   if (status->copied)
     apr_hash_set(att_hash, "copied", APR_HASH_KEY_STRING, "true");
@@ -341,6 +462,24 @@ svn_cl__print_status_xml(const char *path,
   if (tree_conflicted)
     apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
                  "true");
+  if (status->moved_from_abspath || status->moved_to_abspath)
+    {
+      const char *cwd;
+      const char *relpath;
+      SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+      if (status->moved_from_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_from_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          apr_hash_set(att_hash, "moved-from", APR_HASH_KEY_STRING, relpath);
+        }
+      if (status->moved_to_abspath)
+        {
+          relpath = make_relpath(cwd, status->moved_to_abspath, pool, pool);
+          relpath = svn_dirent_local_style(relpath, pool);
+          apr_hash_set(att_hash, "moved-to", APR_HASH_KEY_STRING, relpath);
+        }
+    }
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
 
@@ -354,29 +493,7 @@ svn_cl__print_status_xml(const char *path,
     }
 
   if (status->lock)
-    {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock->token);
-
-      /* If lock_owner is NULL, assume WC is corrupt. */
-      if (status->lock->owner)
-        svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                 status->lock->owner);
-      else
-        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                 _("'%s' has lock token, but no lock owner"),
-                                 svn_dirent_local_style(path, pool));
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                               status->lock->comment);
-
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                               svn_time_to_cstring
-                               (status->lock->creation_date, pool));
-
-      svn_xml_make_close_tag(&sb, pool, "lock");
-    }
+    svn_cl__print_xml_lock(&sb, status->lock, pool);
 
   svn_xml_make_close_tag(&sb, pool, "wc-status");
 
@@ -390,33 +507,8 @@ svn_cl__print_status_xml(const char *path,
                             generate_status_desc(status->repos_prop_status),
                             NULL);
       if (status->repos_lock)
-        {
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
+        svn_cl__print_xml_lock(&sb, status->repos_lock, pool);
 
-          svn_cl__xml_tagged_cdata(&sb, pool, "token",
-                                   status->repos_lock->token);
-
-          svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                   status->repos_lock->owner);
-
-          svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                                   status->repos_lock->comment);
-
-          svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                                   svn_time_to_cstring
-                                   (status->repos_lock->creation_date,
-                                    pool));
-
-          if (status->repos_lock->expiration_date != 0)
-            {
-              svn_cl__xml_tagged_cdata(&sb, pool, "expires",
-                                       svn_time_to_cstring
-                                       (status->repos_lock->expiration_date,
-                                        pool));
-            }
-
-          svn_xml_make_close_tag(&sb, pool, "lock");
-        }
       svn_xml_make_close_tag(&sb, pool, "repos-status");
     }
 
@@ -440,7 +532,10 @@ svn_cl__print_status(const char *path,
                      apr_pool_t *pool)
 {
   if (! status
-      || (skip_unrecognized && !(status->versioned || status->conflicted))
+      || (skip_unrecognized
+          && !(status->versioned
+               || status->conflicted
+               || status->node_status == svn_wc_status_external))
       || (status->node_status == svn_wc_status_none
           && status->repos_node_status == svn_wc_status_none))
     return SVN_NO_ERROR;

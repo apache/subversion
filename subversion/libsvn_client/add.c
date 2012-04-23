@@ -47,6 +47,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_magic.h"
 
 #include "svn_private_config.h"
 
@@ -132,6 +133,7 @@ split_props(apr_array_header_t **props,
         }
       else if (property[i] == ';')
         {
+          /* ";;" becomes ";" */
           if (property[i+1] == ';')
             {
               new_prop[j] = ';';
@@ -220,6 +222,7 @@ svn_error_t *
 svn_client__get_auto_props(apr_hash_t **properties,
                            const char **mimetype,
                            const char *path,
+                           svn_magic__cookie_t *magic_cookie,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
@@ -253,6 +256,29 @@ svn_client__get_auto_props(apr_hash_t **properties,
     {
       SVN_ERR(svn_io_detect_mimetype2(&autoprops.mimetype, path,
                                       ctx->mimetypes_map, pool));
+
+      /* If we got no mime-type, or if it is "application/octet-stream",
+       * try to get the mime-type from libmagic. */
+      if (magic_cookie &&
+          (!autoprops.mimetype ||
+           strcmp(autoprops.mimetype, "application/octet-stream") == 0))
+        {
+          const char *magic_mimetype;
+
+         /* Since libmagic usually treats UTF-16 files as "text/plain",
+          * svn_magic__detect_binary_mimetype() will return NULL for such
+          * files. This is fine for now since we currently don't support
+          * UTF-16-encoded text files (issue #2194).
+          * Once we do support UTF-16 this code path will fail to detect
+          * them as text unless the svn_io_detect_mimetype2() call above
+          * returns "text/plain" for them. */
+          SVN_ERR(svn_magic__detect_binary_mimetype(&magic_mimetype,
+                                                    path, magic_cookie,
+                                                    pool, pool));
+          if (magic_mimetype)
+            autoprops.mimetype = magic_mimetype;
+        }
+
       if (autoprops.mimetype)
         apr_hash_set(autoprops.properties, SVN_PROP_MIME_TYPE,
                      strlen(SVN_PROP_MIME_TYPE),
@@ -267,7 +293,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
       if (executable)
         apr_hash_set(autoprops.properties, SVN_PROP_EXECUTABLE,
                      strlen(SVN_PROP_EXECUTABLE),
-                     svn_string_create("", pool));
+                     svn_string_create_empty(pool));
     }
 
   *mimetype = autoprops.mimetype;
@@ -277,6 +303,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
 /* Only call this if the on-disk node kind is a file. */
 static svn_error_t *
 add_file(const char *local_abspath,
+         svn_magic__cookie_t *magic_cookie,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
@@ -297,7 +324,7 @@ add_file(const char *local_abspath,
        we open them to estimate file type.
        That's why we postpone the add until after this step. */
     SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, local_abspath,
-                                       ctx, pool));
+                                       magic_cookie, ctx, pool));
 
   /* Add the file */
   SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
@@ -340,7 +367,7 @@ add_file(const char *local_abspath,
                                              NULL /* changelists */,
                                              NULL, NULL, NULL, NULL,
                                              pool));
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
     }
@@ -368,6 +395,9 @@ add_file(const char *local_abspath,
  * Files and directories that match ignore patterns will not be added unless
  * NO_IGNORE is TRUE.
  *
+ * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
+ * if necessary.
+ *
  * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
  * the user to cancel the operation
  */
@@ -376,6 +406,7 @@ add_dir_recursive(const char *dir_abspath,
                   svn_depth_t depth,
                   svn_boolean_t force,
                   svn_boolean_t no_ignore,
+                  svn_magic__cookie_t *magic_cookie,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *scratch_pool)
 {
@@ -398,7 +429,7 @@ add_dir_recursive(const char *dir_abspath,
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   if (!no_ignore)
     {
@@ -442,12 +473,13 @@ add_dir_recursive(const char *dir_abspath,
             depth_below_here = svn_depth_empty;
 
           SVN_ERR(add_dir_recursive(abspath, depth_below_here,
-                                    force, no_ignore, ctx, iterpool));
+                                    force, no_ignore, magic_cookie,
+                                    ctx, iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
         {
-          err = add_file(abspath, ctx, iterpool);
+          err = add_file(abspath, magic_cookie, ctx, iterpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else
@@ -482,6 +514,9 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   svn_node_kind_t kind;
   svn_error_t *err;
   struct add_with_write_lock_baton *b = baton;
+  svn_magic__cookie_t *magic_cookie;
+
+  svn_magic__init(&magic_cookie, scratch_pool);
 
   if (b->existing_parent_abspath)
     {
@@ -531,16 +566,35 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
       err = add_dir_recursive(b->local_abspath, b->depth,
-                              b->force, b->no_ignore, b->ctx,
+                              b->force, b->no_ignore, magic_cookie, b->ctx,
                               scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(b->local_abspath, b->ctx, scratch_pool);
+    err = add_file(b->local_abspath, magic_cookie, b->ctx, scratch_pool);
   else if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("'%s' not found"),
-                             svn_dirent_local_style(b->local_abspath,
-                                                    scratch_pool));
+    {
+      svn_boolean_t tree_conflicted;
+
+      /* Provide a meaningful error message if the node does not exist
+       * on disk but is a tree conflict victim. */
+      err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+                                 b->ctx->wc_ctx, b->local_abspath,
+                                 scratch_pool);
+      if (err)
+        svn_error_clear(err);
+      else if (tree_conflicted)
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                                 _("'%s' is an existing item in conflict; "
+                                   "please mark the conflict as resolved "
+                                   "before adding a new item here"),
+                                 svn_dirent_local_style(b->local_abspath,
+                                                        scratch_pool));
+
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("'%s' not found"),
+                               svn_dirent_local_style(b->local_abspath,
+                                                      scratch_pool));
+    }
   else
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Unsupported node kind for path '%s'"),
@@ -553,7 +607,7 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -567,16 +621,24 @@ find_existing_parent(const char **existing_parent_abspath,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  int format;
+  svn_node_kind_t kind;
   const char *parent_abspath;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
-  SVN_ERR(svn_wc_check_wc2(&format, wc_ctx, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
 
-  if (format > 0)
+  if (kind == svn_node_dir)
     {
-      *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
-      return SVN_NO_ERROR;
+      svn_boolean_t is_deleted;
+
+      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
+                                             wc_ctx, local_abspath,
+                                             scratch_pool));
+      if (!is_deleted)
+        {
+          *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
+          return SVN_NO_ERROR;
+        }
     }
 
   if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
@@ -848,7 +910,7 @@ mkdir_urls(const apr_array_header_t *urls,
     {
       /* At least try to abort the edit (and fs txn) before throwing err. */
       svn_error_clear(editor->abort_edit(edit_baton, pool));
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   /* Close the edit. */
@@ -889,7 +951,7 @@ svn_client__make_local_parents(const char *path,
       svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 

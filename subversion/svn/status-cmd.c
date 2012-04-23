@@ -106,7 +106,7 @@ print_conflict_stats(struct status_baton *sb, apr_pool_t *pool)
 static svn_error_t *
 print_start_target_xml(const char *target, apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
                         "path", target, NULL);
@@ -122,7 +122,7 @@ static svn_error_t *
 print_finish_target_xml(svn_revnum_t repos_rev,
                         apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   if (SVN_IS_VALID_REVNUM(repos_rev))
     {
@@ -211,7 +211,7 @@ print_status(void *baton,
                                                         &twks->changed_date,
                                                         &twks->changed_author,
                                                         sb->ctx->wc_ctx,
-                                                        local_abspath, 
+                                                        local_abspath,
                                                         sb->cl_pool, pool));
             break;
 
@@ -269,20 +269,13 @@ svn_cl__status(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  /* URLs are invalid input. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target);
-    }
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
@@ -362,7 +355,7 @@ svn_cl__status(apr_getopt_t *os,
       svn_stringbuf_t *buf;
 
       if (opt_state->xml)
-        buf = svn_stringbuf_create("", scratch_pool);
+        buf = svn_stringbuf_create_empty(scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))

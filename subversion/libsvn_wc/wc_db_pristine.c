@@ -32,8 +32,9 @@
 #include "wc-queries.h"
 #include "wc_db_private.h"
 
+#define PRISTINE_STORAGE_EXT ".svn-base"
 #define PRISTINE_STORAGE_RELPATH "pristine"
-#define PRISTINE_TEMPDIR_RELPATH ""
+#define PRISTINE_TEMPDIR_RELPATH "tmp"
 
 
 
@@ -42,7 +43,6 @@
    to hold CHECKSUM's pristine file, relating to the pristine store
    configured for the working copy indicated by PDH. The returned path
    does not necessarily currently exist.
-
 
    Any other allocations are made in SCRATCH_POOL. */
 static svn_error_t *
@@ -62,9 +62,6 @@ get_pristine_fname(const char **pristine_abspath,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  /* ### need to fix this to use a symbol for ".svn". we don't need
-     ### to use join_many since we know "/" is the separator for
-     ### internal canonical paths */
   base_dir_abspath = svn_dirent_join_many(scratch_pool,
                                           wcroot_abspath,
                                           svn_wc_get_adm_dir(scratch_pool),
@@ -79,7 +76,10 @@ get_pristine_fname(const char **pristine_abspath,
   subdir[1] = hexdigest[1];
   subdir[2] = '\0';
 
-  /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
+  hexdigest = apr_pstrcat(scratch_pool, hexdigest, PRISTINE_STORAGE_EXT,
+                          (char *)NULL);
+
+  /* The file is located at DIR/.svn/pristine/XX/XXYYZZ...svn-base */
   *pristine_abspath = svn_dirent_join_many(result_pool,
                                            base_dir_abspath,
                                            subdir,
@@ -300,7 +300,7 @@ typedef struct pristine_install_baton_t
  *
  * This function expects to be executed inside a SQLite txn that has already
  * acquired a 'RESERVED' lock.
- * 
+ *
  * Implements 'notes/wc-ng/pristine-store' section A-3(a).
  * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
@@ -364,7 +364,7 @@ pristine_install_txn(void *baton,
 
       if (err2)
         /* Creating directory didn't work: Return all errors */
-        return svn_error_return(svn_error_compose_create(err, err2));
+        return svn_error_trace(svn_error_compose_create(err, err2));
       else
         /* We could create a directory: retry install */
         svn_error_clear(err);
@@ -408,12 +408,14 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
 
   /* ### this logic assumes that TEMPFILE_ABSPATH follows this pattern:
-     ###   WCROOT_ABSPATH/COMPONENT/TEMPFNAME
+     ###   WCROOT_ABSPATH/COMPONENT/COMPONENT/TEMPFNAME
      ### if we change this (see PRISTINE_TEMPDIR_RELPATH), then this
      ### logic should change.  */
-  wri_abspath = svn_dirent_dirname(svn_dirent_dirname(tempfile_abspath,
-                                                      scratch_pool),
-                                   scratch_pool);
+  wri_abspath = svn_dirent_dirname(
+                    svn_dirent_dirname(
+                        svn_dirent_dirname(tempfile_abspath, scratch_pool),
+                        scratch_pool),
+                    scratch_pool);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
@@ -471,7 +473,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 
@@ -510,7 +512,7 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
   SVN_ERR(svn_sqlite__column_checksum(sha1_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*sha1_checksum)->kind == svn_checksum_sha1);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 

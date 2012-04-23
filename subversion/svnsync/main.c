@@ -32,6 +32,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_string.h"
+#include "svn_version.h"
 
 #include "private/svn_opt_private.h"
 #include "private/svn_ra_private.h"
@@ -66,7 +67,7 @@ enum svnsync__opt {
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
   svnsync_opt_allow_non_empty,
-  svnsync_opt_steal_lock,
+  svnsync_opt_steal_lock
 };
 
 #define SVNSYNC_OPTS_DEFAULT svnsync_opt_non_interactive, \
@@ -184,9 +185,11 @@ static const apr_getopt_option_t svnsync_options[] =
                           "                             "
                           "see --source-password and --sync-password)") },
     {"trust-server-cert", svnsync_opt_trust_server_cert, 0,
-                       N_("accept unknown SSL server certificates without\n"
+                       N_("accept SSL server certificates from unknown\n"
                           "                             "
-                          "prompting (but only with '--non-interactive')") },
+                          "certificate authorities without prompting (but only\n"
+                          "                             "
+                          "with '--non-interactive')") },
     {"source-username", svnsync_opt_source_username, 1,
                        N_("connect to source repository with username ARG") },
     {"source-password", svnsync_opt_source_password, 1,
@@ -757,7 +760,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* If we're doing a partial replay, we have to check first if the server
      supports this. */
-  if (svn_uri_is_child(root_url, baton->from_url, pool))
+  if (strcmp(root_url, baton->from_url) != 0)
     {
       svn_boolean_t server_supports_partial_replay;
       svn_error_t *err = svn_ra_has_capability(from_session,
@@ -765,7 +768,7 @@ do_initialize(svn_ra_session_t *to_session,
                                                SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                                                pool);
       if (err && err->apr_err != SVN_ERR_UNKNOWN_CAPABILITY)
-        return svn_error_return(err);
+        return svn_error_trace(err);
 
       if (err || !server_supports_partial_replay)
         return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, err,
@@ -906,14 +909,17 @@ open_source_session(svn_ra_session_t **from_session,
                     void *baton,
                     apr_pool_t *pool)
 {
+  apr_hash_t *props;
   svn_string_t *from_url_str, *from_uuid_str;
 
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
-                          &from_url_str, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
-                          &from_uuid_str, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                          last_merged_rev, pool));
+  SVN_ERR(svn_ra_rev_proplist(to_session, 0, &props, pool));
+
+  from_url_str = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
+                              APR_HASH_KEY_STRING);
+  from_uuid_str = apr_hash_get(props, SVNSYNC_PROP_FROM_UUID,
+                               APR_HASH_KEY_STRING);
+  *last_merged_rev = apr_hash_get(props, SVNSYNC_PROP_LAST_MERGED_REV,
+                                  APR_HASH_KEY_STRING);
 
   if (! from_url_str || ! from_uuid_str || ! *last_merged_rev)
     return svn_error_create
@@ -1045,6 +1051,8 @@ replay_rev_started(svn_revnum_t revision,
   apr_hash_t *filtered;
   int filtered_count;
   int normalized_count;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                    svn_delta_shim_callbacks_default(pool);
 
   /* We set this property so that if we error out for some reason
      we can later determine where we were in the process of
@@ -1081,7 +1089,7 @@ replay_rev_started(svn_revnum_t revision,
      replay_rev_finished callback. */
   if (! apr_hash_get(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
     apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                 svn_string_create("", pool));
+                 svn_string_create_empty(pool));
 
   /* If necessary, normalize encoding and line ending style. Add the number
      of properties that required EOL normalization to the overall count
@@ -1111,6 +1119,9 @@ replay_rev_started(svn_revnum_t revision,
                                             pool));
   *editor = cancel_editor;
   *edit_baton = cancel_baton;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1630,6 +1641,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
   const char *to_url;
+  apr_hash_t *props;
   svn_string_t *from_url, *from_uuid, *last_merged_rev;
 
   SVN_ERR(svn_opt__args_to_target_array(&targets, os,
@@ -1651,19 +1663,20 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
   baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
   SVN_ERR(open_target_session(&to_session, baton, pool));
 
-  /* Verify that the repos has been initialized for synchronization. */
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
-                          &from_url, pool));
+  SVN_ERR(svn_ra_rev_proplist(to_session, 0, &props, pool));
+
+  from_url = apr_hash_get(props, SVNSYNC_PROP_FROM_URL,
+                          APR_HASH_KEY_STRING);
+
   if (! from_url)
     return svn_error_createf
       (SVN_ERR_BAD_URL, NULL,
        _("Repository '%s' is not initialized for synchronization"), to_url);
 
-  /* Fetch more of the magic properties, which are the source of our info. */
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
-                          &from_uuid, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                          &last_merged_rev, pool));
+  from_uuid = apr_hash_get(props, SVNSYNC_PROP_FROM_UUID,
+                           APR_HASH_KEY_STRING);
+  last_merged_rev = apr_hash_get(props, SVNSYNC_PROP_LAST_MERGED_REV,
+                                 APR_HASH_KEY_STRING);
 
   /* Print the info. */
   SVN_ERR(svn_cmdline_printf(pool, _("Source URL: %s\n"), from_url->data));

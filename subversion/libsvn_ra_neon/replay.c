@@ -25,6 +25,8 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 
+#include "private/svn_string_private.h"
+
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -343,7 +345,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
             if (svn_xml_get_attr_value("del", atts))
               rb->prop_accum = NULL;
             else
-              rb->prop_accum = svn_stringbuf_create("", rb->prop_pool);
+              rb->prop_accum = svn_stringbuf_create_empty(rb->prop_pool);
 
             rb->prop_name = apr_pstrdup(rb->prop_pool, name);
           }
@@ -389,14 +391,13 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     case ELEM_change_dir_prop:
       {
         const svn_string_t *decoded_value;
-        svn_string_t prop;
 
         if (rb->prop_accum)
           {
-            prop.data = rb->prop_accum->data;
-            prop.len = rb->prop_accum->len;
+            const svn_string_t *prop;
 
-            decoded_value = svn_base64_decode_string(&prop, rb->prop_pool);
+            prop = svn_stringbuf__morph_into_string(rb->prop_accum);
+            decoded_value = svn_base64_decode_string(prop, rb->prop_pool);
           }
         else
           decoded_value = NULL; /* It's a delete */
@@ -478,7 +479,7 @@ svn_ra_neon__replay(svn_ra_session_t *session,
   rb.pool = pool;
   rb.dirs = apr_array_make(pool, 5, sizeof(dir_item_t));
   rb.prop_pool = svn_pool_create(pool);
-  rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
+  rb.prop_accum = svn_stringbuf_create_empty(rb.prop_pool);
 
   return svn_ra_neon__parsed_request(ras, "REPORT", ras->url->data, body,
                                      NULL, NULL,

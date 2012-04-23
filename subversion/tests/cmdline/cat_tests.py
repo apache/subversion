@@ -159,8 +159,7 @@ def cat_skip_uncattable(sbox):
                                        'cat', rho_path, new_file_path)
 
   expected_err3 = expected_err1 + expected_err2 + \
-      ".*svn: E200009: Could not cat all targets because some targets " + \
-      "don't exist\n"
+      ".*svn: E200009: Could not cat all targets because some targets"
   expected_err_re = re.compile(expected_err3, re.DOTALL)
 
   exit_code, output, error = svntest.main.run_svn(1, 'cat', rho_path, G_path, new_file_path)
@@ -245,7 +244,7 @@ def cat_non_existing_remote_file(sbox):
   """cat non-existing remote file"""
   sbox.build(create_wc = False)
   non_existing_path = sbox.repo_url + '/non-existing'
-  
+
   expected_err = "svn: warning: W160013: .*not found.*" + \
       non_existing_path.split('/')[1]
 

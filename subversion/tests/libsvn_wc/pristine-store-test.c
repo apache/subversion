@@ -266,7 +266,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
 
 /* Check that the store rejects an attempt to replace an existing pristine
  * text with different text.
- * 
+ *
  * White-box knowledge: The implementation compares the file sizes but
  * doesn't compare the text itself, so in this test we ensure the second
  * text is a different size. */

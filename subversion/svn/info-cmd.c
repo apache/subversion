@@ -77,15 +77,15 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
-/* A callback of type svn_info_receiver_t.
+/* A callback of type svn_client_info_receiver2_t.
    Prints svn info in xml mode to standard out */
 static svn_error_t *
 print_info_xml(void *baton,
                const char *target,
-               const svn_info2_t *info,
+               const svn_client_info2_t *info,
                apr_pool_t *pool)
 {
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   const char *rev_str;
   const char *path_prefix = baton;
 
@@ -94,12 +94,10 @@ print_info_xml(void *baton,
   else
     rev_str = apr_pstrdup(pool, _("Resource is not under version control."));
 
-  if (path_prefix)
-    target = svn_dirent_skip_ancestor(path_prefix, target);
-
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_dirent_local_style(target, pool),
+                        "path", svn_cl__local_style_skip_ancestor(
+                                  path_prefix, target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
@@ -136,8 +134,15 @@ print_info_xml(void *baton,
                                schedule_str(info->wc_info->schedule));
 
       /* "<depth> xx </depth>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "depth",
-                               svn_depth_to_word(info->wc_info->depth));
+      {
+        svn_depth_t depth = info->wc_info->depth;
+
+        /* In the entries world info just passed depth infinity for files */
+        if (depth == svn_depth_unknown && info->kind == svn_node_file)
+          depth = svn_depth_infinity;
+
+        svn_cl__xml_tagged_cdata(&sb, pool, "depth", svn_depth_to_word(depth));
+      }
 
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
@@ -150,21 +155,51 @@ print_info_xml(void *baton,
                                               info->wc_info->copyfrom_rev));
 
       /* "<text-updated> xx </text-updated>" */
-      if (info->wc_info->text_time)
+      if (info->wc_info->recorded_time)
         svn_cl__xml_tagged_cdata(&sb, pool, "text-updated",
-                                 svn_time_to_cstring(info->wc_info->text_time,
-                                                     pool));
+                                 svn_time_to_cstring(
+                                          info->wc_info->recorded_time,
+                                          pool));
 
       /* "<checksum> xx </checksum>" */
       /* ### Print the checksum kind. */
       svn_cl__xml_tagged_cdata(&sb, pool, "checksum",
                                svn_checksum_to_cstring(info->wc_info->checksum,
-                                                       pool)); 
+                                                       pool));
 
       if (info->wc_info->changelist)
         /* "<changelist> xx </changelist>" */
         svn_cl__xml_tagged_cdata(&sb, pool, "changelist",
                                  info->wc_info->changelist);
+
+      if (info->wc_info->moved_from_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_from_abspath);
+
+          /* <moved-from> xx </moved-from> */
+          if (relpath && relpath[0] != '\0')
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-from", relpath);
+          else
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-from",
+                                     info->wc_info->moved_from_abspath);
+        }
+
+      if (info->wc_info->moved_to_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_to_abspath);
+          /* <moved-to> xx </moved-to> */
+          if (relpath && relpath[0] != '\0')
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-to", relpath);
+          else
+            svn_cl__xml_tagged_cdata(&sb, pool, "moved-to",
+                                     info->wc_info->moved_to_abspath);
+        }
 
       /* "</wc-info>" */
       svn_xml_make_close_tag(&sb, pool, "wc-info");
@@ -236,32 +271,7 @@ print_info_xml(void *baton,
     }
 
   if (info->lock)
-    {
-      /* "<lock>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-
-      /* "<token> xx </token>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", info->lock->token);
-
-      /* "<owner> xx </owner>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "owner", info->lock->owner);
-
-      /* "<comment ...> xxxx </comment>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment", info->lock->comment);
-
-      /* "<created> xx </created>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
-                               svn_time_to_cstring
-                               (info->lock->creation_date, pool));
-
-      /* "<expires> xx </expires>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "expires",
-                               svn_time_to_cstring
-                               (info->lock->expiration_date, pool));
-
-      /* "</lock>" */
-      svn_xml_make_close_tag(&sb, pool, "lock");
-    }
+    svn_cl__print_xml_lock(&sb, info->lock, pool);
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");
@@ -270,20 +280,18 @@ print_info_xml(void *baton,
 }
 
 
-/* A callback of type svn_info_receiver_t. */
+/* A callback of type svn_client_info_receiver2_t. */
 static svn_error_t *
 print_info(void *baton,
            const char *target,
-           const svn_info2_t *info,
+           const svn_client_info2_t *info,
            apr_pool_t *pool)
 {
   const char *path_prefix = baton;
 
-  if (path_prefix)
-    target = svn_dirent_skip_ancestor(path_prefix, target);
-
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
-                             svn_dirent_local_style(target, pool)));
+                             svn_cl__local_style_skip_ancestor(
+                               path_prefix, target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
@@ -397,6 +405,31 @@ print_info(void *baton,
       if (SVN_IS_VALID_REVNUM(info->wc_info->copyfrom_rev))
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From Rev: %ld\n"),
                                    info->wc_info->copyfrom_rev));
+      if (info->wc_info->moved_from_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_from_abspath);
+          if (relpath && relpath[0] != '\0')
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"), relpath));
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
+                                       info->wc_info->moved_from_abspath));
+        }
+
+      if (info->wc_info->moved_to_abspath)
+        {
+          const char *relpath;
+
+          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
+                                             info->wc_info->moved_to_abspath);
+          if (relpath && relpath[0] != '\0')
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"), relpath));
+          else
+            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
+                                       info->wc_info->moved_to_abspath));
+        }
     }
 
   if (info->last_changed_author)
@@ -413,8 +446,8 @@ print_info(void *baton,
 
   if (info->wc_info)
     {
-      if (info->wc_info->text_time)
-        SVN_ERR(svn_cl__info_print_time(info->wc_info->text_time,
+      if (info->wc_info->recorded_time)
+        SVN_ERR(svn_cl__info_print_time(info->wc_info->recorded_time,
                                         _("Text Last Updated"), pool));
 
       if (info->wc_info->checksum)
@@ -438,20 +471,26 @@ print_info(void *baton,
               switch (conflict->kind)
                 {
                   case svn_wc_conflict_kind_text:
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Previous Base File: %s\n"),
-                              svn_dirent_local_style(conflict->base_abspath,
-                                                     pool)));
+                    if (conflict->base_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Previous Base File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->base_abspath,
+                                        pool)));
 
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Previous Working File: %s\n"),
-                              svn_dirent_local_style(conflict->my_abspath,
-                                                     pool)));
+                    if (conflict->my_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Previous Working File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->my_abspath,
+                                        pool)));
 
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Current Base File: %s\n"),
-                              svn_dirent_local_style(conflict->their_abspath,
-                                                     pool)));
+                    if (conflict->their_abspath)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Current Base File: %s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix, conflict->their_abspath,
+                                        pool)));
                   break;
 
                   case svn_wc_conflict_kind_property:
@@ -551,12 +590,12 @@ svn_cl__info(apr_getopt_t *os,
   svn_error_t *err;
   svn_boolean_t seen_nonexistent_target = FALSE;
   svn_opt_revision_t peg_revision;
-  svn_info_receiver2_t receiver;
+  svn_client_info_receiver2_t receiver;
   const char *path_prefix;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -600,22 +639,20 @@ svn_cl__info(apr_getopt_t *os,
       /* If no peg-rev was attached to a URL target, then assume HEAD. */
       if (svn_path_is_url(truepath))
         {
-          truepath = svn_uri_canonicalize(truepath, subpool);
-
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_opt_revision_head;
         }
       else
         {
-          truepath = svn_dirent_canonicalize(truepath, subpool);
-
           SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
         }
 
       err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             receiver, (void *) path_prefix, opt_state->depth,
-                             opt_state->changelists, ctx, subpool);
+                             opt_state->depth, TRUE, TRUE,
+                             opt_state->changelists,
+                             receiver, (void *) path_prefix,
+                             ctx, subpool);
 
       if (err)
         {
@@ -629,7 +666,7 @@ svn_cl__info(apr_getopt_t *os,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
 
           svn_error_clear(err);
@@ -644,7 +681,7 @@ svn_cl__info(apr_getopt_t *os,
 
   if (seen_nonexistent_target)
     return svn_error_create(
-      SVN_ERR_ILLEGAL_TARGET, NULL, 
+      SVN_ERR_ILLEGAL_TARGET, NULL,
       _("Could not display info for all targets because some "
         "targets don't exist"));
   else

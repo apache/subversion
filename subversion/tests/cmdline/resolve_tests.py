@@ -196,7 +196,7 @@ def prop_conflict_resolution(sbox):
     # Update, postponing all conflict resolution.
     svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                        '--accept=postpone', wc_dir)
-    svntest.actions.run_and_verify_resolve([iota_path, mu_path, gamma_path], '-R',
+    svntest.actions.run_and_verify_resolve([iota_path, mu_path], '-R',
                                            '--accept', resolve_accept, wc_dir)
     svntest.actions.run_and_verify_svn(
       'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '

@@ -19,7 +19,7 @@ in addition to <none> when the WORKING_NODE does not exist.
 ### A comment in 'wc-metadata.sql' says not all of 6 values are
 allowed in WORKING, but it may be wrong.  A wc-to-wc copy could have
 absent and excluded presence values in the BASE source, does the copy
-put those values into the working tree?  An url-to-wc copy could get
+put those values into the working tree?  A url-to-wc copy could get
 an authz failure part way through, does that result in an absent node?
 There is currently no UI to do a sparse url-to-wc copy, but if there
 was then would that result in an excluded node?

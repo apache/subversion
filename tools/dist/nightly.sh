@@ -53,36 +53,32 @@ echo "Will place results in: $target"
 head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
 
 # Get the latest versions of the rolling scripts
-for i in construct-rolling-environment.sh roll.sh dist.sh gen_nightly_ann.py
+for i in release.py dist.sh
 do 
   $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
+# We also need ezt
+$svn export -r $head $repo/trunk/build/generator/ezt.py@$head $dir/ezt.py
 
 # Create the environment
 cd roll
 echo '----------------building environment------------------'
-if [ ! -d "prefix" ]; then
-  ../construct-rolling-environment.sh prefix
-fi;
+../release.py --base-dir ${abscwd}/roll build-env
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
-${abscwd}/roll.sh trunk $head "-nightly"
+../release.py --base-dir ${abscwd}/roll roll --branch trunk trunk-nightly $head
 cd ..
 
 # Create the information page
-./gen_nightly_ann.py $head > index.html
-
-# Move the results to the target location
 echo '-------------------moving results---------------------'
-if [ -f "$target/index.html" ]; then rm "$target/index.html"; fi
-mv index.html "$target"
+./release.py --base-dir ${abscwd}/roll post-candidates trunk-nightly $head \
+    --target $target
 if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
 if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
-rm -r roll/deploy/to-tigris
-mv roll/deploy "$target/dist/r$head"
+mv roll/deploy $target/dist/r$head
 
-# Some static links for the most recent artefacts.
+# Some static links for the most recent artifacts.
 ln -sf "r$head" "$target/dist/current"
 ls "$target/dist/r$head" | while read fname; do
   ln -sf "r$head/$fname" "$target/dist/$fname"

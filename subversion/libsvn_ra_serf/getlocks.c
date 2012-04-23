@@ -25,24 +25,20 @@
 
 #include <apr_uri.h>
 
-#include <expat.h>
-
 #include <serf.h>
 
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
-#include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
-#include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
-#include "svn_path.h"
 #include "svn_time.h"
+#include "svn_xml.h"
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
 #include "svn_private_config.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_serf.h"
 
@@ -59,7 +55,7 @@ typedef enum lock_state_e {
   OWNER,
   COMMENT,
   CREATION_DATE,
-  EXPIRATION_DATE,
+  EXPIRATION_DATE
 } lock_state_e;
 
 typedef struct lock_info_t {
@@ -204,9 +200,8 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
       else if ((lock_ctx->requested_depth == svn_depth_files) ||
                (lock_ctx->requested_depth == svn_depth_immediates))
         {
-          const char *rel_path = svn_fspath__is_child(lock_ctx->path,
-                                                      info->lock->path,
-                                                      info->pool);
+          const char *rel_path = svn_fspath__skip_ancestor(lock_ctx->path,
+                                                           info->lock->path);
           if (rel_path && (svn_path_component_count(rel_path) == 1))
             apr_hash_set(lock_ctx->hash, info->lock->path,
                          APR_HASH_KEY_STRING, info->lock);

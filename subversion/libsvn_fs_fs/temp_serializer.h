@@ -26,7 +26,7 @@
 #include "fs.h"
 
 /**
- * Prepend the @a number to the @c string in a space efficient way that
+ * Prepend the @a number to the @a string in a space efficient way that
  * no other (number,string) combination can produce the same result.
  * Allocate temporaries as well as the result from @a pool.
  */
@@ -60,7 +60,7 @@ svn_fs_fs__noderev_deserialize(void *buffer,
                                node_revision_t **noderev_p);
 
 /**
- * @ref svn_txdelta_window_t is not sufficient for caching the data it
+ * #svn_txdelta_window_t is not sufficient for caching the data it
  * represents because data read process needs auxilliary information.
  */
 typedef struct
@@ -73,8 +73,8 @@ typedef struct
 } svn_fs_fs__txdelta_cached_window_t;
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for
- * @ref svn_fs_fs__txdelta_cached_window_t.
+ * Implements #svn_cache__serialize_func_t for
+ * #svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
 svn_fs_fs__serialize_txdelta_window(char **buffer,
@@ -83,18 +83,18 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
                                     apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for
- * @ref svn_fs_fs__txdelta_cached_window_t.
+ * Implements #svn_cache__deserialize_func_t for
+ * #svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
 svn_fs_fs__deserialize_txdelta_window(void **item,
-                                      const char *buffer,
+                                      char *buffer,
                                       apr_size_t buffer_size,
                                       apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for manifests
- * (@a apr_array_header_t).
+ * Implements #svn_cache__serialize_func_t for a manifest
+ * (@a in is an #apr_array_header_t of apr_off_t elements).
  */
 svn_error_t *
 svn_fs_fs__serialize_manifest(char **data,
@@ -103,17 +103,17 @@ svn_fs_fs__serialize_manifest(char **data,
                               apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for manifests
- * (@a apr_array_header_t).
+ * Implements #svn_cache__deserialize_func_t for a manifest
+ * (@a *out is an #apr_array_header_t of apr_off_t elements).
  */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
-                                const char *data,
+                                char *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for @ref svn_fs_id_t
+ * Implements #svn_cache__serialize_func_t for #svn_fs_id_t
  */
 svn_error_t *
 svn_fs_fs__serialize_id(char **data,
@@ -122,16 +122,16 @@ svn_fs_fs__serialize_id(char **data,
                         apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for @ref svn_fs_id_t
+ * Implements #svn_cache__deserialize_func_t for #svn_fs_id_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
-                          const char *data,
+                          char *data,
                           apr_size_t data_len,
                           apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for @ref node_revision_t
+ * Implements #svn_cache__serialize_func_t for #node_revision_t
  */
 svn_error_t *
 svn_fs_fs__serialize_node_revision(char **buffer,
@@ -140,16 +140,16 @@ svn_fs_fs__serialize_node_revision(char **buffer,
                                    apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for @ref node_revision_t
+ * Implements #svn_cache__deserialize_func_t for #node_revision_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
-                                     const char *buffer,
+                                     char *buffer,
                                      apr_size_t buffer_size,
                                      apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_func_t for a directory contents hash
+ * Implements #svn_cache__serialize_func_t for a directory contents hash
  */
 svn_error_t *
 svn_fs_fs__serialize_dir_entries(char **data,
@@ -158,18 +158,18 @@ svn_fs_fs__serialize_dir_entries(char **data,
                                  apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_func_t for a directory contents hash
+ * Implements #svn_cache__deserialize_func_t for a directory contents hash
  */
 svn_error_t *
 svn_fs_fs__deserialize_dir_entries(void **out,
-                                   const char *data,
+                                   char *data,
                                    apr_size_t data_len,
                                    apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__partial_getter_func_t for a single element
- * identified by its offset in @a baton within a serialized manifest array.
- */
+ * Implements #svn_cache__partial_getter_func_t.  Set (apr_off_t) @a *out
+ * to the element indexed by (apr_int64_t) @a *baton within the
+ * serialized manifest array @a data and @a data_len. */
 svn_error_t *
 svn_fs_fs__get_sharded_offset(void **out,
                               const char *data,
@@ -178,9 +178,9 @@ svn_fs_fs__get_sharded_offset(void **out,
                               apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__partial_getter_func_t for a single 
- * @ref svn_fs_dirent_t within a serialized directory contents hash,
- * identified by its name in @a baton.
+ * Implements #svn_cache__partial_getter_func_t for a single
+ * #svn_fs_dirent_t within a serialized directory contents hash,
+ * identified by its name (const char @a *baton).
  */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
@@ -205,9 +205,9 @@ typedef struct replace_baton_t
 } replace_baton_t;
 
 /**
- * Implements @ref svn_cache__partial_setter_func_t for a single
- * @ref svn_fs_dirent_t within a serialized directory contents hash,
- * identified by its name in the @ref replace_baton_t in @a baton.
+ * Implements #svn_cache__partial_setter_func_t for a single
+ * #svn_fs_dirent_t within a serialized directory contents hash,
+ * identified by its name in the #replace_baton_t in @a baton.
  */
 svn_error_t *
 svn_fs_fs__replace_dir_entry(char **data,

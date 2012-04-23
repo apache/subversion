@@ -1287,7 +1287,6 @@ class SvnClientTest < Test::Unit::TestCase
         ctx.mv(path1, path2)
       end
       ctx.revert([path1, path2])
-      FileUtils.rm(path2)
 
       File.open(path1, "w") {|f| f.print(src2)}
       assert_nothing_raised do

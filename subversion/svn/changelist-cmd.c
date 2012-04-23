@@ -45,7 +45,7 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_depth_t depth = opt_state->depth;
-  int i;
+  apr_array_header_t *errors = apr_array_make(pool, 0, sizeof(apr_status_t));
 
   /* If we're not removing changelists, then our first argument should
      be the name of a changelist. */
@@ -62,23 +62,14 @@ svn_cl__changelist(apr_getopt_t *os,
   /* Parse the remaining arguments as paths. */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Changelist has no implicit dot-target `.', so don't you put that
      code here! */
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  /* Don't even attempt to modify the working copy if any of the
-   * targets look like URLs. URLs are invalid input. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target);
-    }
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   if (opt_state->quiet)
     /* FIXME: This is required because svn_client_create_context()
@@ -108,24 +99,51 @@ svn_cl__changelist(apr_getopt_t *os,
 
   if (changelist_name)
     {
-      return svn_cl__try
-              (svn_client_add_to_changelist(targets, changelist_name,
+      SVN_ERR(svn_cl__try(
+               svn_client_add_to_changelist(targets, changelist_name,
                                             depth, opt_state->changelists,
                                             ctx, pool),
-               NULL, opt_state->quiet,
+               errors, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR);
+               SVN_NO_ERROR));
     }
   else
     {
-      return svn_cl__try
-              (svn_client_remove_from_changelists(targets, depth,
+      SVN_ERR(svn_cl__try(
+               svn_client_remove_from_changelists(targets, depth,
                                                   opt_state->changelists,
                                                   ctx, pool),
-               NULL, opt_state->quiet,
+               errors, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR);
+               SVN_NO_ERROR));
     }
+
+  if (errors->nelts > 0)
+    {
+      int i;
+      svn_error_t *err;
+
+      err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
+      for (i = 0; i < errors->nelts; i++)
+        {
+          apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
+
+          if (status == SVN_ERR_WC_PATH_NOT_FOUND)
+            err = svn_error_quick_wrap(err,
+                                       _("Could not set changelists on "
+                                         "all targets because some targets "
+                                         "don't exist"));
+          else if (status == SVN_ERR_UNVERSIONED_RESOURCE)
+            err = svn_error_quick_wrap(err,
+                                       _("Could not set changelists on "
+                                         "all targets because some targets "
+                                         "are not versioned"));
+        }
+
+      return svn_error_trace(err);
+    }
+
+  return SVN_NO_ERROR;
 }

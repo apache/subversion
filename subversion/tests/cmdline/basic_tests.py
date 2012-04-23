@@ -1182,7 +1182,7 @@ def basic_delete(sbox):
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
-  # At one stage deleting an URL dumped core
+  # At one stage deleting a URL dumped core
   iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
@@ -1614,6 +1614,12 @@ def basic_add_parents(sbox):
                                         None,
                                         wc_dir)
 
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', X_path, '--keep-local')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', '--parents', zeta_path)
+
 #----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
@@ -1722,9 +1728,9 @@ def basic_peg_revision(sbox):
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', wc_file)
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
@@ -1984,7 +1990,6 @@ def basic_rm_urls_one_repo(sbox):
                                         expected_status)
 
 # Test for issue #1199
-@XFail()
 @Issue(1199)
 def basic_rm_urls_multi_repos(sbox):
   "remotely remove directories from two repositories"
@@ -2605,9 +2610,8 @@ def delete_child_parent_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
 
-  # This produces a tree-conflict
+  # This produced a tree-conflict until we fixed issue #3533
   expected_status.tweak(wc_rev=2)
-  expected_status.tweak('A/B/E', treeconflict='C')
   svntest.actions.run_and_verify_update(wc_dir,
                                         [],
                                         expected_disk,
@@ -2625,7 +2629,7 @@ def basic_relocate(sbox):
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  shutil.copytree(repo_dir, other_repo_dir)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
 
   def _verify_url(wc_path, url):
     name = os.path.basename(wc_path)
@@ -2711,7 +2715,7 @@ def ls_multiple_and_non_existent_targets(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  
+
   def non_existent_wc_target():
     "non-existent wc target"
     non_existent_path = os.path.join(wc_dir, 'non-existent')
@@ -2724,7 +2728,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     "non-existent url target"
     non_existent_url = sbox.repo_url + '/non-existent'
     expected_err = ".*W160013.*"
-    
+
     svntest.actions.run_and_verify_svn2(None, None, expected_err,
                                         1, 'ls', non_existent_url)
   def multiple_wc_targets():
@@ -2742,7 +2746,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     expected_err = ".*W155010.*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
-    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha,
                                                     non_existent_path, beta)
 
     # Verify error
@@ -2765,7 +2769,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     expected_err = ".*W160013.*\n.*E200009.*"
     expected_err_re = re.compile(expected_err, re.DOTALL)
 
-    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha,
                                                     non_existent_url, beta)
 
     # Verify error
@@ -2801,7 +2805,7 @@ def add_multiple_targets(sbox):
       'file2' : Item(verb='Adding'),
     })
 
-  exit_code, output, error = svntest.main.run_svn(1, 'add', file1, 
+  exit_code, output, error = svntest.main.run_svn(1, 'add', file1,
                                                   non_existent_path, file2)
 
   # Verify error
@@ -2816,123 +2820,8 @@ def add_multiple_targets(sbox):
   svntest.actions.run_and_verify_svn(None, expected_status, [],
                                      'status', wc_dir)
 
-def info_multiple_targets(sbox):
-  "info multiple targets"
 
-  sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
 
-  def multiple_wc_targets():
-    "multiple wc targets"
-
-    alpha = sbox.ospath('A/B/E/alpha')
-    beta = sbox.ospath('A/B/E/beta')
-    non_existent_path = os.path.join(wc_dir, 'non-existent')
-
-    # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
-                                        0, 'info', alpha, beta)
-
-    # One non-existing target
-    expected_err = ".*W155010.*\n\n.*E200009.*"
-    expected_err_re = re.compile(expected_err, re.DOTALL)
-
-    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
-                                                    non_existent_path, beta)
-
-    # Verify error
-    if not expected_err_re.match("".join(error)):
-      raise svntest.Failure('info failed: expected error "%s", but received '
-                            '"%s"' % (expected_err, "".join(error)))
-
-  def multiple_url_targets():
-    "multiple url targets"
-
-    alpha = sbox.repo_url +  '/A/B/E/alpha'
-    beta = sbox.repo_url +  '/A/B/E/beta'
-    non_existent_url = sbox.repo_url +  '/non-existent'
-
-    # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
-                                        0, 'info', alpha, beta)
-
-    # One non-existing target
-    expected_err = ".*W170000.*\n\n.*E200009.*"
-    expected_err_re = re.compile(expected_err, re.DOTALL)
-
-    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
-                                                    non_existent_url, beta)
-
-    # Verify error
-    if not expected_err_re.match("".join(error)):
-      raise svntest.Failure('info failed: expected error "%s", but received '
-                            '"%s"' % (expected_err, "".join(error)))
-  # Test one by one
-  multiple_wc_targets()
-  multiple_url_targets()
-
-def blame_multiple_targets(sbox):
-  "blame multiple target"
-
-  sbox.build()
-
-  def multiple_wc_targets():
-    "multiple wc targets"
-    
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
-    non_existent = os.path.join(sbox.wc_dir, 'non-existent')
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
-
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
-
-    expected_err = ".*W155010.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err, re.DOTALL)
-
-    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
-                                                    non_existent, iota)
-
-    # Verify error
-    if not expected_err_re.match("".join(error)):
-      raise svntest.Failure('blame failed: expected error "%s", but received '
-                            '"%s"' % (expected_err, "".join(error)))
-
-  def multiple_url_targets():
-    "multiple url targets"
-
-    # First, make a new revision of iota.
-    iota = os.path.join(sbox.wc_dir, 'iota')
-    iota_url = sbox.repo_url + '/iota'
-    non_existent = sbox.repo_url + '/non-existent'
-    svntest.main.file_append(iota, "New contents for iota\n")
-    svntest.main.run_svn(None, 'ci',
-                         '-m', '', iota)
-
-    expected_output = [
-      "     1    jrandom This is the file 'iota'.\n",
-      "     2    jrandom New contents for iota\n",
-      ]
-
-    expected_err = ".*(W160017|W160013).*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err, re.DOTALL)
-
-    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
-                                                    non_existent, iota_url)
-
-    # Verify error
-    if not expected_err_re.match("".join(error)):
-      raise svntest.Failure('blame failed: expected error "%s", but received '
-                            '"%s"' % (expected_err, "".join(error)))
-
-  # Test one by one
-  multiple_wc_targets()
-  multiple_url_targets()
-  
 ########################################################################
 # Run the tests
 
@@ -2996,8 +2885,6 @@ test_list = [ None,
               ls_url_special_characters,
               ls_multiple_and_non_existent_targets,
               add_multiple_targets,
-              info_multiple_targets,
-              blame_multiple_targets,
              ]
 
 if __name__ == '__main__':

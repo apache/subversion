@@ -44,7 +44,7 @@
 struct fns_wrapper_baton
 {
   /* We put the old baton in front of this one, so that we can still use
-     this baton in place of the old.  This prevents us from having to 
+     this baton in place of the old.  This prevents us from having to
      implement simple wrappers around each member of diff_fns_t. */
   void *old_baton;
   const svn_diff_fns_t *vtable;

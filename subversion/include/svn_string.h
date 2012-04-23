@@ -120,8 +120,7 @@ typedef struct svn_stringbuf_t
 } svn_stringbuf_t;
 
 
-/** svn_string_t functions.
- *
+/**
  * @defgroup svn_string_svn_string_t svn_string_t functions
  * @{
  */
@@ -129,6 +128,12 @@ typedef struct svn_stringbuf_t
 /** Create a new bytestring containing a C string (NULL-terminated). */
 svn_string_t *
 svn_string_create(const char *cstring, apr_pool_t *pool);
+
+/** Create a truely empty string object (length is 0)
+ * @since New in 1.8.
+ */
+svn_string_t *
+svn_string_create_empty(apr_pool_t *pool);
 
 /** Create a new bytestring containing a generic string of bytes
  * (NOT NULL-terminated) */
@@ -180,8 +185,7 @@ svn_string_find_char_backward(const svn_string_t *str, char ch);
 /** @} */
 
 
-/** svn_stringbuf_t functions.
- *
+/**
  * @defgroup svn_string_svn_stringbuf_t svn_stringbuf_t functions
  * @{
  */
@@ -195,6 +199,12 @@ svn_stringbuf_create(const char *cstring, apr_pool_t *pool);
  */
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
+
+/** Create a truely empty string object (length and blocksize are 0)
+ * @since New in 1.8.
+ */
+svn_stringbuf_t *
+svn_stringbuf_create_empty(apr_pool_t *pool);
 
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
@@ -254,7 +264,7 @@ void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
 
 /** Append a single character @a byte onto @a targetstr.
- * This is an optimized version of @ref svn_stringbuf_appendbytes
+ * This is an optimized version of svn_stringbuf_appendbytes()
  * that is much faster to call and execute. Gains vary with the ABI.
  * The advantages extend beyond the actual call because the reduced
  * register pressure allows for more optimization within the caller.
@@ -324,15 +334,14 @@ svn_string_compare_stringbuf(const svn_string_t *str1,
 /** @} */
 
 
-/** C strings.
- *
- * @defgroup svn_string_cstrings c string functions
+/**
+ * @defgroup svn_string_cstrings C string functions
  * @{
  */
 
 /** Divide @a input into substrings along @a sep_chars boundaries, return an
- * array of copies of those substrings, allocating both the array and
- * the copies in @a pool.
+ * array of copies of those substrings (plain const char*), allocating both
+ * the array and the copies in @a pool.
  *
  * None of the elements added to the array contain any of the
  * characters in @a sep_chars, and none of the new elements are empty

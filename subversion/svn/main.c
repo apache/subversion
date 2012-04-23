@@ -51,8 +51,8 @@
 #include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_hash.h"
+#include "svn_version.h"
 #include "cl.h"
-#include "svn_cache_config.h"
 
 #include "private/svn_wc_private.h"
 #include "private/svn_cmdline_private.h"
@@ -124,6 +124,7 @@ typedef enum svn_cl__longopt_t {
   opt_internal_diff,
   opt_use_git_diff_format,
   opt_allow_mixed_revisions,
+  opt_include_externals,
 } svn_cl__longopt_t;
 
 
@@ -145,7 +146,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
                        "                             "
-                       "If ARG is negative this is like -r ARG:ARG-1")},
+                       "If ARG is negative this is like -r ARG:ARG-1\n"
+                       "                             "
+                       "If ARG is of the form ARG1-ARG2 then this is like\n"
+                       "                             "
+                       "ARG1:ARG2, where ARG1 is inclusive")},
   {"revision",      'r', 1,
                     N_("ARG (some commands also take ARG1:ARG2 range)\n"
                        "                             "
@@ -223,9 +228,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
-                    N_("accept unknown SSL server certificates without\n"
+                    N_("accept SSL server certificates from unknown\n"
                        "                             "
-                       "prompting (but only with '--non-interactive')")},
+                       "certificate authorities without prompting (but only\n"
+                       "                             "
+                       "with '--non-interactive')") },
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,
@@ -339,6 +346,12 @@ const apr_getopt_option_t svn_cl__options[] =
                        "Use of this option is not recommended!\n"
                        "                             "
                        "Please run 'svn update' instead.")},
+  {"include-externals", opt_include_externals, 0,
+                       N_("Also commit file and dir externals reached by\n"
+                       "                             "
+                       "recursion. This does not include externals with a\n"
+                       "                             "
+                       "fixed revision. (See the svn:externals property)")},
 
   /* Long-opt Aliases
    *
@@ -346,30 +359,7 @@ const apr_getopt_option_t svn_cl__options[] =
    * other option (whose description should probably mention its aliases).
   */
 
-  {"sd",            opt_set_depth, 1, NULL},
-  {"enc",           opt_encoding, 1, NULL},
-  {"soc",           opt_stop_on_copy, 0, NULL},
-  {"nac",           opt_no_auth_cache, 0, NULL},
-  {"dry",           opt_dry_run, 0, NULL},
-  {"ndd",           opt_no_diff_deleted, 0, NULL},
-  {"na",            opt_notice_ancestry, 0, NULL},
-  {"ia",            opt_ignore_ancestry, 0, NULL},
-  {"ie",            opt_ignore_externals, 0, NULL},
-  {"rd",            opt_reverse_diff, 0, NULL},
-  {"ro",            opt_record_only, 0, NULL},
-  {"cd",            opt_config_dir, 1, NULL},
   {"cl",            opt_changelist, 1, NULL},
-  {"kl",            opt_keep_local, 0, NULL},
-  {"sr",            opt_show_revs, 1, NULL},
-  {"ri",            opt_reintegrate, 0, NULL},
-  {"sca",           opt_show_copies_as_adds, 0, NULL},
-  {"ik",            opt_ignore_keywords, 0, NULL},
-  {"iw",            opt_ignore_whitespace, 0, NULL},
-  {"idiff",         opt_internal_diff, 0, NULL},
-  {"keep-locks",    opt_no_unlock, 0, NULL},
-  {"keep-cl",       opt_keep_changelists, 0, NULL},
-  {"vi-cmd",        opt_editor_cmd, 1, NULL},
-  {"emacs-cmd",     opt_editor_cmd, 1, NULL},
 
   {0,               0, 0, 0},
 };
@@ -384,7 +374,7 @@ const apr_getopt_option_t svn_cl__options[] =
  *
  * In most of the help text "PATH" is used where a working copy path is
  * required, "URL" where a repository URL is required and "TARGET" when
- * either a path or an url can be used.  Hmm, should this be part of the
+ * either a path or a url can be used.  Hmm, should this be part of the
  * help text?
  */
 
@@ -480,7 +470,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  If any targets are (or contain) locked items, those will be\n"
        "  unlocked after a successful commit.\n"),
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
-     opt_changelist, opt_keep_changelists} },
+     opt_changelist, opt_keep_changelists, opt_include_externals} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering\n"
@@ -662,6 +652,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
      "  behavior, which can be useful for determining branchpoints.\n"
      "\n"
+     "  The --depth option is only valid in combination with the --diff option\n"
+     "  and limits the scope of the displayed diff to the specified depth.\n"
+
+     "\n"
      "  Examples:\n"
      "    svn log\n"
      "    svn log foo.c\n"
@@ -671,61 +665,52 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
+     opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
   { "merge", svn_cl__merge, {0}, N_
-    ("Apply the differences between two sources to a working copy path.\n"
-     "usage: 1. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
+    ("Merge changes into a working copy.\n"
+     "usage: 0. merge SOURCE[@REV] [TARGET_WCPATH]\n"
+     "          (the 'sync' merge)\n"
+     "       1. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
+     "          (the 'cherry-pick' merge)\n"
      "       2. merge --reintegrate SOURCE[@REV] [TARGET_WCPATH]\n"
+     "          (the 'reintegrate' merge)\n"
      "       3. merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
+     "          (the '2-URL' merge)\n"
      "\n"
-     "  1. The first form is called a \"sync\", or \"cherry-pick\", merge:\n"
-     "     svn merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
+     "  0. This form is called a 'sync' (aka 'catch-up') merge:\n"
+     "\n"
+     "       svn merge SOURCE[@REV] [TARGET_WCPATH]\n"
      "\n"
      "     A sync merge is used to merge into a branch any unmerged changes\n"
-     "     made on its immediate ancestor branch.\n"
+     "     made on its immediate ancestor branch. This uses merge tracking\n"
+     "     to find which changes need to be merged.\n"
      "\n"
-     "     A cherry-picking merge is used to merge specific revisions from\n"
-     "     one branch to another.\n"
+     "     SOURCE specifies the branch from where the changes will be pulled,\n"
+     "     and TARGET_WCPATH specifies the working copy of the target branch,\n"
+     "     into which the changes will be applied. Normally SOURCE and\n"
+     "     TARGET_WCPATH should each point to the root of a branch. If changes\n"
+     "     need to be merged from and to only a subtree of the branch, then\n"
+     "     the path to that subtree must be included in both SOURCE and\n"
+     "     TARGET_WCPATH.\n"
      "\n"
-     "     SOURCE is usually a URL. The source of a cherry-picking merge can\n"
-     "     also be a working copy path, in which case the corresponding URL\n"
-     "     of the path is used.\n"
+     "     SOURCE is usually a URL. The optional '@REV' specifies both the peg\n"
+     "     revision of the URL and the latest revision that will be considered\n"
+     "     for merging; the default value is the HEAD revision. If SOURCE is a\n"
+     "     working copy path, the corresponding URL of the path is used, and\n"
+     "     the default value of 'REV' is the base revision.\n"
      "\n"
-     "     If REV is specified, it is used as the peg revision for SOURCE,\n"
-     "     i.e. SOURCE is looked up in the repository at revision REV.\n"
-     "     If REV is not specified, the HEAD revision is assumed.\n"
-     "\n"
-     "     TARGET_WCPATH is a working copy of the branch the changes will\n"
-     "     be applied to.\n"
-     "\n"
-     "     '-r N:M' specifies a revision range to be merged. The difference\n"
-     "     between SOURCE@REV as it existed at revision N, and SOURCE@REV at\n"
-     "     it existed at revision M, is merged into TARGET_WCPATH.  If no\n"
-     "     revision range is specified, the default range of 0:REV is used.\n"
-     "     \n"
-     "     If mergeinfo within TARGET_WCPATH indicates that revisions within\n"
-     "     the range were already merged, changes made in those revisions\n"
-     "     are not merged again. If needed, the range is broken into multiple\n"
-     "     sub-ranges, and each sub-range is merged separately.\n"
-     "\n"
-     "     If N is greater than M, the range is a \"reverse range\".\n"
-     "     A reverse range can be used to undo changes made to SOURCE\n"
-     "     between revisions N and M.\n"
-     "\n"
-     "     '-c M' is equivalent to the range '-r <M-1>:M'.\n"
-     "     '-c -M' does the reverse: '-r M:<M-1>'.\n"
-     "     \n"
-     "     Multiple '-c' and/or '-r' options may be specified and mixing of\n"
-     "     forward and reverse ranges is allowed.\n"
+     "     TARGET_WCPATH is a working copy path; the default is '.'.\n"
      "\n"
      "       - Sync Merge Example -\n"
      "\n"
-     "     A feature is being developed on a branch called \"feature\".\n"
-     "     The feature branch is regularly synced with trunk to keep up with\n"
-     "     changes made there.\n"
+     "     A feature is being developed on a branch called 'feature'. The\n"
+     "     feature branch is regularly synced with trunk to keep up with the\n"
+     "     changes made there. The previous sync merges are not shown on this\n"
+     "     diagram, and the last of them was done when HEAD was r100, and now\n"
+     "     HEAD is r200.\n"
      "\n"
      "                 feature  +------------------------o-----\n"
      "                         /                         ^\n"
@@ -733,19 +718,53 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "                       /          .............../\n"
      "         trunk ------+------------L--------------R------\n"
      "                                r100           r200\n"
-     "     \n"
-     "     In the above diagram, L marks the \"left\" side of the merge\n"
-     "     (trunk@100), and R marks the \"right\" side of the merge (trunk@200).\n"
-     "     The difference between the left and right side is merged into the target.\n"
      "\n"
-     "     To perform the merge, check out a working copy of the feature\n"
+     "     Subversion will locate all the changes on 'trunk' that have not yet\n"
+     "     been merged into the target. In this case that is a single range,\n"
+     "     r100:200. In the diagram above, L marks the 'left' side of the\n"
+     "     range (trunk@100) and R marks the 'right' side of the range\n"
+     "     (trunk@200). The difference between L and R will be merged into\n"
+     "     the target.\n"
+     "\n"
+     "     To perform this sync merge, check out a working copy of the feature\n"
      "     branch and run the following command in the top-level directory\n"
      "     of the working copy:\n"
      "\n"
      "         svn merge ^/trunk\n"
      "\n"
-     "     The default revision range is -r0:HEAD, so any unmerged changes\n"
-     "     will be merged.\n"
+     "\n"
+     "  1. This form is called a 'cherry-pick' merge:\n"
+     "\n"
+     "       svn merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
+     "\n"
+     "     A cherry-picking merge is used to merge specific revisions (or\n"
+     "     revision ranges) from one branch to another. By default, this form\n"
+     "     of merge uses merge tracking to avoid re-merging any of the specified\n"
+     "     revisions that have already been merged. If the --ignore-ancestry\n"
+     "     option is given then that does not happen.\n"
+     "\n"
+     "     The SOURCE and TARGET_WCPATH arguments are the same as for a 'sync'\n"
+     "     merge, except that REV acts only as a peg and does not specify the\n"
+     "     latest revision that will be considered for merging.\n"
+     "\n"
+     "     The revision ranges to be merged are specified by the '-r' and/or\n"
+     "     '-c' options. '-r N:M' refers to the difference in the history of\n"
+     "     the source branch between revision N and revision M. '-c M' is\n"
+     "     equivalent to '-r <M-1>:M'. Each such difference is merged into\n"
+     "     TARGET_WCPATH.\n"
+     "\n"
+     "     If mergeinfo within TARGET_WCPATH indicates that revisions within\n"
+     "     the range were already merged, changes made in those revisions\n"
+     "     are not merged again. If needed, the range is broken into multiple\n"
+     "     sub-ranges, and each sub-range is merged separately.\n"
+     "\n"
+     "     If N is greater than M in '-r N:M', or with '-c -M' which is\n"
+     "     equivalent to '-r M:<M-1>', the range is a 'reverse range'.\n"
+     "     A reverse range can be used to undo changes made to SOURCE\n"
+     "     between revisions N and M.\n"
+     "\n"
+     "     Multiple '-c' and/or '-r' options may be specified and mixing of\n"
+     "     forward and reverse ranges is allowed.\n"
      "\n"
      "       - Cherry-picking Merge Example -\n"
      "\n"
@@ -758,10 +777,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "                      /                          |\n"
      "         trunk ------+--------------------------LR-----\n"
      "                                                r50\n"
-     "     \n"
+     "\n"
      "     In the above diagram, L marks the left side of the merge (trunk@49)\n"
-     "     and R marks the right side of the merge (trunk@50).\n"
-     "     The difference between the left and right side is merged into the target.\n"
+     "     and R marks the right side of the merge (trunk@50). The difference\n"
+     "     between the left and right side is merged into the target.\n"
      "\n"
      "     To perform the merge, check out a working copy of the release\n"
      "     branch and run the following command in the top-level directory\n"
@@ -775,8 +794,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "         svn merge -c50,54,60 ^/trunk\n"
      "\n"
      "\n"
-     "  2. The second form is called a \"reintegrate merge\":\n"
-     "     svn merge --reintegrate SOURCE[@REV] [TARGET_WCPATH]\n"
+     "  2. This form is called a 'reintegrate merge':\n"
+     "\n"
+     "       svn merge --reintegrate SOURCE[@REV] [TARGET_WCPATH]\n"
      "\n"
      "     SOURCE is the URL of a branch to be merged back into (usually) its\n"
      "     immediate ancestor branch.  If REV is specified, it is used a\n"
@@ -789,10 +809,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "       - Reintegrate Merge Example -\n"
      "\n"
-     "     A feature has been developed on a branch called \"feature\".\n"
+     "     A feature has been developed on a branch called 'feature'.\n"
      "     The feature branch started as a copy of trunk@W. Work on the\n"
      "     feature has completed and it should be merged back into the trunk.\n"
-     "     \n"
+     "\n"
      "     The feature branch was last synced with its immediate ancestor,\n"
      "     the trunk, in revision X. So the difference between trunk@X and\n"
      "     feature@HEAD contains the complete set of changes that implement\n"
@@ -830,8 +850,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     be done on the feature branch, it should be deleted and then re-created.\n"
      "\n"
      "\n"
-     "  3. The third form is called a \"2-URL merge\":\n"
-     "     svn merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
+     "  3. This form is called a '2-URL merge':\n"
+     "\n"
+     "       svn merge SOURCE1[@N] SOURCE2[@M] [TARGET_WCPATH]\n"
      "\n"
      "     Two source URLs are specified, together with two revisions N and M.\n"
      "     The two sources to be compared at the specified revisions, and the\n"
@@ -857,9 +878,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "       - 2-URL Merge Example -\n"
      "\n"
-     "     A feature has been developed on a branch called \"feature\".\n"
+     "     A feature has been developed on a branch called 'feature'.\n"
      "     Development for the upcoming 3.0 release has happened in parallel on\n"
-     "     the \"3.x-release\" branch. The work on the feature branch must be\n"
+     "     the '3.x-release' branch. The work on the feature branch must be\n"
      "     merged to the 3.x-release branch. However, the feature branch and\n"
      "     the 3.x-release branch are not directly related, so a 2-URL merge\n"
      "     is needed.\n"
@@ -886,7 +907,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     To perform the merge, check out a working copy of the 3.x-release\n"
      "     branch and run the following command in the top-level directory\n"
      "     of the working copy:\n"
-     "       \n"
+     "\n"
      "         svn merge ^/trunk@500 ^/feature\n"
      "\n"
      "     Before performing a 2-URL merge, it is a good idea to preview the\n"
@@ -905,6 +926,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "\n"
      "  The following applies to all types of merges:\n"
+     "\n"
+     "  To prevent unnecessary merge conflicts, svn merge requires that\n"
+     "  TARGET_WCPATH is not a mixed-revision working copy.\n"
+     "  Running 'svn update' before starting a merge ensures that all\n"
+     "  items in the working copy are based on the same revision.\n"
      "\n"
      "  For each merged item a line will be printed with characters reporting\n"
      "  the action taken. These characters have the following meaning:\n"
@@ -943,7 +969,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Display information related to merges (or potential merges) between\n"
      "  SOURCE and TARGET (default: '.').  Display the type of information\n"
      "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
-     "  it defaults to --show-revs='merged'.\n"),
+     "  it defaults to --show-revs='merged'.\n"
+     "\n"
+     "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
@@ -1015,6 +1043,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for deletion. If the patch creates a new file, that file is scheduled\n"
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
+     "\n"
+     "  Hint: If the patch file was created with Subversion, it will contain\n"
+     "        the number of a revision N the patch will cleanly apply to\n"
+     "        (look for lines like '--- foo/bar.txt        (revision N)').\n"
+     "        To avoid rejects, first update to the revision N using\n"
+     "        'svn update -r N', apply the patch, and then update back to the\n"
+     "        HEAD revision. This way, conflicts can be resolved interactively.\n"
      ),
     {'q', opt_dry_run, opt_strip, opt_reverse_diff,
      opt_ignore_whitespace} },
@@ -1149,7 +1184,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "       2. relocate TO-URL [PATH]\n"
      "\n"
      "  Rewrite working copy URL metadata to reflect a syntactic change only.\n"
-     "  This is used when repository's root URL changes (such as a scheme\n"
+     "  This is used when a repository's root URL changes (such as a scheme\n"
      "  or hostname change) but your working copy still reflects the same\n"
      "  directory within the same repository.\n"
      "\n"
@@ -1193,7 +1228,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: revert PATH...\n"
      "\n"
      "  Note:  this subcommand does not require network access, and resolves\n"
-     "  any conflicted states.  However, it does not restore removed directories.\n"),
+     "  any conflicted states.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
@@ -1393,7 +1428,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
-     "usage: upgrade WCPATH...\n"),
+     "usage: upgrade [WCPATH...]\n"
+     "\n"
+     "  Local modifications are preserved.\n"),
     { 'q' } },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -1450,7 +1487,6 @@ main(int argc, const char *argv[])
   svn_error_t *err;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
-  svn_cache_config_t settings;
   int opt_id;
   apr_getopt_t *os;
   svn_cl__opt_state_t opt_state = { 0, { 0 } };
@@ -1497,17 +1533,6 @@ main(int argc, const char *argv[])
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 #endif
-
-  /* Per default, disable large expensive FS caching on the client side.
-   * We can still chose a different size for that cache later in the
-   * startup phase, e.g. after reading config files. If that does not
-   * happen until the first FSFS repository get opened, low initialization
-   * overhead caches will be used for the most time-critical structures.
-   *
-   * This is only relevant for FSFS over ra_local. */
-  settings = *svn_get_cache_config();
-  settings.cache_size = 0x0;
-  svn_set_cache_config(&settings);
 
   /* Initialize the RA library. */
   err = svn_ra_initialize(pool);
@@ -1943,12 +1968,6 @@ main(int argc, const char *argv[])
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
-        if (opt_state.changelist[0] == '\0')
-          {
-            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                   _("Changelist names must not be empty"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          }
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;
@@ -2035,6 +2054,9 @@ main(int argc, const char *argv[])
         break;
       case opt_allow_mixed_revisions:
         opt_state.allow_mixed_rev = TRUE;
+        break;
+      case opt_include_externals:
+        opt_state.include_externals = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -2192,6 +2214,19 @@ main(int argc, const char *argv[])
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("--with-revprop and --with-no-revprops "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* Disallow simultaneous use of both -m and -F, when they are
+     both used to pass a commit message or lock comment.  ('propset'
+     takes the property value, not a commit message, from -F.) 
+   */
+  if (opt_state.filedata && opt_state.message
+      && subcommand->cmd_func != svn_cl__propset)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--message (-m) and --file (-F) "
                                "are mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
@@ -2374,8 +2409,10 @@ main(int argc, const char *argv[])
                               opt_state.config_dir, pool);
   if (err)
     {
-      /* Fallback to default config if the config directory isn't readable. */
-      if (err->apr_err == APR_EACCES)
+      /* Fallback to default config if the config directory isn't readable
+         or is not a directory. */
+      if (APR_STATUS_IS_EACCES(err->apr_err)
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
         {
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
@@ -2591,8 +2628,6 @@ main(int argc, const char *argv[])
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
   if (err)
     {
-      svn_error_t *tmp_err;
-
       /* For argument-related problems, suggest using the 'help'
          subcommand. */
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
@@ -2619,15 +2654,11 @@ main(int argc, const char *argv[])
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
-      for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
-        if (tmp_err->apr_err == SVN_ERR_WC_LOCKED)
-          {
-            svn_error_clear
-              (svn_cmdline_fputs(_("svn: run 'svn cleanup' to remove locks "
-                                   "(type 'svn help cleanup' for details)\n"),
-                                 stderr, pool));
-            break;
-          }
+      if (svn_error_find_cause(err, SVN_ERR_WC_LOCKED))
+        svn_error_clear(svn_cmdline_fputs(_("svn: run 'svn cleanup' to "
+                                            "remove locks (type 'svn help "
+                                            "cleanup' for details)\n"),
+                                          stderr, pool));
 
       svn_error_clear(err);
       svn_pool_destroy(pool);

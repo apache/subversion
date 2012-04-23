@@ -85,7 +85,7 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, versioned_abspath, NULL,
+                                     db, versioned_abspath, NULL, FALSE,
                                      scratch_pool, scratch_pool));
 
   if (special)
@@ -170,7 +170,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, versioned_abspath, NULL, 
+                                     db, versioned_abspath, NULL, FALSE,
                                      scratch_pool, scratch_pool));
 
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
@@ -259,10 +259,11 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_hash_t *props,
+                           svn_boolean_t for_normalization,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_string_t *propval;
+  const char *propval;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (props == NULL)
@@ -271,29 +272,26 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
 
   if (eol)
     {
-      propval = props ? apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                                     APR_HASH_KEY_STRING) : NULL;
+      propval = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
 
-      svn_subst_eol_style_from_value(style, eol, propval ? propval->data : NULL);
+      svn_subst_eol_style_from_value(style, eol, propval);
     }
 
   if (keywords)
     {
-      propval = props ? apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                     APR_HASH_KEY_STRING) : NULL;
+      propval = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
 
-      if (!propval || propval->len == 0)
+      if (!propval || *propval == '\0')
         *keywords = NULL;
       else
         SVN_ERR(svn_wc__expand_keywords(keywords,
-                                        db, local_abspath,
-                                        propval->data,
+                                        db, local_abspath, NULL,
+                                        propval, for_normalization,
                                         result_pool, scratch_pool));
     }
   if (special)
     {
-      propval = props ? apr_hash_get(props, SVN_PROP_SPECIAL,
-                                     APR_HASH_KEY_STRING) : NULL;
+      propval = svn_prop_get_value(props, SVN_PROP_SPECIAL);
 
       *special = (propval != NULL);
     }
@@ -305,7 +303,9 @@ svn_error_t *
 svn_wc__expand_keywords(apr_hash_t **keywords,
                         svn_wc__db_t *db,
                         const char *local_abspath,
+                        const char *wri_abspath,
                         const char *keyword_list,
+                        svn_boolean_t for_normalization,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -314,17 +314,34 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
   const char *changed_author;
   const char *url;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
-                               NULL, NULL, &changed_rev,
-                               &changed_date, &changed_author, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+  if (! for_normalization)
+    {
+      const char *repos_root_url;
+      const char *repos_relpath;
 
-  SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
-                              scratch_pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
+                                   &repos_root_url, NULL, &changed_rev,
+                                   &changed_date, &changed_author, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+      if (repos_relpath)
+        url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                          scratch_pool);
+      else
+         SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
+                                     scratch_pool));
+    }
+  else
+    {
+      url = "";
+      changed_rev = SVN_INVALID_REVNUM;
+      changed_date = 0;
+      changed_author = "";
+    }
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     keyword_list,
@@ -348,7 +365,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_wc__db_lock_t *lock;
   apr_hash_t *props = NULL;
 
@@ -370,7 +387,7 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
 
   /* We actually only care about the following flags on files, so just
      early-out for all other types. */
-  if (kind != svn_wc__db_kind_file)
+  if (kind != svn_kind_file)
     return SVN_NO_ERROR;
 
   /* If we get this far, we're going to change *something*, so just set

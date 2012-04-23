@@ -89,6 +89,8 @@ typedef struct dir_conf_t {
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
   const char *activities_db;         /* path to activities database(s) */
+  enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
+  enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
 } dir_conf_t;
 
 
@@ -103,7 +105,7 @@ static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
 /* The compression level we will pass to svn_txdelta_to_svndiff3()
  * for wire-compression */
-static int svn__compression_level = SVN_DEFAULT_COMPRESSION_LEVEL;
+static int svn__compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
 
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
@@ -211,6 +213,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
+  newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
+  newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   /* Prefer our parent's value over our new one - hence the swap. */
   newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
 
@@ -251,7 +255,7 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
                         cmd->pool);
   if (! *uri_base_name)
     return "SVNMasterURI value must not be a server root";
-  
+
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;
@@ -342,9 +346,13 @@ SVNPathAuthz_cmd(cmd_parms *cmd, void *config, const char *arg1)
                                AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER);
         }
     }
-  else
+  else if (apr_strnatcasecmp("on", arg1) == 0)
     {
       conf->path_authz_method = CONF_PATHAUTHZ_ON;
+    }
+  else
+    {
+      return "Unrecognized value for SVNPathAuthz directive";
     }
 
   return NULL;
@@ -425,9 +433,35 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 }
 
 static const char *
+SVNCacheTextDeltas_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->txdelta_cache = CONF_FLAG_ON;
+  else
+    conf->txdelta_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheFullTexts_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->fulltext_cache = CONF_FLAG_ON;
+  else
+    conf->fulltext_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
 SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  svn_cache_config_t settings = *svn_get_cache_config();
+  svn_cache_config_t settings = *svn_cache_config_get();
 
   apr_uint64_t value = 0;
   svn_error_t *err = svn_cstring_atoui64(&value, arg1);
@@ -437,9 +471,9 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
       return "Invalid decimal number for the SVN cache size.";
     }
 
-  settings.cache_size = value * 0x100000;
+  settings.cache_size = value * 0x400;
 
-  svn_set_cache_config(&settings);
+  svn_cache_config_set(&settings);
 
   return NULL;
 }
@@ -455,13 +489,14 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
       return "Invalid decimal number for the SVN compression level.";
     }
 
-  if ((value < SVN_NO_COMPRESSION_LEVEL) || (value > SVN_MAX_COMPRESSION_LEVEL))
+  if ((value < SVN_DELTA_COMPRESSION_LEVEL_NONE)
+      || (value > SVN_DELTA_COMPRESSION_LEVEL_MAX))
     return apr_psprintf(cmd->pool,
                         "%d is not a valid compression level. "
                         "The valid range is %d .. %d.",
                         value,
-                        (int)SVN_NO_COMPRESSION_LEVEL,
-                        (int)SVN_MAX_COMPRESSION_LEVEL);
+                        (int)SVN_DELTA_COMPRESSION_LEVEL_NONE,
+                        (int)SVN_DELTA_COMPRESSION_LEVEL_MAX);
 
   svn__compression_level = value;
 
@@ -719,6 +754,26 @@ dav_svn__get_activities_db(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_txdelta_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->txdelta_cache == CONF_FLAG_ON;
+}
+
+
+svn_boolean_t
+dav_svn__get_fulltext_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->fulltext_cache == CONF_FLAG_ON;
+}
+
+
 int
 dav_svn__get_compression_level(void)
 {
@@ -847,13 +902,17 @@ merge_xml_in_filter(ap_filter_t *f,
 /* Response handler for POST requests (protocol-v2 commits).  */
 static int dav_svn__handler(request_rec *r)
 {
-  /* HTTP-defined Methods we handle */
-  r->allowed = 0
-    | (AP_METHOD_BIT << M_POST);
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-  if (r->method_number == M_POST) {
-    return dav_svn__method_post(r);
-  }
+  if (conf->fs_path || conf->fs_parent_path)
+    {
+      /* HTTP-defined Methods we handle */
+      r->allowed = 0
+        | (AP_METHOD_BIT << M_POST);
+
+      if (r->method_number == M_POST)
+        return dav_svn__method_post(r);
+    }
 
   return DECLINED;
 }
@@ -928,11 +987,25 @@ static const command_rec cmds[] =
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
 
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheTextDeltas", SVNCacheTextDeltas_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access to older revisions by caching "
+               "delta information if sufficient in-memory cache is "
+               "available (default is Off)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheFullTexts", SVNCacheFullTexts_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access by caching full file content "
+               "if sufficient in-memory cache is available "
+               "(default is Off)."),
+
   /* per server */
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
                 RSRC_CONF,
-                "specifies the maximum size im MB per process of Subversion's "
-                "in-memory object cache (default value is 16; 0 deactivates "
+                "specifies the maximum size in kB per process of Subversion's "
+                "in-memory object cache (default value is 16384; 0 deactivates "
                 "the cache)."),
   /* per server */
   AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,

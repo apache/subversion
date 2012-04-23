@@ -468,6 +468,9 @@ public class ClientNotifyInformation extends EventObject
         /** Skipping a working only node */
         update_skip_working_only ("update skip working only"),
 
+        /** Skipped a file or directory to which access couldn't be obtained */
+        update_skip_access_denied ("update skip access denied"),
+
         /** An update operation removed an external working copy.  */
         update_external_removed ("update external removed"),
 
@@ -514,7 +517,31 @@ public class ClientNotifyInformation extends EventObject
 
         /** The server has instructed the client to follow a URL
           * redirection. */
-        url_redirect    ("url redirect");
+        url_redirect    ("url redirect"),
+
+        /** The operation was attempted on a path which doesn't exist. */
+        path_nonexistent ("path nonexistent"),
+
+        /** Removing a path by excluding it. */
+        exclude ("exclude"),
+
+        /** Operation failed because the node remains in conflict */
+        failed_conflict ("failed conflict"),
+
+        /** Operation failed because an added node is missing */
+        failed_missing ("failed missing"),
+
+        /** Operation failed because a node is out of date */
+        failed_out_of_date ("failed out of date"),
+
+        /** Operation failed because an added parent is not selected */
+        failed_no_parent ("failed no parent"),
+
+        /** Operation failed because a node is locked */
+        failed_locked ("failed by lock"),
+
+        /** Operation failed because the operation was forbidden */
+        failed_forbidden_by_server ("failed forbidden by server");
 
         /**
          * The description of the action.

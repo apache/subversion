@@ -1,0 +1,205 @@
+                                                                -*- Text -*-
+
+ Externals handling in wc-ng
+ ===========================
+
+A long time ago, we introduced svn:externals in Subversion as a solution to
+using multiple independent components.
+
+When updating we process svn:externals changes, by walking over all directories
+that have (or had) svn:externals properties defined on them.
+
+Then we take all the old and the new definitions and put them in a list. And
+then we start comparing them, following this schema
+
+  *  For all directories that have and/or had svn:externals
+     +  For all definitions that were and/or are defined
+        -  If it does not exist locally
+           o  If the definition is not removed: Checkout
+        -  If it is unchanged: update it
+        -  If the definition is just removed, remove the external
+        -  If the definition was modified
+           o  If it is switchable within a repository: switch
+           o  Else: remove and then reinstall the new definition
+        -  If the definition is new: checkout
+
+(There are some small variations around relative externals, unmatched externals
+ and revision locked externals, but this is the primary idea)
+
+This schema allows a read-only working copy to fully follow svn:externals
+changes without any user interaction as long as any intermediate update is
+followed.
+
+For an incoming update on 'svn update' this is easy, as we have the old and the
+new versions of the property and we can just run the external update schema.
+
+
+Ok, pretty straightforward, but things get much harder once you start looking
+at how to change svn:externals definitions locally.
+
+
+ Handling changes to svn:externals
+ =================================
+
+The easiest way to handle this, is how we do it today (r1102626). We only apply
+svn:externals changes when they are applied to the BASE layer. In this case we
+can follow the original external update schema.
+
+But this is not what any normal subversion user likes, because you have to
+commit a potentially invalid external description just to test it. To avoid
+this hassle you would like to prefer changes before committing, but then the
+external update schema doesn't work any more.
+
+The external update schema needs the difference between an old and a new
+definition to update your working copy, but with local property changes you
+only have access to the last version and probably some older version, but not
+to the previous version.
+
+[[
+> If you do 
+> Assuming you committed
+> $ svn propset svn:externals A .
+> $ svn up .
+> (updates externals to match definition nothing->A)
+> 
+> $ svn ci -m""
+> $ svn propset svn:externals B .
+> $ svn update .
+> 
+> Then currently this updates the directory to the definition A (just to be
+> safe), while you (and many others) would like it to go to B.
+> 
+> So assume the preferred scenario this would do the update A->B
+> 
+> But then you have the even likely case
+> $ svn propset svn:externals C
+> $ svn update .
+> 
+> This would then apply A->C, so this could potentially break your working
+> copy, by leaving traces of B.
+> 
+> We really need the step B->C here, but there is no way to access B, because
+> it wasn't committed. It just lived in a local property change.
+]]
+
+Before Subversion 1.6, it wasn't such a big problem when the external update
+schema broke down on the working copy where svn:externals were edited. You just
+deleted the subdirectory and ran svn update again. But then we introduced file
+externals....
+
+"We really need some store with old (applied) svn:externals definitions, so we
+ would only have to update externals from that to the latest definition"
+(Issue #2267, #3351, #3823)
+
+
+ Wc-1.0 File Externals
+ =====================
+
+Just before we released Subversion 1.6 somebody noticed that you could switch
+an added file (really a bug) and that you could use that to do svn:external
+like things with that. Within a few days some support to manage these externals
+was added and the file externals as we know them were born.
+
+These file externals were added as part of the working copy where they are
+located with a special registration in their svn_wc_entry_t. (Note: this didn't
+have to be the same working copy as where the definition lived).
+One noticable limitation was that they had to be from the same repository as
+the directory they are placed in.
+
+The existing externals update schema handled did this really well and file
+externals were released as part of Subversion 1.6.
+
+
+But when you mix the feature of editing svn:externals and file externals,
+things get ugly. If you add a file external to svn:external; then perform an
+update and then revert the definition of the file external before committing,
+you will find that this file external will still be in your working copy.
+(And there is no real way to fix this).
+
+
+ The 'file externals' problem
+ ============================
+
+When we introduced file externals, we expected this to be easy to maintain,
+as essentially we already supported switched files.
+
+But then somebody noticed that you could delete file externals via 'svn rm',
+and then the external was removed... but not where it was placed, but at
+the place where it was added from. So we added some tests to detect that
+specific case. We never had that problem with directory externals.
+
+(Same problem with moving files)
+
+Then somebody noticed that merge was recording more merge information when
+you had file externals. So we added some tests to detect and work around that.
+
+(And I think about 20 similar cases in different places of our code).
+
+We never expected any of this when we introduced file externals as an
+easy feature.
+
+[[
+<@cmpilato> A file external -- like any other external -- shouldn't be an add at all in a copy situation.
+<@Bert> cmpilato: But a file external is not like 'any other external'... It is like 'any other switch'
+<@cmpilato> That mindset is 90% of the problem with file externals.
+<@cmpilato> They were never intended to behave as switches.
+<@cmpilato> Switch was simply the low-hanging mechanism that was used to shoehorn them in.
+<@cmpilato> They were always intended to behave like dir externals.
+<@cmpilato> hrm.  we don't appear to be honoring the --ignore-externals option to 'svn cp WC WC' either...
+]]
+
+"Why can't file externals be more like 'normal' externals?"
+(Issue #3589, #3518, #3351, #3665, #3816, #3843)
+
+
+ The WC-NG Externals store
+ =========================
+
+After holding back several changes to more file externals corner cases on
+"we should really design file externals before adding more features" these
+three questions got me thinking:
+
+    "We really need some store with old (applied) svn:externals definitions, so
+     we would only have to update externals from that to the latest definition"    
+
+    "Why can't file externals be more like 'normal' externals?"
+
+And later (via private mail):
+    "Will this allow to exclude externals from WC? (Use-case: watching repo
+     of public project with number of externals)"
+
+So we have three separate requests to store some information on externals,
+which we couldn't store before.
+
+- Handling externals changes -
+
+For every applied external we would like to have:
+  * Where it was defined 
+  * What is its definition
+  * If it has a fixed revision or not.
+This allows applying svn:externals changes from any previous state to the last
+state by just comparing the actual propery values against what is stored.
+ 
+- Moving file externals into their own storage -
+  
+If we want to make file externals like 'normal externals, we should remove
+their presence from their parent working copy and just handle them as
+independent filesystem objects.
+
+For that we need some storage location of 'all the relevant information it
+would have in the past'.
+  * Repository, repos_relpath, revision.
+  * Presence (always status normal. Can't be deleted, moved, etc.)
+  * Kind (always file or symlink)
+  * Properties
+  * Checksum
+  * Changed date, author, revision
+  * Recorded size and mod time
+  
+- Excluding externals -
+
+To allow excluding externals we need some kind of presence flag containing
+'normal' and 'excluded' per external.
+
+
+### Combine these three ideas and you have the EXTERNALS table for format 29

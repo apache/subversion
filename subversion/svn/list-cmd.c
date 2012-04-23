@@ -30,6 +30,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_opt.h"
 
 #include "cl.h"
 
@@ -155,7 +156,7 @@ print_dirent_xml(void *baton,
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
 
-  sb = svn_stringbuf_create("", pool);
+  sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "kind", svn_cl__node_kind_str_xml(dirent->kind),
@@ -220,7 +221,7 @@ svn_cl__list(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -270,12 +271,12 @@ svn_cl__list(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Get peg revisions. */
-      SVN_ERR(svn_cl__opt_parse_path(&peg_revision, &truepath, target,
-                                     subpool));
+      SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
+                                 subpool));
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "list",
                                 "path", truepath[0] == '\0' ? "." : truepath,
                                 NULL);
@@ -298,7 +299,7 @@ svn_cl__list(apr_getopt_t *os,
               err->apr_err == SVN_ERR_FS_NOT_FOUND)
               svn_handle_warning2(stderr, err, "svn: ");
           else
-              return svn_error_return(err);
+              return svn_error_trace(err);
 
           svn_error_clear(err);
           err = NULL;
@@ -307,7 +308,7 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_close_tag(&sb, pool, "list");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }

@@ -26,6 +26,7 @@
 
 # General modules
 import os
+import re
 import shutil
 import sys
 
@@ -33,6 +34,7 @@ import sys
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svntest.verify import SVNUnexpectedStderr
+from svntest.verify import UnorderedOutput
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
@@ -465,7 +467,7 @@ def fsfs_file(repo_dir, kind, rev):
     if svntest.main.options.fsfs_sharding is None:
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
-      shard = int(rev) // svntest.main.fsfs_sharding
+      shard = int(rev) // svntest.main.options.fsfs_sharding
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
       if svntest.main.options.fsfs_packing is None or kind == 'revprops':
@@ -613,7 +615,7 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Found malformed header in revision file")
+    expected_stderr=".*Found malformed header '[^']*' in revision file")
 
 #----------------------------------------------------------------------
 
@@ -970,7 +972,7 @@ def verify_with_invalid_revprops(sbox):
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin verify' is unexpected.", None, errput, None,
-    ".*Malformed file"):
+    ".*svnadmin: E200002:.*"):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1256,7 +1258,7 @@ def hotcopy_symlink(sbox):
       raise svntest.Failure
 
 def load_bad_props(sbox):
-  "svadmin load with invalid svn: props"
+  "svnadmin load with invalid svn: props"
 
   dump_str = """SVN-fs-dump-format-version: 2
 
@@ -1315,6 +1317,198 @@ text
   svntest.actions.load_repo(sbox, dump_str=dump_str,
                             bypass_prop_validation=True)
 
+# This test intentionally corrupts a revision and assumes an FSFS
+# repository. If you can make it work with BDB please do so.
+# However, the verification triggered by this test is in the repos layer
+# so it will trigger with either backend anyway.
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.server_enforces_UTF8_fspaths_in_verify)
+def verify_non_utf8_paths(sbox):
+  "svnadmin verify with non-UTF-8 paths"
+
+  dumpfile = clean_dumpfile()
+  test_create(sbox)
+
+  # Load the dumpstream
+  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, dumpfile,
+                             '--ignore-uuid')
+
+  # Replace the path 'A' in revision 1 with a non-UTF-8 sequence.
+  # This has been observed in repositories in the wild, though Subversion
+  # 1.6 and greater should prevent such filenames from entering the repository.
+  path1 = os.path.join(sbox.repo_dir, "db", "revs", "0", "1")
+  path_new = os.path.join(sbox.repo_dir, "db", "revs", "0", "1.new")
+  fp1 = open(path1, 'rb')
+  fp_new = open(path_new, 'wb')
+  for line in fp1.readlines():
+    if line == "A\n":
+      # replace 'A' with a latin1 character -- the new path is not valid UTF-8
+      fp_new.write("\xE6\n")
+    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "cpath: /A\n":
+      # also fix up the 'created path' field
+      fp_new.write("cpath: /\xE6\n")
+    elif line == "_0.0.t0-0 add-file true true /A\n":
+      # and another occurrance
+      fp_new.write("_0.0.t0-0 add-file true true /\xE6\n")
+    else:
+      fp_new.write(line)
+  fp1.close()
+  fp_new.close()
+  os.remove(path1)
+  os.rename(path_new, path1)
+
+  # Verify the repository, expecting failure
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+  svntest.verify.verify_outputs(
+    "Unexpected error while running 'svnadmin verify'.",
+    [], errput, None, ".*Path '.*' is not in UTF-8.*")
+
+  # Make sure the repository can still be dumped so that the
+  # encoding problem can be fixed in a dump/edit/load cycle.
+  expected_stderr = [
+    "* Dumped revision 0.\n",
+    "WARNING 0x0002: E160005: "
+      "While validating fspath '?\\230': "
+      "Path '?\\230' is not in UTF-8"
+      "\n",
+    "* Dumped revision 1.\n",
+    ]
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir)
+  if svntest.verify.compare_and_display_lines(
+    "Output of 'svnadmin dump' is unexpected.",
+    'STDERR', expected_stderr, errput):
+    raise svntest.Failure
+
+def test_lslocks_and_rmlocks(sbox):
+  "test 'svnadmin lslocks' and 'svnadmin rmlocks'"
+  
+  sbox.build(create_wc=False)
+  iota_url = sbox.repo_url + '/iota'
+  lambda_url = sbox.repo_url + '/A/B/lambda'
+
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir)
+
+  if exit_code or errput or output:
+    raise svntest.Failure("Error: 'lslocks' failed")
+
+  expected_output = UnorderedOutput(
+    ["'A/B/lambda' locked by user 'jrandom'.\n",
+     "'iota' locked by user 'jrandom'.\n"])
+  
+  # Lock iota and A/B/lambda using svn client
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], "lock", "-m", "Locking files",
+                                     iota_url, lambda_url)
+
+  expected_output_list = [
+      "Path: /A/B/lambda",
+      "UUID Token: opaquelocktoken",
+      "Owner: jrandom",
+      "Created:",
+      "Expires:",
+      "Comment \(1 line\):",
+      "Locking files",
+      "Path: /iota",
+      "UUID Token: opaquelocktoken.*",      
+      "\n", # empty line    
+      ]
+
+  # List all locks
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir)
+  
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+    
+  try:
+    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
+    svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                             'output',
+                                             expected_output, output)
+  except:
+    # Usually both locks have the same timestamp but if the clock
+    # ticks between creating the two locks then the timestamps will
+    # differ.  When the output has two identical "Created" lines
+    # UnorderedRegexOutput must have one matching regex, when the
+    # output has two different "Created" lines UnorderedRegexOutput
+    # must have two regex.
+    expected_output_list.append("Created:.*")
+    expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
+    svntest.verify.compare_and_display_lines('lslocks output mismatch',
+                                             'output',
+                                             expected_output, output)
+
+  # List lock in path /A
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir,
+                                                        "A")
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  expected_output = svntest.verify.UnorderedRegexOutput([
+    "Path: /A/B/lambda",
+    "UUID Token: opaquelocktoken",
+    "Owner: jrandom",
+    "Created:",
+    "Expires:",
+    "Comment \(1 line\):",
+    "Locking files",
+    "\n", # empty line    
+    ])
+
+  svntest.verify.compare_and_display_lines('message', 'label',
+                                           expected_output, output)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+
+  # Remove locks
+  exit_code, output, errput = svntest.main.run_svnadmin("rmlocks",
+                                                        sbox.repo_dir,
+                                                        "iota",
+                                                        "A/B/lambda")
+  expected_output = UnorderedOutput(["Removed lock on '/iota'.\n",
+                                     "Removed lock on '/A/B/lambda'.\n"])
+  
+  svntest.verify.verify_outputs(
+    "Unexpected output while running 'svnadmin rmlocks'.",
+    output, [], expected_output, None)
+
+#----------------------------------------------------------------------
+@Issue(3734)
+def load_ranges(sbox):
+  "'svnadmin load --revision X:Y'"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'skeleton_repos.dump')
+  dumplines = open(dumpfile_location).readlines()
+  dumpdata = "".join(dumplines)
+
+  # Load our dumpfile, 2 revisions at a time, verifying that we have
+  # the correct youngest revision after each load.
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r0:2')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['2\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r3:4')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['4\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r5:6')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
+                                         None, 'youngest', sbox.repo_dir)
+
+  # There are ordering differences in the property blocks.
+  expected_dump = UnorderedOutput(dumplines)
+  new_dumpdata = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+  svntest.verify.compare_and_display_lines("Dump files", "DUMP",
+                                           expected_dump, new_dumpdata)
 
 ########################################################################
 # Run the tests
@@ -1344,6 +1538,9 @@ test_list = [ None,
               dont_drop_valid_mergeinfo_during_incremental_loads,
               hotcopy_symlink,
               load_bad_props,
+              verify_non_utf8_paths,
+              test_lslocks_and_rmlocks,
+              load_ranges,
              ]
 
 if __name__ == '__main__':

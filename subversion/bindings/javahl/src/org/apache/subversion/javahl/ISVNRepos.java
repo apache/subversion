@@ -247,4 +247,10 @@ public interface ISVNRepos {
      */
     public abstract void pack(File path, ReposNotifyCallback callback)
 			throws ClientException;
+
+    /**
+     * cancel the active operation
+     * @throws ClientException
+     */
+    void cancelOperation() throws ClientException;
 }

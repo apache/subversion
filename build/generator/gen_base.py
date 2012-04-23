@@ -27,6 +27,7 @@ import sys
 import glob
 import re
 import fileinput
+import filecmp
 try:
   # Python >=3.0
   import configparser
@@ -215,8 +216,27 @@ class GeneratorBase:
 
     import transform_sql
     for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
-      assert len(sqlfile) == 1
-      transform_sql.main(sqlfile[0], open(hdrfile, 'w'))
+      new_hdrfile = hdrfile + ".new"
+      new_file = open(new_hdrfile, 'w')
+      transform_sql.main(sqlfile[0], new_file)
+      new_file.close()
+
+      def identical(file1, file2):
+        try:
+          if filecmp.cmp(new_hdrfile, hdrfile):
+            return True
+          else:
+            return False
+        except:
+          return False
+
+      if identical(new_hdrfile, hdrfile):
+        os.remove(new_hdrfile)
+      else:
+        try:
+          os.remove(hdrfile)
+        except: pass
+        os.rename(new_hdrfile, hdrfile)
 
 
 class DependencyGraph:
@@ -479,6 +499,8 @@ class TargetLib(TargetLinked):
 
     # Is a library referencing symbols which are undefined at link time.
     self.undefined_lib_symbols = options.get('undefined-lib-symbols') == 'yes'
+
+    self.link_cmd = options.get('link-cmd', '$(LINK_LIB)')
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
@@ -764,6 +786,7 @@ class TargetSQLHeader(Target):
     Target.__init__(self, name, options, gen_obj)
     self.sources = options.get('sources')
 
+  _re_sql_include = re.compile('-- *include: *([-a-z]+)')
   def add_dependencies(self):
 
     sources = _collect_paths(self.sources, self.path)
@@ -777,6 +800,13 @@ class TargetSQLHeader(Target):
 
     self.gen_obj.graph.add(DT_SQLHDR, output, source)
 
+    for line in fileinput.input(source):
+      match = self._re_sql_include.match(line)
+      if not match:
+        continue
+      file = match.group(1)
+      self.gen_obj.graph.add(DT_SQLHDR, output,
+                             os.path.join(os.path.dirname(source), file + '.sql'))
 
 _build_types = {
   'exe' : TargetExe,

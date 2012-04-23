@@ -196,7 +196,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -205,7 +205,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_wc__db_kind_file)
+  if (kind != svn_kind_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -220,7 +220,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                "because its delete is already committed"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-  else if (status == svn_wc__db_status_absent
+  else if (status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_incomplete)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
@@ -249,7 +249,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const svn_checksum_t *sha1_checksum;
 
   if (size)
@@ -261,7 +261,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_wc__db_kind_file)
+  if (kind != svn_kind_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -282,7 +282,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                "because its delete is already committed"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-  else if (status == svn_wc__db_status_absent
+  else if (status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_incomplete)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
@@ -315,8 +315,8 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   local_abspath = svn_wc__adm_child(dir_abspath, fname, scratch_pool);
-  return svn_error_return(svn_stream_open_readonly(stream, local_abspath,
-                                                   result_pool, scratch_pool));
+  return svn_error_trace(svn_stream_open_readonly(stream, local_abspath,
+                                                  result_pool, scratch_pool));
 }
 
 
@@ -326,14 +326,14 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            svn_checksum_t **md5_checksum,
                            svn_checksum_t **sha1_checksum,
                            svn_wc__db_t *db,
-                           const char *local_abspath,
+                           const char *wri_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   const char *temp_dir_abspath;
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, local_abspath,
+  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, wri_abspath,
                                           scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_unique(stream,
                                  temp_base_abspath,
@@ -396,11 +396,23 @@ init_adm(svn_wc__db_t *db,
   /** Init the tmp area. ***/
   SVN_ERR(init_adm_tmp_area(local_abspath, pool));
 
-  /* Lastly, create the SDB.  */
+  /* Create the SDB. */
   SVN_ERR(svn_wc__db_init(db, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
                           initial_rev, depth,
                           pool));
+
+  /* Stamp ENTRIES and FORMAT files for old clients.  */
+  SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
+                                               SVN_WC__ADM_ENTRIES,
+                                               pool),
+                             SVN_WC__NON_ENTRIES_STRING,
+                             pool));
+  SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
+                                               SVN_WC__ADM_FORMAT,
+                                               pool),
+                             SVN_WC__NON_ENTRIES_STRING,
+                             pool));
 
   return SVN_NO_ERROR;
 }
@@ -416,7 +428,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   int format;
-  const char *repos_relpath;
+  const char *repos_relpath = svn_uri_skip_ancestor(repos_root_url, url,
+                                                    scratch_pool);
   svn_wc__db_status_t status;
   const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
   svn_revnum_t db_revision;
@@ -425,21 +438,17 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_ancestor(repos_root_url, url));
+  SVN_ERR_ASSERT(repos_relpath != NULL);
 
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
                                     scratch_pool));
 
-  repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
-  if (repos_relpath == NULL)
-    repos_relpath = "";
-
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
   if (format == 0)
-    return svn_error_return(init_adm(db, local_abspath,
-                                     repos_relpath, repos_root_url, repos_uuid,
-                                     revision, depth, scratch_pool));
+    return svn_error_trace(init_adm(db, local_abspath,
+                                    repos_relpath, repos_root_url, repos_uuid,
+                                    revision, depth, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
                                &db_revision, &db_repos_relpath,
@@ -472,8 +481,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                              &db_repos_relpath,
                                              &db_repos_root_url,
                                              &db_repos_uuid,
-                                             NULL, NULL, NULL, NULL,
-                                             db, local_abspath,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, db, local_abspath,
                                              scratch_pool, scratch_pool));
           else
             SVN_ERR(svn_wc__db_scan_base_repos(&db_repos_relpath,
@@ -491,7 +500,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
       /* ### comparing URLs, should they be canonicalized first? */
       if (strcmp(db_repos_uuid, repos_uuid)
           || strcmp(db_repos_root_url, repos_root_url)
-          || !svn_relpath_is_ancestor(db_repos_relpath, repos_relpath))
+          || !svn_relpath_skip_ancestor(db_repos_relpath, repos_relpath))
         {
           const char *copyfrom_root_url, *copyfrom_repos_relpath;
 
@@ -532,7 +541,7 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    svn_depth_t depth,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__internal_ensure_adm(wc_ctx->db, local_abspath, url, repos_root_url,
                                 repos_uuid, revision, depth, scratch_pool));
 }
@@ -554,17 +563,18 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
                                 scratch_pool, scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
-     directory, which also removes the lock */
-  SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
+     directory, which also removes remaining locks */
 
-  /* ### We should check if we are the only user of this DB, or
-         perhaps call svn_wc__db_drop_root? */
+  /* Now close the DB, and we can delete the working copy */
   if (strcmp(adm_abspath, dir_abspath) == 0)
-    SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
-                                                 scratch_pool),
-                               FALSE,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
+    {
+      SVN_ERR(svn_wc__db_drop_root(db, adm_abspath, scratch_pool));
+      SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
+                                                   scratch_pool),
+                                 FALSE,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -587,7 +597,7 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
 
   /* Now, rebuild the tmp area. */
-  return svn_error_return(init_adm_tmp_area(adm_abspath, scratch_pool));
+  return svn_error_trace(init_adm_tmp_area(adm_abspath, scratch_pool));
 }
 
 
@@ -617,7 +627,7 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
                                        pool, pool);
   err = svn_error_compose_create(err, svn_wc__db_close(db));
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
                                    delete_when, pool, pool));
