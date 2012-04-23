@@ -205,8 +205,8 @@ switch_internal(svn_revnum_t *result_rev,
                 &switch_loc, ra_session, revnum, switch_rev_url, pool));
       SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, local_abspath,
                                    pool, pool));
-      SVN_ERR(svn_wc__node_get_base_rev(&target_rev, ctx->wc_ctx,
-                                        local_abspath, pool));
+      SVN_ERR(svn_wc__node_get_base(&target_rev, NULL, NULL, NULL, ctx->wc_ctx,
+                                    local_abspath, pool, pool));
       SVN_ERR(svn_client__pathrev_create_with_session(
                 &target_loc, ra_session, target_rev, target_url, pool));
       /* ### It would be nice if this function could reuse the existing

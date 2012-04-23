@@ -895,8 +895,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   SVN_ERR(svn_wc__node_get_url(&target_base.url, ctx->wc_ctx, target_abspath,
                                pool, pool));
-  SVN_ERR(svn_wc__node_get_base_rev(&target_base.rev, ctx->wc_ctx,
-                                    target_abspath, pool));
+  SVN_ERR(svn_wc__node_get_base(&target_base.rev, NULL, NULL, NULL,
+                                ctx->wc_ctx, target_abspath, pool, pool));
   SVN_ERR(svn_wc__node_get_repos_info(&target_base.repos_root_url,
                                       &target_base.repos_uuid,
                                       ctx->wc_ctx, target_abspath, pool, pool));
@@ -4061,8 +4061,9 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
      So in the name of user friendliness, return an error suggesting a helpful
      course of action.
   */
-  SVN_ERR(svn_wc__node_get_base_rev(&child_base_revision, ctx->wc_ctx,
-                                     child->abspath, scratch_pool));
+  SVN_ERR(svn_wc__node_get_base(&child_base_revision, NULL, NULL, NULL,
+                                ctx->wc_ctx, child->abspath,
+                                scratch_pool, scratch_pool));
   /* If CHILD has no base revision then it hasn't been committed yet, so it
      can't have any "future" history. */
   if (SVN_IS_VALID_REVNUM(child_base_revision)

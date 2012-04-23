@@ -628,21 +628,31 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
 
 
 /**
- * Get the base revision of @a local_abspath using @a wc_ctx.  If
- * @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ * Get the repository location of the base node at @a local_abspath.
  *
- * In @a *base_revision, return the revision of the revert-base, i.e. the
- * revision that this node was checked out at or last updated/switched to,
+ * Set *REVISION, *REPOS_RELPATH, *REPOS_ROOT_URL and *REPOS_UUID to the
+ * location that this node was checked out at or last updated/switched to,
  * regardless of any uncommitted changes (delete, replace and/or
  * copy-here/move-here).  For a locally added/copied/moved-here node that is
- * not part of a replace, return @c SVN_INVALID_REVNUM.
+ * not part of a replace, return @c SVN_INVALID_REVNUM/NULL/NULL/NULL.
+ *
+ * If there is no base node at @a local_abspath, return a
+ * @c SVN_ERR_WC_PATH_NOT_FOUND error.
+ *
+ * All output arguments may be NULL.
+ *
+ * Allocate the results in @a result_pool. Perform temporary allocations in
+ * @a scratch_pool.
  */
 svn_error_t *
-svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
+svn_wc__node_get_base(svn_revnum_t *revision,
+                      const char **repos_relpath,
+                      const char **repos_root_url,
+                      const char **repos_uuid,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 
 /* Get the working revision of @a local_abspath using @a wc_ctx. If @a
