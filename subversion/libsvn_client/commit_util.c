@@ -1623,14 +1623,20 @@ do_item_commit(void **dir_baton,
               prop = APR_ARRAY_IDX(prop_changes, ctr, svn_prop_t *);
               if (kind == svn_node_file)
                 {
-                  editor->change_file_prop(file_baton, prop->name,
-                                           prop->value, pool);
+                  err = editor->change_file_prop(file_baton, prop->name,
+                                                 prop->value, pool);
                 }
               else
                 {
-                  editor->change_dir_prop(*dir_baton, prop->name,
-                                          prop->value, pool);
+                  err = editor->change_dir_prop(*dir_baton, prop->name,
+                                                prop->value, pool);
                 }
+
+              if (err)
+                return svn_error_trace(fixup_commit_error(local_abspath,
+                                                          icb->base_url,
+                                                          path, kind, err,
+                                                          ctx, pool));
             }
         }
     }
@@ -1706,14 +1712,21 @@ do_item_commit(void **dir_baton,
                                    svn_prop_t *);
               if (kind == svn_node_file)
                 {
-                  editor->change_file_prop(file_baton, prop->name,
+                  err = editor->change_file_prop(file_baton, prop->name,
                                            prop->value, pool);
                 }
               else
                 {
-                  editor->change_dir_prop(*dir_baton, prop->name,
+                  err = editor->change_dir_prop(*dir_baton, prop->name,
                                           prop->value, pool);
                 }
+
+              if (err)
+                return svn_error_trace(fixup_commit_error(local_abspath,
+                                                          icb->base_url,
+                                                          path, kind,
+                                                          err, ctx,
+                                                          pool));
             }
         }
     }
