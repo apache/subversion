@@ -779,7 +779,7 @@ svn_ra_get_commit_editor4(svn_ra_session_t *session,
      this function as returned. */
   struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
   struct svn_delta__extra_baton *exb;
-  svn_delta_unlock_func_t unlock_func;
+  svn_delta__unlock_func_t unlock_func;
   void *unlock_baton;
   svn_boolean_t send_abs_paths;
   const char *repos_root;

@@ -1152,20 +1152,6 @@ typedef struct svn_delta_shim_callbacks_t
 svn_delta_shim_callbacks_t *
 svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
 
-typedef svn_error_t *(*svn_delta__start_edit_func_t)(
-    void *baton,
-    svn_revnum_t base_revision);
-
-typedef svn_error_t *(*svn_delta__target_revision_func_t)(
-    void *baton,
-    svn_revnum_t target_revision,
-    apr_pool_t *scratch_pool);
-
-typedef svn_error_t *(*svn_delta_unlock_func_t)(
-    void *baton,
-    const char *path,
-    apr_pool_t *scratch_pool);
-
 
 /** A temporary API which conditionally inserts a double editor shim
  * into the chain of delta editors.  Used for testing Editor v2.
