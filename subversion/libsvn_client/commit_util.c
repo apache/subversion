@@ -1778,7 +1778,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
@@ -1802,8 +1801,6 @@ svn_client__do_commit(const char *base_url,
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
   /* Ditto for the checksums. */
-  if (md5_checksums)
-    *md5_checksums = apr_hash_make(result_pool);
   if (sha1_checksums)
     *sha1_checksums = apr_hash_make(result_pool);
 
@@ -1883,9 +1880,6 @@ svn_client__do_commit(const char *base_url,
                                                     err, ctx, scratch_pool));
         }
 
-      if (md5_checksums)
-        apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
-                     new_text_base_md5_checksum);
       if (sha1_checksums)
         apr_hash_set(*sha1_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_sha1_checksum);

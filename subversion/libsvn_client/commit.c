@@ -1786,8 +1786,8 @@ svn_client_commit6(const apr_array_header_t *targets,
   /* Perform the commit. */
   cmt_err = svn_error_trace(
             svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, NULL,
-                                  &sha1_checksums, ctx, pool, iterpool));
+                                  notify_prefix, &sha1_checksums, ctx, pool,
+                                  iterpool));
 
   /* Handle a successful commit. */
   if ((! cmt_err)
