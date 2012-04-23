@@ -809,10 +809,6 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
 
-/** Do not auto-commit the txn when its associated editor is marked
- * as completed.
- */
-#define SVN_FS_TXN_NO_AUTOCOMMIT                 0x00004
 /** @} */
 
 /**
@@ -1019,18 +1015,21 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  * @{
  */
 
+/* ### docco. note that @a autocommit is typically TRUE.  */
 svn_error_t *
 svn_fs_editor_create(svn_editor_t **editor,
                      const char **txn_name,
                      svn_fs_t *fs,
                      svn_revnum_t revision,
                      apr_uint32_t flags,
+                     svn_boolean_t autocommit,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
 
+/* ### docco.  */
 svn_error_t *
 svn_fs_editor_create_for(svn_editor_t **editor,
                          svn_fs_t *fs,

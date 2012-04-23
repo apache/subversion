@@ -34,7 +34,7 @@
 
 struct edit_baton {
   svn_fs_txn_t *txn;
-  svn_boolean_t no_autocommit;
+  svn_boolean_t autocommit;
 };
 
 #define UNUSED(x) ((void)(x))
@@ -226,7 +226,7 @@ abort_cb(void *baton,
 static svn_error_t *
 make_editor(svn_editor_t **editor,
             svn_fs_txn_t *txn,
-            svn_boolean_t no_autocommit,
+            svn_boolean_t autocommit,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             apr_pool_t *result_pool,
@@ -250,7 +250,7 @@ make_editor(svn_editor_t **editor,
   struct edit_baton *eb = apr_palloc(result_pool, sizeof(*eb));
 
   eb->txn = txn;
-  eb->no_autocommit = no_autocommit;
+  eb->autocommit = autocommit;
 
   SVN_ERR(svn_editor_create(editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
@@ -266,17 +266,17 @@ svn_fs_editor_create(svn_editor_t **editor,
                      svn_fs_t *fs,
                      svn_revnum_t revision,
                      apr_uint32_t flags,
+                     svn_boolean_t autocommit,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_fs_txn_t *txn;
-  svn_boolean_t no_autocommit = (flags & SVN_FS_TXN_NO_AUTOCOMMIT) != 0;
 
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, revision, flags, result_pool));
   SVN_ERR(svn_fs_txn_name(txn_name, txn, result_pool));
-  return svn_error_trace(make_editor(editor, txn, no_autocommit,
+  return svn_error_trace(make_editor(editor, txn, autocommit,
                                      cancel_func, cancel_baton,
                                      result_pool, scratch_pool));
 }
@@ -294,7 +294,7 @@ svn_fs_editor_create_for(svn_editor_t **editor,
   svn_fs_txn_t *txn;
 
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, result_pool));
-  return svn_error_trace(make_editor(editor, txn, TRUE /* no_autocommit */,
+  return svn_error_trace(make_editor(editor, txn, FALSE /* autocommit */,
                                      cancel_func, cancel_baton,
                                      result_pool, scratch_pool));
 }
