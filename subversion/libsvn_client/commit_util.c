@@ -674,10 +674,10 @@ harvest_committables(const char *local_abspath,
       svn_revnum_t dir_rev;
 
       if (!copy_mode_root)
-        SVN_ERR(svn_wc__node_get_base_rev(&dir_rev, wc_ctx,
-                                          svn_dirent_dirname(local_abspath,
-                                                             scratch_pool),
-                                          scratch_pool));
+        SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, wc_ctx,
+                                      svn_dirent_dirname(local_abspath,
+                                                         scratch_pool),
+                                      scratch_pool, scratch_pool));
 
       if (copy_mode_root || node_rev != dir_rev)
         {

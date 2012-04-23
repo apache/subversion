@@ -232,8 +232,8 @@ update_internal(svn_revnum_t *result_rev,
   /* Check if our anchor exists in BASE. If it doesn't we can't update.
      ### For performance reasons this should be handled with the same query
      ### as retrieving the anchor url. */
-  SVN_ERR(svn_wc__node_get_base_rev(&revnum, ctx->wc_ctx, anchor_abspath,
-                                    pool));
+  SVN_ERR(svn_wc__node_get_base(&revnum, NULL, NULL, NULL, ctx->wc_ctx,
+                                anchor_abspath, pool, pool));
 
   /* It does not make sense to update tree-conflict victims. */
   err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,

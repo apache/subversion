@@ -1165,8 +1165,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__node_get_base_rev(&pair->src_revnum, ctx->wc_ctx,
-                                        pair->src_abspath_or_url, iterpool));
+      SVN_ERR(svn_wc__node_get_base(&pair->src_revnum, NULL, NULL, NULL,
+                                    ctx->wc_ctx, pair->src_abspath_or_url,
+                                    iterpool, iterpool));
     }
 
   /* Determine the longest common ancestor for the destinations, and open an RA
