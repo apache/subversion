@@ -105,12 +105,7 @@ static sasl_callback_t callbacks[] =
 static svn_error_t *initialize(void *baton, apr_pool_t *pool)
 {
   int result;
-  apr_status_t status;
-
-  status = svn_ra_svn__sasl_common_init(pool);
-  if (status)
-    return svn_error_wrap_apr(status,
-                              _("Could not initialize the SASL library"));
+  SVN_ERR(svn_ra_svn__sasl_common_init(pool));
 
   /* The second parameter tells SASL to look for a configuration file
      named subversion.conf. */

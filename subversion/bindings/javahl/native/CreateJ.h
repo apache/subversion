@@ -49,7 +49,7 @@ class CreateJ
   Checksum(const svn_checksum_t *checksum);
 
   static jobject
-  Info(const char *path, const svn_info2_t *info);
+  Info(const char *path, const svn_client_info2_t *info);
 
   static jobject
   Lock(const svn_lock_t *lock);
@@ -61,8 +61,8 @@ class CreateJ
   ChangedPath(const char *path, svn_log_changed_path2_t *log_item);
 
   static jobject
-  Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
-         const svn_client_status_t *status, apr_pool_t *pool);
+  Status(svn_wc_context_t *wc_ctx, const svn_client_status_t *status,
+         apr_pool_t *pool);
 
   static jobject
   ClientNotifyInformation(const svn_wc_notify_t *notify);

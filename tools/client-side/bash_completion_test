@@ -116,7 +116,7 @@ get_svn_options() {
   { svn help "$1" |
       # Find the relevant lines; remove "arg" and description.
       sed -n -e '1,/^Valid options:$/d;/^  -/!d' \
-             -e 's/\( arg\)* * : .*//;p' |
+             -e 's/\( ARG\)* * : .*//;p' |
       # Remove brackets; put each word on its own line.
       tr -d '] ' | tr '[' '\n'
     # The following options are always accepted but not listed in the help

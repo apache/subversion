@@ -180,9 +180,8 @@ svn_error_t *
 svn_error_root_cause(svn_error_t *err);
 
 /** Return the first error in @a err's chain that has an error code @a
- * apr_err or #SVN_NO_ERROR if there is no error with that code.  @a
- * err should *not* be cleared as the returned error shares memory
- * with @a err.
+ * apr_err or #SVN_NO_ERROR if there is no error with that code.  The
+ * returned error should @em not be cleared as it shares memory with @a err.
  *
  * If @a err is #SVN_NO_ERROR, return #SVN_NO_ERROR.
  *
@@ -303,21 +302,24 @@ svn_handle_warning(FILE *stream,
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
-      return svn_error_return(svn_err__temp);   \
+      return svn_error_trace(svn_err__temp);    \
   } while (0)
 
 /**
- * A statement macro for returning error values.
+ * A macro for wrapping an error in a source-location trace message.
  *
- * This macro can be used when directly returning an error to ensure
+ * This macro can be used when directly returning an already created
+ * error (when not using SVN_ERR, svn_error_create(), etc.) to ensure
  * that the call stack is recorded correctly.
+ *
+ * @since New in 1.7.
  */
 #ifdef SVN_ERR__TRACING
 #define SVN_ERR__TRACED "traced call"
 
-#define svn_error_return(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
+#define svn_error_trace(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
 #else
-#define svn_error_return(expr)  (expr)
+#define svn_error_trace(expr)  (expr)
 #endif
 
 /**
@@ -350,8 +352,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
   do {                                                      \
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
-      return svn_error_return(svn_error_quick_wrap(         \
-                                 svn_err__temp, wrap_msg)); \
+      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
   } while (0)
 
 
@@ -382,14 +383,16 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  * Return TRUE if @a err is an error specifically related to locking a
  * path in the repository, FALSE otherwise.
  *
- * SVN_ERR_FS_OUT_OF_DATE is in here because it's a non-fatal error
- * that can be thrown when attempting to lock an item.
+ * SVN_ERR_FS_OUT_OF_DATE and SVN_ERR_FS_NOT_FOUND are in here because it's a
+ * non-fatal error that can be thrown when attempting to lock an item.
  *
  * @since New in 1.2.
  */
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
   (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||        \
-   err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
+   err->apr_err == SVN_ERR_FS_NOT_FOUND           ||        \
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
+   err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
 
 /**
  * Return TRUE if @a err is an error specifically related to unlocking
@@ -408,7 +411,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 /** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
  * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
  * constants.
- * 
+ *
  * @since New in 1.7.
  */
 #define SVN_ERROR_IN_CATEGORY(apr_err, category)            \
@@ -440,7 +443,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  */
 #define SVN_ERR_MALFUNCTION()                                      \
   do {                                                             \
-    return svn_error_return(svn_error__malfunction(                \
+    return svn_error_trace(svn_error__malfunction(                 \
                                  TRUE, __FILE__, __LINE__, NULL)); \
   } while (0)
 

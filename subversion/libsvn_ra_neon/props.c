@@ -547,7 +547,7 @@ svn_error_t * svn_ra_neon__get_props(apr_hash_t **results,
   pc.pool = pool;
   pc.propbuffer = apr_hash_make(pool);
   pc.props = apr_hash_make(pool);
-  pc.cdata = svn_stringbuf_create("", pool);
+  pc.cdata = svn_stringbuf_create_empty(pool);
 
   /* Create and dispatch the request! */
   SVN_ERR(svn_ra_neon__parsed_request(sess, "PROPFIND", url,
@@ -571,7 +571,7 @@ svn_error_t * svn_ra_neon__get_props_resource(svn_ra_neon__resource_t **rsrc,
 {
   apr_hash_t *props;
   char * url_path = apr_pstrdup(pool, url);
-  int len = strlen(url);
+  size_t len = strlen(url);
   /* Clean up any trailing slashes. */
   if (len > 1 && url[len - 1] == '/')
       url_path[len - 1] = '\0';
@@ -646,12 +646,11 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
 svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               svn_ra_neon__session_t *sess,
                                               const char *url,
-                                              const char *label,
                                               apr_pool_t *pool)
 {
   svn_string_t *propval;
 
-  SVN_ERR(svn_ra_neon__get_props_resource(rsrc, sess, url, label,
+  SVN_ERR(svn_ra_neon__get_props_resource(rsrc, sess, url, NULL,
                                           starting_props, pool));
 
   /* Cache some of the resource information. */
@@ -672,6 +671,27 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                              APR_HASH_KEY_STRING);
       if (propval)
         sess->uuid = apr_pstrdup(sess->pool, propval->data);
+    }
+
+  if (! sess->repos_root)
+    {
+      propval = apr_hash_get((*rsrc)->propset,
+                             SVN_RA_NEON__PROP_BASELINE_RELPATH,
+                             APR_HASH_KEY_STRING);
+
+      if (propval)
+      {
+        ne_uri uri;
+        svn_stringbuf_t *urlbuf = svn_stringbuf_create(url, pool);
+
+        svn_path_remove_components(urlbuf,
+                                   svn_path_component_count(propval->data));
+
+        uri = sess->root;
+        uri.path = urlbuf->data;
+
+        sess->repos_root = svn_ra_neon__uri_unparse(&uri, sess->pool);
+      }
     }
 
   return SVN_NO_ERROR;
@@ -717,7 +737,7 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
     {
       svn_pool_clear(iterpool);
       err = svn_ra_neon__get_starting_props(rsrc, sess, path_s->data,
-                                            NULL, iterpool);
+                                            iterpool);
       if (! err)
         break;   /* found an existing, readable parent! */
 
@@ -937,12 +957,8 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
   else
     {
       /* Fetch a specific revision */
-
-      char label[20];
-
       /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
-
-      apr_snprintf(label, sizeof(label), "%ld", revision);
+      const char *label = apr_ltoa(pool, revision);
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
@@ -957,18 +973,59 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
 }
 
 
-svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
-                                            svn_string_t *bc_url,
-                                            svn_string_t *bc_relative,
+svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
+                                            const char **bc_relative_p,
                                             svn_revnum_t *latest_rev,
                                             svn_ra_neon__session_t *sess,
                                             const char *url,
                                             svn_revnum_t revision,
                                             apr_pool_t *pool)
 {
-  svn_ra_neon__resource_t *baseline_rsrc, *rsrc;
+  svn_ra_neon__resource_t *baseline_rsrc;
   const svn_string_t *my_bc_url;
   svn_string_t my_bc_rel;
+
+  /* If the server supports HTTPv2, we can bypass alot of the hard
+     work here.  Otherwise, we fall back to older (less direct)
+     semantics.  */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(sess))
+    {
+      /* Fetch youngest revision from server only if needed to construct
+         baseline collection URL or return to caller. */
+      if (! SVN_IS_VALID_REVNUM(revision) && (bc_url_p || latest_rev))
+        {
+          svn_revnum_t youngest;
+
+          SVN_ERR(svn_ra_neon__exchange_capabilities(sess, NULL,
+                                                     &youngest, pool));
+          if (! SVN_IS_VALID_REVNUM(youngest))
+            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                    _("The OPTIONS response did not include "
+                                      "the youngest revision"));
+          revision = youngest;
+        }
+      if (bc_url_p)
+        {
+          *bc_url_p = apr_psprintf(pool, "%s/%ld", sess->rev_root_stub,
+                                   revision);
+        }
+      if (bc_relative_p)
+        {
+          const char *relpath = svn_uri_skip_ancestor(sess->repos_root, url,
+                                                      pool);
+          if (! relpath)
+            return svn_error_createf(SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH, NULL,
+                                     _("Url '%s' is not in repository '%s'"),
+                                     url, sess->repos_root);
+
+          *bc_relative_p = relpath;
+        }
+      if (latest_rev)
+        {
+          *latest_rev = revision;
+        }
+      return SVN_NO_ERROR;
+    }
 
   /* Go fetch a BASELINE_RSRC that contains specific properties we
      want.  This routine will also fill in BC_RELATIVE as best it
@@ -999,8 +1056,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
     }
 
   /* maybe return bc_url to the caller */
-  if (bc_url)
-    *bc_url = *my_bc_url;
+  if (bc_url_p)
+    *bc_url_p = my_bc_url->data;
 
   if (latest_rev != NULL)
     {
@@ -1020,19 +1077,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
       *latest_rev = SVN_STR_TO_REV(vsn_name->data);
     }
 
-  if (is_dir != NULL)
-    {
-      /* query the DAV:resourcetype of the full, assembled URL. */
-      const char *full_bc_url = svn_path_url_add_component2(my_bc_url->data,
-                                                            my_bc_rel.data,
-                                                            pool);
-      SVN_ERR(svn_ra_neon__get_starting_props(&rsrc, sess, full_bc_url,
-                                              NULL, pool));
-      *is_dir = rsrc->is_collection;
-    }
-
-  if (bc_relative)
-    *bc_relative = my_bc_rel;
+  if (bc_relative_p)
+    *bc_relative_p = my_bc_rel.data;
 
   return SVN_NO_ERROR;
 }
@@ -1158,6 +1204,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
 {
   svn_error_t *err;
   svn_stringbuf_t *body;
+  int code;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* just punt if there are no changes to make. */
@@ -1231,9 +1278,22 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
   apr_hash_set(extra_headers, "Content-Type", APR_HASH_KEY_STRING,
                "text/xml; charset=UTF-8");
 
-  err = svn_ra_neon__simple_request(NULL, ras, "PROPPATCH", url,
+  err = svn_ra_neon__simple_request(&code, ras, "PROPPATCH", url,
                                     extra_headers, body->data,
                                     200, 207, pool);
+
+  if (err && err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+    switch(code)
+      {
+        case 423:
+          return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, err,
+                                   _("No lock on path '%s'; "
+                                     " repository is unchanged"), url);
+        /* ### Add case 412 for a better error on issue #3674 */
+        default:
+          break;
+      }
+
   if (err)
     return svn_error_create
       (SVN_ERR_RA_DAV_PROPPATCH_FAILED, err,
@@ -1253,10 +1313,12 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *url = ras->url->data;
+  const char *bc_url;
+  const char *bc_relative;
   svn_error_t *err;
   svn_boolean_t is_dir;
 
-  /* ### For now, using svn_ra_neon__get_baseline_info() works because
+  /* ### For now, using svn_ra_neon__get_starting_props() works because
      we only have three possibilities: dir, file, or none.  When we
      add symlinks, we will need to do something different.  Here's one
      way described by Greg Stein:
@@ -1288,8 +1350,21 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
   if (path)
     url = svn_path_url_add_component2(url, path, pool);
 
-  err = svn_ra_neon__get_baseline_info(&is_dir, NULL, NULL, NULL,
-                                       ras, url, revision, pool);
+  err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                       url, revision, pool);
+
+  if (! err)
+    {
+      svn_ra_neon__resource_t *rsrc;
+      const char *full_bc_url = svn_path_url_add_component2(bc_url,
+                                                            bc_relative,
+                                                            pool);
+
+      /* query the DAV:resourcetype of the full, assembled URL. */
+      err = svn_ra_neon__get_starting_props(&rsrc, ras, full_bc_url, pool);
+      if (! err)
+        is_dir = rsrc->is_collection;
+    }
 
   if (err == SVN_NO_ERROR)
     {
@@ -1336,10 +1411,10 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
   else
     {
       /* Else, convert (rev, path) into an opaque server-generated URL. */
-      svn_string_t bc_url, bc_relative;
+      const char *bc_url;
+      const char *bc_relative;
 
-      err = svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative,
-                                           NULL, ras,
+      err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
                                            url, revision, pool);
       if (err)
         {
@@ -1354,8 +1429,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
             return err;
         }
 
-      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                              pool);
+      final_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
     }
 
   /* Depth-zero PROPFIND is the One True DAV Way. */

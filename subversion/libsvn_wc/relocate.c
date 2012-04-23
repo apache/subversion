@@ -50,7 +50,7 @@ url_remove_final_relpath(const char *url,
   const char *relpath_end;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(url));
-  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath, scratch_pool));
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath));
 
   if (relpath[0] == 0)
     return result;
@@ -85,7 +85,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                  void *validator_baton,
                  apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const char *repos_relpath;
   const char *old_repos_root, *old_url;
   const char *new_repos_root, *new_url;
@@ -131,7 +131,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
-  if (kind != svn_wc__db_kind_dir)
+  if (kind != svn_kind_dir)
     return svn_error_create(SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
                             _("Cannot relocate a single file"));
 
@@ -164,7 +164,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   SVN_ERR(validator(validator_baton, uuid, new_url, new_repos_root,
                     scratch_pool));
 
-  return svn_error_return(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
-                                                     new_repos_root,
-                                                     scratch_pool));
+  return svn_error_trace(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
+                                                    new_repos_root,
+                                                    scratch_pool));
 }

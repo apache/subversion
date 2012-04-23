@@ -67,6 +67,12 @@
 #
 # To prevent the server from advertising httpv2, pass USE_HTTPV1 in
 # the environment.
+# 
+# To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
+# appropriate value in the environment.
+#
+# Passing --no-tests as argv[1] will have the script start a server
+# but not run any tests.
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
@@ -157,6 +163,12 @@ if [ ${USE_HTTPV1:+set} ]; then
  ADVERTISE_V2_PROTOCOL=off
 fi
 
+# Pick up $SVN_PATH_AUTHZ
+SVN_PATH_AUTHZ_LINE=""
+if [ ${SVN_PATH_AUTHZ:+set} ]; then
+ SVN_PATH_AUTHZ_LINE="SVNPathAuthz      ${SVN_PATH_AUTHZ}"
+fi
+
 # Find the source and build directories. The build dir can be found if it is
 # the current working dir or the source dir.
 pushd ${SCRIPTDIR}/../../../ > /dev/null
@@ -183,7 +195,7 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
 
 case "`uname`" in
   Darwin*) LDD='otool -L'
@@ -323,6 +335,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
@@ -333,6 +346,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  ${SVN_PATH_AUTHZ_LINE}
 </Location>
 RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-test-work/repositories/\$1
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1

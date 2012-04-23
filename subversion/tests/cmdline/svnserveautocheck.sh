@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -32,34 +32,36 @@
 # svnserveautocheck".  Like "make check", you can specify further options
 # like "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
 
+PYTHON=${PYTHON:-python}
+
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
 set +e
 
-trap trap_cleanup SIGHUP SIGTERM SIGINT
+trap trap_cleanup HUP TERM INT
 
 # Ensure the server uses a known locale.
 LC_ALL=C
 export LC_ALL
 
-function really_cleanup() {
+really_cleanup() {
     if [ -e  "$SVNSERVE_PID" ]; then
         kill $(cat "$SVNSERVE_PID")
         rm -f $SVNSERVE_PID
     fi
 }
 
-function trap_cleanup() {
+trap_cleanup() {
     really_cleanup
     exit 1
 }
 
-function say() {
+say() {
   echo "$SCRIPT: $*"
 }
 
-function fail() {
+fail() {
   say $*
   exit 1
 }
@@ -67,9 +69,9 @@ function fail() {
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
 elif [ -x $SCRIPTDIR/../../svn/svn ]; then
-  pushd $SCRIPTDIR/../../../ >/dev/null
+  cd $SCRIPTDIR/../../../
   ABS_BUILDDIR=$(pwd)
-  popd >/dev/null
+  cd - >/dev/null
 else
   fail "Run this script from the root of Subversion's build tree!"
 fi
@@ -84,9 +86,17 @@ SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
 
-SVNSERVE_PORT=$(($RANDOM+1024))
+random_port() {
+  if [ -n "$BASH_VERSION" ]; then
+    echo $(($RANDOM+1024))
+  else
+    $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
+  fi
+}
+
+SVNSERVE_PORT=$(random_port)
 while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
-  SVNSERVE_PORT=$(($RANDOM+1024))
+  SVNSERVE_PORT=$(random_port)
 done
 
 if [ "$THREADED" != "" ]; then
@@ -100,16 +110,16 @@ fi
             $SVNSERVE_ARGS &
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
-if [ $# == 0 ]; then
+if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else
-  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
+  cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
   time "./${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
-  popd >/dev/null
+  cd - > /dev/null
 fi
 
 really_cleanup

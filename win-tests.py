@@ -77,6 +77,9 @@ def _usage_exit():
   print("  --httpd-daemon         : Run Apache httpd as daemon")
   print("  --httpd-service        : Run Apache httpd as Windows service (default)")
   print("  --http-library         : dav library to use, neon (default) or serf")
+  print("  --http-short-circuit   : Use SVNPathAuthz short_circuit on HTTP server")
+  print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
+  print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
   print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
@@ -123,7 +126,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
-                        'httpd-server', 'http-library=', 'help',
+                        'httpd-server', 'http-library=', 'http-short-circuit',
+                        'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=',
@@ -143,6 +147,9 @@ run_httpd = None
 httpd_port = None
 httpd_service = None
 http_library = 'neon'
+http_short_circuit = False
+advertise_httpv2 = True
+http_bulk_updates = True
 list_tests = None
 milestone_filter = None
 test_javahl = None
@@ -192,6 +199,12 @@ for opt, val in opts:
     httpd_service = 1
   elif opt == '--http-library':
     http_library = val
+  elif opt == '--http-short-circuit':
+    http_short_circuit = True
+  elif opt == '--disable-http-v2':
+    advertise_httpv2 = False
+  elif opt == '--disable-bulk-updates':
+    http_bulk_updates = False
   elif opt == '--fsfs-sharding':
     fsfs_sharding = int(val)
   elif opt == '--fsfs-packing':
@@ -309,7 +322,7 @@ def locate_libs():
     suffix = "-1"
   else:
     suffix = ""
-    
+
   if cp.has_option('options', '--with-static-apr'):
     dlls.append(os.path.join(gen_obj.apr_path, objdir,
                              'libapr%s.dll' % (suffix)))
@@ -414,13 +427,30 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for DAV tests"
-  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port, service):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
+               service, httpv2, short_circuit, bulk_updates):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
+
+    if httpv2:
+      self.httpv2_option = 'on'
+    else:
+      self.httpv2_option = 'off'
+
+    if bulk_updates:
+      self.bulkupdates_option = 'on'
+    else:
+      self.bulkupdates_option = 'off'
+
     self.service = service
     self.proc_handle = None
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
+
+    if short_circuit:
+      self.path_authz_option = 'short_circuit'
+    else:
+      self.path_authz_option = 'on'
 
     if not os.path.exists(self.path):
       self.name = 'httpd.exe'
@@ -475,6 +505,9 @@ class Httpd:
     fp.write('ServerName   localhost\n')
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
+    fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
+    fp.write('Customlog    log common\n')
+    fp.write('LogLevel     Debug\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
 
     # Write LoadModule for minimal system module
@@ -508,7 +541,6 @@ class Httpd:
              'REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1\n')
 
     fp.write('TypesConfig     ' + self._quote(self.httpd_mime_types) + '\n')
-    fp.write('LogLevel        Debug\n')
     fp.write('HostNameLookups Off\n')
 
     fp.close()
@@ -553,6 +585,9 @@ class Httpd:
       '<Location ' + location + '>\n' \
       '  DAV             svn\n' \
       '  SVNParentPath   ' + self._quote(path) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '  SVNAllowBulkUpdates ' + self.bulkupdates_option + '\n' \
       '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
       '  AuthType        Basic\n' \
       '  AuthName        "Subversion Repository"\n' \
@@ -621,6 +656,8 @@ if create_dirs:
     baton = copied_execs
     for dirpath, dirs, files in os.walk('subversion'):
       copy_execs(baton, dirpath, dirs + files)
+    for dirpath, dirs, files in os.walk('tools/client-side/svnmucc'):
+      copy_execs(baton, dirpath, dirs + files)
   except:
     os.chdir(old_cwd)
     raise
@@ -643,7 +680,8 @@ if not list_tests:
 
   if run_httpd:
     daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                   httpd_service)
+                   httpd_service, advertise_httpv2, http_short_circuit,
+                   http_bulk_updates)
 
   # Start service daemon, if any
   if daemon:

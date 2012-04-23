@@ -23,12 +23,11 @@
 
 /*
  * the KIND column in these tables has one of the following values
- * (documented in the corresponding C type #svn_wc__db_kind_t):
+ * (documented in the corresponding C type #svn_kind_t):
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
- *   "subdir"
  *
  * the PRESENCE column in these tables has one of the following values
  * (see also the C type #svn_wc__db_status_t):
@@ -316,8 +315,8 @@ CREATE TABLE NODES (
      BASE node, the location of the initial checkout.
 
      When op_depth != 0, they indicate where this node was copied/moved from.
-     In this case, the fields are set only on the root of the operation,
-     and are NULL for all children. */
+     In this case, the fields are set for the root of the operation and for all
+     children. */
   repos_id  INTEGER REFERENCES REPOSITORY (id),
   repos_path  TEXT,
   revision  INTEGER,
@@ -384,7 +383,8 @@ CREATE TABLE NODES (
      perhaps add a column called "moved_from". */
 
   /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is specified in copyfrom_*.  */
+     copied). The source of the move is implied by a different node with
+     a moved_to column pointing at this node. */
   moved_here  INTEGER,
 
   /* If the underlying node was moved away (rather than just deleted), this
@@ -392,8 +392,8 @@ CREATE TABLE NODES (
      This is set only on the root of a move, and is NULL for all children.
 
      Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node, whether that is BASE or a child node
-     implied from a parent's move/copy.  */
+     to the "underlying" node in the BASE tree. A non-NULL moved_to column
+     is only valid in rows where op_depth == 0. */
   moved_to  TEXT,
 
 
@@ -505,7 +505,7 @@ CREATE VIEW NODES_BASE AS
 
 CREATE TRIGGER nodes_insert_trigger
 AFTER INSERT ON nodes
-/* WHEN NEW.checksum IS NOT NULL */
+WHEN NEW.checksum IS NOT NULL
 BEGIN
   UPDATE pristine SET refcount = refcount + 1
   WHERE checksum = NEW.checksum;
@@ -513,7 +513,7 @@ END;
 
 CREATE TRIGGER nodes_delete_trigger
 AFTER DELETE ON nodes
-/* WHEN OLD.checksum IS NOT NULL */
+WHEN OLD.checksum IS NOT NULL
 BEGIN
   UPDATE pristine SET refcount = refcount - 1
   WHERE checksum = OLD.checksum;
@@ -530,11 +530,58 @@ BEGIN
   WHERE checksum = OLD.checksum;
 END;
 
+-- STMT_CREATE_EXTERNALS
 
+CREATE TABLE EXTERNALS (
+  /* Working copy location related fields (like NODES)*/
+
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
+  local_relpath  TEXT NOT NULL,
+
+  /* The working copy root can't be recorded as an external in itself
+     so this will never be NULL. ### ATM only inserted, never queried */
+  parent_relpath  TEXT NOT NULL,
+
+  /* Repository location fields */
+  repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
+
+  /* Either 'normal' or 'excluded' */
+  presence  TEXT NOT NULL,
+
+  /* the kind of the external. */
+  kind  TEXT NOT NULL,
+
+  /* The local relpath of the directory NODE defining this external 
+     (Defaults to the parent directory of the file external after upgrade) */
+  def_local_relpath         TEXT NOT NULL,
+
+  /* The url of the external as used in the definition */
+  def_repos_relpath         TEXT NOT NULL,
+
+  /* The operational (peg) and node revision if this is a revision fixed
+     external; otherwise NULL. (Usually these will both have the same value) */
+  def_operational_revision  TEXT,
+  def_revision              TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
+);
+
+CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
+CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
+                                                      def_local_relpath,
+                                                      local_relpath);
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
 -- STMT_UPGRADE_TO_20
+
+UPDATE BASE_NODE SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=BASE_NODE.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=BASE_NODE.checksum);
+
+UPDATE WORKING_NODE SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=WORKING_NODE.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=WORKING_NODE.checksum);
 
 INSERT INTO NODES (
        wc_id, local_relpath, op_depth, parent_relpath,
@@ -664,11 +711,14 @@ PRAGMA user_version = 28;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 29 introduces ... */
+/* Format 29 introduces the EXTERNALS table (See STMT_CREATE_TRIGGERS) and
+   optimizes a few trigger definitions. ... */
 
 -- STMT_UPGRADE_TO_29
 
 DROP TRIGGER IF EXISTS nodes_update_checksum_trigger;
+DROP TRIGGER IF EXISTS nodes_insert_trigger;
+DROP TRIGGER IF EXISTS nodes_delete_trigger;
 
 CREATE TRIGGER nodes_update_checksum_trigger
 AFTER UPDATE OF checksum ON nodes
@@ -681,6 +731,23 @@ BEGIN
   WHERE checksum = OLD.checksum;
 END;
 
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
@@ -695,6 +762,16 @@ END;
    and all the tables will be cleaned up. We don't know what that format
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
+
+/* TODO: Rename the "absent" presence value to "server-excluded" before
+   the 1.7 release. wc_db.c and this file have references to "absent" which
+   still need to be changed to "server-excluded". */
+/* TODO: Un-confuse *_revision column names in the EXTERNALS table to
+   "-r<operative> foo@<peg>", as suggested by the patch attached to
+   http://svn.haxx.se/dev/archive-2011-09/0478.shtml */
+/* TODO: Remove column parent_relpath from EXTERNALS. We're not using it and
+   never will. It's not interesting like in the NODES table: the external's
+   parent path may be *anything*: unversioned, "behind" a another WC... */
 
 /* Now "drop" the tree_conflict_data column from actual_node. */
 CREATE TABLE ACTUAL_NODE_BACKUP (

@@ -50,10 +50,21 @@ get_old_version(int *version,
 {
   svn_error_t *err;
   const char *format_file_path;
+  svn_node_kind_t kind;
 
   /* Try reading the format number from the entries file.  */
   format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_ENTRIES,
                                        scratch_pool);
+
+  /* Since trying to open a non-existent file is quite expensive, try a
+     quick stat call first. In wc-ng w/cs, this will be an early exit. */
+  SVN_ERR(svn_io_check_path(format_file_path, &kind, scratch_pool));
+  if (kind == svn_node_none)
+    {
+      *version = 0;
+      return SVN_NO_ERROR;
+    }
+
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err == NULL)
     return SVN_NO_ERROR;
@@ -87,13 +98,15 @@ get_old_version(int *version,
 
 /* A helper function to parse_local_abspath() which returns the on-disk KIND
    of LOCAL_ABSPATH, using DB and SCRATCH_POOL as needed.
-   
+
    This function may do strange things, but at long as it comes up with the
-   Right Answer, we should be happy.  */
+   Right Answer, we should be happy.
+
+   Sets *KIND to svn_node_dir for symlinks. */
 static svn_error_t *
-get_path_kind(svn_wc__db_t *db,
+get_path_kind(svn_node_kind_t *kind,
+              svn_wc__db_t *db,
               const char *local_abspath,
-              svn_node_kind_t *kind,
               apr_pool_t *scratch_pool)
 {
   svn_boolean_t special;
@@ -121,7 +134,11 @@ get_path_kind(svn_wc__db_t *db,
     }
 
   SVN_ERR(svn_io_check_special_path(local_abspath, &db->parse_cache.kind,
-                                    &special /* unused */, scratch_pool));
+                                    &special, scratch_pool));
+
+  /* The wcroot could be a symlink to a directory. (Issue #2557, #3987) */
+  if (special)
+    db->parse_cache.kind = svn_node_dir;
   *kind = db->parse_cache.kind;
 
   return SVN_NO_ERROR;
@@ -213,8 +230,8 @@ svn_wc__db_close(svn_wc__db_t *db)
     }
 
   /* Run the cleanup for each WCROOT.  */
-  return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
-                                                        scratch_pool));
+  return svn_error_trace(svn_wc__db_close_many_wcroots(roots, db->state_pool,
+                                                       scratch_pool));
 }
 
 
@@ -274,7 +291,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
             err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
                                               "client before upgrading with "
                                               "this client"));
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
     }
 
@@ -384,7 +401,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      ### rid of this stat() call. it is going to happen for EVERY call
      ### into wc_db which references a file. calls for directories could
      ### get an early-exit in the hash lookup just above.  */
-  SVN_ERR(get_path_kind(db, local_abspath, &kind, scratch_pool));
+  SVN_ERR(get_path_kind(&kind, db, local_abspath, scratch_pool));
   if (kind != svn_node_dir)
     {
       /* If the node specified by the path is NOT present, then it cannot
@@ -458,13 +475,19 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
          we're caching database handles, it make sense to be as permissive
          as the filesystem allows. */
       err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
-                                    svn_sqlite__mode_readwrite,
+                                    svn_sqlite__mode_readwrite, NULL,
                                     db->state_pool, scratch_pool);
       if (err == NULL)
-        break;
+        {
+#ifdef SVN_DEBUG
+          /* Install self-verification trigger statements. */
+          SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_VERIFICATION_TRIGGERS));
+#endif
+          break;
+        }
       if (err->apr_err != SVN_ERR_SQLITE_ERROR
           && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
+        return svn_error_trace(err);
       svn_error_clear(err);
 
       /* If we have not moved upwards, then check for a wc-1 working copy.
@@ -527,7 +550,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                 _("Missing a row in WCROOT for '%s'."),
                                 svn_dirent_local_style(original_abspath,
                                                        scratch_pool)));
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       /* WCROOT.local_abspath may be NULL when the database is stored

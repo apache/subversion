@@ -489,3 +489,17 @@ Java_org_apache_subversion_javahl_SVNRepos_pack
 
   cl->pack(path, jnotifyCallback != NULL ? &callback : NULL);
 }
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNRepos_cancelOperation
+(JNIEnv *env, jobject jthis)
+{
+  JNIEntry(SVNRepos, cancelOperation);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return;
+    }
+  cl->cancelOperation();
+}

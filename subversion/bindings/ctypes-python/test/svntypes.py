@@ -21,8 +21,24 @@ import setup_path
 import unittest
 from csvn.core import *
 import csvn.types as _types
+from csvn.types import SvnDate, Hash, Array, APRFile, Stream, SvnStringPtr
 
-class TypesTestCase(unittest.TestCase):
+class SvnDateTestCase(unittest.TestCase):
+
+    def test_as_apr_time_t(self):
+        d1 = SvnDate('1999-12-31T23:59:59.000000Z')
+        d2 = SvnDate('2000-01-01T00:00:00.000000Z')
+        t1 = d1.as_apr_time_t().value
+        t2 = d2.as_apr_time_t().value
+        self.assertEqual(t1 + 1000000, t2)
+
+    def test_as_human_string(self):
+        d1 = SvnDate('1999-12-31T23:59:59.000000Z')
+        s1 = d1.as_human_string()
+        self.assertEqual(s1[:27], '1999-12-31 23:59:59 +0000 (')
+
+
+class HashTestCase(unittest.TestCase):
 
     def test_hash(self):
         self.pydict = {"bruce":"batman", "clark":"superman",
@@ -35,6 +51,34 @@ class TypesTestCase(unittest.TestCase):
         self.assertNotEqual(self.svnhash["clark"].value,
             self.pydict["bruce"])
 
+    def test_insert_delete(self):
+        h = Hash(c_char_p)
+        h['foo'] = 'f'
+        h['bar'] = 'b'
+        self.assertEqual(len(h), 2)
+        self.assertEqual(h['foo'].value, 'f')
+        self.assertEqual(h['bar'].value, 'b')
+        h['bar'] = 'b'
+        self.assertEqual(len(h), 2)
+        del h['foo']
+        self.assertEqual(len(h), 1)
+        self.assertEqual(h['bar'].value, 'b')
+
+    def test_iter(self):
+        h = Hash(c_char_p, { 'foo': 'f', 'bar': 'b' })
+        keys = sorted(h.keys())
+        self.assertEqual(keys, ['bar', 'foo'])
+        vals = []
+        for k in h:
+            vals += [ h[k].value ]
+        self.assertEqual(sorted(vals), ['b', 'f'])
+        vals = []
+        for k,v in h.items():
+            vals += [ v.value ]
+        self.assertEqual(sorted(vals), ['b', 'f'])
+
+class ArrayTestCase(unittest.TestCase):
+
     def test_array(self):
         self.pyarray = ["vini", "vidi", "vici"]
         self.svnarray = _types.Array(c_char_p, self.pyarray)
@@ -43,7 +87,11 @@ class TypesTestCase(unittest.TestCase):
         self.assertEqual(self.svnarray[1], "vidi")
 
 def suite():
-    return unittest.makeSuite(TypesTestCase, 'test')
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(SvnDateTestCase, 'test'))
+    suite.addTest(unittest.makeSuite(HashTestCase, 'test'))
+    suite.addTest(unittest.makeSuite(ArrayTestCase, 'test'))
+    return suite
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

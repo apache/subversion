@@ -29,7 +29,7 @@
 -- STMT_SELECT_NODE_INFO
 SELECT op_depth, repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties
+  symlink_target, last_mod_time, properties, moved_here
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
@@ -37,8 +37,11 @@ ORDER BY op_depth DESC
 -- STMT_SELECT_NODE_INFO_WITH_LOCK
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
-  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date
+  depth, symlink_target, last_mod_time, properties, moved_here,
+  /* All the columns until now must match those returned by
+     STMT_SELECT_NODE_INFO. The implementation of svn_wc__db_read_info()
+     assumes that these columns are followed by the lock information) */
+  lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
@@ -48,7 +51,8 @@ ORDER BY op_depth DESC
 -- STMT_SELECT_BASE_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties, file_external IS NOT NULL
+  symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
@@ -56,6 +60,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 SELECT nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  moved_to,
+  /* All the columns until now must match those returned by
+     STMT_SELECT_BASE_NODE. The implementation of svn_wc__db_base_get_info()
+     assumes that these columns are followed by the lock information) */
   lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
@@ -64,7 +72,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_BASE_CHILDREN_INFO
 SELECT local_relpath, nodes.repos_id, nodes.repos_path, presence, kind,
-  revision, depth, properties, file_external IS NOT NULL,
+  revision, depth, file_external IS NOT NULL,
   lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
@@ -80,6 +88,13 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
 LIMIT 1
+
+-- STMT_SELECT_DEPTH_NODE
+SELECT repos_id, repos_path, presence, kind, revision, checksum,
+  translated_size, changed_revision, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_SELECT_LOWEST_WORKING_NODE
 SELECT op_depth, presence
@@ -99,6 +114,11 @@ SELECT tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2 AND tree_conflict_data IS NOT NULL
 
+-- STMT_SELECT_ACTUAL_CHANGELIST
+SELECT changelist
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2 AND changelist IS NOT NULL
+
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
      ORDER BY local_relpath, op_depth DESC
@@ -107,20 +127,17 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND tree_conflict_data IS NOT NULL
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date, local_relpath
+  lock_comment, lock_date, local_relpath, moved_here, moved_to, 
+  file_external IS NOT NULL
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
-/* ### See comment at STMT_SELECT_NODE_CHILDREN_INFO.
-   ### Should C code handle GROUP BY local_relpath ORDER BY op_depths DESC? */
 SELECT local_relpath, op_depth, presence, kind
-FROM nodes
+FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
-GROUP BY local_relpath
-ORDER BY op_depth DESC
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT prop_reject, changelist, conflict_old, conflict_new,
@@ -146,13 +163,14 @@ INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, translated_size, last_mod_time,
-  dav_cache, symlink_target )
+  dav_cache, symlink_target, file_external, moved_to, moved_here)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-        ?15, ?16, ?17, ?18, ?19)
+        ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
+  AND (?3 != 0 OR file_external is NULL)
 
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
@@ -166,7 +184,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
 DELETE FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2
-       OR ((local_relpath > ?2 || '/') AND (local_relpath < ?2 || '0')))
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND (op_depth < ?3
        OR (op_depth = ?3 AND presence = 'base-deleted'))
 
@@ -174,13 +192,15 @@ WHERE wc_id = ?1
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth = ?3
   AND (parent_relpath = ?2
-       OR ((parent_relpath > ?2 || '/') AND (parent_relpath < ?2 || '0')))
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND presence == 'not-present'
 
 -- STMT_COMMIT_DESCENDANT_TO_BASE
 UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
   moved_here = NULL, moved_to = NULL, dav_cache = NULL,
-  presence = CASE presence WHEN 'normal' THEN 'normal' ELSE 'not-present' END
+  presence = CASE presence WHEN 'normal' THEN 'normal'
+                           WHEN 'excluded' THEN 'excluded'
+                           ELSE 'not-present' END
 WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = ?3
 
 -- STMT_SELECT_NODE_CHILDREN
@@ -212,18 +232,9 @@ SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
 
--- STMT_SELECT_NODE_PROPS_OF_CHILDREN
-SELECT properties, presence, local_relpath, kind FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2
-ORDER BY local_relpath, op_depth DESC
-
 -- STMT_SELECT_ACTUAL_PROPS
 SELECT properties FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_SELECT_ACTUAL_PROPS_OF_CHILDREN
-SELECT properties, local_relpath FROM actual_node
-WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_UPDATE_NODE_BASE_PROPS
 UPDATE nodes SET properties = ?3
@@ -256,7 +267,9 @@ FROM nodes
 LEFT JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND op_depth = 0
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_INSERT_WCROOT
 INSERT INTO wcroot (local_abspath)
@@ -271,7 +284,7 @@ SELECT dav_cache FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_DELETION_INFO
-SELECT nodes_base.presence, nodes_work.presence, nodes_work.moved_to,
+SELECT nodes_base.presence, nodes_work.presence, nodes_base.moved_to,
        nodes_work.op_depth
 FROM nodes AS nodes_work
 LEFT OUTER JOIN nodes nodes_base ON nodes_base.wc_id = nodes_work.wc_id
@@ -288,21 +301,22 @@ WHERE repos_id = ?1 AND repos_relpath = ?2
 
 -- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
 UPDATE nodes SET dav_cache = NULL
-WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0 AND
-  (local_relpath = ?2 OR
-   local_relpath LIKE ?3 ESCAPE '#')
+WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_RECURSIVE_UPDATE_NODE_REPO
-UPDATE nodes SET repos_id = ?5, dav_cache = NULL
-WHERE wc_id = ?1 AND repos_id = ?4 AND
-  (local_relpath = ?2
-   OR local_relpath LIKE ?3 ESCAPE '#')
+UPDATE nodes SET repos_id = ?4, dav_cache = NULL
+WHERE wc_id = ?1
+  AND repos_id = ?3
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_UPDATE_LOCK_REPOS_ID
-UPDATE lock SET repos_id = ?4
-WHERE repos_id = ?1 AND
-  (repos_relpath = ?2 OR
-   repos_relpath LIKE ?3 ESCAPE '#')
+UPDATE lock SET repos_id = ?2
+WHERE repos_id = ?1
 
 -- STMT_UPDATE_NODE_FILEINFO
 UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
@@ -339,19 +353,19 @@ INSERT INTO actual_node (
   wc_id, local_relpath, prop_reject, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
 
--- STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST
-UPDATE actual_node SET changelist = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND changelist=?4
+-- STMT_UPDATE_ACTUAL_CHANGELISTS
+UPDATE actual_node SET changelist = ?2
+WHERE wc_id = ?1 AND local_relpath IN
+(SELECT local_relpath FROM targets_list WHERE kind = 'file' AND wc_id = ?1)
 
--- STMT_UPDATE_ACTUAL_CHANGELIST
-UPDATE actual_node SET changelist = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
+-- STMT_UPDATE_ACTUAL_CLEAR_CHANGELIST
+UPDATE actual_node SET changelist = NULL
+ WHERE wc_id = ?1 AND local_relpath = ?2
 
--- STMT_INSERT_ACTUAL_CHANGELIST
-INSERT INTO actual_node (
-  wc_id, local_relpath, changelist, parent_relpath)
-VALUES (?1, ?2, ?3, ?4)
+-- STMT_MARK_SKIPPED_CHANGELIST_DIRS
+/* 7 corresponds to svn_wc_notify_skip */
+INSERT INTO changelist_list (wc_id, local_relpath, notify, changelist)
+SELECT wc_id, local_relpath, 7, ?1 FROM targets_list WHERE kind = 'dir'
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
@@ -377,7 +391,7 @@ CREATE INDEX changelist_list_index ON changelist_list(wc_id, local_relpath);
         Action          Old CL      New CL      Notification
         ------          ------      ------      ------------
         UPDATE ACTUAL   NULL        NOT NULL    cl-set
-        UPDATE ACTUAL   NOT NULL    NOT NULL    cl-clear / cl-set
+        UPDATE ACTUAL   NOT NULL    NOT NULL    cl-set
         UPDATE ACTUAL   NOT NULL    NULL        cl-clear
 
 Of the following triggers, the first address the first case, and the second
@@ -412,28 +426,127 @@ BEGIN
     VALUES (NEW.wc_id, NEW.local_relpath, 26, NEW.changelist);
 END
 
--- STMT_DROP_CHANGELIST_LIST_TRIGGERS
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_insert;
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_set;
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear
-
 -- STMT_INSERT_CHANGELIST_LIST
 INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
 VALUES (?1, ?2, ?3, ?4)
 
--- STMT_DELETE_CHANGELIST_LIST_RECURSIVE
-DELETE FROM changelist_list
-WHERE wc_id = ?1 AND local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#'
+-- STMT_FINALIZE_CHANGELIST
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_insert;
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_set;
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear;
+DROP TABLE IF EXISTS changelist_list;
+DROP TABLE IF EXISTS targets_list
 
--- STMT_SELECT_CHANGELIST_LIST_RECURSIVE
-SELECT local_relpath, notify, changelist
+-- STMT_SELECT_CHANGELIST_LIST
+SELECT wc_id, local_relpath, notify, changelist
 FROM changelist_list
-WHERE wc_id = ?1 AND local_relpath = ?2 or local_relpath LIKE ?3 ESCAPE '#'
-ORDER BY local_relpath
+ORDER BY wc_id, local_relpath
+
+-- STMT_CREATE_TARGETS_LIST
+DROP TABLE IF EXISTS targets_list;
+CREATE TEMPORARY TABLE targets_list (
+  wc_id  INTEGER NOT NULL,
+  local_relpath TEXT NOT NULL,
+  parent_relpath TEXT,
+  kind TEXT NOT NULL
+  );
+CREATE INDEX targets_list_kind
+  ON targets_list (kind)
+/* need more indicies? */
+
+-- STMT_DROP_TARGETS_LIST
+DROP TABLE IF EXISTS targets_list
+
+-- STMT_INSERT_TARGET
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT wc_id, local_relpath, parent_relpath, kind
+FROM nodes_current WHERE wc_id = ?1 AND local_relpath = ?2
+
+-- STMT_INSERT_TARGET_DEPTH_FILES
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT wc_id, local_relpath, parent_relpath, kind
+FROM nodes_current
+WHERE wc_id = ?1 AND ((parent_relpath = ?2 AND kind = 'file')
+                      OR local_relpath = ?2)
+
+-- STMT_INSERT_TARGET_DEPTH_IMMEDIATES
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT wc_id, local_relpath, parent_relpath, kind
+FROM nodes_current
+WHERE wc_id = ?1 AND (parent_relpath = ?2 OR local_relpath = ?2)
+
+-- STMT_INSERT_TARGET_DEPTH_INFINITY
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT wc_id, local_relpath, parent_relpath, kind
+FROM nodes_current
+WHERE wc_id = ?1
+       AND (?2 = ''
+            OR local_relpath = ?2 
+            OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+
+-- STMT_INSERT_TARGET_WITH_CHANGELIST
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1 AND A.changelist = ?3 AND N.local_relpath = ?2
+
+-- STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_FILES
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1 AND A.changelist = ?3
+       AND ((N.parent_relpath = ?2 AND kind = 'file') OR N.local_relpath = ?2)
+
+-- STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_IMMEDIATES
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1 AND A.changelist = ?3
+       AND (N.parent_relpath = ?2 OR N.local_relpath = ?2)
+
+-- STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_INFINITY
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1
+       AND (?2 = ''
+            OR N.local_relpath = ?2 
+            OR IS_STRICT_DESCENDANT_OF(N.local_relpath, ?2))
+       AND A.changelist = ?3
+
+-- STMT_SELECT_TARGETS
+SELECT local_relpath, parent_relpath from targets_list
+
+-- STMT_INSERT_ACTUAL_EMPTIES
+INSERT OR IGNORE INTO actual_node (
+     wc_id, local_relpath, parent_relpath, properties,
+     conflict_old, conflict_new, conflict_working,
+     prop_reject, changelist, text_mod, tree_conflict_data )
+SELECT wc_id, local_relpath, parent_relpath, NULL, NULL, NULL, NULL,
+       NULL, NULL, NULL, NULL
+FROM targets_list
 
 -- STMT_DELETE_ACTUAL_EMPTY
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
+  AND properties IS NULL
+  AND conflict_old IS NULL
+  AND conflict_new IS NULL
+  AND prop_reject IS NULL
+  AND changelist IS NULL
+  AND text_mod IS NULL
+  AND tree_conflict_data IS NULL
+  AND older_checksum IS NULL
+  AND right_checksum IS NULL
+  AND left_checksum IS NULL
+
+-- STMT_DELETE_ACTUAL_EMPTIES
+DELETE FROM actual_node
+WHERE wc_id = ?1
   AND properties IS NULL
   AND conflict_old IS NULL
   AND conflict_new IS NULL
@@ -462,22 +575,17 @@ WHERE wc_id = ?1 AND local_relpath = ?2
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
   AND presence = 'base-deleted'
 
--- STMT_DELETE_ALL_WORKING_NODES
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
-
 -- STMT_DELETE_ALL_LAYERS
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_DELETE_NODES
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_DELETE_NODES_RECURSIVE
 DELETE FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND op_depth >= ?4
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth >= ?3
 
 -- STMT_DELETE_ACTUAL_NODE
 DELETE FROM actual_node
@@ -485,7 +593,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_DELETE_ACTUAL_NODE_RECURSIVE
 DELETE FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
 DELETE FROM actual_node
@@ -494,32 +605,24 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST
 DELETE FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2
-      AND (changelist IS NULL
-           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
-                                     WHERE wc_id  = ?1 AND local_relpath = ?2
-                                       AND kind = 'file'))
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+  AND (changelist IS NULL
+       OR NOT EXISTS (SELECT 1 FROM nodes_current c
+                      WHERE c.wc_id = ?1 AND c.local_relpath = ?2
+                        AND c.kind = 'file'))
 
 -- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
 DELETE FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-      AND (changelist IS NULL
-           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
-                                    WHERE wc_id = ?1
-                                      AND (local_relpath = ?2
-                                           OR local_relpath LIKE ?3 ESCAPE '#')
-                                      AND kind = 'file'))
-
--- STMT_DELETE_ACTUAL_LEAVING_CHANGELIST_AND_CONFLICT
-DELETE FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-      AND tree_conflict_data IS NULL
-      AND (changelist IS NULL
-           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
-                                    WHERE wc_id = ?1
-                                      AND (local_relpath = ?2
-                                           OR local_relpath LIKE ?3 ESCAPE '#')
-                                      AND kind = 'file'))
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND (changelist IS NULL
+       OR NOT EXISTS (SELECT 1 FROM nodes_current c
+                      WHERE c.wc_id = ?1 
+                        AND c.local_relpath = actual_node.local_relpath
+                        AND c.kind = 'file'))
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
 UPDATE actual_node
@@ -547,40 +650,15 @@ SET properties = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
     right_checksum = NULL
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-
--- STMT_CLEAR_ACTUAL_LEAVING_CHANGELIST_AND_CONFLICT
-UPDATE actual_node
-SET properties = NULL,
-    text_mod = NULL,
-    conflict_old = NULL,
-    conflict_new = NULL,
-    conflict_working = NULL,
-    prop_reject = NULL,
-    older_checksum = NULL,
-    left_checksum = NULL,
-    right_checksum = NULL
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_NODE_WORKING_DEPTH
-UPDATE nodes SET depth = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
-
--- STMT_UPDATE_NODE_BASE_EXCLUDED
-UPDATE nodes SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_NODE_WORKING_EXCLUDED
-UPDATE nodes SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2)
+  AND kind='dir'
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE
 UPDATE nodes SET presence = ?3
@@ -642,6 +720,13 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND
        AND (conflict_new IS NULL) AND (conflict_working IS NULL)
        AND (tree_conflict_data IS NULL))
 
+-- STMT_SELECT_CONFLICT_MARKER_FILES
+SELECT prop_reject, conflict_old, conflict_new, conflict_working
+FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR parent_relpath = ?2)
+  AND ((prop_reject IS NOT NULL) OR (conflict_old IS NOT NULL)
+       OR (conflict_new IS NOT NULL) OR (conflict_working IS NOT NULL))
+
 -- STMT_SELECT_ACTUAL_CHILDREN_TREE_CONFLICT
 SELECT local_relpath, tree_conflict_data
 FROM actual_node
@@ -673,6 +758,13 @@ VALUES (?1, ?2, ?3)
 SELECT locked_levels FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
 
+-- STMT_SELECT_ANCESTOR_WCLOCKS
+SELECT local_dir_relpath, locked_levels FROM wc_lock
+WHERE wc_id = ?1
+  AND ((local_dir_relpath <= ?2 AND local_dir_relpath >= ?3)
+       OR local_dir_relpath = '')
+ORDER BY local_dir_relpath DESC
+
 -- STMT_DELETE_WC_LOCK
 DELETE FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
@@ -691,21 +783,28 @@ AND NOT EXISTS (SELECT 1 FROM nodes
 -- STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE
 DELETE FROM wc_lock
 WHERE wc_id = ?1
-AND (local_dir_relpath = ?2 OR local_dir_relpath LIKE ?3 ESCAPE '#')
-AND NOT EXISTS (SELECT 1 FROM nodes
-                 WHERE nodes.wc_id = ?1
-                   AND nodes.local_relpath = wc_lock.local_dir_relpath)
+  AND (?2 = ''
+       OR local_dir_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_dir_relpath, ?2))
+  AND NOT EXISTS (SELECT 1 FROM nodes
+                   WHERE nodes.wc_id = ?1
+                     AND nodes.local_relpath = wc_lock.local_dir_relpath)
 
 -- STMT_APPLY_CHANGES_TO_BASE_NODE
 /* translated_size and last_mod_time are not mentioned here because they will
-   be tweaked after the working-file is installed.
-   ### what to do about file_external?  */
+   be tweaked after the working-file is installed. When we replace an existing
+   BASE node (read: bump), preserve its file_external status. */
 INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
-  changed_author, checksum, properties, dav_cache, symlink_target )
+  changed_author, checksum, properties, dav_cache, symlink_target,
+  file_external )
 VALUES (?1, ?2, 0,
-        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+        (SELECT file_external FROM nodes
+          WHERE wc_id = ?1
+            AND local_relpath = ?2
+            AND op_depth = 0))
 
 -- STMT_INSTALL_WORKING_NODE_FOR_DELETE
 INSERT OR REPLACE INTO nodes (
@@ -716,18 +815,18 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE
+/* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
+-- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
-    changed_revision, changed_date, changed_author, depth, symlink_target,
-    translated_size, last_mod_time, properties)
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
 SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
-       kind, checksum, changed_revision, changed_date, changed_author, depth,
-       symlink_target, translated_size, last_mod_time, properties
-FROM nodes_current
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence NOT IN ('base-deleted', 'not-present')
-      
+       kind
+FROM nodes
+WHERE wc_id = ?1
+  AND (local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = ?3
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -742,61 +841,52 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE
+-- STMT_INSERT_DELETE_FROM_BASE
 INSERT INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, depth, kind, changed_revision, changed_date,
-    changed_author, checksum, properties, translated_size, last_mod_time,
-    symlink_target )
-SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
-    repos_path, revision, ?4 /*presence*/, depth, kind, changed_revision,
-    changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
+SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath,
+    'base-deleted', kind
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
-
-/* ### these statements below should be setting copyfrom_revision! */
--- STMT_UPDATE_COPYFROM
-UPDATE nodes SET repos_id = ?3, repos_path = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
-
 -- STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE
 UPDATE nodes SET op_depth = ?3 + 1
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
-
--- STMT_UPDATE_OP_DEPTH
-UPDATE nodes SET op_depth = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+ AND op_depth = ?3
 
 -- STMT_DOES_NODE_EXIST
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
-/* ### This doesn't select all absent nodes, it only selects one of them. */
--- STMT_SELECT_ABSENT_NODES
+-- STMT_HAS_SERVER_EXCLUDED_NODES
 SELECT local_relpath FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND op_depth = 0 AND presence = 'absent' LIMIT 1
-
-/* ### Select all absent nodes. */
--- STMT_SELECT_ALL_ABSENT_NODES
-SELECT local_relpath FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0 AND presence = 'absent'
+LIMIT 1
 
-/* ### Why can't this query not just use the BASE repository
-   location values, instead of taking 3 additional parameters?! */
+/* ### Select all server-excluded nodes. */
+-- STMT_SELECT_ALL_SERVER_EXCLUDED_NODES
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = 0
+  AND presence = 'absent'
+
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id,
-    repos_path, revision, presence, depth, kind, changed_revision,
+    repos_path, revision, presence, depth, moved_here, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/, depth,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth, ?7/*moved_here*/,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -805,17 +895,30 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, depth, kind, changed_revision, changed_date,
+    revision, presence, depth, moved_here, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/, depth,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth, ?7 /*moved_here*/,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
 LIMIT 1
+
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_DEPTH
+INSERT OR REPLACE INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, moved_here, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target )
+SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth, ?7 /*moved_here*/,
+    kind, changed_revision, changed_date, changed_author, checksum,
+    properties, translated_size, last_mod_time, symlink_target
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?8
 
 -- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (
@@ -836,22 +939,90 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_SELECT_ACTUAL_CHILDREN
-SELECT 1 FROM actual_node WHERE wc_id = ?1 AND parent_relpath = ?2
+-- STMT_ACTUAL_HAS_CHILDREN
+SELECT 1 FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2
+LIMIT 1
+
+-- STMT_INSERT_EXTERNAL
+INSERT OR REPLACE INTO externals (
+    wc_id, local_relpath, parent_relpath, presence, kind, def_local_relpath,
+    repos_id, def_repos_relpath, def_operational_revision, def_revision)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+
+-- STMT_SELECT_EXTERNAL_INFO
+SELECT presence, kind, def_local_relpath, repos_id,
+    def_repos_relpath, def_operational_revision, def_revision
+FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
+LIMIT 1
+
+/* Select all committable externals, i.e. only unpegged ones on the same
+ * repository as the target path ?2, that are defined by WC ?1 to
+ * live below the target path. It does not matter which ancestor has the
+ * svn:externals definition, only the local path at which the external is
+ * supposed to be checked out is queried.
+ * Arguments:
+ *  ?1: wc_id.
+ *  ?2: the target path, local relpath inside ?1.
+ *  ?3: boolean, if 1 return immediate children of ?2 only.
+ *
+ * ### NOTE: This statement deliberately removes file externals that live
+ * inside an unversioned dir, because commit still breaks on those.
+ * Once that's been fixed, the conditions below "--->8---" become obsolete. */
+-- STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW
+SELECT local_relpath, kind, repos_id, def_repos_relpath, repository.root
+FROM externals
+LEFT OUTER JOIN repository ON repository.id = externals.repos_id
+WHERE wc_id = ?1
+  AND def_revision IS NULL
+  AND repos_id = (SELECT repos_id FROM nodes
+                  WHERE nodes.local_relpath = ?2)
+  AND ( ((NOT ?3)
+         AND (?2 = ''
+              /* Want only the cildren of e.local_relpath;
+               * externals can't have a local_relpath = ''. */
+              OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2)))
+        OR
+        ((?3)
+         AND parent_relpath = ?2) )
+  /* ------>8----- */
+  AND (EXISTS (SELECT 1 FROM nodes
+               WHERE nodes.wc_id = externals.wc_id
+               AND nodes.local_relpath = externals.parent_relpath))
+
+-- STMT_SELECT_EXTERNALS_DEFINED
+SELECT local_relpath, def_local_relpath
+FROM externals
+WHERE wc_id = ?1 
+  AND (?2 = ''
+       OR def_local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2))
+
+-- STMT_UPDATE_EXTERNAL_FILEINFO
+UPDATE externals SET recorded_size = ?3, recorded_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2
+
+-- STMT_DELETE_EXTERNAL
+DELETE FROM externals
+WHERE wc_id = ?1 AND local_relpath = ?2
+
+-- STMT_SELECT_EXTERNAL_PROPERTIES
+SELECT IFNULL((SELECT properties FROM actual_node a
+               WHERE a.wc_id = ?1 AND A.local_relpath = n.local_relpath),
+              properties),
+       local_relpath, depth
+FROM nodes n
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND kind = 'dir' AND presence='normal'
+  AND op_depth=(SELECT MAX(op_depth) FROM nodes o
+                WHERE o.wc_id = ?1 AND o.local_relpath = n.local_relpath)
 
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
-
--- STMT_INSERT_BASE_NODE_FOR_ENTRY
-/* The BASE tree has a fixed op_depth '0' */
-INSERT OR REPLACE INTO nodes (
-  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-  revision, presence, kind, checksum,
-  changed_revision, changed_date, changed_author, depth, properties,
-  translated_size, last_mod_time )
-VALUES (?1, ?2, 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
-       ?14, ?15, ?16 )
 
 -- STMT_INSERT_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (
@@ -860,19 +1031,6 @@ INSERT OR REPLACE INTO actual_node (
   conflict_working, prop_reject, changelist, text_mod,
   tree_conflict_data)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)
-
--- STMT_SELECT_NOT_PRESENT
-SELECT 1 FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND presence = 'not-present'
-  AND op_depth = 0
-
--- STMT_SELECT_FILE_EXTERNAL
-SELECT file_external FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_FILE_EXTERNAL
-UPDATE nodes SET file_external = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 /* ------------------------------------------------------------------------- */
 
@@ -896,15 +1054,8 @@ WHERE tree_conflict_data IS NOT NULL
 UPDATE actual_node SET tree_conflict_data = NULL
 
 -- STMT_SELECT_ALL_FILES
-/* Should this select on wc_id as well? */
 SELECT DISTINCT local_relpath FROM nodes
-WHERE kind = 'file' AND parent_relpath = ?1
-
--- STMT_SELECT_NODE_UPGRADE
-SELECT op_depth, presence, wc_id
-FROM nodes
-WHERE local_relpath = ?1
-ORDER BY op_depth DESC
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND kind = 'file'
 
 -- STMT_UPDATE_NODE_PROPS
 UPDATE nodes SET properties = ?4
@@ -912,123 +1063,107 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_HAS_WORKING_NODES
 SELECT 1 FROM nodes WHERE op_depth > 0
+LIMIT 1
 
 -- STMT_HAS_ACTUAL_NODES_CONFLICTS
 SELECT 1 FROM actual_node
 WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
            AND (conflict_new IS NULL) AND (conflict_working IS NULL)
            AND (tree_conflict_data IS NULL))
-
--- STMT_UPDATE_CHECKSUM
-UPDATE nodes SET checksum = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 /* PROOF OF CONCEPT: Complex queries for callback walks, caching results
                      in a temporary table. */
 
--- STMT_CLEAR_NODE_PROPS_CACHE
-DROP TABLE IF EXISTS temp__node_props_cache
-
--- STMT_CACHE_NODE_PROPS_RECURSIVE
-CREATE TEMPORARY TABLE temp__node_props_cache AS
-  SELECT local_relpath, kind, properties FROM nodes_current
-  WHERE wc_id = ?1
-    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-    AND local_relpath NOT IN (
-      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND presence IN ('normal', 'incomplete')
+-- STMT_CREATE_NODE_PROPS_CACHE
+DROP TABLE IF EXISTS temp__node_props_cache;
+CREATE TEMPORARY TABLE temp__node_props_cache (
+  local_Relpath TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  properties BLOB
+  );
 /* ###  Need index?
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
 
--- STMT_CACHE_ACTUAL_PROPS_RECURSIVE
-INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
-  SELECT A.local_relpath, N.kind, A.properties
-  FROM actual_node AS A JOIN nodes_current AS N
-    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
-       AND N.presence IN ('normal', 'incomplete')
-  WHERE A.wc_id = ?1
-    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?3 ESCAPE '#')
-    AND A.local_relpath NOT IN
-      (SELECT local_relpath FROM temp__node_props_cache)
+-- STMT_CACHE_NODE_PROPS
+INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
+ SELECT local_relpath, kind, properties FROM nodes_current
+  WHERE wc_id = ?1
+    AND local_relpath IN (SELECT local_relpath FROM targets_list)
+    AND presence IN ('normal', 'incomplete')
 
--- STMT_CACHE_NODE_BASE_PROPS_RECURSIVE
-CREATE TEMPORARY TABLE temp__node_props_cache AS
+-- STMT_CACHE_ACTUAL_PROPS
+UPDATE temp__node_props_cache 
+   SET properties=
+        IFNULL((SELECT properties FROM actual_node a
+                 WHERE a.wc_id = ?1
+                   AND a.local_relpath = temp__node_props_cache.local_relpath),
+               properties)
+
+-- STMT_CACHE_NODE_BASE_PROPS
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT local_relpath, kind, properties FROM nodes_base
   WHERE wc_id = ?1
-    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-    AND local_relpath NOT IN (
-      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND local_relpath IN (SELECT local_relpath FROM targets_list)
     AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
 
--- STMT_CACHE_NODE_PROPS_OF_CHILDREN
-CREATE TEMPORARY TABLE temp__node_props_cache AS
-  SELECT local_relpath, kind, properties FROM nodes_current
+-- STMT_CACHE_NODE_PRISTINE_PROPS
+INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
+ SELECT local_relpath, kind, 
+        IFNULL((SELECT properties FROM nodes nn
+                 WHERE n.presence = 'base-deleted'
+                   AND nn.wc_id = n.wc_id
+                   AND nn.local_relpath = n.local_relpath
+                   AND nn.op_depth < n.op_depth
+                 ORDER BY op_depth DESC),
+               properties)
+  FROM nodes_current n
   WHERE wc_id = ?1
-    AND (local_relpath = ?2 OR parent_relpath = ?2)
-    AND local_relpath NOT IN (
-      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
-
--- STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN
-INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
-  SELECT A.local_relpath, N.kind, A.properties
-  FROM actual_node AS A JOIN nodes_current AS N
-    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
-       AND N.presence IN ('normal', 'incomplete')
-  WHERE A.wc_id = ?1
-    AND (A.local_relpath = ?2 OR A.parent_relpath = ?2)
-    AND A.local_relpath NOT IN
-      (SELECT local_relpath FROM temp__node_props_cache)
-
--- STMT_CACHE_NODE_BASE_PROPS_OF_CHILDREN
-CREATE TEMPORARY TABLE temp__node_props_cache AS
-  SELECT local_relpath, kind, properties FROM nodes_base
-  WHERE wc_id = ?1
-    AND (local_relpath = ?2 OR parent_relpath = ?2)
-    AND local_relpath NOT IN (
-      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
+    AND local_relpath IN (SELECT local_relpath FROM targets_list)
+    AND presence IN ('normal', 'incomplete', 'base-deleted')
 
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
-SELECT local_relpath, kind, properties FROM temp__node_props_cache
+SELECT local_relpath, properties FROM temp__node_props_cache
 ORDER BY local_relpath
+
+-- STMT_DROP_NODE_PROPS_CACHE
+DROP TABLE IF EXISTS temp__node_props_cache;
+
 
 -- STMT_CREATE_REVERT_LIST
 DROP TABLE IF EXISTS revert_list;
 CREATE TEMPORARY TABLE revert_list (
-   local_relpath TEXT PRIMARY KEY,
+   /* need wc_id if/when revert spans multiple working copies */
+   local_relpath TEXT NOT NULL,
+   actual INTEGER NOT NULL,         /* 1 if an actual row, 0 if a nodes row */
    conflict_old TEXT,
    conflict_new TEXT,
    conflict_working TEXT,
    prop_reject TEXT,
-   notify INTEGER
+   notify INTEGER,         /* 1 if an actual row had props or tree conflict */
+   op_depth INTEGER,
+   repos_id INTEGER,
+   kind TEXT,
+   PRIMARY KEY (local_relpath, actual)
    );
 DROP TRIGGER IF EXISTS   trigger_revert_list_nodes;
 CREATE TEMPORARY TRIGGER trigger_revert_list_nodes
 BEFORE DELETE ON nodes
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, notify)
-   SELECT OLD.local_relpath, 1;
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, op_depth,
+                                      repos_id, kind)
+   SELECT OLD.local_relpath, 0, OLD.op_depth, OLD.repos_id, OLD.kind;
 END;
 DROP TRIGGER IF EXISTS   trigger_revert_list_actual_delete;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_delete
 BEFORE DELETE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, conflict_old,
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_old,
                                        conflict_new, conflict_working,
                                        prop_reject, notify)
-   SELECT OLD.local_relpath,
+   SELECT OLD.local_relpath, 1,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
           CASE
@@ -1039,10 +1174,10 @@ DROP TRIGGER IF EXISTS   trigger_revert_list_actual_update;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
 BEFORE UPDATE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, conflict_old,
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_old,
                                        conflict_new, conflict_working,
                                        prop_reject, notify)
-   SELECT OLD.local_relpath,
+   SELECT OLD.local_relpath, 1,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
           CASE
@@ -1056,40 +1191,60 @@ DROP TRIGGER IF EXISTS trigger_revert_list_actual_delete;
 DROP TRIGGER IF EXISTS trigger_revert_list_actual_update
 
 -- STMT_SELECT_REVERT_LIST
-SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify
+SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify,
+       actual, op_depth, repos_id, kind
 FROM revert_list
 WHERE local_relpath = ?1
+ORDER BY actual DESC
+
+-- STMT_SELECT_REVERT_LIST_COPIED_CHILDREN
+SELECT local_relpath, kind
+FROM revert_list
+WHERE local_relpath LIKE ?1 ESCAPE '#'
+  AND op_depth >= ?2
+  AND repos_id IS NOT NULL
+ORDER BY local_relpath
 
 -- STMT_DELETE_REVERT_LIST
 DELETE FROM revert_list WHERE local_relpath = ?1
 
 -- STMT_SELECT_REVERT_LIST_RECURSIVE
-SELECT local_relpath, notify
+SELECT DISTINCT local_relpath
 FROM revert_list
-WHERE local_relpath = ?1 or local_relpath LIKE ?2 ESCAPE '#'
+WHERE (local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#')
+  AND (notify OR actual = 0)
 ORDER BY local_relpath
 
 -- STMT_DELETE_REVERT_LIST_RECURSIVE
 DELETE FROM revert_list
 WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
 
+-- STMT_DROP_REVERT_LIST
+DROP TABLE IF EXISTS revert_list
+
 -- STMT_CREATE_DELETE_LIST
 DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
-   local_relpath TEXT PRIMARY KEY
+/* ### we should put the wc_id in here in case a delete spans multiple
+   ### working copies. queries, etc will need to be adjusted.  */
+   local_relpath TEXT PRIMARY KEY NOT NULL UNIQUE
    )
 
+/* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE */
 -- STMT_INSERT_DELETE_LIST
 INSERT INTO delete_list(local_relpath)
 SELECT local_relpath FROM nodes_current
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence NOT IN ('base-deleted', 'not-present')
+WHERE wc_id = ?1
+  AND (local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth >= ?3
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
 ORDER BY local_relpath
 
--- STMT_DROP_DELETE_LIST
+-- STMT_FINALIZE_DELETE
 DROP TABLE IF EXISTS delete_list
 
 
@@ -1101,63 +1256,162 @@ DROP TABLE IF EXISTS delete_list
 SELECT MIN(revision), MAX(revision),
        MIN(changed_revision), MAX(changed_revision) FROM nodes
   WHERE wc_id = ?1
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence IN ('normal', 'incomplete')
-  AND file_external IS NULL
-  AND op_depth = 0
+    AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+    AND presence IN ('normal', 'incomplete')
+    AND file_external IS NULL
+    AND op_depth = 0
 
--- STMT_SELECT_SPARSE_NODES
-SELECT local_relpath, presence, depth FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+-- STMT_HAS_SPARSE_NODES
+SELECT 1 FROM nodes
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND (presence IN ('absent', 'excluded')
         OR depth NOT IN ('infinity', 'unknown'))
   AND file_external IS NULL
+LIMIT 1
 
 -- STMT_SUBTREE_HAS_TREE_MODIFICATIONS
 SELECT 1 FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth > 0
-  AND presence IN ('normal', 'incomplete', 'base-deleted')
-  AND file_external IS NULL
 LIMIT 1
 
 -- STMT_SUBTREE_HAS_PROP_MODIFICATIONS
 SELECT 1 FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND properties IS NOT NULL
 LIMIT 1
 
-/* Find nodes that are switched relative to the wc root.
-   This query expects repos_path(wcroot)/% as arg 4,
-   and repos_path(wcroot), with a slash appended unless the path is empty,
-   as arg 5. */
--- STMT_SELECT_SWITCHED_NODES
-SELECT local_relpath, repos_path FROM nodes_base
-WHERE wc_id = ?1 AND local_relpath != ""
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND ((repos_path NOT LIKE ?4 ESCAPE '#' AND repos_path != local_relpath)
-       OR (repos_path != ?5 || local_relpath))
-  AND file_external IS NULL
+/* Determine if there is some switched subtree in just SQL. This looks easy,
+   but it really isn't, because we don't have a simple (and optimizable)
+   path join operation in SQL.
 
-/* Find nodes that are unswitched relative to the wc root.
-   This query expects repos_path(wcroot), with a slash appended unless the
-   path is empty, as arg 4. */
--- STMT_SELECT_UNSWITCHED_NODES
-SELECT local_relpath FROM nodes_base
-WHERE wc_id = ?1 AND local_relpath != ""
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND (repos_path == ?4 || local_relpath)
-  AND file_external IS NULL
+   To work around that we have 4 different cases:
+      * Check on a node that is neither wcroot nor repos root
+      * Check on a node that is repos_root, but not wcroot.
+      * Check on a node that is wcroot, but not repos root.
+      * Check on a node that is both wcroot and repos root.
+
+   To make things easier, our testsuite is usually in that last category,
+   while normal working copies are almost always in one of the others.
+*/
+-- STMT_HAS_SWITCHED
+SELECT o.repos_path || '/' || SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
 LIMIT 1
 
--- STMT_SELECT_CURRENT_NODES_RECURSIVE
-SELECT local_relpath, kind FROM nodes_current
+-- STMT_HAS_SWITCHED_REPOS_ROOT
+SELECT SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
+LIMIT 1
+
+-- STMT_HAS_SWITCHED_WCROOT
+SELECT o.repos_path || '/' || s.local_relpath AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND s.local_relpath != ''
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
+LIMIT 1
+
+-- STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT
+SELECT s.local_relpath AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND s.local_relpath != ''
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
+LIMIT 1
+
+-- STMT_SELECT_BASE_FILES_RECURSIVE
+SELECT local_relpath, translated_size, last_mod_time FROM nodes AS n
 WHERE wc_id = ?1
-  AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence IN ('normal', 'incomplete')
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = 0
+  AND kind='file'
+  AND presence='normal'
   AND file_external IS NULL
+
+-- STMT_SELECT_MOVED_FROM_RELPATH
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth = 0
+
+-- STMT_UPDATE_MOVED_TO_RELPATH
+UPDATE nodes SET moved_to = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+
+-- STMT_CLEAR_MOVED_TO_RELPATH
+UPDATE nodes SET moved_to = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+
+-- STMT_CLEAR_MOVED_TO_RELPATH_RECURSIVE
+UPDATE nodes SET moved_to = NULL
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth = 0
+
+/* This statement returns pairs of move-roots below the path ?2 in WC_ID ?1.
+ * Each row returns a moved-here path (always a child of ?2) in the first
+ * column, and its matching moved-away (deleted) path in the second column. */
+-- STMT_SELECT_MOVED_HERE_CHILDREN
+SELECT moved_to, local_relpath FROM nodes
+WHERE wc_id = ?1 AND op_depth = 0
+  AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
+
+/* ------------------------------------------------------------------------- */
+
+/* Queries for verification. */
+
+-- STMT_SELECT_ALL_NODES
+SELECT op_depth, local_relpath, parent_relpath, file_external FROM nodes
+WHERE wc_id == ?1
+
+/* ------------------------------------------------------------------------- */
 
 /* Grab all the statements related to the schema.  */
 
 -- include: wc-metadata
+-- include: wc-checks

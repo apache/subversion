@@ -1827,7 +1827,7 @@ def merge_replace_causes_tree_conflict2(sbox):
 
   # Merge them one by one to see all the errors.
 
-  ### A file-with-file replacement onto a deleted file. 
+  ### A file-with-file replacement onto a deleted file.
   # svn merge $URL/A/mu $URL/branch/mu A/mu
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A + "':\n",
@@ -1940,6 +1940,82 @@ def merge_replace_causes_tree_conflict2(sbox):
     actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'st',
                               '--depth=empty', path)
 
+#----------------------------------------------------------------------
+# Test for issue #4011 'merge of replacement on local delete fails'
+@SkipUnless(server_has_mergeinfo)
+@Issue(4011)
+@XFail()
+def merge_replace_on_del_fails(sbox):
+  "merge replace on local delete fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C_path        = os.path.join(wc_dir, 'A', 'C')
+  branch_path   = os.path.join(wc_dir, 'branch')
+  C_branch_path = os.path.join(wc_dir, 'branch', 'C')
+
+  # r2 - Copy ^/A to ^/branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/branch',
+                                     '-m', 'Create a branch')
+
+  # r3 - Replace A/C
+  svntest.actions.run_and_verify_svn(None, None, [], 'del', C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Replace A/C', wc_dir)
+
+  # r4 - Delete branch/C
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'del', C_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Delete branch/C', wc_dir)
+
+  # Sync merge ^/A to branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_stdout = verify.UnorderedOutput([
+    "--- Merging r2 through r4 into '" + branch_path + "':\n",
+    '   C ' + C_branch_path + '\n',
+    "--- Recording mergeinfo for merge of r2 through r4 into '" \
+    + branch_path + "':\n",
+    ' U   ' + branch_path + '\n',
+    'Summary of conflicts:\n',
+    '  Tree conflicts: 1\n',
+    ])
+  # This currently fails with:
+  #
+  #   >svn merge ^/A branch
+  #   ..\..\..\subversion\svn\util.c:913: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:11349: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:11303: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:11303: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:11273: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:9287: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:8870: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:5349: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_repos\reporter.c:1430: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\ra.c:247: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_repos\reporter.c:1269: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_repos\reporter.c:1205: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_repos\reporter.c:920: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_delta\cancel.c:120: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_delta\cancel.c:120: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\repos_diff.c:710: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:2234: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\adm_ops.c:1069: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\adm_ops.c:956: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\update_editor.c:5036: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:6985: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:6929: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:6920: (apr_err=155010)
+  #   svn: E155010: The node 'C:\SVN\src-trunk\Debug\subversion\tests\
+  #     cmdline\svn-test-work\working_copies\merge_tree_conflict_tests-24\
+  #     branch\C' was not found.
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+    sbox.repo_url + '/A', branch_path)
+
 ########################################################################
 # Run the tests
 
@@ -1969,6 +2045,7 @@ test_list = [ None,
               tree_conflicts_merge_del_onto_missing,
               merge_replace_causes_tree_conflict,
               merge_replace_causes_tree_conflict2,
+              merge_replace_on_del_fails,
              ]
 
 if __name__ == '__main__':

@@ -95,7 +95,7 @@ extern "C" {
 #define SVN_REPOS__CONF_PASSWD "passwd"
 #define SVN_REPOS__CONF_AUTHZ "authz"
 
-/* The Repository object, created by svn_repos_open() and
+/* The Repository object, created by svn_repos_open2() and
    svn_repos_create(). */
 struct svn_repos_t
 {

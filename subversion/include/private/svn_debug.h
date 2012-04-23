@@ -85,5 +85,9 @@ svn_dbg__printf(const char *fmt, ...)
 }
 #endif /* __cplusplus */
 
+#else /* SVN_DEBUG */
+
+/* We DON'T define SVN_DBG in release mode. See top of this file. */
+
 #endif /* SVN_DEBUG */
 #endif /* SVN_DEBUG_H */

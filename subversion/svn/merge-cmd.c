@@ -67,7 +67,7 @@ svn_cl__merge(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* For now, we require at least one source.  That may change in
      future versions of Subversion, for example if we have support for
@@ -175,28 +175,21 @@ svn_cl__merge(apr_getopt_t *os,
                                 _("Too many arguments given"));
 
       /* Set the default value for unspecified paths and peg revision. */
-      if (targets->nelts == 0)
-        {
-          peg_revision1.kind = svn_opt_revision_head;
-        }
-      else
-        {
-          /* targets->nelts is 1 ("svn merge SOURCE") or 2 ("svn merge
-             SOURCE WCPATH") here. */
-          sourcepath2 = sourcepath1;
+      /* targets->nelts is 1 ("svn merge SOURCE") or 2 ("svn merge
+         SOURCE WCPATH") here. */
+      sourcepath2 = sourcepath1;
 
-          if (peg_revision1.kind == svn_opt_revision_unspecified)
-            peg_revision1.kind = svn_path_is_url(sourcepath1)
-              ? svn_opt_revision_head : svn_opt_revision_working;
+      if (peg_revision1.kind == svn_opt_revision_unspecified)
+        peg_revision1.kind = svn_path_is_url(sourcepath1)
+          ? svn_opt_revision_head : svn_opt_revision_working;
 
-          if (targets->nelts == 2)
-            {
-              targetpath = APR_ARRAY_IDX(targets, 1, const char *);
-              if (svn_path_is_url(targetpath))
-                return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                        _("Cannot specify a revision range "
-                                          "with two URLs"));
-            }
+      if (targets->nelts == 2)
+        {
+          targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+          if (svn_path_is_url(targetpath))
+            return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                    _("Cannot specify a revision range "
+                                      "with two URLs"));
         }
     }
   else /* using @rev syntax */
@@ -298,12 +291,16 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
-  if (! two_sources_specified) /* TODO: Switch order of if */
+  if (opt_state->reintegrate)
     {
-      /* If we don't have a source, use the target as the source. */
-      if (! sourcepath1)
-        sourcepath1 = targetpath;
-
+      err = svn_client_merge_reintegrate(sourcepath1,
+                                         &peg_revision1,
+                                         targetpath,
+                                         opt_state->dry_run,
+                                         options, ctx, pool);
+    }
+  else if (! two_sources_specified)
+    {
       /* If we don't have at least one valid revision range, pick a
          good one that spans the entire set of revisions on our
          source. */
@@ -318,34 +315,26 @@ svn_cl__merge(apr_getopt_t *os,
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
 
-      if (opt_state->reintegrate)
-        err = svn_client_merge_reintegrate(sourcepath1,
-                                           &peg_revision1,
-                                           targetpath,
-                                           opt_state->dry_run,
-                                           options, ctx, pool);
-      else
-        err = svn_client_merge_peg4(sourcepath1,
-                                    ranges_to_merge,
-                                    &peg_revision1,
-                                    targetpath,
-                                    opt_state->depth,
-                                    opt_state->ignore_ancestry,
-                                    opt_state->force,
-                                    opt_state->record_only,
-                                    opt_state->dry_run,
-                                    opt_state->allow_mixed_rev,
-                                    options,
-                                    ctx,
-                                    pool);
+      err = svn_client_merge_peg4(sourcepath1,
+                                  ranges_to_merge,
+                                  &peg_revision1,
+                                  targetpath,
+                                  opt_state->depth,
+                                  opt_state->ignore_ancestry,
+                                  opt_state->force,
+                                  opt_state->record_only,
+                                  opt_state->dry_run,
+                                  opt_state->allow_mixed_rev,
+                                  options,
+                                  ctx,
+                                  pool);
     }
   else
     {
       if (svn_path_is_url(sourcepath1) != svn_path_is_url(sourcepath2))
-        return svn_error_return(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                                 NULL,
-                                                 _("Merge sources must both be "
-                                                   "either paths or URLs")));
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Merge sources must both be "
+                                  "either paths or URLs"));
       err = svn_client_merge4(sourcepath1,
                               &first_range_start,
                               sourcepath2,
@@ -365,8 +354,20 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
 
-  if (err && (! opt_state->reintegrate))
-    return svn_cl__may_need_force(err);
+  if (err)
+    {
+      if(err->apr_err == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
+        {
+          err = svn_error_quick_wrap(
+            err,
+            _("Merge tracking not possible, use --ignore-ancestry or\n"
+              "fix invalid mergeinfo in target with 'svn propset'"));
+        }
+      else if (! opt_state->reintegrate)
+        {
+          return svn_cl__may_need_force(err);
+        }
+    }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

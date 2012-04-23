@@ -84,7 +84,7 @@ class TestCase:
 
     DOC is ...
 
-    WIP is ...
+    WIP is a string describing the reason for the work-in-progress
     """
     assert hasattr(cond_func, '__call__')
 
@@ -197,7 +197,7 @@ class _XFail(TestCase):
     that we're running over a particular RA layer).
 
     WIP is ...
-    
+
     ISSUES is an issue number (or a list of issue numbers) tracking this."""
 
     TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip,
@@ -279,11 +279,14 @@ def XFail_deco(cond_func = lambda: True):
   return _second
 
 
-def Wimp_deco(func):
-  if isinstance(func, TestCase):
-    return _Wimp(func, issues=func.issues)
-  else:
-    return _Wimp(func)
+def Wimp_deco(wip, cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _Wimp(wip, func, cond_func, issues=func.issues)
+    else:
+      return _Wimp(wip, func, cond_func)
+
+  return _second
 
 
 def Skip_deco(cond_func = lambda: True):
@@ -314,7 +317,7 @@ def Issues_deco(*issues):
       return func
 
     else:
-      # we need to wrap the function 
+      # we need to wrap the function
       return create_test_case(func, issues=issues)
 
   return _second

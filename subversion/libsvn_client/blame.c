@@ -85,7 +85,7 @@ struct file_rev_baton {
   struct rev *rev;     /* the rev for which blame is being assigned
                           during a diff */
   struct blame_chain *chain;      /* the original blame chain. */
-  const char *tmp_path; /* temp file name to feed svn_io_open_unique_file */
+  const char *repos_root_url;    /* To construct a url */
   apr_pool_t *mainpool;  /* lives during the whole sequence of calls */
   apr_pool_t *lastpool;  /* pool used during previous call */
   apr_pool_t *currpool;  /* pool used during this call */
@@ -108,7 +108,6 @@ struct delta_baton {
   void *wrapped_baton;
   struct file_rev_baton *file_rev_baton;
   svn_stream_t *source_stream;  /* the delta source */
-  svn_stream_t *stream;  /* the result of the delta */
   const char *filename;
 };
 
@@ -321,13 +320,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window)
     return SVN_NO_ERROR;
 
-  /* Close the files used for the delta.
+  /* Close the source file used for the delta.
      It is important to do this early, since otherwise, they will be deleted
      before all handles are closed, which leads to failures on some platforms
      when new tempfiles are to be created. */
   if (dbaton->source_stream)
     SVN_ERR(svn_stream_close(dbaton->source_stream));
-  SVN_ERR(svn_stream_close(dbaton->stream));
 
   /* If we are including merged revisions, we need to add each rev to the
      merged chain. */
@@ -426,7 +424,11 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (frb->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_blame_revision, pool);
+            = svn_wc_create_notify_url(
+                            svn_path_url_add_component2(frb->repos_root_url,
+                                                        path+1, pool),
+                            svn_wc_notify_blame_revision, pool);
+      notify->path = path;
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
@@ -467,12 +469,9 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   else
     filepool = frb->currpool;
 
-  SVN_ERR(svn_stream_open_unique(&delta_baton->stream,
-                                 &delta_baton->filename,
-                                 NULL,
+  SVN_ERR(svn_stream_open_unique(&cur_stream, &delta_baton->filename, NULL,
                                  svn_io_file_del_on_pool_cleanup,
                                  filepool, filepool));
-  cur_stream = svn_stream_disown(delta_baton->stream, filepool);
 
   /* Get window handler for applying delta. */
   svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
@@ -593,7 +592,6 @@ svn_client_blame5(const char *target,
 {
   struct file_rev_baton frb;
   svn_ra_session_t *ra_session;
-  const char *url;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk, *walk_merged = NULL;
   apr_pool_t *iterpool;
@@ -612,9 +610,8 @@ svn_client_blame5(const char *target,
     SVN_ERR(svn_dirent_get_absolute(&target_abspath_or_url, target, pool));
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
-                                           &url, target, NULL,
-                                           peg_revision, end,
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum, NULL,
+                                           target, NULL, peg_revision, end,
                                            ctx, pool));
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
@@ -647,8 +644,7 @@ svn_client_blame5(const char *target,
       frb.merged_chain->pool = pool;
     }
 
-  SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
-  frb.tmp_path = svn_dirent_join(frb.tmp_path, "tmp", pool),
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &frb.repos_root_url, pool));
 
   frb.mainpool = pool;
   /* The callback will flip the following two pools, because it needs

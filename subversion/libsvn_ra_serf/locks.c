@@ -29,14 +29,12 @@
 
 #include <serf.h>
 
+#include "svn_dav.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
-#include "svn_dav.h"
-#include "svn_xml.h"
+
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_private_config.h"
@@ -57,7 +55,7 @@ typedef enum lock_state_e {
   DEPTH,
   TIMEOUT,
   LOCK_TOKEN,
-  COMMENT,
+  COMMENT
 } lock_state_e;
 
 typedef struct lock_prop_info_t {
@@ -360,9 +358,13 @@ handle_lock(serf_request_t *request,
       const char *val;
 
       serf_status_line sl;
-      apr_status_t rv;
+      apr_status_t status;
 
-      rv = serf_bucket_response_status(response, &sl);
+      status = serf_bucket_response_status(response, &sl);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
 
       ctx->status_code = sl.code;
       ctx->reason = sl.reason;
@@ -382,14 +384,6 @@ handle_lock(serf_request_t *request,
             }
           return err;
         }
-
-      /* 405 == Method Not Allowed (Occurs when trying to lock a working
-         copy path which no longer exists at HEAD in the repository. */
-      if (sl.code == 405)
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE,
-                                 NULL,
-                                 _("Lock request failed: %d %s"),
-                                   ctx->status_code, ctx->reason);
 
       headers = serf_bucket_response_get_headers(response);
 
@@ -586,6 +580,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
   subpool = svn_pool_create(pool);
 
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       svn_ra_serf__handler_t *handler;
@@ -594,7 +590,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_info_t *lock_ctx;
       const void *key;
       void *val;
-      svn_error_t *err, *new_err;
+      svn_error_t *err;
+      svn_error_t *new_err = NULL;
 
       svn_pool_clear(subpool);
 
@@ -688,6 +685,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
   subpool = svn_pool_create(pool);
 
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       svn_ra_serf__handler_t *handler;
@@ -695,13 +694,14 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       const char *req_url, *path, *token;
       const void *key;
       void *val;
-      svn_lock_t *existing_lock;
+      svn_lock_t *existing_lock = NULL;
       struct unlock_context_t unlock_ctx;
       svn_error_t *lock_err = NULL;
 
       svn_pool_clear(subpool);
 
       ctx = apr_pcalloc(subpool, sizeof(*ctx));
+      ctx->pool = subpool;
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;

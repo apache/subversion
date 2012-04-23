@@ -225,7 +225,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
 }
 
 jobject
-CreateJ::Info(const char *path, const svn_info2_t *info)
+CreateJ::Info(const char *path, const svn_client_info2_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -297,9 +297,11 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jworkingSize = info->wc_info->working_size;
+      /* ### Maybe rename the java fields while we can */
+      jworkingSize = info->wc_info->recorded_size;
+      jtext_time = info->wc_info->recorded_time;
+
       jcopyfrom_rev = info->wc_info->copyfrom_rev;
-      jtext_time = info->wc_info->text_time;
 
       if (info->wc_info->conflicts && info->wc_info->conflicts->nelts > 0)
         {
@@ -538,9 +540,13 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 }
 
 jobject
-CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
-                const svn_client_status_t *status, apr_pool_t *pool)
+CreateJ::Status(svn_wc_context_t *wc_ctx,
+                const svn_client_status_t *status,
+                apr_pool_t *pool)
 {
+  if (status == NULL)
+    return NULL;
+
   JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references
@@ -563,19 +569,18 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZLjava/lang/String;"
-                             "JZZLjava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;"
-                             "JL"JAVA_PACKAGE"/types/Lock;"
+                             "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
+                             "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
-  jstring jPath = JNIUtil::makeJString(local_abspath);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
 
+  /* ### Calculate the old style text_status value to make
+     ### the tests pass. It is probably better to do this in
+     ### the tigris package and then switch the apache package
+     ### to three statuses. */
   jstring jUrl = NULL;
   jobject jNodeKind = NULL;
   jlong jRevision =
@@ -584,129 +589,77 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
     org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedDate = 0;
   jstring jLastCommitAuthor = NULL;
-  jobject jTextType = NULL;
-  jobject jPropType = NULL;
-  jobject jRepositoryTextType = NULL;
-  jobject jRepositoryPropType = NULL;
-  jboolean jIsLocked = JNI_FALSE;
-  jboolean jIsCopied = JNI_FALSE;
-  jboolean jIsConflicted = JNI_FALSE;
-  jboolean jIsSwitched = JNI_FALSE;
-  jboolean jIsFileExternal = JNI_FALSE;
-  jstring jURLCopiedFrom = NULL;
-  jlong jRevisionCopiedFrom =
-    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
-  jstring jLockToken = NULL;
-  jstring jLockComment = NULL;
-  jstring jLockOwner = NULL;
-  jlong jLockCreationDate = 0;
-  jobject jLock = NULL;
-  jlong jOODLastCmtRevision =
-    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
-  jlong jOODLastCmtDate = 0;
-  jobject jOODKind = NULL;
-  jstring jOODLastCmtAuthor = NULL;
+  jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
-  if (status != NULL)
+
+  enum svn_wc_status_kind text_status = status->node_status;
+
+  /* Avoid using values that might come from prop changes */
+  if (text_status == svn_wc_status_modified
+      || text_status == svn_wc_status_conflicted)
+    text_status = status->text_status;
+
+  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
+
+  if (repos_text_status == svn_wc_status_modified
+      || repos_text_status == svn_wc_status_conflicted)
+    repos_text_status = status->repos_text_status;
+
+  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
+  jobject jTextType = EnumMapper::mapStatusKind(text_status);
+  jobject jPropType = EnumMapper::mapStatusKind(status->prop_status);
+  jobject jRepositoryTextType = EnumMapper::mapStatusKind(repos_text_status);
+  jobject jRepositoryPropType = EnumMapper::mapStatusKind(
+                                                  status->repos_prop_status);
+  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsLocked = (status->wc_is_locked == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsFileExternal = (status->file_external == 1) ? JNI_TRUE
+                                                          : JNI_FALSE;
+
+  jstring jPath = JNIUtil::makeJString(status->local_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jReposLock = CreateJ::Lock(status->repos_lock);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  if (status->repos_root_url)
     {
-      /* ### Calculate the old style text_status value to make
-         ### the tests pass. It is probably better to do this in
-         ### the tigris package and then switch the apache package
-         ### to three statuses. */
-      enum svn_wc_status_kind text_status = status->node_status;
+      jUrl = JNIUtil::makeJString(svn_path_url_add_component2(
+                                    status->repos_root_url,
+                                    status->repos_relpath,
+                                    pool));
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
 
-      /* Avoid using values that might come from prop changes */
-      if (text_status == svn_wc_status_modified
-          || text_status == svn_wc_status_conflicted)
-        text_status = status->text_status;
+  jlong jOODLastCmtRevision = status->ood_changed_rev;
+  jlong jOODLastCmtDate = status->ood_changed_date;
+  jobject jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
+  jstring jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_changed_author);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
-      jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
-      jTextType = EnumMapper::mapStatusKind(text_status);
-      jPropType = EnumMapper::mapStatusKind(status->prop_status);
-      jRepositoryTextType = EnumMapper::mapStatusKind(
-                                                      status->repos_text_status);
-      jRepositoryPropType = EnumMapper::mapStatusKind(
-                                                      status->repos_prop_status);
-      jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
-      jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
-      jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
-      jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
+  if (status->versioned)
+    {
+      jNodeKind = EnumMapper::mapNodeKind(status->kind);
+      jRevision = status->revision;
+      jLastChangedRevision = status->changed_rev;
+      jLastChangedDate = status->changed_date;
+      jLastCommitAuthor = JNIUtil::makeJString(status->changed_author);
 
-      jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      if (status->repos_root_url)
-        {
-          jUrl = JNIUtil::makeJString(svn_path_url_add_component2(
-                                        status->repos_root_url,
-                                        status->repos_relpath,
-                                        pool));
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-        }
-
-      jOODLastCmtRevision = status->ood_changed_rev;
-      jOODLastCmtDate = status->ood_changed_date;
-      jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
-      jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_changed_author);
+      jLocalLock = Lock(status->lock);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      if (status->versioned)
-        {
-          jNodeKind = EnumMapper::mapNodeKind(status->kind);
-          jRevision = status->revision;
-          jLastChangedRevision = status->changed_rev;
-          jLastChangedDate = status->changed_date;
-          jLastCommitAuthor = JNIUtil::makeJString(status->changed_author);
-
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          if (status->lock)
-            {
-              jLockToken = JNIUtil::makeJString(status->lock->token);
-              if (JNIUtil::isJavaExceptionThrown())
-                POP_AND_RETURN_NULL;
-
-              jLockComment = JNIUtil::makeJString(status->lock->comment);
-              if (JNIUtil::isJavaExceptionThrown())
-                POP_AND_RETURN_NULL;
-
-              jLockOwner = JNIUtil::makeJString(status->lock->owner);
-              if (JNIUtil::isJavaExceptionThrown())
-                POP_AND_RETURN_NULL;
-
-              jLockCreationDate = status->lock->creation_date;
-            }
-
-          jChangelist = JNIUtil::makeJString(status->changelist);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-        }
-
-      if (status->versioned && status->conflicted)
-        {
-          const char *copyfrom_url;
-          svn_revnum_t copyfrom_rev;
-          svn_boolean_t is_copy_target;
-
-          SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                                     &copyfrom_url,
-                                                     &copyfrom_rev,
-                                                     &is_copy_target,
-                                                     wc_ctx, local_abspath,
-                                                     pool, pool), NULL);
-
-          jURLCopiedFrom = JNIUtil::makeJString(is_copy_target ? copyfrom_url
-                                                               : NULL);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jRevisionCopiedFrom = is_copy_target ? copyfrom_rev
-                                               : SVN_INVALID_REVNUM;
-        }
+      jChangelist = JNIUtil::makeJString(status->changelist);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
     }
 
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
@@ -714,10 +667,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                                jLastCommitAuthor, jTextType, jPropType,
                                jRepositoryTextType, jRepositoryPropType,
                                jIsLocked, jIsCopied, jIsConflicted,
-                               jURLCopiedFrom, jRevisionCopiedFrom,
-                               jIsSwitched, jIsFileExternal, jLockToken,
-                               jLockOwner,
-                               jLockComment, jLockCreationDate, jLock,
+                               jIsSwitched, jIsFileExternal, jLocalLock,
+                               jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
                                jOODKind, jOODLastCmtAuthor, jChangelist);
 
@@ -875,7 +826,7 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jWarning = JNIUtil::makeJString(reposNotify->warning);
+  jstring jWarning = JNIUtil::makeJString(reposNotify->warning_str);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -991,7 +942,8 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>",
-                               "(JLjava/lang/String;Ljava/lang/String;)V");
+                               "(JLjava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
     }
@@ -1006,8 +958,18 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 
   jlong jRevision = commit_info->revision;
 
+  jstring jPostCommitError = JNIUtil::makeJString(
+                                            commit_info->post_commit_err);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jReposRoot = JNIUtil::makeJString(commit_info->repos_root);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   // call the Java method
-  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor);
+  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor,
+                                 jPostCommitError, jReposRoot);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

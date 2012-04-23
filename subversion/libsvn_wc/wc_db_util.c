@@ -38,6 +38,7 @@
 #define SVN_WC__I_AM_WC_DB
 
 #include "svn_dirent_uri.h"
+#include "private/svn_sqlite.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -70,9 +71,42 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
   SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
   *wc_id = svn_sqlite__column_int64(stmt, 0);
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+
+
+
+/* An SQLite application defined function that allows SQL queries to
+   use "relpath_depth(local_relpath)".  */
+static svn_error_t *
+relpath_depth(svn_sqlite__context_t *sctx,
+              int argc,
+              svn_sqlite__value_t *values[],
+              apr_pool_t *scratch_pool)
+{
+  const char *path = NULL;
+  apr_int64_t depth;
+
+  if (argc == 1 && svn_sqlite__value_type(values[0]) == SVN_SQLITE__TEXT)
+    path = svn_sqlite__value_text(values[0]);
+  if (!path)
+    {
+      svn_sqlite__result_null(sctx);
+      return SVN_NO_ERROR;
+    }
+
+  depth = *path ? 1 : 0;
+  while (*path)
+    {
+      if (*path == '/')
+        ++depth;
+      ++path;
+    }
+  svn_sqlite__result_int64(sctx, depth);
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
@@ -80,25 +114,30 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *dir_abspath,
                         const char *sdb_fname,
                         svn_sqlite__mode_t smode,
+                        const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   const char *sdb_abspath = svn_wc__adm_child(dir_abspath, sdb_fname,
                                               scratch_pool);
 
-  return svn_error_return(svn_sqlite__open(sdb, sdb_abspath,
-                                           smode, statements,
-                                           0, NULL,
-                                           result_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__open(sdb, sdb_abspath, smode,
+                           my_statements ? my_statements : statements,
+                           0, NULL, result_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__create_scalar_function(*sdb, "relpath_depth", 1,
+                                             relpath_depth, NULL));
+
+  return SVN_NO_ERROR;
 }
 
 
-/* Some helpful transaction helpers. 
+/* Some helpful transaction helpers.
 
    Instead of directly using SQLite transactions, these wrappers take care of
    simple cases by allowing consumers to worry about wrapping the wcroot and
    local_relpath, which are almost always used within the transaction.
-   
+
    This also means if we later want to implement some wc_db-specific txn
    handling, we have a convenient place to do it.
    */
@@ -127,7 +166,7 @@ run_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 {
   struct txn_baton_t *tb = baton;
 
-  return svn_error_return(
+  return svn_error_trace(
     tb->cb_func(tb->cb_baton, tb->wcroot, tb->local_relpath, scratch_pool));
 }
 
@@ -144,6 +183,6 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
 {
   struct txn_baton_t tb = { wcroot, local_relpath, cb_func, cb_baton };
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_sqlite__with_lock(wcroot->sdb, run_txn, &tb, scratch_pool));
 }

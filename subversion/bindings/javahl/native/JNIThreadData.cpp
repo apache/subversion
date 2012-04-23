@@ -41,7 +41,6 @@ JNIThreadData::JNIThreadData()
 {
   m_env = NULL;
   m_exceptionThrown = false;
-  m_requestPool = NULL;
   m_previous = NULL;
 }
 

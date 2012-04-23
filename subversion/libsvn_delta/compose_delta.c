@@ -774,7 +774,7 @@ svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
   /* Read the description of the delta composition algorithm in
      notes/fs-improvements.txt before going any further.
      You have been warned. */
-  build_baton.new_data = svn_stringbuf_create("", pool);
+  build_baton.new_data = svn_stringbuf_create_empty(pool);
   for (i = 0; i < window_B->num_ops; ++i)
     {
       const svn_txdelta_op_t *const op = &window_B->ops[i];

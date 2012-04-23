@@ -91,18 +91,19 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       /* If target isn't versioned, just send a 'skip'
          notification and move on. */
       if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
-          || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+          || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
+          || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
           if (b->ctx->notify_func2)
-            (*b->ctx->notify_func2)
-              (b->ctx->notify_baton2,
+            (*b->ctx->notify_func2)(
+               b->ctx->notify_baton2,
                svn_wc_create_notify(b->local_abspath, svn_wc_notify_skip,
                                     scratch_pool),
                scratch_pool);
           svn_error_clear(err);
         }
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;
@@ -147,7 +148,8 @@ svn_client_revert2(const apr_array_header_t *paths,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *local_abspath;
+      const char *local_abspath, *lock_target;
+      svn_boolean_t wc_root;
 
       svn_pool_clear(subpool);
 
@@ -163,8 +165,13 @@ svn_client_revert2(const apr_array_header_t *paths,
       baton.use_commit_times = use_commit_times;
       baton.changelists = changelists;
       baton.ctx = ctx;
+
+      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root, ctx->wc_ctx,
+                                          local_abspath, pool));
+      lock_target = wc_root ? local_abspath
+                            : svn_dirent_dirname(local_abspath, pool);
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
-                                         local_abspath, TRUE, pool, pool);
+                                         lock_target, FALSE, pool, pool);
       if (err)
         goto errorful;
     }
@@ -186,5 +193,5 @@ svn_client_revert2(const apr_array_header_t *paths,
 
   svn_pool_destroy(subpool);
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }

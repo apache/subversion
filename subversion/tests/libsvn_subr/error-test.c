@@ -90,7 +90,7 @@ test_error_purge_tracing(apr_pool_t *pool)
                             "SVN_NO_ERROR after being passed a "
                             "SVN_NO_ERROR.");
 
-  err = svn_error_return(svn_error_create(SVN_ERR_BASE, NULL, "root error"));
+  err = svn_error_trace(svn_error_create(SVN_ERR_BASE, NULL, "root error"));
 #ifdef SVN_ERR__TRACING
   if (! svn_error__is_tracing_link(err))
     {
@@ -98,7 +98,7 @@ test_error_purge_tracing(apr_pool_t *pool)
                               "The top error is not a tracing link:");
     }
 #endif
-  err = svn_error_return(svn_error_create(SVN_ERR_BASE, err, "other error"));
+  err = svn_error_trace(svn_error_create(SVN_ERR_BASE, err, "other error"));
 #ifdef SVN_ERR__TRACING
   if (! svn_error__is_tracing_link(err))
     {
@@ -126,7 +126,7 @@ test_error_purge_tracing(apr_pool_t *pool)
 
     /* For this test, use a random error status. */
     err = svn_error_create(SVN_ERR_BAD_UUID, NULL, SVN_ERR__TRACED);
-    err = svn_error_return(err);
+    err = svn_error_trace(err);
 
     /* Register a malfunction handler that doesn't call abort() to
        check that a new error chain with an assertion error is

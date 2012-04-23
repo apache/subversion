@@ -327,22 +327,22 @@ public class Info2 implements java.io.Serializable
 
       return null;
     }
-    
+
     static private String
     getChecksumDigest(org.apache.subversion.javahl.types.Checksum checksum)
     {
     	if (checksum == null)
     		return null;
-    	
+
     	if (checksum.getKind() != org.apache.subversion.javahl.types.Checksum.Kind.MD5)
     		return null;
-    	
+
     	StringBuffer hexDigest = new StringBuffer();
     	for (byte b : checksum.getDigest())
     	{
     		hexDigest.append(Integer.toHexString(0xFF & b));
     	}
-    	
+
     	return hexDigest.toString();
     }
 

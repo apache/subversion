@@ -67,12 +67,12 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   const char *source, *target;
   svn_opt_revision_t src_peg_revision, tgt_peg_revision;
   /* Default to depth empty. */
-  svn_depth_t depth = opt_state->depth == svn_depth_unknown
-    ? svn_depth_empty : opt_state->depth;
+  svn_depth_t depth = (opt_state->depth == svn_depth_unknown)
+                      ? svn_depth_empty : opt_state->depth;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* We expect a single source URL followed by a single target --
      nothing more, nothing less. */

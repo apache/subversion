@@ -105,13 +105,13 @@ lock_start_element(int *elem, void *baton, int parent,
     case ELEM_lock_timeout:
     case ELEM_lock_depth:
     case ELEM_status:
-      b->cdata = svn_stringbuf_create("", b->pool);
+      b->cdata = svn_stringbuf_create_empty(b->pool);
       break;
 
     case ELEM_href:
       if (parent == ELEM_lock_token
           || parent == ELEM_response)
-        b->cdata = svn_stringbuf_create("", b->pool);
+        b->cdata = svn_stringbuf_create_empty(b->pool);
       break;
 
     default:
@@ -242,7 +242,7 @@ do_lock(svn_lock_t **lock,
   ne_uri uri;
   int code;
   const char *url;
-  svn_string_t fs_path;
+  const char *fs_path;
   ne_xml_parser *lck_parser;
   svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
@@ -251,7 +251,7 @@ do_lock(svn_lock_t **lock,
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component2(ras->url->data, path, pool);
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &fs_path, NULL, ras,
                                          url, SVN_INVALID_REVNUM, pool));
 
   if (ne_uri_parse(url, &uri) != 0)
@@ -309,7 +309,7 @@ do_lock(svn_lock_t **lock,
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
-  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
+  err = lock_from_baton(lock, req, fs_path, lrb, pool);
 
  cleanup:
   /* 405 == Method Not Allowed (Occurs when trying to lock a working
@@ -399,6 +399,7 @@ do_unlock(svn_ra_session_t *session,
   const char *url;
   const char *url_path;
   ne_uri uri;
+  svn_error_t *err = SVN_NO_ERROR;
 
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
@@ -441,7 +442,6 @@ do_unlock(svn_ra_session_t *session,
 
   {
     int code = 0;
-    svn_error_t *err;
 
     err = svn_ra_neon__simple_request(&code, ras, "UNLOCK", url_path,
                                       extra_headers, NULL, 204, 0, pool);
@@ -460,13 +460,11 @@ do_unlock(svn_ra_session_t *session,
                                        _("No lock on path '%s'"
                                          " (%d Bad Request)"), path, code);
             default:
-              break; /* Handle as error */
+              break;
           }
       }
-    else
-      SVN_ERR(err);
   }
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 
@@ -514,7 +512,7 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
         }
 
       if (lock_func)
-        callback_err = svn_error_return(
+        callback_err = svn_error_trace(
                  lock_func(lock_baton, path, FALSE, old_lock, err, iterpool));
 
       svn_error_clear(err);
@@ -529,7 +527,7 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_error_return(
+  return svn_error_trace(
           svn_ra_neon__maybe_store_auth_info_after_result(ret_err, ras, pool));
 }
 
@@ -541,7 +539,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
                                apr_pool_t *pool)
 {
   const char *url;
-  svn_string_t fs_path;
+  const char *fs_path;
   svn_error_t *err;
   ne_uri uri;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
@@ -559,7 +557,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component2(ras->url->data, path, pool);
 
-  err = svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+  err = svn_ra_neon__get_baseline_info(NULL, &fs_path, NULL, ras,
                                        url, SVN_INVALID_REVNUM, pool);
   SVN_ERR(svn_ra_neon__maybe_store_auth_info_after_result(err, ras, pool));
 
@@ -593,7 +591,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
 
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */
-  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
+  err = lock_from_baton(lock, req, fs_path, lrb, pool);
 
  cleanup:
   svn_ra_neon__request_destroy(req);

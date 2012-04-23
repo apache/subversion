@@ -79,6 +79,10 @@ class WC(object):
         self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
 
+    def close(self):
+        """Close this WC object, releasing any resources."""
+        self.pool.clear()
+
     def copy(self, src, dest, rev = ""):
         """Copy src to dest.
 

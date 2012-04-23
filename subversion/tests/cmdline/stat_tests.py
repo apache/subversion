@@ -797,13 +797,14 @@ def status_on_unversioned_dotdot(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  new_dir = os.path.join(wc_dir, 'new_dir')
-  new_subdir = os.path.join(new_dir, 'new_subdir')
+  new_dir = sbox.ospath('new')
+  new_sub = sbox.ospath('new/sub')
+  new_subsub = sbox.ospath('new/sub/sub')
   os.mkdir(new_dir)
-  os.mkdir(new_subdir)
+  os.mkdir(new_sub)
+  os.mkdir(new_subsub)
 
-  os.chdir(new_subdir)
-
+  os.chdir(new_subsub)
   exit_code, out, err = svntest.main.run_svn(1, 'st', '..')
   for line in err:
     if line.find('svn: warning: W155007: \'..\' is not a working copy') != -1:
@@ -917,7 +918,7 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\"?>\n",
+  template = ['<?xml version="1.0" encoding="UTF-8"?>\n',
               "<status>\n",
               "<target\n",
               "   path=\"%s\">\n" % (file_path),
@@ -1224,7 +1225,7 @@ def status_update_with_incoming_props(sbox):
   else:
     raise svntest.Failure
 
-  xout = ["<?xml version=\"1.0\"?>\n",
+  xout = ['<?xml version="1.0" encoding="UTF-8"?>\n',
           "<status>\n",
           "<target\n",
           "   path=\"%s\">\n" % (wc_dir),
@@ -1884,6 +1885,45 @@ def wc_wc_copy_timestamp(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
+@Issue(3908)
+def wclock_status(sbox):
+  "verbose/non-verbose on locked working copy"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  # Recursive lock
+  svntest.actions.lock_admin_dir(sbox.ospath('A/D'), True)
+
+  # Verbose status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/H', locked='L')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Non-verbose status
+  expected_output = svntest.verify.UnorderedOutput([
+      '  L     %s\n' % sbox.ospath(path) for path in ['A/D',
+                                                      'A/D/G',
+                                                      'A/D/H']
+      ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', wc_dir)
+
+  # Second non-recursive lock
+  svntest.actions.lock_admin_dir(sbox.ospath('A/B'))
+
+  expected_status.tweak('A/B', locked='L')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_output = svntest.verify.UnorderedOutput([
+      '  L     %s\n' % sbox.ospath(path) for path in ['A/B',
+                                                      'A/D',
+                                                      'A/D/G',
+                                                      'A/D/H']
+      ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1924,6 +1964,7 @@ test_list = [ None,
               status_nested_wc_old_format,
               status_locked_deleted,
               wc_wc_copy_timestamp,
+              wclock_status,
              ]
 
 if __name__ == '__main__':

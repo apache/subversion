@@ -61,10 +61,17 @@ extern "C" {
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
 
-   If SPECIAL is not NULL determine if the svn:special flag is set on 
+   If SPECIAL is not NULL determine if the svn:special flag is set on
    LOCAL_ABSPATH in DB.  If so, set SPECIAL to TRUE, if not, set it to FALSE.
 
    If PROPS is not NULL, use PROPS instead of the properties on LOCAL_ABSPATH.
+
+   If WRI_ABSPATH is not NULL, retrieve the information for LOCAL_ABSPATH
+   from the working copy identified by WRI_ABSPATH. Falling back to file
+   external information if the file is not present as versioned node.
+
+   If FOR_NORMALIZATION is TRUE, just return a list of keywords instead of
+   calculating their intended values.
 
    Use SCRATCH_POOL for temporary allocation, RESULT_POOL for allocating
    *STYLE and *EOL.
@@ -77,6 +84,7 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_hash_t *props,
+                           svn_boolean_t for_normalization,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -98,13 +106,22 @@ void svn_wc__eol_value_from_string(const char **value,
 
    Use LOCAL_ABSPATH to expand keyword values.
 
+   If WRI_ABSPATH is not NULL, retrieve the information for LOCAL_ABSPATH
+   from the working copy identified by WRI_ABSPATH. Falling back to file
+   external information if the file is not present as versioned node.
+
+   If FOR_NORMALIZATION is TRUE, just return a list of keywords instead of
+   calculating their intended values.
+
    Use SCRATCH_POOL for any temporary allocations.
 */
 svn_error_t *
 svn_wc__expand_keywords(apr_hash_t **keywords,
                         svn_wc__db_t *db,
                         const char *local_abspath,
+                        const char *wri_abspath,
                         const char *keyword_list,
+                        svn_boolean_t for_normalization,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
@@ -124,7 +141,7 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
 
    This function looks at the current values of the above properties,
    including any scheduled-but-not-yet-committed changes.
- 
+
    If LOCAL_ABSPATH is a directory, this function is a no-op.
 
    Use SCRATCH_POOL for any temporary allocations.

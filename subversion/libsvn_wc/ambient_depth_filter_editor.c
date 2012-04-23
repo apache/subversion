@@ -117,7 +117,7 @@ struct dir_baton
    obtaining information for the ambient depth editor */
 static svn_error_t *
 ambient_read_info(svn_wc__db_status_t *status,
-                  svn_wc__db_kind_t *kind,
+                  svn_kind_t *kind,
                   svn_depth_t *depth,
                   svn_wc__db_t *db,
                   const char *local_abspath,
@@ -128,7 +128,7 @@ ambient_read_info(svn_wc__db_status_t *status,
 
   err = svn_wc__db_base_get_info(status, kind, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, depth, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -136,7 +136,7 @@ ambient_read_info(svn_wc__db_status_t *status,
     {
       svn_error_clear(err);
 
-      *kind = svn_wc__db_kind_unknown;
+      *kind = svn_kind_unknown;
       if (status)
         *status = svn_wc__db_status_normal;
       if (depth)
@@ -174,39 +174,33 @@ make_dir_baton(struct dir_baton **d_p,
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
 
-  d->abspath = apr_pstrdup(pool, eb->anchor_abspath);
   if (path)
-    d->abspath = svn_dirent_join(d->abspath, path, pool);
+    d->abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
+  else
+    d->abspath = apr_pstrdup(pool, eb->anchor_abspath);
 
   /* The svn_depth_unknown means that: 1) pb is the anchor; 2) there
      is an non-null target, for which we are preparing the baton.
      This enables explicitly pull in the target. */
   if (pb && pb->ambient_depth != svn_depth_unknown)
     {
-      const char *abspath;
       svn_boolean_t exclude;
       svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
       svn_boolean_t exists = TRUE;
-
-      abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                         path),
-                                pool);
 
       if (!added)
         {
           SVN_ERR(ambient_read_info(&status, &kind, NULL,
-                                    eb->db, abspath, pool));
+                                    eb->db, d->abspath, pool));
         }
       else
         {
-          exists = FALSE;
           status = svn_wc__db_status_not_present;
-          kind = svn_wc__db_kind_unknown;
+          kind = svn_kind_unknown;
         }
 
-      exists = (kind != svn_wc__db_kind_unknown);
+      exists = (kind != svn_kind_unknown);
 
       if (pb->ambient_depth == svn_depth_empty
           || pb->ambient_depth == svn_depth_files)
@@ -252,7 +246,7 @@ make_file_baton(struct file_baton **f_p,
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
   struct edit_baton *eb = pb->edit_baton;
   svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   const char *abspath;
 
   SVN_ERR_ASSERT(path);
@@ -264,10 +258,7 @@ make_file_baton(struct file_baton **f_p,
       return SVN_NO_ERROR;
     }
 
-  abspath = svn_dirent_join(eb->anchor_abspath,
-                            svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                     path),
-                            pool);
+  abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
 
   if (!added)
     {
@@ -277,7 +268,7 @@ make_file_baton(struct file_baton **f_p,
   else
     {
       status = svn_wc__db_status_not_present;
-      kind = svn_wc__db_kind_unknown;
+      kind = svn_kind_unknown;
     }
 
   if (pb->ambient_depth == svn_depth_empty)
@@ -288,9 +279,9 @@ make_file_baton(struct file_baton **f_p,
          doesn't want to hear about the file at all. */
 
       if (status == svn_wc__db_status_not_present
-          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_server_excluded
           || status == svn_wc__db_status_excluded
-          || kind == svn_wc__db_kind_unknown)
+          || kind == svn_kind_unknown)
         {
           f->ambiently_excluded = TRUE;
           *f_p = f;
@@ -317,7 +308,7 @@ make_file_baton(struct file_baton **f_p,
 
 /*** Editor Functions ***/
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -330,7 +321,7 @@ set_target_revision(void *edit_baton,
                                                 target_revision, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -349,7 +340,7 @@ open_root(void *edit_baton,
   if (! *eb->target)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
       svn_wc__db_status_t status;
       svn_depth_t depth;
 
@@ -358,10 +349,10 @@ open_root(void *edit_baton,
                                 eb->db, eb->anchor_abspath,
                                 pool));
 
-      if (kind != svn_wc__db_kind_unknown 
+      if (kind != svn_kind_unknown
           && status != svn_wc__db_status_not_present
           && status != svn_wc__db_status_excluded
-          && status != svn_wc__db_status_absent)
+          && status != svn_wc__db_status_server_excluded)
         {
           b->ambient_depth = depth;
         }
@@ -371,7 +362,7 @@ open_root(void *edit_baton,
                                        pool, &b->wrapped_baton);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t base_revision,
@@ -389,22 +380,19 @@ delete_entry(const char *path,
       /* If the entry we want to delete doesn't exist, that's OK.
          It's probably an old server that doesn't understand
          depths. */
-      svn_wc__db_kind_t kind;
+      svn_kind_t kind;
       svn_wc__db_status_t status;
       const char *abspath;
 
-      abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                         path),
-                                pool);
+      abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
 
       SVN_ERR(ambient_read_info(&status, &kind, NULL,
                                 eb->db, abspath, pool));
 
-      if (kind == svn_wc__db_kind_unknown
+      if (kind == svn_kind_unknown
           || status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_absent)
+          || status == svn_wc__db_status_server_excluded)
         return SVN_NO_ERROR;
     }
 
@@ -412,7 +400,7 @@ delete_entry(const char *path,
                                           pb->wrapped_baton, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -458,7 +446,7 @@ add_directory(const char *path,
                                            pool, &b->wrapped_baton);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -470,7 +458,7 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
   const char *local_abspath;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_wc__db_status_t status;
   svn_depth_t depth;
 
@@ -487,19 +475,15 @@ open_directory(const char *path,
      flush the logs of pb's directory, which might be important for
      this svn_wc_entry call. */
 
-  local_abspath = svn_dirent_join(eb->anchor_abspath,
-                                  svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                           path),
-                                  pool);
-
+  local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
 
   SVN_ERR(ambient_read_info(&status, &kind, &depth,
                             eb->db, local_abspath, pool));
 
-  if (kind != svn_wc__db_kind_unknown
+  if (kind != svn_kind_unknown
       && status != svn_wc__db_status_not_present
       && status != svn_wc__db_status_excluded
-      && status != svn_wc__db_status_absent)
+      && status != svn_wc__db_status_server_excluded)
     {
       b->ambient_depth = depth;
     }
@@ -507,7 +491,7 @@ open_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -531,7 +515,7 @@ add_file(const char *path,
                                       pool, &b->wrapped_baton);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -553,7 +537,7 @@ open_file(const char *path,
                                        &b->wrapped_baton);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -577,7 +561,7 @@ apply_textdelta(void *file_baton,
                                              handler, handler_baton);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_file(void *file_baton,
            const char *text_checksum,
@@ -593,7 +577,7 @@ close_file(void *file_baton,
                                         text_checksum, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
@@ -608,7 +592,7 @@ absent_file(const char *path,
   return eb->wrapped_editor->absent_file(path, pb->wrapped_baton, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -622,7 +606,7 @@ close_directory(void *dir_baton,
   return eb->wrapped_editor->close_directory(db->wrapped_baton, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -638,7 +622,7 @@ absent_directory(const char *path,
   return eb->wrapped_editor->absent_directory(path, pb->wrapped_baton, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -655,7 +639,7 @@ change_file_prop(void *file_baton,
                                               name, value, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -672,7 +656,7 @@ change_dir_prop(void *dir_baton,
                                              name, value, pool);
 }
 
-/* */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)

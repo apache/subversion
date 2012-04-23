@@ -83,14 +83,14 @@ print_update_summary(apr_array_header_t *targets,
       /* Convert to an absolute path if it's not already. */
       if (! svn_dirent_is_absolute(path))
         SVN_ERR(svn_dirent_get_absolute(&path, path, iterpool));
-      path = svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                             path), iterpool);
 
       /* Print an update summary for this target, removing the current
          working directory prefix from PATH (if PATH is at or under
          $CWD), and converting the path to local style for display. */
       SVN_ERR(svn_cmdline_printf(iterpool, _("  Updated '%s' to r%ld.\n"),
-                                 path, rev));
+                                 svn_cl__local_style_skip_ancestor(
+                                   path_prefix, path, iterpool),
+                                 rev));
     }
 
   svn_pool_destroy(iterpool);
@@ -110,26 +110,18 @@ svn_cl__update(apr_getopt_t *os,
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
   apr_array_header_t *result_revs;
-  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
-  /* If any targets are URLs, display error message and exit. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      if (svn_path_is_url(target))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a local path"), target);
-    }
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
@@ -167,7 +159,6 @@ svn_cl__update(apr_getopt_t *os,
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
                              opt_state->force, TRUE /* adds_as_modification */,
-                             FALSE /* apply_local_external_modifications */,
                              opt_state->parents,
                              ctx, scratch_pool));
 

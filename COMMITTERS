@@ -115,8 +115,7 @@ Commit access for specific areas:
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       jlonestar   Martin Maurer <martin.maurer@email.de>      (svnshow) [EMAIL
                                                              IS BOUNCING]
-       shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push) [EMAIL
-                                                             IS BOUNCING]
+       shlomif   Shlomi Fish <shlomif@shlomifish.org>        (svn-push)
        mthelen   Michael W Thelen <mike@pietdepsi.com>       (doc)
   jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (case-insensitive)
       martinto   Martin Tomes <lists@tomes.org>              (case-insensitive)
@@ -154,6 +153,7 @@ Commit access for specific areas:
      gmcdonald   Gavin McDonald <gavin@16degrees.com.au>     (build/hudson,
                                                               tools/buildbot)
       artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump, svntest)
+         arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
 
   Translation of message files:
 
@@ -194,6 +194,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
+         moklo   Morten Kloster <morklo@gmail.com>           (diff-improvements br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

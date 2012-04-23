@@ -29,13 +29,13 @@ def get_format(wc_path):
 
   formatno = 'not under version control'
 
-  if os.path.exists(entries):
-    formatno = int(open(entries).readline())
-  elif os.path.exists(wc_db):
+  if os.path.exists(wc_db):
     conn = sqlite3.connect(wc_db)
     curs = conn.cursor()
     curs.execute('pragma user_version;')
     formatno = curs.fetchone()[0]
+  elif os.path.exists(entries):
+    formatno = int(open(entries).readline())
   elif os.path.exists(wc_path):
     parent_path = os.path.dirname(os.path.abspath(wc_path))
     if wc_path != parent_path:
@@ -51,7 +51,7 @@ def print_format(wc_path):
   #   1.4.x: format 8
   #   1.5.x: format 9
   #   1.6.x: format 10
-  #   1.7.x: format XXX
+  #   1.7.x: format 29
   formatno = get_format(wc_path)
   print '%s: %s' % (wc_path, formatno)
 

@@ -33,11 +33,11 @@
 
 #include "temp_serializer.h"
 
-/* Utility to encode a signed NUMBER into a variable-length sequence of 
+/* Utility to encode a signed NUMBER into a variable-length sequence of
  * 8-bit chars in KEY_BUFFER and return the last writen position.
  *
- * Numbers will be stored in 7 bits / byte and using byte values above 
- * 32 (' ') to make them combinable with other string by simply separating 
+ * Numbers will be stored in 7 bits / byte and using byte values above
+ * 32 (' ') to make them combinable with other string by simply separating
  * individual parts with spaces.
  */
 static char*
@@ -65,7 +65,7 @@ encode_number(apr_int64_t number, char *key_buffer)
 }
 
 /* Prepend the NUMBER to the STRING in a space efficient way that no other
- * (number,string) combination can produce the same result. 
+ * (number,string) combination can produce the same result.
  * Allocate temporaries as well as the result from POOL.
  */
 const char*
@@ -75,13 +75,13 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
 {
   apr_size_t len = strlen(string);
 
-  /* number part requires max. 10x7 bits + 1 space. 
+  /* number part requires max. 10x7 bits + 1 space.
    * Add another 1 for the terminal 0 */
   char *key_buffer = apr_palloc(pool, len + 12);
   const char *key = key_buffer;
 
-  /* Prepend the number to the string and separate them by space. No other 
-   * number can result in the same prefix, no other string in the same 
+  /* Prepend the number to the string and separate them by space. No other
+   * number can result in the same prefix, no other string in the same
    * postfix nor can the boundary between them be ambiguous. */
   key_buffer = encode_number(number, key_buffer);
   *++key_buffer = ' ';
@@ -271,7 +271,7 @@ typedef struct hash_data_t
 static int
 compare_dirent_id_names(const void *lhs, const void *rhs)
 {
-  return strcmp((*(const svn_fs_dirent_t *const *)lhs)->name, 
+  return strcmp((*(const svn_fs_dirent_t *const *)lhs)->name,
                 (*(const svn_fs_dirent_t *const *)rhs)->name);
 }
 
@@ -395,8 +395,6 @@ deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
   return result;
 }
 
-/* Serialize a NODEREV_P within the serialization CONTEXT.
- */
 void
 svn_fs_fs__noderev_serialize(svn_temp_serializer__context_t *context,
                              node_revision_t * const *noderev_p)
@@ -425,8 +423,6 @@ svn_fs_fs__noderev_serialize(svn_temp_serializer__context_t *context,
 }
 
 
-/* Deserialize a NODEREV_P within the BUFFER.
- */
 void
 svn_fs_fs__noderev_deserialize(void *buffer,
                                node_revision_t **noderev_p)
@@ -454,7 +450,7 @@ svn_fs_fs__noderev_deserialize(void *buffer,
 }
 
 
-/* Utility function to serialize COUNT svn_txdelta_op_t objects 
+/* Utility function to serialize COUNT svn_txdelta_op_t objects
  * at OPS in the given serialization CONTEXT.
  */
 static void
@@ -492,8 +488,6 @@ serialize_txdeltawindow(svn_temp_serializer__context_t *context,
   svn_temp_serializer__pop(context);
 }
 
-/* Implements svn_cache__serialize_fn_t for svn_fs_fs__txdelta_cached_window_t
- */
 svn_error_t *
 svn_fs_fs__serialize_txdelta_window(char **buffer,
                                     apr_size_t *buffer_size,
@@ -526,12 +520,9 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for
- * svn_fs_fs__txdelta_cached_window_t.
- */
 svn_error_t *
 svn_fs_fs__deserialize_txdelta_window(void **item,
-                                      const char *buffer,
+                                      char *buffer,
                                       apr_size_t buffer_size,
                                       apr_pool_t *pool)
 {
@@ -556,8 +547,6 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__serialize_fn_t for manifests.
- */
 svn_error_t *
 svn_fs_fs__serialize_manifest(char **data,
                               apr_size_t *data_len,
@@ -573,18 +562,16 @@ svn_fs_fs__serialize_manifest(char **data,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for manifests.
- */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
-                                const char *data,
+                                char *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool)
 {
   apr_array_header_t *manifest = apr_array_make(pool, 1, sizeof(apr_off_t));
 
-  manifest->nelts = data_len / sizeof(apr_off_t);
-  manifest->nalloc = data_len / sizeof(apr_off_t);
+  manifest->nelts = (int) (data_len / sizeof(apr_off_t));
+  manifest->nalloc = (int) (data_len / sizeof(apr_off_t));
   manifest->elts = (char*)data;
 
   *out = manifest;
@@ -592,8 +579,6 @@ svn_fs_fs__deserialize_manifest(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__serialize_fn_t for svn_fs_id_t
- */
 svn_error_t *
 svn_fs_fs__serialize_id(char **data,
                         apr_size_t *data_len,
@@ -618,11 +603,9 @@ svn_fs_fs__serialize_id(char **data,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for svn_fs_id_t
- */
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
-                          const char *data,
+                          char *data,
                           apr_size_t data_len,
                           apr_pool_t *pool)
 {
@@ -639,8 +622,6 @@ svn_fs_fs__deserialize_id(void **out,
 
 /** Caching node_revision_t objects. **/
 
-/* Implements svn_cache__serialize_fn_t for node_revision_t.
- */
 svn_error_t *
 svn_fs_fs__serialize_node_revision(char **buffer,
                                     apr_size_t *buffer_size,
@@ -665,11 +646,9 @@ svn_fs_fs__serialize_node_revision(char **buffer,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for node_revision_t
- */
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
-                                     const char *buffer,
+                                     char *buffer,
                                      apr_size_t buffer_size,
                                      apr_pool_t *pool)
 {
@@ -700,8 +679,6 @@ return_serialized_dir_context(svn_temp_serializer__context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__serialize_func_t for a directory contents hash.
- */
 svn_error_t *
 svn_fs_fs__serialize_dir_entries(char **data,
                                  apr_size_t *data_len,
@@ -710,18 +687,16 @@ svn_fs_fs__serialize_dir_entries(char **data,
 {
   apr_hash_t *dir = in;
 
-  /* serialize the dir content into a new serialization context 
+  /* serialize the dir content into a new serialization context
    * and return the serialized data */
   return return_serialized_dir_context(serialize_dir(dir, pool),
                                        data,
                                        data_len);
 }
 
-/* Implements svn_cache__deserialize_func_t for a directory contents hash
- */
 svn_error_t *
 svn_fs_fs__deserialize_dir_entries(void **out,
-                                   const char *data,
+                                   char *data,
                                    apr_size_t data_len,
                                    apr_pool_t *pool)
 {
@@ -734,8 +709,6 @@ svn_fs_fs__deserialize_dir_entries(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__partial_getter_func_t for manifests.
- */
 svn_error_t *
 svn_fs_fs__get_sharded_offset(void **out,
                               const char *data,
@@ -746,7 +719,7 @@ svn_fs_fs__get_sharded_offset(void **out,
   apr_off_t *manifest = (apr_off_t *)data;
   apr_int64_t shard_pos = *(apr_int64_t *)baton;
 
-  *(apr_int64_t *)out = manifest[shard_pos];
+  *(apr_off_t *)out = manifest[shard_pos];
 
   return SVN_NO_ERROR;
 }
@@ -797,8 +770,6 @@ find_entry(svn_fs_dirent_t **entries,
   return lower;
 }
 
-/* Implements svn_cache__partial_getter_func_t for a directory contents hash.
- */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
                              const char *data,
@@ -875,8 +846,6 @@ slowly_replace_dir_entry(char **data,
   return svn_fs_fs__serialize_dir_entries(data, data_len, dir, pool);
 }
 
-/* Implements svn_cache__partial_setter_func_t for a serialized directory.
- */
 svn_error_t *
 svn_fs_fs__replace_dir_entry(char **data,
                              apr_size_t *data_len,

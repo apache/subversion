@@ -103,6 +103,11 @@ class Processor(object):
     for line in input.split('\n'):
       line = line.replace('"', '\\"')
 
+      # '/'+1 == '0'
+      line = re.sub(r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
+                    r"((\1) > (\2) || '/' AND (\1) < (\2) || '0') ",
+                    line)
+
       if line.strip():
         handled = False
 
@@ -124,7 +129,7 @@ class Processor(object):
         # got something besides whitespace. write it out. include some whitespace
         # to separate the SQL commands. and a backslash to continue the string
         # onto the next line.
-        self.output.write('  "%s " \\\n' % line)
+        self.output.write('  "%s " \\\n' % line.rstrip())
 
     # previous line had a continuation. end the madness.
     self.close_define()

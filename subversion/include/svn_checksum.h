@@ -80,7 +80,7 @@ svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool);
 
-/** Set @c checksum->digest to all zeros, which, by convention, matches
+/** Set @a checksum->digest to all zeros, which, by convention, matches
  * all other checksums.
  *
  * @since New in 1.6.
@@ -241,7 +241,7 @@ svn_checksum_size(const svn_checksum_t *checksum);
 
 
 /**
- * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and 
+ * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and
  * @a expected checksums which do not match.  Use @a fmt, and the following
  * parameters to populate the error message.
  *

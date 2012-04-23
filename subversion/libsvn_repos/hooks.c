@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -73,7 +74,7 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
   if (err)
     {
       svn_error_clear(err2);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   if (APR_PROC_CHECK_EXIT(exitwhy) && exitcode == 0)
@@ -201,7 +202,8 @@ run_hook_cmd(svn_string_t **result,
 
   if (err)
     {
-      err = svn_error_createf
+      /* CMD_PROC is not safe to use. Bail. */
+      return svn_error_createf
         (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to start '%s' hook"), cmd);
     }
   else
@@ -226,7 +228,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
 
-      *result = svn_string_create_from_buf(native_stdout, pool);
+      *result = svn_stringbuf__morph_into_string(native_stdout);
     }
   else
     {
@@ -235,7 +237,7 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr(apr_err, _("Error closing null file"));
     }
 
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
@@ -394,7 +396,7 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
 
   svn_stringbuf_appendcstr(lock_str, "\n");
   return create_temp_file(handle,
-                          svn_string_create_from_buf(lock_str, pool), pool);
+                          svn_stringbuf__morph_into_string(lock_str), pool);
 }
 
 
@@ -615,8 +617,11 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 
       SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
                            pool));
+
       if (token)
+        /* No validation here; the FS will take care of that. */
         *token = buf->data;
+
     }
   else if (token)
     *token = "";

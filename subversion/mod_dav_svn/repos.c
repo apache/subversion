@@ -1063,7 +1063,7 @@ prep_private(dav_resource_combined *comb)
             {
               svn_error_clear(serr);
               comb->res.exists = FALSE;
-              return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+              return dav_svn__new_error(pool, HTTP_NOT_FOUND, 0,
                                         "Named transaction doesn't exist.");
             }
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1931,6 +1931,7 @@ get_resource(request_rec *r,
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
   void *userdata;
+  apr_hash_t *fs_config;
 
   repo_name = dav_svn__get_repo_name(r);
   xslt_uri = dav_svn__get_xslt_uri(r);
@@ -2132,10 +2133,23 @@ get_resource(request_rec *r,
   repos->repos = userdata;
   if (repos->repos == NULL)
     {
-      serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
+      /* construct FS configuration parameters */
+      fs_config = apr_hash_make(r->connection->pool);
+      apr_hash_set(fs_config,
+                   SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                   APR_HASH_KEY_STRING,
+                   dav_svn__get_txdelta_cache_flag(r) ? "1" : "0");
+      apr_hash_set(fs_config,
+                   SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                   APR_HASH_KEY_STRING,
+                   dav_svn__get_fulltext_cache_flag(r) ? "1" : "0");
+
+      /* open the FS */
+      serr = svn_repos_open2(&(repos->repos), fs_path, fs_config,
+                             r->connection->pool);
       if (serr != NULL)
         {
-          /* The error returned by svn_repos_open might contain the
+          /* The error returned by svn_repos_open2 might contain the
              actual path to the failed repository.  We don't want to
              leak that path back to the client, because that would be
              a security risk, but we do want to log the real error on
@@ -2346,7 +2360,7 @@ get_parent_path(const char *path,
       /* Remove any trailing slash; else svn_path_dirname() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-     
+
       if (is_urlpath)
         return svn_urlpath__dirname(tmp, pool);
       else
@@ -2389,7 +2403,6 @@ get_parent_resource(const dav_resource *resource,
       parent->uri = get_parent_path(resource->uri, TRUE, resource->pool);
       parent->info = parentinfo;
 
-      parentinfo->pool = resource->info->pool;
       parentinfo->uri_path =
         svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
                                              TRUE, resource->pool),
@@ -3186,6 +3199,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         "                  rev     CDATA #IMPLIED\n"
         "                  base    CDATA #IMPLIED>\n"
         "  <!ELEMENT updir EMPTY>\n"
+        "  <!ATTLIST updir href    CDATA #REQUIRED>\n"
         "  <!ELEMENT file  EMPTY>\n"
         "  <!ATTLIST file  name    CDATA #REQUIRED\n"
         "                  href    CDATA #REQUIRED>\n"
@@ -3233,7 +3247,23 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               apr_hash_this(hi, &key, NULL, &val);
               dirent = val;
 
-              if (dirent->kind != svn_node_dir)
+              if (dirent->kind == svn_node_file && dirent->special)
+                {
+                  svn_node_kind_t resolved_kind;
+                  const char *name = key;
+
+                  serr = svn_io_check_resolved_path(name, &resolved_kind,
+                                                    resource->pool);
+                  if (serr != NULL)
+                    return dav_svn__convert_err(serr,
+                                                HTTP_INTERNAL_SERVER_ERROR,
+                                                "couldn't fetch dirents "
+                                                "of SVNParentPath",
+                                                resource->pool);
+                  if (resolved_kind != svn_node_dir)
+                    continue;
+                }
+              else if (dirent->kind != svn_node_dir)
                 continue;
 
               ent->name = key;
@@ -3321,23 +3351,25 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           && ((resource->info->repos_path[1] != '\0')
               || dav_svn__get_list_parentpath_flag(resource->info->r)))
         {
-          if (gen_html)
+          const char *href;
+          if (resource->info->pegged)
             {
-              if (resource->info->pegged)
-                {
-                  ap_fprintf(output, bb,
-                             "  <li><a href=\"../?p=%ld\">..</a></li>\n",
-                             resource->info->root.rev);
-                }
-              else
-                {
-                  ap_fprintf(output, bb,
-                             "  <li><a href=\"../\">..</a></li>\n");
-                }
+              href = apr_psprintf(resource->pool, "../?p=%ld",
+                                  resource->info->root.rev);
             }
           else
             {
-              ap_fprintf(output, bb, "    <updir />\n");
+              href = "../";
+            }
+
+          if (gen_html)
+            {
+              ap_fprintf(output, bb,
+                         "  <li><a href=\"%s\">..</a></li>\n", href);
+            }
+          else
+            {
+              ap_fprintf(output, bb, "    <updir href=\"%s\"/>\n", href);
             }
         }
 
@@ -3525,8 +3557,10 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                         resource->pool);
           if (!is_file)
             return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                                      "the delta base does not refer to a "
-                                      "file");
+                                      apr_psprintf(resource->pool,
+                                      "the delta base of '%s' does not refer "
+                                      "to a file in revision %ld",
+                                      info.repos_path, info.rev));
 
           /* Okay. Let's open up a delta stream for the client to read. */
           serr = svn_fs_get_file_delta_stream(&txd_stream,
@@ -4014,9 +4048,6 @@ do_walk(walker_ctx_t *ctx, int depth)
   apr_hash_t *children;
   apr_pool_t *iterpool;
 
-  /* Clear the temporary pool. */
-  svn_pool_clear(ctx->info.pool);
-
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
      the first [and only] entry to do_walk() for a member resource, so
@@ -4220,9 +4251,6 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   /* the current resource's repos_path is stored in ctx.repos_path */
   if (ctx.repos_path != NULL)
     ctx.info.repos_path = ctx.repos_path->data;
-
-  /* Create a pool usable by the response. */
-  ctx.info.pool = svn_pool_create(params->pool);
 
   /* ### is the root already/always open? need to verify */
 

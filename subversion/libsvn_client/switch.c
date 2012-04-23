@@ -67,8 +67,6 @@ switch_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t ignore_ancestry,
-                svn_boolean_t apply_local_external_modifications,
-                svn_boolean_t innerswitch,
                 svn_boolean_t *timestamp_sleep,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -88,7 +86,7 @@ switch_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
-  svn_client__external_func_baton_t efb;
+  struct svn_client__dirent_fetcher_baton_t dfb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
@@ -99,7 +97,7 @@ switch_internal(svn_revnum_t *result_rev,
     depth_is_sticky = FALSE;
 
   /* Do not support the situation of both exclude and switch a target. */
-  if (depth_is_sticky && depth == svn_depth_exclude)
+  if (depth == svn_depth_exclude)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Cannot both exclude and switch a path"));
 
@@ -114,6 +112,18 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
+
+  {
+    svn_boolean_t has_working;
+    SVN_ERR(svn_wc__node_has_working(&has_working, ctx->wc_ctx, local_abspath,
+                                     pool));
+
+    if (has_working)
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Cannot switch '%s' because it is not in the "
+                                 "repository yet"),
+                               svn_dirent_local_style(local_abspath, pool));
+  }
 
   /* See which files the user wants to preserve the extension of when
      conflict files are made. */
@@ -175,7 +185,7 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_uri_is_ancestor(source_root, url))
+  if (! svn_uri__is_ancestor(source_root, url))
     return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
                              _("'%s'\nis not the same repository as\n'%s'"),
                              url, source_root);
@@ -194,6 +204,8 @@ switch_internal(svn_revnum_t *result_rev,
                                    pool, pool));
       SVN_ERR(svn_wc__node_get_base_rev(&target_rev, ctx->wc_ctx,
                                         local_abspath, pool));
+      /* ### It would be nice if this function could reuse the existing
+             ra session instead of opening two for its own use. */
       SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
                                                        switch_rev_url, revnum,
                                                        target_url, target_rev,
@@ -209,13 +221,12 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  efb.externals_new = apr_hash_make(pool);
-  efb.externals_old = apr_hash_make(pool);
-  efb.ambient_depths = apr_hash_make(pool);
-  efb.result_pool = pool;
-
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
+
+  dfb.ra_session = ra_session;
+  SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
+  dfb.target_revision = revnum;
 
   SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
@@ -224,8 +235,9 @@ switch_internal(svn_revnum_t *result_rev,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
+                                    svn_client__dirent_fetcher, &dfb,
                                     ctx->conflict_func2, ctx->conflict_baton2,
-                                    svn_client__external_info_gatherer, &efb,
+                                    NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     pool, pool));
@@ -250,7 +262,6 @@ switch_internal(svn_revnum_t *result_rev,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
                                 use_commit_times,
-                                svn_client__external_info_gatherer, &efb,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 ctx->notify_func2, ctx->notify_baton2, pool);
 
@@ -259,7 +270,7 @@ switch_internal(svn_revnum_t *result_rev,
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
       svn_io_sleep_for_timestamps(local_abspath, pool);
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   *use_sleep = TRUE;
 
@@ -268,15 +279,18 @@ switch_internal(svn_revnum_t *result_rev,
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      if (apply_local_external_modifications)
-        SVN_ERR(svn_client__gather_local_external_changes(
-                efb.externals_new, efb.ambient_depths, local_abspath,
-                depth, ctx, pool));
+      apr_hash_t *new_externals;
+      apr_hash_t *new_depths;
+      SVN_ERR(svn_wc__externals_gather_definitions(&new_externals,
+                                                   &new_depths,
+                                                   ctx->wc_ctx, local_abspath,
+                                                   depth, pool, pool));
 
-      err = svn_client__handle_externals(efb.externals_old,
-                                         efb.externals_new, efb.ambient_depths,
-                                         source_root,
-                                         depth, FALSE, use_sleep, ctx, pool);
+      SVN_ERR(svn_client__handle_externals(new_externals,
+                                           new_depths,
+                                           source_root, local_abspath,
+                                           depth, use_sleep,
+                                           ctx, pool));
     }
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
@@ -286,7 +300,7 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Return errors we might have sustained. */
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -319,9 +333,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
-                            svn_boolean_t apply_local_external_modifications,
                             svn_boolean_t ignore_ancestry,
-                            svn_boolean_t innerswitch,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -340,7 +352,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                    ctx->wc_ctx, local_abspath, TRUE,
                                    pool, pool);
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   acquired_lock = (err == SVN_NO_ERROR);
   svn_error_clear(err);
@@ -350,7 +362,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                          depth, depth_is_sticky,
                          ignore_externals,
                          allow_unver_obstructions, ignore_ancestry,
-                         apply_local_external_modifications, innerswitch,
                          timestamp_sleep, ctx, pool);
 
   if (acquired_lock)
@@ -372,7 +383,6 @@ svn_client_switch3(svn_revnum_t *result_rev,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_boolean_t ignore_ancestry,
-                   svn_boolean_t apply_local_external_modifications,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -384,7 +394,5 @@ svn_client_switch3(svn_revnum_t *result_rev,
                                      peg_revision, revision, depth,
                                      depth_is_sticky, ignore_externals,
                                      allow_unver_obstructions,
-                                     apply_local_external_modifications,
-                                     ignore_ancestry,
-                                     FALSE, NULL, ctx, pool);
+                                     ignore_ancestry, NULL, ctx, pool);
 }

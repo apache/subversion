@@ -173,6 +173,8 @@ svn_diff_diff4_2(svn_diff_t **diff,
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[4];
+  svn_diff__token_index_t num_tokens;
+  svn_diff__token_index_t *token_counts[4];
   svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
                                         svn_diff_datasource_modified,
                                         svn_diff_datasource_latest,
@@ -227,6 +229,8 @@ svn_diff_diff4_2(svn_diff_t **diff,
                                prefix_lines,
                                subpool2));
 
+  num_tokens = svn_diff__get_node_count(tree);
+
   /* Get rid of the tokens, we don't need them to calc the diff */
   if (vtable->token_discard_all != NULL)
     vtable->token_discard_all(diff_baton);
@@ -234,8 +238,19 @@ svn_diff_diff4_2(svn_diff_t **diff,
   /* We don't need the nodes in the tree either anymore, nor the tree itself */
   svn_pool_clear(subpool3);
 
+  token_counts[0] = svn_diff__get_token_counts(position_list[0], num_tokens,
+                                               subpool);
+  token_counts[1] = svn_diff__get_token_counts(position_list[1], num_tokens,
+                                               subpool);
+  token_counts[2] = svn_diff__get_token_counts(position_list[2], num_tokens,
+                                               subpool);
+  token_counts[3] = svn_diff__get_token_counts(position_list[3], num_tokens,
+                                               subpool);
+
   /* Get the lcs for original - latest */
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], prefix_lines,
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2],
+                         token_counts[0], token_counts[2],
+                         num_tokens, prefix_lines,
                          suffix_lines, subpool3);
   diff_ol = svn_diff__diff(lcs_ol, 1, 1, TRUE, pool);
 
@@ -257,7 +272,9 @@ svn_diff_diff4_2(svn_diff_t **diff,
   /* Get the lcs for common ancestor - original
    * Do reverse adjustements
    */
-  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], prefix_lines,
+  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2],
+                             token_counts[3], token_counts[2],
+                             num_tokens, prefix_lines,
                              suffix_lines, subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
@@ -267,7 +284,9 @@ svn_diff_diff4_2(svn_diff_t **diff,
   /* Get the lcs for modified - common ancestor
    * Do forward adjustments
    */
-  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], prefix_lines,
+  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3],
+                             token_counts[1], token_counts[3],
+                             num_tokens, prefix_lines,
                              suffix_lines, subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
@@ -283,7 +302,7 @@ svn_diff_diff4_2(svn_diff_t **diff,
       if (hunk->type == svn_diff__type_conflict)
         {
           svn_diff__resolve_conflict(hunk, &position_list[1],
-                                     &position_list[2], pool);
+                                     &position_list[2], num_tokens, pool);
         }
     }
 

@@ -38,13 +38,11 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 
-#include "../../include/private/svn_sqlite.h"
-
 #include "../../libsvn_wc/wc.h"
-#include "../../libsvn_wc/wc-queries.h"
 #include "../../libsvn_wc/wc_db.h"
 
 #include "../svn_test.h"
+#include "utils.h"
 
 
 /* NOTE: these must be canonical!  */
@@ -260,7 +258,7 @@ static const char * const TESTING_DATA = (
   "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'L/L-a/L-a-a', 1, 'L', null, null, null, 'not-present',"
+  "  1, 'L/L-a/L-a-a', 1, 'L/L-a', null, null, null, 'not-present',"
   "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null);"
    "insert into actual_node values ("
@@ -300,63 +298,22 @@ static const char * const M_TESTING_DATA = (
    "  null, null, null, null);"
    );
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
 
 static svn_error_t *
-make_one_db(const char *dirpath,
-            const char * const my_statements[],
-            apr_pool_t *scratch_pool)
-{
-  const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
-  svn_sqlite__db_t *sdb;
-  int i;
-
-  /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
-  SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
-
-  svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
-                           my_statements,
-                           0, NULL,
-                           scratch_pool, scratch_pool));
-
-  for (i = 0; my_statements[i] != NULL; i++)
-    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
+create_fake_wc(const char *subdir, apr_pool_t *pool)
 {
   const char *root;
-  const char *dirpath;
-  const char * const my_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    statements[STMT_CREATE_NODES_TRIGGERS],
-    TESTING_DATA,
-    NULL
-  };
-  const char * const M_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    statements[STMT_CREATE_NODES],
-    statements[STMT_CREATE_NODES_TRIGGERS],
-    M_TESTING_DATA,
-    NULL
-  };
+  const char *wc_abspath;
 
-  root = svn_dirent_join("fake-wc", subdir, scratch_pool);
+  root = svn_dirent_join("fake-wc", subdir, pool);
 
-  SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, pool));
 
-  dirpath = svn_dirent_join(root, ".svn", scratch_pool);
-  SVN_ERR(make_one_db(dirpath, my_statements, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, pool));
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, pool, pool));
 
-  dirpath = svn_dirent_join_many(scratch_pool, root, "M", ".svn", NULL);
-  SVN_ERR(make_one_db(dirpath, M_statements, scratch_pool));
+  wc_abspath = svn_dirent_join(wc_abspath, "M", pool);
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, M_TESTING_DATA, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -368,7 +325,7 @@ create_open(svn_wc__db_t **db,
             const char *subdir,
             apr_pool_t *pool)
 {
-  SVN_ERR(create_fake_wc(subdir, SVN_WC__VERSION, pool));
+  SVN_ERR(create_fake_wc(subdir, pool));
 
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
@@ -612,14 +569,14 @@ test_access_baton_like_locking(apr_pool_t *pool)
   err = svn_wc__db_wclock_obtain(wc_ctx2->db, D3, 0, FALSE, pool);
 
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't lock, as it is still locked */
 
   err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock, as it is not ours */
@@ -633,7 +590,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
 
   err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
-    return svn_error_return(err);
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock a not locked path */
@@ -648,7 +605,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
     svn_boolean_t is_root;
     SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, pool, pool));
     SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
-                                        wc_ctx, local_abspath, FALSE, FALSE,
+                                        wc_ctx, local_abspath,
                                         pool, pool));
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));

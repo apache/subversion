@@ -97,8 +97,7 @@ svn_cl__switch(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  const char *target = NULL, *switch_url = NULL;
-  const char *true_path;
+  const char *target, *switch_url;
   svn_opt_revision_t peg_revision;
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
@@ -109,7 +108,8 @@ svn_cl__switch(apr_getopt_t *os,
      switch to ("switch_url"). */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
@@ -121,38 +121,22 @@ svn_cl__switch(apr_getopt_t *os,
   if (targets->nelts > 2)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  /* Get the required SWITCH_URL and the optional TARGET arguments. */
-  if (targets->nelts == 1)
-    {
-      switch_url = APR_ARRAY_IDX(targets, 0, const char *);
-      target = "";
-    }
-  else
-    {
-      switch_url = APR_ARRAY_IDX(targets, 0, const char *);
-      target = APR_ARRAY_IDX(targets, 1, const char *);
-    }
-
-  /* Strip peg revision if targets contains an URI. */
-  SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, switch_url,
+  /* Get the required SWITCH_URL and its optional PEG_REVISION, and the
+   * optional TARGET argument. */
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &switch_url,
+                             APR_ARRAY_IDX(targets, 0, const char *),
                              scratch_pool));
-  APR_ARRAY_IDX(targets, 0, const char *) = true_path;
-  switch_url = true_path;
+  if (targets->nelts == 1)
+    target = "";
+  else
+    target = APR_ARRAY_IDX(targets, 1, const char *);
 
   /* Validate the switch_url */
   if (! svn_path_is_url(switch_url))
-    return svn_error_createf
-      (SVN_ERR_BAD_URL, NULL,
-       _("'%s' does not appear to be a URL"), switch_url);
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                             _("'%s' does not appear to be a URL"), switch_url);
 
-  /* Target path cannot be URL */
-  if (svn_path_is_url(target))
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("'%s' is not a local path"),
-                             target);
-
-  /* Canonicalize the URL. */
-  switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
+  SVN_ERR(svn_cl__check_target_is_local_path(target));
 
   /* Deal with depthstuffs. */
   if (opt_state->set_depth != svn_depth_unknown)
@@ -177,7 +161,6 @@ svn_cl__switch(apr_getopt_t *os,
                            &(opt_state->start_revision), depth,
                            depth_is_sticky, opt_state->ignore_externals,
                            opt_state->force, opt_state->ignore_ancestry,
-                           FALSE /* apply_local_external_modifications */,
                            ctx, scratch_pool);
   if (err)
     {

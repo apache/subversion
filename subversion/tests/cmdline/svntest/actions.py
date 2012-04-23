@@ -350,10 +350,36 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   if sys.platform == 'win32':
     err = map(lambda x : x.replace('\r\n', '\n'), err)
 
+  for index, line in enumerate(err[:]):
+    if re.search("warning: W200007", line):
+      del err[index]
+
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
+
+
+def run_and_verify_svnmucc(message, expected_stdout, expected_stderr,
+                           *varargs):
+  """Run svnmucc command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+                                 expected_exit, *varargs)
+
+def run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Run svnmucc command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnmucc(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None,
               bypass_prop_validation = False):
@@ -921,7 +947,7 @@ def run_and_verify_info(expected_infos, *args):
         if value is not None and key not in actual:
           raise main.SVNLineUnequal("Expected key '%s' (with value '%s') "
                                     "not found" % (key, value))
-        if value is not None and not re.search(value, actual[key]):
+        if value is not None and not re.match(value, actual[key]):
           raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
                                            "  Expected: '%s' (regex)\n"
                                            "  Found:    '%s' (string)\n"
@@ -1372,8 +1398,9 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     status_tree = status_tree.old_tree()
 
   # Commit.
+  if '-m' not in args and '-F' not in args:
+    args = list(args) + ['-m', 'log msg']
   exit_code, output, errput = main.run_svn(error_re_string, 'ci',
-                                           '-m', 'log msg',
                                            *args)
 
   if error_re_string:
@@ -1633,6 +1660,18 @@ def run_and_verify_resolved(expected_paths, *args):
   elements of EXPECTED_PATHS as the arguments."""
   _run_and_verify_resolve('resolved', expected_paths, *args)
 
+def run_and_verify_revert(expected_paths, *args):
+  """Run "svn revert" with arguments ARGS, and verify that it reverts
+  the paths in EXPECTED_PATHS and no others.  If no ARGS are
+  specified, use the elements of EXPECTED_PATHS as the arguments."""
+  if len(args) == 0:
+    args = expected_paths
+  expected_output = verify.UnorderedOutput([
+    "Reverted '" + path + "'\n" for path in
+    expected_paths])
+  run_and_verify_svn(None, expected_output, [],
+                     "revert", *args)
+
 
 ######################################################################
 # Other general utilities
@@ -1709,6 +1748,11 @@ def lock_admin_dir(wc_dir, recursive=False):
 
   svntest.main.run_wc_lock_tester(recursive, wc_dir)
 
+def set_incomplete(wc_dir, revision):
+  "Make wc_dir incomplete at revision"
+
+  svntest.main.run_wc_incomplete_tester(wc_dir, revision)
+
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Repository UUID']
@@ -1784,12 +1828,12 @@ def set_prop(name, value, path, expected_err=None):
   if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
     from tempfile import mkstemp
     (fd, value_file_path) = mkstemp()
+    os.close(fd)
     value_file = open(value_file_path, 'wb')
     value_file.write(value)
     value_file.flush()
     value_file.close()
     main.run_svn(expected_err, 'propset', '-F', value_file_path, name, path)
-    os.close(fd)
     os.remove(value_file_path)
   else:
     main.run_svn(expected_err, 'propset', name, value, path)
@@ -2576,9 +2620,15 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
   # This time, cd to the subdir before updating it.
   was_cwd = os.getcwd()
   for path, skipped in chdir_skip_paths:
+    if isinstance(skipped, list):
+      expected_skip = {}
+      for p in skipped:
+        expected_skip[p] = Item(verb='Skipped')
+    else:
+      expected_skip = {skipped : Item(verb='Skipped')}
     p = j(base, path)
     run_and_verify_update(p,
-                          wc.State(p, {skipped : Item(verb='Skipped')}),
+                          wc.State(p, expected_skip),
                           None, None)
   os.chdir(was_cwd)
 

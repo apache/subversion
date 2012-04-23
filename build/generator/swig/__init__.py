@@ -59,19 +59,12 @@ class Generator:
 
     # Calculate SWIG paths
     self.swig_path = swig_path
-    try:
-      self.swig_libdir = _exec.output([self.swig_path, "-swiglib"], strip=1)
-    except AssertionError:
-      pass
+    self.swig_libdir = _exec.output([self.swig_path, "-swiglib"], strip=1)
 
   def version(self):
     """Get the version number of SWIG"""
-    try:
-      swig_version = _exec.output([self.swig_path, "-version"])
-      m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
-      if m:
-        return (m.group(1), m.group(2), m.group(3))
-    except AssertionError:
-      pass
+    swig_version = _exec.output([self.swig_path, "-version"])
+    m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
+    if m:
+      return (m.group(1), m.group(2), m.group(3))
     return (0, 0, 0)
-

@@ -52,19 +52,6 @@ static svn_cache_config_t cache_settings =
                   * has little impact on performance and a more modest
                   * value (< 100) may be more suitable.
                   */
-    TRUE,        /* cache fulltexts.
-                  * Most SVN tools care about reconstructed file content.
-                  * Thus, this is a reasonable default.
-                  * SVN admin tools may set that to FALSE because fulltexts
-                  * won't be re-used rendering the cache less effective
-                  * by squeezing wanted data out.
-                  */
-    FALSE,       /* don't cache text deltas.
-                  * Once we reconstructed the fulltexts from the deltas,
-                  * these deltas are rarely re-used. Therefore, only tools
-                  * like svnadmin will activate this to speed up operations
-                  * dump and verify.
-                  */
 #ifdef APR_HAS_THREADS
     FALSE        /* assume multi-threaded operation.
                   * Because this simply activates proper synchronization
@@ -77,7 +64,7 @@ static svn_cache_config_t cache_settings =
 
 /* Get the current FSFS cache configuration. */
 const svn_cache_config_t *
-svn_get_cache_config(void)
+svn_cache_config_get(void)
 {
   return &cache_settings;
 }
@@ -126,12 +113,13 @@ svn_cache__get_global_membuffer_cache(void)
       apr_pool_create_ex(&pool, NULL, NULL, allocator);
       if (pool == NULL)
         return NULL;
+      apr_allocator_owner_set(allocator, pool);
 
       err = svn_cache__membuffer_cache_create(
           &new_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 16),
-          ! svn_get_cache_config()->single_threaded,
+          ! svn_cache_config_get()->single_threaded,
           pool);
 
       /* Some error occured. Most likely it's an OOM error but we don't
@@ -159,6 +147,9 @@ svn_cache__get_global_membuffer_cache(void)
       /* Handle race condition: if we are the first to create a
        * cache object, make it our global singleton. Otherwise,
        * discard the new cache and keep the existing one.
+       *
+       * Cast is necessary because of APR bug:
+       * https://issues.apache.org/bugzilla/show_bug.cgi?id=50731
        */
       old_cache = apr_atomic_casptr((volatile void **)&cache, new_cache, NULL);
       if (old_cache != NULL)
@@ -169,7 +160,7 @@ svn_cache__get_global_membuffer_cache(void)
 }
 
 void
-svn_set_cache_config(const svn_cache_config_t *settings)
+svn_cache_config_set(const svn_cache_config_t *settings)
 {
   cache_settings = *settings;
 }

@@ -383,7 +383,7 @@ open_root(void *edit_baton,
 
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
-  eb->propstring = svn_stringbuf_create("", eb->pool);
+  eb->propstring = svn_stringbuf_create_empty(eb->pool);
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
                                edit_baton, NULL, FALSE, eb->pool);
@@ -487,7 +487,7 @@ open_directory(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
+  if (ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
       copyfrom_path = svn_relpath_join(pb->copyfrom_path,
                                        svn_relpath_basename(path, NULL),
@@ -598,7 +598,7 @@ open_file(const char *path,
 
   /* If the parent directory has explicit copyfrom path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
+  if (ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
       copyfrom_path = svn_relpath_join(pb->copyfrom_path,
                                        svn_relpath_basename(path, NULL),
@@ -718,13 +718,13 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   LDR_DBG(("apply_textdelta %p\n", file_baton));
 
-  /* Use a temporary file to measure the text-content-length */
+  /* Use a temporary file to measure the Text-content-length */
   delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
   /* Prepare to write the delta to the delta_filestream */
   svn_txdelta_to_svndiff3(&(hb->apply_handler), &(hb->apply_baton),
-                          delta_filestream, 0, SVN_DEFAULT_COMPRESSION_LEVEL,
-                          pool);
+                          delta_filestream, 0,
+                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 
   eb->dump_text = TRUE;
   eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
@@ -856,6 +856,8 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
 {
   struct dump_edit_baton *eb;
   svn_delta_editor_t *de;
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                        svn_delta_shim_callbacks_default(pool);
 
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   eb->stream = stream;
@@ -888,6 +890,11 @@ svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
   *editor = de;
 
   /* Wrap this editor in a cancellation editor. */
-  return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                           de, eb, editor, edit_baton, pool);
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            de, eb, editor, edit_baton, pool));
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   shim_callbacks, pool, pool));
+
+  return SVN_NO_ERROR;
 }

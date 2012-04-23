@@ -185,7 +185,7 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
 
   if (src_length == 0)
   {
-    *dest = svn_stringbuf_create("", pool);
+    *dest = svn_stringbuf_create_empty(pool);
     return APR_SUCCESS;
   }
 

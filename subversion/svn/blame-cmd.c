@@ -249,7 +249,7 @@ svn_cl__blame(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Blame needs a file on which to operate. */
   if (! targets->nelts)
@@ -283,7 +283,7 @@ svn_cl__blame(apr_getopt_t *os,
   if (! opt_state->xml)
     SVN_ERR(svn_stream_for_stdout(&bl.out, pool));
   else
-    bl.sbuf = svn_stringbuf_create("", pool);
+    bl.sbuf = svn_stringbuf_create_empty(pool);
 
   bl.opt_state = opt_state;
 
@@ -389,7 +389,7 @@ svn_cl__blame(apr_getopt_t *os,
             }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
       else if (opt_state->xml)

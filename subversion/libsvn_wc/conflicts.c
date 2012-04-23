@@ -134,7 +134,7 @@ attempt_deletion(const char *file_abspath,
   if (err == NULL || !APR_STATUS_IS_ENOENT(err->apr_err))
     {
       *was_present = TRUE;
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   svn_error_clear(err);
@@ -180,7 +180,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
   const char *prop_reject_file = NULL;
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   int i;
   const apr_array_header_t *conflicts;
   const char *conflict_dir_abspath;
@@ -208,14 +208,13 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         prop_reject_file = desc->their_abspath;
     }
 
-  if (kind == svn_wc__db_kind_dir)
+  if (kind == svn_kind_dir)
     conflict_dir_abspath = local_abspath;
   else
     conflict_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   if (resolve_text)
     {
-      svn_stream_t *tmp_stream = NULL;
       const char *auto_resolve_src;
 
       /* Handle automatic conflict resolution before the temporary files are
@@ -240,6 +239,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
             if (conflict_old && conflict_working && conflict_new)
               {
                 const char *temp_dir;
+                svn_stream_t *tmp_stream = NULL;
                 svn_diff_t *diff;
                 svn_diff_conflict_display_style_t style =
                   conflict_choice == svn_wc_conflict_choose_theirs_conflict
@@ -252,7 +252,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                 SVN_ERR(svn_stream_open_unique(&tmp_stream,
                                                &auto_resolve_src,
                                                temp_dir,
-                                               svn_io_file_del_on_close,
+                                               svn_io_file_del_on_pool_cleanup,
                                                pool, pool));
 
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
@@ -269,6 +269,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                                     NULL, NULL, NULL, NULL,
                                                     style,
                                                     pool));
+                SVN_ERR(svn_stream_close(tmp_stream));
               }
             else
               auto_resolve_src = NULL;
@@ -283,9 +284,6 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         SVN_ERR(svn_io_copy_file(
           svn_dirent_join(conflict_dir_abspath, auto_resolve_src, pool),
           local_abspath, TRUE, pool));
-
-      if (tmp_stream)
-        SVN_ERR(svn_stream_close(tmp_stream));
     }
 
   /* Records whether we found any of the conflict files.  */
@@ -329,13 +327,13 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
 {
   svn_boolean_t ignored_result;
 
-  return svn_error_return(resolve_conflict_on_node(
-                            db, local_abspath,
-                            TRUE /* resolve_text */,
-                            FALSE /* resolve_props */,
-                            svn_wc_conflict_choose_merged,
-                            &ignored_result,
-                            scratch_pool));
+  return svn_error_trace(resolve_conflict_on_node(
+                           db, local_abspath,
+                           TRUE /* resolve_text */,
+                           FALSE /* resolve_props */,
+                           svn_wc_conflict_choose_merged,
+                           &ignored_result,
+                           scratch_pool));
 }
 
 
@@ -459,6 +457,7 @@ resolve_one_conflict(svn_wc__db_t *db,
 static svn_error_t *
 recursive_resolve_conflict(svn_wc__db_t *db,
                            const char *local_abspath,
+                           svn_boolean_t this_is_conflicted,
                            svn_depth_t depth,
                            svn_boolean_t resolve_text,
                            const char *resolve_prop,
@@ -470,33 +469,16 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                            void *notify_baton,
                            apr_pool_t *scratch_pool)
 {
-  svn_boolean_t conflicted;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const apr_array_header_t *children;
   apr_hash_t *visited = apr_hash_make(scratch_pool);
   svn_depth_t child_depth;
-  svn_error_t *err;
   int i;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, &conflicted, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
-                             db, local_abspath, iterpool, iterpool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    { /* Would be nice if we could just call svn_wc__db_read_info on
-         conflict victims */
-      svn_error_clear(err);
-      conflicted = TRUE; /* Just resolve it */
-    }
-  else
-    SVN_ERR(err);
-
-  if (conflicted)
+  if (this_is_conflicted)
     {
       SVN_ERR(resolve_one_conflict(db,
                                    local_abspath,
@@ -513,14 +495,16 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
   child_depth = (depth < svn_depth_infinity) ? svn_depth_empty : depth;
 
-  SVN_ERR(svn_wc__db_read_conflict_victims(&children, db, local_abspath,
-                                           scratch_pool, iterpool));
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                   scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
-      svn_wc__db_kind_t kind;
+      svn_wc__db_status_t status;
+      svn_kind_t kind;
+      svn_boolean_t conflicted;
 
       svn_pool_clear(iterpool);
 
@@ -529,33 +513,52 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      apr_hash_set(visited, name, APR_HASH_KEY_STRING, name);
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   &conflicted, NULL, NULL, NULL, NULL, NULL,
+                                   NULL,
+                                   db, child_abspath, iterpool, iterpool));
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE, iterpool));
-      if (kind == svn_wc__db_kind_dir && depth < svn_depth_immediates)
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_server_excluded)
         continue;
 
-      SVN_ERR(recursive_resolve_conflict(db,
-                                         child_abspath,
-                                         child_depth,
-                                         resolve_text,
-                                         resolve_prop,
-                                         resolve_tree,
-                                         conflict_choice,
-                                         cancel_func, cancel_baton,
-                                         notify_func, notify_baton,
-                                         iterpool));
+      apr_hash_set(visited, name, APR_HASH_KEY_STRING, name);
+      if (kind == svn_kind_dir && depth < svn_depth_immediates)
+        continue;
+
+      if (kind == svn_kind_dir)
+        SVN_ERR(recursive_resolve_conflict(db,
+                                           child_abspath,
+                                           conflicted,
+                                           child_depth,
+                                           resolve_text,
+                                           resolve_prop,
+                                           resolve_tree,
+                                           conflict_choice,
+                                           cancel_func, cancel_baton,
+                                           notify_func, notify_baton,
+                                           iterpool));
+      else if (conflicted)
+        SVN_ERR(resolve_one_conflict(db,
+                                     child_abspath,
+                                     resolve_text,
+                                     resolve_prop,
+                                     resolve_tree,
+                                     conflict_choice,
+                                     notify_func, notify_baton,
+                                     iterpool));
     }
 
-  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                   scratch_pool, iterpool));
+    SVN_ERR(svn_wc__db_read_conflict_victims(&children, db, local_abspath,
+                                           scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
-      svn_wc__db_kind_t kind;
-      svn_boolean_t hidden;
 
       svn_pool_clear(iterpool);
 
@@ -567,25 +570,18 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-      if (hidden)
-        continue;
-
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE, iterpool));
-      if (kind == svn_wc__db_kind_dir && depth < svn_depth_immediates)
-        continue;
-
-      SVN_ERR(recursive_resolve_conflict(db,
-                                         child_abspath,
-                                         child_depth,
-                                         resolve_text,
-                                         resolve_prop,
-                                         resolve_tree,
-                                         conflict_choice,
-                                         cancel_func, cancel_baton,
-                                         notify_func, notify_baton,
-                                         iterpool));
+      /* We only have to resolve one level of tree conflicts. All other
+         conflicts are resolved in the other loop */
+      SVN_ERR(resolve_one_conflict(db,
+                                   child_abspath,
+                                   FALSE /*resolve_text*/,
+                                   FALSE /*resolve_prop*/,
+                                   resolve_tree,
+                                   conflict_choice,
+                                   notify_func, notify_baton,
+                                   iterpool));
     }
+
 
   svn_pool_destroy(iterpool);
 
@@ -607,6 +603,8 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
+  svn_kind_t kind;
+  svn_boolean_t conflicted;
   /* ### the underlying code does NOT support resolving individual
      ### properties. bail out if the caller tries it.  */
   if (resolve_prop != NULL && *resolve_prop != '\0')
@@ -614,20 +612,30 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                             U_("Resolving a single property is not (yet) "
                                "supported."));
 
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
   /* When the implementation still used the entry walker, depth
      unknown was translated to infinity. */
-  if (depth == svn_depth_unknown)
+  if (kind != svn_kind_dir)
+    depth = svn_depth_empty;
+  else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  return svn_error_return(recursive_resolve_conflict(
-                            wc_ctx->db,
-                            local_abspath,
-                            depth,
-                            resolve_text,
-                            resolve_prop,
-                            resolve_tree,
-                            conflict_choice,
-                            cancel_func, cancel_baton,
-                            notify_func, notify_baton,
-                            scratch_pool));
+  return svn_error_trace(recursive_resolve_conflict(
+                           wc_ctx->db,
+                           local_abspath,
+                           conflicted,
+                           depth,
+                           resolve_text,
+                           resolve_prop,
+                           resolve_tree,
+                           conflict_choice,
+                           cancel_func, cancel_baton,
+                           notify_func, notify_baton,
+                           scratch_pool));
 }

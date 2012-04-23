@@ -8506,7 +8506,7 @@ msgstr ""
 "     sonst REV. Ohne Angabe von PFAD2 wird der letzte Abschnitt von PFAD1\n"
 "     als lokaler Verzeichnisname verwendet. Ohne Angabe von REV werden alle\n"
 "     lokalen Änderungen beibehalten. Objekte, die sich nicht unter\n"
-"     Versionskontrolle befinden, werden in diesem Fall auch nicht kopiert.\n"
+"     Versionskontrolle befinden, werden nicht kopiert.\n"
 "\n"
 "  PEGREV gibt an, in welcher Revision das Ziel zuerst gesucht wird.\n"
 

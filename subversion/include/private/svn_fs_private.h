@@ -58,6 +58,15 @@ extern "C" {
 apr_hash_t *
 svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx);
 
+
+/* Check whether PATH is valid for a filesystem, following (most of) the
+ * requirements in svn_fs.h:"Directory entry names and directory paths".
+ *
+ * Return SVN_ERR_FS_PATH_SYNTAX if PATH is not valid.
+ */
+svn_error_t *
+svn_fs__path_valid(const char *path, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

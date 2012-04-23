@@ -119,7 +119,6 @@ PHASE 1 IN DETAIL
        are unversioned transaction props, rather than file or directory
        props.
 
-
      - transaction root resource (!svn/txr/TXN-NAME/[PATH])
 
        Represents the directory tree snapshot associated with a
@@ -129,7 +128,7 @@ PHASE 1 IN DETAIL
        these resources (MKCOL, PUT, PROPFIND, PROPPATCH, GET, etc.).
 
      - alternate transaction resource (!svn/vtxn/VTXN-NAME)
-       alternate transaction root resource (!svn/vtxr/VTXN-NAME/[PATH])
+     - alternate transaction root resource (!svn/vtxr/VTXN-NAME/[PATH])
 
        Alternative names for the transaction based on a virtual, or
        visible, name supplied by the client when the transaction
@@ -331,7 +330,7 @@ STATUS
 
     - REPORT against the new "me resource" instead of VCC URI  [DONE]
     - use new URIs to avoid unnecessary PROPFIND discovery     [DONE]
-    - eliminate now-unnecessary wcprops cache
+    - eliminate now-unnecessary wcprops cache                  [DEFERRED]
 
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
@@ -349,4 +348,10 @@ STATUS
     - get me resource, and pegrev stub from OPTIONS          [DONE]
     - use me resource instead of the VCC                     [STARTED]
     - use pegrev stubs instead of get_baseline_info() walks  [STARTED]
-    - use rev stubs for revprop stuff
+    - use rev stubs for revprop stuff                        [DONE]
+    - use POST to 'me' resource to get txn name              [DONE]
+    - set revprops using PROPPATCH on the txn resource       [DONE]
+    - abort edit with DELETE against the txn resource        [DONE]
+    - send write requests against txn and txn root URLs      [DONE]
+    - send X-SVN-Version-Name for out-of-dateness checks     [DONE]
+    - enable pipelined PUTs                                  [OUT-OF-SCOPE]

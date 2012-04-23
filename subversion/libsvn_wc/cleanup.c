@@ -76,7 +76,7 @@ repair_timestamps(svn_wc__db_t *db,
                   void *cancel_baton,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_kind_t kind;
   svn_wc__db_status_t status;
 
   if (cancel_func)
@@ -89,20 +89,21 @@ repair_timestamps(svn_wc__db_t *db,
                                NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  if (status == svn_wc__db_status_absent
+  if (status == svn_wc__db_status_server_excluded
       || status == svn_wc__db_status_deleted
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
-  if (kind == svn_wc__db_kind_file)
+  if (kind == svn_kind_file
+      || kind == svn_kind_symlink)
     {
       svn_boolean_t modified;
-      SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
-                                               db, local_abspath, FALSE, FALSE,
+      SVN_ERR(svn_wc__internal_file_modified_p(&modified,
+                                               db, local_abspath, FALSE,
                                                scratch_pool));
     }
-  else if (kind == svn_wc__db_kind_dir)
+  else if (kind == svn_kind_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       const apr_array_header_t *children;
@@ -158,6 +159,10 @@ cleanup_internal(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, dir_abspath,
                                 scratch_pool, scratch_pool));
+
+#ifdef SVN_DEBUG
+  SVN_ERR(svn_wc__db_verify(db, dir_abspath, scratch_pool));
+#endif
 
   /* Perform these operations if we lock the entire working copy.
      Note that we really need to check a wcroot value and not

@@ -283,9 +283,6 @@ struct dav_resource_private {
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
-
-  /* Pool to allocate temporary data from */
-  apr_pool_t *pool;
 };
 
 
@@ -312,6 +309,12 @@ svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
+
+/* for the repository referred to by this request, is txdelta caching active? */
+svn_boolean_t dav_svn__get_txdelta_cache_flag(request_rec *r);
+
+/* for the repository referred to by this request, is fulltext caching active? */
+svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
@@ -805,7 +808,8 @@ enum dav_svn__build_what {
   DAV_SVN__BUILD_URI_BC,         /* a Baseline Collection */
   DAV_SVN__BUILD_URI_PUBLIC,     /* the "public" VCR */
   DAV_SVN__BUILD_URI_VERSION,    /* a Version Resource */
-  DAV_SVN__BUILD_URI_VCC         /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_VCC,        /* a Version Controlled Configuration */
+  DAV_SVN__BUILD_URI_REVROOT     /* HTTPv2: Revision Root resource */
 };
 
 const char *

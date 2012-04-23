@@ -37,7 +37,7 @@
  */
 typedef enum drev_state_e {
   NONE = 0,
-  VERSION_NAME,
+  VERSION_NAME
 } drev_state_e;
 
 typedef struct drev_context_t {

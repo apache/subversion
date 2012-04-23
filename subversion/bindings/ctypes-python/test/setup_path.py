@@ -25,8 +25,8 @@
 import sys
 import os
 
-src_swig_python_tests_dir = os.path.dirname(os.path.dirname(__file__))
-sys.path[0:0] = [ src_swig_python_tests_dir ]
+src_ctypes_python_tests_dir = os.path.dirname(os.path.dirname(__file__))
+sys.path[0:0] = [ src_ctypes_python_tests_dir ]
 
 import csvn.core
 csvn.core.svn_cmdline_init("", csvn.core.stderr)

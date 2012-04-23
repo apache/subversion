@@ -405,11 +405,12 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      username we used for authz purposes", do so now. */
   if (b->user && (! b->authz_user))
     {
-      b->authz_user = apr_pstrdup(b->pool, b->user);
+      char *authz_user = apr_pstrdup(b->pool, b->user);
       if (b->username_case == CASE_FORCE_UPPER)
-        convert_case((char *)b->authz_user, TRUE);
+        convert_case(authz_user, TRUE);
       else if (b->username_case == CASE_FORCE_LOWER)
-        convert_case((char *)b->authz_user, FALSE);
+        convert_case(authz_user, FALSE);
+      b->authz_user = authz_user;
     }
 
   return svn_repos_authz_check_access(b->authzdb, b->authz_repos_name,
@@ -1844,17 +1845,12 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_index_t *hi;
   const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
-  apr_uint64_t validate_inherited_mergeinfo;
   svn_boolean_t include_descendants;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb?B", &paths, &rev,
-                                 &inherit_word,
-                                 &include_descendants,
-                                 &validate_inherited_mergeinfo));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb", &paths, &rev,
+                                 &inherit_word, &include_descendants));
   inherit = svn_inheritance_from_word(inherit_word);
-  if (validate_inherited_mergeinfo == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    validate_inherited_mergeinfo = FALSE;
 
   /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -1877,14 +1873,12 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                              pool)));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo2(&mergeinfo, b->repos,
-                                          canonical_paths, rev,
-                                          inherit,
-                                          (svn_boolean_t)
-                                          validate_inherited_mergeinfo,
-                                          include_descendants,
-                                          authz_check_access_cb_func(b), b,
-                                          pool));
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
+                                         canonical_paths, rev,
+                                         inherit,
+                                         include_descendants,
+                                         authz_check_access_cb_func(b), b,
+                                         pool));
   SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&mergeinfo, mergeinfo,
                                                     b->fs_path->data, pool));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
@@ -1902,8 +1896,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      mergeinfo_string));
     }
   svn_pool_destroy(iterpool);
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b)",
-    validate_inherited_mergeinfo));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   return SVN_NO_ERROR;
 }
@@ -2368,7 +2361,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_close(stream, svndiff_close_handler);
 
       /* If the connection does not support SVNDIFF1 or if we don't want to use
-       * compression, use the non-compressing "version 0" implementation */ 
+       * compression, use the non-compressing "version 0" implementation */
       if (   svn_ra_svn_compression_level(frb->conn) > 0
           && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
         svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
@@ -2997,7 +2990,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
+  SVN_ERR(svn_repos_open2(&b->repos, repos_root, b->fs_config, pool));
   SVN_ERR(svn_repos_remember_client_capabilities(b->repos, capabilities));
   b->fs = svn_repos_fs(b->repos);
   fs_path = full_path + strlen(repos_root);
@@ -3079,7 +3072,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
   fs_warning_baton_t warn_baton;
-  svn_stringbuf_t *cap_log = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(pool);
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);
@@ -3094,6 +3087,13 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.log_file = params->log_file;
   b.pool = pool;
   b.use_sasl = FALSE;
+
+  /* construct FS configuration parameters */
+  b.fs_config = apr_hash_make(pool);
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+               APR_HASH_KEY_STRING, params->cache_txdeltas ? "1" : "0");
+  apr_hash_set(b.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+               APR_HASH_KEY_STRING, params->cache_fulltexts ? "1" : "0");
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */

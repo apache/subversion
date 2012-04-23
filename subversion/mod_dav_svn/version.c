@@ -348,7 +348,6 @@ dav_svn__checkout(dav_resource *resource,
   /* Auto-Versioning Stuff */
   if (auto_checkout)
     {
-      dav_resource *res; /* ignored */
       const char *uuid_buf;
       void *data;
       const char *shared_activity, *shared_txn_name = NULL;
@@ -429,9 +428,9 @@ dav_svn__checkout(dav_resource *resource,
 
       /* Tweak the VCR in-place, making it into a WR.  (Ignore the
          NULL return value.) */
-      res = dav_svn__create_working_resource(resource,
-                                             shared_activity, shared_txn_name,
-                                             TRUE /* tweak in place */);
+      dav_svn__create_working_resource(resource,
+                                       shared_activity, shared_txn_name,
+                                       TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
          auto_versionable allows us to do an auto-checkin and
@@ -798,7 +797,7 @@ cleanup_deltify(void *data)
      subpool, then destroy it before exiting. */
   apr_pool_t *subpool = svn_pool_create(cdb->pool);
 
-  err = svn_repos_open(&repos, cdb->repos_path, subpool);
+  err = svn_repos_open2(&repos, cdb->repos_path, NULL, subpool);
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,

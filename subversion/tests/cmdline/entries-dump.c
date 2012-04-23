@@ -177,17 +177,19 @@ print_dir(const char *local_abspath,
           apr_pool_t *scratch_pool)
 {
   struct directory_walk_baton *bt = walk_baton;
+  const char *path;
 
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;
 
-  printf("%s\n",
-         svn_dirent_local_style(
-                   svn_dirent_join(bt->prefix_path,
-                                   svn_dirent_skip_ancestor(bt->root_abspath,
-                                                            local_abspath),
-                                   scratch_pool),
-                   scratch_pool));
+  /* If LOCAL_ABSPATH a child of or equal to ROOT_ABSPATH, then display
+     a relative path starting with PREFIX_PATH. */
+  path = svn_dirent_skip_ancestor(bt->root_abspath, local_abspath);
+  if (path)
+    path = svn_dirent_join(bt->prefix_path, path, scratch_pool);
+  else
+    path = local_abspath;
+  printf("%s\n", svn_dirent_local_style(path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -246,7 +248,7 @@ directory_dump(const char *path,
       SVN_ERR(directory_dump_old(&bt, dir_abspath, scratch_pool));
     }
 
-  return svn_error_return(svn_wc_context_destroy(bt.wc_ctx));
+  return svn_error_trace(svn_wc_context_destroy(bt.wc_ctx));
 }
 
 int

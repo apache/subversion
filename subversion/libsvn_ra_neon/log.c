@@ -195,9 +195,9 @@ log_start_element(int *elem, void *baton, int parent,
                                      svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
-      lb->this_path_item->text_modified = svn_tristate_from_word(
+      lb->this_path_item->text_modified = svn_tristate__from_word(
                                      svn_xml_get_attr_value("text-mods", atts));
-      lb->this_path_item->props_modified = svn_tristate_from_word(
+      lb->this_path_item->props_modified = svn_tristate__from_word(
                                      svn_xml_get_attr_value("prop-mods", atts));
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,
@@ -365,10 +365,11 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   int i;
   svn_ra_neon__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create_empty(pool);
   svn_boolean_t want_custom_revprops;
   struct log_baton lb;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   const char *final_bc_url;
   svn_revnum_t use_rev;
   svn_error_t *err;
@@ -490,7 +491,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.count = 0;
   lb.nest_level = 0;
   lb.limit_compat_bailout = FALSE;
-  lb.cdata = svn_stringbuf_create("", pool);
+  lb.cdata = svn_stringbuf_create_empty(pool);
   lb.log_entry = svn_log_entry_create(pool);
   lb.want_cdata = NULL;
   reset_log_item(&lb);
@@ -501,11 +502,9 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, ras->url->data, use_rev,
-                                         pool));
-  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                             pool);
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                         ras->url->data, use_rev, pool));
+  final_bc_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
 
 
   err = svn_ra_neon__parsed_request(ras,
@@ -530,5 +529,5 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
       err = SVN_NO_ERROR;
     }
 
-  return err;
+  return svn_error_trace(err);
 }

@@ -36,9 +36,9 @@
  * @see Path::Path(const std::string &)
  * @param path Path string
  */
-Path::Path(const char *pi_path)
+Path::Path(const char *pi_path, SVN::Pool &in_pool)
 {
-  init(pi_path);
+  init(pi_path, in_pool);
 }
 
 /**
@@ -48,9 +48,9 @@ Path::Path(const char *pi_path)
  *
  * @param path Path string
  */
-Path::Path(const std::string &pi_path)
+Path::Path(const std::string &pi_path, SVN::Pool &in_pool)
 {
-  init(pi_path.c_str());
+  init(pi_path.c_str(), in_pool);
 }
 
 /**
@@ -58,9 +58,9 @@ Path::Path(const std::string &pi_path)
  *
  * @param path Path to be copied
  */
-Path::Path(const Path &pi_path)
+Path::Path(const Path &pi_path, SVN::Pool &in_pool)
 {
-  init(pi_path.c_str());
+  init(pi_path.c_str(), in_pool);
 }
 
 /**
@@ -69,7 +69,7 @@ Path::Path(const Path &pi_path)
  * @param path Path string
  */
 void
-Path::init(const char *pi_path)
+Path::init(const char *pi_path, SVN::Pool &in_pool)
 {
   if (*pi_path == 0)
     {
@@ -78,9 +78,7 @@ Path::init(const char *pi_path)
     }
   else
     {
-      m_error_occured =
-        JNIUtil::preprocessPath(pi_path,
-                                JNIUtil::getRequestPool()->pool() );
+      m_error_occured = JNIUtil::preprocessPath(pi_path, in_pool.getPool());
 
       m_path = pi_path;
     }
@@ -110,7 +108,9 @@ Path::c_str() const
 Path&
 Path::operator=(const Path &pi_path)
 {
-  init(pi_path.c_str());
+  m_error_occured = NULL;
+  m_path = pi_path.m_path;
+
   return *this;
 }
 
@@ -125,7 +125,7 @@ jboolean Path::isValid(const char *p)
     return JNI_FALSE;
 
   SVN::Pool requestPool;
-  svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
+  svn_error_t *err = svn_path_check_valid(p, requestPool.getPool());
   if (err == SVN_NO_ERROR)
     {
       return JNI_TRUE;
