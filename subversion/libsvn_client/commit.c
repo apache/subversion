@@ -1764,18 +1764,18 @@ svn_client_commit6(const apr_array_header_t *targets,
   cb.pool = pool;
 
   cmt_err = svn_error_trace(
-          svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
-                                               base_abspath, commit_items,
-                                               TRUE, FALSE, ctx, pool));
+              svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
+                                                   base_abspath, commit_items,
+                                                   TRUE, FALSE, ctx, pool));
 
   if (cmt_err)
     goto cleanup;
 
   cmt_err = svn_error_trace(
-                 get_ra_editor(&editor, &edit_baton, ra_session, ctx,
-                               log_msg, commit_items, revprop_table,
-                               lock_tokens, keep_locks, capture_commit_info,
-                               &cb, pool));
+              get_ra_editor(&editor, &edit_baton, ra_session, ctx,
+                            log_msg, commit_items, revprop_table,
+                            lock_tokens, keep_locks, capture_commit_info,
+                            &cb, pool));
 
   if (cmt_err)
     goto cleanup;
@@ -1785,9 +1785,9 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   /* Perform the commit. */
   cmt_err = svn_error_trace(
-            svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &sha1_checksums, ctx, pool,
-                                  iterpool));
+              svn_client__do_commit(base_url, commit_items, editor, edit_baton,
+                                    notify_prefix, &sha1_checksums, ctx, pool,
+                                    iterpool));
 
   /* Handle a successful commit. */
   if ((! cmt_err)
