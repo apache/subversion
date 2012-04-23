@@ -34,6 +34,7 @@
 
 struct edit_baton {
   svn_fs_txn_t *txn;
+  svn_boolean_t no_autocommit;
 };
 
 
@@ -63,6 +64,7 @@ make_editor(svn_editor_t **editor,
   struct edit_baton *eb = apr_palloc(result_pool, sizeof(*eb));
 
   eb->txn = txn;
+  eb->no_autocommit = (flags & SVN_FS_TXN_NO_AUTOCOMMIT) != 0;
 
   SVN_ERR(svn_editor_create(editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
