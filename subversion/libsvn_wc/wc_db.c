@@ -8223,7 +8223,6 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
         {
           const char *child_relpath;
           const char *child_abspath;
-          svn_error_t *err;
 
           child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
           child_abspath = svn_dirent_join(wcroot->abspath,
