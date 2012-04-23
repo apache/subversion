@@ -181,12 +181,12 @@ svn_client_cat2(svn_stream_t *out,
 {
   svn_ra_session_t *ra_session;
   svn_revnum_t rev;
-  svn_node_kind_t url_kind;
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props;
   const char *url;
   svn_stream_t *output = out;
+  svn_error_t *err;
 
   /* ### Inconsistent default revision logic in this command. */
   if (peg_revision->kind == svn_opt_revision_unspecified)
@@ -229,15 +229,21 @@ svn_client_cat2(svn_stream_t *out,
                                            peg_revision,
                                            revision, ctx, pool));
 
-  /* Make sure the object isn't a directory. */
-  SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));
-  if (url_kind == svn_node_dir)
-    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                             _("URL '%s' refers to a directory"), url);
-
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
-  SVN_ERR(svn_ra_get_file(ra_session, "", rev, NULL, NULL, &props, pool));
+  err = svn_ra_get_file(ra_session, "", rev, NULL, NULL, &props, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FILE)
+        {
+          return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, err,
+                                   _("URL '%s' refers to a directory"), url);
+        }
+      else
+        {
+          return svn_error_return(err);
+        }
+    }
 
   eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
   keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);

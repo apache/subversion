@@ -121,12 +121,38 @@ extern "C" {
  * All metadata is held in a single '.svn/wc.db' in the root directory of
  * the working copy.
  *
+ * The change from 19 to 20 introduces NODES and drops BASE_NODE and
+ * WORKING_NODE, op_depth is always 0 or 2.
+ *
+ * The change from 20 to 21 moved tree conflict storage from the
+ * parent to the conflicted node.
+ *
+ * The change from 21 to 22 moved tree conflict storage from
+ * conflict_data column to the tree_conflict_data column.
+ *
+ * The change from 22 to 23 introduced multi-layer op_depth processing for
+ * NODES.
+ *
+ * The change from 23 to 24 started using the 'refcount' column of the
+ * 'pristine' table correctly, instead of always setting it to '1'.
+ *
+ * The change from 24 to 25 introduced a NODES_CURRENT view.
+ *
+ * The change from 25 to 26 introduced a NODES_BASE view.
+ *
+ * The change from 26 to 27 stored conflict files as relpaths rather
+ * than basenames.
+ *
+ * The change from 27 to 28 converted any remaining references to MD5 checksums
+ * to SHA1 checksums
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 19
+#define SVN_WC__VERSION 28
+
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
@@ -235,14 +261,11 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a keep_changelist is set, don't remove any changeset assignments
  * from @a local_abspath; otherwise, clear it of such assignments.
  *
- * If @a local_abspath is a file and @a md5_checksum is non-NULL, use
- * @a md5_checksum as the checksum for the new text base. Otherwise,
- * calculate the checksum if needed.
- *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db.
+ * If @a sha1_checksum is non-NULL, use it to identify the node's pristine
+ * text.
  *
- * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
- * identify the node's pristine text.
- * ### NOT YET IMPLEMENTED.
+ * If @a old_externals is non-NULL, store the old version of just removed
+ * svn:externals definitions on unshadowed directories in @a old_externals.
  *
  * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
  * recursive commit operation.
@@ -258,9 +281,9 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    apr_hash_t *new_dav_cache,
                                    svn_boolean_t no_unlock,
                                    svn_boolean_t keep_changelist,
-                                   const svn_checksum_t *md5_checksum,
                                    const svn_checksum_t *sha1_checksum,
                                    const svn_wc_committed_queue_t *queue,
+                                   apr_hash_t *old_externals,
                                    apr_pool_t *scratch_pool);
 
 
@@ -346,7 +369,10 @@ void svn_wc__compat_call_notify_func(void *baton,
                                      apr_pool_t *pool);
 
 /* Set *MODIFIED_P to non-zero if LOCAL_ABSPATH's text is modified with
- * regard to the base revision, else set *MODIFIED_P to zero.
+ * regard to the base revision, else set *MODIFIED_P to zero.  Also
+ * set *EXECUTABLE_P and *READ_ONLY_P based on the files current
+ * permissions.  (EXECUTABLE_P and READ_ONLY_P can individually be
+ * NULL if the caller doesn't care about those attributes of the file.)
  *
  * If FORCE_COMPARISON is true, this function will not allow early
  * return mechanisms that avoid actual content comparison.  Instead,
@@ -365,15 +391,23 @@ void svn_wc__compat_call_notify_func(void *baton,
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * If the text is unmodified and a write-lock is held this function
+ * will ensure that the last-known-unmodified timestamp and
+ * filesize of the file as recorded in DB matches the corresponding
+ * attributes of the actual file.  (This is often referred to as
+ * "timestamp repair", and serves to help future unforced is-modified
+ * checks return quickly if the file remains untouched.)
  */
 svn_error_t *
-svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
+svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
+                                 svn_boolean_t *executable_p,
+                                 svn_boolean_t *read_only_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t force_comparison,
                                  svn_boolean_t compare_textbases,
                                  apr_pool_t *scratch_pool);
-
 
 
 /* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
@@ -437,7 +471,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
-                       svn_wc_conflict_resolver_func_t conflict_func,
+                       svn_wc_conflict_resolver_func2_t conflict_func,
                        void *conflict_baton,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
@@ -465,9 +499,6 @@ svn_wc__walker_default_error_handler(const char *path,
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
  * @c svn_depth_immediates, or @c svn_depth_unknown.
  *
- * If @a read_base is TRUE, always read the depth data from BASE_NODE
- * instead of from WORKING when that exists.
- *
  * Allocations are done in POOL.
  */
 svn_error_t *
@@ -476,7 +507,6 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     svn_wc__db_t *db,
                                     const char *anchor_abspath,
                                     const char *target,
-                                    svn_boolean_t read_base,
                                     const svn_delta_editor_t *wrapped_editor,
                                     void *wrapped_edit_baton,
                                     apr_pool_t *result_pool);
@@ -492,24 +522,6 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
-
-/* Similar to svn_wc__versioned_file_modcheck(), but with a wc_db parameter
- * instead of a wc_context.
- *
- * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
- * style and keywords to repository-normal form according to its properties,
- * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
- * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
- * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
- * result with VERSIONED_FILE_ABSPATH.
- */
-svn_error_t *
-svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
-                                         svn_wc__db_t *db,
-                                         const char *versioned_file_abspath,
-                                         svn_stream_t *pristine_stream,
-                                         svn_boolean_t compare_textbases,
-                                         apr_pool_t *scratch_pool);
 
 /* Internal version of svn_wc_transmit_text_deltas3(). */
 svn_error_t *
@@ -548,15 +560,43 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
 svn_boolean_t
 svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  apr_hash_t *clhash,
+                                  const apr_hash_t *clhash,
                                   apr_pool_t *scratch_pool);
 
+/* Library-internal version of svn_wc_walk_status(), which see. */
+svn_error_t *
+svn_wc__internal_walk_status(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_depth_t depth,
+                             svn_boolean_t get_all,
+                             svn_boolean_t no_ignore,
+                             svn_boolean_t ignore_text_mods,
+                             const apr_array_header_t *ignore_patterns,
+                             svn_wc_status_func4_t status_func,
+                             void *status_baton,
+                             svn_wc_external_update_t external_func,
+                             void *external_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool);
 
-/* Library-internal version of svn_wc__node_walk_children(), which see. */
+/** A callback invoked by the generic node-walker function.  */
+typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
+                                                  svn_node_kind_t kind,
+                                                  void *walk_baton,
+                                                  apr_pool_t *scratch_pool);
+
+/* Call @a walk_callback with @a walk_baton for @a local_abspath and all
+   nodes underneath it, restricted by @a walk_depth, and possibly
+   @a changelists.
+
+   If @a show_hidden is true, include hidden nodes, else ignore them.
+   If CHANGELISTS is non-NULL and non-empty, filter thereon. */
 svn_error_t *
 svn_wc__internal_walk_children(svn_wc__db_t *db,
                                const char *local_abspath,
                                svn_boolean_t show_hidden,
+                               const apr_array_header_t *changelists,
                                svn_wc__node_found_func_t walk_callback,
                                void *walk_baton,
                                svn_depth_t walk_depth,
@@ -574,23 +614,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               svn_cancel_func_t cancel_func,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool);
-
-
-/* Library-internal version of svn_wc__node_is_replaced(). */
-svn_error_t *
-svn_wc__internal_is_replaced(svn_boolean_t *replaced,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool);
-
-
-/* Library-internal version of svn_wc__node_get_url(). */
-svn_error_t *
-svn_wc__internal_node_get_url(const char **url,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
 
 
 /* Library-internal version of svn_wc__node_is_file_external(). */
@@ -620,7 +643,37 @@ svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc__node_get_origin() */
+svn_error_t *
+svn_wc__internal_get_origin(svn_boolean_t *is_copy,
+                            svn_revnum_t *revision,
+                            const char **repos_relpath,
+                            const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t scan_deleted,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc__node_get_commit_base_rev */
+svn_error_t *
+svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool);
+
+
+/* Internal version of svn_wc__node_get_repos_info() */
+svn_error_t *
+svn_wc__internal_get_repos_info(const char **repos_root_url,
+                                const char **repos_uuid,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_boolean_t scan_added,
+                                svn_boolean_t scan_deleted,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.

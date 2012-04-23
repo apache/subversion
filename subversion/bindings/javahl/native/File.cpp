@@ -95,7 +95,7 @@ const char *File::getInternalStyle(const SVN::Pool &requestPool)
     return NULL;
 }
 
-bool File::isNull()
+bool File::isNull() const
 {
   return m_jthis == NULL;
 }

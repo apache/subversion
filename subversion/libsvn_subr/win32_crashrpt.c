@@ -375,7 +375,7 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
 
 /* Internal structure used to pass some data to the enumerate symbols
  * callback */
-typedef struct {
+typedef struct symbols_baton_t {
   STACKFRAME64 *stack_frame;
   FILE *log_file;
   int nr_of_frame;

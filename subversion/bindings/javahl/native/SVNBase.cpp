@@ -36,7 +36,7 @@ SVNBase::~SVNBase()
 {
 }
 
-jlong SVNBase::getCppAddr()
+jlong SVNBase::getCppAddr() const
 {
   return reinterpret_cast<jlong>(this);
 }

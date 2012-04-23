@@ -26,6 +26,7 @@
 
 # General modules
 import sys, os
+import re
 
 # Our testing module
 import svntest
@@ -35,11 +36,13 @@ from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import server_has_partial_replay
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
-Wimp = svntest.testcase.Wimp
 
 ## Mismatched headers during dumping operation
 # Text-copy-source-* and *-sha1 headers are not provided by the RA
@@ -49,9 +52,10 @@ Wimp = svntest.testcase.Wimp
 # /dev/null). This is really harmless, but `svnadmin dump` contains
 # the logic for differentiating between these two cases.
 
-mismatched_headers_re = \
-    "Prop-delta: |Text-content-sha1: |Text-copy-source-md5: |" \
-    "Text-copy-source-sha1: |Text-delta-base-sha1: .*"
+mismatched_headers_re = re.compile(
+    "Prop-delta: .*|Text-content-sha1: .*|Text-copy-source-md5: .*|" 
+    "Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
+)
 
 ######################################################################
 # Helper routines
@@ -66,7 +70,7 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
-                  subdir = None):
+                  subdir = None, bypass_prop_validation = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
   dump' and check that the same dumpfile is produced or that
   expected_dumpfile_name is produced if provided. Additionally, the
@@ -85,8 +89,9 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                         dumpfile_name),
                            'rb').readlines()
 
-  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
-  
+  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile,
+                                      bypass_prop_validation)
+
   repo_url = sbox.repo_url
   if subdir:
     repo_url = repo_url + subdir
@@ -101,13 +106,15 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
+    svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
     None, mismatched_headers_re)
 
-def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None):
+def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
+                  expect_deltas = True):
   """Load a dumpfile using 'svnrdump load', dump it with 'svnadmin
   dump' and check that the same dumpfile is produced"""
 
@@ -140,7 +147,8 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None):
                                           sbox.repo_url)
 
   # Create a dump file using svnadmin dump
-  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, True)
+  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
+                                                          expect_deltas)
 
   if expected_dumpfile_name:
     svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
@@ -199,7 +207,7 @@ def copy_and_modify_dump(sbox):
 def copy_and_modify_load(sbox):
   "load: copy and modify"
   run_load_test(sbox, "copy-and-modify.dump")
-  
+
 def no_author_dump(sbox):
   "dump: copy revs with no svn:author revprops"
   run_dump_test(sbox, "no-author.dump")
@@ -211,7 +219,7 @@ def no_author_load(sbox):
 def copy_from_previous_version_and_modify_dump(sbox):
   "dump: copy from previous version and modify"
   run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
-  
+
 def copy_from_previous_version_and_modify_load(sbox):
   "load: copy from previous version and modify"
   run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
@@ -259,7 +267,7 @@ def tag_trunk_with_file2_load(sbox):
 def dir_prop_change_dump(sbox):
   "dump: directory property changes"
   run_dump_test(sbox, "dir-prop-change.dump")
-  
+
 def dir_prop_change_load(sbox):
   "load: directory property changes"
   run_load_test(sbox, "dir-prop-change.dump")
@@ -299,9 +307,16 @@ def url_encoding_load(sbox):
   run_load_test(sbox, "url-encoding-bug.dump")
 
 def copy_bad_line_endings_dump(sbox):
-  "dump: inconsistent line endings in svn:props"
+  "dump: inconsistent line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings.dump",
-           expected_dumpfile_name="copy-bad-line-endings.expected.dump")
+                expected_dumpfile_name="copy-bad-line-endings.expected.dump",
+                bypass_prop_validation=True)
+
+def copy_bad_line_endings2_dump(sbox):
+  "dump: non-LF line endings in svn:* props"
+  run_dump_test(sbox, "copy-bad-line-endings2.dump",
+                expected_dumpfile_name="copy-bad-line-endings2.expected.dump",
+                bypass_prop_validation=True)
 
 def commit_a_copy_of_root_dump(sbox):
   "dump: commit a copy of root"
@@ -315,6 +330,21 @@ def descend_into_replace_dump(sbox):
   "dump: descending into replaced dir looks in src"
   run_dump_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
                 expected_dumpfile_name = "descend-into-replace.expected.dump")
+
+def descend_into_replace_load(sbox):
+  "load: descending into replaced dir looks in src"
+  run_load_test(sbox, "descend-into-replace.dump")
+
+@Issue(3847)
+def add_multi_prop_dump(sbox):
+  "dump: add with multiple props"
+  run_dump_test(sbox, "add-multi-prop.dump")
+
+@Issue(3844)
+def multi_prop_edit_load(sbox):
+  "load: multiple prop edits on a file"
+  run_load_test(sbox, "multi-prop-edits.dump", None, False)
+
 
 ########################################################################
 # Run the tests
@@ -340,7 +370,7 @@ test_list = [ None,
               tag_trunk_with_file2_dump,
               tag_trunk_with_file2_load,
               dir_prop_change_dump,
-              Wimp("TODO", dir_prop_change_load, svntest.main.is_ra_type_dav),
+              dir_prop_change_load,
               copy_parent_modify_prop_dump,
               copy_parent_modify_prop_load,
               url_encoding_dump,
@@ -354,9 +384,13 @@ test_list = [ None,
               move_and_modify_in_the_same_revision_dump,
               move_and_modify_in_the_same_revision_load,
               copy_bad_line_endings_dump,
+              copy_bad_line_endings2_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
               descend_into_replace_dump,
+              descend_into_replace_load,
+              add_multi_prop_dump,
+              multi_prop_edit_load,
              ]
 
 if __name__ == '__main__':

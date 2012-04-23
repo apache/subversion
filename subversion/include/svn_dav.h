@@ -92,12 +92,12 @@ extern "C" {
     universe of svn_lock_t->owner.)  */
 #define SVN_DAV_LOCK_OWNER_HEADER "X-SVN-Lock-Owner"
 
-/** Assuming the OPTIONS was performed againts a resource within a
+/** Assuming the OPTIONS was performed against a resource within a
  * Subversion repository, then this header indicates the youngest
  * revision in the repository.  */
 #define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
 
-/** Assuming the OPTIONS was performed againts a resource within a
+/** Assuming the OPTIONS was performed against a resource within a
  * Subversion repository, then this header indicates the UUID of the
  * repository.  */
 #define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
@@ -133,6 +133,11 @@ extern "C" {
  * from a "txn root").  (HTTP protocol v2 only)  */
 #define SVN_DAV_TXN_STUB_HEADER "SVN-Txn-Stub"
 
+/** Companion to @c SVN_DAV_TXN_STUB_HEADER, used when a POST request
+ *  returns @c SVN_DAV_VTXN_NAME_HEADER in response to a client
+ *  supplied name.  (HTTP protocol v2 only)  */
+#define SVN_DAV_VTXN_STUB_HEADER "SVN-VTxn-Stub"
+
 /** This header provides an opaque URI which represents the root
  * directory of a Subversion transaction (revision-in-progress),
  * similar to the concept of a "txn root" in the libsvn_fs API.  The
@@ -141,12 +146,23 @@ extern "C" {
  * protocol v2 only)  */
 #define SVN_DAV_TXN_ROOT_STUB_HEADER "SVN-Txn-Root-Stub"
 
+/** Companion to @c SVN_DAV_TXN_ROOT_STUB_HEADER, used when a POST
+ *  request returns @c SVN_DAV_VTXN_NAME_HEADER in response to a
+ *  client supplied name.  (HTTP protocol v2 only)  */
+#define SVN_DAV_VTXN_ROOT_STUB_HEADER "SVN-VTxn-Root-Stub"
+
 /** This header is used in the POST response to tell the client the
  * name of the Subversion transaction created by the request.  It can
  * then be appended to the transaction stub and transaction root stub
  * for access to the properties and paths, respectively, of the named
  * transaction.  (HTTP protocol v2 only)  */
 #define SVN_DAV_TXN_NAME_HEADER "SVN-Txn-Name"
+
+/** This header is used in the POST request, to pass a client supplied
+ * alternative transaction name to the server, and in the the POST
+ * response, to tell the client that the alternative transaction
+ * resource names should be used.  (HTTP protocol v2 only)  */
+#define SVN_DAV_VTXN_NAME_HEADER "SVN-VTxn-Name"
 
 /**
  * @name Fulltext MD5 headers

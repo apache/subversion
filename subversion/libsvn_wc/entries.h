@@ -80,22 +80,42 @@ svn_error_t *
 svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry);
 
 
-/* For internal use by entries.c to read/write old-format working copies. */
-svn_error_t *
-svn_wc__read_entries_old(apr_hash_t **entries,
-                         const char *dir_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
+/* The checksums of one pre-1.7 text-base file.  If the text-base file
+ * exists, both checksums are filled in, otherwise both fields are NULL. */
+typedef struct svn_wc__text_base_file_info_t
+{
+  svn_checksum_t *sha1_checksum;
+  svn_checksum_t *md5_checksum;
+} svn_wc__text_base_file_info_t;
 
-/* For internal use by upgrade.c to write entries in the wc-ng format.  */
+/* The text-base checksums of the normal base and/or the revert-base of one
+ * pre-1.7 versioned text file. */
+typedef struct svn_wc__text_base_info_t
+{
+  svn_wc__text_base_file_info_t normal_base;
+  svn_wc__text_base_file_info_t revert_base;
+} svn_wc__text_base_info_t;
+
+/* For internal use by upgrade.c to write entries in the wc-ng format.
+   Return in DIR_BATON the baton to be passed as PARENT_BATON when
+   upgrading child directories. Pass a NULL PARENT_BATON when upgrading
+   the root directory.
+
+   TEXT_BASES_INFO is a hash of information about all the text bases found
+   in this directory's admin area, keyed on (const char *) name of the
+   versioned file, with (svn_wc__text_base_info_t *) values. */
 svn_error_t *
-svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+svn_wc__write_upgraded_entries(void **dir_baton,
+                               void *parent_baton,
+                               svn_wc__db_t *db,
                                svn_sqlite__db_t *sdb,
                                apr_int64_t repos_id,
                                apr_int64_t wc_id,
                                const char *dir_abspath,
                                const char *new_root_abspath,
                                apr_hash_t *entries,
+                               apr_hash_t *text_bases_info,
+                               apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
 /* Parse a file external specification in the NULL terminated STR and

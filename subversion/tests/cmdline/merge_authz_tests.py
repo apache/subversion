@@ -34,9 +34,12 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 from merge_tests import set_up_branch
 from merge_tests import expected_merge_output
@@ -70,6 +73,9 @@ from svntest.actions import inject_conflict_into_expected_state
 #         This is *not* a full test of issue #2829, see also merge_tests.py,
 #         search for "2829".  This tests the problem where a merge adds a path
 #         with a missing sibling and so needs its own explicit mergeinfo.
+@Issues(2893,2997,2829)
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
 def mergeinfo_and_skipped_paths(sbox):
   "skipped paths get overriding mergeinfo"
 
@@ -428,6 +434,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(2876)
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
 
@@ -550,6 +558,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
     [], 'merge', '-r1:6', '--force',
     A_url, Acopy_path)
 
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
 def reintegrate_fails_if_no_root_access(sbox):
   "reintegrate fails if no root access"
 
@@ -567,7 +578,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   rho_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
   omega_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'omega')
   psi_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
-      
+
   # Copy A@1 to A_COPY in r2, and then make some changes to A in r3-6.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -601,7 +612,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   # Update so we are ready for reintegrate.
   svntest.main.run_svn(None, 'up', wc_dir)
 
-  # Change authz file so everybody has access to everything but the root.  
+  # Change authz file so everybody has access to everything but the root.
   if is_ra_type_svn() or is_ra_type_dav():
     write_restrictive_svnserve_conf(sbox.repo_dir)
     write_authz_file(sbox, {"/"       : "* =",
@@ -673,25 +684,21 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        None, None, None, None,
                                        None, True, True,
                                        '--reintegrate', A_path)
-  
+
 ########################################################################
 # Run the tests
 
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(Skip(mergeinfo_and_skipped_paths,
-                              svntest.main.is_ra_type_file),
-                         svntest.main.server_has_mergeinfo),
-              SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
-                         server_has_mergeinfo),
-              SkipUnless(Skip(reintegrate_fails_if_no_root_access,
-                              svntest.main.is_ra_type_file),
-                         svntest.main.server_has_mergeinfo),
+              mergeinfo_and_skipped_paths,
+              merge_fails_if_subtree_is_deleted_on_src,
+              reintegrate_fails_if_no_root_access,
              ]
+serial_only = True
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list, serial_only = True)
+  svntest.main.run_tests(test_list, serial_only = serial_only)
   # NOTREACHED
 
 

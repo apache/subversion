@@ -322,7 +322,7 @@ void SVNClient::add(const char *path,
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
                              svn_depth_t depth, bool depthIsSticky,
-                             bool ignoreExternals,
+                             bool makeParents, bool ignoreExternals,
                              bool allowUnverObstructions)
 {
     SVN::Pool requestPool;
@@ -334,12 +334,14 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
     const apr_array_header_t *array = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), NULL);
-    SVN_JNI_ERR(svn_client_update3(&revs, array,
+    SVN_JNI_ERR(svn_client_update4(&revs, array,
                                    revision.revision(),
                                    depth,
                                    depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
+                                   TRUE /* adds_as_modification */,
+                                   FALSE, makeParents,
                                    ctx, requestPool.pool()),
                 NULL);
 
@@ -373,7 +375,7 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
         return;
 
     SVN_JNI_ERR(svn_client_commit5(targets2, depth,
-                                   noUnlock, keepChangelist,
+                                   noUnlock, keepChangelist, TRUE,
                                    changelists.array(requestPool),
                                    revprops.hash(requestPool),
                                    CommitCallback::callback, callback,
@@ -516,7 +518,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                           Revision &revision, Revision &pegRevision,
                           svn_depth_t depth, bool depthIsSticky,
                           bool ignoreExternals,
-                          bool allowUnverObstructions)
+                          bool allowUnverObstructions,
+                          bool ignoreAncestry)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", -1);
@@ -531,7 +534,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     if (ctx == NULL)
         return -1;
 
-    SVN_JNI_ERR(svn_client_switch2(&rev, intPath.c_str(),
+    SVN_JNI_ERR(svn_client_switch3(&rev, intPath.c_str(),
                                    intUrl.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(),
@@ -539,6 +542,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                                    depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
+                                   ignoreAncestry,
+                                   FALSE,
                                    ctx,
                                    requestPool.pool()),
                 -1);
@@ -566,7 +571,7 @@ void SVNClient::doImport(const char *path, const char *url,
     SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
                                    revprops.hash(requestPool),
-                                   CommitCallback::callback, callback, 
+                                   CommitCallback::callback, callback,
                                    ctx, requestPool.pool()), );
 }
 
@@ -719,7 +724,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         return NULL;
 
     // Transform mergeinfo into Java Mergeinfo object.
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/Mergeinfo");
+    jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Mergeinfo");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -869,20 +874,45 @@ void SVNClient::properties(const char *path, Revision &revision,
     return;
 }
 
-void SVNClient::propertySet(const char *path, const char *name,
-                            const char *value, svn_depth_t depth,
-                            StringArray &changelists, bool force,
-                            RevpropTable &revprops, CommitCallback *callback)
+void SVNClient::propertySetLocal(Targets &targets, const char *name,
+                                 JNIByteArray &value, svn_depth_t depth,
+                                 StringArray &changelists, bool force)
 {
     SVN::Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(name, "name", );
 
     svn_string_t *val;
-    if (value == NULL)
+    if (value.isNull())
       val = NULL;
     else
-      val = svn_string_create(value, requestPool.pool());
+      val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
+                               requestPool.pool());
+
+    svn_client_ctx_t *ctx = context.getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    const apr_array_header_t *targetsApr = targets.array(requestPool);
+    SVN_JNI_ERR(svn_client_propset_local(name, val, targetsApr,
+                                         depth, force,
+                                         changelists.array(requestPool),
+                                         ctx, requestPool.pool()), );
+}
+
+void SVNClient::propertySetRemote(const char *path, const char *name,
+                                  JNIByteArray &value, bool force,
+                                  RevpropTable &revprops,
+                                  CommitCallback *callback)
+{
+    SVN::Pool requestPool;
+    SVN_JNI_NULL_PTR_EX(name, "name", );
+
+    svn_string_t *val;
+    if (value.isNull())
+      val = NULL;
+    else
+      val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
+                               requestPool.pool());
 
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
@@ -891,12 +921,11 @@ void SVNClient::propertySet(const char *path, const char *name,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_propset4(name, val, intPath.c_str(),
-                                    depth, force, SVN_INVALID_REVNUM,
-                                    changelists.array(requestPool),
-                                    revprops.hash(requestPool),
-                                    CommitCallback::callback, callback,
-                                    ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_propset_remote(name, val, intPath.c_str(),
+                                          force, SVN_INVALID_REVNUM,
+                                          revprops.hash(requestPool),
+                                          CommitCallback::callback, callback,
+                                          ctx, requestPool.pool()), );
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,
@@ -1103,7 +1132,6 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    JNIEnv *env = JNIUtil::getEnv();
     svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
@@ -1153,7 +1181,7 @@ jbyteArray SVNClient::revProperty(const char *path,
                                    propval->len);
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
-                         bool recurse)
+                         bool ignoreExternals)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1172,9 +1200,9 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_relocate(intPath.c_str(), intFrom.c_str(),
-                                    intTo.c_str(), recurse, ctx,
-                                    requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_relocate2(intPath.c_str(), intFrom.c_str(),
+                                     intTo.c_str(), ignoreExternals, ctx,
+                                     requestPool.pool()), );
 }
 
 void SVNClient::blame(const char *path, Revision &pegRevision,
@@ -1414,7 +1442,6 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
 struct info_baton
 {
     std::vector<info_entry> infoVect;
-    int info_ver;
     apr_pool_t *pool;
 };
 
@@ -1463,7 +1490,7 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
     // Should parameterize the following, instead of defaulting to FALSE
     SVN_JNI_ERR(svn_client_patch(checkedPatchPath.c_str(),
                                  checkedTargetPath.c_str(),
-                                 dryRun, stripCount, FALSE, reverse,
+                                 dryRun, stripCount, reverse,
                                  ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, requestPool.pool(),

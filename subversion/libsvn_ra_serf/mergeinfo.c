@@ -40,12 +40,13 @@
 
 
 /* The current state of our XML parsing. */
-typedef enum {
+typedef enum mergeinfo_state_e {
   NONE = 0,
   MERGEINFO_REPORT,
   MERGEINFO_ITEM,
   MERGEINFO_PATH,
-  MERGEINFO_INFO
+  MERGEINFO_INFO,
+  MERGEINFO_VALIDATED
 } mergeinfo_state_e;
 
 /* Baton for accumulating mergeinfo.  RESULT_CATALOG stores the final
@@ -53,7 +54,7 @@ typedef enum {
    get_mergeinfo.  curr_path and curr_info contain the value of the
    CDATA from the mergeinfo items as we get them from the server.  */
 
-typedef struct {
+typedef struct mergeinfo_context_t {
   apr_pool_t *pool;
   svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
@@ -62,6 +63,8 @@ typedef struct {
   const apr_array_header_t *paths;
   svn_revnum_t revision;
   svn_mergeinfo_inheritance_t inherit;
+  svn_boolean_t validate_inherited_mergeinfo;
+  svn_boolean_t validated_inherited_mergeinfo;
   svn_boolean_t include_descendants;
 } mergeinfo_context_t;
 
@@ -78,6 +81,11 @@ start_element(svn_ra_serf__xml_parser_t *parser,
   if (state == NONE && strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGEINFO_REPORT);
+    }
+  else if (state == MERGEINFO_REPORT &&
+           strcmp(name.name, SVN_DAV__VALIDATE_INHERITED) == 0)
+    {
+      svn_ra_serf__xml_push_state(parser, MERGEINFO_VALIDATED);
     }
   else if (state == MERGEINFO_REPORT &&
            strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
@@ -169,6 +177,11 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
         svn_stringbuf_appendbytes(mergeinfo_ctx->curr_info, data, len);
       break;
 
+    case MERGEINFO_VALIDATED:
+      if (strncmp(data, "yes", 3) == 0)
+        mergeinfo_ctx->validated_inherited_mergeinfo = TRUE;
+      break;
+
     default:
       break;
     }
@@ -184,7 +197,6 @@ create_mergeinfo_body(serf_bucket_t **bkt,
 {
   mergeinfo_context_t *mergeinfo_ctx = baton;
   serf_bucket_t *body_bkt;
-  int i;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -207,8 +219,17 @@ create_mergeinfo_body(serf_bucket_t **bkt,
                                    "yes", alloc);
     }
 
+  if (mergeinfo_ctx->validate_inherited_mergeinfo)
+    {
+      svn_ra_serf__add_tag_buckets(body_bkt, "S:"
+                                   SVN_DAV__VALIDATE_INHERITED,
+                                   "yes", alloc);
+    }
+
   if (mergeinfo_ctx->paths)
     {
+      int i;
+
       for (i = 0; i < mergeinfo_ctx->paths->nelts; i++)
         {
           const char *this_path = APR_ARRAY_IDX(mergeinfo_ctx->paths,
@@ -234,6 +255,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t *validate_inherited_mergeinfo,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
@@ -263,6 +285,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   mergeinfo_ctx->paths = paths;
   mergeinfo_ctx->revision = revision;
   mergeinfo_ctx->inherit = inherit;
+  mergeinfo_ctx->validate_inherited_mergeinfo = *validate_inherited_mergeinfo;
+  mergeinfo_ctx->validated_inherited_mergeinfo = FALSE;
   mergeinfo_ctx->include_descendants = include_descendants;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
@@ -301,6 +325,9 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
     }
 
   SVN_ERR(err);
+
+  *validate_inherited_mergeinfo =
+    mergeinfo_ctx->validated_inherited_mergeinfo;
 
   if (mergeinfo_ctx->done && apr_hash_count(mergeinfo_ctx->result_catalog))
     *catalog = mergeinfo_ctx->result_catalog;

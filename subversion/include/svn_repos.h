@@ -107,7 +107,7 @@ typedef svn_error_t *(*svn_repos_authz_func_t)(svn_boolean_t *allowed,
  *
  * @since New in 1.3.
  */
-typedef enum
+typedef enum svn_repos_authz_access_t
 {
   /** No access. */
   svn_authz_none = 0,
@@ -185,7 +185,7 @@ typedef svn_error_t *(*svn_repos_file_rev_handler_t)
 
 /* Notification system. */
 
-/** The type of action occuring.
+/** The type of action occurring.
  *
  * @since New in 1.7.
  */
@@ -671,24 +671,6 @@ const char *
 svn_repos_post_revprop_change_hook(svn_repos_t *repos,
                                    apr_pool_t *pool);
 
-/** Return the path to @a repos's pre-obliterate hook, allocated in
- * @a pool.
- *
- * @since New in 1.7.
- */
-const char *
-svn_repos_pre_obliterate_hook(svn_repos_t *repos,
-                              apr_pool_t *pool);
-
-/** Return the path to @a repos's post-obliterate hook, allocated in
- * @a pool.
- *
- * @since New in 1.7.
- */
-const char *
-svn_repos_post_obliterate_hook(svn_repos_t *repos,
-                               apr_pool_t *pool);
-
 
 /** @defgroup svn_repos_lock_hooks Paths to lock hooks
  * @{
@@ -1005,7 +987,7 @@ svn_repos_delete_path(void *report_baton,
  *
  * After the call to this function, @a report_baton is no longer valid;
  * it should not be passed to any other reporting functions, including
- * svn_repos_abort_report().
+ * svn_repos_abort_report(), even if this function returns an error.
  */
 svn_error_t *
 svn_repos_finish_report(void *report_baton,
@@ -1085,7 +1067,7 @@ svn_repos_abort_report(void *report_baton,
  * proportional to the greatest depth of the tree under @a tgt_root, not
  * the total size of the delta.
  *
- * ### svn_repos_dir_delta2 is mostly superceded by the reporter
+ * ### svn_repos_dir_delta2 is mostly superseded by the reporter
  * ### functionality (svn_repos_begin_report2 and friends).
  * ### svn_repos_dir_delta2 does allow the roots to be transaction
  * ### roots rather than just revision roots, and it has the
@@ -1239,6 +1221,9 @@ svn_repos_replay(svn_fs_root_t *root,
  * for cleaning them up (either by committing them, or aborting them).
  *
  * @since New in 1.5.
+ *
+ * @note Yes, @a repos_url is a <em>decoded</em> URL.  We realize
+ * that's sorta wonky.  Sorry about that.
  */
 svn_error_t *
 svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
@@ -1595,7 +1580,10 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * not be traversed while harvesting revision logs for each path.
  *
  * If @a include_merged_revisions is set, log information for revisions
- * which have been merged to @a targets will also be returned.
+ * which have been merged to @a paths will also be returned, unless these
+ * revisions are already part of @a start to @a end in @a repos's
+ * filesystem, as limted by @a paths. In the latter case those revisions
+ * are skipped and @a receiver is not invoked.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -1715,6 +1703,11 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
+ * If the mergeinfo for any path is inherited and
+ * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
+ * that path in @a *catalog will only contain merge source
+ * path-revisions that actually exist in repository.
+ *
  * If @a revision is #SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If @a include_descendants is TRUE, then additionally return the
@@ -1731,7 +1724,25 @@ svn_repos_get_logs(svn_repos_t *repos,
  *
  * Use @a pool for all allocations.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                            svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t validate_inherited_mergeinfo,
+                            svn_boolean_t include_descendants,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_fs_get_mergeinfo2(), but with
+ * @a validate_inherited_mergeinfo always passed as FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
@@ -1821,15 +1832,27 @@ svn_repos_get_file_revs(svn_repos_t *repos,
  * @{
  */
 
-/** Like svn_fs_commit_txn(), but invoke the @a repos's pre- and
+/** Like svn_fs_commit_txn(), but invoke the @a repos' pre- and
  * post-commit hooks around the commit.  Use @a pool for any necessary
  * allocations.
  *
- * If the pre-commit hook or svn_fs_commit_txn() fails, throw the
- * original error to caller.  If an error occurs when running the
- * post-commit hook, return the original error wrapped with
- * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  If the caller sees this
- * error, it knows that the commit succeeded anyway.
+ * If the pre-commit hook fails, do not attempt to commit the
+ * transaction and throw the original error to the caller.
+ *
+ * A successful commit is indicated by a valid revision value in @a
+ * *new_rev, not if svn_fs_commit_txn() returns an error, which can
+ * occur during its post commit FS processing.  If the transaction was
+ * not committed, then return the associated error and do not execute
+ * the post-commit hook.
+ *
+ * If the commit succeeds the post-commit hook is executed.  If the
+ * post-commit hook returns an error, always wrap it with
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED; this allows the caller to
+ * find the post-commit hook error in the returned error chain.  If
+ * both svn_fs_commit_txn() and the post-commit hook return errors,
+ * then svn_fs_commit_txn()'s error is the parent error and the
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped error is the child
+ * error.
  *
  * @a conflict_p, @a new_rev, and @a txn are as in svn_fs_commit_txn().
  */
@@ -1975,7 +1998,7 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
-/** 
+/**
  * Similar to svn_repos_fs_get_locks2(), but with @a depth always
  * passed as svn_depth_infinity.
  *
@@ -2200,20 +2223,20 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
 /* ---------------------------------------------------------------*/
 
 /**
- * @defgroup svn_repos_inspection Data structures and editor things for
+ * @defgroup svn_repos_inspection Data structures and editor things for \
  * repository inspection.
  * @{
  *
- * As it turns out, the svn_repos_dir_delta2() interface can be
- * extremely useful for examining the repository, or more exactly,
- * changes to the repository.  svn_repos_dir_delta2() allows for
- * differences between two trees to be described using an editor.
+ * As it turns out, the svn_repos_replay2(), svn_repos_dir_delta2() and
+ * svn_repos_begin_report2() interfaces can be extremely useful for
+ * examining the repository, or more exactly, changes to the repository.
+ * These drivers allows for differences between two trees to be
+ * described using an editor.
  *
- * By using the editor obtained from svn_repos_node_editor() with
- * svn_repos_dir_delta2(), the description of how to transform one tree
- * into another can be used to build an in-memory linked-list tree,
- * which each node representing a repository node that was changed as a
- * result of having svn_repos_dir_delta2() drive that editor.
+ * By using the editor obtained from svn_repos_node_editor() with one of
+ * the drivers mentioned above, the description of how to transform one
+ * tree into another can be used to build an in-memory linked-list tree,
+ * which each node representing a repository node that was changed.
  */
 
 /** A node in the repository. */
@@ -2253,9 +2276,13 @@ typedef struct svn_repos_node_t
 
 
 /** Set @a *editor and @a *edit_baton to an editor that, when driven by
- * svn_repos_dir_delta2(), builds an <tt>svn_repos_node_t *</tt> tree
- * representing the delta from @a base_root to @a root in @a repos's
- * filesystem.
+ * a driver such as svn_repos_replay2(), builds an <tt>svn_repos_node_t *</tt>
+ * tree representing the delta from @a base_root to @a root in @a
+ * repos's filesystem.
+ *
+ * The editor can also be driven by svn_repos_dir_delta2() or
+ * svn_repos_begin_report2(), but unless you have special needs,
+ * svn_repos_replay2() is preferred.
  *
  * Invoke svn_repos_node_from_baton() on @a edit_baton to obtain the root
  * node afterwards.
@@ -2275,10 +2302,9 @@ svn_repos_node_editor(const svn_delta_editor_t **editor,
                       apr_pool_t *node_pool,
                       apr_pool_t *pool);
 
-/** Return the root node of the linked-list tree generated by driving
- * the editor created by svn_repos_node_editor() with
- * svn_repos_dir_delta2(), which is stored in @a edit_baton.  This is
- * only really useful if used *after* the editor drive is completed.
+/** Return the root node of the linked-list tree generated by driving the
+ * editor (associated with @a edit_baton) created by svn_repos_node_editor().
+ * This is only really useful if used *after* the editor drive is completed.
  */
 svn_repos_node_t *
 svn_repos_node_from_baton(void *edit_baton);
@@ -2510,6 +2536,10 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If @a use_post_commit_hook is set, call the repository's
  * post-commit hook after committing each loaded revision.
  *
+ * If @a validate_props is set, then validate Subversion revision and
+ * node properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
  * If non-NULL, use @a notify_func and @a notify_baton to send notification
  * of events to the caller.
  *
@@ -2526,6 +2556,7 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    const char *parent_dir,
                    svn_boolean_t use_pre_commit_hook,
                    svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -2533,8 +2564,9 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_load_fs3(), but with @a feedback_stream in place of
- * the #svn_repos_notify_func_t and baton.
+ * Similar to svn_repos_load_fs3(), but with @a feedback_stream in
+ * place of the #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2556,7 +2588,7 @@ svn_repos_load_fs2(svn_repos_t *repos,
  * Similar to svn_repos_load_fs2(), but with @a use_pre_commit_hook and
  * @a use_post_commit_hook always @c FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -2709,12 +2741,15 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
  *
+ * If @a validate_props is set, then validate Subversion revision and
+ * node properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
- *
  *
  * @since New in 1.7.
  */
@@ -2723,6 +2758,7 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
                                enum svn_repos_load_uuid uuid_action,
                                const char *parent_dir,
                                svn_repos_notify_func_t notify_func,
@@ -2730,8 +2766,9 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream in place
- * if a #svn_repos_notify_func_t and baton.
+ * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream
+ * in place if a #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2926,7 +2963,7 @@ svn_repos_authz_check_access(svn_authz_t *authz,
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_repos_revision_access_level_t
 {
   svn_repos_revision_access_none,
   svn_repos_revision_access_partial,

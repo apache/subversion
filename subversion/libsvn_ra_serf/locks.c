@@ -47,7 +47,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum lock_state_e {
   NONE = 0,
   PROP,
   LOCK_DISCOVERY,
@@ -60,12 +60,12 @@ typedef enum {
   COMMENT,
 } lock_state_e;
 
-typedef struct {
+typedef struct lock_prop_info_t {
   const char *data;
   apr_size_t len;
 } lock_prop_info_t;
 
-typedef struct {
+typedef struct lock_info_t {
   apr_pool_t *pool;
 
   const char *path;
@@ -515,7 +515,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   svn_error_t *err;
   int status_code;
 
-  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
 
@@ -609,7 +609,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->lock->comment = comment;
 
       lock_ctx->force = force;
-      req_url = svn_path_url_add_component2(session->repos_url.path,
+      req_url = svn_path_url_add_component2(session->session_url.path,
                                             lock_ctx->path, subpool);
 
       handler = apr_pcalloc(subpool, sizeof(*handler));
@@ -695,7 +695,9 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       const char *req_url, *path, *token;
       const void *key;
       void *val;
+      svn_lock_t *existing_lock;
       struct unlock_context_t unlock_ctx;
+      svn_error_t *lock_err = NULL;
 
       svn_pool_clear(subpool);
 
@@ -707,10 +709,9 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       if (force && (!token || token[0] == '\0'))
         {
-          svn_lock_t *lock;
-
-          SVN_ERR(svn_ra_serf__get_lock(ra_session, &lock, path, subpool));
-          token = lock->token;
+          SVN_ERR(svn_ra_serf__get_lock(ra_session, &existing_lock, path,
+                                        subpool));
+          token = existing_lock->token;
           if (!token)
             {
               svn_error_t *err;
@@ -732,9 +733,9 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
         }
 
       unlock_ctx.force = force;
-      unlock_ctx.token = apr_pstrcat(subpool, "<", token, ">", NULL);
+      unlock_ctx.token = apr_pstrcat(subpool, "<", token, ">", (char *)NULL);
 
-      req_url = svn_path_url_add_component2(session->repos_url.path, path,
+      req_url = svn_path_url_add_component2(session->session_url.path, path,
                                             subpool);
 
       handler = apr_pcalloc(subpool, sizeof(*handler));
@@ -753,15 +754,28 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       SVN_ERR(svn_ra_serf__context_run_wait(&ctx->done, session, subpool));
 
-      if (ctx->status != 204)
+      switch (ctx->status)
         {
-           return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                    _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+          case 204:
+            break; /* OK */
+          case 403:
+            /* Api users expect this specific error code to detect failures */
+            lock_err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
+                                         _("Unlock request failed: %d %s"),
+                                         ctx->status, ctx->reason);
+            break;
+          default:
+            lock_err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                   _("Unlock request failed: %d %s"),
+                                   ctx->status, ctx->reason);
         }
 
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, NULL, subpool));
+        {
+          SVN_ERR(lock_func(lock_baton, path, FALSE, existing_lock,
+                            lock_err, subpool));
+          svn_error_clear(lock_err);
+        }
     }
 
   return SVN_NO_ERROR;

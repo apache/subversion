@@ -31,10 +31,31 @@ import re, os, stat
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
+
+######################################################################
+# Helpers
+
+def check_writability(path, writable):
+  bits = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
+  mode = os.stat(path)[0]
+  if bool(mode & bits) != writable:
+    raise svntest.Failure("path '%s' is unexpectedly %s (mode %o)"
+                          % (path, ["writable", "read-only"][writable], mode))
+
+def is_writable(path):
+  "Raise if PATH is not writable."
+  check_writability(path, True)
+
+def is_readonly(path):
+  "Raise if PATH is not readonly."
+  check_writability(path, False)
 
 ######################################################################
 # Tests
@@ -341,7 +362,7 @@ def enforce_lock(sbox):
   # svn:needs-lock value should be forced to a '*'
   svntest.actions.set_prop('svn:needs-lock', 'foo', iota_path)
   svntest.actions.set_prop('svn:needs-lock', '*', lambda_path)
-  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.set_prop('svn:needs-lock', '      ', mu_path, expected_err)
 
   # Check svn:needs-lock
@@ -390,6 +411,7 @@ def enforce_lock(sbox):
 # Test that updating a file with the "svn:needs-lock" property works,
 # especially on Windows, where renaming A to B fails if B already
 # exists and has its read-only bit set.  See also issue #2278.
+@Issue(2278)
 def update_while_needing_lock(sbox):
   "update handles svn:needs-lock correctly"
 
@@ -845,9 +867,11 @@ def lock_switched_files(sbox):
   alpha_URL = sbox.repo_url + '/A/B/E/alpha'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     iota_URL, gamma_path)
+                                     iota_URL, gamma_path,
+                                     '--ignore-ancestry')
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     alpha_URL, lambda_path)
+                                     alpha_URL, lambda_path,
+                                     '--ignore-ancestry')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', 'A/B/lambda', switched='S')
@@ -936,7 +960,8 @@ def lock_uri_encoded(sbox):
 
 #----------------------------------------------------------------------
 # A regression test for a bug when svn:needs-lock and svn:executable
-# interact badly. The bug was fixed in trunk @ r14859.
+# interact badly. The bug was fixed in trunk @ r854933.
+@SkipUnless(svntest.main.is_posix_os)
 def lock_and_exebit1(sbox):
   "svn:needs-lock and svn:executable, part I"
 
@@ -949,11 +974,11 @@ def lock_and_exebit1(sbox):
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
-  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                       'ps', 'svn:needs-lock', ' ', gamma_path)
 
-  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:executable property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                       'ps', 'svn:executable', ' ', gamma_path)
 
@@ -1013,6 +1038,7 @@ def lock_and_exebit1(sbox):
 
 #----------------------------------------------------------------------
 # A variant of lock_and_exebit1: same test without unlock
+@SkipUnless(svntest.main.is_posix_os)
 def lock_and_exebit2(sbox):
   "svn:needs-lock and svn:executable, part II"
 
@@ -1025,11 +1051,11 @@ def lock_and_exebit2(sbox):
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
-  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                       'ps', 'svn:needs-lock', ' ', gamma_path)
 
-  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:executable property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                      'ps', 'svn:executable', ' ', gamma_path)
 
@@ -1292,6 +1318,7 @@ def ls_url_encoded(sbox):
 
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
+@Issue(3794)
 def unlock_wrong_token(sbox):
   "verify unlocking with wrong lock token"
 
@@ -1309,7 +1336,7 @@ def unlock_wrong_token(sbox):
   # Steal the lock as the same author, but using an URL to keep the old token
   # in the WC.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     "--force", file_url)
+                                    "--force", file_url)
 
   # Then, unlocking the WC path should fail.
   ### The error message returned is actually this, but let's worry about that
@@ -1352,6 +1379,7 @@ def examine_lock_encoded_recurse(sbox):
                                         svntest.main.wc_author)
 
 # Trying to unlock someone else's lock with --force should fail.
+@Issue(3801)
 def unlocked_lock_of_other_user(sbox):
   "unlock file locked by other user"
 
@@ -1372,7 +1400,7 @@ def unlocked_lock_of_other_user(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
   else:
-    expected_err = "svn: warning: User '%s' is trying to use a lock owned by "\
+    expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
                    "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       'unlock',
@@ -1422,7 +1450,8 @@ def lock_twice_in_one_wc(sbox):
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', sbox.repo_url + '/A',
-                                     os.path.join(wc_dir, 'A', 'B'))
+                                     os.path.join(wc_dir, 'A', 'B'),
+                                     '--ignore-ancestry')
 
   # Lock location 1
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1450,6 +1479,7 @@ def lock_twice_in_one_wc(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3524 'Locking path via ra_serf which doesn't exist in
 # HEAD triggers assert'
+@Issue(3524)
 def lock_path_not_in_head(sbox):
   "lock path that does not exist in HEAD"
 
@@ -1526,6 +1556,8 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
+@XFail(svntest.main.is_ra_type_dav)
+@Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
 
@@ -1573,6 +1605,48 @@ def replace_and_propset_locked_path(sbox):
                                      'commit', '-m', '', G_path)
 
 
+#----------------------------------------------------------------------
+def cp_isnt_ro(sbox):
+  "uncommitted svn:needs-lock add/cp not read-only"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_URL = sbox.repo_url + '/A/mu'
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu2_path = os.path.join(wc_dir, 'A', 'mu2')
+  mu3_path = os.path.join(wc_dir, 'A', 'mu3')
+  kappa_path = os.path.join(wc_dir, 'kappa')
+  open(kappa_path, 'w').write("This is the file 'kappa'.\n")
+
+  ## added file
+  sbox.simple_add('kappa')
+  svntest.actions.set_prop('svn:needs-lock', 'yes', kappa_path)
+  is_writable(kappa_path)
+  sbox.simple_commit('kappa')
+  is_readonly(kappa_path)
+
+  ## versioned file
+  svntest.actions.set_prop('svn:needs-lock', 'yes', mu_path)
+  is_writable(mu_path)
+  sbox.simple_commit('A/mu')
+  is_readonly(mu_path)
+
+  # At this point, mu has 'svn:needs-lock' set
+
+  ## wc->wc copied file
+  svntest.main.run_svn(None, 'copy', mu_path, mu2_path)
+  is_writable(mu2_path)
+  sbox.simple_commit('A/mu2')
+  is_readonly(mu2_path)
+
+  ## URL->wc copied file
+  svntest.main.run_svn(None, 'copy', mu_URL, mu3_path)
+  is_writable(mu3_path)
+  sbox.simple_commit('A/mu3')
+  is_readonly(mu3_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1602,23 +1676,22 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-              SkipUnless(lock_and_exebit1, svntest.main.is_posix_os),
-              SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
+              lock_and_exebit1,
+              lock_and_exebit2,
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,
               info_moved_path,
               ls_url_encoded,
-              XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
+              unlock_wrong_token,
               examine_lock_encoded_recurse,
-              XFail(unlocked_lock_of_other_user,
-                    svntest.main.is_ra_type_dav),
+              unlocked_lock_of_other_user,
               lock_funky_comment_chars,
               lock_twice_in_one_wc,
               lock_path_not_in_head,
               verify_path_escaping,
-              XFail(replace_and_propset_locked_path,
-                    svntest.main.is_ra_type_dav),
+              replace_and_propset_locked_path,
+              cp_isnt_ro,
             ]
 
 if __name__ == '__main__':

@@ -39,6 +39,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
 
 #include "ra_serf.h"
 
@@ -95,18 +96,18 @@ construct_realm(svn_ra_serf__session_t *session,
   const char *realm;
   apr_port_t port;
 
-  if (session->repos_url.port_str)
+  if (session->session_url.port_str)
     {
-      port = session->repos_url.port;
+      port = session->session_url.port;
     }
   else
     {
-      port = apr_uri_port_of_scheme(session->repos_url.scheme);
+      port = apr_uri_port_of_scheme(session->session_url.scheme);
     }
 
   realm = apr_psprintf(pool, "%s://%s:%d",
-                       session->repos_url.scheme,
-                       session->repos_url.hostname,
+                       session->session_url.scheme,
+                       session->session_url.hostname,
                        port);
 
   return realm;
@@ -325,10 +326,6 @@ conn_setup(apr_socket_t *sock,
   return SVN_NO_ERROR;
 }
 
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-/* This ugly ifdef construction can be cleaned up as soon as serf >= 0.4
-   gets the minimum supported serf version! */
-
 /* svn_ra_serf__conn_setup is a callback for serf. This function
    creates a read bucket and will wrap the write bucket if SSL
    is needed. */
@@ -339,18 +336,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool)
 {
-#else
-/* This is the old API, for compatibility with serf
-   versions <= 0.3. */
-serf_bucket_t *
-svn_ra_serf__conn_setup(apr_socket_t *sock,
-                        void *baton,
-                        apr_pool_t *pool)
-{
-  serf_bucket_t **write_bkt = NULL;
-  serf_bucket_t *rb = NULL;
-  serf_bucket_t **read_bkt = &rb;
-#endif
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
   apr_status_t status = SVN_NO_ERROR;
@@ -370,12 +355,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
       status = session->pending_error->apr_err;
     }
 
-#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
-  SVN_ERR_ASSERT_NO_RETURN(rb != NULL);
-  return rb;
-#else
   return status;
-#endif
 }
 
 serf_bucket_t*
@@ -423,12 +403,6 @@ connection_closed(serf_connection_t *conn,
 
   if (sc->using_ssl)
       sc->ssl_context = NULL;
-
-  /* Restart the authentication phase on this new connection. */
-  if (sc->session->auth_protocol)
-    SVN_ERR(sc->session->auth_protocol->init_conn_func(sc->session,
-                                                       sc,
-                                                       sc->session->pool));
 
   return SVN_NO_ERROR;
 }
@@ -618,38 +592,6 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
-  /* Setup server authorization headers */
-  if (conn->session->auth_protocol)
-    SVN_ERR(conn->session->auth_protocol->setup_request_func(conn, method, url,
-                                                             hdrs_bkt));
-
-  /* Setup proxy authorization headers */
-  if (conn->session->proxy_auth_protocol)
-    SVN_ERR(conn->session->proxy_auth_protocol->setup_request_func(conn,
-                                                                   method,
-                                                                   url,
-                                                                   hdrs_bkt));
-
-#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
-  /* Set up SSL if we need to */
-  if (conn->using_ssl)
-    {
-      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt, conn->ssl_context,
-                                            serf_request_get_alloc(request));
-      if (!conn->ssl_context)
-        {
-          conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*req_bkt);
-
-          serf_ssl_client_cert_provider_set(conn->ssl_context,
-                                            svn_ra_serf__handle_client_cert,
-                                            conn, conn->session->pool);
-          serf_ssl_client_cert_password_set(conn->ssl_context,
-                                            svn_ra_serf__handle_client_cert_pw,
-                                            conn, conn->session->pool);
-        }
-    }
-#endif
-
   if (ret_hdrs_bkt)
     {
       *ret_hdrs_bkt = hdrs_bkt;
@@ -664,19 +606,23 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *pool)
 {
   apr_status_t status;
+  apr_pool_t *iterpool;
 
   assert(sess->pending_error == SVN_NO_ERROR);
 
+  iterpool = svn_pool_create(pool);
   while (!*done)
     {
       svn_error_t *err;
       int i;
 
+      svn_pool_clear(iterpool);
+
       if (sess->wc_callbacks &&
           sess->wc_callbacks->cancel_func)
         SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
 
-      status = serf_context_run(sess->context, sess->timeout, pool);
+      status = serf_context_run(sess->context, sess->timeout, iterpool);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
@@ -708,6 +654,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -738,7 +685,7 @@ start_error(svn_ra_serf__xml_parser_t *parser,
       if (err_code)
         {
           apr_int64_t val;
-          
+
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
@@ -914,7 +861,7 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
 
   headers = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(headers, "Location");
-  return val ? svn_uri_canonicalize(val, pool) : NULL;
+  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -963,12 +910,12 @@ parse_dav_status(int *status_code_out, svn_stringbuf_t *buf,
     token = apr_strtok(NULL, " \t\r\n", &tok_status);
   if (!token)
     return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                             "Malformed DAV:status CDATA '%s'",
+                             _("Malformed DAV:status CDATA '%s'"),
                              buf->data);
   err = svn_cstring_atoi(status_code_out, token);
   if (err)
     return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
-                             "Malformed DAV:status CDATA '%s'",
+                             _("Malformed DAV:status CDATA '%s'"),
                              buf->data);
 
   return SVN_NO_ERROR;
@@ -1097,7 +1044,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
           server_err->has_xml_response = TRUE;
           server_err->contains_precondition_error = FALSE;
-          server_err->cdata = svn_stringbuf_create("", pool);
+          server_err->cdata = svn_stringbuf_create("", server_err->error->pool);
           server_err->collect_cdata = FALSE;
           server_err->parser.pool = server_err->error->pool;
           server_err->parser.user_data = server_err;
@@ -1171,7 +1118,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
 
   svn_ra_serf__define_ns(&parser->state->ns_list, attrs, parser->state->pool);
 
-  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
@@ -1185,7 +1132,7 @@ end_xml(void *userData, const char *raw_name)
   if (parser->error)
     return;
 
-  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   parser->error = parser->end(parser, parser->user_data, name);
 }
@@ -1294,8 +1241,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
                 }
             }
           SVN_ERR(svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                         "XML parsing failed: (%d %s)",
-                                         sl.code, sl.reason));
+                                    _("XML parsing failed: (%d %s)"),
+                                    sl.code, sl.reason));
         }
 
       if (ctx->error && ctx->ignore_errors == FALSE)
@@ -1507,34 +1454,11 @@ handle_response(serf_request_t *request,
                                         ctx->session->pool));
       ctx->session->auth_attempts = 0;
       ctx->session->auth_state = NULL;
-      ctx->session->realm = NULL;
     }
 
   ctx->conn->last_status_code = sl.code;
 
-  if (sl.code == 401 || sl.code == 407)
-    {
-      /* 401 Authorization or 407 Proxy-Authentication required */
-      status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-
-      /* Don't bother handling the authentication request if the response
-         wasn't received completely yet. Serf will call handle_response
-         again when more data is received. */
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          *serf_status = status;
-          return SVN_NO_ERROR;
-        }
-
-      SVN_ERR(svn_ra_serf__handle_auth(sl.code, ctx,
-                                       request, response, pool));
-
-      svn_ra_serf__priority_request_create(ctx);
-
-      *serf_status = status;
-      return SVN_NO_ERROR;
-    }
-  else if (sl.code == 409 || sl.code >= 500)
+  if (sl.code == 409 || sl.code >= 500)
     {
       /* 409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
@@ -1552,28 +1476,6 @@ handle_response(serf_request_t *request,
   else
     {
       svn_error_t *err;
-
-      /* Validate this response message. */
-      if (ctx->session->auth_protocol ||
-          ctx->session->proxy_auth_protocol)
-        {
-          const svn_ra_serf__auth_protocol_t *prot;
-
-          if (ctx->session->auth_protocol)
-            prot = ctx->session->auth_protocol;
-          else
-            prot = ctx->session->proxy_auth_protocol;
-
-          err = prot->validate_response_func(ctx, request, response, pool);
-          if (err)
-            {
-              svn_ra_serf__response_discard_handler(request, response, NULL,
-                                                    pool);
-              /* Ignore serf status code, just return the real error */
-
-              return svn_error_return(err);
-            }
-        }
 
       err = ctx->response_handler(request,response, ctx->response_baton, pool);
 
@@ -1714,7 +1616,7 @@ setup_request_cb(serf_request_t *request,
 
   if (err)
     {
-      ctx->session->pending_error 
+      ctx->session->pending_error
                 = svn_error_compose_create(ctx->session->pending_error,
                                            err);
 
@@ -1731,13 +1633,6 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
                                         setup_request_cb, handler);
 }
 
-serf_request_t *
-svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
-{
-  return serf_connection_priority_request_create(handler->conn->conn,
-                                                 setup_request_cb, handler);
-}
-
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__session_t *session,
@@ -1745,7 +1640,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
                           apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *path, *relative_path, *present_path = "", *uuid;
+  const char *path, *relative_path, *uuid;
 
   /* If we've already got the information our caller seeks, just return it.  */
   if (session->vcc_url && session->repos_root_str)
@@ -1761,7 +1656,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
     }
 
   props = apr_hash_make(pool);
-  path = session->repos_url.path;
+  path = session->session_url.path;
   *vcc_url = NULL;
   uuid = NULL;
 
@@ -1791,7 +1686,8 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
         }
       else
         {
-          if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+          if ((err->apr_err != SVN_ERR_FS_NOT_FOUND) &&
+              (err->apr_err != SVN_ERR_RA_DAV_FORBIDDEN))
             {
               return err;  /* found a _real_ error */
             }
@@ -1800,19 +1696,23 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               /* This happens when the file is missing in HEAD. */
               svn_error_clear(err);
 
-              /* Okay, strip off. */
-              present_path = svn_uri_join(svn_uri_basename(path, pool),
-                                          present_path, pool);
-              path = svn_uri_dirname(path, pool);
+              /* Okay, strip off a component from PATH. */
+              path = svn_urlpath__dirname(path, pool);
+
+              /* An error occurred on conns. serf 0.4.0 remembers that
+                 the connection had a problem. We need to reset it, in
+                 order to use it again.  */
+              serf_connection_reset(conn->conn);
             }
         }
     }
-  while (!svn_path_is_empty(path));
+  while ((path[0] != '\0')
+         && (! (path[0] == '/' && path[1] == '\0')));
 
   if (!*vcc_url)
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
+                              _("The PROPFIND response did not include the "
                                 "requested version-controlled-configuration "
                                 "value"));
     }
@@ -1834,12 +1734,12 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
                                  svn_path_component_count(relative_path));
 
       /* Now recreate the root_url. */
-      session->repos_root = session->repos_url;
+      session->repos_root = session->session_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
-        svn_uri_canonicalize(apr_uri_unparse(session->pool,
-                                             &session->repos_root, 0),
-                             session->pool);
+        svn_urlpath__canonicalize(apr_uri_unparse(session->pool,
+                                                  &session->repos_root, 0),
+                                  session->pool);
     }
 
   /* Store the repository UUID in the cache. */
@@ -1884,7 +1784,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
     }
   else
     {
-      *rel_path = svn_uri_is_child(decoded_root, decoded_orig, pool);
+      *rel_path = svn_urlpath__is_child(decoded_root, decoded_orig, pool);
       SVN_ERR_ASSERT(*rel_path != NULL);
     }
   return SVN_NO_ERROR;
@@ -1924,6 +1824,10 @@ svn_ra_serf__error_on_status(int status_code,
                                      " please relocate")
                                  : _("Repository moved temporarily to '%s';"
                                      " please relocate"), location);
+      case 403:
+        return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                 _("Access to '%s' forbidden"), path);
+
       case 404:
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);

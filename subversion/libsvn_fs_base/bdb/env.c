@@ -76,7 +76,7 @@
    filesystems.  We /should/ be safe using this as a unique hash key,
    because the database must be on a local filesystem.  We can hope,
    anyway. */
-typedef struct
+typedef struct bdb_env_key_t
 {
   apr_dev_t device;
   apr_ino_t inode;
@@ -373,7 +373,7 @@ clear_cache(void *data)
 }
 #endif /* APR_HAS_THREADS */
 
-static volatile svn_atomic_t bdb_cache_state;
+static volatile svn_atomic_t bdb_cache_state = 0;
 
 static svn_error_t *
 bdb_init_cb(void *baton, apr_pool_t *pool)

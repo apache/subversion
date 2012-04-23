@@ -292,6 +292,11 @@ svn_opt_format_option(const char **string,
  * command name or an alias.  ### @todo Why does this only print to
  * @c stdout, whereas svn_opt_print_generic_help() gives us a choice?
  *
+ * When printing the description of an option, if the same option code
+ * appears a second time in @a options_table with a different name, then
+ * use that second name as an alias for the first name.  This additional
+ * behaviour is new in 1.7.
+ *
  * @since New in 1.5.
  */
 void

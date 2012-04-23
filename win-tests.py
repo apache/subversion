@@ -79,6 +79,12 @@ def _usage_exit():
   print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
+  print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
+  print("                           used with --list) limits the tests listed to")
+  print("                           those with an associated issue in the tracker")
+  print("                           which has a target milestone that matches RE.")
+  print("  --mode-filter=TYPE     : limit tests to expected TYPE = XFAIL, SKIP, PASS,")
+  print("                           or 'ALL' (default)")
   print("  --enable-sasl          : enable Cyrus SASL authentication for")
   print("                           svnserve")
   print("  -p, --parallel         : run multiple tests in parallel")
@@ -87,6 +93,7 @@ def _usage_exit():
   print(" --config-file           : Configuration file for tests")
   print(" --fsfs-sharding         : Specify shard size (for fsfs)")
   print(" --fsfs-packing          : Run 'svnadmin pack' automatically")
+  print(" --log-to-stdout         : Write log results to stdout")
 
   sys.exit(0)
 
@@ -119,7 +126,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'httpd-server', 'http-library=', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
-                        'config-file=', 'server-minor-version='])
+                        'config-file=', 'server-minor-version=',
+                        'log-to-stdout', 'mode-filter=', 'milestone-filter='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -136,6 +144,7 @@ httpd_port = None
 httpd_service = None
 http_library = 'neon'
 list_tests = None
+milestone_filter = None
 test_javahl = None
 enable_sasl = None
 svn_bin = None
@@ -144,6 +153,8 @@ fsfs_sharding = None
 fsfs_packing = None
 server_minor_version = None
 config_file = None
+log_to_stdout = None
+mode_filter=None
 tests_to_run = []
 
 for opt, val in opts:
@@ -189,6 +200,10 @@ for opt, val in opts:
     test_javahl = 1
   elif opt == '--list':
     list_tests = 1
+  elif opt == '--milestone-filter':
+    milestone_filter = val
+  elif opt == '--mode-filter':
+    mode_filter = val
   elif opt == '--enable-sasl':
     enable_sasl = 1
     base_url = "svn://localhost/"
@@ -200,6 +215,8 @@ for opt, val in opts:
     parallel = 1
   elif opt in ('--config-file'):
     config_file = val
+  elif opt == '--log-to-stdout':
+    log_to_stdout = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -226,7 +243,6 @@ if run_httpd:
     base_url = 'http://localhost:' + str(httpd_port)
 
 if base_url:
-  all_tests = client_tests
   repo_loc = 'remote repository ' + base_url + '.'
   if base_url[:4] == 'http':
     log = 'dav-tests.log'
@@ -293,9 +309,11 @@ def locate_libs():
     suffix = "-1"
   else:
     suffix = ""
-  dlls.append(os.path.join(gen_obj.apr_path, objdir,
-                           'libapr%s.dll' % (suffix)))
-  dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
+    
+  if cp.has_option('options', '--with-static-apr'):
+    dlls.append(os.path.join(gen_obj.apr_path, objdir,
+                             'libapr%s.dll' % (suffix)))
+    dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
                              'libaprutil%s.dll' % (suffix)))
 
   if gen_obj.libintl_path is not None:
@@ -484,7 +502,7 @@ class Httpd:
     fp.write(self._svn_repo('local_tmp'))
 
     # And two redirects for the redirect tests
-    fp.write('RedirectMatch permanent ^/svn-test-work/repositories/' 
+    fp.write('RedirectMatch permanent ^/svn-test-work/repositories/'
              'REDIRECT-PERM-(.*)$ /svn-test-work/repositories/$1\n')
     fp.write('RedirectMatch           ^/svn-test-work/repositories/'
              'REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1\n')
@@ -492,7 +510,7 @@ class Httpd:
     fp.write('TypesConfig     ' + self._quote(self.httpd_mime_types) + '\n')
     fp.write('LogLevel        Debug\n')
     fp.write('HostNameLookups Off\n')
-    
+
     fp.close()
 
   def __del__(self):
@@ -617,16 +635,19 @@ abs_builddir = fix_case(abs_builddir)
 
 daemon = None
 # Run the tests
-if run_svnserve:
-  daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
-if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                 httpd_service)
+# No need to start any servers if we are only listing the tests.
+if not list_tests:
+  if run_svnserve:
+    daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
-# Start service daemon, if any
-if daemon:
-  daemon.start()
+  if run_httpd:
+    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
+                   httpd_service)
+
+  # Start service daemon, if any
+  if daemon:
+    daemon.start()
 
 # Find the full path and filename of any test that is specified just by
 # its base name.
@@ -654,19 +675,30 @@ else:
   tests_to_run = all_tests
 
 
-print('Testing %s configuration on %s' % (objdir, repo_loc))
+if list_tests:
+  print('Listing %s configuration on %s' % (objdir, repo_loc))
+else:
+  print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 
 if not test_javahl:
   import run_tests
+  if log_to_stdout:
+    log_file = None
+    fail_log_file = None
+  else:
+    log_file = os.path.join(abs_builddir, log)
+    fail_log_file = os.path.join(abs_builddir, faillog)
+
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
-                             os.path.join(abs_builddir, log),
-                             os.path.join(abs_builddir, faillog),
+                             log_file,
+                             fail_log_file,
                              base_url, fs_type, http_library,
                              server_minor_version, not quiet,
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
-                             list_tests, svn_bin)
+                             list_tests, svn_bin, mode_filter,
+                             milestone_filter)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)
@@ -686,26 +718,26 @@ else:
           '-Dtest.rooturl=',
           '-Dtest.fstype=' + fs_type ,
           '-Dtest.tests=',
-          
-          '-Djava.library.path=' 
+
+          '-Djava.library.path='
                     + os.path.join(abs_objdir,
                                    'subversion/bindings/javahl/native'),
-          '-classpath', 
+          '-classpath',
           os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
             gen_obj.junit_path
          )
-  
-  sys.stderr.flush()        
+
+  sys.stderr.flush()
   print('Running org.apache.subversion tests:')
   sys.stdout.flush()
-  
+
   r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
   sys.stdout.flush()
   sys.stderr.flush()
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-  
+
   print('Running org.tigris.subversion tests:')
   sys.stdout.flush()
   r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
@@ -714,7 +746,7 @@ else:
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-  
+
 # Stop service daemon, if any
 if daemon:
   del daemon

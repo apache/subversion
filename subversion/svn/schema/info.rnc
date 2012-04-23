@@ -53,6 +53,7 @@ uuid = element uuid { uuid.type }
 ## Info in the working copy entry.
 wc-info =
   element wc-info {
+    wcroot-abspath?,
     schedule?,
     changelist?,
     copy-from-url?,
@@ -62,6 +63,8 @@ wc-info =
     prop-updated?,
     checksum?
   }
+
+wcroot-abspath = element wcroot-abspath { string }
 
 schedule =
   element schedule { "normal" | "add" | "delete" | "replace" | "none" }

@@ -26,6 +26,8 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
@@ -218,7 +220,7 @@ check_split_url(const char *repos_path,
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&root_url, repos_path, pool));
   if (in_repos_path)
-    url = apr_pstrcat(pool, root_url, in_repos_path, NULL);
+    url = apr_pstrcat(pool, root_url, in_repos_path, (char *)NULL);
   else
     url = root_url;
 

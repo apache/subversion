@@ -39,6 +39,7 @@
 #include "changes-table.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 
@@ -331,7 +332,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
                 continue;
 
               /* If we come across a child of our path, remove it. */
-              if (svn_uri_is_child(change->path, hashkey, subpool))
+              if (svn_fspath__is_child(change->path, hashkey, subpool))
                 apr_hash_set(changes, hashkey, klen, NULL);
             }
         }

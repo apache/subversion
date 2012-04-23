@@ -60,7 +60,7 @@
 
 /* This effectively defines a single table.  Every provider in this
    array returns the same kind of credentials. */
-typedef struct
+typedef struct provider_set_t
 {
   /* ordered array of svn_auth_provider_object_t */
   apr_array_header_t *providers;
@@ -183,11 +183,11 @@ svn_auth_first_credentials(void **credentials,
   table = apr_hash_get(auth_baton->tables, cred_kind, APR_HASH_KEY_STRING);
   if (! table)
     return svn_error_createf(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
-                             "No provider registered for '%s' credentials",
+                             _("No provider registered for '%s' credentials"),
                              cred_kind);
 
   /* First, see if we have cached creds in the auth_baton. */
-  cache_key = apr_pstrcat(pool, cred_kind, ":", realmstring, NULL);
+  cache_key = apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
   creds = apr_hash_get(auth_baton->creds_cache,
                        cache_key, APR_HASH_KEY_STRING);
   if (creds)

@@ -40,7 +40,7 @@ Array::~Array()
         {
           JNIUtil::getEnv()->DeleteLocalRef(*it);
         }
-      
+
       JNIUtil::getEnv()->DeleteLocalRef(m_objectArray);
     }
 }

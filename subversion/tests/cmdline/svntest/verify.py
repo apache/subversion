@@ -80,6 +80,8 @@ def createExpectedOutput(expected, output_type, match_all=True):
     expected = ExpectedOutput(expected)
   elif isinstance(expected, str):
     expected = RegexOutput(expected, match_all)
+  elif isinstance(expected, int):
+    expected = RegexOutput(".*: E%d:.*" % expected, False)
   elif expected is AnyOutput:
     expected = AnyOutput()
   elif expected is not None and not isinstance(expected, ExpectedOutput):
@@ -106,7 +108,7 @@ class ExpectedOutput:
     return str(self.output)
 
   def __cmp__(self, other):
-    raise 'badness'
+    raise Exception('badness')
 
   def matches(self, other, except_re=None):
     """Return whether SELF.output matches OTHER (which may be a list
@@ -236,7 +238,12 @@ class UnorderedOutput(ExpectedOutput):
   is_unordered = True
 
   def __cmp__(self, other):
-    raise 'badness'
+    raise Exception('badness')
+
+  def matches_except(self, expected, actual, except_re):
+    assert type(actual) == type([]) # ### if this trips: fix it!
+    return self.is_equivalent_list([l for l in expected if not except_re.match(l)],
+                                   [l for l in actual if not except_re.match(l)])
 
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."

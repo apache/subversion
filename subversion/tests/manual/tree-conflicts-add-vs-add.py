@@ -1,5 +1,22 @@
 #!/usr/bin/env python
 
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # Setup your environment so that `which svn` shows the svn you want to test.
 # Just run this file, no parameters. Test files are created in /tmp/...
 # To adjust which tests are run, look at 'p = Permutations(' way below...
@@ -217,14 +234,14 @@ def prepare(ctx, action, kind):
     prepare_cp(ctx, kind, '1')
   elif action == cp2:
     prepare_cp(ctx, kind, '2')
-    
+
 
 def postpare(ctx, action, kind):
   if action == cp1:
     postpare_cp(ctx, kind, '1')
   elif action == cp2:
     postpare_cp(ctx, kind, '2')
-    
+
 
 
 def co(name, local_action, local_kind, incoming_action, incoming_kind):
@@ -249,7 +266,7 @@ def co(name, local_action, local_kind, incoming_action, incoming_kind):
 
   postpare(ctx, local_action, local_kind)
   postpare(ctx, incoming_action, incoming_kind)
-  
+
   # get conflicts
   o1,e1 = shell('yes p | svn checkout "' + ctx.URL + '" ' +
                 '"' + ctx.WC + '"')
@@ -260,7 +277,7 @@ def co(name, local_action, local_kind, incoming_action, incoming_kind):
                    +'select local_relpath,properties from actual_node; '
                    ])
   return o1, e1, o2, e2, o3, e3
-  
+
 
 def up(name, local_action, local_kind, incoming_action, incoming_kind):
   ctx = TestContext()
@@ -285,7 +302,7 @@ def up(name, local_action, local_kind, incoming_action, incoming_kind):
 
   postpare(ctx, local_action, local_kind)
   postpare(ctx, incoming_action, incoming_kind)
-  
+
   # get conflicts
   o1,e1 = svn('update', '--accept=postpone', ctx.WC)
   o2,e2 = svn('status', ctx.WC)
@@ -295,7 +312,7 @@ def up(name, local_action, local_kind, incoming_action, incoming_kind):
                    +'select local_relpath,properties from actual_node; '
                    ])
   return o1, e1, o2, e2, o3, e3
-  
+
 
 def sw(name, local_action, local_kind, incoming_action, incoming_kind):
   ctx = TestContext()
@@ -318,7 +335,7 @@ def sw(name, local_action, local_kind, incoming_action, incoming_kind):
 
   postpare(ctx, local_action, local_kind)
   postpare(ctx, incoming_action, incoming_kind)
-  
+
   # get conflicts
   o1,e1 = svn('switch', '--accept=postpone', ctx.url('branch'), ctx.wc('trunk'))
   o2,e2 = svn('status', ctx.WC)
@@ -330,7 +347,7 @@ def sw(name, local_action, local_kind, incoming_action, incoming_kind):
 
 
 # This controls which tests are run. All possible combinations are tested.
-# The elements are functions for up,sw and add,cp1,cp2,unver, and they are 
+# The elements are functions for up,sw and add,cp1,cp2,unver, and they are
 # simple strings for f (file), l (symlink), d (directory).
 #
 #            cmd        local action and kind     incoming action and kind

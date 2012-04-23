@@ -49,18 +49,18 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum date_state_e {
   NONE = 0,
   VERSION_NAME,
 } date_state_e;
 
-typedef struct {
+typedef struct date_info_t {
   /* The currently collected value as we build it up */
   const char *tmp;
   apr_size_t tmp_len;
 } date_info_t;
 
-typedef struct {
+typedef struct date_context_t {
   apr_pool_t *pool;
 
   /* The time asked about. */

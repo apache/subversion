@@ -31,6 +31,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "private/svn_fspath.h"
 
 
 /*** Helper functions. ***/
@@ -194,7 +195,9 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
            current one.  For the first iteration, this is just the
            empty string. ***/
       if (i > 0)
-        common = svn_relpath_get_longest_ancestor(last_path, path, iterpool);
+        common = (last_path[0] == '/')
+          ? svn_fspath__get_longest_ancestor(last_path, path, iterpool)
+          : svn_relpath_get_longest_ancestor(last_path, path, iterpool);
       common_len = strlen(common);
 
       /*** Step B - Close any directories between the last path and
@@ -215,7 +218,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
       if (*path == '/')
-        svn_uri_split(&pdir, &bname, path, iterpool);
+        svn_fspath__split(&pdir, &bname, path, iterpool);
       else
         svn_relpath_split(&pdir, &bname, path, iterpool);
       if (strlen(pdir) > common_len)

@@ -36,7 +36,7 @@ class Generator(gen_win.WinGeneratorBase):
                                       'vcnet-vcproj')
 
   def quote(self, str):
-    return '&quot;%s&quot;' % str
+    return '"%s"' % str
 
   def get_external_project(self, target, proj_ext):
     "Link project files: prefer vcproj's, but if don't exist, try dsp's."
@@ -141,14 +141,14 @@ class Generator(gen_win.WinGeneratorBase):
 
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
-    self.move_proj_file(os.path.join('build', 'win32'),
+    self.move_proj_file(self.projfilesdir,
                         'svn_config' + self.vcproj_extension,
                           (
                             ('sql', sql),
                             ('project_guid', self.makeguid('__CONFIG__')),
                           )
                         )
-    self.move_proj_file(os.path.join('build', 'win32'),
+    self.move_proj_file(self.projfilesdir,
                         'svn_locale' + self.vcproj_extension,
                         (
                           ('project_guid', self.makeguid('svn_locale')),

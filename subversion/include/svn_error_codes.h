@@ -219,6 +219,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 13,
              "Unknown string value of token")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_BAD_CHANGELIST_NAME,
+             SVN_ERR_BAD_CATEGORY_START + 14,
+             "Invalid changelist name")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -273,6 +278,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_IO_WRITE_ERROR,
              SVN_ERR_IO_CATEGORY_START + 6,
              "Write error")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_IO_PIPE_WRITE_ERROR,
+             SVN_ERR_IO_CATEGORY_START + 7,
+             "Write error in pipe")
 
   /* stream errors */
 
@@ -1391,11 +1401,19 @@ SVN_ERROR_START
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
 
+  SVN_ERRDEF(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+             SVN_ERR_CL_CATEGORY_START + 11,
+             "Failed processing one or more externals definitions")
+
   /* malfunctions such as assertion failures */
 
   SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,
              SVN_ERR_MALFUNC_CATEGORY_START + 0,
              "Assertion failure")
+
+  SVN_ERRDEF(SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
+             SVN_ERR_MALFUNC_CATEGORY_START + 1,
+             "No non-tracing links found in the error chain")
 
 SVN_ERROR_END
 

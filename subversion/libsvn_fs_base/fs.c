@@ -486,7 +486,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__set_uuid,
   svn_fs_base__revision_root,
   svn_fs_base__begin_txn,
-  svn_fs_base__begin_obliteration_txn,
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
@@ -497,6 +496,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
   base_bdb_set_errcall,
+  svn_fs_base__validate_mergeinfo,
 };
 
 /* Where the format number is stored. */

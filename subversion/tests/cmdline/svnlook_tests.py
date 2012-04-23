@@ -32,8 +32,12 @@ import svntest
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -185,6 +189,7 @@ def test_misc(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1089
+@Issue(1089)
 def delete_file_in_moved_dir(sbox):
   "delete file in moved dir"
 
@@ -239,6 +244,7 @@ def delete_file_in_moved_dir(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1241
+@Issue(1241)
 def test_print_property_diffs(sbox):
   "test the printing of property diffs"
 
@@ -271,7 +277,7 @@ def test_print_property_diffs(sbox):
 
   # replace wcdir/iota with iota in expected_output
   for i in range(len(expected_output)):
-    expected_output[i] = expected_output[i].replace(canonical_iota_path, 
+    expected_output[i] = expected_output[i].replace(canonical_iota_path,
                                                     'iota')
 
   # Check that the header filenames match.
@@ -280,7 +286,7 @@ def test_print_property_diffs(sbox):
   if expected_output[3].split()[1] != output[3].split()[1]:
     raise svntest.Failure
 
-  svntest.verify.compare_and_display_lines('', '', 
+  svntest.verify.compare_and_display_lines('', '',
                                            expected_output[4:],
                                            output[4:])
 
@@ -337,7 +343,8 @@ text
 """
 
   # load dumpfile with inconsistent newlines into repos.
-  svntest.actions.load_repo(sbox, dump_str=dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=True)
 
   exit_code, output, errput = svntest.main.run_svnlook("info",
                                                        sbox.repo_dir, "-r1")
@@ -389,6 +396,7 @@ def changed_copy_info(sbox):
 
 #----------------------------------------------------------------------
 # Issue 2663
+@Issue(2663)
 def tree_non_recursive(sbox):
   "test 'svnlook tree --non-recursive'"
 
@@ -471,14 +479,14 @@ def diff_ignore_whitespace(sbox):
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
   # It should not print anything.
   output = run_svnlook('diff', '-r2', '-x', '--ignore-space-change',
-                       repo_dir, '/A/mu')
+                       repo_dir)
   if output != []:
     raise svntest.Failure
 
   # Check the output of 'svnlook diff -x --ignore-all-space' on mu.
   # It should not print anything.
   output = run_svnlook('diff', '-r2', '-x', '--ignore-all-space',
-                       repo_dir, '/A/mu')
+                       repo_dir)
   if output != []:
     raise svntest.Failure
 
@@ -528,14 +536,14 @@ def diff_ignore_eolstyle(sbox):
 
 
     output = run_svnlook('diff', '-r', str(rev + 1), '-x',
-                         '--ignore-eol-style', repo_dir, '/A/mu')
+                         '--ignore-eol-style', repo_dir)
     rev += 1
 
     canonical_mu_path = mu_path.replace(os.path.sep, '/')
 
     # replace wcdir/A/mu with A/mu in expected_output
     for i in range(len(expected_output)):
-      expected_output[i] = expected_output[i].replace(canonical_mu_path, 
+      expected_output[i] = expected_output[i].replace(canonical_mu_path,
                                                       'A/mu')
 
     # Check that the header filenames match.
@@ -544,7 +552,7 @@ def diff_ignore_eolstyle(sbox):
     if expected_output[3].split()[1] != output[3].split()[1]:
       raise svntest.Failure
 
-    svntest.verify.compare_and_display_lines('', '', 
+    svntest.verify.compare_and_display_lines('', '',
                                              expected_output[4:],
                                              output[4:])
 
@@ -565,7 +573,7 @@ def diff_binary(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', mu_path)
 
   # Now run 'svnlook diff' and look for the "Binary files differ" message.
-  output = run_svnlook('diff', repo_dir, '/A/mu')
+  output = run_svnlook('diff', repo_dir)
   if not "(Binary files differ)\n" in output:
     raise svntest.Failure("No 'Binary files differ' indication in "
                           "'svnlook diff' output.")
@@ -637,7 +645,7 @@ def output_command(fp, cmd, opt):
   return status
 
 for (svnlook_cmd, svnlook_opt) in %s:
-  output_command(fp, svnlook_cmd, svnlook_opt.split(' '))
+  output_command(fp, svnlook_cmd, svnlook_opt.split())
 fp.close()"""
   pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
 

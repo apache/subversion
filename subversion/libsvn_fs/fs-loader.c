@@ -657,15 +657,6 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
   return svn_error_return(svn_fs_begin_txn2(txn_p, fs, rev, 0, pool));
 }
 
-svn_error_t *
-svn_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                               svn_fs_t *fs,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool)
-{
-  return svn_error_return(fs->vtable->begin_obliteration_txn(txn_p, fs, rev,
-                                                             pool));
-}
 
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
@@ -676,6 +667,7 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   svn_fs_t *fs;
   const char *fs_path;
 
+  *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   fs = svn_fs_root_fs(txn_root);
   fs_path = svn_fs_path(fs, pool);
@@ -684,24 +676,20 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   SVN_ERR(txn->vtable->commit(conflict_p, new_rev, txn, pool));
 
 #ifdef PACK_AFTER_EVERY_COMMIT
-  SVN_ERR(svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool));
+  {
+    svn_error_t *err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
+    if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+      /* Pre-1.6 filesystem. */
+      svn_error_clear(err);
+    else if (err)
+      /* Real error. */
+      return svn_error_return(err);
+  }
 #endif
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__commit_obliteration_txn(svn_revnum_t rev, svn_fs_txn_t *txn,
-                                apr_pool_t *pool)
-{
-  /* TODO: ### Perhaps here is a good place to unpack the revision ... */
-
-  SVN_ERR(txn->vtable->commit_obliteration(rev, txn, pool));
-
-  /* ### ... and here to re-pack it, if it was packed. */
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs_abort_txn(svn_fs_txn_t *txn, apr_pool_t *pool)
@@ -991,6 +979,22 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t validate_inherited_mergeinfo,
+                      svn_boolean_t include_descendants,
+                      apr_pool_t *pool)
+{
+  return svn_error_return(root->vtable->get_mergeinfo(catalog, root, paths,
+                                                      inherit,
+                                                      validate_inherited_mergeinfo,
+                                                      include_descendants,
+                                                      pool));
+}
+
+svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
@@ -998,10 +1002,24 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return svn_error_return(root->vtable->get_mergeinfo(catalog, root, paths,
-                                                      inherit,
-                                                      include_descendants,
-                                                      pool));
+  return svn_error_return(svn_fs_get_mergeinfo2(catalog, root, paths,
+                                                inherit,
+                                                FALSE,
+                                                include_descendants,
+                                                pool));
+}
+
+svn_error_t *
+svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
+                          svn_fs_t *fs,
+                          svn_mergeinfo_t mergeinfo,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_return(fs->vtable->validate_mergeinfo(validated_mergeinfo,
+                                                         fs, mergeinfo,
+                                                         result_pool,
+                                                         scratch_pool));
 }
 
 svn_error_t *

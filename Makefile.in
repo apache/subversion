@@ -340,8 +340,6 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-TRUNK_TRAIL_URL = /repos/asf/subversion/trunk
-
 all: mkdir-init external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
@@ -353,17 +351,17 @@ install: external-install local-install revision-install
 local-all: @BUILD_RULES@ @TRANSFORM_LIBTOOL_SCRIPTS@
 
 transform-libtool-scripts: @BUILD_RULES@
-	@$(top_srcdir)/build/transform_libtool_scripts.sh
+	@$(SHELL) $(top_srcdir)/build/transform_libtool_scripts.sh
 
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
-	  tools/po/po-update.sh pot
+	  $(SHELL) tools/po/po-update.sh pot
 
 # "make locale-gnu-po-update" updates all translations.
 # "make locale-gnu-po-update PO=ll" updates only the ll.po file.
 locale-gnu-po-update:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
-	  tools/po/po-update.sh $(PO)
+	  $(SHELL) tools/po/po-update.sh $(PO)
 
 # clean everything but the bulky test output, returning the system back
 # to before 'make' was run.
@@ -389,10 +387,12 @@ fast-distclean: fast-clean
 	$(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
+local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extraclean-javahl
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
+              $(top_srcdir)/gen-make.opts \
+              $(top_srcdir)/build/transform_libtool_scripts.sh \
               $(top_srcdir)/build/libtool.m4 \
               $(top_srcdir)/build/ltoptions.m4 \
               $(top_srcdir)/build/ltsugar.m4 \
@@ -403,30 +403,25 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
 
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig clean-ctypes-python
+local-clean: fast-clean check-clean clean-swig clean-ctypes-python clean-javahl
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
 
 local-install: @INSTALL_RULES@
 
-### HACK!! Find a better way to do this
 revision-install:
-	subversion/svnversion/svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) > \
-	    $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt;          \
-	if test "$$?" != "0"; then                                          \
-	  svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) >                     \
-	    $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt;          \
-	  if test "$$?" != "0"; then                                        \
-	    echo "unknown" >                                                \
-	      $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt;        \
-	  fi;                                                               \
-	fi;
+	test -d $(DESTDIR)$(includedir)/subversion-1 || \
+	  $(MKDIR) $(DESTDIR)$(includedir)/subversion-1
+	(subversion/svnversion/svnversion $(top_srcdir) ||  \
+	 svnversion $(top_srcdir) ||                        \
+	 echo "unknown";                                    \
+	) > $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt
 
 install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
-javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
+javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-types-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
 install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
@@ -436,6 +431,8 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
+
+extraclean-javahl: clean-javahl
 
 check-javahl: javahl javahl-compat
 	@FIX_JAVAHL_LIB@
@@ -490,12 +487,13 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
+	@# Takes MODULE_PATH and USE_HTTPV1 in the environment.
 	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
@@ -505,7 +503,8 @@ svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
 svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
-	bash $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
+	@env THREADED=$(THREADED) \
+	  bash $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
@@ -539,7 +538,6 @@ mkdir-init:
 	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \
         for i in $$list; do                              \
             if [ ! -d $$i ]; then                        \
-                echo "$(MKDIR) $$i" ;                    \
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
@@ -607,7 +605,8 @@ doc-javahl:
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl \
       org.apache.subversion.javahl \
-      org.apache.subversion.javahl.callback
+      org.apache.subversion.javahl.callback \
+      org.apache.subversion.javahl.types
 
 doc-clean:
 	rm -rf $(top_srcdir)/doc/doxygen
@@ -709,6 +708,7 @@ install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
+	@rm -f .swig_checked
 extraclean-swig: extraclean-swig-headers extraclean-swig-py \
                  extraclean-swig-rb extraclean-swig-pl
 
@@ -728,10 +728,16 @@ $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
 
+# There is a "readlink -f" command on some systems for the same purpose,
+# but it's not as portable (e.g. Mac OS X doesn't have it).  These should
+# only be used where Python/Perl are known to be available.
+READLINK_PY=$(PYTHON) -c 'import sys,os; print(os.path.realpath(sys.argv[1]))'
+READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
+
 swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
 swig-pl: $(swig-pl_DEPS)
-	if test "$(SWIG_PL_DIR)" != "$(SWIG_PL_SRC_DIR)"; then \
+	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
 	  ln -sf $(SWIG_PL_SRC_DIR)/native/*.c $(SWIG_PL_DIR)/native; \
 	fi
 	cd $(SWIG_PL_DIR)/native; $(MAKE) OPTIMIZE="" OTHERLDFLAGS="$(SWIG_LDFLAGS)"
@@ -824,7 +830,7 @@ install-swig-rb-doc:
 
 # ctypes-python make targets
 ctypes-python: local-all
-	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)"
+	$(SHELL) $(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)"
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \

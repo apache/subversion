@@ -64,11 +64,18 @@
 #
 #   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \ 
 #     subversion/tests/cmdline/davautocheck.sh
+#
+# To prevent the server from advertising httpv2, pass USE_HTTPV1 in
+# the environment.
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
 trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
+
+# Ensure the server uses a known locale.
+LC_ALL=C
+export LC_ALL
 
 function stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
@@ -144,6 +151,12 @@ unset HTTPS_PROXY
 
 say "Using '$APXS'..."
 
+# Pick up $USE_HTTPV1
+ADVERTISE_V2_PROTOCOL=on
+if [ ${USE_HTTPV1:+set} ]; then
+ ADVERTISE_V2_PROTOCOL=off
+fi
+
 # Find the source and build directories. The build dir can be found if it is
 # the current working dir or the source dir.
 pushd ${SCRIPTDIR}/../../../ > /dev/null
@@ -179,14 +192,8 @@ case "`uname`" in
     ;;
 esac
 
-CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-$LDD "$CLIENT_CMD" | grep -q 'not found' \
-  && fail "Subversion client couldn't be fully linked at run-time"
-"$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
-  || fail "Subversion client couldn't find and/or load ra_dav library"
-
 httpd="$($APXS -q PROGNAME)"
-HTTPD=$(get_prog_name $httpd) || fail "HTTPD not found"
+HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 [ -x $HTTPD ] || fail "HTTPD '$HTTPD' not executable"
 
 "$HTTPD" -v 1>/dev/null 2>&1 \
@@ -315,6 +322,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
@@ -324,6 +332,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
 </Location>
 RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-test-work/repositories/\$1
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1
@@ -364,17 +373,25 @@ rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good"
 
-if [ "$HTTP_LIBRARY" = "" ]; then
-  say "Using default dav library"
-else
-  say "Using dav library '$HTTP_LIBRARY'"
-fi
-
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
 
 say "starting the tests..."
+
+CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
+$LDD "$CLIENT_CMD" | grep -q 'not found' \
+  && fail "Subversion client couldn't be fully linked at run-time"
+
+if [ "$HTTP_LIBRARY" = "" ]; then
+  say "Using default dav library"
+  "$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
+    || fail "Subversion client couldn't find and/or load ra_dav library"
+else
+  say "Requesting dav library '$HTTP_LIBRARY'"
+  "$CLIENT_CMD" --version | egrep -q "^[*] ra_$HTTP_LIBRARY" \
+    || fail "Subversion client couldn't find and/or load ra_dav library '$HTTP_LIBRARY'"
+fi
 
 if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"

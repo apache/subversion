@@ -101,6 +101,7 @@ reset_log_item(struct log_baton *lb)
   lb->log_entry->changed_paths  = NULL;
   lb->log_entry->has_children   = FALSE;
   lb->log_entry->changed_paths2 = NULL;
+  lb->log_entry->subtractive_merge = FALSE;
 
   svn_pool_clear(lb->subpool);
 }
@@ -137,6 +138,8 @@ log_start_element(int *elem, void *baton, int parent,
       { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "has-children", ELEM_has_children,
         SVN_RA_NEON__XML_CDATA },
+      { SVN_XML_NAMESPACE, "subtractive-merge", ELEM_subtractive_merge,
+        SVN_RA_NEON__XML_CDATA },
       { NULL }
     };
   const svn_ra_neon__xml_elm_t *elm
@@ -171,6 +174,9 @@ log_start_element(int *elem, void *baton, int parent,
       break;
     case ELEM_has_children:
       lb->log_entry->has_children = TRUE;
+      break;
+    case ELEM_subtractive_merge:
+      lb->log_entry->subtractive_merge = TRUE;
       break;
 
     default:
@@ -498,8 +504,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data, use_rev,
                                          pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
+                                             pool);
 
 
   err = svn_ra_neon__parsed_request(ras,

@@ -34,11 +34,61 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_config.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
+
+
+
+/* Wrapper notify_func2 function and baton for warning about
+   reduced-depth commits of copied directories.  */
+struct copy_warning_notify_baton
+{
+  svn_wc_notify_func2_t wrapped_func;
+  void *wrapped_baton;
+  svn_depth_t depth;
+  svn_boolean_t warned;
+};
+
+static void
+copy_warning_notify_func(void *baton,
+                         const svn_wc_notify_t *notify,
+                         apr_pool_t *pool)
+{
+  struct copy_warning_notify_baton *b = baton;
+
+  /* Call the wrapped notification system (if any). */
+  if (b->wrapped_func)
+    b->wrapped_func(b->wrapped_baton, notify, pool);
+
+  /* If we're being notified about a copy of a directory when our
+     commit depth is less-than-infinite, and we've not already warned
+     about this situation, then warn about it (and remember that we
+     now have.)  */
+  if ((! b->warned)
+      && (b->depth < svn_depth_infinity)
+      && (notify->kind == svn_node_dir)
+      && ((notify->action == svn_wc_notify_commit_copied) ||
+          (notify->action == svn_wc_notify_commit_copied_replaced)))
+    {
+      svn_error_t *err;
+      err = svn_cmdline_printf(pool,
+                               _("svn: The depth of this commit is '%s', "
+                                 "but copies are always performed "
+                                 "recursively in the repository.\n"),
+                               svn_depth_to_word(b->depth));
+      /* ### FIXME: Try to return this error showhow? */
+      svn_error_clear(err);
+
+      /* We'll only warn once. */
+      b->warned = TRUE;
+    }
+}
+
+
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -55,6 +105,7 @@ svn_cl__commit(apr_getopt_t *os,
   const char *base_dir;
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
+  struct copy_warning_notify_baton cwnb;
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -78,11 +129,8 @@ svn_cl__commit(apr_getopt_t *os,
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   /* Condense the targets (like commit does)... */
-  SVN_ERR(svn_path_condense_targets(&base_dir,
-                                    &condensed_targets,
-                                    targets,
-                                    TRUE,
-                                    pool));
+  SVN_ERR(svn_dirent_condense_targets(&base_dir, &condensed_targets, targets,
+                                      TRUE, pool, pool));
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
     {
@@ -97,21 +145,6 @@ svn_cl__commit(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
-  /* Copies are done server-side, and cheaply, which means they're
-   * effectively always done with infinite depth.
-   * This is a potential cause of confusion for users trying to commit
-   * copied subtrees in part by restricting the commit's depth.
-   * See issue #3699. */
-  if (opt_state->depth < svn_depth_infinity)
-    SVN_ERR(svn_cmdline_printf(pool,
-                               _("svn: warning: The depth of this commit "
-                                 "is '%s', but copied directories will "
-                                 "regardless be committed with depth '%s'. "
-                                 "You must remove unwanted children of those "
-                                 "directories in a separate commit.\n"),
-                               svn_depth_to_word(opt_state->depth),
-                               svn_depth_to_word(svn_depth_infinity)));
-    
   cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                      APR_HASH_KEY_STRING);
   if (cfg)
@@ -127,11 +160,26 @@ svn_cl__commit(apr_getopt_t *os,
                                      opt_state, base_dir,
                                      ctx->config, pool));
 
+  /* Copies are done server-side, and cheaply, which means they're
+     effectively always done with infinite depth.  This is a potential
+     cause of confusion for users trying to commit copied subtrees in
+     part by restricting the commit's depth.  See issues #3699 and #3752. */
+  if (opt_state->depth < svn_depth_infinity)
+    {
+      cwnb.wrapped_func = ctx->notify_func2;
+      cwnb.wrapped_baton = ctx->notify_baton2;
+      cwnb.depth = opt_state->depth;
+      cwnb.warned = FALSE;
+      ctx->notify_func2 = copy_warning_notify_func;
+      ctx->notify_baton2 = &cwnb;
+    }
+
   /* Commit. */
   err = svn_client_commit5(targets,
                            opt_state->depth,
                            no_unlock,
                            opt_state->keep_changelists,
+                           TRUE /* commit_as_operations */,
                            opt_state->changelists,
                            opt_state->revprop_table,
                            ! opt_state->quiet
@@ -139,20 +187,6 @@ svn_cl__commit(apr_getopt_t *os,
                            NULL,
                            ctx,
                            pool);
-  if (err)
-    {
-      svn_error_t *root_err = svn_error_root_cause(err);
-      if (root_err->apr_err == SVN_ERR_UNKNOWN_CHANGELIST)
-        {
-          /* Strip any errors wrapped around this root cause.  Note
-             that this handling differs from that of any other
-             commands, because of the way 'commit' internally harvests
-             its list of committables. */
-          root_err = svn_error_dup(root_err);
-          svn_error_clear(err);
-          err = root_err;
-        }
-    }
   SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
 
   return SVN_NO_ERROR;

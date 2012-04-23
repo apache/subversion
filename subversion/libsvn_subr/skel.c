@@ -710,6 +710,39 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
 
 
 svn_error_t *
+svn_skel__parse_prop(svn_string_t **propval,
+                     const svn_skel_t *skel,
+                     const char *propname,
+                     apr_pool_t *pool /* result_pool */)
+{
+  svn_skel_t *elt;
+
+  *propval = NULL;
+
+  /* Validate the skel. */
+  if (! is_valid_proplist_skel(skel))
+    return skel_err("proplist");
+
+  /* Look for PROPNAME in SKEL. */
+  for (elt = skel->children; elt; elt = elt->next->next)
+    {
+      if (elt->len == strlen(propname)
+          && strncmp(propname, elt->data, elt->len) == 0)
+        {
+          *propval = svn_string_ncreate(elt->next->data, elt->next->len,
+                                        pool);
+          break;
+        }
+      else
+        {
+          continue;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_skel__unparse_proplist(svn_skel_t **skel_p,
                            apr_hash_t *proplist,
                            apr_pool_t *pool)

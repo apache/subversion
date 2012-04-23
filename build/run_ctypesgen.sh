@@ -86,4 +86,4 @@ $LT_EXECUTE $PYTHON $CTYPESGEN --cpp "$cpp $CPPFLAGS $cppflags" $ldflags $includ
 (cat $abs_srcdir/$cp_relpath/csvn/core/functions.py.in; \
  sed -e '/^FILE =/d' $output | \
  perl -pe 's{(\s+\w+)\.restype = POINTER\(svn_error_t\)}{\1.restype = POINTER(svn_error_t)\n\1.errcheck = _svn_errcheck}' \
- ) > $abs_builddir/$cp_relpath/csvn/core/functions.py
+ ) > $abs_srcdir/$cp_relpath/csvn/core/functions.py

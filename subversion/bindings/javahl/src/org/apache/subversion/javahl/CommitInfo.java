@@ -25,6 +25,8 @@ package org.apache.subversion.javahl;
 
 import java.util.Date;
 
+import org.apache.subversion.javahl.types.LogDate;
+
 /**
  * This class describes a item which will be commited.
  */

@@ -35,6 +35,7 @@
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_repos_private.h"
 
 
 
@@ -125,8 +126,6 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
         action = _("Commit");
       else if (strcmp(name, "pre-revprop-change") == 0)
         action = _("Revprop change");
-      else if (strcmp(name, "pre-obliterate") == 0)
-        action = _("Obliteration");
       else if (strcmp(name, "pre-lock") == 0)
         action = _("Lock");
       else if (strcmp(name, "pre-unlock") == 0)
@@ -177,56 +176,14 @@ run_hook_cmd(svn_string_t **result,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
 {
-  apr_file_t *read_errhandle, *write_errhandle, *null_handle;
-  apr_file_t *read_outhandle, *write_outhandle;
+  apr_file_t *null_handle;
   apr_status_t apr_err;
   svn_error_t *err;
   apr_proc_t cmd_proc;
 
-  /* Create a pipe to access stderr of the child. */
-  apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't create pipe for hook '%s'"), cmd);
-
-  /* Pipes are inherited by default, but we don't want that, since
-     APR will duplicate the write end of the pipe for the child process.
-     Not closing the read end is harmless, but if the write end is inherited,
-     it will be inherited by grandchildren as well.  This causes problems
-     if a hook script puts long-running jobs in the background.  Even if
-     they redirect stderr to something else, the write end of our pipe will
-     still be open, causing us to block. */
-  apr_err = apr_file_inherit_unset(read_errhandle);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't make pipe read handle non-inherited for hook '%s'"),
-       cmd);
-
-  apr_err = apr_file_inherit_unset(write_errhandle);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't make pipe write handle non-inherited for hook '%s'"),
-       cmd);
-
   if (result)
     {
-      /* Create a pipe to access stdout of the child. */
-      apr_err = apr_file_pipe_create(&read_outhandle, &write_outhandle, pool);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't create pipe for hook '%s'"), cmd);
-
-      apr_err = apr_file_inherit_unset(read_outhandle);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err,
-           _("Can't make pipe read handle non-inherited for hook '%s'"), cmd);
-
-      apr_err = apr_file_inherit_unset(write_outhandle);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err,
-           _("Can't make pipe write handle non-inherited for hook '%s'"), cmd);
+      null_handle = NULL;
     }
   else
     {
@@ -238,26 +195,9 @@ run_hook_cmd(svn_string_t **result,
             (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
     }
 
-  err = svn_io_start_cmd(&cmd_proc, ".", cmd, args, FALSE,
-                         stdin_handle, result ? write_outhandle : null_handle,
-                         write_errhandle, pool);
-
-  /* This seems to be done automatically if we pass the third parameter of
-     apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
-     not support those parameters. We need to close the write end of the
-     pipe so we don't hang on the read end later, if we need to read it. */
-  apr_err = apr_file_close(write_errhandle);
-  if (!err && apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Error closing write end of stderr pipe"));
-
-  if (result)
-    {
-      apr_err = apr_file_close(write_outhandle);
-      if (!err && apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Error closing write end of stderr pipe"));
-    }
+  err = svn_io_start_cmd2(&cmd_proc, ".", cmd, args, FALSE,
+                          FALSE, stdin_handle, result != NULL, null_handle,
+                          TRUE, NULL, pool);
 
   if (err)
     {
@@ -266,13 +206,13 @@ run_hook_cmd(svn_string_t **result,
     }
   else
     {
-      err = check_hook_result(name, cmd, &cmd_proc, read_errhandle, pool);
+      err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
     }
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe
      and null file */
-  apr_err = apr_file_close(read_errhandle);
+  apr_err = apr_file_close(cmd_proc.err);
   if (!err && apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Error closing read end of stderr pipe"));
@@ -280,8 +220,8 @@ run_hook_cmd(svn_string_t **result,
   if (result)
     {
       svn_stringbuf_t *native_stdout;
-      SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, read_outhandle, pool));
-      apr_err = apr_file_close(read_outhandle);
+      SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, cmd_proc.out, pool));
+      apr_err = apr_file_close(cmd_proc.out);
       if (!err && apr_err)
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
@@ -347,7 +287,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
   for (extn = check_extns; *extn; ++extn)
     {
       const char *const hook_path =
-        (**extn ? apr_pstrcat(pool, hook, *extn, NULL) : hook);
+        (**extn ? apr_pstrcat(pool, hook, *extn, (char *)NULL) : hook);
 
       svn_node_kind_t kind;
       if (!(err = svn_io_check_resolved_path(hook_path, &kind, pool))
@@ -642,92 +582,6 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t  *
-svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
-                                svn_revnum_t rev,
-                                const char *author,
-                                const svn_string_t *obliteration_set,
-                                apr_pool_t *pool)
-{
-  const char *hook = svn_repos_pre_obliterate_hook(repos, pool);
-  svn_boolean_t broken_link;
-
-  if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)
-    {
-      return hook_symlink_error(hook);
-    }
-  else if (hook)
-    {
-      const char *args[4];
-      apr_file_t *stdin_handle = NULL;
-
-      /* Pass the Obliteration Set as stdin to hook */
-      SVN_ERR(create_temp_file(&stdin_handle, obliteration_set, pool));
-
-      args[0] = hook;
-      args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-      args[2] = author ? author : "";
-      args[3] = NULL;
-
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_OBLITERATE, hook, args,
-                           stdin_handle, pool));
-
-      SVN_ERR(svn_io_file_close(stdin_handle, pool));
-    }
-  else
-    {
-      /* If the pre- hook doesn't exist at all, then default to
-         MASSIVE PARANOIA.  Obliteration is a lossy
-         operation; so unless the repository admininstrator has
-         *deliberately* created the pre-hook, disallow all changes. */
-      return
-        svn_error_create
-        (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
-         _("Repository has not been enabled to accept obliteration"));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t  *
-svn_repos__hooks_post_obliterate(svn_repos_t *repos,
-                                 svn_revnum_t rev,
-                                 const char *author,
-                                 const svn_string_t *obliteration_set,
-                                 apr_pool_t *pool)
-{
-  const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
-  svn_boolean_t broken_link;
-
-  if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)
-    {
-      return hook_symlink_error(hook);
-    }
-  else if (hook)
-    {
-      const char *args[4];
-      apr_file_t *stdin_handle = NULL;
-
-      /* Pass the Obliteration Set as stdin to hook */
-      SVN_ERR(create_temp_file(&stdin_handle, obliteration_set, pool));
-
-      args[0] = hook;
-      args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-      args[2] = author ? author : "";
-      args[3] = NULL;
-
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook,
-                           args, stdin_handle, pool));
-
-      SVN_ERR(svn_io_file_close(stdin_handle, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 
 svn_error_t  *

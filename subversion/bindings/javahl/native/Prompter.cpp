@@ -225,7 +225,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
-    return false;
+    return NULL;
 
   static jmethodID mid = 0;
   static jmethodID mid2 = 0;

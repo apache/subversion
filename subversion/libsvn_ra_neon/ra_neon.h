@@ -61,7 +61,7 @@ extern "C" {
 typedef int svn_ra_neon__xml_elmid;
 
 /** XML element */
-typedef struct {
+typedef struct svn_ra_neon__xml_elm_t {
   /** XML namespace. */
   const char *nspace;
 
@@ -146,6 +146,8 @@ typedef struct svn_ra_neon__session_t {
   const char *rev_root_stub;    /* for accessing REV/PATH pairs */
   const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
   const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
+  const char *vtxn_stub;        /* for accessing transactions (i.e. txnprops) */
+  const char *vtxn_root_stub;   /* for accessing TXN/PATH pairs */
 
   /*** End HTTP v2 stuff ***/
 
@@ -154,7 +156,7 @@ typedef struct svn_ra_neon__session_t {
 #define SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras) ((ras)->me_resource != NULL)
 
 
-typedef struct {
+typedef struct svn_ra_neon__request_t {
   ne_request *ne_req;                   /* neon request structure */
   ne_session *ne_sess;                  /* neon session structure */
   svn_ra_neon__session_t *sess;          /* DAV session structure */
@@ -299,13 +301,15 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
 svn_error_t * svn_ra_neon__abort_commit(void *session_baton,
                                         void *edit_baton);
 
-svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool);
+svn_error_t * svn_ra_neon__get_mergeinfo(
+  svn_ra_session_t *session,
+  apr_hash_t **mergeinfo,
+  const apr_array_header_t *paths,
+  svn_revnum_t revision,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t include_descendants,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      const svn_ra_reporter3_t **reporter,
@@ -434,7 +438,7 @@ svn_error_t *svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
 
 #define SVN_RA_NEON__PROP_DEADPROP_COUNT SVN_DAV_PROP_NS_DAV "deadprop-count"
 
-typedef struct {
+typedef struct svn_ra_neon__resource_t {
   /* what is the URL for this resource */
   const char *url;
 
@@ -859,7 +863,9 @@ enum {
   ELEM_mergeinfo_info,
   ELEM_has_children,
   ELEM_merged_revision,
-  ELEM_deleted_rev_report
+  ELEM_deleted_rev_report,
+  ELEM_validate_inherited_mergeinfo,
+  ELEM_subtractive_merge,
 };
 
 /* ### docco */

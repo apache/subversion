@@ -52,8 +52,6 @@ const apr_array_header_t *Targets::array(const SVN::Pool &pool)
 {
   if (m_strArray != NULL)
     {
-      JNIEnv *env = JNIUtil::getEnv();
-
       const std::vector<std::string> &vec = m_strArray->vector();
 
       std::vector<std::string>::const_iterator it;

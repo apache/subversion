@@ -47,14 +47,19 @@ svn_client_url_from_path2(const char **url,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_opt_revision_t revision;
-
   if (!svn_path_is_url(path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, scratch_pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url,
+                                      scratch_pool));
 
-  revision.kind = svn_opt_revision_unspecified;
-  return svn_client__derive_location(url, NULL, path_or_url, &revision,
-                                     NULL, ctx, result_pool, scratch_pool);
+      return svn_error_return(
+                 svn_wc__node_get_url(url, ctx->wc_ctx, path_or_url,
+                                      result_pool, scratch_pool));
+    }
+  else
+    *url = apr_pstrdup(result_pool, path_or_url);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -64,19 +69,12 @@ svn_client_root_url_from_path(const char **url,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
-  svn_opt_revision_t peg_revision;
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
 
-  if (svn_path_is_url(path_or_url))
-    {
-      peg_revision.kind = svn_opt_revision_head;
-    }
-  else
-    {
-      peg_revision.kind = svn_opt_revision_base;
-      SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
-    }
-  return svn_client__get_repos_root(url, path_or_url, &peg_revision,
-                                    ctx, pool, pool);
+  return svn_error_return(
+           svn_client__get_repos_root(url, path_or_url,
+                                      ctx, pool, pool));
 }
 
 svn_error_t *
@@ -138,8 +136,12 @@ svn_client__entry_location(const char **url,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const char *copyfrom_url;
-  svn_revnum_t copyfrom_rev;
+  svn_boolean_t is_copy;
+  const char *repos_root_url;
+  const char *repos_relpath;
+  svn_revnum_t origin_rev;
+
+  *url = NULL;
 
   /* This function doesn't contact the repository, so error out if
      asked to do so. */
@@ -147,58 +149,68 @@ svn_client__entry_location(const char **url,
       || peg_rev_kind == svn_opt_revision_head)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                         &copyfrom_url, &copyfrom_rev,
-                                         NULL, wc_ctx, local_abspath,
-                                         result_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_origin(&is_copy, &origin_rev, &repos_relpath,
+                                  &repos_root_url, NULL,
+                                  wc_ctx, local_abspath, TRUE,
+                                  scratch_pool, scratch_pool));
 
-  if (copyfrom_url && peg_rev_kind == svn_opt_revision_working)
+  if (is_copy
+      /* ### Just && peg_rev_kind == svn_opt_revision_base ?? */
+      && peg_rev_kind != svn_opt_revision_working
+      && peg_rev_kind != svn_opt_revision_committed
+      && peg_rev_kind != svn_opt_revision_previous)
     {
-      *url = copyfrom_url;
-      if (revnum)
-        *revnum = copyfrom_rev;
-    }
-  else
-    {
-      const char *node_url;
-
-      SVN_ERR(svn_wc__node_get_url(&node_url, wc_ctx, local_abspath,
+      /* Obtain BASE url or future url */
+      SVN_ERR(svn_wc__node_get_url(url, wc_ctx, local_abspath,
                                    result_pool, scratch_pool));
-      if (node_url)
-        {
-          *url = node_url;
-          if (revnum)
-            {
-              if ((peg_rev_kind == svn_opt_revision_committed) ||
-                  (peg_rev_kind == svn_opt_revision_previous))
-                {
-                  SVN_ERR(svn_wc__node_get_changed_info(revnum, NULL, NULL,
-                                                        wc_ctx,
-                                                        local_abspath,
-                                                        result_pool,
-                                                        scratch_pool));
-                  if (peg_rev_kind == svn_opt_revision_previous)
-                    *revnum = *revnum - 1;
-                }
-              else
-                {
-                  /* Local modifications are not relevant here, so consider
-                     svn_opt_revision_unspecified, svn_opt_revision_number,
-                     svn_opt_revision_base, and svn_opt_revision_working
-                     as the same. */
-                  SVN_ERR(svn_wc__node_get_base_rev(revnum,
-                                                    wc_ctx, local_abspath,
-                                                    scratch_pool));
-                }
-            }
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                   _("Entry for '%s' has no URL"),
-                                   svn_dirent_local_style(local_abspath,
-                                                          scratch_pool));
-        }
+    }
+  else if (repos_relpath)
+    {
+      *url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                         result_pool);
+    }
+
+  if (! *url)
+    {
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("Entry for '%s' has no URL"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+
+  if (revnum)
+    *revnum = origin_rev;
+  else
+    return SVN_NO_ERROR;
+
+  switch (peg_rev_kind)
+    {
+      case svn_opt_revision_committed:
+      case svn_opt_revision_previous:
+        SVN_ERR(svn_wc__node_get_changed_info(revnum, NULL, NULL,
+                                              wc_ctx, local_abspath,
+                                              scratch_pool, scratch_pool));
+
+        if (peg_rev_kind == svn_opt_revision_previous)
+          *revnum = *revnum - 1;
+        break;
+
+      case svn_opt_revision_base:
+        if (is_copy)
+          {
+            /* We really want to look at BASE below the origin */
+            SVN_ERR(svn_wc__node_get_base_rev(revnum, wc_ctx, local_abspath,
+                                              scratch_pool));
+          }
+
+      case svn_opt_revision_working:
+      /*case svn_opt_revision_unspecified:
+      case svn_opt_revision_number:
+      case svn_opt_revision_date:
+      case svn_opt_revision_head:*/
+      default:
+        /* Use the value we got from the origin */
+        break;
     }
 
   return SVN_NO_ERROR;

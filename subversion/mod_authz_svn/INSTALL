@@ -79,6 +79,26 @@ II.   Configuration
          though AuthzSVNAnonymous was set to 'No'.  The AuthzSVNAnonymous
          directive prevents the anonymous access check from being run.
 
+      D. Example 4: Per-repository access file
+
+         This configuration allows to use SVNParentPath but have
+         different authz files per repository.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNReposRelativeAccessFile filename
+
+           Require valid-user
+         </Location>
+
+         NOTE: AuthzSVNReposRelativeAccessFile filename causes the authz file
+         to be read from <repo path>/conf/<filename>
 
    2. Specifying permissions
 

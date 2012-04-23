@@ -324,7 +324,7 @@ class RemoteRepository(object):
     def set_log_func(self, log_func):
         """Register a callback to get a log message for commit and
         commit-like operations. LOG_FUNC should take an array as an argument,
-        which holds the files to be commited. It should return a list of the
+        which holds the files to be committed. It should return a list of the
         form [LOG, FILE] where LOG is a log message and FILE is the temporary
         file, if one was created instead of a log message. If LOG is None,
         the operation will be canceled and FILE will be treated as the
@@ -408,7 +408,7 @@ class LocalRepository(object):
           ... absent, then we return svn_node_none.
           ... a regular file, then we return svn_node_file.
           ... a directory, then we return svn_node_dir
-          ... unknown, then we return svn_node_unknowna
+          ... unknown, then we return svn_node_unknown
         """
         assert(not encoded)
         root = self.fs.root(rev=rev, pool=self.iterpool)

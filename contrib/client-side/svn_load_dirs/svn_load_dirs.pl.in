@@ -1416,7 +1416,7 @@ sub make_targets_file
 
   foreach my $file (@_)
     {
-      print TARGETS "$file\n";
+      print TARGETS "$file\@\n";
     }
 
   close(TARGETS)

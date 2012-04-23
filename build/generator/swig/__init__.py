@@ -70,9 +70,8 @@ class Generator:
       swig_version = _exec.output([self.swig_path, "-version"])
       m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
       if m:
-        return int(
-          "%s0%s0%s" % (m.group(1), m.group(2), m.group(3)))
+        return (m.group(1), m.group(2), m.group(3))
     except AssertionError:
       pass
-    return 0
+    return (0, 0, 0)
 

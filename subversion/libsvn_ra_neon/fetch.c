@@ -55,18 +55,7 @@
 #include "ra_neon.h"
 
 
-typedef struct {
-  /* the information for this subdir. if rsrc==NULL, then this is a sentinel
-     record in fetch_ctx_t.subdirs to close the directory implied by the
-     parent_baton member. */
-  svn_ra_neon__resource_t *rsrc;
-
-  /* the directory containing this subdirectory. */
-  void *parent_baton;
-
-} subdir_t;
-
-typedef struct {
+typedef struct file_read_ctx_t {
   apr_pool_t *pool;
 
   /* these two are the handler that the editor gave us */
@@ -79,28 +68,25 @@ typedef struct {
 
 } file_read_ctx_t;
 
-typedef struct {
+typedef struct file_write_ctx_t {
   svn_boolean_t do_checksum;  /* only accumulate checksum if set */
   svn_checksum_ctx_t *checksum_ctx; /* accumulating checksum of file contents */
   svn_stream_t *stream;       /* stream to write file contents to */
 } file_write_ctx_t;
 
-typedef struct {
+typedef struct custom_get_ctx_t {
   svn_ra_neon__request_t *req;  /* Used to propagate errors out of the reader */
   int checked_type;             /* have we processed ctype yet? */
 
   void *subctx;
 } custom_get_ctx_t;
 
-#define POP_SUBDIR(sds) (APR_ARRAY_IDX((sds), --(sds)->nelts, subdir_t *))
-#define PUSH_SUBDIR(sds,s) (APR_ARRAY_PUSH((sds), subdir_t *) = (s))
-
 typedef svn_error_t * (*prop_setter_t)(void *baton,
                                        const char *name,
                                        const svn_string_t *value,
                                        apr_pool_t *pool);
 
-typedef struct {
+typedef struct dir_item_t {
   /* The baton returned by the editor's open_root/open_dir */
   void *baton;
 
@@ -124,7 +110,7 @@ typedef struct {
 
 } dir_item_t;
 
-typedef struct {
+typedef struct report_baton_t {
   svn_ra_neon__session_t *ras;
 
   apr_file_t *tmpfile;
@@ -202,10 +188,11 @@ typedef struct {
   /* Use an intermediate tmpfile for the REPORT response. */
   svn_boolean_t spool_response;
 
-  /* A modern server will understand our "send-all" attribute on the
-     update report request, and will put a "send-all" attribute on
-     its response.  If we see that attribute, we set this to true,
-     otherwise, it stays false (i.e., it's not a modern server). */
+  /* If this report is for a switch, update, or status (but not a
+     merge/diff), then we made the update report request with the "send-all"
+     attribute.  The server reponds to this by putting a "send-all" attribute
+     in its response.  If we see that attribute, we set this to true,
+     otherwise, it stays false. */
   svn_boolean_t receiving_all;
 
   /* Hash mapping 'const char *' paths -> 'const char *' lock tokens. */
@@ -346,7 +333,7 @@ static svn_error_t *add_props(apr_hash_t *props,
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc. */
           SVN_ERR((*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX,
-                                               key + NSLEN, NULL),
+                                               key + NSLEN, (char *)NULL),
                             val, pool));
         }
 #undef NSLEN
@@ -640,7 +627,8 @@ filter_props(apr_hash_t *props,
       if (strncmp(name, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
         {
           apr_hash_set(props,
-                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN, NULL),
+                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN,
+                                   (char *)NULL),
                        APR_HASH_KEY_STRING,
                        value);
           continue;
@@ -666,6 +654,12 @@ filter_props(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
+static const ne_propname restype_props[] =
+{
+  { "DAV:", "resourcetype" },
+  { NULL }
+};
+
 svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                                    const char *path,
                                    svn_revnum_t revision,
@@ -677,7 +671,7 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
   svn_ra_neon__resource_t *rsrc;
   const char *final_url;
   svn_ra_neon__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component(ras->url->data, path, pool);
+  const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -696,11 +690,27 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                                              ras,
                                              url, revision,
                                              pool));
-      final_url = svn_path_url_add_component(bc_url.data,
-                                             bc_relative.data,
-                                             pool);
+      final_url = svn_path_url_add_component2(bc_url.data,
+                                              bc_relative.data,
+                                              pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
+    }
+
+  SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url,
+                                          NULL,
+                                          props ? NULL : restype_props,
+                                          pool));
+  if (rsrc->is_collection)
+    {
+      return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
+                              _("Can't get text contents of a directory"));
+    }
+
+  if (props)
+    {
+      *props = apr_hash_make(pool);
+      SVN_ERR(filter_props(*props, rsrc, TRUE, pool));
     }
 
   if (stream)
@@ -766,15 +776,6 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
         }
     }
 
-  if (props)
-    {
-      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url,
-                                              NULL, NULL /* all props */,
-                                              pool));
-      *props = apr_hash_make(pool);
-      SVN_ERR(filter_props(*props, rsrc, TRUE, pool));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -802,7 +803,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
   apr_size_t final_url_n_components;
   svn_boolean_t supports_deadprop_count;
   svn_ra_neon__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component(ras->url->data, path, pool);
+  const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -821,9 +822,9 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                              ras,
                                              url, revision,
                                              pool));
-      final_url = svn_path_url_add_component(bc_url.data,
-                                             bc_relative.data,
-                                             pool);
+      final_url = svn_path_url_add_component2(bc_url.data,
+                                              bc_relative.data,
+                                              pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
@@ -957,7 +958,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
           svn_dirent_t *entry;
 
           apr_hash_this(hi, &key, NULL, &val);
-          childname =  key;
+          childname = svn_relpath_canonicalize(key, pool);
           resource = val;
 
           /* Skip the effective '.' entry that comes back from
@@ -1064,7 +1065,8 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
             }
 
           apr_hash_set(*dirents,
-                       svn_path_uri_decode(svn_uri_basename(childname, pool),
+                       svn_path_uri_decode(svn_relpath_basename(childname,
+                                                                pool),
                                            pool),
                        APR_HASH_KEY_STRING, entry);
         }
@@ -1097,7 +1099,7 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
      PROPFINDs. */
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
     {
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
                                                  latest_revnum, pool));
       if (! SVN_IS_VALID_REVNUM(*latest_revnum))
         return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
@@ -1601,19 +1603,16 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf, subpool);
 
-      /* Property fetching is implied in addition.  This flag is only
-         for parsing old-style reports; it is ignored when talking to
-         a modern server. */
+      /* Property fetching is implied in addition. */
       TOP_DIR(rb).fetch_props = TRUE;
 
       bc_url = svn_xml_get_attr_value("bc-url", atts);
 
-      /* In non-modern report responses, we're just told to fetch the
+      /* If we are not in send-all mode, we're just told to fetch the
          props later.  In that case, we can at least do a pre-emptive
          depth-1 propfind on the directory right now; this prevents
          individual propfinds on added-files later on, thus reducing
-         the number of network turnarounds (though not by as much as
-         simply getting a modern report response!).  */
+         the number of network turnarounds. */
       if ((! rb->receiving_all) && bc_url)
         {
           apr_hash_t *bc_children;
@@ -1724,9 +1723,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
                                       crev, rb->file_pool,
                                       &rb->file_baton));
 
-      /* Property fetching is implied in addition.  This flag is only
-         for parsing old-style reports; it is ignored when talking to
-         a modern server. */
+      /* Property fetching is implied in addition. */
       rb->fetch_props = TRUE;
 
       break;
@@ -2013,8 +2010,8 @@ cdata_handler(void *userdata, int state, const char *cdata, size_t len)
             /* Short write without associated error?  "Can't happen." */
             return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                                      _("Error writing to '%s': unexpected EOF"),
-                                     svn_path_local_style(rb->namestr->data,
-                                                          rb->pool));
+                                     svn_relpath_local_style(rb->namestr->data,
+                                                             rb->pool));
           }
       }
       break;
@@ -2258,7 +2255,8 @@ end_element(void *userdata, int state,
           rb->file_baton ? rb->file_pool : TOP_DIR(rb).pool;
         prop_setter_t setter =
           rb->file_baton ? editor->change_file_prop : editor->change_dir_prop;
-        const char *name = apr_pstrcat(pool, elm->nspace, elm->name, NULL);
+        const char *name = apr_pstrcat(pool, elm->nspace, elm->name,
+                                       (char *)NULL);
         void *baton = rb->file_baton ? rb->file_baton : TOP_DIR(rb).baton;
         svn_string_t valstr;
 

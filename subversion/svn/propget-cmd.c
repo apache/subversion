@@ -61,7 +61,7 @@ stream_write(svn_stream_t *out,
   SVN_ERR(svn_stream_write(out, data, &write_len));
   if (write_len != len)
     return svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                            "Error writing to stream");
+                            _("Error writing to stream"));
   return SVN_NO_ERROR;
 }
 
@@ -140,6 +140,12 @@ print_properties(svn_stream_t *out,
                                 ? _("Properties on '%s':\n")
                                 : "%s - ", filename);
           SVN_ERR(svn_cmdline_cstring_from_utf8(&header, header, iterpool));
+          SVN_ERR(svn_subst_translate_cstring2(header, &header,
+                                               APR_EOL_STR,  /* 'native' eol */
+                                               FALSE, /* no repair */
+                                               NULL,  /* no keywords */
+                                               FALSE, /* no expansion */
+                                               iterpool));
           SVN_ERR(stream_write(out, header, strlen(header)));
         }
 
@@ -149,7 +155,7 @@ print_properties(svn_stream_t *out,
           apr_hash_t *hash = apr_hash_make(iterpool);
 
           apr_hash_set(hash, pname_utf8, APR_HASH_KEY_STRING, propval);
-          svn_cl__print_prop_hash(hash, FALSE, iterpool);
+          SVN_ERR(svn_cl__print_prop_hash(out, hash, FALSE, iterpool));
         }
       else
         {
@@ -184,7 +190,6 @@ svn_cl__propget(apr_getopt_t *os,
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   svn_stream_t *out;
-  int i;
 
   if (opt_state->verbose && (opt_state->revprop || opt_state->strict
                              || opt_state->xml))
@@ -267,6 +272,7 @@ svn_cl__propget(apr_getopt_t *os,
   else  /* operate on a normal, versioned property (not a revprop) */
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      int i;
 
       if (opt_state->xml)
         SVN_ERR(svn_cl__xml_print_header("properties", subpool));

@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import re, os
+import re, os, stat
 
 # Our testing module
 import svntest
@@ -34,9 +34,12 @@ from svntest.actions import run_and_verify_svn
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -229,6 +232,7 @@ def revert_from_wc_root(sbox):
   svntest.actions.run_and_verify_status('', expected_output)
 
 
+@Issue(1663)
 def revert_reexpand_keyword(sbox):
   "revert reexpands manually contracted keyword"
 
@@ -289,6 +293,7 @@ def revert_reexpand_keyword(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #1775:
 # Should be able to revert a file with no properties i.e. no prop-base
+@Issue(1775)
 def revert_replaced_file_without_props(sbox):
   "revert a replaced file with no properties"
 
@@ -340,6 +345,8 @@ def revert_replaced_file_without_props(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #876:
 # svn revert of an svn move'd file does not revert the file
+@XFail()
+@Issue(876)
 def revert_moved_file(sbox):
     "revert a moved file"
 
@@ -374,7 +381,7 @@ def revert_moved_file(sbox):
 #
 # It is like merge_file_replace (in merge_tests.py), but reverts file
 # instead of commit.
-
+@Issue(2135)
 def revert_file_merge_replace_with_history(sbox):
   "revert a merge replacement of file with history"
 
@@ -537,7 +544,7 @@ def revert_after_second_replace(sbox):
 # Tests for issue #2517.
 #
 # Manual conflict resolution leads to spurious revert report.
-
+@Issue(2517)
 def revert_after_manual_conflict_resolution__text(sbox):
   "revert after manual text-conflict resolution"
 
@@ -728,6 +735,7 @@ def revert_replaced_with_history_file_1(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2804.
+@Issue(2804)
 def status_of_missing_dir_after_revert(sbox):
   "status after schedule-delete, revert, and local rm"
 
@@ -771,6 +779,7 @@ def status_of_missing_dir_after_revert(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2804 with replaced directory
+@Issue(2804)
 def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   "status after replace+, revert, and local rm"
 
@@ -847,15 +856,8 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  revert_paths = [G_path,
-                  os.path.join(G_path, 'alpha'),
-                  os.path.join(G_path, 'beta')]
-
-  if svntest.main.wc_is_singledb(wc_dir):
-    # These nodes are not lost in single-db
-    revert_paths += [ os.path.join(G_path, 'pi'),
-                      os.path.join(G_path, 'rho'),
-                      os.path.join(G_path, 'tau')]
+  revert_paths = [G_path] + [os.path.join(G_path, child)
+                             for child in ['alpha', 'beta', 'pi', 'rho', 'tau']]
 
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])
@@ -886,6 +888,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                      wc_dir)
 
 # Test for issue #2928.
+@Issue(2928)
 def revert_replaced_with_history_file_2(sbox):
   "reverted replace with history restores checksum"
 
@@ -988,12 +991,12 @@ def revert_add_over_not_present_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/C')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
   main.run_svn(None, 'mkdir', os.path.join(wc_dir, 'A/C'))
-  
+
   # This failed in some WC-NG intermediate format (r927318-r958992).
   main.run_svn(None, 'revert', os.path.join(wc_dir, 'A/C'))
-  
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -1018,13 +1021,172 @@ def revert_added_tree(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@Issue(3834)
 def revert_child_of_copy(sbox):
-  "revert a child of a copied directory does nothing"
+  "revert a child of a copied directory"
 
   sbox.build()
   wc_dir = sbox.wc_dir
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', sbox.ospath('A/B/E'), sbox.ospath('A/B/E2'))
+                                     'cp',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
+
+
+  svntest.main.file_append(sbox.ospath('A/B/E2/beta'), 'extra text\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E2'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'  : Item(status='M ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # First revert removes text change, child is still copied
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E2/beta')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E2/beta'))
+  expected_status.tweak('A/B/E2/beta', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Second revert of child does nothing, child is still copied
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', sbox.ospath('A/B/E2/beta'))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@Issue(3783)
+def revert_non_recusive_after_delete(sbox):
+  "non-recursive revert after delete"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/B'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
+                        'A/B/lambda', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This appears to work but gets the op-depth wrong
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B'))
+  expected_status.tweak('A/B', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='R ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Since the op-depth was wrong A/B/E erroneously remains deleted
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def revert_permissions_only(sbox):
+  "permission-only reverts"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Helpers pinched/adapted from lock_tests.py.  Put them somewhere common?
+  def check_writability(path, writable):
+    bits = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
+    mode = os.stat(path)[0]
+    if bool(mode & bits) != writable:
+      raise svntest.Failure("path '%s' is unexpectedly %s (mode %o)"
+                            % (path, ["writable", "read-only"][writable], mode))
+
+  def is_writable(path):
+    "Raise if PATH is not writable."
+    check_writability(path, True)
+
+  def is_readonly(path):
+    "Raise if PATH is not readonly."
+    check_writability(path, False)
+
+  def check_executability(path, executable):
+    bits = stat.S_IXGRP | stat.S_IXOTH | stat.S_IEXEC
+    mode = os.stat(path)[0]
+    if bool(mode & bits) != executable:
+      raise svntest.Failure("path '%s' is unexpectedly %s (mode %o)"
+                            % (path,
+                               ["executable", "non-executable"][executable],
+                               mode))
+
+  def is_executable(path):
+    "Raise if PATH is not executable."
+    check_executability(path, True)
+
+  def is_non_executable(path):
+    "Raise if PATH is executable."
+    check_executability(path, False)
+
+
+  os.chmod(sbox.ospath('A/B/E/alpha'), 0444);  # read-only
+  is_readonly(sbox.ospath('A/B/E/alpha'))
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E/alpha'))
+  is_writable(sbox.ospath('A/B/E/alpha'))
+
+  if svntest.main.is_posix_os():
+    os.chmod(sbox.ospath('A/B/E/beta'), 0777);   # executable
+    is_executable(sbox.ospath('A/B/E/beta'))
+    expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'revert', sbox.ospath('A/B/E/beta'))
+    is_non_executable(sbox.ospath('A/B/E/beta'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:needs-lock', '1',
+                                     sbox.ospath('A/B/E/alpha'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:executable', '1',
+                                     sbox.ospath('A/B/E/beta'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha': Item(verb='Sending'),
+    'A/B/E/beta':  Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', wc_rev='2')
+  expected_status.tweak('A/B/E/beta',  wc_rev='2')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  os.chmod(sbox.ospath('A/B/E/alpha'), 0666);  # not read-only
+  is_writable(sbox.ospath('A/B/E/alpha'))
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E/alpha'))
+  is_readonly(sbox.ospath('A/B/E/alpha'))
+
+  if svntest.main.is_posix_os():
+    os.chmod(sbox.ospath('A/B/E/beta'), 0666);   # not executable
+    is_non_executable(sbox.ospath('A/B/E/beta'))
+    expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'revert', sbox.ospath('A/B/E/beta'))
+    is_executable(sbox.ospath('A/B/E/beta'))
+
+@XFail()
+@Issue(3851)
+def revert_copy_depth_files(sbox):
+  "revert a copy with depth=files"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -1034,11 +1196,96 @@ def revert_child_of_copy(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Revert of child of copy does nothing, status is unchanged
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'revert', sbox.ospath('A/B/E2/beta'))
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % sbox.ospath(path) for path in ['A/B/E2',
+                                                       'A/B/E2/alpha',
+                                                       'A/B/E2/beta']])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth', 'files',
+                                     sbox.ospath('A/B/E2'))
+
+  expected_status.remove('A/B/E2', 'A/B/E2/alpha', 'A/B/E2/beta')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+@Issue(3851)
+def revert_nested_add_depth_immediates(sbox):
+  "revert a nested add with depth=immediates"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '--parents', sbox.ospath('A/X/Y'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/X'       : Item(status='A ', wc_rev='0'),
+    'A/X/Y'     : Item(status='A ', wc_rev='0'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % sbox.ospath(path) for path in ['A/X', 'A/X/Y']])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth', 'immediates',
+                                     sbox.ospath('A/X'))
+
+  expected_status.remove('A/X', 'A/X/Y')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@XFail()
+@Issue(3859)
+def revert_empty_actual(sbox):
+  "revert with superfluous actual node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), 'their text\n')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a NODES row with op-depth>0
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-r', '1',
+                                     sbox.repo_url + '/A/B/E/alpha',
+                                     sbox.ospath('alpha'))
+
+  # Merge to create an ACTUAL with a conflict
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'alpha' : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.file_append(sbox.ospath('alpha'), 'my text\n')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '--accept', 'postpone',
+                                     '^/A/B/E/alpha', sbox.ospath('alpha'))
+  expected_status.tweak('alpha', status='CM', entry_status='A ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Clear merge property and remove conflict files
+  sbox.simple_propdel('svn:mergeinfo', 'alpha')
+  os.remove(sbox.ospath('alpha.merge-left.r1'))
+  os.remove(sbox.ospath('alpha.merge-right.r2'))
+  os.remove(sbox.ospath('alpha.working'))
+
+  # XFail here: revert removes the NODES row so notification should
+  # occur but the superfluous ACTUAL node suppresses it
+  expected_status.tweak('alpha', status='A ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Reverted '%s'\n" % sbox.ospath('alpha')],
+                                     [],
+                                     'revert', sbox.ospath('alpha'))
+
+  expected_status.remove('alpha')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+                                     
 
 ########################################################################
 # Run the tests
@@ -1049,7 +1296,7 @@ test_list = [ None,
               revert_from_wc_root,
               revert_reexpand_keyword,
               revert_replaced_file_without_props,
-              XFail(revert_moved_file),
+              revert_moved_file,
               revert_wc_to_wc_replace_with_props,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
@@ -1068,6 +1315,11 @@ test_list = [ None,
               revert_add_over_not_present_dir,
               revert_added_tree,
               revert_child_of_copy,
+              revert_non_recusive_after_delete,
+              revert_permissions_only,
+              revert_copy_depth_files,
+              revert_nested_add_depth_immediates,
+              revert_empty_actual,
              ]
 
 if __name__ == '__main__':

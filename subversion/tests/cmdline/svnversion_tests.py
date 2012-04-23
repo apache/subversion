@@ -33,8 +33,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 #----------------------------------------------------------------------
@@ -103,7 +107,9 @@ def svnversion_test(sbox):
   if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                            expected_output,
                                            expected_disk,
-                                           expected_status):
+                                           expected_status,
+                                           None, None, None, None, None,
+                                           False, '--ignore-ancestry'):
     raise svntest.Failure
 
   # Prop modified, mixed, part wc switched
@@ -166,6 +172,7 @@ def svnversion_test(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(3816)
 def ignore_externals(sbox):
   "test 'svnversion' with svn:externals"
   sbox.build()
@@ -174,7 +181,10 @@ def ignore_externals(sbox):
 
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
-  externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
+  externals_desc = """\
+ext-dir -r 1 %s/A/D/G
+ext-file -r 1 %s/A/D/H/omega
+""" % (repo_url, repo_url)
   (fd, tmp_f) = tempfile.mkstemp(dir=wc_dir)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -194,11 +204,13 @@ def ignore_externals(sbox):
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  ext_path = os.path.join(C_path, 'ext')
+  ext_dir_path = os.path.join(C_path, 'ext-dir')
+  ext_file_path = os.path.join(C_path, 'ext-file')
   expected_infos = [
       { 'Revision' : '^1$' },
+      { 'Revision' : '^1$' },
     ]
-  svntest.actions.run_and_verify_info(expected_infos, ext_path)
+  svntest.actions.run_and_verify_info(expected_infos, ext_dir_path, ext_file_path)
 
   svntest.actions.run_and_verify_svnversion("working copy with svn:externals",
                                             wc_dir, repo_url,
@@ -207,6 +219,7 @@ def ignore_externals(sbox):
 #----------------------------------------------------------------------
 
 # Test for issue #3461 'excluded subtrees are not detected by svnversion'
+@Issue(3461)
 def svnversion_with_excluded_subtrees(sbox):
   "test 'svnversion' with excluded subtrees"
   sbox.build()
@@ -243,6 +256,7 @@ def svnversion_with_structural_changes(sbox):
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 
+  # Test a copy
   iota_path = os.path.join(wc_dir, 'iota')
   iota_copy_path = os.path.join(wc_dir, 'iota_copy')
 
@@ -253,7 +267,7 @@ def svnversion_with_structural_changes(sbox):
                                             iota_copy_path, repo_url +
                                             '/iota_copy',
                                             [ "Uncommitted local addition, "
-                                            "copy or move\n" ], 
+                                            "copy or move\n" ],
                                             [])
   C_path = os.path.join(wc_dir, 'A', 'C')
   C_copy_path = os.path.join(wc_dir, 'C_copy')
@@ -264,8 +278,88 @@ def svnversion_with_structural_changes(sbox):
                                             C_copy_path, repo_url +
                                             '/C_copy',
                                             [ "Uncommitted local addition, "
-                                            "copy or move\n" ], 
+                                            "copy or move\n" ],
                                             [])
+  sbox.simple_commit()
+
+  # Test deletion
+  sbox.simple_rm('iota')
+  svntest.actions.run_and_verify_svnversion("Deleted file",
+                                            sbox.ospath('iota'),
+                                            repo_url + '/iota',
+                                            [],
+                                            [ "'%s' doesn't exist\n" % \
+                                              sbox.ospath('iota')],
+                                            )
+  svntest.actions.run_and_verify_svnversion("Deleted file", wc_dir, repo_url,
+                                            [ "1:2M\n" ], [])
+
+def committed_revisions(sbox):
+  "test 'svnversion --committed'" 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  sbox.simple_copy('iota', 'iota2')
+  sbox.simple_commit()
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svnversion("Committed revisions", wc_dir, repo_url,
+                                            [ "1:2\n" ], [],
+                                            "--committed")
+
+def non_reposroot_wc(sbox):
+  "test 'svnversion' on a non-repos-root working copy"
+  sbox.build(create_wc=False)
+  wc_dir = sbox.add_wc_path('wc2')
+  repo_url = sbox.repo_url + "/A/B"
+  svntest.main.run_svn(None, 'checkout', repo_url, wc_dir)
+  svntest.actions.run_and_verify_svnversion("Non-repos-root wc dir",
+                                            wc_dir, repo_url,
+                                            [ "1\n" ], [])
+
+@Issue(3858)
+def child_switched(sbox):
+  "test svnversion output for switched children"
+  sbox.build()#sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Copy A to A2
+  sbox.simple_copy('A', 'branch')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Switch A/B to a sibling.
+  sbox.simple_switch(repo_url + '/A/D', 'A/B')
+
+  # This should detect the switch at A/B
+  svntest.actions.run_and_verify_svnversion(None, wc_dir, None,
+                                            [ "2S\n" ], [])
+
+  # But A/B/G and its children are not switched by itself
+  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B/G'),
+                                            None, [ "2\n" ], [])
+
+  # And A/B isn't when you look at it directly
+  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B'),
+                                            None, [ "2\n" ], [])
+
+  # Switch branch/D to ^/A, then switch branch/D/G back to ^/branch/D/G so
+  # the latter is switched relative to its parent but not the WC root.
+  sbox.simple_switch(repo_url + '/A/D', 'branch/D')
+  sbox.simple_switch(repo_url + '/branch/D/G', 'branch/D/G')
+
+  # This should detect the switch at branch/D and branch/D/G
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir,'branch'),
+                                            None, [ "2S\n" ], [])
+
+  # Directly targeting the switched branch/D should still detect the switch
+  # at branch/D/G even though the latter isn't switched against the root of
+  # the working copy.
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir,'branch', 'D'),
+                                            None, [ "2S\n" ], [])
 
 ########################################################################
 # Run the tests
@@ -277,6 +371,9 @@ test_list = [ None,
               ignore_externals,
               svnversion_with_excluded_subtrees,
               svnversion_with_structural_changes,
+              committed_revisions,
+              non_reposroot_wc,
+              child_switched,
              ]
 
 if __name__ == '__main__':

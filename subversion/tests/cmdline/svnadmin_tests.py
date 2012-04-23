@@ -36,9 +36,12 @@ from svntest.verify import SVNUnexpectedStderr
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -248,8 +251,9 @@ def inconsistent_headers(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
 # not remain so after load
+@Issue(2729)
 def empty_date(sbox):
-  "preserve date-less revisions in load (issue #2729)"
+  "preserve date-less revisions in load"
 
   test_create(sbox)
 
@@ -477,6 +481,7 @@ def fsfs_file(repo_dir, kind, rev):
     return os.path.join(repo_dir, 'db', kind, rev)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
@@ -612,6 +617,7 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 #----------------------------------------------------------------------
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
   sbox.build()
@@ -690,7 +696,7 @@ def recover_fsfs(sbox):
     'db/current', expected_current_contents, actual_current_contents)
 
 #----------------------------------------------------------------------
-
+@Issue(2983)
 def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
@@ -787,7 +793,7 @@ def set_uuid(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-
+@Issue(3020)
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
@@ -824,6 +830,8 @@ def reflect_dropped_renumbered_revs(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@Issue(2992)
 def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   """fsfs recovery checks missing revs / revprops files"""
   # Set up a repository containing the greek tree.
@@ -906,16 +914,32 @@ def create_in_repo_subdir(sbox):
   # This should succeed
   svntest.main.create_repos(repo_dir)
 
+  success = False
   try:
     # This should fail
     subdir = os.path.join(repo_dir, 'Z')
     svntest.main.create_repos(subdir)
   except svntest.main.SVNRepositoryCreateFailure:
-    return
+    success = True
+  if not success:
+    raise svntest.Failure
 
-  # No SVNRepositoryCreateFailure raised?
-  raise svntest.Failure
+  cwd = os.getcwd()
+  success = False
+  try:
+    # This should fail, too
+    subdir = os.path.join(repo_dir, 'conf')
+    os.chdir(subdir)
+    svntest.main.create_repos('Z')
+    os.chdir(cwd)
+  except svntest.main.SVNRepositoryCreateFailure:
+    success = True
+    os.chdir(cwd)
+  if not success:
+    raise svntest.Failure
 
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_with_invalid_revprops(sbox):
   "svnadmin verify detects invalid revprops file"
 
@@ -968,6 +992,7 @@ def verify_with_invalid_revprops(sbox):
 #      each of them to 'TARGET-REPOS'.
 #
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+@Issue(3020)
 def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
 
@@ -1004,7 +1029,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on this repos@15 is:
   #
@@ -1034,7 +1059,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
     "/trunk/B/E:5-6,8-9\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)  
+                                     sbox.repo_url)
 
   # PART 2: Load a a series of incremental dumps to an empty repository.
   #
@@ -1085,7 +1110,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # repository.  First, try the full dump-load in one shot.
   #
   # PART 3: Load a full dump to an non-empty repository.
-  #  
+  #
   # Reset our sandbox.
   test_create(sbox)
 
@@ -1145,7 +1170,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # Load this skeleton repos into the empty target:
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
                              '--ignore-uuid')
-  
+
   # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
                              open(dump_file_r1_10).read(),
@@ -1168,6 +1193,8 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      sbox.repo_url)
 
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(2591)
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 
@@ -1228,6 +1255,67 @@ def hotcopy_symlink(sbox):
     if os.readlink(symlink_path + '_abs') != target_abspath:
       raise svntest.Failure
 
+def load_bad_props(sbox):
+  "svadmin load with invalid svn: props"
+
+  dump_str = """SVN-fs-dump-format-version: 2
+
+UUID: dc40867b-38f6-0310-9f5f-f81aa277e06f
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-05-03T19:09:41.129900Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 99
+Content-length: 99
+
+K 7
+svn:log
+V 3
+\n\r\n
+K 10
+svn:author
+V 2
+pl
+K 8
+svn:date
+V 27
+2005-05-03T19:10:19.975578Z
+PROPS-END
+
+Node-path: file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: e1cbb0c3879af8347246f12c559a86b5
+Content-length: 15
+
+PROPS-END
+text
+
+
+"""
+  test_create(sbox)
+
+  # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
+  load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
+                             dumpfile_revisions, dump_str,
+                             '--ignore-uuid')
+
+  # Now try it again bypassing prop validation.  (This interface takes
+  # care of the removal and recreation of the original repository.)
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=True)
+
+
 ########################################################################
 # Run the tests
 
@@ -1245,18 +1333,17 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
-              SkipUnless(verify_incremental_fsfs, svntest.main.is_fs_type_fsfs),
-              SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
+              verify_incremental_fsfs,
+              recover_fsfs,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
-              SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
-                         svntest.main.is_fs_type_fsfs),
+              fsfs_recover_handle_missing_revs_or_revprops_file,
               create_in_repo_subdir,
-              SkipUnless(verify_with_invalid_revprops,
-                         svntest.main.is_fs_type_fsfs),
+              verify_with_invalid_revprops,
               dont_drop_valid_mergeinfo_during_incremental_loads,
-              SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
+              hotcopy_symlink,
+              load_bad_props,
              ]
 
 if __name__ == '__main__':

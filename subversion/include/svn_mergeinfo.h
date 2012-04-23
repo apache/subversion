@@ -61,7 +61,7 @@ extern "C" {
  *
  * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
  * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
- * exception to this is @c SVN_PROP_MERGEINFO with non-ineritable revision
+ * exception to this is @c SVN_PROP_MERGEINFO with non-inheritable revision
  * ranges.  These non-inheritable ranges apply only to the path which they
  * are set on.
  *
@@ -192,8 +192,8 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
-/** Merge one mergeinfo, @a changes, into another mergeinfo @a
- * mergeinfo.
+/** Merge a shallow copy of one mergeinfo, @a changes, into another mergeinfo
+ * @a mergeinfo.
  *
  * When intersecting rangelists for a path are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
@@ -226,7 +226,7 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_catalog,
 
 /** Like svn_mergeinfo_remove2, but always considers inheritance.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -308,17 +308,6 @@ svn_rangelist_remove(apr_array_header_t **output, const apr_array_header_t *eras
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
-/** Like svn_mergeinfo_intersect2, but always considers inheritance.
- *
- * @deprecated Provided for backward compatibility with the 1.5 API.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
-                        svn_mergeinfo_t mergeinfo1,
-                        svn_mergeinfo_t mergeinfo2,
-                        apr_pool_t *pool);
-
 /** Find the intersection of two mergeinfos, @a mergeinfo1 and @a
  * mergeinfo2, and place the result in @a *mergeinfo, which is (deeply)
  * allocated in @a result_pool.  Temporary allocations will be performed
@@ -337,6 +326,17 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_boolean_t consider_inheritance,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+/** Like svn_mergeinfo_intersect2, but always considers inheritance.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
+                        svn_mergeinfo_t mergeinfo1,
+                        svn_mergeinfo_t mergeinfo2,
+                        apr_pool_t *pool);
 
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
@@ -507,7 +507,7 @@ svn_rangelist_dup(const apr_array_header_t *rangelist, apr_pool_t *pool);
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_mergeinfo_inheritance_t
 {
   /** Explicit mergeinfo only. */
   svn_mergeinfo_explicit,
@@ -518,7 +518,7 @@ typedef enum
   svn_mergeinfo_inherited,
 
   /** Mergeinfo on target's nearest (path-wise, not history-wise)
-      ancestor, regardless of whether target has explict mergeinfo. */
+      ancestor, regardless of whether target has explicit mergeinfo. */
   svn_mergeinfo_nearest_ancestor
 } svn_mergeinfo_inheritance_t;
 

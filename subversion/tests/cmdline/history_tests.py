@@ -32,8 +32,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
 ######################################################################
@@ -135,6 +139,7 @@ def cat_traces_renames(sbox):
                                      None, svntest.verify.AnyOutput,
                                      'cat',  '-r', 'HEAD', rho_path)
 
+@Issue(1970)
 def cat_avoids_false_identities(sbox):
   "verify that 'svn cat' avoids false identities"
 

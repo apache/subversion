@@ -45,7 +45,7 @@
 /*** Getting misc. information ***/
 
 /* The baton for use with copyfrom_info_receiver(). */
-typedef struct
+typedef struct copyfrom_info_t
 {
   svn_boolean_t is_first;
   const char *path;
@@ -148,7 +148,7 @@ svn_client__get_copy_source(const char *path_or_url,
 
 /* compatibility with pre-1.5 servers, which send only author/date/log
  *revprops in log entries */
-typedef struct
+typedef struct pre_15_receiver_baton_t
 {
   svn_client_ctx_t *ctx;
   /* ra session for retrieving revprops from old servers */
@@ -244,7 +244,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 }
 
 /* limit receiver */
-typedef struct
+typedef struct limit_receiver_baton_t
 {
   int limit;
   svn_log_entry_receiver_t receiver;
@@ -395,11 +395,12 @@ svn_client_log5(const apr_array_header_t *targets,
               const char *target;
 
               target = APR_ARRAY_IDX(targets, i, const char *);
+
               if (svn_path_is_url(target) || svn_dirent_is_absolute(target))
-                return svn_error_return(svn_error_createf(
-                                          SVN_ERR_ILLEGAL_TARGET, NULL,
-                                          _("'%s' is not a relative path"),
-                                          target));
+                return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                         _("'%s' is not a relative path"),
+                                          target);
+
               APR_ARRAY_PUSH(condensed_targets, const char *) = target;
             }
         }
@@ -451,15 +452,14 @@ svn_client_log5(const apr_array_header_t *targets,
           APR_ARRAY_PUSH(target_urls, const char *) = url;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
-      svn_pool_destroy(iterpool);
 
       /* if we have no valid target_urls, just exit. */
       if (target_urls->nelts == 0)
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR(svn_path_condense_targets(&url_or_path, &condensed_targets,
-                                        target_urls, TRUE, pool));
+      SVN_ERR(svn_uri_condense_targets(&url_or_path, &condensed_targets,
+                                       target_urls, TRUE, pool, iterpool));
 
       if (condensed_targets->nelts == 0)
         APR_ARRAY_PUSH(condensed_targets, const char *) = "";
@@ -467,6 +467,7 @@ svn_client_log5(const apr_array_header_t *targets,
       /* 'targets' now becomes 'real_targets', which has bogus,
          unversioned things removed from it. */
       targets = real_targets;
+      svn_pool_destroy(iterpool);
     }
 
 
@@ -475,7 +476,8 @@ svn_client_log5(const apr_array_header_t *targets,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
     if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_rev.kind))
-      SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
+      SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
+                                          TRUE, pool, pool));
     else
       ra_target = url_or_path;
 
@@ -525,13 +527,13 @@ svn_client_log5(const apr_array_header_t *targets,
    * the named range.  This led to revisions being printed in strange
    * order or being printed more than once.  This is issue 1550.
    *
-   * In r11599, jpieper blocked multiple wc targets in svn/log-cmd.c,
+   * In r851673, jpieper blocked multiple wc targets in svn/log-cmd.c,
    * meaning this block not only doesn't work right in that case, but isn't
    * even testable that way (svn has no unit test suite; we can only test
    * via the svn command).  So, that check is now moved into this function
    * (see above).
    *
-   * kfogel ponders future enhancements in r4186:
+   * kfogel ponders future enhancements in r844260:
    * I think that's okay behavior, since the sense of the command is
    * that one wants a particular range of logs for *this* file, then
    * another range for *that* file, and so on.  But we should

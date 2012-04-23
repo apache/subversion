@@ -33,6 +33,7 @@
 #include "svn_time.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_repos_private.h"
 #include "private/svn_utf_private.h"
 
 
@@ -45,25 +46,29 @@ svn_repos_fs_commit_txn(const char **conflict_p,
                         svn_fs_txn_t *txn,
                         apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *err2;
   const char *txn_name;
+
+  *new_rev = SVN_INVALID_REVNUM;
 
   /* Run pre-commit hooks. */
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
   SVN_ERR(svn_repos__hooks_pre_commit(repos, txn_name, pool));
 
   /* Commit. */
-  SVN_ERR(svn_fs_commit_txn(conflict_p, new_rev, txn, pool));
+  err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
+  if (! SVN_IS_VALID_REVNUM(*new_rev))
+    return err;
 
-  /* Run post-commit hooks.   Notice that we're wrapping the error
-     with a -specific- errorcode, so that our caller knows not to try
-     and abort the transaction. */
-  if ((err = svn_repos__hooks_post_commit(repos, *new_rev, pool)))
-    return svn_error_create
-      (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
-       _("Commit succeeded, but post-commit hook failed"));
+  /* Run post-commit hooks. */
+  if ((err2 = svn_repos__hooks_post_commit(repos, *new_rev, pool)))
+    {
+      err2 = svn_error_create
+               (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err2,
+                _("Commit succeeded, but post-commit hook failed"));
+    }
 
-  return SVN_NO_ERROR;
+  return svn_error_compose_create(err, err2);
 }
 
 
@@ -152,15 +157,10 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 
 /*** Property wrappers ***/
 
-/* Validate that property NAME is valid for use in a Subversion
-   repository; return SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some "svn:"
-   properties, also validate the value, and return SVN_ERR_BAD_PROPERTY_VALUE
-   if it is not valid.
-
-   Use POOL for temporary allocations.
- */
-static svn_error_t *
-validate_prop(const char *name, const svn_string_t *value, apr_pool_t *pool)
+svn_error_t *
+svn_repos__validate_prop(const char *name,
+                         const svn_string_t *value,
+                         apr_pool_t *pool)
 {
   svn_prop_kind_t kind = svn_property_kind(NULL, name);
 
@@ -223,7 +223,7 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool)
 {
   /* Validate the property, then call the wrapped function. */
-  SVN_ERR(validate_prop(name, value, pool));
+  SVN_ERR(svn_repos__validate_prop(name, value, pool));
   return svn_fs_change_node_prop(root, path, name, value, pool);
 }
 
@@ -238,7 +238,7 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
   for (i = 0; i < txnprops->nelts; i++)
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(txnprops, i, svn_prop_t);
-      SVN_ERR(validate_prop(prop->name, prop->value, pool));
+      SVN_ERR(svn_repos__validate_prop(prop->name, prop->value, pool));
     }
 
   return svn_fs_change_txn_props(txn, txnprops, pool);
@@ -276,7 +276,6 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
                               apr_pool_t *pool)
 {
   svn_repos_revision_access_level_t readability;
-  char action;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
                                           authz_read_func, authz_read_baton,
@@ -285,8 +284,9 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
   if (readability == svn_repos_revision_access_full)
     {
       const svn_string_t *old_value;
+      char action;
 
-      SVN_ERR(validate_prop(name, new_value, pool));
+      SVN_ERR(svn_repos__validate_prop(name, new_value, pool));
 
       /* Fetch OLD_VALUE for svn_fs_change_rev_prop2(). */
       if (old_value_p)
@@ -300,7 +300,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
           svn_string_t *old_value2;
 
           SVN_ERR(svn_fs_revision_prop(&old_value2, repos->fs, rev, name, pool));
-          old_value = old_value2; 
+          old_value = old_value2;
         }
 
       /* Prepare ACTION. */
@@ -597,22 +597,22 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
 
 
 svn_error_t *
-svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
-                           svn_repos_t *repos,
-                           const apr_array_header_t *paths,
-                           svn_revnum_t rev,
-                           svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t include_descendants,
-                           svn_repos_authz_func_t authz_read_func,
-                           void *authz_read_baton,
-                           apr_pool_t *pool)
+svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *mergeinfo,
+                            svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t rev,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t validate_inherited_mergeinfo,
+                            svn_boolean_t include_descendants,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool)
 {
   /* Here we cast away 'const', but won't try to write through this pointer
    * without first allocating a new array. */
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  int i;
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
@@ -621,6 +621,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   /* Filter out unreadable paths before divining merge tracking info. */
   if (authz_read_func)
     {
+      int i;
+
       for (i = 0; i < paths->nelts; i++)
         {
           svn_boolean_t readable;
@@ -652,13 +654,34 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
      the change itself. */
   /* ### TODO(reint): ... but how about descendant merged-to paths? */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
-                                 include_descendants, pool));
+    SVN_ERR(svn_fs_get_mergeinfo2(mergeinfo, root, readable_paths, inherit,
+                                  validate_inherited_mergeinfo,
+                                  include_descendants, pool));
   else
     *mergeinfo = apr_hash_make(pool);
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t rev,
+                           svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendants,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool)
+{
+  return svn_error_return(svn_repos_fs_get_mergeinfo2(mergeinfo, repos,
+                                                      paths, rev, inherit,
+                                                      FALSE,
+                                                      include_descendants,
+                                                      authz_read_func,
+                                                      authz_read_baton,
+                                                      pool));
 }
 
 struct pack_notify_baton
@@ -693,7 +716,7 @@ svn_repos_fs_pack2(svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   struct pack_notify_baton pnb;
-  
+
   pnb.notify_func = notify_func;
   pnb.notify_baton = notify_baton;
 

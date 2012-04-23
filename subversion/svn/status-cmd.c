@@ -171,14 +171,7 @@ print_status(void *baton,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-
-  svn_revnum_t revision;
-  svn_revnum_t changed_rev;
-  apr_time_t changed_date;
-  const char *changed_author;
-  const char *local_abspath;
-
-  local_abspath = status->local_abspath;
+  const char *local_abspath = status->local_abspath;
 
   /* ### The revision information with associates are based on what
    * ### _read_info() returns. The svn_wc_status_func4_t callback is
@@ -188,24 +181,46 @@ print_status(void *baton,
    * ### with our testsuite. */
   if (status->versioned
       && !SVN_IS_VALID_REVNUM(status->revision)
-      && !status->copied)
+      && !status->copied
+      && (status->node_status == svn_wc_status_deleted
+          || status->node_status == svn_wc_status_replaced))
     {
-      svn_client_status_t *tweaked_status
-                 = svn_client_status_dup(status, sb->cl_pool);
+      svn_client_status_t *twks = svn_client_status_dup(status, sb->cl_pool);
 
-      /* Retrieve some data from the original version of the replaced node */
-      SVN_ERR(svn_wc__node_get_working_rev_info(&revision, &changed_rev,
-                                                &changed_date,
-                                                &changed_author,
-                                                sb->ctx->wc_ctx,
-                                                local_abspath, sb->cl_pool,
-                                                pool));
-      tweaked_status->revision = revision;
-      tweaked_status->changed_rev = changed_rev;
-      tweaked_status->changed_date = changed_date;
-      tweaked_status->changed_author = changed_author;
+      /* Copied is FALSE, so either we have a local addition, or we have
+         a delete that directly shadows a BASE node */
 
-      status = tweaked_status;
+      switch(status->node_status)
+        {
+          case svn_wc_status_replaced:
+            /* Just retrieve the revision below the replacement.
+               The other fields are filled by a copy.
+               (With ! copied, we know we have a BASE node)
+
+               ### Is this really what we want to provide? */
+            SVN_ERR(svn_wc__node_get_pre_ng_status_data(&twks->revision,
+                                                        NULL, NULL, NULL,
+                                                        sb->ctx->wc_ctx,
+                                                        local_abspath,
+                                                        sb->cl_pool, pool));
+            break;
+          case svn_wc_status_deleted:
+            /* Retrieve some data from the original version below the delete */
+            SVN_ERR(svn_wc__node_get_pre_ng_status_data(&twks->revision,
+                                                        &twks->changed_rev,
+                                                        &twks->changed_date,
+                                                        &twks->changed_author,
+                                                        sb->ctx->wc_ctx,
+                                                        local_abspath, 
+                                                        sb->cl_pool, pool));
+            break;
+
+          default:
+            /* This space intentionally left blank. */
+            break;
+        }
+
+      status = twks;
     }
 
   /* If the path is part of a changelist, then we don't print
@@ -258,6 +273,16 @@ svn_cl__status(apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
+
+  /* URLs are invalid input. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a local path"), target);
+    }
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;

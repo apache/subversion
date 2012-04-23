@@ -76,7 +76,6 @@ svn_cl__propedit(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  int i;
 
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
@@ -177,6 +176,7 @@ svn_cl__propedit(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
       struct commit_info_baton cib;
+      int i;
 
       /* The customary implicit dot rule has been prone to user error
        * here.  For example, Jon Trowbridge <trow@gnu.og> did
@@ -295,12 +295,27 @@ svn_cl__propedit(apr_getopt_t *os,
                 SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
+              if (svn_path_is_url(target))
+                {
+                  err = svn_client_propset_remote(pname_utf8, edited_propval,
+                                                  target, opt_state->force,
+                                                  base_rev,
+                                                  opt_state->revprop_table,
+                                                  commit_info_handler, &cib,
+                                                  ctx, subpool);
+                }
+              else
+                {
+                  apr_array_header_t *targs = apr_array_make(subpool, 1,
+                                                    sizeof(const char *));
 
-              err = svn_client_propset4(pname_utf8, edited_propval, target,
-                                        svn_depth_empty, opt_state->force,
-                                        base_rev, NULL, opt_state->revprop_table,
-                                        commit_info_handler, &cib,
-                                        ctx, subpool);
+                  APR_ARRAY_PUSH(targs, const char *) = target;
+                  err = svn_client_propset_local(pname_utf8, edited_propval,
+                                                 targs, svn_depth_empty,
+                                                 opt_state->force, NULL,
+                                                 ctx, subpool);
+                }
+
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));

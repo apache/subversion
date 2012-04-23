@@ -39,7 +39,7 @@
 
 
 
-typedef struct {
+typedef struct gls_context_t {
   /* parameters set by our caller */
   svn_revnum_t peg_revision;
   svn_revnum_t start_rev;

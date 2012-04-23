@@ -178,10 +178,10 @@ save_value(dav_db *db, const dav_prop_name *name,
         /* ignore the unknown namespace of the incoming prop. */
         propname = name->name;
       else
-        return dav_new_error(db->p, HTTP_CONFLICT, 0,
-                             "Properties may only be defined in the "
-                             SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
-                             " namespaces.");
+        return dav_svn__new_error(db->p, HTTP_CONFLICT, 0,
+                                  "Properties may only be defined in the "
+                                  SVN_DAV_PROP_NS_SVN " and "
+                                  SVN_DAV_PROP_NS_CUSTOM " namespaces.");
     }
 
   /* We've got three different types of properties (node, txn, and
@@ -222,17 +222,21 @@ save_value(dav_db *db, const dav_prop_name *name,
                                                resource->pool);
 
           /* Prepare any hook failure message to get sent over the wire */
-          serr = svn_error_purge_tracing(serr);
-          if (serr && serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE)
-            serr->message = apr_xml_quote_string(serr->pool, serr->message, 1);
-
-          /* mod_dav doesn't handle the returned error very well, it
-             generates its own generic error that will be returned to
-             the client.  Cache the detailed error here so that it can
-             be returned a second time when the rollback mechanism
-             triggers. */
           if (serr)
-            resource->info->revprop_error = svn_error_dup(serr);
+            {
+              svn_error_t *purged_serr = svn_error_purge_tracing(serr);
+              if (purged_serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE)
+                purged_serr->message = apr_xml_quote_string
+                                         (purged_serr->pool,
+                                          purged_serr->message, 1);
+
+              /* mod_dav doesn't handle the returned error very well, it
+                 generates its own generic error that will be returned to
+                 the client.  Cache the detailed error here so that it can
+                 be returned a second time when the rollback mechanism
+                 triggers. */
+              resource->info->revprop_error = svn_error_dup(purged_serr);
+            }
 
           /* Tell the logging subsystem about the revprop change. */
           dav_svn__operational_log(resource->info,
@@ -300,9 +304,9 @@ db_open(apr_pool_t *p,
          changing unversioned rev props.  Remove this someday: see IZ #916. */
       if (! (resource->baselined
              && resource->type == DAV_RESOURCE_TYPE_VERSION))
-        return dav_new_error(p, HTTP_CONFLICT, 0,
-                             "Properties may only be changed on working "
-                             "resources.");
+        return dav_svn__new_error(p, HTTP_CONFLICT, 0,
+                                  "Properties may only be changed on working "
+                                  "resources.");
     }
 
   db = apr_pcalloc(p, sizeof(*db));
@@ -451,8 +455,8 @@ decode_property_value(const svn_string_t **out_propval_p,
             *out_propval_p = svn_base64_decode_string(maybe_encoded_propval,
                                                       pool);
           else
-            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                                 "Unknown property encoding");
+            return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                      "Unknown property encoding");
           break;
         }
 
@@ -498,11 +502,12 @@ db_store(dav_db *db,
 
   if (absent && ! elem->first_child)
     /* ### better error check */
-    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                         apr_psprintf(pool, 
-                                      "'%s' cannot be specified on the value "
-                                      "without specifying an expectation",
-                                      SVN_DAV__OLD_VALUE__ABSENT));
+    return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                              apr_psprintf(pool,
+                                           "'%s' cannot be specified on the "
+                                           "value without specifying an "
+                                           "expectation",
+                                           SVN_DAV__OLD_VALUE__ABSENT));
 
   /* ### namespace check? */
   if (elem->first_child && !strcmp(elem->first_child->name, SVN_DAV__OLD_VALUE))
@@ -757,7 +762,7 @@ db_apply_rollback(dav_db *db, dav_deadprop_rollback *rollback)
 
   if (! db->resource->info->revprop_error)
     return NULL;
-  
+
   /* Returning the original revprop change error here will cause this
      detailed error to get returned to the client in preference to the
      more generic error created by mod_dav. */

@@ -34,16 +34,31 @@ svn_cache__set_error_handler(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_cache__is_cachable(svn_cache__t *cache,
+                       apr_size_t size)
+{
+  /* having no cache means we can't cache anything */
+  if (cache == NULL)
+    return FALSE;
+
+  return cache->vtable->is_cachable(cache->cache_internal, size);
+}
 
 /* Give the error handler callback a chance to replace or ignore the
    error. */
 static svn_error_t *
-handle_error(const svn_cache__t *cache,
+handle_error(svn_cache__t *cache,
              svn_error_t *err,
              apr_pool_t *pool)
 {
-  if (err && cache->error_handler)
-    err = (cache->error_handler)(err, cache->error_baton, pool);
+  if (err)
+    {
+      cache->failures++;
+      if (cache->error_handler)
+        err = (cache->error_handler)(err, cache->error_baton, pool);
+    }
+
   return err;
 }
 
@@ -51,20 +66,29 @@ handle_error(const svn_cache__t *cache,
 svn_error_t *
 svn_cache__get(void **value_p,
                svn_boolean_t *found,
-               const svn_cache__t *cache,
+               svn_cache__t *cache,
                const void *key,
                apr_pool_t *pool)
 {
+  svn_error_t *err;
+
   /* In case any errors happen and are quelched, make sure we start
      out with FOUND set to false. */
   *found = FALSE;
-  return handle_error(cache,
-                      (cache->vtable->get)(value_p,
-                                           found,
-                                           cache->cache_internal,
-                                           key,
-                                           pool),
-                      pool);
+
+  cache->reads++;
+  err = handle_error(cache,
+                     (cache->vtable->get)(value_p,
+                                          found,
+                                          cache->cache_internal,
+                                          key,
+                                          pool),
+                     pool);
+
+  if (*found)
+    cache->hits++;
+
+  return err;
 }
 
 svn_error_t *
@@ -73,6 +97,7 @@ svn_cache__set(svn_cache__t *cache,
                void *value,
                apr_pool_t *pool)
 {
+  cache->writes++;
   return handle_error(cache,
                       (cache->vtable->set)(cache->cache_internal,
                                            key,
@@ -84,7 +109,7 @@ svn_cache__set(svn_cache__t *cache,
 
 svn_error_t *
 svn_cache__iter(svn_boolean_t *completed,
-                const svn_cache__t *cache,
+                svn_cache__t *cache,
                 svn_iter_apr_hash_cb_t user_cb,
                 void *user_baton,
                 apr_pool_t *pool)
@@ -96,3 +121,131 @@ svn_cache__iter(svn_boolean_t *completed,
                                pool);
 }
 
+svn_error_t *
+svn_cache__get_partial(void **value,
+                       svn_boolean_t *found,
+                       svn_cache__t *cache,
+                       const void *key,
+                       svn_cache__partial_getter_func_t func,
+                       void *baton,
+                       apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  /* In case any errors happen and are quelched, make sure we start
+  out with FOUND set to false. */
+  *found = FALSE;
+
+  cache->reads++;
+  err = handle_error(cache,
+                     (cache->vtable->get_partial)(value,
+                                                  found,
+                                                  cache->cache_internal,
+                                                  key,
+                                                  func,
+                                                  baton,
+                                                  scratch_pool),
+                     scratch_pool);
+
+  if (*found)
+    cache->hits++;
+
+  return err;
+}
+
+svn_error_t *
+svn_cache__set_partial(svn_cache__t *cache,
+                       const void *key,
+                       svn_cache__partial_setter_func_t func,
+                       void *baton,
+                       apr_pool_t *scratch_pool)
+{
+  cache->writes++;
+  return handle_error(cache,
+                      (cache->vtable->set_partial)(cache->cache_internal,
+                                                   key,
+                                                   func,
+                                                   baton,
+                                                   scratch_pool),
+                      scratch_pool);
+}
+
+svn_error_t *
+svn_cache__get_info(svn_cache__t *cache,
+                    svn_cache__info_t *info,
+                    svn_boolean_t reset,
+                    apr_pool_t *pool)
+{
+  /* write general statistics */
+
+  info->gets = cache->reads;
+  info->hits = cache->hits;
+  info->sets = cache->writes;
+  info->failures = cache->failures;
+
+  /* Call the cache implementation for filling the blanks.
+   * It might also replace some of the general stats but
+   * this is currently not done.
+   */
+  SVN_ERR((cache->vtable->get_info)(cache->cache_internal,
+                                    info,
+                                    reset,
+                                    pool));
+
+  /* reset statistics */
+
+  if (reset)
+    {
+      cache->reads = 0;
+      cache->hits = 0;
+      cache->writes = 0;
+      cache->failures = 0;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_string_t *
+svn_cache__format_info(const svn_cache__info_t *info,
+                       apr_pool_t *pool)
+{
+  enum { _1MB = 1024 * 1024 };
+
+  apr_uint64_t misses = info->gets - info->hits;
+  double hit_rate = (100.0 * info->hits)
+                  / (info->gets ? info->gets : 1);
+  double write_rate = (100.0 * info->sets)
+                    / (misses ? misses : 1);
+  double data_usage_rate = (100.0 * info->used_size)
+                         / (info->data_size ? info->data_size : 1);
+  double data_entry_rate = (100.0 * info->used_entries)
+                         / (info->total_entries ? info->total_entries : 1);
+
+  return svn_string_createf(pool,
+
+                            "prefix  : %s\n"
+                            "gets    : %" APR_UINT64_T_FMT
+                            ", %" APR_UINT64_T_FMT " hits (%5.2f%%)\n"
+                            "sets    : %" APR_UINT64_T_FMT
+                            " (%5.2f%% of misses)\n"
+                            "failures: %" APR_UINT64_T_FMT "\n"
+                            "used    : %" APR_UINT64_T_FMT " MB (%5.2f%%)"
+                            " of %" APR_UINT64_T_FMT " MB data cache"
+                            " / %" APR_UINT64_T_FMT " MB total cache memory\n"
+                            "          %" APR_UINT64_T_FMT " entries (%5.2f%%)"
+                            " of %" APR_UINT64_T_FMT " total\n",
+
+                            info->id,
+
+                            info->gets,
+                            info->hits, hit_rate,
+                            info->sets, write_rate,
+                            info->failures,
+
+                            info->used_size / _1MB, data_usage_rate,
+                            info->data_size / _1MB,
+                            info->total_size / _1MB,
+
+                            info->used_entries, data_entry_rate,
+                            info->total_entries);
+}

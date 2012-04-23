@@ -47,7 +47,7 @@ svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool)
 
   if (lock == NULL)
     return NULL;
-  
+
   new_l = apr_palloc(pool, sizeof(*new_l));
   *new_l = *lock;
 

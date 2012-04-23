@@ -38,6 +38,11 @@
 
 #include "svn_private_config.h"
 
+#ifdef __HAIKU__
+#  include <FindDirectory.h>
+#  include <StorageDefs.h>
+#endif
+
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
@@ -162,7 +167,7 @@ parse_value(int *pch, parse_context_t *ctx)
   while (ch != EOF && ch != '\n')
     /* last ch seen was ':' or '=' in parse_option. */
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->value, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -218,7 +223,7 @@ parse_value(int *pch, parse_context_t *ctx)
 
                   while (ch != EOF && ch != '\n')
                     {
-                      const char char_from_int = ch;
+                      const char char_from_int = (char)ch;
                       svn_stringbuf_appendbyte(ctx->value, char_from_int);
                       SVN_ERR(parser_getc(ctx, &ch));
                     }
@@ -245,7 +250,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   ch = *pch;   /* Yes, the first char is relevant. */
   while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->option, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -288,7 +293,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != EOF && ch != ']' && ch != '\n')
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->section, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -331,7 +336,19 @@ svn_config__sys_config_path(const char **path_p,
                                    SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
-#else  /* ! WIN32 */
+#elif defined(__HAIKU__)
+  {
+    char folder[B_PATH_NAME_LENGTH];
+
+    status_t error = find_directory(B_COMMON_SETTINGS_DIRECTORY, -1, false,
+                                    folder, sizeof(folder));
+    if (error)
+      return SVN_NO_ERROR;
+
+    *path_p = svn_dirent_join_many(pool, folder,
+                                   SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+  }
+#else  /* ! WIN32 && !__HAIKU__ */
 
   *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
@@ -991,8 +1008,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   accepts the '--diff-program' option."                         NL
         "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
-        "### merging tool of choice. Subversion will pass 4 arguments to"    NL
-        "### the specified command: base theirs mine merged"                 NL
+        "### merging tool of choice. Subversion will pass 5 arguments to"    NL
+        "### the specified command: base theirs mine merged wcfile"          NL
         "# merge-tool-cmd = merge_command"                                   NL
         ""                                                                   NL
         "### Section for configuring tunnel agents."                         NL
@@ -1117,7 +1134,20 @@ svn_config_get_user_config_path(const char **path,
                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
-#else  /* ! WIN32 */
+#elif defined(__HAIKU__)
+  {
+    char folder[B_PATH_NAME_LENGTH];
+
+    status_t error = find_directory(B_USER_SETTINGS_DIRECTORY, -1, false,
+                                    folder, sizeof(folder));
+    if (error)
+      return SVN_NO_ERROR;
+
+    *path = svn_dirent_join_many(pool, folder,
+                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+  }
+#else  /* ! WIN32 && !__HAIKU__ */
+
   {
     const char *homedir = svn_user_get_homedir(pool);
     if (! homedir)

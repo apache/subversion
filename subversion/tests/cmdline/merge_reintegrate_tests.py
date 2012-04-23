@@ -34,9 +34,13 @@ from svntest import main, wc, verify, actions
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
@@ -44,6 +48,8 @@ from merge_tests import set_up_branch
 from merge_tests import expected_merge_output
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
+@Issue(3640)
 def basic_reintegrate(sbox):
   "basic merge --reintegrate support"
 
@@ -211,7 +217,7 @@ def basic_reintegrate(sbox):
                                        '--reintegrate', A_path)
 
   # Test issue #3640:
-  # 
+  #
   # Revert the merge then move A to A_MOVED in r9.  Repeat the merge, but
   # targeting A_MOVED this time.  This should work with almost the same
   # results.  The only differences being the inclusion of r9 in the
@@ -382,8 +388,8 @@ def reintegrate_with_rename(sbox):
 
   # Update the wcs again.
   #
-  # Note: this update had to be added because of r28942 (which was
-  # merged into the reintegrate branch in r28947).  Without this
+  # Note: this update had to be added because of r869016 (which was
+  # merged into the reintegrate branch in r869021).  Without this
   # update, the mergeinfo will not be inherited properly as part of
   # the 'svn cp tau tauprime' step, and later (during the post-commit
   # update, with the new expected_disk) we'll get an error like this:
@@ -666,10 +672,11 @@ def reintegrate_fail_on_modified_wc(sbox):
   mu_path = os.path.join(A_path, "mu")
   ignored_expected_disk, ignored_expected_status = set_up_branch(sbox)
   svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
+  sbox.simple_update() # avoid mixed-revision error
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
-    ".*Cannot reintegrate into a working copy that has local modifications.*",
+    ".*Cannot merge into a working copy that has local modifications.*",
     None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
@@ -692,7 +699,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
-    ".*Cannot reintegrate into mixed-revision working copy.*",
+    ".*Cannot merge into mixed-revision working copy.*",
     None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
@@ -733,16 +740,19 @@ def reintegrate_fail_on_switched_wc(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, False);
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
+  sbox.simple_update() # avoid mixed-revision error
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
-    ".*Cannot reintegrate into a working copy with a switched subtree.*",
+    ".*Cannot merge into a working copy with a switched subtree.*",
     None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
 # missing subtrees'.
+@Issue(3603)
 def reintegrate_on_shallow_wc(sbox):
   "merge --reintegrate in shallow wc"
 
@@ -851,6 +861,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_stale_source(sbox):
   "merge --reintegrate should fail on stale source"
   sbox.build()
@@ -960,6 +971,7 @@ def merge_file_with_space_in_its_path(sbox):
                                      file1)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_with_subtree_mergeinfo(sbox):
   "merge --reintegrate with subtree mergeinfo"
 
@@ -1005,7 +1017,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # r10 - Merge r9 from A_COPY_3/D to A/D, creating explicit subtree
   # mergeinfo under A.  For this and every subsequent merge we update the WC
   # first to allow full inheritance and elision.
-  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(9), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=9)
   svntest.actions.run_and_verify_svn(
@@ -1032,7 +1044,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_disk.tweak('A_COPY_2/mu', contents="New content")
 
   # r12 - Merge r11 from A_COPY_2/mu to A_COPY/mu
-  svntest.actions.run_and_verify_svn(None, ["At revision 11.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(11), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=11)
   svntest.actions.run_and_verify_svn(
@@ -1050,7 +1062,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
 
   # r13 - Do a 'synch' cherry harvest merge of all available revisions
   # from A to A_COPY
-  svntest.actions.run_and_verify_svn(None, ["At revision 12.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(12), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=12)
   svntest.actions.run_and_verify_svn(
@@ -1105,7 +1117,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   expected_disk.tweak('A_COPY/B/E/alpha', contents="New content")
 
   # Now, reintegrate A_COPY to A.  This should succeed.
-  svntest.actions.run_and_verify_svn(None, ["At revision 14.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(14), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=14)
   expected_output = wc.State(A_path, {
@@ -1218,7 +1230,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.verify.verify_outputs("Reintegrate failed but not "
                                 "in the way expected",
                                 err, None,
-                                "(svn: Reintegrate can only be used if "
+                                "(svn: E195016: Reintegrate can only be used if "
                                 "revisions 2 through 15 were previously "
                                 "merged from .*/A to the reintegrate source, "
                                 "but this is not the case:\n)"
@@ -1252,7 +1264,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      of 'trunk' was previously merged to 'branch'
 
   # r16 - A) REPOS-to-REPOS rename of A/D/gamma to A/D/gamma_moved.  Since
-  # r34184 WC-to-WC moves won't create mergeinfo on the dest if the source
+  # r874258 WC-to-WC moves won't create mergeinfo on the dest if the source
   # doesn't have any.  So do a repos-to-repos move so explicit mergeinfo
   # *is* created on the destination.
   svntest.actions.run_and_verify_svn(None, None,[], 'move',
@@ -1319,7 +1331,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                            ' U   ' + A_COPY_path + '\n',
                            ' U   ' + D_COPY_path + '\n',
                            ' U   ' + gamma_moved_COPY_path + '\n']),
-    [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
+    [], 'merge', '--allow-mixed-revisions', sbox.repo_url + '/A',  A_COPY_path)
   expected_output = wc.State(
     wc_dir,
     {'A_COPY'               : Item(verb='Sending'), # Mergeinfo update
@@ -1341,7 +1353,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #   /A_COPY/D/gamma_moved:17-19
   #
   # shows that it is fully synched up with trunk.
-  svntest.actions.run_and_verify_svn(None, ["At revision 19.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(19), [], 'up',
                                      wc_dir)
   expected_output = wc.State(A_path, {
     'B/E/alpha'     : Item(status='U '),
@@ -1410,7 +1422,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
     # and is not what this test is about, so we won't fail because of it.
     'D/gamma_moved' : Item(
-      "Even newer content", props={SVN_PROP_MERGEINFO : 
+      "Even newer content", props={SVN_PROP_MERGEINFO :
                                    '/A/D/gamma_moved:2-15\n'
                                    '/A_COPY/D/gamma_moved:2-19\n'
                                    '/A_COPY_3/D/gamma:9'}),
@@ -1432,6 +1444,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def multiple_reintegrates_from_the_same_branch(sbox):
   "multiple reintegrates create self-referential"
 
@@ -1611,7 +1624,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
     expected_merge_output([[2,3],[2,16]],
                           ['U    ' + psi_COPY_path + '\n',
                            ' U   ' + A_COPY_path   + '\n',]),
-    [], 'merge', sbox.repo_url + '/A', A_COPY_path)
+    [], 'merge', '--allow-mixed-revisions', sbox.repo_url + '/A', A_COPY_path)
 
 #----------------------------------------------------------------------
 # Test for a reintegrate bug which can occur when the merge source
@@ -1620,6 +1633,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
 #
 # Also tests Issue #3591 'reintegrate merges update subtree mergeinfo
 # unconditionally'.
+@Issue(3591)
 def reintegrate_with_self_referential_mergeinfo(sbox):
   "source has target's history as explicit mergeinfo"
 
@@ -1638,7 +1652,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
 
   # r6 Copy A to A2 and then manually set some self-referential mergeinfo on
   # A2/B and A2.
-  svntest.actions.run_and_verify_svn(None, ["At revision 5.\n"], [],
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(5), [],
                                      'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', A_path, A2_path)
@@ -1669,7 +1683,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   # Update to uniform revision and reintegrate A2.1 back to A2.
   # Note that the mergeinfo on A2/B is not changed by the reintegration
   # and so is not expected to by updated to describe the merge.
-  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(8), [],
                                      'up', wc_dir)
   expected_output = wc.State(A2_path, {
     'mu' : Item(status='U '),
@@ -1749,6 +1763,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
+@Issue(3577)
 def reintegrate_with_subtree_merges(sbox):
   "reintegrate with prior subtree merges to source"
 
@@ -1796,7 +1811,7 @@ def reintegrate_with_subtree_merges(sbox):
   # Now update the WC and try to reintegrate.  Since we really have merged
   # everything from A to A_COPY, even though it was done via subtree merges,
   # the reintegrate should succeed.  Previously it failed because the naive
-  # interpretation of the mergeinfo on A_COPY didn't reflect that it was 
+  # interpretation of the mergeinfo on A_COPY didn't reflect that it was
   # fully synced with A, resulting in this error:
   #
   #    svn merge ^/A_COPY A --reintegrate
@@ -1880,6 +1895,7 @@ def reintegrate_with_subtree_merges(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
+@Issue(3654)
 def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   "added subtrees with mergeinfo break reintegrate"
 
@@ -1894,7 +1910,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   lambda_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "lambda")
   A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
   nu_COPY_2_path   = os.path.join(wc_dir, "A_COPY_2", "C", "nu")
-  
+
   # Branch A@1 to A_COPY and A_COPY_2 in r2 and r3 respectively.
   # Make some changes under 'A' in r4-7.
   wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
@@ -1906,7 +1922,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
                                      '-m', 'Add new file in A_COPY_2 branch',
                                      wc_dir)
 
-  
+
   # r9 - Cyclic cherry pick merge r8 from A_COPY_2 back to A.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
@@ -1971,7 +1987,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Create new A_COPY branch from A', wc_dir)
 
-  # r17 - Unrelated edits under both A and A_COPY.  
+  # r17 - Unrelated edits under both A and A_COPY.
   svntest.main.file_write(nu_path, "Trunk work on nu.\n")
   svntest.main.file_write(lambda_COPY_path, "lambda edit on A_COPY.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
@@ -1997,7 +2013,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     })
   expected_mergeinfo_output = wc.State(A_path, {
     ''     : Item(status=' U'),
-    'C/nu' : Item(status=' G'),
+    'C/nu' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -2075,6 +2091,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
 # for merge target'.
+@Issue(3648)
 def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   "2-URL merge removes valid mergeinfo from target"
 
@@ -2086,7 +2103,7 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   mu_path          = os.path.join(wc_dir, "A", "mu")
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
   A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
-  
+
   # Branch A@1 to A_COPY r2
   # Branch A@1 to A_COPY_2 in r3.
   # Make some changes under 'A' in r4-7.
@@ -2142,7 +2159,7 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   #
   # Recall from the note on r9 that this diff is simply the one text change
   # made on branch 1 and some mergeinfo:
-  # 
+  #
   #   >svn diff ^/A@8 ^/A_COPY@11
   #   Index: B/lambda
   #   ===================================================================
@@ -2237,21 +2254,17 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(basic_reintegrate,
-                         server_has_mergeinfo),
+              basic_reintegrate,
               reintegrate_with_rename,
               reintegrate_branch_never_merged_to,
               reintegrate_fail_on_modified_wc,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
               reintegrate_on_shallow_wc,
-              SkipUnless(reintegrate_fail_on_stale_source,
-                         server_has_mergeinfo),
+              reintegrate_fail_on_stale_source,
               merge_file_with_space_in_its_path,
-              SkipUnless(reintegrate_with_subtree_mergeinfo,
-                         server_has_mergeinfo),
-              SkipUnless(multiple_reintegrates_from_the_same_branch,
-                         server_has_mergeinfo),
+              reintegrate_with_subtree_mergeinfo,
+              multiple_reintegrates_from_the_same_branch,
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
               two_URL_merge_removes_valid_mergeinfo_from_target,

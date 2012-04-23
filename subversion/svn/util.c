@@ -61,6 +61,7 @@
 
 #include "private/svn_token.h"
 #include "private/svn_opt_private.h"
+#include "private/svn_client_private.h"
 
 
 
@@ -71,8 +72,13 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
-    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld.\n"),
-                               commit_info->revision));
+    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
+                               commit_info->revision,
+                               commit_info->revision == 42 &&
+                               getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
+                                 ?  _(" (the answer to life, the universe, "
+                                      "and everything)")
+                                 : ""));
 
   /* Writing to stdout, as there maybe systems that consider the
    * presence of stderr as an indication of commit failure.
@@ -432,11 +438,21 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  /* Now, run the editor command line.  */
+  /* Prepare the editor command line.  */
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
   if (err)
     goto cleanup;
   cmd = apr_psprintf(pool, "%s %s", editor, tmpfile_native);
+
+  /* If the caller wants us to leave the file around, return the path
+     of the file we'll use, and make a note not to destroy it.  */
+  if (tmpfile_left)
+    {
+      *tmpfile_left = svn_dirent_join(base_dir, tmpfile_name, pool);
+      remove_file = FALSE;
+    }
+
+  /* Now, run the editor command line.  */
   sys_err = system(cmd);
   if (sys_err != 0)
     {
@@ -456,14 +472,6 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  /* If the caller wants us to leave the file around, return the path
-     of the file we used, and make a note not to destroy it.  */
-  if (tmpfile_left)
-    {
-      *tmpfile_left = svn_dirent_join(base_dir, tmpfile_name, pool);
-      remove_file = FALSE;
-    }
-
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
       (finfo_before.size != finfo_after.size))
@@ -478,8 +486,9 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
         {
-          err = svn_subst_translate_string(edited_contents, *edited_contents,
-                                           encoding, pool);
+          err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
+                                            *edited_contents, encoding, FALSE,
+                                            pool, pool);
           if (err)
             {
               err = svn_error_quick_wrap
@@ -616,7 +625,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      commit error chain, too. */
 
   err = svn_error_createf(commit_err->apr_err, NULL,
-                          "   '%s'",
+                          _("   '%s'"),
                           svn_dirent_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,
@@ -704,8 +713,9 @@ svn_cl__get_log_message(const char **log_msg,
       /* Make a string from a stringbuf, sharing the data allocation. */
       log_msg_str->data = log_msg_buf->data;
       log_msg_str->len = log_msg_buf->len;
-      SVN_ERR_W(svn_subst_translate_string(&log_msg_str, log_msg_str,
-                                           lmb->message_encoding, pool),
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
+                                            log_msg_str, lmb->message_encoding,
+                                            FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
 
       *log_msg = log_msg_str->data;
@@ -826,14 +836,14 @@ svn_cl__get_log_message(const char **log_msg,
              white space as we will consider white space only as empty */
           apr_size_t len;
 
-          for (len = message->len - 1; len >= 0; len--)
+          for (len = 0; len < message->len; len++)
             {
               /* FIXME: should really use an UTF-8 whitespace test
                  rather than svn_ctype_isspace, which is ASCII only */
               if (! svn_ctype_isspace(message->data[len]))
                 break;
             }
-          if (len < 0)
+          if (len == message->len)
             message = NULL;
         }
 
@@ -846,7 +856,7 @@ svn_cl__get_log_message(const char **log_msg,
                      "(a)bort, (c)ontinue, (e)dit:\n"), NULL, pool));
           if (reply)
             {
-              char letter = apr_tolower(reply[0]);
+              int letter = apr_tolower(reply[0]);
 
               /* If the user chooses to abort, we cleanup the
                  temporary file and exit the loop with a NULL
@@ -906,9 +916,6 @@ svn_cl__may_need_force(svn_error_t *err)
 svn_error_t *
 svn_cl__error_checked_fputs(const char *string, FILE* stream)
 {
-  /* This function is equal to svn_cmdline_fputs() minus
-     the utf8->local encoding translation */
-
   /* On POSIX systems, errno will be set on an error in fputs, but this might
      not be the case on other platforms.  We reset errno and only
      use it if it was set by the below fputs call.  Else, we just return
@@ -1291,17 +1298,6 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                       node->peg_rev);
 }
 
-const char *
-svn_cl__path_join(const char *base,
-                  const char *component,
-                  apr_pool_t *pool)
-{
-  if (svn_path_is_url(base))
-    return svn_uri_join(base, component, pool);
-  else
-    return svn_dirent_join(base, component, pool);
-}
-
 svn_error_t *
 svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
                           const apr_array_header_t *targets,
@@ -1326,4 +1322,33 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
   *true_targets_p = true_targets;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__opt_parse_path(svn_opt_revision_t *rev,
+                       const char **truepath,
+                       const char *path /* UTF-8! */,
+                       apr_pool_t *pool)
+{
+  SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
+
+  if (svn_path_is_url(*truepath))
+    *truepath = svn_uri_canonicalize(*truepath, pool);
+  else
+    *truepath = svn_dirent_canonicalize(*truepath, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_error_t *err;
+
+  err = svn_client__assert_homogeneous_target_type(targets);
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                             _("Cannot mix repository and working copy "
+                               "targets"));
+  return err;
 }

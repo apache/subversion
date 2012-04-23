@@ -229,6 +229,10 @@ rm -f "$DISTPATH/STATUS"
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
 rm -rf "$DISTPATH/contrib"
 
+# Remove notes/ from our distribution tarball.  It's large, but largely
+# blue-sky and out-of-date, and of questionable use to end users.
+rm -rf "$DISTPATH/notes"
+
 # Remove packages/ from the tarball.
 # (See http://svn.haxx.se/dev/archive-2009-12/0205.shtml)
 rm -rf "$DISTPATH/packages"
@@ -262,7 +266,7 @@ ver_patch=`echo $VERSION | cut -d '.' -f 3`
 
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
-if [ "$VERSION" != "trunk"]; then
+if [ "$VERSION" != "trunk" ]; then
   sed \
    -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
    -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \

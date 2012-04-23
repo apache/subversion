@@ -28,7 +28,7 @@
 
 
 
-typedef struct {
+typedef struct id_private_t {
   const char *node_id;
   const char *copy_id;
   const char *txn_id;

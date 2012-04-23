@@ -53,11 +53,11 @@ TEMPDIR=$BASEDIR/temp
 case $LOCATION in
     US)
     APACHE_MIRROR=http://www.pangex.com/pub/apache
-    SOURCEFORGE_MIRROR=http://internap.dl.sourceforge.net/sourceforge
+    SOURCEFORGE_MIRROR=softlayer
     ;;
     UK)
     APACHE_MIRROR=http://apache.rmplc.co.uk
-    SOURCEFORGE_MIRROR=http://kent.dl.sourceforge.net/sourceforge
+    SOURCEFORGE_MIRROR=kent
     ;;
     *)
     echo "Unknown LOCATION" >&2
@@ -77,7 +77,10 @@ setup() {
 create_prefix() {
     wget -nc http://ftp.gnu.org/gnu/autoconf/$AUTOCONF.tar.bz2
     wget -nc http://ftp.gnu.org/gnu/libtool/$LIBTOOL.tar.gz
-    wget -nc $SOURCEFORGE_MIRROR/swig/$SWIG.tar.gz
+    wget -nc -O $SWIG.tar.gz \
+             "http://sourceforge.net/projects/swig/files/swig/$SWIG/$SWIG.tar.gz/download?use_mirror=$SOURCEFORGE_MIRROR"
+
+    PATH=$PREFIX/bin:$PATH; export PATH
 
     tar jxvf $AUTOCONF.tar.bz2
     cd $AUTOCONF

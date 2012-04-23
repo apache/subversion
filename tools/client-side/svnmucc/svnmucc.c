@@ -51,6 +51,7 @@
 #include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_utf.h"
+#include "private/svn_cmdline_private.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -136,7 +137,7 @@ commit_callback(const svn_commit_info_t *commit_info,
   return SVN_NO_ERROR;
 }
 
-typedef enum {
+typedef enum action_code_t {
   ACTION_MV,
   ACTION_MKDIR,
   ACTION_CP,
@@ -162,7 +163,7 @@ struct operation {
   const char *url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
-  apr_hash_t *prop_mods; /* const char *prop_name -> 
+  apr_hash_t *prop_mods; /* const char *prop_name ->
                             const svn_string_t *prop_value */
   apr_array_header_t *prop_dels; /* const char *prop_name deletions */
   void *baton;           /* as returned by the commit editor */
@@ -204,7 +205,7 @@ change_props(const svn_delta_editor_t *editor,
         {
           const void *key;
           void *val;
-          
+
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &key, NULL, &val);
           if (child->kind == svn_node_dir)
@@ -298,10 +299,9 @@ drive(struct operation *operation,
               if (apr_err)
                 return svn_error_wrap_apr(apr_err, "Can't open stdin");
             }
-          contents = svn_stream_from_aprfile(f, pool);
+          contents = svn_stream_from_aprfile2(f, FALSE, pool);
           SVN_ERR(svn_txdelta_send_stream(contents, handler,
                                           handler_baton, NULL, pool));
-          SVN_ERR(svn_io_file_close(f, pool));
         }
       /* If we opened a file, we need to apply outstanding propmods,
          then close it. */
@@ -358,14 +358,14 @@ get_operation(const char *path,
   return child;
 }
 
-/* Return the portion of URL that is relative to ANCHOR. */
+/* Return the portion of URL that is relative to ANCHOR (URI-decoded). */
 static const char *
 subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
 {
   if (! strcmp(url, anchor))
     return "";
   else
-    return svn_path_uri_decode(svn_path_is_child(anchor, url, pool), pool);
+    return svn_uri_is_child(anchor, url, pool);
 }
 
 /* Add PATH to the operations tree rooted at OPERATION, creating any
@@ -412,7 +412,7 @@ build(action_code_t action,
   for (i = 0; i < path_bits->nelts; ++i)
     {
       const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
-      path_so_far = svn_path_join(path_so_far, path_bit, pool);
+      path_so_far = svn_relpath_join(path_so_far, path_bit, pool);
       operation = get_operation(path_so_far, operation, pool);
 
       /* If we cross a replace- or add-with-history, remember the
@@ -431,7 +431,7 @@ build(action_code_t action,
         }
       else if (copy_src)
         {
-          copy_src = svn_path_join(copy_src, path_bit, pool);
+          copy_src = svn_relpath_join(copy_src, path_bit, pool);
         }
     }
 
@@ -614,6 +614,7 @@ execute(const apr_array_header_t *actions,
         const char *username,
         const char *password,
         const char *config_dir,
+        const apr_array_header_t *config_options,
         svn_boolean_t non_interactive,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
@@ -629,9 +630,11 @@ execute(const apr_array_header_t *actions,
   int i;
 
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
+  SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
+                                            "svnmucc: ", "--config-option"));
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password,
                               non_interactive, pool));
-  SVN_ERR(svn_ra_open3(&session, anchor, NULL, ra_callbacks,
+  SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
@@ -733,6 +736,18 @@ read_propvalue_file(const svn_string_t **value_p,
   return SVN_NO_ERROR;
 }
 
+/* Perform the typical suite of manipulations for user-provided URLs
+   on URL, returning the result (allocated from POOL): IRI-to-URI
+   conversion, auto-escaping, and canonicalization. */
+static const char *
+sanitize_url(const char *url,
+             apr_pool_t *pool)
+{
+  url = svn_path_uri_from_iri(url, pool);
+  url = svn_path_uri_autoescape(url, pool);
+  return svn_uri_canonicalize(url, pool);
+}
+
 static void
 usage(apr_pool_t *pool, int exit_val)
 {
@@ -763,7 +778,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  -n, --non-interactive don't prompt the user about anything\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n"
-    "  --config-dir ARG      use ARG to override the config directory\n";
+    "  --config-dir ARG      use ARG to override the config directory\n"
+    "  --config-option ARG   use ARG so override a configuration option\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -788,6 +804,7 @@ main(int argc, const char **argv)
   apr_getopt_t *getopt;
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
+    config_inline_opt,
     with_revprop_opt
   };
   const apr_getopt_option_t options[] = {
@@ -802,17 +819,22 @@ main(int argc, const char **argv)
     {"help", 'h', 0, ""},
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
+    {"config-option",  config_inline_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
+  apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
   int i;
+
+  config_options = apr_array_make(pool, 0,
+                                  sizeof(svn_cmdline__config_argument_t*));
 
   apr_getopt_init(&getopt, pool, argc, argv);
   getopt->interleave = 1;
@@ -820,6 +842,8 @@ main(int argc, const char **argv)
     {
       int opt;
       const char *arg;
+      const char *opt_arg;
+
       apr_status_t status = apr_getopt_long(getopt, options, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
@@ -838,7 +862,7 @@ main(int argc, const char **argv)
             svn_stringbuf_t *contents;
             err = svn_utf_cstring_to_utf8(&arg_utf8, arg, pool);
             if (! err)
-              err = svn_stringbuf_from_file(&contents, arg, pool);
+              err = svn_stringbuf_from_file2(&contents, arg, pool);
             if (! err)
               err = svn_utf_cstring_to_utf8(&message, contents->data, pool);
             if (err)
@@ -855,11 +879,11 @@ main(int argc, const char **argv)
           err = svn_utf_cstring_to_utf8(&root_url, arg, pool);
           if (err)
             handle_error(err, pool);
-          root_url = svn_path_canonicalize(root_url, pool);
           if (! svn_path_is_url(root_url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                            "'%s' is not a URL\n", root_url),
                          pool);
+          root_url = sanitize_url(root_url, pool);
           break;
         case 'r':
           {
@@ -886,6 +910,16 @@ main(int argc, const char **argv)
           break;
         case config_dir_opt:
           err = svn_utf_cstring_to_utf8(&config_dir, arg, pool);
+          if (err)
+            handle_error(err, pool);
+          break;
+        case config_inline_opt:
+          err = svn_utf_cstring_to_utf8(&opt_arg, arg, pool);
+          if (err)
+            handle_error(err, pool);
+
+          err = svn_cmdline__parse_config_option(config_options, opt_arg,
+                                                 pool);
           if (err)
             handle_error(err, pool);
           break;
@@ -984,10 +1018,9 @@ main(int argc, const char **argv)
       /* For puts, there should be a local file next. */
       if (action->action == ACTION_PUT)
         {
-          action->path[1] = svn_path_canonicalize(APR_ARRAY_IDX(action_args,
-                                                                i,
-                                                                const char *),
-                                                  pool);
+          action->path[1] =
+            svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
+                                                  const char *), pool);
           if (++i == action_args->nelts)
             insufficient(pool);
         }
@@ -1009,22 +1042,25 @@ main(int argc, const char **argv)
           else if (action->action == ACTION_PROPSET)
             {
               action->prop_value =
-                svn_string_create(APR_ARRAY_IDX(action_args, i, 
+                svn_string_create(APR_ARRAY_IDX(action_args, i,
                                                 const char *), pool);
               if (++i == action_args->nelts)
                 insufficient(pool);
             }
           else
             {
-              const char *propval_file = 
-                svn_path_canonicalize(APR_ARRAY_IDX(action_args, i, 
-                                                    const char *), pool);
+              const char *propval_file =
+                svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
+                                                      const char *), pool);
 
               if (++i == action_args->nelts)
                 insufficient(pool);
 
-              handle_error(read_propvalue_file(&(action->prop_value),
-                                               propval_file, pool), pool);
+              err = read_propvalue_file(&(action->prop_value),
+                                        propval_file, pool);
+              if (err)
+                handle_error(err, pool);
+
               action->action = ACTION_PROPSET;
             }
         }
@@ -1045,26 +1081,33 @@ main(int argc, const char **argv)
         {
           const char *url = APR_ARRAY_IDX(action_args, i, const char *);
 
-          /* If there's a root URL, we expect this to be a path
-             relative to that URL.  Otherwise, it should be a full URL. */
-          if (root_url)
-            url = svn_path_join(root_url, url, pool);
-          else if (! svn_path_is_url(url))
-            handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not a URL\n", url), pool);
-          url = svn_path_uri_from_iri(url, pool);
-          url = svn_path_uri_autoescape(url, pool);
-          url = svn_path_canonicalize(url, pool);
+          /* If there's a ROOT_URL, we expect URL to be a path
+             relative to ROOT_URL (and we build a full url from the
+             combination of the two).  Otherwise, it should be a full
+             url. */
+          if (! svn_path_is_url(url))
+            {
+              if (! root_url)
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                               "'%s' is not a URL, and "
+                                               "--root-url (-U) not provided\n",
+                                               url), pool);
+              /* ### These relpaths are already URI-encoded. */
+              url = apr_pstrcat(pool, root_url, "/",
+                                svn_relpath_canonicalize(url, pool),
+                                (char *)NULL);
+            }
+          url = sanitize_url(url, pool);
           action->path[j] = url;
 
           /* The cp source could be the anchor, but the other URLs should be
              children of the anchor. */
           if (! (action->action == ACTION_CP && j == 0))
-            url = svn_path_dirname(url, pool);
+            url = svn_uri_dirname(url, pool);
           if (! anchor)
             anchor = url;
           else
-            anchor = svn_path_get_longest_ancestor(anchor, url, pool);
+            anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
 
           if ((++i == action_args->nelts) && (j >= num_url_args))
             insufficient(pool);
@@ -1084,12 +1127,15 @@ main(int argc, const char **argv)
                      svn_string_create("committed using svnmucc", pool));
     }
   else
-    /* -F or -m specified; use that even if --with-revprop=svn:log. */
-    apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                 svn_string_create(message, pool));
+    {
+      /* -F or -m specified; use that even if --with-revprop=svn:log. */
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_string_create(message, pool));
+    }
 
   if ((err = execute(actions, anchor, revprops, username, password,
-                     config_dir, non_interactive, base_revision, pool)))
+                     config_dir, config_options, non_interactive,
+                     base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);

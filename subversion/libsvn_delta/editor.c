@@ -223,11 +223,11 @@ svn_editor_add_directory(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_add_directory != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_add_directory)(editor->baton, relpath, children,
-                                          props, replaces_rev,
-                                          editor->scratch_pool);
+  err = editor->funcs.cb_add_directory(editor->baton, relpath, children,
+                                       props, replaces_rev,
+                                       editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -244,10 +244,10 @@ svn_editor_add_file(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_add_file != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_add_file)(editor->baton, relpath, props,
-                                     replaces_rev, editor->scratch_pool);
+  err = editor->funcs.cb_add_file(editor->baton, relpath, props,
+                                  replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -265,10 +265,10 @@ svn_editor_add_symlink(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_add_symlink != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_add_symlink)(editor->baton, relpath, target, props,
-                                        replaces_rev, editor->scratch_pool);
+  err = editor->funcs.cb_add_symlink(editor->baton, relpath, target, props,
+                                     replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -285,10 +285,10 @@ svn_editor_add_absent(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_add_absent != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_add_absent)(editor->baton, relpath, kind,
-                                       replaces_rev, editor->scratch_pool);
+  err = editor->funcs.cb_add_absent(editor->baton, relpath, kind,
+                                    replaces_rev, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -306,10 +306,10 @@ svn_editor_set_props(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_set_props != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_set_props)(editor->baton, relpath, revision, props,
-                                      complete, editor->scratch_pool);
+  err = editor->funcs.cb_set_props(editor->baton, relpath, revision, props,
+                                   complete, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -327,11 +327,10 @@ svn_editor_set_text(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_set_text != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_set_text)(editor->baton, relpath, revision,
-                                     checksum, contents,
-                                     editor->scratch_pool);
+  err = editor->funcs.cb_set_text(editor->baton, relpath, revision,
+                                  checksum, contents, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -348,10 +347,10 @@ svn_editor_set_target(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_set_target != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_set_target)(editor->baton, relpath, revision,
-                                       target, editor->scratch_pool);
+  err = editor->funcs.cb_set_target(editor->baton, relpath, revision,
+                                    target, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -367,10 +366,10 @@ svn_editor_delete(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_delete != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_delete)(editor->baton, relpath, revision,
-                                   editor->scratch_pool);
+  err = editor->funcs.cb_delete(editor->baton, relpath, revision,
+                                editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -388,11 +387,11 @@ svn_editor_copy(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_copy != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_copy)(editor->baton, src_relpath, src_revision,
-                                 dst_relpath, replaces_rev,
-                                 editor->scratch_pool);
+  err = editor->funcs.cb_copy(editor->baton, src_relpath, src_revision,
+                              dst_relpath, replaces_rev,
+                              editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -410,11 +409,11 @@ svn_editor_move(svn_editor_t *editor,
   SVN_ERR_ASSERT(editor->funcs.cb_move != NULL);
 
   if (editor->cancel_func)
-    SVN_ERR((*editor->cancel_func)(editor->cancel_baton));
+    SVN_ERR(editor->cancel_func(editor->cancel_baton));
 
-  err = (*editor->funcs.cb_move)(editor->baton, src_relpath, src_revision,
-                                 dst_relpath, replaces_rev,
-                                 editor->scratch_pool);
+  err = editor->funcs.cb_move(editor->baton, src_relpath, src_revision,
+                              dst_relpath, replaces_rev,
+                              editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -427,7 +426,7 @@ svn_editor_complete(svn_editor_t *editor)
 
   SVN_ERR_ASSERT(editor->funcs.cb_complete != NULL);
 
-  err = (*editor->funcs.cb_complete)(editor->baton, editor->scratch_pool);
+  err = editor->funcs.cb_complete(editor->baton, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }
@@ -440,7 +439,7 @@ svn_editor_abort(svn_editor_t *editor)
 
   SVN_ERR_ASSERT(editor->funcs.cb_abort != NULL);
 
-  err = (*editor->funcs.cb_abort)(editor->baton, editor->scratch_pool);
+  err = editor->funcs.cb_abort(editor->baton, editor->scratch_pool);
   svn_pool_clear(editor->scratch_pool);
   return err;
 }

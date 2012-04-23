@@ -67,7 +67,7 @@ static const svn_ra_neon__xml_elm_t gls_report_elements[] =
   { NULL }
 };
 
-typedef struct {
+typedef struct get_location_segments_baton_t {
   svn_location_segment_receiver_t receiver;
   void *receiver_baton;
   apr_pool_t *subpool;
@@ -194,7 +194,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data,
                                          peg_revision, subpool));
-  bc = svn_path_url_add_component(bc_url.data, bc_relative.data, subpool);
+  bc = svn_path_url_add_component2(bc_url.data, bc_relative.data, subpool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", bc,
                                     request_body->data, NULL, NULL,

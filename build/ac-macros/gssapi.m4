@@ -58,10 +58,10 @@ AC_DEFUN(SVN_LIB_RA_SERF_GSSAPI,
       CPPFLAGS="$CPPFLAGS $SVN_GSSAPI_INCLUDES"
       CFLAGS="$old_CFLAGS"
       LIBS="$LIBS $SVN_GSSAPI_LIBS"
-      AC_LINK_IFELSE([
+      AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <gssapi.h>
 int main()
-{gss_init_sec_context(NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);}],
+{gss_init_sec_context(NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);}]])],
         svn_lib_gssapi="yes", svn_lib_gssapi="no")
       if test "$svn_lib_gssapi" = "yes"; then
         AC_MSG_RESULT([yes])

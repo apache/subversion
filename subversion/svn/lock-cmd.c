@@ -72,8 +72,9 @@ get_comment(const char **comment, svn_client_ctx_t *ctx,
     }
 
   /* Translate to UTF8/LF. */
-  SVN_ERR(svn_subst_translate_string(&comment_string, comment_string,
-                                     opt_state->encoding, pool));
+  SVN_ERR(svn_subst_translate_string2(&comment_string, NULL, NULL,
+                                      comment_string, opt_state->encoding,
+                                      FALSE, pool, pool));
   *comment = comment_string->data;
 
   return SVN_NO_ERROR;
@@ -97,6 +98,8 @@ svn_cl__lock(apr_getopt_t *os,
   /* We only support locking files, so '.' is not valid. */
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
 
   /* Get comment. */
   SVN_ERR(get_comment(&comment, ctx, opt_state, pool));

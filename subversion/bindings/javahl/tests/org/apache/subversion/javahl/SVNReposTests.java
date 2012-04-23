@@ -23,6 +23,7 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.types.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -109,10 +110,10 @@ public class SVNReposTests extends SVNTests
         OneTest thisTest = new OneTest(false,false);
         // verify zero revisions in new repos
         URI repoUrl = makeReposUrl(thisTest.getRepository());
-        final Info2[] infoHolder = new Info2[1];
+        final Info[] infoHolder = new Info[1];
         InfoCallback mycallback = new InfoCallback()
         {
-            public void singleInfo(Info2 info)
+            public void singleInfo(Info info)
             {
                 infoHolder[0] = info;
             }

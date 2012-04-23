@@ -46,7 +46,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum loc_state_e {
   REPORT,
   LOCATION,
 } loc_state_e;
@@ -59,7 +59,7 @@ typedef struct loc_state_list_t {
   struct loc_state_list_t *prev;
 } loc_state_list_t;
 
-typedef struct {
+typedef struct loc_context_t {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 

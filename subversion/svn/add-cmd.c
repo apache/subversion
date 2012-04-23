@@ -51,6 +51,7 @@ svn_cl__add(apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   apr_pool_t *iterpool;
+  svn_boolean_t seen_nonexistent_target = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -71,16 +72,15 @@ svn_cl__add(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       if (svn_path_is_url(target))
-        return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                                  NULL,
-                                                  _("'%s' is not a local path"),
-                                                  target));
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a local path"), target);
     }
 
   iterpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      svn_boolean_t success;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -89,12 +89,21 @@ svn_cl__add(apr_getopt_t *os,
                                opt_state->depth,
                                opt_state->force, opt_state->no_ignore,
                                opt_state->parents, ctx, iterpool),
-               NULL, opt_state->quiet,
+               &success, opt_state->quiet,
                SVN_ERR_ENTRY_EXISTS,
                SVN_ERR_WC_PATH_NOT_FOUND,
                SVN_NO_ERROR));
+
+      if (! success)
+        seen_nonexistent_target = TRUE;
     }
 
   svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
+
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not add all targets because some targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

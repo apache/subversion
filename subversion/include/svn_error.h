@@ -57,12 +57,6 @@ extern "C" {
    there for the reasons why. */
 #include "svn_error_codes.h"
 
-/** Set the error location for debug mode. */
-void
-svn_error__locate(const char *file,
-                  long line);
-
-
 /** Put an English description of @a statcode into @a buf and return @a buf,
  * NULL-terminated. @a statcode is either an svn error or apr error.
  */
@@ -116,10 +110,6 @@ svn_error_create(apr_status_t apr_err,
                  svn_error_t *child,
                  const char *message);
 
-/** Wrapper macro to collect file and line information */
-#define svn_error_create \
-  (svn_error__locate(__FILE__,__LINE__), (svn_error_create))
-
 /** Create an error structure with the given @a apr_err and @a child,
  * with a printf-style error message produced by passing @a fmt, using
  * apr_psprintf().
@@ -130,10 +120,6 @@ svn_error_createf(apr_status_t apr_err,
                   const char *fmt,
                   ...)
   __attribute__ ((format(printf, 3, 4)));
-
-/** Wrapper macro to collect file and line information */
-#define svn_error_createf \
-  (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
 
 /** Wrap a @a status from an APR function.  If @a fmt is NULL, this is
  * equivalent to svn_error_create(status,NULL,NULL).  Otherwise,
@@ -149,10 +135,6 @@ svn_error_wrap_apr(apr_status_t status,
                    ...)
        __attribute__((format(printf, 2, 3)));
 
-/** Wrapper macro to collect file and line information */
-#define svn_error_wrap_apr \
-  (svn_error__locate(__FILE__,__LINE__), (svn_error_wrap_apr))
-
 /** A quick n' easy way to create a wrapped exception with your own
  * message, before throwing it up the stack.  (It uses all of the
  * @a child's fields.)
@@ -161,14 +143,14 @@ svn_error_t *
 svn_error_quick_wrap(svn_error_t *child,
                      const char *new_msg);
 
-/** Wrapper macro to collect file and line information */
-#define svn_error_quick_wrap \
-  (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
-
 /** Compose two errors, returning the composition as a brand new error
  * and consuming the original errors.  Either or both of @a err1 and
  * @a err2 may be @c SVN_NO_ERROR.  If both are not @c SVN_NO_ERROR,
  * @a err2 will follow @a err1 in the chain of the returned error.
+ *
+ * Either @a err1 or @a err2 can be functions that return svn_error_t*
+ * but if both are functions they can be evaluated in either order as
+ * per the C language rules.
  *
  * @since New in 1.6.
  */
@@ -179,6 +161,10 @@ svn_error_compose_create(svn_error_t *err1,
 /** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err
  * chain will be copied into @a chain's pool and destroyed, so @a new_err
  * itself becomes invalid after this function.
+ *
+ * Either @a chain or @a new_err can be functions that return svn_error_t*
+ * but if both are functions they can be evaluated in either order as
+ * per the C language rules.
  */
 void
 svn_error_compose(svn_error_t *chain,
@@ -193,14 +179,17 @@ svn_error_compose(svn_error_t *chain,
 svn_error_t *
 svn_error_root_cause(svn_error_t *err);
 
-/** Return TRUE if @a err's chain contains the error code @a apr_err.
+/** Return the first error in @a err's chain that has an error code @a
+ * apr_err or #SVN_NO_ERROR if there is no error with that code.  @a
+ * err should *not* be cleared as the returned error shares memory
+ * with @a err.
  *
- * If @a err is #SVN_NO_ERROR, return FALSE.
+ * If @a err is #SVN_NO_ERROR, return #SVN_NO_ERROR.
  *
  * @since New in 1.7.
  */
-svn_boolean_t
-svn_error_has_cause(svn_error_t *err, apr_status_t apr_err);
+svn_error_t *
+svn_error_find_cause(svn_error_t *err, apr_status_t apr_err);
 
 /** Create a new error that is a deep copy of @a err and return it.
  *
@@ -220,6 +209,24 @@ svn_error_dup(svn_error_t *err);
  */
 void
 svn_error_clear(svn_error_t *error);
+
+
+#if defined(SVN_DEBUG)
+/** Set the error location for debug mode. */
+void
+svn_error__locate(const char *file,
+                  long line);
+
+/* Wrapper macros to collect file and line information */
+#define svn_error_create \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_create))
+#define svn_error_createf \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
+#define svn_error_wrap_apr \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_wrap_apr))
+#define svn_error_quick_wrap \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
+#endif
 
 
 /**
@@ -254,6 +261,8 @@ svn_handle_error(svn_error_t *error,
  * Very basic default warning handler: print out the error @a error to the
  * stdio stream @a stream, prefixed by @a prefix.  Allocations are
  * performed in the error's pool.
+ *
+ * @a error may not be @c NULL.
  *
  * @since New in 1.2.
  */
@@ -312,13 +321,22 @@ svn_handle_warning(FILE *stream,
 #endif
 
 /**
- * Purge from @a ERR and its child chain any links associated with
- * error tracing placeholders, and return the new top-level error
- * chain item.  @a ERR should be considered unusable after passing
- * through this function, but should *not* be cleared (as the returned
- * error is shares memory with @a ERR).
+ * Returns an error chain that is based on @a err's error chain but
+ * does not include any error tracing placeholders.  @a err is not
+ * modified, except for any allocations using its pool.
  *
- * @since New in 1.6.
+ * The returned error chain is allocated from @a err's pool and shares
+ * its message and source filename character arrays.  The returned
+ * error chain should *not* be cleared because it is not a fully
+ * fledged error chain, only clearing @a err should be done to clear
+ * the returned error chain.  If @a err is cleared, then the returned
+ * error chain is unusable.
+ *
+ * @a err can be #SVN_NO_ERROR.  If @a err is not #SVN_NO_ERROR, then
+ * the last link in the error chain must be a non-tracing error, i.e,
+ * a real error.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
@@ -353,6 +371,13 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
 /** @} */
 
+
+/** Error groups
+ *
+ * @defgroup svn_error_error_groups Error groups
+ * @{
+ */
+
 /**
  * Return TRUE if @a err is an error specifically related to locking a
  * path in the repository, FALSE otherwise.
@@ -379,6 +404,25 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||               \
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+
+/** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
+ * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
+ * constants.
+ * 
+ * @since New in 1.7.
+ */
+#define SVN_ERROR_IN_CATEGORY(apr_err, category)            \
+    ((category) == ((apr_err) / SVN_ERR_CATEGORY_SIZE) * SVN_ERR_CATEGORY_SIZE)
+
+
+/** @} */
+
+
+/** Internal malfunctions and assertions
+ *
+ * @defgroup svn_error_malfunction_assertion Malfunctions and assertions
+ * @{
+ */
 
 /** Report that an internal malfunction has occurred, and possibly terminate
  * the program.
@@ -495,6 +539,8 @@ svn_error__malfunction(svn_boolean_t can_return,
  * The function may alter its behaviour according to compile-time
  * and run-time and even interactive conditions.
  *
+ * @see SVN_ERROR_IN_CATEGORY()
+ *
  * @since New in 1.6.
  */
 typedef svn_error_t *(*svn_error_malfunction_handler_t)
@@ -539,6 +585,8 @@ svn_error_abort_on_malfunction(svn_boolean_t can_return,
                                const char *file,
                                int line,
                                const char *expr);
+
+/** @} */
 
 
 #ifdef __cplusplus

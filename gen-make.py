@@ -93,8 +93,10 @@ def _objinfo(o):
     return "%s: %s %s" % (t,n,f)
 
 
-def _usage_exit():
-  "print usage, exit the script"
+def _usage_exit(err=None):
+  "print ERR (if any), print usage, then exit the script"
+  if err:
+    print("ERROR: %s\n" % (err))
   print("USAGE:  gen-make.py [options...] [conf-file]")
   print("  -s        skip dependency generation")
   print("  --debug   print lots of stuff only developers care about")
@@ -205,6 +207,9 @@ def _usage_exit():
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
+  print("  --with-static-apr")
+  print("           Use static apr and apr-util")
+  print("")
   print("  --vsnet-version=VER")
   print("           generate for VS.NET version VER (2002, 2003, 2005, 2008 or 2010)")
   print("           [only valid in combination with '-t vcproj']")
@@ -250,6 +255,7 @@ if __name__ == '__main__':
                             'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
+                            'with-static-apr',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',
@@ -261,9 +267,9 @@ if __name__ == '__main__':
                             'vsnet-version=',
                             ])
     if len(args) > 1:
-      _usage_exit()
-  except getopt.GetoptError:
-    _usage_exit()
+      _usage_exit("Too many arguments")
+  except getopt.GetoptError, e:
+    _usage_exit(str(e))
 
   conf = 'build.conf'
   skip = 0
@@ -306,7 +312,7 @@ if __name__ == '__main__':
   opt_conf.close()
 
   if gentype not in gen_modules.keys():
-    _usage_exit()
+    _usage_exit("Unknown module type '%s'" % (gentype))
 
   main(conf, gentype, skip_depends=skip, other_options=rest.list)
 
