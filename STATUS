@@ -143,6 +143,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, danielsh
 
+ * r1329417
+   Fix issue #4166 'multiple merge editor drives which add then delete a
+   subtree fail'.
+   Justification:
+     Prevents merge failure in an edge case.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
