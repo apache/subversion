@@ -1984,6 +1984,8 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                   apr_pool_t *pool);
 
 
+/** @} */
+
 /** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
  */
