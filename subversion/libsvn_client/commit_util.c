@@ -1580,10 +1580,7 @@ do_item_commit(void **dir_baton,
                                  parent_baton, pool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, item->kind,
-                                                  err, ctx, pool));
+        goto fixup_error;
     }
 
   /* If this item is supposed to be added, do so. */
@@ -1607,10 +1604,7 @@ do_item_commit(void **dir_baton,
         }
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, kind, err,
-                                                  ctx, pool));
+        goto fixup_error;
 
       /* Set other prop-changes, if available in the baton */
       if (item->outgoing_prop_changes)
@@ -1623,14 +1617,17 @@ do_item_commit(void **dir_baton,
               prop = APR_ARRAY_IDX(prop_changes, ctr, svn_prop_t *);
               if (kind == svn_node_file)
                 {
-                  editor->change_file_prop(file_baton, prop->name,
-                                           prop->value, pool);
+                  err = editor->change_file_prop(file_baton, prop->name,
+                                                 prop->value, pool);
                 }
               else
                 {
-                  editor->change_dir_prop(*dir_baton, prop->name,
-                                          prop->value, pool);
+                  err = editor->change_dir_prop(*dir_baton, prop->name,
+                                                prop->value, pool);
                 }
+
+              if (err)
+                goto fixup_error;
             }
         }
     }
@@ -1648,11 +1645,7 @@ do_item_commit(void **dir_baton,
                                       file_pool, &file_baton);
 
               if (err)
-                return svn_error_trace(fixup_commit_error(local_abspath,
-                                                          icb->base_url,
-                                                          path, kind,
-                                                          err, ctx,
-                                                          pool));
+                goto fixup_error;
             }
         }
       else
@@ -1672,11 +1665,7 @@ do_item_commit(void **dir_baton,
                 }
 
               if (err)
-                return svn_error_trace(fixup_commit_error(local_abspath,
-                                                          icb->base_url,
-                                                          path, kind,
-                                                          err, ctx,
-                                                          pool));
+                goto fixup_error;
             }
         }
 
@@ -1689,10 +1678,7 @@ do_item_commit(void **dir_baton,
               (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, kind, err,
-                                                  ctx, pool));
+        goto fixup_error;
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
@@ -1706,14 +1692,17 @@ do_item_commit(void **dir_baton,
                                    svn_prop_t *);
               if (kind == svn_node_file)
                 {
-                  editor->change_file_prop(file_baton, prop->name,
+                  err = editor->change_file_prop(file_baton, prop->name,
                                            prop->value, pool);
                 }
               else
                 {
-                  editor->change_dir_prop(*dir_baton, prop->name,
+                  err = editor->change_dir_prop(*dir_baton, prop->name,
                                           prop->value, pool);
                 }
+
+              if (err)
+                goto fixup_error;
             }
         }
     }
@@ -1734,10 +1723,7 @@ do_item_commit(void **dir_baton,
                                     file_pool, &file_baton);
 
           if (err)
-            return svn_error_trace(fixup_commit_error(local_abspath,
-                                                      icb->base_url,
-                                                      path, kind,
-                                                      err, ctx, pool));
+            goto fixup_error;
         }
 
       /* Add this file mod to the FILE_MODS hash. */
@@ -1752,13 +1738,16 @@ do_item_commit(void **dir_baton,
       err = editor->close_file(file_baton, NULL, file_pool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, kind,
-                                                  err, ctx, pool));
+        goto fixup_error;
     }
 
   return SVN_NO_ERROR;
+
+fixup_error:
+  return svn_error_trace(fixup_commit_error(local_abspath,
+                                            icb->base_url,
+                                            path, kind,
+                                            err, ctx, pool));
 }
 
 
@@ -1778,7 +1767,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
@@ -1802,8 +1790,6 @@ svn_client__do_commit(const char *base_url,
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
   /* Ditto for the checksums. */
-  if (md5_checksums)
-    *md5_checksums = apr_hash_make(result_pool);
   if (sha1_checksums)
     *sha1_checksums = apr_hash_make(result_pool);
 
@@ -1883,9 +1869,6 @@ svn_client__do_commit(const char *base_url,
                                                     err, ctx, scratch_pool));
         }
 
-      if (md5_checksums)
-        apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
-                     new_text_base_md5_checksum);
       if (sha1_checksums)
         apr_hash_set(*sha1_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_sha1_checksum);
