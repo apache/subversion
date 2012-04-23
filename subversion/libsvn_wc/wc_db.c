@@ -5101,7 +5101,14 @@ do_changelist_notify(void *baton,
       svn_pool_clear(iterpool);
 
       if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
+        {
+          svn_error_t *err = cancel_func(cancel_baton);
+
+          if (err)
+            return svn_error_trace(svn_error_compose_create(
+                                                    err,
+                                                    svn_sqlite__reset(stmt)));
+        }
 
       notify_abspath = svn_dirent_join(wcroot->abspath, notify_relpath,
                                        iterpool);
@@ -8166,6 +8173,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   cache_props_baton_t baton;
   svn_boolean_t have_row;
   apr_pool_t *iterpool;
+  svn_error_t *err = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(receiver_func);
@@ -8198,40 +8206,43 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_RELEVANT_PROPS_FROM_CACHE));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
+  while (!err && have_row)
     {
       apr_hash_t *props;
 
       svn_pool_clear(iterpool);
 
-      /* see if someone wants to cancel this operation. */
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
       SVN_ERR(svn_sqlite__column_properties(&props, stmt, 1, iterpool,
                                             iterpool));
-      if (props && apr_hash_count(props) != 0)
+
+      /* see if someone wants to cancel this operation. */
+      if (cancel_func)
+        err = cancel_func(cancel_baton);
+
+      if (!err && props && apr_hash_count(props) != 0)
         {
           const char *child_relpath;
           const char *child_abspath;
+          svn_error_t *err;
 
           child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
           child_abspath = svn_dirent_join(wcroot->abspath,
                                           child_relpath, iterpool);
 
-          SVN_ERR(receiver_func(receiver_baton, child_abspath, props,
-                                iterpool));
+          err = receiver_func(receiver_baton, child_abspath, props, iterpool);
         }
 
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      err = svn_error_compose_create(err, svn_sqlite__step(&have_row, stmt));
     }
 
-  SVN_ERR(svn_sqlite__reset(stmt));
+  err = svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
-                                      STMT_DROP_NODE_PROPS_CACHE));
+  SVN_ERR(svn_error_compose_create(
+                    err,
+                    svn_sqlite__exec_statements(wcroot->sdb,
+                                                STMT_DROP_NODE_PROPS_CACHE)));
   return SVN_NO_ERROR;
 }
 
