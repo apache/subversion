@@ -808,6 +808,11 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
+/** Do not auto-commit the txn when its associated editor is marked
+ * as completed.
+ */
+#define SVN_FS_TXN_NO_AUTOCOMMIT                 0x00004
 /** @} */
 
 /**
