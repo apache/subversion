@@ -32,6 +32,8 @@
 
 #include "svn_private_config.h"
 
+#include "repos.h"
+
 
 
 
