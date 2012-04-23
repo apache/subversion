@@ -39,6 +39,7 @@
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_editor.h"
 
 
 #ifdef __cplusplus
@@ -807,6 +808,11 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
+/** Do not auto-commit the txn when its associated editor is marked
+ * as completed.
+ */
+#define SVN_FS_TXN_NO_AUTOCOMMIT                 0x00004
 /** @} */
 
 /**
@@ -1001,6 +1007,38 @@ svn_error_t *
 svn_fs_change_txn_props(svn_fs_txn_t *txn,
                         const apr_array_header_t *props,
                         apr_pool_t *pool);
+
+/** @} */
+
+
+/** Editors
+ *
+ * ### docco
+ *
+ * @defgroup svn_fs_editor Transaction editors
+ * @{
+ */
+
+svn_error_t *
+svn_fs_editor_create(svn_editor_t **editor,
+                     const char **txn_name,
+                     svn_fs_t *fs,
+                     svn_revnum_t revision,
+                     apr_uint32_t flags,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_fs_editor_create_for(svn_editor_t **editor,
+                         svn_fs_t *fs,
+                         const char *txn_name,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /** @} */
 

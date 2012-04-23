@@ -406,6 +406,7 @@ $START &
 sleep 2
 
 say "HTTPD started and listening on '$BASE_URL'..."
+#query "Ready" "y"
 
 # Perform a trivial validation of our httpd configuration by
 # downloading a file and comparing it to the original copy.

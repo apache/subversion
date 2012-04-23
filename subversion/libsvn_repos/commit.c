@@ -37,8 +37,11 @@
 #include "svn_checksum.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
-#include "repos.h"
 #include "svn_private_config.h"
+#include "svn_editor.h"
+
+#include "repos.h"
+
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 
@@ -127,6 +130,18 @@ struct file_baton
   const char *path; /* the -absolute- path to this file in the fs */
 };
 
+
+struct ev2_baton
+{
+  /* The repository we are editing.  */
+  svn_repos_t *repos;
+
+  /* The FS txn editor  */
+  svn_editor_t *inner;
+
+  /* The name of the open transaction (so we know what to commit)  */
+  const char *txn_name;
+};
 
 
 /* Create and return a generic out-of-dateness error. */
@@ -953,6 +968,49 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
                                    eb->repos_url, eb->base_path,
                                    shim_callbacks, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos__get_commit_ev2(svn_editor_t **editor,
+                          svn_repos_t *repos,
+                          svn_revnum_t revision,
+                          apr_hash_t *revprop_table,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  static const svn_editor_cb_many_t editor_cbs = {
+    NULL /* add_directory_cb */,
+    NULL /* add_file_cb */,
+    NULL /* add_symlink_cb */,
+    NULL /* add_absent_cb */,
+    NULL /* alter_directory_cb */,
+    NULL /* alter_file_cb */,
+    NULL /* alter_symlink_cb */,
+    NULL /* delete_cb */,
+    NULL /* copy_cb */,
+    NULL /* move_cb */,
+    NULL /* rotate_cb */,
+    NULL /* complete_cb */,
+    NULL /* abort_cb */
+  };
+  struct ev2_baton *eb = apr_palloc(result_pool, sizeof(*eb));
+
+  eb->repos = repos;
+
+  SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
+                               repos->fs, revision,
+                               SVN_FS_TXN_CHECK_LOCKS,
+                               cancel_func, cancel_baton,
+                               result_pool, scratch_pool));
+
+  SVN_ERR(svn_editor_create(editor, eb, cancel_func, cancel_baton,
+                            result_pool, scratch_pool));
+  SVN_ERR(svn_editor_setcb_many(*editor, &editor_cbs, scratch_pool));
 
   return SVN_NO_ERROR;
 }

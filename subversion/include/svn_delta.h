@@ -1167,51 +1167,6 @@ typedef svn_error_t *(*svn_delta_unlock_func_t)(
     apr_pool_t *scratch_pool);
 
 
-/* svn_editor__See insert_shims() for more information. */
-struct svn_delta__extra_baton
-{
-  svn_delta__start_edit_func_t start_edit;
-  svn_delta__target_revision_func_t target_revision;
-  void *baton;
-};
-
-/** A temporary API to convert from a delta editor to an Ev2 editor. */
-svn_error_t *
-svn_delta__editor_from_delta(svn_editor_t **editor_p,
-                  struct svn_delta__extra_baton **exb,
-                  svn_delta_unlock_func_t *unlock_func,
-                  void **unlock_baton,
-                  const svn_delta_editor_t *deditor,
-                  void *dedit_baton,
-                  svn_boolean_t *send_abs_paths,
-                  const char *repos_root,
-                  const char *base_relpath,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  svn_delta_fetch_kind_func_t fetch_kind_func,
-                  void *fetch_kind_baton,
-                  svn_delta_fetch_props_func_t fetch_props_func,
-                  void *fetch_props_baton,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool);
-
-/** A temporary API to convert from an Ev2 editor to a delta editor. */
-svn_error_t *
-svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
-                  void **dedit_baton,
-                  svn_editor_t *editor,
-                  svn_delta_unlock_func_t unlock_func,
-                  void *unlock_baton,
-                  svn_boolean_t *found_abs_paths,
-                  const char *repos_root,
-                  const char *base_relpath,
-                  svn_delta_fetch_props_func_t fetch_props_func,
-                  void *fetch_props_baton,
-                  svn_delta_fetch_base_func_t fetch_base_func,
-                  void *fetch_base_baton,
-                  struct svn_delta__extra_baton *exb,
-                  apr_pool_t *pool);
-
 /** A temporary API which conditionally inserts a double editor shim
  * into the chain of delta editors.  Used for testing Editor v2.
  *

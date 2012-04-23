@@ -29,8 +29,9 @@
 
 #include <apr_pools.h>
 
-#include "svn_repos.h"
 #include "svn_types.h"
+#include "svn_repos.h"
+#include "svn_editor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,6 +87,19 @@ svn_error_t *
 svn_repos__fs_type(const char **fs_type,
                    const char *repos_path,
                    apr_pool_t *pool);
+
+
+/* Create a commit editor for REPOS, based on REVISION.  */
+svn_error_t *
+svn_repos__get_commit_ev2(svn_editor_t **editor,
+                          svn_repos_t *repos,
+                          svn_revnum_t revision,
+                          apr_hash_t *revprop_table,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

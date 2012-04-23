@@ -33,6 +33,8 @@
 
 #include "svn_private_config.h"
 
+#include "private/svn_delta_private.h"
+
 
 struct file_rev_handler_wrapper_baton {
   void *baton;
@@ -106,7 +108,6 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * details.
  */
 
-
 struct ev2_edit_baton
 {
   svn_editor_t *editor;
@@ -134,7 +135,7 @@ struct ev2_edit_baton
   svn_delta_fetch_base_func_t fetch_base_func;
   void *fetch_base_baton;
 
-  svn_delta_unlock_func_t do_unlock;
+  svn_delta__unlock_func_t do_unlock;
   void *unlock_baton;
 };
 
@@ -1054,7 +1055,7 @@ svn_error_t *
 svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                   void **dedit_baton,
                   svn_editor_t *editor,
-                  svn_delta_unlock_func_t unlock_func,
+                  svn_delta__unlock_func_t unlock_func,
                   void *unlock_baton,
                   svn_boolean_t *found_abs_paths,
                   const char *repos_root,
@@ -2006,7 +2007,7 @@ do_unlock(void *baton,
 svn_error_t *
 svn_delta__editor_from_delta(svn_editor_t **editor_p,
                   struct svn_delta__extra_baton **exb,
-                  svn_delta_unlock_func_t *unlock_func,
+                  svn_delta__unlock_func_t *unlock_func,
                   void **unlock_baton,
                   const svn_delta_editor_t *deditor,
                   void *dedit_baton,
@@ -2132,7 +2133,7 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
   svn_boolean_t *found_abs_paths = apr_palloc(result_pool,
                                               sizeof(*found_abs_paths));
 
-  svn_delta_unlock_func_t unlock_func;
+  svn_delta__unlock_func_t unlock_func;
   void *unlock_baton;
 
   SVN_ERR_ASSERT(shim_callbacks->fetch_kind_func != NULL);
