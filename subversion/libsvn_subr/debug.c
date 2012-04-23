@@ -27,9 +27,12 @@
 #include <stdarg.h>
 
 #include "svn_types.h"
+#include "svn_string.h"
 
 #include "private/svn_debug.h"
 
+
+#define DBG_FLAG "DBG: "
 
 /* This will be tweaked by the preamble code.  */
 static FILE * volatile debug_output = NULL;
@@ -59,21 +62,63 @@ svn_dbg__preamble(const char *file, long line, FILE *output)
       else
         ++slash;
 
-      fprintf(output, "DBG: %s:%4ld: ", slash, line);
+      fprintf(output, DBG_FLAG "%s:%4ld: ", slash, line);
     }
+}
+
+
+static void
+print_line(const char *fmt, va_list ap)
+{
+  FILE *output = debug_output;
+
+  if (output == NULL || quiet_mode())
+    return;
+
+  (void) vfprintf(output, fmt, ap);
 }
 
 
 void
 svn_dbg__printf(const char *fmt, ...)
 {
-  FILE *output = debug_output;
   va_list ap;
 
-  if (output == NULL || quiet_mode())
-    return;
-
   va_start(ap, fmt);
-  (void) vfprintf(output, fmt, ap);
+  print_line(fmt, ap);
   va_end(ap);
 }
+
+
+void
+svn_dbg__print_props(apr_hash_t *props,
+                     const char *header_fmt,
+                     ...)
+{
+/* We only build this code if SVN_DEBUG is defined. */
+#ifdef SVN_DEBUG
+
+  apr_hash_index_t *hi;
+  va_list ap;
+
+  va_start(ap, header_fmt);
+  print_line(header_fmt, ap);
+  va_end(ap);
+
+  if (props == NULL)
+    {
+      SVN_DBG(("    (null)\n"));
+      return;
+    }
+
+  for (hi = apr_hash_first(apr_hash_pool_get(props), props); hi;
+        hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_string_t *val = svn__apr_hash_index_val(hi);
+
+      SVN_DBG(("    '%s' -> '%s'\n", name, val->data));
+    }
+#endif /* SVN_DEBUG */
+}
+

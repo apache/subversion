@@ -155,7 +155,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
 
     /* Invoke the FS module's initfunc function with the common
        pool protected by a lock. */
-    SVN_MUTEX__WITH_LOCK(common_pool_lock, 
+    SVN_MUTEX__WITH_LOCK(common_pool_lock,
                          initfunc(my_version, vtable, common_pool));
   }
   fs_version = (*vtable)->get_version();
@@ -199,14 +199,27 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
   apr_size_t len;
 
   /* Read the fsap-name file to get the FSAP name, or assume the (old)
-     default. */
+     default.  For old repositories I suppose we could check some
+     other file, DB_CONFIG or strings say, but for now just check the
+     directory exists. */
   filename = svn_dirent_join(path, FS_TYPE_FILENAME, pool);
   err = svn_io_file_open(&file, filename, APR_READ|APR_BUFFERED, 0, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
-      svn_error_clear(err);
-      *fs_type = apr_pstrdup(pool, SVN_FS_TYPE_BDB);
-      return SVN_NO_ERROR;
+      svn_node_kind_t kind;
+      svn_error_t *err2 = svn_io_check_path(path, &kind, pool);
+      if (err2)
+        {
+          svn_error_clear(err2);
+          return err;
+        }
+      if (kind == svn_node_dir)
+        {
+          svn_error_clear(err);
+          *fs_type = SVN_FS_TYPE_BDB;
+          return SVN_NO_ERROR;
+        }
+      return err;
     }
   else if (err)
     return err;
@@ -357,7 +370,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   /* Perform the actual creation. */
   *fs_p = fs_new(fs_config, pool);
-  
+
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->create(*fs_p, path, pool, common_pool));
   return SVN_NO_ERROR;
@@ -394,7 +407,9 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool) 
+              svn_revnum_t start,
+              svn_revnum_t end,
+              apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
@@ -404,7 +419,7 @@ svn_fs_verify(const char *path,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->verify_fs(fs, path, cancel_func, cancel_baton,
-                                         pool, common_pool));
+                                         start, end, pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -424,16 +439,72 @@ svn_fs_delete_fs(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_fs_hotcopy2(const char *src_path, const char *dst_path,
+                svn_boolean_t clean, svn_boolean_t incremental,
+                svn_cancel_func_t cancel_func, void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  fs_library_vtable_t *vtable;
+  const char *src_fs_type;
+  svn_fs_t *src_fs;
+  svn_fs_t *dst_fs;
+  const char *dst_fs_type;
+  svn_node_kind_t dst_kind;
+
+  if (strcmp(src_path, dst_path) == 0)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Hotcopy source and destination are equal"));
+
+  SVN_ERR(svn_fs_type(&src_fs_type, src_path, scratch_pool));
+  SVN_ERR(get_library_vtable(&vtable, src_fs_type, scratch_pool));
+  src_fs = fs_new(NULL, scratch_pool);
+  dst_fs = fs_new(NULL, scratch_pool);
+
+  SVN_ERR(svn_io_check_path(dst_path, &dst_kind, scratch_pool));
+  if (dst_kind == svn_node_file)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("'%s' already exists and is a file"),
+                             svn_dirent_local_style(dst_path,
+                                                    scratch_pool));
+  if (dst_kind == svn_node_unknown)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("'%s' already exists and has an unknown "
+                               "node kind"),
+                             svn_dirent_local_style(dst_path,
+                                                    scratch_pool));
+  if (dst_kind == svn_node_dir)
+    {
+      svn_node_kind_t type_file_kind;
+
+      SVN_ERR(svn_io_check_path(svn_dirent_join(dst_path,
+                                                FS_TYPE_FILENAME,
+                                                scratch_pool),
+                                &type_file_kind, scratch_pool));
+      if (type_file_kind != svn_node_none)
+        {
+          SVN_ERR(svn_fs_type(&dst_fs_type, dst_path, scratch_pool));
+          if (strcmp(src_fs_type, dst_fs_type) != 0)
+            return svn_error_createf(
+                     SVN_ERR_ILLEGAL_TARGET, NULL,
+                     _("The filesystem type of the hotcopy source "
+                       "('%s') does not match the filesystem "
+                       "type of the hotcopy destination ('%s')"),
+                     src_fs_type, dst_fs_type);
+        }
+    }
+
+  SVN_ERR(vtable->hotcopy(src_fs, dst_fs, src_path, dst_path, clean,
+                          incremental, cancel_func, cancel_baton,
+                          scratch_pool));
+  return svn_error_trace(write_fs_type(dst_path, src_fs_type, scratch_pool));
+}
+
+svn_error_t *
 svn_fs_hotcopy(const char *src_path, const char *dest_path,
                svn_boolean_t clean, apr_pool_t *pool)
 {
-  fs_library_vtable_t *vtable;
-  const char *fs_type;
-
-  SVN_ERR(svn_fs_type(&fs_type, src_path, pool));
-  SVN_ERR(get_library_vtable(&vtable, fs_type, pool));
-  SVN_ERR(vtable->hotcopy(src_path, dest_path, clean, pool));
-  return svn_error_trace(write_fs_type(dest_path, fs_type, pool));
+  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean,
+                                         FALSE, NULL, NULL, pool));
 }
 
 svn_error_t *

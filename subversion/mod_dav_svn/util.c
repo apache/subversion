@@ -53,9 +53,11 @@ dav_svn__new_error(apr_pool_t *pool,
  * > 2.2 below perpetuates this.
  */
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  /* old code assumed errno was valid; keep assuming */
-  return dav_new_error(pool, status, error_id, errno, desc);
+  return dav_new_error(pool, status, error_id, 0, desc);
 #else
+
+  errno = 0; /* For the same reason as in dav_svn__new_error_tag */
+
   return dav_new_error(pool, status, error_id, desc);
 #endif
 }
@@ -620,6 +622,31 @@ dav_svn__final_flush_or_error(request_rec *r,
   return derr;
 }
 
+void dav_svn__log_err(request_rec *r,
+                      dav_error *err,
+                      int level)
+{
+    dav_error *errscan;
+
+    /* Log the errors */
+    /* ### should have a directive to log the first or all */
+    for (errscan = err; errscan != NULL; errscan = errscan->prev) {
+        apr_status_t status;
+
+        if (errscan->desc == NULL)
+            continue;
+
+#if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
+        status = errscan->aprerr;
+#else
+        status = errscan->save_errno;
+#endif
+
+        ap_log_rerror(APLOG_MARK, level, status, r,
+                      "%s  [%d, #%d]",
+                      errscan->desc, errscan->status, errscan->error_id);
+    }
+}
 
 int
 dav_svn__error_response_tag(request_rec *r,
@@ -639,8 +666,10 @@ dav_svn__error_response_tag(request_rec *r,
   if (err->namespace != NULL)
     ap_rprintf(r, " xmlns:C=\"%s\">" DEBUG_CR "<C:%s/>" DEBUG_CR,
                err->namespace, err->tagname);
-  else
+  else if (err->tagname != NULL)
     ap_rprintf(r, ">" DEBUG_CR "<D:%s/>" DEBUG_CR, err->tagname);
+  else
+    ap_rputs(">" DEBUG_CR, r);
 
   /* here's our mod_dav specific tag: */
   if (err->desc != NULL)

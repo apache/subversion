@@ -66,11 +66,11 @@ typedef struct mergeinfo_context_t {
 
 static svn_error_t *
 start_element(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               svn_ra_serf__dav_props_t name,
-              const char **attrs)
+              const char **attrs,
+              apr_pool_t *scratch_pool)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
+  mergeinfo_context_t *mergeinfo_ctx = parser->user_data;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
@@ -99,10 +99,11 @@ start_element(svn_ra_serf__xml_parser_t *parser,
 }
 
 static svn_error_t *
-end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
-            svn_ra_serf__dav_props_t name)
+end_element(svn_ra_serf__xml_parser_t *parser,
+            svn_ra_serf__dav_props_t name,
+            apr_pool_t *scratch_pool)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
+  mergeinfo_context_t *mergeinfo_ctx = parser->user_data;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
@@ -149,10 +150,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
 
 
 static svn_error_t *
-cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
-              const char *data, apr_size_t len)
+cdata_handler(svn_ra_serf__xml_parser_t *parser,
+              const char *data,
+              apr_size_t len,
+              apr_pool_t *scratch_pool)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
+  mergeinfo_context_t *mergeinfo_ctx = parser->user_data;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;

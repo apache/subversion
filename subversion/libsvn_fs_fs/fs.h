@@ -34,6 +34,7 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
+#include "private/svn_named_atomic.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,6 +83,11 @@ extern "C" {
 #define CONFIG_OPTION_FAIL_STOP          "fail-stop"
 #define CONFIG_SECTION_REP_SHARING       "rep-sharing"
 #define CONFIG_OPTION_ENABLE_REP_SHARING "enable-rep-sharing"
+#define CONFIG_SECTION_DELTIFICATION     "deltification"
+#define CONFIG_OPTION_ENABLE_DIR_DELTIFICATION   "enable-dir-deltification"
+#define CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION "enable-props-deltification"
+#define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
+#define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -117,6 +123,10 @@ extern "C" {
 
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
+
+/* 1.8 deltification options should work with any FSFS repo but to avoid
+ * issues with very old servers, restrict those options to the 1.6+ format*/
+#define SVN_FS_FS__MIN_DELTIFICATION_FORMAT 4
 
 /* The 1.7-dev format, never released, that packed revprops into SQLite
    revprops.db . */
@@ -198,7 +208,8 @@ typedef struct fs_fs_shared_data_t
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
-/* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
+/* Private (non-shared) FSFS-specific data for each svn_fs_t object.
+   Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
 {
   /* The format number of this FS. */
@@ -224,16 +235,33 @@ typedef struct fs_fs_data_t
      (svn_fs_id_t *).  (Not threadsafe.) */
   svn_cache__t *rev_root_id_cache;
 
-  /* DAG node cache for immutable nodes */
+  /* DAG node cache for immutable nodes.  Maps (revision, fspath)
+     to (dag_node_t *). */
   svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
-     unparsed FS ID to ###x. */
+     unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
+     names to (svn_fs_dirent_t *). */
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
-     rep key to svn_string_t. */
+     rep key (revision/offset) to svn_string_t. */
   svn_cache__t *fulltext_cache;
+
+  /* Access object to the atomics namespace used by revprop caching.
+     Will be NULL until the first access. */
+  svn_atomic_namespace__t *revprop_namespace;
+
+  /* Access object to the revprop "generation". Will be NULL until
+     the first access. */
+  svn_named_atomic__t *revprop_generation;
+
+  /* Access object to the revprop update timeout. Will be NULL until
+     the first access. */
+  svn_named_atomic__t *revprop_timeout;
+
+  /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
+  svn_cache__t *revprop_cache;
 
   /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
      a manifest; and a manifest is a mapping from (svn_revnum_t) revision
@@ -244,13 +272,17 @@ typedef struct fs_fs_data_t
   /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
   svn_cache__t *txdelta_window_cache;
 
+  /* Cache for combined windows as svn_stringbuf_t objects;
+     the key is (revFilePath, offset) */
+  svn_cache__t *combined_window_cache;
+
   /* Cache for node_revision_t objects; the key is (revision, id offset) */
   svn_cache__t *node_revision_cache;
 
   /* If set, there are or have been more than one concurrent transaction */
   svn_boolean_t concurrent_transactions;
 
-  /* Tempoary cache for changed directories yet to be committed; maps from
+  /* Temporary cache for changed directories yet to be committed; maps from
      unparsed FS ID to ###x.  NULL outside transactions. */
   svn_cache__t *txn_dir_cache;
 
@@ -269,6 +301,19 @@ typedef struct fs_fs_data_t
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
   svn_boolean_t rep_sharing_allowed;
+
+  /* Whether directory nodes shall be deltified just like file nodes. */
+  svn_boolean_t deltify_directories;
+
+  /* Whether nodes properties shall be deltified. */
+  svn_boolean_t deltify_properties;
+
+  /* Restart deltification histories after each multiple of this value */
+  apr_int64_t max_deltification_walk;
+
+  /* Maximum number of length of the linear part at the top of the
+   * deltification history after which skip deltas will be used. */
+  apr_int64_t max_linear_deltification;
 } fs_fs_data_t;
 
 

@@ -33,6 +33,7 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -51,11 +52,8 @@ typedef struct prop_info_t {
 
   /* Current ns, attribute name, and value of the property we're parsing */
   const char *ns;
-
   const char *name;
-
-  const char *val;
-  apr_size_t val_len;
+  svn_stringbuf_t *value;
 
   const char *encoding;
 
@@ -243,6 +241,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       info = apr_pcalloc(parser->state->pool, sizeof(*info));
       info->pool = parser->state->pool;
+      info->value = svn_stringbuf_create_empty(info->pool);
 
       parser->state->private = info;
     }
@@ -255,11 +254,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 start_propfind(svn_ra_serf__xml_parser_t *parser,
-               void *userData,
                svn_ra_serf__dav_props_t name,
-               const char **attrs)
+               const char **attrs,
+               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
   prop_state_e state;
   prop_info_t *info;
 
@@ -273,7 +272,7 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
     {
       info = push_state(parser, ctx, PROPVAL);
       info->ns = name.namespace;
-      info->name = apr_pstrdup(info->pool, name.name);
+      info->name = "href";
     }
   else if (state == RESPONSE && strcmp(name.name, "prop") == 0)
     {
@@ -296,10 +295,10 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 end_propfind(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
-             svn_ra_serf__dav_props_t name)
+             svn_ra_serf__dav_props_t name,
+             apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
   prop_state_e state;
   prop_info_t *info;
 
@@ -316,24 +315,20 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
     }
   else if (state == PROPVAL)
     {
-      const char *ns, *pname, *val;
-      svn_string_t *val_str;
+      const char *ns;
+      const char *pname;
+      const svn_string_t *val_str = NULL;
 
       /* if we didn't see a CDATA element, we may want the tag name
        * as long as it isn't equivalent to the property name.
        */
-      if (!info->val)
+      /* ### gstein sez: I have no idea what this is about.  */
+      if (*info->value->data == '\0')
         {
           if (strcmp(info->name, name.name) != 0)
-            {
-              info->val = name.name;
-              info->val_len = strlen(info->val);
-            }
+            val_str = svn_string_create(name.name, ctx->pool);
           else
-            {
-              info->val = "";
-              info->val_len = 0;
-            }
+            val_str = svn_string_create_empty(ctx->pool);
         }
 
       if (parser->state->prev->current_state == RESPONSE &&
@@ -342,7 +337,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
           if (strcmp(ctx->depth, "1") == 0)
             {
               ctx->current_path =
-                svn_urlpath__canonicalize(info->val, ctx->pool);
+                svn_urlpath__canonicalize(info->value->data, ctx->pool);
             }
           else
             {
@@ -353,15 +348,13 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
         {
           if (strcmp(info->encoding, "base64") == 0)
             {
-              svn_string_t encoded;
-              const svn_string_t *decoded;
+              const svn_string_t *morph;
 
-              encoded.data = info->val;
-              encoded.len = info->val_len;
-
-              decoded = svn_base64_decode_string(&encoded, parser->state->pool);
-              info->val = decoded->data;
-              info->val_len = decoded->len;
+              morph = svn_stringbuf__morph_into_string(info->value);
+#ifdef SVN_DEBUG
+              info->value = NULL;  /* morph killed the stringbuf.  */
+#endif
+              val_str = svn_base64_decode_string(morph, ctx->pool);
             }
           else
             {
@@ -372,10 +365,13 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
             }
         }
 
+      /* ### there may be better logic to ensure this is set above, but just
+         ### going for the easy win here.  */
+      if (val_str == NULL)
+        val_str = svn_string_create_from_buf(info->value, ctx->pool);
+
       ns = apr_pstrdup(ctx->pool, info->ns);
       pname = apr_pstrdup(ctx->pool, info->name);
-      val = apr_pmemdup(ctx->pool, info->val, info->val_len);
-      val_str = svn_string_ncreate(val, info->val_len, ctx->pool);
 
       /* set the return props and update our cache too. */
       svn_ra_serf__set_ver_prop(ctx->ret_props,
@@ -396,11 +392,11 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
  */
 static svn_error_t *
 cdata_propfind(svn_ra_serf__xml_parser_t *parser,
-               void *userData,
                const char *data,
-               apr_size_t len)
+               apr_size_t len,
+               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = userData;
+  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
   prop_state_e state;
   prop_info_t *info;
 
@@ -410,10 +406,7 @@ cdata_propfind(svn_ra_serf__xml_parser_t *parser,
   info = parser->state->private;
 
   if (state == PROPVAL)
-    {
-      svn_ra_serf__expand_string(&info->val, &info->val_len, data, len,
-                                 info->pool);
-    }
+    svn_stringbuf_appendbytes(info->value, data, len);
 
   return SVN_NO_ERROR;
 }
@@ -988,32 +981,33 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
      revision (if needed) with an OPTIONS request.  */
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      basecoll_url = apr_psprintf(pool, "%s/%ld",
-                                  session->rev_root_stub, revision);
+      svn_revnum_t actual_revision;
 
-      if (latest_revnum)
+      if (SVN_IS_VALID_REVNUM(revision))
         {
-          if (SVN_IS_VALID_REVNUM(revision))
-            {
-              *latest_revnum = revision;
-            }
-          else
-           {
-              svn_ra_serf__options_context_t *opt_ctx;
+          actual_revision = revision;
+        }
+      else
+        {
+          svn_ra_serf__options_context_t *opt_ctx;
 
-              SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
+          SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
                                                   session->session_url.path,
                                                   pool));
-              SVN_ERR(svn_ra_serf__context_run_wait(
+          SVN_ERR(svn_ra_serf__context_run_wait(
                 svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool));
 
-             *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
-             if (! SVN_IS_VALID_REVNUM(*latest_revnum))
-               return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                       _("The OPTIONS response did not include "
-                                         "the youngest revision"));
-          }
+          actual_revision = svn_ra_serf__options_get_youngest_rev(opt_ctx);
+          if (! SVN_IS_VALID_REVNUM(actual_revision))
+            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                    _("The OPTIONS response did not include "
+                                      "the youngest revision"));
         }
+
+      basecoll_url = apr_psprintf(pool, "%s/%ld",
+                                  session->rev_root_stub, actual_revision);
+      if (latest_revnum)
+        *latest_revnum = actual_revision;
     }
 
   /* Otherwise, we fall back to the old VCC_URL PROPFIND hunt.  */
@@ -1021,7 +1015,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
     {
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, conn, pool));
 
-      if (revision != SVN_INVALID_REVNUM)
+      if (SVN_IS_VALID_REVNUM(revision))
         {
           /* First check baseline information cache. */
           SVN_ERR(svn_ra_serf__blncache_get_bc_url(&basecoll_url,

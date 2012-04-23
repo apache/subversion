@@ -1318,9 +1318,8 @@ authz(apr_pool_t *pool)
   contents =
     "[greek:/dir2//secret]"                                                  NL
     "* ="                                                                    NL;
-  err = authz_get_handle(&authz_cfg, contents, subpool);
-  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_INVALID_CONFIG);
-  svn_error_clear(err);
+  SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, subpool),
+                        SVN_ERR_AUTHZ_INVALID_CONFIG);
 
   /* That's a wrap! */
   svn_pool_destroy(subpool);
@@ -1480,10 +1479,7 @@ test_path_authz(svn_repos_t *repos,
 
   /* Check for potential errors. */
   if (path_action->authz_error_expected)
-    {
-      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_UNWRITABLE);
-      svn_error_clear(err);
-    }
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_AUTHZ_UNWRITABLE);
   else
     SVN_ERR(err);
 
@@ -2521,6 +2517,45 @@ test_get_file_revs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+issue_4060(const svn_test_opts_t *opts,
+           apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_authz_t *authz_cfg;
+  svn_boolean_t allowed;
+  const char *authz_contents =
+    "[/A/B]"                                                               NL
+    "ozymandias = rw"                                                      NL
+    "[/]"                                                                  NL
+    "ozymandias = r"                                                       NL
+    ""                                                                     NL;
+
+  SVN_ERR(authz_get_handle(&authz_cfg, authz_contents, subpool));
+
+  SVN_ERR(svn_repos_authz_check_access(authz_cfg, "babylon",
+                                       "/A/B/C", "ozymandias",
+                                       svn_authz_write | svn_authz_recursive,
+                                       &allowed, subpool));
+  SVN_TEST_ASSERT(allowed);
+
+  SVN_ERR(svn_repos_authz_check_access(authz_cfg, "",
+                                       "/A/B/C", "ozymandias",
+                                       svn_authz_write | svn_authz_recursive,
+                                       &allowed, subpool));
+  SVN_TEST_ASSERT(allowed);
+
+  SVN_ERR(svn_repos_authz_check_access(authz_cfg, NULL,
+                                       "/A/B/C", "ozymandias",
+                                       svn_authz_write | svn_authz_recursive,
+                                       &allowed, subpool));
+  SVN_TEST_ASSERT(allowed);
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -2555,5 +2590,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_get_logs ranges and limits"),
     SVN_TEST_OPTS_PASS(test_get_file_revs,
                        "test svn_repos_get_file_revsN"),
+    SVN_TEST_OPTS_PASS(issue_4060,
+                       "test issue 4060"),
     SVN_TEST_NULL
   };

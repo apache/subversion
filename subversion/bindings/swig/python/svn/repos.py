@@ -27,6 +27,7 @@ from libsvn.repos import *
 from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_repos_')
 _unprefix_names(locals(), 'SVN_REPOS_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
 
@@ -88,7 +89,7 @@ class ChangeCollector(_svndelta.Editor):
 
     At this time, two ChangedPath objects will be passed for a path that had
     been replaced in the revision/transaction.  This may change in the future.
-  
+
     ### Can't we deduce FS_PTR from ROOT?
 
     ### POOL is unused

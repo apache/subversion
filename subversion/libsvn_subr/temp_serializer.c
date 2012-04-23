@@ -352,7 +352,7 @@ svn_temp_deserializer__resolve(void *buffer, void **ptr)
 }
 
 const void *
-svn_temp_deserializer__ptr(const void *buffer, const void **ptr)
+svn_temp_deserializer__ptr(const void *buffer, const void *const *ptr)
 {
   return (apr_size_t)*ptr == 0
       ? NULL

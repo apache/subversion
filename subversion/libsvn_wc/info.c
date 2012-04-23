@@ -41,8 +41,7 @@ svn_wc_info_dup(const svn_wc_info_t *info,
 
   if (info->changelist)
     new_info->changelist = apr_pstrdup(pool, info->changelist);
-  if (info->checksum)
-    new_info->checksum = svn_checksum_dup(info->checksum, pool);
+  new_info->checksum = svn_checksum_dup(info->checksum, pool);
   if (info->conflicts)
     {
       int i;
@@ -182,7 +181,7 @@ build_info_for_node(svn_wc__info2_t **info,
           SVN_ERR(svn_wc__internal_get_origin(NULL, &tmpinfo->rev,
                                               &repos_relpath,
                                               &tmpinfo->repos_root_URL,
-                                              &tmpinfo->repos_UUID,
+                                              &tmpinfo->repos_UUID, NULL,
                                               db, local_abspath, TRUE,
                                               result_pool, scratch_pool));
         }

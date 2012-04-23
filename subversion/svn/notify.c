@@ -47,7 +47,6 @@ struct notify_baton
   svn_boolean_t is_checkout;
   svn_boolean_t is_export;
   svn_boolean_t is_wc_to_repos_copy;
-  svn_boolean_t suppress_summary_lines;
   svn_boolean_t sent_first_txdelta;
   svn_boolean_t in_external;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
@@ -583,8 +582,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_update_started:
-      if (! (nb->suppress_summary_lines ||
-             nb->in_external ||
+      if (! (nb->in_external ||
              nb->is_checkout ||
              nb->is_export))
         {
@@ -596,77 +594,74 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_completed:
       {
-        if (! nb->suppress_summary_lines)
+        if (SVN_IS_VALID_REVNUM(n->revision))
           {
-            if (SVN_IS_VALID_REVNUM(n->revision))
+            if (nb->is_export)
               {
-                if (nb->is_export)
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("Exported external at revision %ld.\n")
+                      : _("Exported revision %ld.\n"),
+                      n->revision)))
+                  goto print_error;
+              }
+            else if (nb->is_checkout)
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("Checked out external at revision %ld.\n")
+                      : _("Checked out revision %ld.\n"),
+                      n->revision)))
+                  goto print_error;
+              }
+            else
+              {
+                if (nb->received_some_change)
                   {
+                    nb->received_some_change = FALSE;
                     if ((err = svn_cmdline_printf
                          (pool, nb->in_external
-                          ? _("Exported external at revision %ld.\n")
-                          : _("Exported revision %ld.\n"),
-                          n->revision)))
-                      goto print_error;
-                  }
-                else if (nb->is_checkout)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("Checked out external at revision %ld.\n")
-                          : _("Checked out revision %ld.\n"),
+                          ? _("Updated external to revision %ld.\n")
+                          : _("Updated to revision %ld.\n"),
                           n->revision)))
                       goto print_error;
                   }
                 else
                   {
-                    if (nb->received_some_change)
-                      {
-                        nb->received_some_change = FALSE;
-                        if ((err = svn_cmdline_printf
-                             (pool, nb->in_external
-                              ? _("Updated external to revision %ld.\n")
-                              : _("Updated to revision %ld.\n"),
-                              n->revision)))
-                          goto print_error;
-                      }
-                    else
-                      {
-                        if ((err = svn_cmdline_printf
-                             (pool, nb->in_external
-                              ? _("External at revision %ld.\n")
-                              : _("At revision %ld.\n"),
-                              n->revision)))
-                          goto print_error;
-                      }
+                    if ((err = svn_cmdline_printf
+                         (pool, nb->in_external
+                          ? _("External at revision %ld.\n")
+                          : _("At revision %ld.\n"),
+                          n->revision)))
+                      goto print_error;
                   }
               }
-            else  /* no revision */
+          }
+        else  /* no revision */
+          {
+            if (nb->is_export)
               {
-                if (nb->is_export)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External export complete.\n")
-                          : _("Export complete.\n"))))
-                      goto print_error;
-                  }
-                else if (nb->is_checkout)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External checkout complete.\n")
-                          : _("Checkout complete.\n"))))
-                      goto print_error;
-                  }
-                else
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External update complete.\n")
-                          : _("Update complete.\n"))))
-                      goto print_error;
-                  }
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External export complete.\n")
+                      : _("Export complete.\n"))))
+                  goto print_error;
+              }
+            else if (nb->is_checkout)
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External checkout complete.\n")
+                      : _("Checkout complete.\n"))))
+                  goto print_error;
+              }
+            else
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External update complete.\n")
+                      : _("Update complete.\n"))))
+                  goto print_error;
               }
           }
       }
@@ -1016,7 +1011,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t suppress_summary_lines,
                      apr_pool_t *pool)
 {
   struct notify_baton *nb = apr_pcalloc(pool, sizeof(*nb));
@@ -1026,7 +1020,6 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
   nb->is_wc_to_repos_copy = FALSE;
-  nb->suppress_summary_lines = suppress_summary_lines;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
   nb->text_conflicts = 0;

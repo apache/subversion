@@ -39,6 +39,7 @@
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_editor.h"
 
 
 #ifdef __cplusplus
@@ -84,6 +85,12 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.7.
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
+
+/** Enable / disable revprop caching for a FSFS repository.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
 
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
@@ -250,6 +257,10 @@ svn_fs_upgrade(const char *path,
  * to the Subversion filesystem located in the directory @a path.
  * Use @a pool for necessary allocations.
  *
+ * @a start and @a end may be #SVN_INVALID_REVNUM, in which case
+ * svn_repos_verify_fs2()'s semantics apply.  When @c r0 is being
+ * verified, global invariants may be verified as well.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_verify_fs2() instead, which does non-backend-specific
  * verifications as well.
@@ -260,7 +271,9 @@ svn_error_t *
 svn_fs_verify(const char *path,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool);
+              svn_revnum_t start,
+              svn_revnum_t end,
+              apr_pool_t *scratch_pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -309,8 +322,31 @@ svn_fs_delete_fs(const char *path,
  * means deleting copied, unused logfiles for a Berkeley DB source
  * filesystem.
  *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_hotcopy2(const char *src_path,
+                const char *dest_path,
+                svn_boolean_t clean,
+                svn_boolean_t incremental,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy(const char *src_path,
                const char *dest_path,
@@ -772,6 +808,11 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
+/** Do not auto-commit the txn when its associated editor is marked
+ * as completed.
+ */
+#define SVN_FS_TXN_NO_AUTOCOMMIT                 0x00004
 /** @} */
 
 /**
@@ -966,6 +1007,38 @@ svn_error_t *
 svn_fs_change_txn_props(svn_fs_txn_t *txn,
                         const apr_array_header_t *props,
                         apr_pool_t *pool);
+
+/** @} */
+
+
+/** Editors
+ *
+ * ### docco
+ *
+ * @defgroup svn_fs_editor Transaction editors
+ * @{
+ */
+
+svn_error_t *
+svn_fs_editor_create(svn_editor_t **editor,
+                     const char **txn_name,
+                     svn_fs_t *fs,
+                     svn_revnum_t revision,
+                     apr_uint32_t flags,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_fs_editor_create_for(svn_editor_t **editor,
+                         svn_fs_t *fs,
+                         const char *txn_name,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /** @} */
 

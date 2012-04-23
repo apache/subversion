@@ -29,6 +29,10 @@ import os
 import re
 import shutil
 import sys
+import threading
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -46,6 +50,85 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
+def check_hotcopy_bdb(src, dst):
+  "Verify that the SRC BDB repository has been correctly copied to DST."
+  ### TODO: This function should be extended to verify all hotcopied files,
+  ### not just compare the output of 'svnadmin dump'. See check_hotcopy_fsfs().
+  exit_code, origout, origerr = svntest.main.run_svnadmin("dump", src,
+                                                          '--quiet')
+  exit_code, backout, backerr = svntest.main.run_svnadmin("dump", dst,
+                                                          '--quiet')
+  if origerr or backerr or origout != backout:
+    raise svntest.Failure
+
+def check_hotcopy_fsfs(src, dst):
+    "Verify that the SRC FSFS repository has been correctly copied to DST."
+    # Walk the source and compare all files to the destination
+    for src_dirpath, src_dirs, src_files in os.walk(src):
+      # Verify that the current directory exists in the destination
+      dst_dirpath = src_dirpath.replace(src, dst)
+      if not os.path.isdir(dst_dirpath):
+        raise svntest.Failure("%s does not exist in hotcopy "
+                              "destination" % dst_dirpath)
+      # Verify that all dirents in the current directory also exist in source
+      for dst_dirent in os.listdir(dst_dirpath):
+        src_dirent = os.path.join(src_dirpath, dst_dirent)
+        if not os.path.exists(src_dirent):
+          raise svntest.Failure("%s does not exist in hotcopy "
+                                "source" % src_dirent)
+      # Compare all files in this directory
+      for src_file in src_files:
+        src_path = os.path.join(src_dirpath, src_file)
+        dst_path = os.path.join(dst_dirpath, src_file)
+        if not os.path.isfile(dst_path):
+          raise svntest.Failure("%s does not exist in hotcopy "
+                                "destination" % dst_path)
+
+        # Special case for rep-cache: It will always differ in a byte-by-byte
+        # comparison, so compare db tables instead.
+        if src_file == 'rep-cache.db':
+          db1 = svntest.sqlite3.connect(src_path)
+          db2 = svntest.sqlite3.connect(dst_path)
+          rows1 = []
+          rows2 = []
+          for row in db1.execute("select * from rep_cache order by hash"):
+            rows1.append(row)
+          for row in db2.execute("select * from rep_cache order by hash"):
+            rows2.append(row)
+          if len(rows1) != len(rows2):
+            raise svntest.Failure("number of rows in rep-cache differs")
+          for i in range(len(rows1)):
+            if rows1[i] != rows2[i]:
+              raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
+                                    % (row, rows1[i]))
+          continue
+
+        f1 = open(src_path, 'r')
+        f2 = open(dst_path, 'r')
+        while True:
+          offset = 0
+          BUFSIZE = 1024
+          buf1 = f1.read(BUFSIZE)
+          buf2 = f2.read(BUFSIZE)
+          if not buf1 or not buf2:
+            if not buf1 and not buf2:
+              # both at EOF
+              break
+            elif buf1:
+              raise svntest.Failure("%s differs at offset %i" %
+                                    (dst_path, offset))
+            elif buf2:
+              raise svntest.Failure("%s differs at offset %i" %
+                                    (dst_path, offset))
+          if len(buf1) != len(buf2):
+            raise svntest.Failure("%s differs in length" % dst_path)
+          for i in range(len(buf1)):
+            if buf1[i] != buf2[i]:
+              raise svntest.Failure("%s differs at offset %i"
+                                    % (dst_path, offset))
+            offset += 1
+        f1.close()
+        f2.close()
 
 #----------------------------------------------------------------------
 
@@ -359,17 +442,16 @@ def hotcopy_dot(sbox):
 
   os.chdir(cwd)
 
-  exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
-                                                          sbox.repo_dir,
-                                                          '--quiet')
-  exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
-                                                          backup_dir,
-                                                          '--quiet')
-  if origerr or backerr or origout != backout:
-    raise svntest.Failure
+  if svntest.main.is_fs_type_fsfs():
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+  else:
+    check_hotcopy_bdb(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
+# This test is redundant for FSFS. The hotcopy_dot and hotcopy_incremental
+# tests cover this check for FSFS already.
+@SkipUnless(svntest.main.is_fs_type_bdb)
 def hotcopy_format(sbox):
   "'svnadmin hotcopy' checking db/format file"
   sbox.build()
@@ -379,7 +461,7 @@ def hotcopy_format(sbox):
                                                         sbox.repo_dir,
                                                         backup_dir)
   if errput:
-    print("Error: hotcopy failed")
+    logger.warn("Error: hotcopy failed")
     raise svntest.Failure
 
   # verify that the db/format files are the same
@@ -392,7 +474,7 @@ def hotcopy_format(sbox):
   fp2.close()
 
   if contents1 != contents2:
-    print("Error: db/format file contents do not match after hotcopy")
+    logger.warn("Error: db/format file contents do not match after hotcopy")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -409,7 +491,7 @@ def setrevprop(sbox):
                                                         "--bypass-hooks",
                                                         iota_path)
   if errput:
-    print("Error: 'setlog' failed")
+    logger.warn("Error: 'setlog' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -428,7 +510,7 @@ def setrevprop(sbox):
                                                         "-r0", "svn:author",
                                                         foo_path)
   if errput:
-    print("Error: 'setrevprop' failed")
+    logger.warn("Error: 'setrevprop' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -615,7 +697,8 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Found malformed header '[^']*' in revision file")
+    expected_stderr=".*Found malformed header '[^']*' in revision file"
+                    "|.*Missing id field in node-rev.*")
 
 #----------------------------------------------------------------------
 
@@ -780,7 +863,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
-    print("Error: new UUID matches the original one")
+    logger.warn("Error: new UUID matches the original one")
     raise svntest.Failure
 
   # Now, try setting the UUID back to the original value.
@@ -791,7 +874,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
-    print("Error: new UUID doesn't match the original one")
+    logger.warn("Error: new UUID doesn't match the original one")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1344,9 +1427,12 @@ def verify_non_utf8_paths(sbox):
     if line == "A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write("\xE6\n")
-    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
       # fix up the representation checksum
-      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+      fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      # fix up the representation checksum
+      fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
     elif line == "cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")
@@ -1385,7 +1471,7 @@ def verify_non_utf8_paths(sbox):
 
 def test_lslocks_and_rmlocks(sbox):
   "test 'svnadmin lslocks' and 'svnadmin rmlocks'"
-  
+
   sbox.build(create_wc=False)
   iota_url = sbox.repo_url + '/iota'
   lambda_url = sbox.repo_url + '/A/B/lambda'
@@ -1399,7 +1485,7 @@ def test_lslocks_and_rmlocks(sbox):
   expected_output = UnorderedOutput(
     ["'A/B/lambda' locked by user 'jrandom'.\n",
      "'iota' locked by user 'jrandom'.\n"])
-  
+
   # Lock iota and A/B/lambda using svn client
   svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], "lock", "-m", "Locking files",
@@ -1414,18 +1500,18 @@ def test_lslocks_and_rmlocks(sbox):
       "Comment \(1 line\):",
       "Locking files",
       "Path: /iota",
-      "UUID Token: opaquelocktoken.*",      
-      "\n", # empty line    
+      "UUID Token: opaquelocktoken.*",
+      "\n", # empty line
       ]
 
   # List all locks
   exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
                                                         sbox.repo_dir)
-  
+
   if errput:
     raise SVNUnexpectedStderr(errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
-    
+
   try:
     expected_output = svntest.verify.UnorderedRegexOutput(expected_output_list)
     svntest.verify.compare_and_display_lines('lslocks output mismatch',
@@ -1459,7 +1545,7 @@ def test_lslocks_and_rmlocks(sbox):
     "Expires:",
     "Comment \(1 line\):",
     "Locking files",
-    "\n", # empty line    
+    "\n", # empty line
     ])
 
   svntest.verify.compare_and_display_lines('message', 'label',
@@ -1473,7 +1559,7 @@ def test_lslocks_and_rmlocks(sbox):
                                                         "A/B/lambda")
   expected_output = UnorderedOutput(["Removed lock on '/iota'.\n",
                                      "Removed lock on '/A/B/lambda'.\n"])
-  
+
   svntest.verify.verify_outputs(
     "Unexpected output while running 'svnadmin rmlocks'.",
     output, [], expected_output, None)
@@ -1510,6 +1596,236 @@ def load_ranges(sbox):
   svntest.verify.compare_and_display_lines("Dump files", "DUMP",
                                            expected_dump, new_dumpdata)
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental(sbox):
+  "'svnadmin hotcopy --incremental PATH .'"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+
+  for i in [1, 2, 3]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+    if i < 3:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_incremental_packed(sbox):
+  "'svnadmin hotcopy --incremental' with packing"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  os.mkdir(backup_dir)
+  cwd = os.getcwd()
+  # Configure two files per shard to trigger packing
+  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
+  format_file.write("4\nlayout sharded 2\n")
+  format_file.close()
+
+  # Pack revisions 0 and 1.
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+
+  # Commit 5 more revs, hotcopy and pack after each commit.
+  for i in [1, 2, 3, 4, 5]:
+    os.chdir(backup_dir)
+    svntest.actions.run_and_verify_svnadmin(
+      None, None, [],
+      "hotcopy", "--incremental", os.path.join(cwd, sbox.repo_dir), '.')
+
+    os.chdir(cwd)
+
+    check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+    if i < 5:
+      sbox.simple_mkdir("newdir-%i" % i)
+      sbox.simple_commit()
+      svntest.actions.run_and_verify_svnadmin(
+        None, None, [], "pack", os.path.join(cwd, sbox.repo_dir))
+
+
+def locking(sbox):
+  "svnadmin lock tests"
+  sbox.build(create_wc=False)
+
+  comment_path = os.path.join(svntest.main.temp_dir, "comment")
+  svntest.main.file_write(comment_path, "dummy comment")
+
+  invalid_comment_path = os.path.join(svntest.main.temp_dir, "invalid_comment")
+  svntest.main.file_write(invalid_comment_path, "character  is invalid")
+
+  # Test illegal character in comment file.
+  expected_error = ".*svnadmin: E130004:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          invalid_comment_path)
+
+  # Test locking path with --bypass-hooks
+  expected_output = "'iota' locked by user 'jrandom'."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path,
+                                          "--bypass-hooks")
+
+  # Remove lock
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          None, "rmlocks",
+                                          sbox.repo_dir, "iota")
+
+  # Test locking path without --bypass-hooks
+  expected_output = "'iota' locked by user 'jrandom'."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Test locking already locked path.
+  expected_error = ".*svnadmin: E160035:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Test locking non-existent path.
+  expected_error = ".*svnadmin: E160013:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock",
+                                          sbox.repo_dir,
+                                          "non-existent", "jrandom",
+                                          comment_path)
+
+  # Test locking a path while specifying a lock token.
+  expected_output = "'A/D/G/rho' locked by user 'jrandom'."
+  lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "lock",
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          comment_path, lock_token)
+
+  # Test unlocking a path, but provide the wrong lock token.
+  expected_error = ".*svnadmin: E160040:.*"
+  wrong_lock_token = "opaquelocktoken:12345670-9ab8-defc-9ab8-def01234567c"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "unlock",
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          wrong_lock_token)
+
+  # Test unlocking the path again, but this time provide the correct
+  # lock token.
+  expected_output = "'A/D/G/rho' unlocked."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "unlock",
+                                          sbox.repo_dir,
+                                          "A/D/G/rho", "jrandom",
+                                          lock_token)
+
+  # Install lock/unlock prevention hooks.
+  hook_path = svntest.main.get_pre_lock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+  hook_path = svntest.main.get_pre_unlock_hook_path(sbox.repo_dir)
+  svntest.main.create_python_hook_script(hook_path, 'import sys; sys.exit(1)')
+
+  # Test locking a path.  Don't use --bypass-hooks, though, as we wish
+  # to verify that hook script is really getting executed.
+  expected_error = ".*svnadmin: E165001:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "lock",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          comment_path)
+
+  # Fetch the lock token for our remaining locked path.  (We didn't
+  # explicitly set it, so it will vary from test run to test run.)
+  exit_code, output, errput = svntest.main.run_svnadmin("lslocks",
+                                                        sbox.repo_dir,
+                                                        "iota")
+  iota_token = None
+  for line in output:
+    if line.startswith("UUID Token: opaquelocktoken:"):
+      iota_token = line[12:].rstrip()
+      break
+  if iota_token is None:
+    raise svntest.Failure("Unable to lookup lock token for 'iota'")
+
+  # Try to unlock a path while providing the correct lock token but
+  # with a preventative hook in place.
+  expected_error = ".*svnadmin: E165001:.*"
+  svntest.actions.run_and_verify_svnadmin(None, None,
+                                          expected_error, "unlock",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          iota_token)
+
+  # Finally, use --bypass-hooks to unlock the path (again using the
+  # correct lock token).
+  expected_output = "'iota' unlocked."
+  svntest.actions.run_and_verify_svnadmin(None, expected_output,
+                                          None, "unlock",
+                                          "--bypass-hooks",
+                                          sbox.repo_dir,
+                                          "iota", "jrandom",
+                                          iota_token)
+
+
+@SkipUnless(svntest.main.is_threaded_python)
+@Issue(4129)
+def mergeinfo_race(sbox):
+  "concurrent mergeinfo commits invalidate pred-count"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  ## Create wc2.
+  svntest.main.run_svn(None, 'checkout', '-q', sbox.repo_url, wc2_dir)
+
+  ## Some random edits.
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d1', wc_dir))
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d2', wc2_dir))
+
+  ## Set random mergeinfo properties.
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/P:42', sbox.ospath('A', wc_dir))
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/Q:42', sbox.ospath('iota', wc2_dir))
+
+  def makethread(some_wc_dir):
+    def worker():
+      svntest.main.run_svn(None, 'commit', '-mm', some_wc_dir)
+    return worker
+
+  t1 = threading.Thread(None, makethread(wc_dir))
+  t2 = threading.Thread(None, makethread(wc2_dir))
+
+  # t2 will trigger the issue #4129 sanity check in fs_fs.c
+  t1.start(); t2.start();
+
+  t1.join(); t2.join();
+
+  # Crude attempt to make sure everything worked.
+  # TODO: better way to catch exceptions in the thread
+  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != '3':
+    raise svntest.Failure("one or both commits failed")
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1541,6 +1857,10 @@ test_list = [ None,
               verify_non_utf8_paths,
               test_lslocks_and_rmlocks,
               load_ranges,
+              hotcopy_incremental,
+              hotcopy_incremental_packed,
+              locking,
+              mergeinfo_race,
              ]
 
 if __name__ == '__main__':

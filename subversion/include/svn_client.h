@@ -1768,6 +1768,30 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * @{
  */
 
+/**
+ * The callback invoked by svn_client_import5() before adding a node to the
+ * list of nodes to be imported.
+ *
+ * @a baton is the value passed to @a svn_client_import5 as filter_baton.
+ *
+ * The callback receives the @a local_abspath for each node and the @a dirent
+ * for it when walking the directory tree. Only the kind of node, including
+ * special status is available in @a dirent.
+ *
+ * Implementations can set @a *filtered to TRUE, to make the import filter the
+ * node and (if the node is a directory) all its descendants.
+ *
+ * @a scratch_pool can be used for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_client_import_filter_func_t)(
+  void *baton,
+  svn_boolean_t *filtered,
+  const char *local_abspath,
+  const svn_io_dirent2_t *dirent,
+  apr_pool_t *scratch_pool);
+
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx,
  * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
@@ -1823,12 +1847,38 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
+ * If @a filter_callback is non-NULL, call it for each node that isn't ignored
+ * for other reasons with @a filter_baton, to allow third party to ignore
+ * specific nodes during importing.
+ *
  * If @a commit_callback is non-NULL, then for each successful commit, call
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_import5(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_client_import_filter_func_t filter_callback,
+                   void *filter_baton,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_import5(), but without support for an optional
+ * @a filter_callback.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import4(const char *path,
                    const char *url,
@@ -2255,7 +2305,7 @@ typedef struct svn_client_status_t
    * This will be NULL for moved-here nodes that are just part of a subtree
    * that was moved along (and are not themselves a root of a different move
    * operation).
-   * 
+   *
    * @since New in 1.8. */
   const char *moved_from_abspath;
 
@@ -2877,6 +2927,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t ignore_prop_diff,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2886,7 +2937,8 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  apr_pool_t *pool);
 
 /** Similar to svn_client_diff6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream.
+ * instead of @a outstream and @a errstream, and always showing property
+ * changes.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3035,6 +3087,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t ignore_prop_diff,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -3044,7 +3097,8 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      apr_pool_t *pool);
 
 /** Similar to svn_client_diff_peg6(), but with @a outfile and @a errfile,
- * instead of @a outstream and @a errstream.
+ * instead of @a outstream and @a errstream, and always showing property
+ * changes.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  * @since New in 1.7.
@@ -3435,14 +3489,46 @@ svn_client_merge(const char *source1,
                  apr_pool_t *pool);
 
 
+/**
+ * Determine the URLs and revisions needed to perform a reintegrate merge
+ * from @a source_path_or_url at @a source_peg_revision into the working
+ * copy at @a target_wcpath.
+ *
+ * Set @a *url1_p and @a *rev1_p to the left side, and @a *url2_p and
+ * @a *rev2_p to the right side, URLs and revisions of the source of the
+ * required two-URL merge.
+ *
+ * If no merge should be performed, set @a *url1_p to NULL and @a *rev1_p
+ * to #SVN_INVALID_REVNUM.
+ *
+ * The authentication baton cached in @a ctx is used to communicate with the
+ * repository.
+ *
+ * Allocate all the results in @a result_pool.  Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_find_reintegrate_merge(const char **url1_p,
+                                  svn_revnum_t *rev1_p,
+                                  const char **url2_p,
+                                  svn_revnum_t *rev2_p,
+                                  /* inputs */
+                                  const char *source_path_or_url,
+                                  const svn_opt_revision_t *source_peg_revision,
+                                  const char *target_wcpath,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /**
- * Perform a reintegration merge of @a source at @a peg_revision
+ * Perform a reintegration merge of @a source_path_or_url at @a source_peg_revision
  * into @a target_wcpath.
  * @a target_wcpath must be a single-revision, #svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
- * source must reflect that all of the target has been merged into it.
+ * source_path_or_url must reflect that all of the target has been merged into it.
  * Then this behaves like a merge with svn_client_merge4() from the
  * target's URL to the source.
  *
@@ -3452,8 +3538,8 @@ svn_client_merge(const char *source1,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_merge_reintegrate(const char *source,
-                             const svn_opt_revision_t *peg_revision,
+svn_client_merge_reintegrate(const char *source_path_or_url,
+                             const svn_opt_revision_t *source_peg_revision,
                              const char *target_wcpath,
                              svn_boolean_t dry_run,
                              const apr_array_header_t *merge_options,
@@ -3461,8 +3547,8 @@ svn_client_merge_reintegrate(const char *source,
                              apr_pool_t *pool);
 
 /**
- * Merge the changes between the filesystem object @a source in peg
- * revision @a peg_revision, as it changed between the ranges described
+ * Merge the changes between the filesystem object @a source_path_or_url in peg
+ * revision @a source_peg_revision, as it changed between the ranges described
  * in @a ranges_to_merge.
  *
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
@@ -3478,9 +3564,9 @@ svn_client_merge_reintegrate(const char *source,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_merge_peg4(const char *source,
+svn_client_merge_peg4(const char *source_path_or_url,
                       const apr_array_header_t *ranges_to_merge,
-                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *source_peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,

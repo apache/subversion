@@ -184,6 +184,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
+  svn_boolean_t ignore_props;    /* ignore properties */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
@@ -195,6 +196,7 @@ typedef struct svn_cl__opt_state_t
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* the external editor command to use */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
+  svn_boolean_t symmetric_merge; /* symmetric merge */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
@@ -229,6 +231,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
+  svn_boolean_t use_patch_diff_format; /* Output compatible with GNU patch */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
 } svn_cl__opt_state_t;
@@ -382,6 +385,9 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
    abbreviated format by default, or DETAILED format if flag is set.
 
+   When SUPPRESS_EXTERNALS_PLACEHOLDERS is set, avoid printing
+   externals placeholder lines ("X lines").
+
    When DETAILED is set, use SHOW_LAST_COMMITTED to toggle display of
    the last-committed-revision and last-committed-author.
 
@@ -393,10 +399,16 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
-   */
+
+   Use CWD_ABSPATH -- the absolute path of the current working
+   directory -- to shorten PATH into something relative to that
+   directory as necessary.
+*/
 svn_error_t *
-svn_cl__print_status(const char *path,
+svn_cl__print_status(const char *cwd_abspath,
+                     const char *path,
                      const svn_client_status_t *status,
+                     svn_boolean_t suppress_externals_placeholders,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -409,9 +421,15 @@ svn_cl__print_status(const char *path,
 
 
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
-   allocations. */
+   allocations.
+
+   Use CWD_ABSPATH -- the absolute path of the current working
+   directory -- to shorten PATH into something relative to that
+   directory as necessary.
+ */
 svn_error_t *
-svn_cl__print_status_xml(const char *path,
+svn_cl__print_status_xml(const char *cwd_abspath,
+                         const char *path,
                          const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
@@ -553,14 +571,10 @@ svn_cl__merge_file_externally(const char *base_path,
 
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
- *
- * If don't want a summary line at the end of notifications, set
- * SUPPRESS_FINAL_LINE.
  */
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t suppress_final_line,
                      apr_pool_t *pool);
 
 /* Make the notifier for use with BATON print the appropriate summary
@@ -810,6 +824,23 @@ const char *
 svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
+
+/* Check that PATH_OR_URL1@REVISION1 is related to PATH_OR_URL2@REVISION2.
+ * Raise an error if not.
+ *
+ * ### Ideally we would also check that they are on different lines of
+ * history.  That is easy in common cases, but to give a correct answer in
+ * general we need to know the operative revision(s) as well.  For example,
+ * when one location is the branch point from which the other branch was
+ * copied.
+ */
+svn_error_t *
+svn_cl__check_related_source_and_target(const char *path_or_url1,
+                                        const svn_opt_revision_t *revision1,
+                                        const char *path_or_url2,
+                                        const svn_opt_revision_t *revision2,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

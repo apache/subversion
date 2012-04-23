@@ -130,12 +130,41 @@
   :type 'boolean
   :group 'dsvn)
 
-(defun svn-call-process (program buffer &rest args)
+;; start-file-process and process-file are needed for tramp but only appeared
+;; in Emacs 23 and 22 respectively.
+(setq svn-start-file-process
+  (if (fboundp 'start-file-process) 'start-file-process 'start-process))
+(setq svn-process-file
+  (if (fboundp 'process-file) 'process-file 'call-process))
+
+;; Run svn with default (US-English) messages, since we are going to
+;; parse them.
+(setq svn-process-environment '("LC_MESSAGES=C"))
+
+(defun svn-call-in-svn-environment (func)
+  ;; Dynamic rebinding of process-environment
+  (let ((process-environment
+         (append svn-process-environment process-environment)))
+    (funcall func)))
+
+(defun svn-start-svn-process (buffer args)
+  "Start an svn process associated to BUFFER, with command-line
+arguments ARGS. Return the process object for it."
+  (svn-call-in-svn-environment
+   (lambda ()
+     (apply svn-start-file-process "svn" buffer svn-program args))))
+
+(defun svn-call-svn (infile buffer display args)
+  "Call svn synchronously. Arguments are like process-file."
+  (svn-call-in-svn-environment
+   (lambda ()
+     (apply svn-process-file svn-program infile buffer display args))))
+
+(defun svn-call-process (buffer &rest args)
   "Run svn and wait for it to finish.
-Argument PROGRAM is the svn binary to run.
 Argument BUFFER is the buffer in which to insert output.
 Optional argument ARGS are the arguments to svn."
-  (let ((proc (apply 'start-process "svn" buffer program args)))
+  (let ((proc (svn-start-svn-process buffer args)))
     (set-process-coding-system proc 'utf-8)
     (set-process-filter proc 'svn-output-filter)
     (while (eq (process-status proc) 'run)
@@ -159,9 +188,7 @@ Return non-NIL if there was any output."
         (fundamental-mode))
       (setq default-directory dir)
       (setq buffer-read-only t)
-      (let ((cmd `(,svn-program ,subcommand ,@args))
-            proc)
-        (setq proc (apply 'start-process "svn" buf cmd))
+      (let ((proc (svn-start-svn-process buf (cons subcommand args))))
         (set-process-coding-system proc 'utf-8)
         (set-process-filter proc 'svn-output-filter)
         (while (eq (process-status proc) 'run)
@@ -184,7 +211,7 @@ Returns the buffer that holds the output from 'svn'."
     (with-current-buffer buf
       (erase-buffer)
       (setq default-directory dir))
-    (apply 'call-process svn-program nil buf nil (symbol-name command) args)
+    (svn-call-svn nil buf nil (cons (symbol-name command) args))
     buf))
 
 (defun svn-run-for-stdout (command args)
@@ -192,8 +219,8 @@ Returns the buffer that holds the output from 'svn'."
 Argument COMMAND is the svn subcommand to run.
 Optional argument ARGS is a list of arguments."
   (let ((output-buffer (generate-new-buffer "*svn-stdout*")))
-    (apply 'call-process svn-program nil (list output-buffer nil) nil
-	   (symbol-name command) args)
+    (svn-call-svn nil (list output-buffer nil) nil
+                  (cons (symbol-name command) args))
     (let ((stdout (with-current-buffer output-buffer (buffer-string))))
       (kill-buffer output-buffer)
       stdout)))
@@ -255,8 +282,7 @@ buffer to describe what is going on."
             args (cons "-v" args)))
     (unless (memq command svn-noninteractive-blacklist)
       (setq args (cons "--non-interactive" args)))
-    (setq proc (apply 'start-process "svn" (current-buffer)
-                      svn-program command-s args))
+    (setq proc (svn-start-svn-process (current-buffer) (cons command-s args)))
     (if (fboundp filter-func)
         (set-process-filter proc filter-func)
       (set-process-filter proc 'svn-default-filter))
@@ -546,7 +572,7 @@ VERBOSE-P."
       (setq buffer-read-only t)
       (erase-buffer)
       (setq default-directory dir)
-      (svn-call-process svn-program diff-buf
+      (svn-call-process diff-buf
                         "diff" "-r"
                         (format "%d:%d" (1- commit-id) commit-id)))))
 
@@ -1085,9 +1111,9 @@ outside."
       (insert str)
       (goto-char svn-output-marker)
       (while (looking-at
-              "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([* ]\\) \\(........\\) \\(........\\) \\(............\\) \\([^ ].*\\)\n")
-        (let ((status (match-string 1))
-              (filename (svn-normalise-path (match-string 6))))
+              "\\(?:\\(\\?.....\\)\\|\\([ ACDGIMRX!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? [* ] +[^ ]+ +[^ ]+ +[^ ]+\\) +\\([^ ].*\\)\n")
+        (let ((status (or (match-string 1) (match-string 2)))
+              (filename (svn-normalise-path (match-string 3))))
           (delete-region (match-beginning 0)
                          (match-end 0))
 	  (when (or (not svn-file-filter)
@@ -1154,7 +1180,8 @@ With prefix arg, prompt for REVISION."
     (?D . "Deleted")
     (?U . "Updated")
     (?G . "Merged")
-    (?C . "Conflict")))
+    (?C . "Conflict")
+    (?E . "Existed")))
 
 (defvar svn-merging nil)
 
@@ -1182,7 +1209,7 @@ With prefix arg, prompt for REVISION."
       (goto-char svn-output-marker)
       (while (not nomore)
         (cond ((looking-at
-                "\\([ ADUCG][ ADUCG][ B]\\)  \\(.*\\)\n")
+                "\\([ ADUCGE][ ADUCGE][ B]\\)  \\(.*\\)\n")
                (let* ((status (match-string 1))
                       (file-status (elt status 0))
                       (prop-status (elt status 1))
@@ -1211,6 +1238,8 @@ With prefix arg, prompt for REVISION."
               ((looking-at "At revision \\([0-9]+\\)\\.\n")
                (svn-update-label svn-revision-label (match-string 1))
                (forward-line 1))
+              ((looking-at "Updating '.*':\n")
+               (delete-region (match-beginning 0) (match-end 0)))
               ((and (not svn-merging)
                     (looking-at "Updated to revision \\([0-9]+\\)\\.\n"))
                (svn-update-label svn-revision-label (match-string 1))

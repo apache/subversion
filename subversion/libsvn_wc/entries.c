@@ -236,15 +236,6 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                        entry_abspath,
                                        result_pool,
                                        scratch_pool));
-
-      if (*repos_relpath == NULL)
-        SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath,
-                                           &entry->repos,
-                                           &entry->uuid,
-                                           db,
-                                           entry_abspath,
-                                           result_pool,
-                                           scratch_pool));
     }
   else
     {
@@ -1476,8 +1467,20 @@ insert_node(svn_sqlite__db_t *sdb,
                                   svn_node_kind_to_word(node->kind)));
 
   if (node->kind == svn_node_file)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
-                                      scratch_pool));
+    {
+      if (!node->checksum
+          && node->op_depth == 0
+          && node->presence != svn_wc__db_status_not_present
+          && node->presence != svn_wc__db_status_excluded
+          && node->presence != svn_wc__db_status_server_excluded)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("The file '%s' has no checksum"),
+                                 svn_dirent_local_style(node->local_relpath,
+                                                        scratch_pool));
+
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
+                                        scratch_pool));
+    }
 
   if (node->properties) /* ### Never set, props done later */
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
@@ -1885,7 +1888,7 @@ write_entry(struct write_baton **entry_node,
         }
       else if (entry->absent)
         {
-          SVN_ERR_ASSERT(base_node->presence 
+          SVN_ERR_ASSERT(base_node->presence
                                 == svn_wc__db_status_server_excluded);
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;

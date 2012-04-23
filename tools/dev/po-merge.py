@@ -52,7 +52,7 @@ def parse_translation(f):
         line = f.readline()
         if line[0] != '"':
             break
-        msgid += '\n' + line[:-1]
+        msgid = msgid[:-1] + line[1:-1]
 
     # Parse optional msgid_plural
     msgid_plural = None
@@ -64,7 +64,7 @@ def parse_translation(f):
             line = f.readline()
             if line[0] != '"':
                 break
-            msgid_plural += '\n' + line[:-1]
+            msgid_plural = msgid_plural[:-1] + line[1:-1]
 
     # Parse msgstr
     msgstr = []
@@ -117,9 +117,9 @@ def main(argv):
         argv0 = os.path.basename(argv[0])
         sys.exit('Usage: %s <lang.po>\n'
                  '\n'
-                 'This script will replace the translations and flags in lang.po with\n'
-                 'the translations and flags in the source po file read from standard\n'
-                 'input.  Strings that are not found in the source file are left untouched.\n'
+                 'This script will replace the translations and flags in lang.po (LF line endings)\n'
+                 'with the translations and flags in the source po file read from standard input.\n'
+                 'Strings that are not found in the source file are left untouched.\n'
                  'A backup copy of lang.po is saved as lang.po.bak.\n'
                  '\n'
                  'Example:\n'

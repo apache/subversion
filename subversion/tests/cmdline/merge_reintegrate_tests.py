@@ -2430,12 +2430,12 @@ def reintegrate_replaced_source(sbox):
   A_path         = os.path.join(sbox.wc_dir, "A")
   A_COPY_path    = os.path.join(sbox.wc_dir, "A_COPY")
   beta_COPY_path = os.path.join(sbox.wc_dir, "A_COPY", "B", "E", "beta")
-  mu_COPY_path   = os.path.join(sbox.wc_dir, "A_COPY", "mu")  
+  mu_COPY_path   = os.path.join(sbox.wc_dir, "A_COPY", "mu")
 
   # Using cherrypick merges, simulate a series of sync merges from A to
   # A_COPY with a replace of A_COPY along the way.
   #
-  # r6 - Merge r3 from A to A_COPY
+  # r7 - Merge r3 from A to A_COPY
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c3')
@@ -2470,7 +2470,7 @@ def reintegrate_replaced_source(sbox):
                        wc_dir)
 
   # r12 - Do a final sync merge of A to A_COPY in preparation for
-  # reintegration.  
+  # reintegration.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
   svntest.main.run_svn(None, 'ci', '-m', 'Sycn A_COPY with A', wc_dir)
@@ -2541,7 +2541,66 @@ def reintegrate_replaced_source(sbox):
                                        expected_skip,
                                        [], None, None, None, None, True, True,
                                        '--reintegrate', A_path)
-  
+
+#----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(4052)
+def reintegrate_symlink_deletion(sbox):
+  "reintegrate symlink deletion"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  ## path vars
+  A_path = sbox.ospath('A')
+  A_omicron_path = sbox.ospath('A/omicron')
+  mu_path = sbox.ospath('A/mu')
+  A_COPY_path = sbox.ospath('A_COPY')
+  A_COPY_omicron_path = sbox.ospath('A_COPY/omicron')
+  A_url = sbox.repo_url + "/A"
+  A_COPY_url = sbox.repo_url + "/A_COPY"
+
+  ## add symlink
+  os.symlink(mu_path, A_omicron_path)
+  sbox.simple_add('A/omicron')
+  sbox.simple_commit(message='add symlink')
+
+  ## branch
+  sbox.simple_repo_copy('A', 'A_COPY')
+  sbox.simple_update()
+
+  ## branch rm
+  sbox.simple_rm('A_COPY/omicron')
+  sbox.simple_commit(message='remove symlink on branch')
+
+  ## Note: running update at this point avoids the bug.
+
+  ## reintegrate
+  # ### TODO: verify something here
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       A_COPY_url, A_path)
+
+#----------------------------------------------------------------------
+def no_op_reintegrate(sbox):
+  """no-op reintegrate"""
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Sync merge from trunk to branch
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate; there are no relevant changes on the branch.
+  # ### TODO: Check the result more carefully than merely that it completed.
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/A_COPY', A_path)
+
 ########################################################################
 # Run the tests
 
@@ -2565,6 +2624,8 @@ test_list = [ None,
               reintegrate_creates_bogus_mergeinfo,
               no_source_subtree_mergeinfo,
               reintegrate_replaced_source,
+              reintegrate_symlink_deletion,
+              no_op_reintegrate,
              ]
 
 if __name__ == '__main__':

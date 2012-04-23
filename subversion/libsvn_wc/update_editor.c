@@ -50,6 +50,7 @@
 #include "translate.h"
 #include "workqueue.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
@@ -961,8 +962,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* Tell the file baton about the new text base's checksums. */
       fb->new_text_base_md5_checksum =
-        svn_checksum__from_digest(hb->new_text_base_md5_digest,
-                                  svn_checksum_md5, fb->pool);
+        svn_checksum__from_digest_md5(hb->new_text_base_md5_digest, fb->pool);
       fb->new_text_base_sha1_checksum =
         svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
 
@@ -2541,7 +2541,7 @@ change_dir_prop(void *dir_baton,
   propchange->name = apr_pstrdup(db->pool, name);
   propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
 
-  if (!db->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
+  if (!db->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_directory_edited(db, pool));
 
   return SVN_NO_ERROR;
@@ -3724,7 +3724,7 @@ change_file_prop(void *file_baton,
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
 
-  if (!fb->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
+  if (!fb->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -4470,8 +4470,8 @@ close_file(void *file_baton,
                                   NULL /* left_version */,
                                   NULL /* right_version */,
                                   NULL /* server_baseprops (not merging) */,
-                                  current_base_props /* base_props */,
-                                  fake_actual_props /* working_props */,
+                                  current_base_props /* pristine_props */,
+                                  fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
@@ -4581,7 +4581,7 @@ close_file(void *file_baton,
 
       /* If the file was moved-away, notify for the moved-away node.
        * The original location only had its BASE info changed and
-       * we don't usually notify about such changes. */ 
+       * we don't usually notify about such changes. */
       notify = svn_wc_create_notify(working_abspath, action, scratch_pool);
       notify->kind = svn_node_file;
       notify->content_state = content_state;
@@ -4715,58 +4715,8 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-
 
 /*** Returning editors. ***/
-
-struct fetch_baton
-{
-  svn_wc__db_t *db;
-  const char *target_abspath;
-};
-
-static svn_error_t *
-fetch_props_func(apr_hash_t **props,
-                 void *baton,
-                 const char *path,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fpb = baton;
-  const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
-                                              scratch_pool);
-  svn_error_t *err;
-
-  err = svn_wc__db_read_props(props, fpb->db, local_abspath,
-                              result_pool, scratch_pool);
-
-  /* If the path doesn't exist, just return an empty set of props. */
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      *props = apr_hash_make(result_pool);
-    }
-  else if (err)
-    return svn_error_trace(err);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
-                void *baton,
-                const char *path,
-                apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fpb = baton;
-  const char *local_abspath = svn_dirent_join(fpb->target_abspath, path,
-                                              scratch_pool);
-
-  SVN_ERR(svn_wc__db_read_kind(kind, fpb->db, local_abspath, FALSE,
-                               scratch_pool));
-  
-  return SVN_NO_ERROR;
-}
 
 /* Helper for the three public editor-supplying functions. */
 static svn_error_t *
@@ -4805,7 +4755,7 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
-  struct fetch_baton *fpb;
+  struct svn_wc__shim_fetch_baton_t *sfb;
   svn_delta_shim_callbacks_t *shim_callbacks =
                                 svn_delta_shim_callbacks_default(edit_pool);
 
@@ -5035,24 +4985,26 @@ make_editor(svn_revnum_t *target_revision,
                                             edit_baton,
                                             result_pool));
 
-  fpb = apr_palloc(result_pool, sizeof(*fpb));
-  fpb->db = db;
-  fpb->target_abspath = eb->target_abspath;
+  sfb = apr_palloc(result_pool, sizeof(*sfb));
+  sfb->db = db;
+  sfb->base_abspath = eb->anchor_abspath;
+  sfb->fetch_base = TRUE;
 
-  shim_callbacks->fetch_kind_func = fetch_kind_func;
-  shim_callbacks->fetch_kind_baton = fpb;
-  shim_callbacks->fetch_props_func = fetch_props_func;
-  shim_callbacks->fetch_props_baton = fpb;
+  shim_callbacks->fetch_kind_func = svn_wc__fetch_kind_func;
+  shim_callbacks->fetch_props_func = svn_wc__fetch_props_func;
+  shim_callbacks->fetch_base_func = svn_wc__fetch_base_func;
+  shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks, result_pool, scratch_pool));
+                                   NULL, NULL, shim_callbacks,
+                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
+svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
@@ -5095,7 +5047,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 }
 
 svn_error_t *
-svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
+svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,

@@ -29,6 +29,9 @@ import os
 import re
 import time
 import datetime
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -114,6 +117,12 @@ def status_update_with_nested_adds(sbox):
     'newdir'         : Item(status='  '),
     'newdir/newfile' : Item(status='  '),
     })
+  svntest.actions.run_and_verify_unquiet_status(wc_backup,
+                                                expected_status)
+
+  # At one time an obstructing 'newdir' caused a SEGV on 'newdir/newfile'
+  os.makedirs(os.path.join(wc_backup, 'newdir'))
+  expected_status.tweak('newdir', status='? ')
   svntest.actions.run_and_verify_unquiet_status(wc_backup,
                                                 expected_status)
 
@@ -638,7 +647,7 @@ def get_last_changed_date(path):
   for line in out:
     if re.match("^Last Changed Date", line):
       return line
-  print("Didn't find Last Changed Date for " + path)
+  logger.warn("Didn't find Last Changed Date for %s", path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -649,7 +658,7 @@ def get_text_timestamp(path):
   for line in out:
     if re.match("^Text Last Updated", line):
       return line
-  print("Didn't find text-time for " + path)
+  logger.warn("Didn't find text-time for %s", path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -783,9 +792,9 @@ use-commit-times = yes
       or fmt[23:25] != iota_ts[23:25]):
     # NOTE: the two strings below won't *exactly* match (see just above),
     #   but the *numeric* portions of them should.
-    print("File timestamp on 'iota' does not match.")
-    print("  EXPECTED: %s" % iota_ts)
-    print("    ACTUAL: %s" % fmt)
+    logger.warn("File timestamp on 'iota' does not match.")
+    logger.warn("  EXPECTED: %s", iota_ts)
+    logger.warn("    ACTUAL: %s", fmt)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -899,7 +908,7 @@ def missing_dir_in_anchor(sbox):
 def status_in_xml(sbox):
   "status output in XML format"
 
-  sbox.build(read_only = True)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   file_name = "iota"
@@ -918,38 +927,27 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ['<?xml version="1.0" encoding="UTF-8"?>\n',
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   item=\"modified\"\n",
-              "   revision=\"1\">\n",
-              "<commit\n",
-              "   revision=\"1\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              time_str,
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-              "<against\n",
-              "   revision=\"1\"/>\n",
-              "</target>\n",
-              "</status>\n",
-             ]
+  expected_entries = {file_path : {'wcprops' : 'none',
+                                   'wcitem' : 'modified',
+                                   'wcrev' : '1',
+                                   'crev' : '1',
+                                   'author' : svntest.main.wc_author}}
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                                'status',
-                                                                file_path,
-                                                                '--xml', '-u')
+  svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
-  for i in range(0, len(output)):
-    if output[i] != template[i]:
-      print("ERROR: expected: %s actual: %s" % (template[i], output[i]))
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', 'repo-to-repo copy',
+                                     sbox.repo_url + '/iota',
+                                     sbox.repo_url + '/iota2')
+
+  file_path = sbox.ospath('iota2')
+
+  expected_entries = {file_path : {'wcprops' : 'none',
+                                   'wcitem' : 'none',
+                                   'rprops' : 'none',
+                                   'ritem' : 'added'}}
+
+  svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
 #----------------------------------------------------------------------
 
@@ -1225,53 +1223,23 @@ def status_update_with_incoming_props(sbox):
   else:
     raise svntest.Failure
 
-  xout = ['<?xml version="1.0" encoding="UTF-8"?>\n',
-          "<status>\n",
-          "<target\n",
-          "   path=\"%s\">\n" % (wc_dir),
-          "<entry\n",
-          "   path=\"%s\">\n" % (A_path),
-          "<wc-status\n",
-          "   props=\"none\"\n",
-          "   item=\"normal\"\n",
-          "   revision=\"1\">\n",
-          "<commit\n",
-          "   revision=\"1\">\n",
-          "<author>%s</author>\n" % svntest.main.wc_author,
-          time_str,
-          "</commit>\n",
-          "</wc-status>\n",
-          "<repos-status\n",
-          "   props=\"modified\"\n",
-          "   item=\"none\">\n",
-          "</repos-status>\n",
-          "</entry>\n",
-          "<entry\n",
-          "   path=\"%s\">\n" % (wc_dir),
-          "<wc-status\n",
-          "   props=\"none\"\n",
-          "   item=\"normal\"\n",
-          "   revision=\"1\">\n",
-          "<commit\n",
-          "   revision=\"1\">\n",
-          "<author>%s</author>\n" % svntest.main.wc_author,
-          time_str,
-          "</commit>\n",
-          "</wc-status>\n",
-          "<repos-status\n",
-          "   props=\"modified\"\n",
-          "   item=\"none\">\n",
-          "</repos-status>\n",
-          "</entry>\n",
-          "<against\n",
-          "   revision=\"2\"/>\n",
-          "</target>\n",
-          "</status>\n",]
+  expected_entries ={wc_dir : {'wcprops' : 'none',
+                               'wcitem' : 'normal',
+                               'wcrev' : '1',
+                               'crev' : '1',
+                               'author' : svntest.main.wc_author,
+                               'rprops' : 'modified',
+                               'ritem' : 'none'},
+                     A_path : {'wcprops' : 'none',
+                               'wcitem' : 'normal',
+                               'wcrev' : '1',
+                               'crev' : '1',
+                               'author' : svntest.main.wc_author,
+                               'rprops' : 'modified',
+                               'ritem' : 'none'},
+                     }
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, xout, [],
-                                                                'status',
-                                                                wc_dir,
-                                                                '--xml', '-uN')
+  svntest.actions.run_and_verify_status_xml(expected_entries, wc_dir, '-uN')
 
 # more incoming prop updates.
 def status_update_verbose_with_incoming_props(sbox):
@@ -1785,18 +1753,19 @@ def status_with_tree_conflicts(sbox):
       # check if the path should be a victim
       m = re.search('tree-conflicted="true"', entry)
       if (m is None) and should_be_victim[path]:
-        print("ERROR: expected '%s' to be a tree conflict victim." % path)
-        print("ACTUAL STATUS OUTPUT:")
-        print(output_str)
+        logger.warn("ERROR: expected '%s' to be a tree conflict victim.", path)
+        logger.warn("ACTUAL STATUS OUTPUT:")
+        logger.warn(output_str)
         raise svntest.Failure
       if m and not should_be_victim[path]:
-        print("ERROR: did NOT expect '%s' to be a tree conflict victim." % path)
-        print("ACTUAL STATUS OUTPUT:")
-        print(output_str)
+        logger.warn("ERROR: did NOT expect '%s' to be a tree conflict victim.",
+                    path)
+        logger.warn("ACTUAL STATUS OUTPUT:")
+        logger.warn(output_str)
         raise svntest.Failure
 
   if real_entry_count != len(should_be_victim):
-    print("ERROR: 'status --xml' output is incomplete.")
+    logger.warn("ERROR: 'status --xml' output is incomplete.")
     raise svntest.Failure
 
 
@@ -1924,6 +1893,50 @@ def wclock_status(sbox):
                                      'status', wc_dir)
 
 
+@Issue(4072)
+@XFail()
+def modified_modulo_translation(sbox):
+  "modified before translation, unmodified after"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_propset('svn:eol-style', 'LF', 'iota')
+  sbox.simple_commit()
+
+  # CRLF it.
+  open(sbox.ospath('iota'), 'wb').write("This is the file 'iota'.\r\n")
+
+  # Run status.  Expect some output.
+  # TODO: decide how such files should show in the output; whether they
+  #       always show, or only with some --flag; and adjust this accordingly.
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'status', wc_dir)
+
+  # Expect the file to be renormalized (to LF) after a revert.
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_svn(None, [], [], 'status', wc_dir)
+
+def status_not_present(sbox):
+  "no status on not-present and excluded nodes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_rm('iota', 'A/C')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude',
+                       sbox.ospath('A/mu'), sbox.ospath('A/B'))
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, [], [],'status',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/C'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('no-file'))
+
 ########################################################################
 # Run the tests
 
@@ -1965,6 +1978,8 @@ test_list = [ None,
               status_locked_deleted,
               wc_wc_copy_timestamp,
               wclock_status,
+              modified_modulo_translation,
+              status_not_present,
              ]
 
 if __name__ == '__main__':

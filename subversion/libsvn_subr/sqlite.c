@@ -120,16 +120,17 @@ struct svn_sqlite__value_t
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
-    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, sqlite3_errmsg((db)->db3));    \
+    return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                             NULL, "sqlite: %s",                 \
+                             sqlite3_errmsg((db)->db3));         \
 } while (0)
 
 #define SQLITE_ERR_MSG(x, msg) do                                \
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
-    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, msg);                          \
+    return svn_error_createf(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                             NULL, "sqlite: %s", (msg));         \
 } while (0)
 
 
@@ -245,8 +246,8 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
     {
       svn_error_t *err1, *err2;
 
-      err1 = svn_error_create(SQLITE_ERROR_CODE(sqlite_result), NULL,
-                              sqlite3_errmsg(stmt->db->db3));
+      err1 = svn_error_createf(SQLITE_ERROR_CODE(sqlite_result), NULL,
+                               "sqlite: %s", sqlite3_errmsg(stmt->db->db3));
       err2 = svn_sqlite__reset(stmt);
       return svn_error_compose_create(err1, err2);
     }
@@ -606,12 +607,12 @@ static volatile svn_atomic_t sqlite_init_state = 0;
 static svn_error_t *
 init_sqlite(void *baton, apr_pool_t *pool)
 {
-  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+  if (sqlite3_libversion_number() < SVN_SQLITE_MIN_VERSION_NUMBER)
     {
       return svn_error_createf(
                     SVN_ERR_SQLITE_ERROR, NULL,
                     _("SQLite compiled for %s, but running with %s"),
-                    SQLITE_VERSION, sqlite3_libversion());
+                    SVN_SQLITE_MIN_VERSION, sqlite3_libversion());
     }
 
 #if APR_HAS_THREADS
@@ -678,14 +679,15 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
       int err_code = sqlite3_open_v2(path, db3, flags, NULL);
       if (err_code != SQLITE_OK)
         {
+          /* Save the error message before closing the SQLite handle. */
           char *msg = apr_pstrdup(scratch_pool, sqlite3_errmsg(*db3));
 
           /* We don't catch the error here, since we care more about the open
              error than the close error at this point. */
           sqlite3_close(*db3);
 
-          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", (char *)NULL);
-          return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
+          return svn_error_createf(SQLITE_ERROR_CODE(err_code), NULL,
+                                   "sqlite: %s: '%s'", msg, path);
         }
     }
   }

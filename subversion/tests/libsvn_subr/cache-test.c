@@ -36,7 +36,7 @@
 
 /* Implements svn_cache__serialize_func_t */
 static svn_error_t *
-serialize_revnum(char **data,
+serialize_revnum(void **data,
                  apr_size_t *data_len,
                  void *in,
                  apr_pool_t *pool)
@@ -51,7 +51,7 @@ serialize_revnum(char **data,
 /* Implements svn_cache__deserialize_func_t */
 static svn_error_t *
 deserialize_revnum(void **out,
-                   char *data,
+                   void *data,
                    apr_size_t data_len,
                    apr_pool_t *pool)
 {
@@ -193,6 +193,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            FALSE,
                                             pool));
 
   return basic_cache_test(cache, FALSE, pool);

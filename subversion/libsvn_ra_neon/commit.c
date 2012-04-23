@@ -87,7 +87,7 @@ typedef struct commit_ctx_t
   apr_hash_t *revprop_table;
 
   /* A hash mapping svn_string_t * paths (those which are valid as
-     target in the MERGE response) to svn_node_kind_t kinds. */
+     target in the MERGE response) to (void*)svn_recurse_kind. */
   apr_hash_t *valid_targets;
 
   /* The (potential) author of this commit. */
@@ -1570,8 +1570,7 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
   apr_hash_index_t *hi;
-  svn_delta_shim_callbacks_t *shim_callbacks =
-                                svn_delta_shim_callbacks_default(pool);
+  const char *repos_root;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1621,8 +1620,11 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   *editor = commit_editor;
   *edit_baton = cc;
 
+  SVN_ERR(svn_ra_neon__get_repos_root(session, &repos_root, pool));
+
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks, pool, pool));
+                                   repos_root, cc->anchor_relpath,
+                                   ras->shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }

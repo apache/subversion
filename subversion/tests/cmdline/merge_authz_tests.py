@@ -73,7 +73,10 @@ from svntest.actions import inject_conflict_into_expected_state
 #         This is *not* a full test of issue #2829, see also merge_tests.py,
 #         search for "2829".  This tests the problem where a merge adds a path
 #         with a missing sibling and so needs its own explicit mergeinfo.
-@Issues(2893,2997,2829)
+#
+# #4056 - Don't record non-inheritable mergeinfo if missing subtrees are not
+#         touched by the full-depth diff
+@Issues(2893,2997,2829,4056)
 @SkipUnless(svntest.main.server_has_mergeinfo)
 @Skip(svntest.main.is_ra_type_file)
 def mergeinfo_and_skipped_paths(sbox):
@@ -393,10 +396,54 @@ def mergeinfo_and_skipped_paths(sbox):
 
   # Merge -r7:9 to the restricted WC's A_COPY_2/D/H.
   #
+  # r9 adds a path, 'A_COPY_2/D/H/zeta', which has a missing sibling 'psi',
+  # but since 'psi' is untouched by the merge it isn't skipped, and since it
+  # isn't skipped, its parent 'A_COPY_2/D/H' won't get non-inheritable
+  # mergeinfo set on it to describe the merge, so none of the parent's
+  # children will get explicit mergeinfo -- see issue #4056.
+  expected_output = wc.State(A_COPY_2_H_path, {
+    'omega' : Item(status='U '),
+    'zeta'  : Item(status='A '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_2_H_path, {
+    ''      : Item(status=' U'),
+    'omega' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_H_path, {
+    'omega' : Item(status=' U'),
+    })
+  expected_status = wc.State(A_COPY_2_H_path, {
+    ''      : Item(status=' M', wc_rev=8),
+    'chi'   : Item(status='  ', wc_rev=8),
+    'omega' : Item(status='M ', wc_rev=8),
+    'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8-9'}),
+    'omega' : Item("New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'zeta'  : Item("This is the file 'zeta'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_2_H_path, {})
+  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
+                                       sbox.repo_url + '/A/D/H', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+
+  # Merge -r4:9 to the restricted WC's A_COPY_2/D/H.
+  #
   # r9 adds a path, 'A_COPY_2/D/H/zeta', which has a parent with
-  # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing).
-  # 'A_COPY_2/D/H/zeta' must therefore get its own explicit mergeinfo from
-  # this merge.
+  # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing
+  # and skipped). 'A_COPY_2/D/H/zeta' must therefore get its own explicit
+  # mergeinfo from this merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                     wc_restricted)
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     'zeta'  : Item(status='A '),
@@ -415,15 +462,17 @@ def mergeinfo_and_skipped_paths(sbox):
     'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8-9*'}),
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5-9*'}),
     'omega' : Item("New content",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:5-9'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'zeta'  : Item("This is the file 'zeta'.\n",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:9'}),
     })
-  expected_skip = wc.State(A_COPY_2_H_path, {})
-  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
+  expected_skip = wc.State(A_COPY_2_H_path, {
+    'psi' : Item(),
+    })
+  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '9',
                                        sbox.repo_url + '/A/D/H', None,
                                        expected_output,
                                        expected_mergeinfo_output,

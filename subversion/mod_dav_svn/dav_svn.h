@@ -316,6 +316,9 @@ svn_boolean_t dav_svn__get_txdelta_cache_flag(request_rec *r);
 /* for the repository referred to by this request, is fulltext caching active? */
 svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 
+/* for the repository referred to by this request, is revprop caching active? */
+svn_boolean_t dav_svn__get_revprop_cache_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
  */
@@ -384,6 +387,9 @@ const char *dav_svn__get_root_dir(request_rec *r);
 
 /* Return the data compression level to be used over the wire. */
 int dav_svn__get_compression_level(void);
+
+/* Return the hook script environment parsed from the configuration. */
+apr_hash_t *dav_svn__get_hooks_env(request_rec *r);
 
 /** For HTTP protocol v2, these are the new URIs and URI stubs
     returned to the client in our OPTIONS response.  They all depend
@@ -737,7 +743,7 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 dav_error *
 dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
-                       int errno_id,
+                       int error_id,
                        const char *desc,
                        const char *namespace,
                        const char *tagname);
@@ -752,7 +758,7 @@ dav_svn__new_error_tag(apr_pool_t *pool,
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
-                   int errno_id,
+                   int error_id,
                    const char *desc);
 
 
@@ -949,6 +955,14 @@ dav_error *
 dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
                               ap_filter_t *output, dav_error *preferred_err,
                               apr_pool_t *pool);
+
+/* Log a DAV error response.
+ *
+ * NOTE: Copied from mod_dav's dav_log_err which is not public.
+ */
+void dav_svn__log_err(request_rec *r,
+                      dav_error *err,
+                      int level);
 
 /* Send a "standardized" DAV error response based on the ERR's
  * namespace and tag.

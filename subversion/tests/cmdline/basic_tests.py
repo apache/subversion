@@ -25,7 +25,9 @@
 ######################################################################
 
 # General modules
-import shutil, stat, re, os
+import shutil, stat, re, os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -659,8 +661,8 @@ def basic_conflict(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # logger.warn("Not all extra reject files have been accounted for:")
+    # logger.warn(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -780,17 +782,17 @@ def basic_revert(sbox):
   fp = open(beta_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(iota_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(rho_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(zeta_path, 'r')
   lines = fp.readlines()
@@ -989,9 +991,9 @@ def verify_file_deleted(message, path):
   except IOError:
     return
   if message is not None:
-    print(message)
+    logger.warn(message)
   ###TODO We should raise a less generic error here. which?
-  raise Failure
+  raise svntest.Failure
 
 def verify_dir_deleted(path):
   if not os.path.isdir(path):
@@ -999,6 +1001,7 @@ def verify_dir_deleted(path):
 
   return 1
 
+@Issue(687,4074)
 def basic_delete(sbox):
   "basic delete command"
 
@@ -1167,11 +1170,11 @@ def basic_delete(sbox):
 
   # check unversioned and added dirs has been removed
   if verify_dir_deleted(Q_path):
-    print("Failed to remove unversioned dir")
+    logger.warn("Failed to remove unversioned dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
   if verify_dir_deleted(X_path):
-    print("Failed to remove added dir")
+    logger.warn("Failed to remove added dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -1189,6 +1192,12 @@ def basic_delete(sbox):
                                      ["\n", "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      iota_URL)
+
+  # Issue 4074, deleting a root url SEGV.
+  expected_error = 'svn: E170000: .*not within a repository'
+  svntest.actions.run_and_verify_svn(None, [], expected_error,
+                                     'rm', sbox.repo_url,
+                                     '--message', 'delete root')
 
 #----------------------------------------------------------------------
 
@@ -1666,8 +1675,8 @@ def basic_info(sbox):
       if line.startswith('Path: '):
         paths.append(line[6:].rstrip())
     if paths != expected_paths:
-      print("Reported paths: %s" % paths)
-      print("Expected paths: %s" % expected_paths)
+      logger.warn("Reported paths: %s" % paths)
+      logger.warn("Expected paths: %s" % expected_paths)
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1690,7 +1699,7 @@ def repos_root(sbox):
       if line == "Repository Root: " + sbox.repo_url + "\n":
         break
     else:
-      print("Bad or missing repository root")
+      logger.warn("Bad or missing repository root")
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1913,7 +1922,7 @@ def delete_keep_local_twice(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
 
   if not os.path.isdir(dir):
-    print('Directory was really deleted')
+    logger.warn('Directory was really deleted')
     raise svntest.Failure
 
 def windows_paths_in_repos(sbox):
@@ -2187,8 +2196,8 @@ def automatic_conflict_resolution(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # logger.warn("Not all extra reject files have been accounted for:")
+    # logger.warn(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -2821,6 +2830,123 @@ def add_multiple_targets(sbox):
                                      'status', wc_dir)
 
 
+def quiet_commits(sbox):
+  "commits with --quiet"
+
+  sbox.build()
+
+  svntest.main.file_append(sbox.ospath('A/mu'), 'xxx')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'commit', sbox.wc_dir,
+                                     '--message', 'commit', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'mkdir', sbox.repo_url + '/X',
+                                     '--message', 'mkdir URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'import', sbox.ospath('A/mu'),
+                                     sbox.repo_url + '/f',
+                                     '--message', 'import', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'rm', sbox.repo_url + '/f',
+                                     '--message', 'rm URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'copy', sbox.repo_url + '/X',
+                                     sbox.repo_url + '/Y',
+                                     '--message', 'cp URL URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'move', sbox.repo_url + '/Y',
+                                     sbox.repo_url + '/Z',
+                                     '--message', 'mv URL URL', '--quiet')
+
+  # Not fully testing each command, just that they all commit and
+  # produce no output.
+  expected_output = wc.State(sbox.wc_dir, {
+    'X' : Item(status='A '),
+    'Z' : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 7)
+  expected_status.add({
+      'X'   : Item(status='  ', wc_rev=7),
+      'Z'   : Item(status='  ', wc_rev=7),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'xxx')
+  expected_disk.add({
+    'X' : Item(),
+    'Z' : Item()
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+# Regression test for issue #4023: on Windows, 'svn rm' incorrectly deletes
+# on-disk file if it is case-clashing with intended (non-on-disk) target.
+@Issue(4023)
+@XFail(svntest.main.is_fs_case_insensitive)
+def rm_missing_with_case_clashing_ondisk_item(sbox):
+  """rm missing item with case-clashing ondisk item"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  IOTA_path = os.path.join(wc_dir, 'IOTA')
+
+  # Out-of-svn move, to make iota missing, while IOTA appears as unversioned.
+  os.rename(iota_path, IOTA_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota'              : Item(status='! ', wc_rev='1'),
+    'IOTA'              : Item(status='? '),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # 'svn rm' iota, should leave IOTA alone.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', iota_path)
+
+  # Test status: the unversioned IOTA should still be there.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota'              : Item(status='D ', wc_rev='1'),
+    'IOTA'              : Item(status='? '),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+
+def delete_conflicts_one_of_many(sbox):
+  """delete multiple targets one conflict"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'new rho')
+  sbox.simple_commit()
+  svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'conflict rho')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r1', '--accept', 'postpone',
+                                     wc_dir)
+
+  if not os.path.exists(sbox.ospath('A/D/G/rho.mine')):
+    raise svntest.Failure("conflict file rho.mine missing")
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--force',
+                                     sbox.ospath('A/D/G/rho'),
+                                     sbox.ospath('A/D/G/tau'))
+
+  verify_file_deleted("failed to remove conflict file",
+                      sbox.ospath('A/D/G/rho.mine'))
 
 ########################################################################
 # Run the tests
@@ -2885,6 +3011,9 @@ test_list = [ None,
               ls_url_special_characters,
               ls_multiple_and_non_existent_targets,
               add_multiple_targets,
+              quiet_commits,
+              rm_missing_with_case_clashing_ondisk_item,
+              delete_conflicts_one_of_many,
              ]
 
 if __name__ == '__main__':

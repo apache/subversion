@@ -544,8 +544,8 @@ upd_delete_entry(const char *path,
                                            svn_relpath_basename(path, NULL),
                                            1);
   return dav_svn__brigade_printf(parent->uc->bb, parent->uc->output,
-                                 "<S:delete-entry name=\"%s\"/>" DEBUG_CR,
-                                 qname);
+                                 "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
+                                   DEBUG_CR, qname, revision);
 }
 
 
@@ -734,18 +734,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-
-/* This implements 'svn_txdelta_window_handler_t'.
-   During a resource walk, the driver sends an empty window as a
-   boolean indicating that a change happened to this file, but we
-   don't want to send anything over the wire as a result. */
-static svn_error_t *
-dummy_window_handler(svn_txdelta_window_t *window, void *baton)
-{
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 upd_apply_textdelta(void *file_baton,
                     const char *base_checksum,
@@ -765,7 +753,7 @@ upd_apply_textdelta(void *file_baton,
      we don't actually want to transmit text-deltas. */
   if (file->uc->resource_walk || (! file->uc->send_all))
     {
-      *handler = dummy_window_handler;
+      *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
@@ -955,8 +943,8 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 0);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
-            return derr;
+          if (svn_path_is_url(cdata))
+            cdata = svn_uri_canonicalize(cdata, resource->pool);
           if ((serr = dav_svn__simple_parse_uri(&this_info, resource,
                                                 cdata, resource->pool)))
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -970,8 +958,8 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 0);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
-            return derr;
+          if (svn_path_is_url(cdata))
+            cdata = svn_uri_canonicalize(cdata, resource->pool);
           if ((serr = dav_svn__simple_parse_uri(&this_info, resource,
                                                 cdata, resource->pool)))
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

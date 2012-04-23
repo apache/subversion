@@ -141,8 +141,15 @@ memcache_internal_get(char **data,
   memcache_t *cache = cache_void;
   apr_status_t apr_err;
   const char *mc_key;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool;
 
+  if (key == NULL)
+    {
+      *found = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  subpool = svn_pool_create(pool);
   SVN_ERR(build_key(&mc_key, cache, key, subpool));
 
   apr_err = apr_memcache_getp(cache->memcache,
@@ -240,9 +247,12 @@ memcache_set(void *cache_void,
 {
   memcache_t *cache = cache_void;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  char *data;
+  void *data;
   apr_size_t data_len;
   svn_error_t *err;
+
+  if (key == NULL)
+    return SVN_NO_ERROR;
 
   if (cache->serialize_func)
     {
@@ -297,12 +307,12 @@ memcache_set_partial(void *cache_void,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  char *data;
+  void *data;
   apr_size_t size;
   svn_boolean_t found = FALSE;
 
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  SVN_ERR(memcache_internal_get(&data,
+  SVN_ERR(memcache_internal_get((char **)&data,
                                 &size,
                                 &found,
                                 cache_void,

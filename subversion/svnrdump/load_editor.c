@@ -384,6 +384,121 @@ lock_retry_func(void *baton,
                             reposlocktoken->data);
 }
 
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct revision_baton *rb = baton;
+  svn_stream_t *fstream;
+  svn_error_t *err;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = rb->rev - 1;
+
+  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  err = svn_ra_get_file(rb->pb->aux_session, path, base_revision,
+                        fstream, NULL, NULL, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_stream_close(fstream));
+
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_stream_close(fstream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct revision_baton *rb = baton;
+  svn_node_kind_t node_kind;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = rb->rev - 1;
+
+  SVN_ERR(svn_ra_check_path(rb->pb->aux_session, path, base_revision,
+                            &node_kind, scratch_pool));
+
+  if (node_kind == svn_node_file)
+    {
+      SVN_ERR(svn_ra_get_file(rb->pb->aux_session, path, base_revision,
+                              NULL, NULL, props, result_pool));
+    }
+  else if (node_kind == svn_node_dir)
+    {
+      apr_array_header_t *tmp_props;
+
+      SVN_ERR(svn_ra_get_dir2(rb->pb->aux_session, NULL, NULL, props, path,
+                              base_revision, 0 /* Dirent fields */,
+                              result_pool));
+      tmp_props = svn_prop_hash_to_array(*props, result_pool);
+      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
+                                   result_pool));
+      *props = svn_prop_array_to_hash(tmp_props, result_pool);
+    }
+  else
+    {
+      *props = apr_hash_make(result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct revision_baton *rb = baton;
+  svn_node_kind_t node_kind;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = rb->rev - 1;
+
+  SVN_ERR(svn_ra_check_path(rb->pb->aux_session, path, base_revision,
+                            &node_kind, scratch_pool));
+
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  return SVN_NO_ERROR;
+}
+
+static svn_delta_shim_callbacks_t *
+get_shim_callbacks(struct revision_baton *rb,
+                   apr_pool_t *pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                        svn_delta_shim_callbacks_default(pool);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_baton = rb;
+
+  return callbacks;
+}
+
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
  * time-delay loop. This function is duplicated by svnsync in main.c.
@@ -518,6 +633,8 @@ new_node_record(void **node_baton,
       apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
                    APR_HASH_KEY_STRING, NULL);
 
+      SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->pb->session,
+                                    get_shim_callbacks(rb, rb->pool)));
       SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
                                         &commit_edit_baton, rb->revprop_table,
                                         commit_callback, revision_baton,
@@ -876,7 +993,7 @@ remove_node_props(void *baton)
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
       const char *name = svn__apr_hash_index_key(hi);
-      svn_prop_kind_t kind = svn_property_kind(NULL, name);
+      svn_prop_kind_t kind = svn_property_kind2(name);
 
       if (kind == svn_prop_regular_kind)
         SVN_ERR(set_node_property(nb, name, NULL));

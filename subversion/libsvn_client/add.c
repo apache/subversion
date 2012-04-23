@@ -47,6 +47,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
 
 #include "svn_private_config.h"
@@ -494,31 +495,27 @@ add_dir_recursive(const char *dir_abspath,
 }
 
 
-struct add_with_write_lock_baton {
-  const char *local_abspath;
-  svn_depth_t depth;
-  svn_boolean_t force;
-  svn_boolean_t no_ignore;
-  svn_client_ctx_t *ctx;
-
-  /* Absolute path to the first existing parent directory of local_abspath.
-   * If not NULL, all missing parents of local_abspath must be created
-   * before local_abspath can be added. */
-  const char *existing_parent_abspath;
-};
-
-/* The main logic of the public svn_client_add4. */
+/* The main logic of the public svn_client_add4.
+ *
+ * EXISTING_PARENT_ABSPATH is the absolute path to the first existing
+ * parent directory of local_abspath. If not NULL, all missing parents
+ * of LOCAL_ABSPATH must be created before LOCAL_ABSPATH can be added. */
 static svn_error_t *
-add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+add(const char *local_abspath,
+    svn_depth_t depth,
+    svn_boolean_t force,
+    svn_boolean_t no_ignore,
+    const char *existing_parent_abspath,
+    svn_client_ctx_t *ctx,
+    apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
   svn_error_t *err;
-  struct add_with_write_lock_baton *b = baton;
   svn_magic__cookie_t *magic_cookie;
 
   svn_magic__init(&magic_cookie, scratch_pool);
 
-  if (b->existing_parent_abspath)
+  if (existing_parent_abspath)
     {
       const char *parent_abspath;
       const char *child_relpath;
@@ -526,9 +523,9 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       int i;
       apr_pool_t *iterpool;
 
-      parent_abspath = b->existing_parent_abspath;
-      child_relpath = svn_dirent_is_child(b->existing_parent_abspath,
-                                          b->local_abspath, NULL);
+      parent_abspath = existing_parent_abspath;
+      child_relpath = svn_dirent_is_child(existing_parent_abspath,
+                                          local_abspath, NULL);
       components = svn_path_decompose(child_relpath, scratch_pool);
       iterpool = svn_pool_create(scratch_pool);
       for (i = 0; i < components->nelts - 1; i++)
@@ -538,8 +535,8 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 
           svn_pool_clear(iterpool);
 
-          if (b->ctx->cancel_func)
-            SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+          if (ctx->cancel_func)
+            SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
           component = APR_ARRAY_IDX(components, i, const char *);
           parent_abspath = svn_dirent_join(parent_abspath, component,
@@ -548,29 +545,27 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
           if (disk_kind != svn_node_none && disk_kind != svn_node_dir)
             return svn_error_createf(SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL,
                                      _("'%s' prevents creating parent of '%s'"),
-                                     parent_abspath, b->local_abspath);
+                                     parent_abspath, local_abspath);
 
           SVN_ERR(svn_io_make_dir_recursively(parent_abspath, scratch_pool));
-          SVN_ERR(svn_wc_add_from_disk(b->ctx->wc_ctx, parent_abspath,
-                                       b->ctx->notify_func2,
-                                       b->ctx->notify_baton2,
+          SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, parent_abspath,
+                                       ctx->notify_func2, ctx->notify_baton2,
                                        scratch_pool));
         }
       svn_pool_destroy(iterpool);
     }
 
-  SVN_ERR(svn_io_check_path(b->local_abspath, &kind, scratch_pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_dir)
     {
       /* We use add_dir_recursive for all directory targets
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
-      err = add_dir_recursive(b->local_abspath, b->depth,
-                              b->force, b->no_ignore, magic_cookie, b->ctx,
-                              scratch_pool);
+      err = add_dir_recursive(local_abspath, depth, force, no_ignore,
+                              magic_cookie, ctx, scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(b->local_abspath, magic_cookie, b->ctx, scratch_pool);
+    err = add_file(local_abspath, magic_cookie, ctx, scratch_pool);
   else if (kind == svn_node_none)
     {
       svn_boolean_t tree_conflicted;
@@ -578,7 +573,7 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       /* Provide a meaningful error message if the node does not exist
        * on disk but is a tree conflict victim. */
       err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
-                                 b->ctx->wc_ctx, b->local_abspath,
+                                 ctx->wc_ctx, local_abspath,
                                  scratch_pool);
       if (err)
         svn_error_clear(err);
@@ -587,22 +582,22 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
                                  _("'%s' is an existing item in conflict; "
                                    "please mark the conflict as resolved "
                                    "before adding a new item here"),
-                                 svn_dirent_local_style(b->local_abspath,
+                                 svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
 
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("'%s' not found"),
-                               svn_dirent_local_style(b->local_abspath,
+                               svn_dirent_local_style(local_abspath,
                                                       scratch_pool));
     }
   else
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Unsupported node kind for path '%s'"),
-                             svn_dirent_local_style(b->local_abspath,
+                             svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
   /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
-  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && b->force)
+  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -675,7 +670,7 @@ svn_client_add4(const char *path,
 {
   const char *parent_abspath;
   const char *local_abspath;
-  struct add_with_write_lock_baton baton;
+  const char *existing_parent_abspath;
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -695,30 +690,26 @@ svn_client_add4(const char *path,
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
-  baton.existing_parent_abspath = NULL;
+  existing_parent_abspath = NULL;
   if (add_parents)
     {
       apr_pool_t *subpool;
-      const char *existing_parent_abspath;
+      const char *existing_parent_abspath2;
 
       subpool = svn_pool_create(pool);
-      SVN_ERR(find_existing_parent(&existing_parent_abspath, ctx,
+      SVN_ERR(find_existing_parent(&existing_parent_abspath2, ctx,
                                    parent_abspath, pool, subpool));
-      if (strcmp(existing_parent_abspath, parent_abspath) != 0)
-        baton.existing_parent_abspath = existing_parent_abspath;
+      if (strcmp(existing_parent_abspath2, parent_abspath) != 0)
+        existing_parent_abspath = existing_parent_abspath2;
       svn_pool_destroy(subpool);
     }
 
-  baton.local_abspath = local_abspath;
-  baton.depth = depth;
-  baton.force = force;
-  baton.no_ignore = no_ignore;
-  baton.ctx = ctx;
-  SVN_ERR(svn_wc__call_with_write_lock(add, &baton, ctx->wc_ctx,
-                                       baton.existing_parent_abspath
-                                         ? baton.existing_parent_abspath
-                                         : parent_abspath,
-                                       FALSE, pool, pool));
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    add(local_abspath, depth, force, no_ignore, existing_parent_abspath,
+        ctx, pool),
+    ctx->wc_ctx,
+    existing_parent_abspath ? existing_parent_abspath : parent_abspath,
+    FALSE /* lock_anchor */, pool);
   return SVN_NO_ERROR;
 }
 
@@ -819,6 +810,11 @@ mkdir_urls(const apr_array_header_t *urls,
       const char *bname;
       svn_uri_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
+
+      if (*bname == '\0')
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("There is no valid uri above '%s'"),
+                                 common);
     }
   else
     {
@@ -841,6 +837,12 @@ mkdir_urls(const apr_array_header_t *urls,
           const char *bname;
 
           svn_uri_split(&common, &bname, common, pool);
+
+          if (*bname == '\0')
+             return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                      _("There is no valid uri above '%s'"),
+                                      common);
+
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
@@ -895,6 +897,9 @@ mkdir_urls(const apr_array_header_t *urls,
                                                  ctx, pool));
 
   /* Fetch RA commit editor */
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
+                        svn_client__get_shim_callbacks(ctx->wc_ctx, NULL,
+                                                       pool)));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,

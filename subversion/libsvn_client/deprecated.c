@@ -44,6 +44,7 @@
 #include "client.h"
 #include "mergeinfo.h"
 
+#include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
@@ -384,6 +385,27 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 }
 
 /*** From commit.c ***/
+svn_error_t *
+svn_client_import4(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_import5(path, url, depth, no_ignore,
+                                            ignore_unknown_node_types,
+                                            revprop_table,
+                                            NULL, NULL,
+                                            commit_callback, commit_baton,
+                                            ctx, pool));
+}
+
+
 svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,
@@ -863,7 +885,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
   return svn_client_diff6(diff_options, path1, revision1, path2,
                           revision2, relative_to_dir, depth,
                           ignore_ancestry, no_diff_deleted,
-                          show_copies_as_adds, ignore_content_type,
+                          show_copies_as_adds, ignore_content_type, FALSE,
                           use_git_diff_format, header_encoding,
                           outstream, errstream, changelists, ctx, pool);
 }
@@ -991,6 +1013,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                               no_diff_deleted,
                               show_copies_as_adds,
                               ignore_content_type,
+                              FALSE,
                               use_git_diff_format,
                               header_encoding,
                               outstream,
@@ -1362,16 +1385,11 @@ svn_client_log4(const apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
   apr_array_header_t *revision_ranges;
-  svn_opt_revision_range_t *range;
-
-  range = apr_palloc(pool, sizeof(svn_opt_revision_range_t));
-  range->start = *start;
-  range->end = *end;
 
   revision_ranges = apr_array_make(pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
-
-  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(start, end, pool);
 
   return svn_client_log5(targets, peg_revision, revision_ranges, limit,
                          discover_changed_paths, strict_node_history,
@@ -1577,13 +1595,11 @@ svn_client_merge_peg2(const char *source,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  svn_opt_revision_range_t range;
   apr_array_header_t *ranges_to_merge =
     apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
 
-  range.start = *revision1;
-  range.end = *revision2;
-  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &range;
+  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *)
+    = svn_opt__revision_range_create(revision1, revision2, pool);
   return svn_client_merge_peg3(source, ranges_to_merge,
                                peg_revision,
                                target_wcpath,

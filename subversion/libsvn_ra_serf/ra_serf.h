@@ -39,6 +39,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_subr_private.h"
 
 #include "blncache.h"
 
@@ -70,6 +71,10 @@ typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
   serf_connection_t *conn;
 
+  /* The server is not Apache/mod_dav_svn (directly) and only supports
+     HTTP/1.0. Thus, we cannot send chunked requests.  */
+  svn_boolean_t http10;
+
   /* Bucket allocator for this connection. */
   serf_bucket_alloc_t *bkt_alloc;
 
@@ -78,6 +83,7 @@ typedef struct svn_ra_serf__connection_t {
 
   /* Are we using ssl */
   svn_boolean_t using_ssl;
+  int server_cert_failures; /* Collected cert failures in chain */
 
   /* Should we ask for compressed responses? */
   svn_boolean_t using_compression;
@@ -146,6 +152,9 @@ struct svn_ra_serf__session_t {
   /* Callback function to handle cancellation */
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
+
+  /* Ev2 shim callbacks */
+  svn_delta_shim_callbacks_t *shim_callbacks;
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
@@ -315,12 +324,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool);
 
-serf_bucket_t*
-svn_ra_serf__accept_response(serf_request_t *request,
-                             serf_bucket_t *stream,
-                             void *acceptor_baton,
-                             apr_pool_t *pool);
-
 void
 svn_ra_serf__conn_closed(serf_connection_t *conn,
                          void *closed_baton,
@@ -347,24 +350,6 @@ svn_ra_serf__handle_client_cert_pw(void *data,
                                    const char *cert_path,
                                    const char **password);
 
-/*
- * Create a REQUEST with an associated REQ_BKT in the SESSION.
- *
- * If HDRS_BKT is not-NULL, it will be set to a headers_bucket that
- * corresponds to the new request.
- *
- * The request will be METHOD at URL.
- *
- * If BODY_BKT is not-NULL, it will be sent as the request body.
- *
- * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
- */
-svn_error_t *
-svn_ra_serf__setup_serf_req(serf_request_t *request,
-                            serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
-                            svn_ra_serf__connection_t *conn,
-                            const char *method, const char *url,
-                            serf_bucket_t *body_bkt, const char *content_type);
 
 /*
  * This function will run the serf context in SESS until *DONE is TRUE.
@@ -381,29 +366,20 @@ typedef svn_error_t *
                                    void *handler_baton,
                                    apr_pool_t *pool);
 
-/* Callback for setting up a complete serf request */
-typedef svn_error_t *
-(*svn_ra_serf__request_setup_t)(serf_request_t *request,
-                                void *setup_baton,
-                                serf_bucket_t **req_bkt,
-                                serf_response_acceptor_t *acceptor,
-                                void **acceptor_baton,
-                                svn_ra_serf__response_handler_t *handler,
-                                void **handler_baton,
-                                apr_pool_t *pool);
-
 /* Callback for when a request body is needed. */
+/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_body_delegate_t)(serf_bucket_t **body_bkt,
                                         void *baton,
                                         serf_bucket_alloc_t *alloc,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *request_pool);
 
 /* Callback for when request headers are needed. */
+/* ### should pass a scratch_pool  */
 typedef svn_error_t *
 (*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
                                           void *baton,
-                                          apr_pool_t *pool);
+                                          apr_pool_t *request_pool);
 
 /* Callback for when a response has an error. */
 typedef svn_error_t *
@@ -436,15 +412,6 @@ typedef struct svn_ra_serf__handler_t {
    */
   svn_ra_serf__response_error_t response_error;
   void *response_error_baton;
-
-  /* This function and baton will be executed when the request is about
-   * to be delivered by serf.
-   *
-   * This just passes through serf's raw request creation parameters.
-   * None of the other parameters will be utilized if this field is set.
-   */
-  svn_ra_serf__request_setup_t setup;
-  void *setup_baton;
 
   /* This function and baton pair allows for custom request headers to
    * be set.
@@ -509,30 +476,28 @@ typedef struct svn_ra_serf__xml_parser_t svn_ra_serf__xml_parser_t;
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_start_element_t)(svn_ra_serf__xml_parser_t *parser,
-                                    void *baton,
                                     svn_ra_serf__dav_props_t name,
-                                    const char **attrs);
+                                    const char **attrs,
+                                    apr_pool_t *scratch_pool);
 
 /* Callback invoked with @a baton by our XML @a parser when an element with
  * the @a name is closed.
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_end_element_t)(svn_ra_serf__xml_parser_t *parser,
-                                  void *baton,
-                                  svn_ra_serf__dav_props_t name);
+                                  svn_ra_serf__dav_props_t name,
+                                  apr_pool_t *scratch_pool);
 
 /* Callback invoked with @a baton by our XML @a parser when a CDATA portion
  * of @a data with size @a len is encountered.
  *
  * This may be invoked multiple times for the same tag.
- *
- * @see svn_ra_serf__expand_string
  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
-                                          void *baton,
                                           const char *data,
-                                          apr_size_t len);
+                                          apr_size_t len,
+                                          apr_pool_t *scratch_pool);
 
 /*
  * Helper structure associated with handle_xml_parser handler that will
@@ -881,16 +846,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
                        svn_ra_serf__ns_t *ns_list,
                        const char *name);
 
-/*
- * Expand the string represented by @a cur with a current size of @a
- * cur_len by appending @a new with a size of @a new_len.
- *
- * The reallocated string is made in @a pool.
- */
-void
-svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
-                           const char *new, apr_size_t new_len,
-                           apr_pool_t *pool);
 
 /** PROPFIND-related functions **/
 
@@ -1452,6 +1407,29 @@ svn_error_t *
 svn_ra_serf__error_on_status(int status_code,
                              const char *path,
                              const char *location);
+
+svn_error_t *
+svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks);
+
+
+svn_error_t *
+svn_ra_serf__copy_into_spillbuf(svn_spillbuf_t **spillbuf,
+                                serf_bucket_t *bkt,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+serf_bucket_t *
+svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
+                              serf_bucket_alloc_t *allocator,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
+                            const char **url,
+                            apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
