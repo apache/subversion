@@ -1971,7 +1971,11 @@ svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
  *
  * ### Someday: before a txn is created, some kind of read-hook could
  *              be called here.
+ *
+ * @note This function was never fully implemented, nor used. Ignore it.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                   svn_repos_t *repos,
