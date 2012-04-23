@@ -99,9 +99,10 @@ svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
 
 /* Make a shallow (ie, mergeinfos are not duped, or altered at all;
    keys share storage) copy of IN_CATALOG in *OUT_CATALOG, removing
-   PREFIX_PATH (which is an absolute path) from the beginning of each
-   key in the catalog (each of which is also an absolute path).  It is
-   illegal for any key to not start with PREFIX_PATH.  The new hash
+   PREFIX_PATH from the beginning of each key in the catalog.
+   PREFIX_PATH and the keys of IN_CATALOG are absolute 'fspaths',
+   starting with '/'.  It is illegal for any key to not start with
+   PREFIX_PATH.  The keys of *OUT_CATALOG are relpaths.  The new hash
    and temporary values are allocated in POOL.  (This is useful for
    making the return value from svn_ra_get_mergeinfo relative to the
    session root, say.) */
@@ -233,15 +234,6 @@ svn_mergeinfo__filter_catalog_by_ranges(
 svn_boolean_t
 svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
                                  apr_pool_t *scratch_pool);
-
-/* If MERGEINFO_STR is a string representation of non-inheritable mergeinfo
-   set *IS_NONINHERITABLE to TRUE, set it to FALSE otherwise.  MERGEINFO_STR
-   may be NULL or empty.  If MERGEINFO_STR cannot be parsed return
-   SVN_ERR_MERGEINFO_PARSE_ERROR. */
-svn_error_t *
-svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
-                                         const char *mergeinfo_str,
-                                         apr_pool_t *scratch_pool);
 
 /* Return a rangelist with one svn_merge_range_t * element defined by START,
    END, and INHERITABLE.  The rangelist and its contents are allocated in

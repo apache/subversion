@@ -324,7 +324,7 @@ I.    INTRODUCTION
       default.  Add "http-library = neon" to the [global] section of
       your ~/.subversion/servers file to use ra_neon instead.)
 
-        a. Serf library 0.7.1 or newer (http://code.google.com/p/serf/)
+        a. Serf library 1.1.0 or newer (http://code.google.com/p/serf/)
 
            In order to use ra_serf, you must install serf, and run
            Subversion's ./configure with the argument --with-serf.  If
@@ -478,11 +478,11 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      10.  Python 2.4 or newer (http://www.python.org/)  (OPTIONAL)
+      10.  Python 2.5 or newer (http://www.python.org/)  (OPTIONAL)
 
       If you want to run "make check" or build from the latest source
       under Unix as described in section II.B and III.D, install
-      Python 2.4 or higher on your system. The majority of the test
+      Python 2.5 or higher on your system. The majority of the test
       suite is written in Python, as is part of Subversion's build
       system.
 
@@ -842,7 +842,7 @@ II.   INSTALLATION
         is compatible with VC6, which is the one from february 2003.
         You can get it from MSDN:
         http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
-      * Python 2.4 or higher, downloaded from http://www.python.org/ which is
+      * Python 2.5 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
       * Awk (from http://cm.bell-labs.com/cm/cs/who/bwk/awk95.exe) is

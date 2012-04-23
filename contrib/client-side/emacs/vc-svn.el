@@ -3,17 +3,27 @@
 
 ;;; #########################################################################
 ;;; ##                                                                     ##
-;;; ##          NOTE: THIS IS NOT THE MASTER VERSION OF VC-SVN.EL          ##
+;;; ##                NOTE: THIS FILE IS ONLY FOR EMACS 21                 ##
 ;;; ##                                                                     ##
-;;; ## The canonical vc-svn.el now lives in the FSF Emacs tree, at         ##
-;;; ## http://savannah.gnu.org/cgi-bin/viewcvs/emacs/emacs/lisp/vc-svn.el. ##
-;;; ## The version here is maintained only because it is compatible with   ##
-;;; ## older releases of Emacs, since (as of this writing) the one in the  ##
-;;; ## FSF tree hasn't made it into an official release of Emacs yet.      ##
-;;; ## Eventually it will, though, and sometime after that the version     ##
-;;; ## here will go away.                                                  ##
+;;; ## Emacs 21 does not come with a working vc-mode for Subversion, and   ##
+;;; ## in particular, dsvn.el needs one. This file is provided for those   ##
+;;; ## who use that Emacs version.					   ##
 ;;; ##                                                                     ##
+;;; ## Emacs 22 and newer versions come with a Subversion-capable vc-mode  ##
+;;; ## and should not use this file.					   ##
+;;; ##									   ##
+;;; ## This file is a mild fork of vc-svn.el from the Emacs source tree.   ##
+;;; ## It may go away at some undetermined point in the future, when	   ##
+;;; ## support of Emacs 21 becomes completely irrelevant.		   ##
+;;; ## 									   ##
+;;; ## Maintenance of the vc-mode for Subversion should be done first and  ##
+;;; ## foremost in the Emacs tree, and changes done to this file only	   ##
+;;; ## when necessary.							   ##
+;;; ## 									   ##
 ;;; #########################################################################
+
+(if (> emacs-major-version 21)
+    (error "This file should only be used by Emacs versions 21 and earlier"))
 
 ;;; Writing this back end has shown up some problems in VC: bugs,
 ;;; shortcomings in the back end interface, and so on.  But I want to

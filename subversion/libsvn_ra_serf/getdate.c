@@ -51,15 +51,8 @@ typedef enum date_state_e {
   VERSION_NAME
 } date_state_e;
 
-typedef struct date_info_t {
-  /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
-} date_info_t;
 
 typedef struct date_context_t {
-  apr_pool_t *pool;
-
   /* The time asked about. */
   apr_time_t time;
 
@@ -71,41 +64,24 @@ typedef struct date_context_t {
 
 } date_context_t;
 
-
-static date_info_t *
-push_state(svn_ra_serf__xml_parser_t *parser,
-           date_context_t *date_ctx,
-           date_state_e state)
-{
-  svn_ra_serf__xml_push_state(parser, state);
-
-  if (state == VERSION_NAME)
-    {
-      date_info_t *info;
-
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
-
-      parser->state->private = info;
-    }
-
-  return parser->state->private;
-}
 
 static svn_error_t *
 start_getdate(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               svn_ra_serf__dav_props_t name,
-              const char **attrs)
+              const char **attrs,
+              apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
-  date_state_e state;
+  date_context_t *date_ctx = parser->user_data;
+  date_state_e state = parser->state->current_state;
 
-  state = parser->state->current_state;
+  UNUSED_CTX(date_ctx);
 
   if (state == NONE &&
       strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
-      push_state(parser, date_ctx, VERSION_NAME);
+      svn_ra_serf__xml_push_state(parser, VERSION_NAME);
+
+      parser->state->private = svn_stringbuf_create_empty(parser->state->pool);
     }
 
   return SVN_NO_ERROR;
@@ -113,20 +89,18 @@ start_getdate(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_getdate(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
-            svn_ra_serf__dav_props_t name)
+            svn_ra_serf__dav_props_t name,
+            apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
-  date_state_e state;
-  date_info_t *info;
-
-  state = parser->state->current_state;
-  info = parser->state->private;
+  date_context_t *date_ctx = parser->user_data;
+  date_state_e state = parser->state->current_state;
 
   if (state == VERSION_NAME &&
       strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
-      *date_ctx->revision = SVN_STR_TO_REV(info->tmp);
+      const svn_stringbuf_t *datebuf = parser->state->private;
+
+      *date_ctx->revision = SVN_STR_TO_REV(datebuf->data);
       svn_ra_serf__xml_pop_state(parser);
     }
 
@@ -135,24 +109,21 @@ end_getdate(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_getdate(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               const char *data,
-              apr_size_t len)
+              apr_size_t len,
+              apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
-  date_state_e state;
-  date_info_t *info;
+  date_context_t *date_ctx = parser->user_data;
+  date_state_e state = parser->state->current_state;
+  svn_stringbuf_t *datebuf;
 
   UNUSED_CTX(date_ctx);
-
-  state = parser->state->current_state;
-  info = parser->state->private;
 
   switch (state)
     {
     case VERSION_NAME:
-        svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
-                                   data, len, parser->state->pool);
+        datebuf = parser->state->private;
+        svn_stringbuf_appendbytes(datebuf, data, len);
         break;
     default:
         break;
@@ -202,8 +173,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   const char *report_target;
   int status_code;
 
-  date_ctx = apr_pcalloc(pool, sizeof(*date_ctx));
-  date_ctx->pool = pool;
+  date_ctx = apr_palloc(pool, sizeof(*date_ctx));
   date_ctx->time = tm;
   date_ctx->revision = revision;
   date_ctx->done = FALSE;

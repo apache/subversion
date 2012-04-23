@@ -370,7 +370,7 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
+  SVN_ERR(svn_wc__get_update_editor(&update_editor, &update_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,

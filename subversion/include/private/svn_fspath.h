@@ -55,6 +55,9 @@ svn_fspath__is_canonical(const char *fspath);
  * The returned fspath may be statically allocated or allocated from
  * @a pool.
  *
+ * This is similar to svn_fs__canonicalize_abspath() but also treats "."
+ * segments as special.
+ *
  * @since New in 1.7.
  */
 const char *

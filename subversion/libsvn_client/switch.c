@@ -197,20 +197,23 @@ switch_internal(svn_revnum_t *result_rev,
      ### okay? */
   if (! ignore_ancestry)
     {
-      const char *target_url, *yc_path;
-      svn_revnum_t target_rev, yc_rev;
+      const char *target_url;
+      svn_revnum_t target_rev;
+      svn_client__pathrev_t *switch_loc, *target_loc, *yca;
 
+      SVN_ERR(svn_client__pathrev_create_with_session(
+                &switch_loc, ra_session, revnum, switch_rev_url, pool));
       SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, local_abspath,
                                    pool, pool));
       SVN_ERR(svn_wc__node_get_base_rev(&target_rev, ctx->wc_ctx,
                                         local_abspath, pool));
+      SVN_ERR(svn_client__pathrev_create_with_session(
+                &target_loc, ra_session, target_rev, target_url, pool));
       /* ### It would be nice if this function could reuse the existing
              ra session instead of opening two for its own use. */
-      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
-                                                       switch_rev_url, revnum,
-                                                       target_url, target_rev,
-                                                       ctx, pool));
-      if (! (yc_path && SVN_IS_VALID_REVNUM(yc_rev)))
+      SVN_ERR(svn_client__get_youngest_common_ancestor(
+                &yca, switch_loc, target_loc, ctx, pool, pool));
+      if (! yca)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("'%s' shares no common ancestry with '%s'"),
                                  switch_url, local_abspath);
@@ -228,7 +231,7 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
   dfb.target_revision = revnum;
 
-  SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
+  SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, switch_rev_url, use_commit_times,
                                     depth,

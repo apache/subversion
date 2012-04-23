@@ -135,6 +135,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
+/** @since New in 1.8. */
+#define SVN_CONFIG_SECTION_HOOKS_ENV            "hooks-env"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"
@@ -300,6 +302,32 @@ svn_config_set_bool(svn_config_t *cfg,
                     const char *section,
                     const char *option,
                     svn_boolean_t value);
+
+/** Like svn_config_get(), but for 64 bit signed integers.
+ *
+ * Parses the option as an integer value. Returns an error if the option
+ * could not be converted to an integer.
+ *
+ * @since New in 1.8
+ */
+svn_error_t *
+svn_config_get_int64(svn_config_t *cfg,
+                     apr_int64_t *valuep,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t default_value);
+
+/** Like svn_config_set(), but for 64 bit signed integers.
+ *
+ * Sets the option to the signed decimal @a value.
+ *
+ * @since New in 1.8
+ */
+void
+svn_config_set_int64(svn_config_t *cfg,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t value);
 
 /** Like svn_config_get(), but only for yes/no/ask values.
  *

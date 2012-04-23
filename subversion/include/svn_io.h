@@ -682,6 +682,39 @@ svn_io_file_lock2(const char *lock_file,
                   svn_boolean_t exclusive,
                   svn_boolean_t nonblocking,
                   apr_pool_t *pool);
+
+/**
+ * Lock the file @a lockfile_handle. If @a exclusive is TRUE,
+ * obtain exclusive lock, otherwise obtain shared lock.
+ *
+ * If @a nonblocking is TRUE, do not wait for the lock if it
+ * is not available: throw an error instead.
+ *
+ * Lock will be automatically released when @a pool is cleared or destroyed.
+ * You may also explicitly call @ref svn_io_unlock_open_file.
+ * Use @a pool for memory allocations. @a pool must be the pool that
+ * @a lockfile_handle has been created in or one of its sub-pools.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_lock_open_file(apr_file_t *lockfile_handle,
+                      svn_boolean_t exclusive,
+                      svn_boolean_t nonblocking,
+                      apr_pool_t *pool);
+
+/**
+ * Unlock the file @a lockfile_handle.
+ *
+ * Use @a pool for memory allocations. @a pool must be the pool that
+ * @a lockfile_handle has been created in or one of its sub-pools.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_unlock_open_file(apr_file_t *lockfile_handle,
+                        apr_pool_t *pool);
+
 /**
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  * memory allocations.
@@ -988,6 +1021,16 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
 svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
+
+/** Return a generic stream which implements buffered reads and writes.
+ *  The stream will preferentially store data in-memory, but may use
+ *  disk storage as backup if the amount of data is large.
+ *  Allocate the stream in @a result_pool
+ *
+ * @since New in 1.8.
+ */
+svn_stream_t *
+svn_stream_buffered(apr_pool_t *result_pool);
 
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
@@ -1521,10 +1564,35 @@ svn_io_dir_walk(const char *dirname,
  * Otherwise, the invoked program runs with an empty environment and @a cmd
  * must be an absolute path.
  *
+ * If @a inherit is FALSE and @a env is not NULL, the invoked program
+ * inherits the environment defined by @a env, instead of an empty
+ * environment or the caller's environment.
+ *
  * @note On some platforms, failure to execute @a cmd in the child process
  * will result in error output being written to @a errfile, if non-NULL, and
  * a non-zero exit status being returned to the parent process.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *svn_io_start_cmd3(apr_proc_t *cmd_proc,
+                               const char *path,
+                               const char *cmd,
+                               const char *const *args,
+                               const char *const *env,
+                               svn_boolean_t inherit,
+                               svn_boolean_t infile_pipe,
+                               apr_file_t *infile,
+                               svn_boolean_t outfile_pipe,
+                               apr_file_t *outfile,
+                               svn_boolean_t errfile_pipe,
+                               apr_file_t *errfile,
+                               apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_io_start_cmd3() but with @a env always set to NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API
  * @since New in 1.7.
  */
 svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,

@@ -67,7 +67,7 @@ def  migrate_sqlite(wc_src, target, wcroot):
   src_c.execute('select count(*) from wc_lock')
   count = int(src_c.fetchone()[0])
   assert count == 0
-    
+
   src_c.execute('select count(*) from work_queue')
   count = int(src_c.fetchone()[0])
   assert count == 0

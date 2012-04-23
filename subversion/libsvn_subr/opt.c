@@ -644,6 +644,32 @@ svn_opt__revision_to_string(const svn_opt_revision_t *revision,
     }
 }
 
+svn_opt_revision_range_t *
+svn_opt__revision_range_create(const svn_opt_revision_t *start_revision,
+                               const svn_opt_revision_t *end_revision,
+                               apr_pool_t *result_pool)
+{
+  svn_opt_revision_range_t *range = apr_palloc(result_pool, sizeof(*range));
+
+  range->start = *start_revision;
+  range->end = *end_revision;
+  return range;
+}
+
+svn_opt_revision_range_t *
+svn_opt__revision_range_from_revnums(svn_revnum_t start_revnum,
+                                     svn_revnum_t end_revnum,
+                                     apr_pool_t *result_pool)
+{
+  svn_opt_revision_range_t *range = apr_palloc(result_pool, sizeof(*range));
+
+  range->start.kind = svn_opt_revision_number;
+  range->start.value.number = start_revnum;
+  range->end.kind = svn_opt_revision_number;
+  range->end.value.number = end_revnum;
+  return range;
+}
+
 
 
 /*** Parsing arguments. ***/
@@ -1074,7 +1100,7 @@ svn_opt__print_version_info(const char *pgm_name,
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
   SVN_ERR(svn_cmdline_fputs(
-             _("Copyright (C) 2011 The Apache Software Foundation.\n"
+             _("Copyright (C) 2012 The Apache Software Foundation.\n"
                "This software consists of contributions made by many "
                "people; see the NOTICE\n"
                "file for more information.\n"

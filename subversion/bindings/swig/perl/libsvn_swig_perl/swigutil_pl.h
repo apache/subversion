@@ -144,6 +144,11 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 				   SV *perl_callbacks,
 				   apr_pool_t *pool);
 
+/* thunked gnome_keyring_unlock_prompt callback function */
+svn_error_t *svn_swig_pl_thunk_gnome_keyring_unlock_prompt(char **keyring_password,
+                                                           const char *keyring_name,
+                                                           void *baton,
+                                                           apr_pool_t *pool);
 /* thunked simple_prompt callback function */
 svn_error_t *svn_swig_pl_thunk_simple_prompt(svn_auth_cred_simple_t **cred,
                                              void *baton,

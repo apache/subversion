@@ -516,7 +516,29 @@ svn_repos_fs(svn_repos_t *repos);
  * source filesystem as part of the copy operation; currently, this
  * means deleting copied, unused logfiles for a Berkeley DB source
  * repository.
+ *
+ * If @a incremental is TRUE, make an effort to not re-copy information
+ * already present in the destination. If incremental hotcopy is not
+ * implemented by the filesystem backend, raise SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Like svn_repos_hotcopy2(), but without the @a incremental parameter
+ * and without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_hotcopy(const char *src_path,
                   const char *dst_path,
@@ -741,6 +763,17 @@ svn_repos_pre_unlock_hook(svn_repos_t *repos,
 const char *
 svn_repos_post_unlock_hook(svn_repos_t *repos,
                            apr_pool_t *pool);
+
+/** Set the environment that @a repos's hooks will inherit to @a hooks_env,
+ * a hash table where keys and values represent names and values of environment
+ * variables. @a hooks_env must live at least as long as @a repos.
+ *
+ * If this function is not called, hooks will run in an empty environment.
+ *
+ * @since New in 1.8. */
+void
+svn_repos_hooks_setenv(svn_repos_t *repos,
+                       apr_hash_t *hooks_env);
 
 /** @} */
 
@@ -1747,6 +1780,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
  * never be @c NULL but may be empty.
  *
+ * The paths in @a paths, and the keys of @a catalog, start with '/'.
+ *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
@@ -1936,7 +1971,11 @@ svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
  *
  * ### Someday: before a txn is created, some kind of read-hook could
  *              be called here.
+ *
+ * @note This function was never fully implemented, nor used. Ignore it.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                   svn_repos_t *repos,
@@ -1944,6 +1983,8 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                   const char *author,
                                   apr_pool_t *pool);
 
+
+/** @} */
 
 /** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
@@ -2990,6 +3031,13 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * required_access anywhere in the repository.  Set @a *access_granted
  * to TRUE if at least one path is accessible with the @a
  * required_access.
+ *
+ * For compatibility with 1.6, and earlier, @a repos_name can be NULL
+ * in which case it is equivalent to a @a repos_name of "".
+ *
+ * @note Presently, @a repos_name must byte-for-byte match the repos_name
+ * specified in the authz file; it is treated as an opaque string, and not
+ * as a dirent.
  *
  * @since New in 1.3.
  */

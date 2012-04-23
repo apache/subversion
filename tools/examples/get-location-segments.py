@@ -105,6 +105,9 @@ def prompt_func_simple_prompt(realm, username, may_save, pool):
   simple_cred.may_save = False
   return simple_cred
 
+def prompt_func_gnome_keyring_prompt(keyring, pool):
+  return getpass.getpass(prompt="Password for '%s' GNOME keyring: " % keyring)
+
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
@@ -124,8 +127,13 @@ ERROR: %s
     sys.exit(1)
 
   core.svn_config_ensure(None)
-  ctx = client.ctx_t()
-  providers = [
+  ctx = client.svn_client_create_context()
+  ctx.config = core.svn_config_get_config(None)
+
+  # Make sure that these are at the start of the list, so passwords from
+  # gnome-keyring / kwallet are checked before asking for new passwords.
+  providers = core.svn_auth_get_platform_specific_client_providers(ctx.config['config'], None)
+  providers.extend([
     client.get_simple_provider(),
     core.svn_auth_get_ssl_server_trust_file_provider(),
     core.svn_auth_get_simple_prompt_provider(prompt_func_simple_prompt, 2),
@@ -134,9 +142,12 @@ ERROR: %s
     client.get_ssl_server_trust_file_provider(),
     client.get_ssl_client_cert_file_provider(),
     client.get_ssl_client_cert_pw_file_provider(),
-    ]
+  ])
+
   ctx.auth_baton = core.svn_auth_open(providers)
-  ctx.config = core.svn_config_get_config(None)
+
+  if hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'):
+    core.svn_auth_set_gnome_keyring_unlock_prompt_func(ctx.auth_baton, prompt_func_gnome_keyring_prompt)
 
   ra_callbacks = ra.callbacks_t()
   ra_callbacks.auth_baton = ctx.auth_baton

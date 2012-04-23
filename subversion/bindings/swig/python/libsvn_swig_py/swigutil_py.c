@@ -650,17 +650,29 @@ PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
   return convert_hash(hash, convert_string, NULL, NULL);
 }
 
-static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
+static PyObject *convert_pointerlist(void *value, void *ctx, PyObject *py_pool)
 {
   int i;
   PyObject *list;
   apr_array_header_t *array = value;
 
   list = PyList_New(0);
+  if (list == NULL)
+    return NULL;
+
   for (i = 0; i < array->nelts; i++)
     {
-      svn_merge_range_t *range = APR_ARRAY_IDX(array, i, svn_merge_range_t *);
-      if (PyList_Append(list, convert_to_swigtype(range, ctx, py_pool)) == -1)
+      void *ptr = APR_ARRAY_IDX(array, i, void *);
+      PyObject *obj;
+      int result;
+
+      obj = convert_to_swigtype(ptr, ctx, py_pool);
+      if (obj == NULL)
+        goto error;
+
+      result = PyList_Append(list, obj);
+      Py_DECREF(obj);
+      if (result == -1)
         goto error;
     }
   return list;
@@ -669,18 +681,18 @@ static PyObject *convert_rangelist(void *value, void *ctx, PyObject *py_pool)
   return NULL;
 }
 
-PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
-                                        swig_type_info *type,
-                                        PyObject *py_pool)
+PyObject *svn_swig_py_pointerlist_to_list(apr_array_header_t *list,
+                                          swig_type_info *type,
+                                          PyObject *py_pool)
 {
-  return convert_rangelist(rangelist, type, py_pool);
+  return convert_pointerlist(list, type, py_pool);
 }
 
 PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool)
 {
-  return convert_hash(hash, convert_rangelist, type, py_pool);
+  return convert_hash(hash, convert_pointerlist, type, py_pool);
 }
 
 static PyObject *convert_mergeinfo_hash(void *value, void *ctx,
@@ -2790,6 +2802,41 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
   svn_swig_py_release_py_lock();
   return err;
 }
+
+svn_error_t *
+svn_swig_py_auth_gnome_keyring_unlock_prompt_func(char **keyring_passwd,
+                                                  const char *keyring_name,
+                                                  void *baton,
+                                                  apr_pool_t *pool)
+{
+  /* The baton is the actual prompt function passed from python */
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+  *keyring_passwd = NULL;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)"sO&",
+                                      keyring_name,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      *keyring_passwd = make_string_from_ob(result, pool);
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 
 svn_error_t *
 svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,

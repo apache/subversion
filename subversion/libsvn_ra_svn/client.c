@@ -1152,7 +1152,18 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       dirent->size = size;/* FIXME: svn_filesize_t */
       dirent->has_props = has_props;
       dirent->created_rev = crev;
-      SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
+      /* NOTE: the tuple's format string says CDATE may be NULL. But this
+         function does not allow that. The server has always sent us some
+         random date, however, so this just happens to work. But let's
+         be wary of servers that are (improperly) fixed to send NULL.
+
+         Note: they should NOT be "fixed" to send NULL, as that would break
+         any older clients which received that NULL. But we may as well
+         be defensive against a malicous server.  */
+      if (cdate == NULL)
+        dirent->time = 0;
+      else
+        SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
       dirent->last_author = cauthor;
       apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
     }
@@ -1166,15 +1177,12 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 static svn_tristate_t
 optbool_to_tristate(apr_uint64_t v)
 {
-  switch (v)
-  {
-    case TRUE:
-      return svn_tristate_true;
-    case FALSE:
-      return svn_tristate_false;
-    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
-      return svn_tristate_unknown;
-  }
+  if (v == TRUE)
+    return svn_tristate_true;
+  if (v == FALSE)
+    return svn_tristate_false;
+
+  return svn_tristate_unknown; /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
 }
 
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
@@ -2499,6 +2507,18 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   return svn_ra_svn_read_cmd_response(conn, pool, "r", revision_deleted);
 }
 
+static svn_error_t *
+ra_svn_register_editor_shim_callbacks(svn_ra_session_t *session,
+                                      svn_delta_shim_callbacks_t *callbacks)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+
+  conn->shim_callbacks = callbacks;
+
+  return SVN_NO_ERROR;
+}
+
 
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
@@ -2535,7 +2555,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
-  ra_svn_get_deleted_rev
+  ra_svn_get_deleted_rev,
+  ra_svn_register_editor_shim_callbacks
 };
 
 svn_error_t *

@@ -33,9 +33,6 @@
 #include "svn_subst.h"
 #include "svn_string.h"
 
-#include "private/svn_opt_private.h"
-#include "private/svn_cmdline_private.h"
-
 #include "sync.h"
 
 #include "svn_private_config.h"
@@ -389,7 +386,7 @@ change_file_prop(void *file_baton,
   edit_baton_t *eb = fb->edit_baton;
 
   /* only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   /* Maybe drop svn:mergeinfo.  */
@@ -437,7 +434,7 @@ change_dir_prop(void *dir_baton,
   edit_baton_t *eb = db->edit_baton;
 
   /* Only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   /* Maybe drop svn:mergeinfo.  */

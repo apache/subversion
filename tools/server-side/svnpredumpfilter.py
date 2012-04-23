@@ -33,6 +33,7 @@ log -vq' when run against the root of the repository whose history
 will be filtered by a user with universal read access to the
 repository's data.  Do not use the --use-merge-history (-g) or
 --stop-on-copy when generating this revision log stream.
+Use the default ordering of revisions (that is, '-r HEAD:0').
 
 Return errorcode 0 if there are no additional dependencies found, 1 if
 there were; any other errorcode indicates a fatal error.
@@ -113,12 +114,12 @@ def log(msg, min_verbosity):
     elif min_verbosity == 2:
       sys.stderr.write("[**] ")
     sys.stderr.write(msg + "\n")
-    
+
 class DependencyTracker:
   def __init__(self, include_paths):
     self.include_paths = include_paths[:]
     self.dependent_paths = []
-    
+
   def path_included(self, path):
     for include_path in self.include_paths + self.dependent_paths:
       if subsumes(include_path, path):
@@ -142,7 +143,7 @@ def readline(stream):
 def svn_log_stream_get_dependencies(stream, included_paths):
   import re
 
-  dt = DependencyTracker(included_paths)  
+  dt = DependencyTracker(included_paths)
 
   header_re = re.compile(r'^r([0-9]+) \|.*$')
   action_re = re.compile(r'^   [ADMR] /(.*)$')
@@ -152,7 +153,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
   eof = False
   path_copies = {}
   found_changed_path = False
-  
+
   while not eof:
     try:
       line = line_buf is not None and line_buf or readline(stream)
@@ -219,7 +220,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
     raise LogStreamError("No changed paths found; did you remember to run "
                          "'svn log' with the --verbose (-v) option when "
                          "generating the input to this script?")
-    
+
   return dt
 
 def analyze_logs(included_paths):
@@ -267,13 +268,13 @@ def usage_and_exit(errmsg=None):
 def main():
   config_dir = None
   targets_file = None
-  
+
   try:
     opts, args = getopt.getopt(sys.argv[1:], "hv",
                                ["help", "verbose", "targets="])
   except getopt.GetoptError, e:
     usage_and_exit(str(e))
-    
+
   for option, value in opts:
     if option in ['-h', '--help']:
       usage_and_exit()

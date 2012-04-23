@@ -23,18 +23,18 @@
 #    under the License.
 ######################################################################
 
-import sys     # for argv[]
+import sys
 import os
-import shutil  # for rmtree()
+import shutil
 import re
-import stat    # for ST_MODE
+import stat
 import subprocess
-import time    # for time()
-import traceback # for print_exc()
+import time
 import threading
-import optparse # for argument parsing
+import optparse
 import xml
 import urllib
+import logging
 
 try:
   # Python >=3.0
@@ -78,6 +78,22 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
+# This enables both a time stamp prefix on all log lines and a
+# '<TIME = 0.042552>' line after running every external command.
+log_with_timestamps = True
+
+# Set up logging
+logger = logging.getLogger()
+handler = logging.StreamHandler(sys.stdout)
+if log_with_timestamps:
+  formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
+                                '%Y-%m-%d %H:%M:%S')
+else:
+  formatter = logging.Formatter('[%(levelname)s] %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
   pass
@@ -105,7 +121,7 @@ class SVNRepositoryCreateFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
-  file_scheme_prefix = 'file:///'
+  file_scheme_prefix = 'file:'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
@@ -131,23 +147,6 @@ wc_author2 = 'jconstant' # use the same password as wc_author
 
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
-
-# This function mimics the Python 2.3 urllib function of the same name.
-def pathname2url(path):
-  """Convert the pathname PATH from the local syntax for a path to the form
-  used in the path component of a URL. This does not produce a complete URL.
-  The return value will already be quoted using the quote() function."""
-
-  # Don't leave ':' in file://C%3A/ escaped as our canonicalization
-  # rules will replace this with a ':' on input.
-  return urllib_parse_quote(path.replace('\\', '/')).replace('%3A', ':')
-
-# This function mimics the Python 2.3 urllib function of the same name.
-def url2pathname(path):
-  """Convert the path component PATH from an encoded URL to the local syntax
-  for a path. This does not accept a complete URL. This function uses
-  unquote() to decode PATH."""
-  return os.path.normpath(urllib_parse_unquote(path))
 
 ######################################################################
 # The locations of the svn, svnadmin and svnlook binaries, relative to
@@ -302,12 +301,10 @@ def get_start_commit_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "start-commit")
 
-
 def get_pre_commit_hook_path(repo_dir):
   "Return the path of the pre-commit-hook conf file in REPO_DIR."
 
   return os.path.join(repo_dir, "hooks", "pre-commit")
-
 
 def get_post_commit_hook_path(repo_dir):
   "Return the path of the post-commit-hook conf file in REPO_DIR."
@@ -318,6 +315,16 @@ def get_pre_revprop_change_hook_path(repo_dir):
   "Return the path of the pre-revprop-change hook script in REPO_DIR."
 
   return os.path.join(repo_dir, "hooks", "pre-revprop-change")
+
+def get_pre_lock_hook_path(repo_dir):
+  "Return the path of the pre-lock hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-lock")
+
+def get_pre_unlock_hook_path(repo_dir):
+  "Return the path of the pre-unlock hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-unlock")
 
 def get_svnserve_conf_file_path(repo_dir):
   "Return the path of the svnserve.conf file in REPO_DIR."
@@ -436,22 +443,16 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       exit_signal = exit_code
 
     if stdout_lines is not None:
-      sys.stdout.write("".join(stdout_lines))
-      sys.stdout.flush()
+      logger.info("".join(stdout_lines))
     if stderr_lines is not None:
-      sys.stderr.write("".join(stderr_lines))
-      sys.stderr.flush()
-    if options.verbose:
-      # show the whole path to make it easier to start a debugger
-      sys.stderr.write("CMD: %s terminated by signal %d\n"
-                       % (command_string, exit_signal))
-      sys.stderr.flush()
+      logger.warning("".join(stderr_lines))
+    # show the whole path to make it easier to start a debugger
+    logger.warning("CMD: %s terminated by signal %d"
+                     % (command_string, exit_signal))
     raise SVNProcessTerminatedBySignal
   else:
-    if exit_code and options.verbose:
-      sys.stderr.write("CMD: %s exited with %d\n"
-                       % (command_string, exit_code))
-      sys.stderr.flush()
+    if exit_code:
+      logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
@@ -469,10 +470,9 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
     raise TypeError("stdin_lines should have list type")
 
   # Log the command line
-  if options.verbose and not command.endswith('.py'):
-    sys.stdout.write('CMD: %s %s\n' % (os.path.basename(command),
-                                      ' '.join([_quote_arg(x) for x in varargs])))
-    sys.stdout.flush()
+  if not command.endswith('.py'):
+    logger.info('CMD: %s %s' % (os.path.basename(command),
+                                  ' '.join([_quote_arg(x) for x in varargs])))
 
   infile, outfile, errfile, kid = open_pipe([command] + list(varargs), bufsize)
 
@@ -503,8 +503,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   If ERROR_EXPECTED is None, any stderr output will be printed and any
   stderr output or a non-zero exit code will raise an exception."""
 
-  if options.verbose:
-    start = time.time()
+  start = time.time()
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
@@ -512,18 +511,17 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  if options.verbose:
+  if log_with_timestamps:
     stop = time.time()
-    print('<TIME = %.6f>' % (stop - start))
-    for x in stdout_lines:
-      sys.stdout.write(x)
-    for x in stderr_lines:
-      sys.stdout.write(x)
+    logger.info('<TIME = %.6f>' % (stop - start))
+  for x in stdout_lines:
+    logger.info(x.rstrip())
+  for x in stderr_lines:
+    logger.info(x.rstrip())
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
-    if not options.verbose:
-      for x in stderr_lines:
-        sys.stdout.write(x)
+    for x in stderr_lines:
+      logger.warning(x.rstrip())
     raise Failure
 
   return exit_code, \
@@ -758,7 +756,7 @@ def file_substitute(path, contents, new_contents):
   open(path, 'w').write(fcontent)
 
 # For creating blank new repositories
-def create_repos(path):
+def create_repos(path, minor_version = None):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
   exist, create it."""
 
@@ -766,11 +764,13 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
-  if options.server_minor_version < 4:
+  if not minor_version or minor_version > options.server_minor_version:
+    minor_version = options.server_minor_version
+  if minor_version < 4:
     opts += ("--pre-1.4-compatible",)
-  elif options.server_minor_version < 5:
+  elif minor_version < 5:
     opts += ("--pre-1.5-compatible",)
-  elif options.server_minor_version < 6:
+  elif minor_version < 6:
     opts += ("--pre-1.6-compatible",)
   if options.fs_type is not None:
     opts += ("--fs-type=" + options.fs_type,)
@@ -794,6 +794,9 @@ def create_repos(path):
                 "realm = svntest\n[sasl]\nuse-sasl = true\n")
   else:
     file_append(get_svnserve_conf_file_path(path), "password-db = passwd\n")
+    # This actually creates TWO [users] sections in the file (one of them is
+    # uncommented in `svnadmin create`'s template), so we exercise the .ini
+    # files reading code's handling of duplicates, too. :-)
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
@@ -844,7 +847,8 @@ def create_repos(path):
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
+               minor_version = None):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # Save any previous value of SVN_DBG_QUIET
@@ -853,17 +857,16 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
-  create_repos(dst_path)
+  create_repos(dst_path, minor_version)
   dump_args = ['dump', src_path]
   load_args = ['load', dst_path]
 
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
-  if options.verbose:
-    sys.stdout.write('CMD: %s %s | %s %s\n' %
+
+  logger.info('CMD: %s %s | %s %s' %
                      (os.path.basename(svnadmin_binary), ' '.join(dump_args),
                       os.path.basename(svnadmin_binary), ' '.join(load_args)))
-    sys.stdout.flush()
   start = time.time()
 
   dump_in, dump_out, dump_err, dump_kid = open_pipe(
@@ -871,10 +874,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   load_in, load_out, load_err, load_kid = open_pipe(
     [svnadmin_binary] + load_args,
     stdin=dump_out) # Attached to dump_kid
-
-  stop = time.time()
-  if options.verbose:
-    print('<TIME = %.6f>' % (stop - start))
 
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
   dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
@@ -885,6 +884,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   #load_in is dump_out so it's already closed.
   load_out.close()
   load_err.close()
+
+  if log_with_timestamps:
+    stop = time.time()
+    logger.info('<TIME = %.6f>' % (stop - start))
 
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
@@ -998,51 +1001,60 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
-def mergeinfo_notify_line(revstart, revend):
+def mergeinfo_notify_line(revstart, revend, target=None):
   """Return an expected output line that describes the beginning of a
   mergeinfo recording notification on revisions REVSTART through REVEND."""
+  if target:
+    target_re = re.escape(target)
+  else:
+    target_re = ".+"
   if (revend is None):
     if (revstart < 0):
       revstart = abs(revstart)
-      return "--- Recording mergeinfo for reverse merge of r%ld .*:\n" \
-             % (revstart)
+      return "--- Recording mergeinfo for reverse merge of r%ld into '%s':\n" \
+             % (revstart, target_re)
     else:
-      return "--- Recording mergeinfo for merge of r%ld .*:\n" % (revstart)
+      return "--- Recording mergeinfo for merge of r%ld into '%s':\n" \
+             % (revstart, target_re)
   elif (revstart < revend):
-    return "--- Recording mergeinfo for merge of r%ld through r%ld .*:\n" \
-           % (revstart, revend)
+    return "--- Recording mergeinfo for merge of r%ld through r%ld into '%s':\n" \
+           % (revstart, revend, target_re)
   else:
     return "--- Recording mergeinfo for reverse merge of r%ld through " \
-           "r%ld .*:\n" % (revstart, revend)
+           "r%ld into '%s':\n" % (revstart, revend, target_re)
 
 def merge_notify_line(revstart=None, revend=None, same_URL=True,
-                      foreign=False):
+                      foreign=False, target=None):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
   from_foreign_phrase = foreign and "\(from foreign repository\) " or ""
+  if target:
+    target_re = re.escape(target)
+  else:
+    target_re = ".+"
   if not same_URL:
-    return "--- Merging differences between %srepository URLs into '.+':\n" \
-           % (foreign and "foreign " or "")
+    return "--- Merging differences between %srepository URLs into '%s':\n" \
+           % (foreign and "foreign " or "", target_re)
   if revend is None:
     if revstart is None:
       # The left and right sides of the merge are from different URLs.
-      return "--- Merging differences between %srepository URLs into '.+':\n" \
-             % (foreign and "foreign " or "")
+      return "--- Merging differences between %srepository URLs into '%s':\n" \
+             % (foreign and "foreign " or "", target_re)
     elif revstart < 0:
-      return "--- Reverse-merging %sr%ld into '.+':\n" \
-             % (from_foreign_phrase, abs(revstart))
+      return "--- Reverse-merging %sr%ld into '%s':\n" \
+             % (from_foreign_phrase, abs(revstart), target_re)
     else:
-      return "--- Merging %sr%ld into '.+':\n" \
-             % (from_foreign_phrase, revstart)
+      return "--- Merging %sr%ld into '%s':\n" \
+             % (from_foreign_phrase, revstart, target_re)
   else:
     if revstart > revend:
-      return "--- Reverse-merging %sr%ld through r%ld into '.+':\n" \
-             % (from_foreign_phrase, revstart, revend)
+      return "--- Reverse-merging %sr%ld through r%ld into '%s':\n" \
+             % (from_foreign_phrase, revstart, revend, target_re)
     else:
-      return "--- Merging %sr%ld through r%ld into '.+':\n" \
-             % (from_foreign_phrase, revstart, revend)
+      return "--- Merging %sr%ld through r%ld into '%s':\n" \
+             % (from_foreign_phrase, revstart, revend, target_re)
 
 
 def make_log_msg():
@@ -1122,6 +1134,9 @@ def is_os_darwin():
 def is_fs_case_insensitive():
   return (is_os_darwin() or is_os_windows())
 
+def is_threaded_python():
+  return True
+
 def server_has_mergeinfo():
   return options.server_minor_version >= 5
 
@@ -1178,7 +1193,7 @@ class TestSpawningThread(threading.Thread):
       args.append('--fs-type=' + options.fs_type)
     if options.test_area_url:
       args.append('--url=' + options.test_area_url)
-    if options.verbose:
+    if logger.getEffectiveLevel() <= logging.DEBUG:
       args.append('-v')
     if options.cleanup:
       args.append('--cleanup')
@@ -1252,7 +1267,7 @@ class TestRunner:
       # If there is no filter or this test made if through
       # the filter then print it!
       if options.milestone_filter is None or len(issues):
-        if options.verbose and self.pred.inprogress:
+        if self.pred.inprogress:
           tail += " [[%s]]" % self.pred.inprogress
         else:
           print(" %3d    %-5s  %s%s" % (self.index,
@@ -1324,32 +1339,29 @@ class TestRunner:
       result = svntest.testcase.RESULT_SKIP
     except Failure, ex:
       result = svntest.testcase.RESULT_FAIL
+      msg = ''
       # We captured Failure and its subclasses. We don't want to print
       # anything for plain old Failure since that just indicates test
       # failure, rather than relevant information. However, if there
       # *is* information in the exception's arguments, then print it.
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
-        print('CWD: %s' % os.getcwd())
+        logger.warn('CWD: %s' % os.getcwd())
         if ex_args:
-          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
+          msg = 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
         else:
-          print('EXCEPTION: %s' % ex.__class__.__name__)
-      traceback.print_exc(file=sys.stdout)
-      sys.stdout.flush()
+          msg = 'EXCEPTION: %s' % ex.__class__.__name__
+      logger.warn(msg, exc_info=True)
     except KeyboardInterrupt:
-      print('Interrupted')
+      logger.error('Interrupted')
       sys.exit(0)
     except SystemExit, ex:
-      print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
+      logger.error('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
     except:
       result = svntest.testcase.RESULT_FAIL
-      print('CWD: %s' % os.getcwd())
-      print('UNEXPECTED EXCEPTION:')
-      traceback.print_exc(file=sys.stdout)
-      sys.stdout.flush()
+      logger.warn('CWD: %s' % os.getcwd(), exc_info=True)
 
     os.chdir(saved_dir)
     exit_code, result_text, result_benignity = self.pred.results(result)
@@ -1467,6 +1479,14 @@ def create_default_options():
 
 def _create_parser():
   """Return a parser for our test suite."""
+  def set_log_level(option, opt, value, parser, level=None):
+    if level:
+      # called from --verbose
+      logger.setLevel(level)
+    else:
+      # called from --set-log-level
+      logger.setLevel(getattr(logging, value, None) or int(value))
+
   # set up the parser
   _default_http_library = 'serf'
   usage = 'usage: %prog [options] [<test> ...]'
@@ -1475,8 +1495,10 @@ def _create_parser():
                     help='Print test doc strings instead of running them')
   parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
                     help='Limit --list to those with target milestone specified')
-  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
-                    help='Print binary command-lines (not with --quiet)')
+  parser.add_option('-v', '--verbose', action='callback',
+                    callback=set_log_level, callback_args=(logging.DEBUG, ),
+                    help='Print binary command-lines (same as ' +
+                         '"--set-log-level logging.DEBUG")')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
   parser.add_option('-p', '--parallel', action='store_const',
@@ -1514,6 +1536,9 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
+  parser.add_option('--set-log-level', action='callback', type='str',
+                    callback=set_log_level,
+		    help="Set log level (numerically or symbolically)")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
@@ -1528,7 +1553,8 @@ def _create_parser():
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
-        url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
+        url=file_scheme_prefix + \
+                        urllib.pathname2url(os.path.abspath(os.getcwd())),
         http_library=_default_http_library)
 
   return parser
@@ -1544,8 +1570,6 @@ def _parse_options(arglist=sys.argv[1:]):
   (options, args) = parser.parse_args(arglist)
 
   # some sanity checking
-  if options.verbose and options.quiet:
-    parser.error("'verbose' and 'quiet' are incompatible")
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
 
@@ -1696,7 +1720,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                    "or function '%s'\n" % arg)
 
   # Calculate pristine_greek_repos_url from test_area_url.
-  pristine_greek_repos_url = options.test_area_url + '/' + pathname2url(pristine_greek_repos_dir)
+  pristine_greek_repos_url = options.test_area_url + '/' + \
+                                urllib.pathname2url(pristine_greek_repos_dir)
 
   if options.use_jsvn:
     if options.svn_bin is None:

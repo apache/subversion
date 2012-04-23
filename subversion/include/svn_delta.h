@@ -651,7 +651,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * Each of these takes a directory baton, indicating the directory
  * in which the change takes place, and a @a path argument, giving the
  * path of the file, subdirectory, or directory entry to change.
- * 
+ *
  * The @a path argument to each of the callbacks is relative to the
  * root of the edit.  Editors will usually want to join this relative
  * path with some base stored in the edit baton (e.g. a URL, or a
@@ -792,8 +792,9 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * number of operations later.  As a result, an editor driver must not
  * assume that an error from an editing function resulted from the
  * particular operation being detected.  Moreover, once an editing
- * function returns an error, the edit is dead; the only further
- * operation which may be called on the editor is abort_edit.
+ * function (including @c close_edit) returns an error, the edit is
+ * dead; the only further operation which may be called on the editor
+ * is @c abort_edit.
  */
 typedef struct svn_delta_editor_t
 {
@@ -916,8 +917,9 @@ typedef struct svn_delta_editor_t
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a subdirectory in the edit source, but
-   * cannot be conveyed to the edit consumer (perhaps because of
-   * authorization restrictions).
+   * cannot be conveyed to the edit consumer.  Currently, this would
+   * only occur because of authorization restrictions, but may change
+   * in the future.
    *
    * Any temporary allocations may be performed in @a scratch_pool.
    */
@@ -1040,8 +1042,9 @@ typedef struct svn_delta_editor_t
 
   /** In the directory represented by @a parent_baton, indicate that
    * @a path is present as a file in the edit source, but cannot be
-   * conveyed to the edit consumer (perhaps because of authorization
-   * restrictions).
+   * cannot be conveyed to the edit consumer.  Currently, this would
+   * only occur because of authorization restrictions, but may change
+   * in the future.
    *
    * Any temporary allocations may be performed in @a scratch_pool.
    */
@@ -1095,6 +1098,7 @@ typedef svn_error_t *(*svn_delta_fetch_props_func_t)(
   apr_hash_t **props,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
@@ -1108,6 +1112,22 @@ typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
   svn_kind_t *kind,
   void *baton,
   const char *path,
+  svn_revnum_t base_revision,
+  apr_pool_t *scratch_pool
+  );
+
+/** Callback to fetch the FILENAME of a file to use as the delta base for
+ * PATH.  The file should last at least as long as RESULT_POOL.  If the base
+ * stream is empty, return NULL through FILENAME.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_delta_fetch_base_func_t)(
+  const char **filename,
+  void *baton,
+  const char *path,
+  svn_revnum_t base_revision,
+  apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
 
@@ -1120,9 +1140,9 @@ typedef svn_error_t *(*svn_delta_fetch_kind_func_t)(
 typedef struct svn_delta_shim_callbacks_t
 {
   svn_delta_fetch_props_func_t fetch_props_func;
-  void *fetch_props_baton;
   svn_delta_fetch_kind_func_t fetch_kind_func;
-  void *fetch_kind_baton;
+  svn_delta_fetch_base_func_t fetch_base_func;
+  void *fetch_baton;
 } svn_delta_shim_callbacks_t;
 
 /** Return a collection of default shim functions in @a result_pool.
@@ -1150,6 +1170,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
+                         const char *repos_root,
+                         const char *base_dir,
                          svn_delta_shim_callbacks_t *shim_callbacks,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
@@ -1271,6 +1293,8 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  *
  * Use @a revision as the revision number passed to intermediate
  * directory openings.
+ *
+ * Each path in @a paths is a const char *.
  *
  * Use @a pool for all necessary allocations.
  */

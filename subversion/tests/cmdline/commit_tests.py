@@ -1136,19 +1136,26 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   A_path = os.path.join(wc_dir, 'A')
   Z_path = os.path.join(wc_dir, 'Z')
+  Z_abspath = os.path.abspath(Z_path)
   mu_path = os.path.join(wc_dir, 'Z', 'mu')
 
   svntest.main.run_svn(None, 'move', A_path, Z_path)
+
+  # Make sure mu is a committable
+  svntest.main.file_write(mu_path, "xxxx")
 
   # Commit a copied thing inside an added-with-history directory,
   # expecting a specific error to occur!
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "svn: E200009: '" +
+                                        re.escape(Z_abspath) +
+                                        "' is not known to exist in the",
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
+  Q_abspath = os.path.abspath(Q_path)
   bloo_path = os.path.join(Q_path, 'bloo')
 
   os.mkdir(Q_path)
@@ -1160,8 +1167,23 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "svn: E200009: '" +
+                                        re.escape(Q_abspath) +
+                                        "' is not known to exist in the",
                                         bloo_path)
+
+  R_path = sbox.ospath('Z/B/R')
+  sbox.simple_mkdir('Z/B/R')
+
+  # Commit a d added thing inside an added directory,
+  # expecting a specific error to occur!
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        "svn: E200009: '" +
+                                        re.escape(Z_abspath) +
+                                        "' is not known to exist in the.*",
+                                        R_path)
 
 #----------------------------------------------------------------------
 
@@ -2824,7 +2846,37 @@ def commit_incomplete(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-  
+
+#----------------------------------------------------------------------
+# Reported here:
+#   Message-ID: <4EBF0FC9.300@gmail.com>
+#   Date: Sun, 13 Nov 2011 13:31:05 +1300
+#   From: Fergus Slorach <sugref@gmail.com>
+#   Subject: svn commit --targets behaviour change in 1.7?
+@Issue(4059)
+def commit_add_subadd(sbox):
+  "committing add with explicit subadd targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  targets_file = sbox.ospath('targets') # ### better tempdir?
+  targets_file = os.path.abspath(targets_file)
+
+  # prepare targets file
+  targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
+  open(targets_file, 'w').write("\n".join(targets))
+
+  # r2: rm A/D
+  sbox.simple_rm('A/D')
+  sbox.simple_commit(message='rm')
+
+  # r3: revert r2, with specific invocation
+  os.chdir(wc_dir)
+  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None, 'merge', '-c', '-2', './')
+  svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
+
 
 ########################################################################
 # Run the tests
@@ -2894,6 +2946,7 @@ test_list = [ None,
               tree_conflicts_resolved,
               commit_multiple_nested_deletes,
               commit_incomplete,
+              commit_add_subadd,
              ]
 
 if __name__ == '__main__':

@@ -42,6 +42,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -402,7 +403,7 @@ copy_versioned_files(const char *from_abspath,
       const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_origin(&is_added, NULL, &repos_relpath,
-                                      NULL, NULL,
+                                      NULL, NULL, NULL,
                                       ctx->wc_ctx, from_abspath, FALSE,
                                       pool, pool));
 
@@ -957,8 +958,7 @@ close_file(void *file_baton,
 
   SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5, text_digest,
                                  pool));
-  actual_checksum = svn_checksum__from_digest(fb->text_digest,
-                                              svn_checksum_md5, pool);
+  actual_checksum = svn_checksum__from_digest_md5(fb->text_digest, pool);
 
   /* Note that text_digest can be NULL when talking to certain repositories.
      In that case text_checksum will be NULL and the following match code
@@ -1016,6 +1016,55 @@ close_file(void *file_baton,
       (*fb->edit_baton->notify_func)(fb->edit_baton->notify_baton, notify,
                                      pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  /* We know the root of the edit is a directory. */
+  if (path[0] == '\0')
+    *kind = svn_kind_dir;
+
+  /* ### TODO: We could possibly fetch the kind of the object in question
+         from the server with a second ra_session, but right now this
+         seems to work. */
+  else
+    *kind = svn_kind_unknown;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  /* Always use empty props, since the node won't have pre-existing props
+     (This is an export, remember?) */
+  *props = apr_hash_make(result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  /* An export always gets text against the empty stream (i.e, full texts). */
+  *filename = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1180,9 +1229,15 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                     &edit_baton,
                                                     pool));
 
+          shim_callbacks->fetch_kind_func = fetch_kind_func;
+          shim_callbacks->fetch_props_func = fetch_props_func;
+          shim_callbacks->fetch_base_func = fetch_base_func;
+          shim_callbacks->fetch_baton = eb;
+
           SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
                                            export_editor, edit_baton,
-                                           shim_callbacks, pool, pool));
+                                           NULL, NULL, shim_callbacks,
+                                           pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,

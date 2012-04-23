@@ -1180,7 +1180,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
   if (! doc)
     {
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   /* Sanity check. */
@@ -1191,7 +1191,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
          definitely no lock-tokens to harvest.  This is likely a
          request from an old client. */
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   if ((doc->root->ns == ns)
@@ -1217,7 +1217,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
   if (! child)
     {
       *locks = hash;
-      return SVN_NO_ERROR;
+      return NULL;
     }
 
   /* Then look for N different <lock> structures within. */
@@ -1262,7 +1262,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
     }
 
   *locks = hash;
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 
@@ -1379,6 +1379,15 @@ merge(dav_resource *target,
                                     "MERGE can only be performed using an "
                                     "activity or transaction resource as the "
                                     "source.",
+                                    SVN_DAV_ERROR_NAMESPACE,
+                                    SVN_DAV_ERROR_TAG);
+    }
+  if (! source->exists)
+    {
+      return dav_svn__new_error_tag(pool, HTTP_METHOD_NOT_ALLOWED,
+                                    SVN_ERR_INCORRECT_PARAMS,
+                                    "MERGE activity or transaction resource "
+                                    "does not exist.",
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }

@@ -35,13 +35,20 @@
 #include "svn_dso.h"
 #include "svn_version.h"
 
-/* The good way to think of this machinery is as a set of tables.
+/* AN OVERVIEW
+   ===========
 
-   - Each type of credentials selects a single table.
+   A good way to think of this machinery is as a set of tables.
 
-   - In a given table, each row is a 'provider' capable of returning
-     the same type of credentials.  Each column represents a
-     provider's repeated attempts to provide credentials.
+     - Each type of credentials selects a single table.
+
+     - In a given table, each row is a 'provider' capable of returning
+       the same type of credentials.  Each column represents a
+       provider's repeated attempts to provide credentials.
+
+
+   Fetching Credentials from Providers
+   -----------------------------------
 
    When the caller asks for a particular type of credentials, the
    machinery in this file walks over the appropriate table.  It starts
@@ -55,6 +62,23 @@
 
    Note that the caller cannot see the table traversal, and thus has
    no idea when we switch providers.
+
+
+   Storing Credentials with Providers
+   ----------------------------------
+
+   When the server has validated a set of credentials, and when
+   credential caching is enabled, we have the chance to store those
+   credentials for later use.  The provider which provided the working
+   credentials is the first one given the opportunity to (re)cache
+   those credentials.  Its save_credentials() function is invoked with
+   the working credentials.  If that provider reports that it
+   successfully stored the credentials, we're done.  Otherwise, we
+   walk the providers (rows) for that type of credentials in order
+   from the top of the table, allowing each in turn the opportunity to
+   store the credentials.  When one reports that it has done so
+   successfully -- or when we run out of providers (rows) to try --
+   the table walk ends.
 */
 
 

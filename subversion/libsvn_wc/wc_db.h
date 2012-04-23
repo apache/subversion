@@ -687,9 +687,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
      UPDATE_ROOT        FALSE
 
-   If the STATUS is normal, and the REPOS_* values are NULL, then the
-   caller should use svn_wc__db_scan_base_repos() to scan up the BASE
-   tree for the repository information.
+   If the STATUS is normal, the REPOS_* values will be non-NULL.
 
    If DEPTH is requested, and the node is NOT a directory, then the
    value will be set to svn_depth_unknown. If LOCAL_ABSPATH is a link,
@@ -1238,6 +1236,7 @@ svn_error_t *
 svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
                                   const char *src_abspath,
                                   const char *dst_abspath,
+                                  svn_boolean_t is_move,
                                   apr_pool_t *scratch_pool);
 
 
@@ -1534,7 +1533,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
  * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
  * files, or NULL if the names are not stored.
- * 
+ *
  * Set *COPIED_HERE if the reverted node was copied here and is the
  * operation root of the copy.
  * Set *KIND to the node kind of the reverted node.
@@ -2438,6 +2437,10 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
+
+   ### Either delete this function and use _base_get_info instead, or
+   ### add a 'revision' output to make a complete repository node location
+   ### and rename to not say 'scan', because it doesn't.
 */
 svn_error_t *
 svn_wc__db_scan_base_repos(const char **repos_relpath,
@@ -2564,7 +2567,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
    If the user moves-away B/W/D from the WORKING tree, then behavior is
    again dependent upon the origination of B/W. For a plain add, the nodes
-   simply move to the destination. For a copy, a deletion is made at B/W/D,
+   simply move to the destination; this means that B/W/D ceases to be a
+   node and so cannot be scanned. For a copy, a deletion is made at B/W/D,
    and a new copy (of a subtree of the original source) is made at the
    destination. For a move-here, a deletion is made, and a copy is made at
    the destination (we do not track multiple moves; the source is moved to
@@ -2573,13 +2577,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    subtree first, then moving the source to B/W).
 
    There are three further considerations when resolving a deleted node:
-
-     If the BASE B/W/D was moved-away, then BASE_DEL_ABSPATH will specify
-     B/W/D as the root of the BASE deletion (not necessarily B/W as an
-     implicit delete caused by a replacement; only the closest ancestor is
-     reported). The other parameters will operate as normal, based on what
-     is happening in the WORKING tree. Also note that ancestors of B/W/D
-     may report additional, explicit moved-away status.
 
      If the BASE B/W/D was deleted explicitly *and* B/W is a replacement,
      then the explicit deletion is subsumed by the implicit deletion that
@@ -2605,10 +2602,10 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    MOVED_TO_ABSPATH will specify the path where this node was moved to
    if the node has moved-away.
 
-   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
-   of the copy operation that created the move destination.
-   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
-   equals MOVED_TO_ABSPATH.
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the
+   target path of the root of the move operation.  If LOCAL_ABSPATH itself
+   is the source path of the root of the move operation, then
+   MOVED_TO_OP_ROOT_ABSPATH equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.
@@ -3045,19 +3042,6 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
                              svn_boolean_t committed,
                              apr_pool_t *scratch_pool);
 
-/* Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
- * LOCAL_ABSPATH is sparse, using DB.
- * Use SCRATCH_POOL for temporary allocations.
- *
- * This function provides a subset of the functionality of
- * svn_wc__db_revision_status() and is more efficient if the caller
- * doesn't need all information returned by svn_wc__db_revision_status(). */
-svn_error_t *
-svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
-
 /* Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
  * is switched, using DB. Use SCRATCH_POOL for temporary allocations.
  *
@@ -3113,6 +3097,16 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   const char *wri_abspath,
                   apr_pool_t *scratch_pool);
 
+
+/* Set *FINAL_ABSPATH to the final moved-to location for LOCAL_ABSPATH
+ * after following any and all nested moves or set *FINAL_ABSPATH to
+ * NULL if LOCAL_ABSPATH is not moved. */
+svn_error_t *
+svn_wc__db_final_moved_to(const char **final_abspath,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /* @} */
 

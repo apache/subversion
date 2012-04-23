@@ -228,8 +228,12 @@ static const char * const TESTING_DATA = (
   "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
-  "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'base-deleted',"
-  "  0, 'J/J-d', 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'normal',"
+  "  0, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  10, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'moved/file', 2, 'moved', 2, 'moved/file', 2, 'base-deleted',"
+  "  0, 'J/J-d', 'file', '()', null, null, null, null, null, null,"
   "  10, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'normal',"
@@ -1053,7 +1057,7 @@ test_scan_deletion(apr_pool_t *pool)
             &copy_op_root_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
                                    moved_to_abspath, pool));
@@ -1070,7 +1074,7 @@ test_scan_deletion(apr_pool_t *pool)
             &copy_op_root_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place/J-e-a",
                                    moved_to_abspath, pool));
@@ -1120,7 +1124,7 @@ test_scan_deletion(apr_pool_t *pool)
   /* ### I don't understand this.  "J/J-e/J-e-b/Jeba" is a deleted
      base node that is not overlayed by the replacement rooted at "J".
      Why does base_del_abspath refer to "J-e"?  */
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place/J-e-b/Jeba",
                                    moved_to_abspath, pool));
@@ -1174,7 +1178,7 @@ test_scan_deletion(apr_pool_t *pool)
             &copy_op_root_abspath,
             db, svn_dirent_join(local_abspath, "K/K-b", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K/K-b",
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/away",
                                    moved_to_abspath, pool));

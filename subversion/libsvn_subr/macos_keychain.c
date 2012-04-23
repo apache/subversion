@@ -65,8 +65,9 @@
 
 /* Implementation of svn_auth__password_set_t that stores
    the password in the OS X KeyChain. */
-static svn_boolean_t
-keychain_password_set(apr_hash_t *creds,
+static svn_error_t *
+keychain_password_set(svn_boolean_t *done,
+                      apr_hash_t *creds,
                       const char *realmstring,
                       const char *username,
                       const char *password,
@@ -106,13 +107,16 @@ keychain_password_set(apr_hash_t *creds,
   if (non_interactive)
     SecKeychainSetUserInteractionAllowed(TRUE);
 
-  return status == 0;
+  *done = (status == 0);
+
+  return SVN_NO_ERROR;
 }
 
 /* Implementation of svn_auth__password_get_t that retrieves
    the password from the OS X KeyChain. */
-static svn_boolean_t
-keychain_password_get(const char **password,
+static svn_error_t *
+keychain_password_get(svn_boolean_t *done,
+                      const char **password,
                       apr_hash_t *creds,
                       const char *realmstring,
                       const char *username,
@@ -123,6 +127,8 @@ keychain_password_get(const char **password,
   OSStatus status;
   UInt32 length;
   void *data;
+
+  *done = FALSE;
 
   if (non_interactive)
     SecKeychainSetUserInteractionAllowed(FALSE);
@@ -137,11 +143,12 @@ keychain_password_get(const char **password,
     SecKeychainSetUserInteractionAllowed(TRUE);
 
   if (status != 0)
-    return FALSE;
+    return SVN_NO_ERROR;
 
   *password = apr_pstrmemdup(pool, data, length);
   SecKeychainItemFreeContent(NULL, data);
-  return TRUE;
+  *done = TRUE;
+  return SVN_NO_ERROR;
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */
@@ -153,14 +160,14 @@ keychain_simple_first_creds(void **credentials,
                             const char *realmstring,
                             apr_pool_t *pool)
 {
-  return svn_auth__simple_first_creds_helper(credentials,
-                                             iter_baton,
-                                             provider_baton,
-                                             parameters,
-                                             realmstring,
-                                             keychain_password_get,
-                                             SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
-                                             pool);
+  return svn_auth__simple_creds_cache_get(credentials,
+                                          iter_baton,
+                                          provider_baton,
+                                          parameters,
+                                          realmstring,
+                                          keychain_password_get,
+                                          SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                          pool);
 }
 
 /* Save encrypted credentials to the simple provider's cache. */
@@ -172,13 +179,13 @@ keychain_simple_save_creds(svn_boolean_t *saved,
                            const char *realmstring,
                            apr_pool_t *pool)
 {
-  return svn_auth__simple_save_creds_helper(saved, credentials,
-                                            provider_baton,
-                                            parameters,
-                                            realmstring,
-                                            keychain_password_set,
-                                            SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
-                                            pool);
+  return svn_auth__simple_creds_cache_set(saved, credentials,
+                                          provider_baton,
+                                          parameters,
+                                          realmstring,
+                                          keychain_password_set,
+                                          SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                          pool);
 }
 
 static const svn_auth_provider_t keychain_simple_provider = {
@@ -198,13 +205,12 @@ keychain_ssl_client_cert_pw_first_creds(void **credentials,
                                         const char *realmstring,
                                         apr_pool_t *pool)
 {
-  return svn_auth__ssl_client_cert_pw_file_first_creds_helper
-           (credentials,
-            iter_baton, provider_baton,
-            parameters, realmstring,
-            keychain_password_get,
-            SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
-            pool);
+  return svn_auth__ssl_client_cert_pw_cache_get(credentials,
+                                                iter_baton, provider_baton,
+                                                parameters, realmstring,
+                                                keychain_password_get,
+                                                SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                                pool);
 }
 
 /* Save encrypted credentials to the ssl client cert password provider's
@@ -217,13 +223,12 @@ keychain_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
                                        const char *realmstring,
                                        apr_pool_t *pool)
 {
-  return svn_auth__ssl_client_cert_pw_file_save_creds_helper
-           (saved, credentials,
-            provider_baton, parameters,
-            realmstring,
-            keychain_password_set,
-            SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
-            pool);
+  return svn_auth__ssl_client_cert_pw_cache_set(saved, credentials,
+                                                provider_baton, parameters,
+                                                realmstring,
+                                                keychain_password_set,
+                                                SVN_AUTH__KEYCHAIN_PASSWORD_TYPE,
+                                                pool);
 }
 
 static const svn_auth_provider_t keychain_ssl_client_cert_pw_provider = {

@@ -31,6 +31,9 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "svn_delta.h"
+#include "svn_editor.h"
+#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,6 +128,67 @@ svn_ra__get_fspath_relative_to_root(svn_ra_session_t *ra_session,
                                     const char **fspath,
                                     const char *url,
                                     apr_pool_t *pool);
+
+/** Register CALLBACKS to be used with the Ev2 shims in RA_SESSION. */
+svn_error_t *
+svn_ra__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
+                                       svn_delta_shim_callbacks_t *callbacks);
+
+
+/* Using information from BATON, provide the (file's) pristine contents
+   for REPOS_RELPATH. They are returned in *CONTENTS, and correspond to
+   *REVISION. These are allocated in RESULT_POOL. SCRATCH_POOL can be used
+   for temporary allocations.  */
+typedef svn_error_t *(*svn_ra__provide_base_cb_t)(
+  svn_stream_t **contents,
+  svn_revnum_t *revision,
+  void *baton,
+  const char *repos_relpath,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/* Using information from BATON, provide the pristine properties for
+   REPOS_RELPATH. They are returned in *PROPS, and correspond to *REVISION.
+   The properties are allocated in RESULT_POOL. SCRATCH_POOL can be used
+   for temporary allocations.  */
+typedef svn_error_t *(*svn_ra__provide_props_cb_t)(
+  apr_hash_t **props,
+  svn_revnum_t *revision,
+  void *baton,
+  const char *repos_relpath,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/* Using information from BATON, fetch the kind of REPOS_RELPATH at revision
+   SRC_REVISION, returning it in *KIND. Temporary allocations can be made
+   in SCRATCH_POOL.  */
+typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
+  svn_kind_t *kind,
+  void *baton,
+  const char *repos_relpath,
+  svn_revnum_t src_revision,
+  apr_pool_t *scratch_pool);
+
+
+/* ### hand-wave... see svn_ra_get_commit_editor3() for the basics
+   ### of these parameters.  */
+svn_error_t *
+svn_ra__get_commit_ev2(svn_editor_t **editor,
+                       svn_ra_session_t *session,
+                       apr_hash_t *revprop_table,
+                       svn_commit_callback2_t callback,
+                       void *callback_baton,
+                       apr_hash_t *lock_tokens,
+                       svn_boolean_t keep_locks,
+                       svn_ra__provide_base_cb_t provide_base_cb,
+                       svn_ra__provide_props_cb_t provide_props_cb,
+                       svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                       void *cb_baton,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

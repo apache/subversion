@@ -27,6 +27,9 @@
 # General modules
 import sys, re, os, subprocess
 import time
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -92,7 +95,7 @@ def detect_extra_files(node, extra_files):
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
 
-  print("Found unexpected object: %s" % node.name)
+  logger.warn("Found unexpected object: %s", node.name)
   raise svntest.tree.SVNTreeUnequal
 
 
@@ -197,8 +200,8 @@ def update_binary_file(sbox):
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
-    print("Not all extra reject files have been accounted for:")
-    print(extra_files)
+    logger.warn("Not all extra reject files have been accounted for:")
+    logger.warn(extra_files)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -304,6 +307,92 @@ def update_binary_file_2(sbox):
                                         None, None, 1,
                                         '-r', '2', wc_dir)
 
+
+#----------------------------------------------------------------------
+
+@XFail()
+@Issue(4128)
+def update_binary_file_3(sbox):
+  "update locally modified file to equal versions"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Suck up contents of a test .png file.
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
+
+  # Write our files contents out to disk, in A/theta.
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
+  # Now, `svn add' that file.
+  svntest.main.run_svn(None, 'add', theta_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit the new binary file, creating revision 2.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Make some mods to the binary files.
+  svntest.main.file_append(theta_path, "foobar")
+  new_theta_contents = theta_contents + "foobar"
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=3),
+    })
+
+  # Commit modified working copy, creating revision 3.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now we locally modify the file back to the old version.
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
+  # Create expected output tree for an update to rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(status='  '),
+    })
+
+  # Create expected disk tree for the update
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents,
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+
+  # Do an update from revision 2 and make sure that our binary file
+  # gets reverted to its original contents.
+  # This used to raise a conflict.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '2', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -609,7 +698,7 @@ def update_to_resolve_text_conflicts(sbox):
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
-    print("didn't get expected extra files")
+    logger.warn("didn't get expected extra files")
     raise svntest.Failure
 
   # remove the conflicting files to clear text conflict but not props conflict
@@ -622,7 +711,7 @@ def update_to_resolve_text_conflicts(sbox):
   exit_code, stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up',
                                                                wc_backup)
   if len (stdout_lines) > 0:
-    print("update 2 failed")
+    logger.warn("update 2 failed")
     raise svntest.Failure
 
   # Create expected status tree
@@ -1189,6 +1278,7 @@ def another_hudson_problem(sbox):
 
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None,
                                      expected_output, [],
                                      'up', G_path)
@@ -3142,19 +3232,17 @@ def mergeinfo_update_elision(sbox):
   lambda_path = os.path.join(wc_dir, "A", "B", "lambda")
 
   # Make a branch A/B_COPY
-  svntest.actions.run_and_verify_svn(
-    None,
-    ["A    " + os.path.join(wc_dir, "A", "B_COPY", "lambda") + "\n",
+  expected_stdout =  verify.UnorderedOutput([
+     "A    " + os.path.join(wc_dir, "A", "B_COPY", "lambda") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E", "alpha") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "E", "beta") + "\n",
      "A    " + os.path.join(wc_dir, "A", "B_COPY", "F") + "\n",
      "Checked out revision 1.\n",
-     "A         " + B_COPY_path + "\n"],
-    [],
-    'copy',
-    sbox.repo_url + "/A/B",
-    B_COPY_path)
+     "A         " + B_COPY_path + "\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+                                     sbox.repo_url + "/A/B", B_COPY_path)
 
   expected_output = wc.State(wc_dir, {'A/B_COPY' : Item(verb='Adding')})
 
@@ -5290,7 +5378,7 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   sbox.simple_update()
   mu_ts_after_update = os.path.getmtime(mu_path)
   if (mu_ts_before_update != mu_ts_after_update):
-    print("The timestamp of 'mu' before and after update does not match.")
+    logger.warn("The timestamp of 'mu' before and after update does not match.")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -5611,6 +5699,101 @@ def update_moved_dir_file_move(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
+def update_move_text_mod(sbox):
+  "text mod to moved files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.main.file_append(sbox.ospath('A/B/lambda'), "modified\n")
+  svntest.main.file_append(sbox.ospath('A/B/E/beta'), "modified\n")
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  sbox.simple_move("A/B/E", "A/E2")
+  sbox.simple_move("A/B/lambda", "A/lambda2")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/lambda',
+                        status='D ')
+  expected_status.add({
+      'A/E2'        : Item(status='A ', copied='+', wc_rev='-'),
+      'A/E2/alpha'  : Item(status='  ', copied='+', wc_rev='-'),
+      'A/E2/beta'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/lambda2'   : Item(status='A ', copied='+', wc_rev='-'),
+      })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/lambda2' : Item(status='U '),
+    'A/E2/beta' : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E', 'A/B/lambda')
+  expected_disk.add({
+    'A/E2'        : Item(),
+    'A/E2/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'A/E2/beta'   : Item(contents="This is the file 'beta'.\nmodified\n"),
+    'A/lambda2'   : Item(contents="This is the file 'lambda'.\nmodified\n"),
+  })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/E2', 'A/E2/alpha', 'A/E2/beta', 'A/lambda2',
+                        wc_rev='-')
+  ### XFAIL 'A/E2/beta' is status R but should be ' '
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+@XFail()
+def update_nested_move_text_mod(sbox):
+  "text mod to moved file in moved dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), "modified\n")
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+
+  sbox.simple_move("A/B/E", "A/E2")
+  sbox.simple_move("A/E2/alpha", "A/alpha2")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+      'A/E2'        : Item(status='A ', copied='+', wc_rev='-'),
+      'A/E2/alpha'  : Item(status='D ', copied='+', wc_rev='-'),
+      'A/E2/beta'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/alpha2'    : Item(status='A ', copied='+', wc_rev='-'),
+      })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/alpha2' : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/E2'        : Item(),
+    'A/E2/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'A/alpha2'    : Item(contents="This is the file 'alpha'.\nmodified\n"),
+  })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/E2', 'A/E2/alpha', 'A/E2/beta', 'A/alpha2',
+                        wc_rev='-')
+  ### XFAIL update fails 'No such file'
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+
+
 #######################################################################
 # Run the tests
 
@@ -5682,6 +5865,9 @@ test_list = [ None,
               update_moved_dir_file_add,
               update_moved_dir_dir_add,
               update_moved_dir_file_move,
+              update_binary_file_3,
+              update_move_text_mod,
+              update_nested_move_text_mod,
              ]
 
 if __name__ == '__main__':

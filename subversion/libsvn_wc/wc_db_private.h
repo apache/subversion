@@ -54,7 +54,7 @@ struct svn_wc__db_t {
   struct
   {
     svn_stringbuf_t *abspath;
-    svn_node_kind_t kind;
+    svn_kind_t kind;
   } parse_cache;
 
   /* As we grow the state of this DB, allocate that state here. */
@@ -173,6 +173,39 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         const char *const *my_statements,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_read_info(), but taking WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
+svn_error_t *
+svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
+                              svn_kind_t *kind,
+                              svn_revnum_t *revision,
+                              const char **repos_relpath,
+                              apr_int64_t *repos_id,
+                              svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_depth_t *depth,
+                              const svn_checksum_t **checksum,
+                              const char **target,
+                              const char **original_repos_relpath,
+                              apr_int64_t *original_repos_id,
+                              svn_revnum_t *original_revision,
+                              svn_wc__db_lock_t **lock,
+                              svn_filesize_t *recorded_size,
+                              apr_time_t *recorded_mod_time,
+                              const char **changelist,
+                              svn_boolean_t *conflicted,
+                              svn_boolean_t *op_root,
+                              svn_boolean_t *had_props,
+                              svn_boolean_t *props_mod,
+                              svn_boolean_t *have_base,
+                              svn_boolean_t *have_more_work,
+                              svn_boolean_t *have_work,
+                              svn_wc__db_wcroot_t *wcroot,
+                              const char *local_relpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 /* Transaction handling */

@@ -77,7 +77,7 @@ class SvnDeltaTest < Test::Unit::TestCase
       if composed_window.nil?
         composed_window = window
       else
-        composed_window = composed_window.compose(window)
+        composed_window = window.compose(composed_window)
       end
     end
 

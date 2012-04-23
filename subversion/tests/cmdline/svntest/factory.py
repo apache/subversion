@@ -255,7 +255,7 @@ if sys.version_info[0] >= 3:
   from io import StringIO
 else:
   # Python <3.0
-  from StringIO import StringIO
+  from cStringIO import StringIO
 
 def make(wc_dir, commands, prev_status=None, prev_disk=None, verbose=True):
   """The Factory Invocation Function. This is typically the only one
@@ -1612,6 +1612,11 @@ class TestFactory:
 
   def ensure_path_var(self, wc, pathelements):
     "Given a path in a working copy, make sure we have a variable for it."
+
+    # special case: if a path is '.', simply use wc_dir.
+    if pathelements == ['.']:
+      return wc.py, wc.realpath
+
     name = "_".join(pathelements)
 
     if wc.suffix is not None:

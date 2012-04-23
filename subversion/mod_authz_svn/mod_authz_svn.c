@@ -48,10 +48,11 @@
 #include "private/svn_fspath.h"
 
 
-extern module AP_MODULE_DECLARE_DATA authz_svn_module;
-
 #ifdef APLOG_USE_MODULE
 APLOG_USE_MODULE(authz_svn);
+#else
+/* This is part of the APLOG_USE_MODULE() macro in httpd-2.3 */
+extern module AP_MODULE_DECLARE_DATA authz_svn_module;
 #endif
 
 typedef struct authz_svn_config_rec {

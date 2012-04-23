@@ -170,7 +170,7 @@ cstring_from_utf8(const char **path_apr,
 
 
 /* Set *NAME_P to the UTF-8 representation of directory entry NAME.
- * NAME is in the the internal encoding used by APR; PARENT is in
+ * NAME is in the internal encoding used by APR; PARENT is in
  * UTF-8 and in internal (not local) style.
  *
  * Use PARENT only for generating an error string if the conversion
@@ -438,7 +438,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
               /* The variable parts of unique_name will not require UTF8
                  conversion. Therefore, if UTF8 conversion had no effect
                  on it in the first iteration, it won't require conversion
-                 in any future interation. */
+                 in any future iteration. */
               needs_utf8_conversion = strcmp(unique_name_apr, unique_name);
             }
         }
@@ -1343,7 +1343,7 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
   static apr_fileperms_t default_perms = 0;
 
   /* Technically, this "racy": Multiple threads may use enter here and
-     try to figure out the default permisission concurrently. That's fine
+     try to figure out the default permission concurrently. That's fine
      since they will end up with the same results. Even more technical,
      apr_fileperms_t is an atomic type on 32+ bit machines.
    */
@@ -1555,7 +1555,7 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
      * Allocate the maximum string length based on leading 4
      * characters of \\?\ (allowing nearly unlimited path lengths)
      * plus the trailing null, then transform /'s into \\'s since
-     * the \\?\ form doesn't allow '/' path seperators.
+     * the \\?\ form doesn't allow '/' path separators.
      *
      * Note that the \\?\ form only works for local drive paths, and
      * \\?\UNC\ is needed UNC paths.
@@ -1565,7 +1565,7 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
     apr_status_t rv;
 
     /* This is correct, we don't twist the filename if it will
-     * definately be shorter than 248 characters.  It merits some
+     * definitely be shorter than 248 characters.  It merits some
      * performance testing to see if this has any effect, but there
      * seem to be applications that get confused by the resulting
      * Unicode \\?\ style file names, especially if they use argv[0]
@@ -1866,29 +1866,25 @@ file_clear_locks(void *arg)
 #endif
 
 svn_error_t *
-svn_io_file_lock2(const char *lock_file,
-                  svn_boolean_t exclusive,
-                  svn_boolean_t nonblocking,
-                  apr_pool_t *pool)
+svn_io_lock_open_file(apr_file_t *lockfile_handle,
+                      svn_boolean_t exclusive,
+                      svn_boolean_t nonblocking,
+                      apr_pool_t *pool)
 {
   int locktype = APR_FLOCK_SHARED;
-  apr_file_t *lockfile_handle;
-  apr_int32_t flags;
   apr_status_t apr_err;
+  const char *fname;
 
   if (exclusive)
     locktype = APR_FLOCK_EXCLUSIVE;
-
-  flags = APR_READ;
-  if (locktype == APR_FLOCK_EXCLUSIVE)
-    flags |= APR_WRITE;
-
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
 
-  SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,
-                           APR_OS_DEFAULT,
-                           pool));
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
   /* Get lock on the filehandle. */
   apr_err = apr_file_lock(lockfile_handle, locktype);
@@ -1915,11 +1911,11 @@ svn_io_file_lock2(const char *lock_file,
         case APR_FLOCK_SHARED:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get shared lock on file '%s'"),
-                                    svn_dirent_local_style(lock_file, pool));
+                                    fname);
         case APR_FLOCK_EXCLUSIVE:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get exclusive lock on file '%s'"),
-                                    svn_dirent_local_style(lock_file, pool));
+                                    fname);
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1934,6 +1930,61 @@ svn_io_file_lock2(const char *lock_file,
 #endif
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_unlock_open_file(apr_file_t *lockfile_handle,
+                        apr_pool_t *pool)
+{
+  const char *fname;
+  apr_status_t apr_err;
+
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
+
+  /* The actual unlock attempt. */
+  apr_err = apr_file_unlock(lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"), fname);
+  
+/* On Windows and OS/2 file locks are automatically released when
+   the file handle closes */
+#if !defined(WIN32) && !defined(__OS2__)
+  apr_pool_cleanup_kill(pool, lockfile_handle, file_clear_locks);
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_file_lock2(const char *lock_file,
+                  svn_boolean_t exclusive,
+                  svn_boolean_t nonblocking,
+                  apr_pool_t *pool)
+{
+  int locktype = APR_FLOCK_SHARED;
+  apr_file_t *lockfile_handle;
+  apr_int32_t flags;
+
+  if (exclusive)
+    locktype = APR_FLOCK_EXCLUSIVE;
+
+  flags = APR_READ;
+  if (locktype == APR_FLOCK_EXCLUSIVE)
+    flags |= APR_WRITE;
+
+  if (nonblocking)
+    locktype |= APR_FLOCK_NONBLOCK;
+
+  SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,
+                           APR_OS_DEFAULT,
+                           pool));
+
+  /* Get lock on the filehandle. */
+  return svn_io_lock_open_file(lockfile_handle, exclusive, nonblocking, pool);
 }
 
 
@@ -2173,7 +2224,7 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
 }
 
 /*
- Mac OS X has a bug where if you're readding the contents of a
+ Mac OS X has a bug where if you're reading the contents of a
  directory via readdir in a loop, and you remove one of the entries in
  the directory and the directory has 338 or more files in it you will
  skip over some of the entries in the directory.  Needless to say,
@@ -2417,10 +2468,11 @@ handle_child_process_error(apr_pool_t *pool, apr_status_t status,
 
 
 svn_error_t *
-svn_io_start_cmd2(apr_proc_t *cmd_proc,
+svn_io_start_cmd3(apr_proc_t *cmd_proc,
                   const char *path,
                   const char *cmd,
                   const char *const *args,
+                  const char *const *env,
                   svn_boolean_t inherit,
                   svn_boolean_t infile_pipe,
                   apr_file_t *infile,
@@ -2542,8 +2594,8 @@ svn_io_start_cmd2(apr_proc_t *cmd_proc,
 
 
   /* Start the cmd command. */
-  apr_err = apr_proc_create(cmd_proc, cmd_apr, args_native, NULL,
-                            cmdproc_attr, pool);
+  apr_err = apr_proc_create(cmd_proc, cmd_apr, args_native,
+                            inherit ? NULL : env, cmdproc_attr, pool);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't start process '%s'"), cmd);
 
@@ -2980,6 +3032,13 @@ svn_io_is_binary_data(const void *data, apr_size_t len)
 {
   const unsigned char *buf = data;
 
+  if (len == 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF)
+    {
+      /* This is an empty UTF-8 file which only contains the UTF-8 BOM.
+       * Treat it as plain text. */
+      return FALSE;
+    }
+
   /* Right now, this function is going to be really stupid.  It's
      going to examine the block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D
@@ -3272,6 +3331,15 @@ svn_io_write_unique(const char **tmp_path,
 svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
 {
+  /* This is a work-around. APR would flush the write buffer
+     _after_ truncating the file causing now invalid buffered
+     data to be written behind OFFSET. */
+  SVN_ERR(do_io_file_wrapper_cleanup
+    (file, apr_file_flush(file),
+     N_("Can't flush file '%s'"),
+     N_("Can't flush stream"),
+     pool));
+
   return do_io_file_wrapper_cleanup
     (file, apr_file_trunc(file, offset),
      N_("Can't truncate file '%s'"),
