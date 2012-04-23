@@ -143,8 +143,6 @@ struct ev2_baton
   const char *txn_name;
 };
 
-#define UNUSED(x) ((void)(x))
-
 
 /* Create and return a generic out-of-dateness error. */
 static svn_error_t *
@@ -984,9 +982,11 @@ add_directory_cb(void *baton,
                  svn_revnum_t replaces_rev,
                  apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_add_directory(eb->inner, relpath, children, props,
+                                   replaces_rev));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1000,9 +1000,11 @@ add_file_cb(void *baton,
             svn_revnum_t replaces_rev,
             apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_add_file(eb->inner, relpath, checksum, contents, props,
+                              replaces_rev));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1015,9 +1017,11 @@ add_symlink_cb(void *baton,
                svn_revnum_t replaces_rev,
                apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_add_symlink(eb->inner, relpath, target, props,
+                                 replaces_rev));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1029,9 +1033,10 @@ add_absent_cb(void *baton,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_add_absent(eb->inner, relpath, kind, replaces_rev));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1043,9 +1048,10 @@ alter_directory_cb(void *baton,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_alter_directory(eb->inner, relpath, revision, props));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1059,9 +1065,11 @@ alter_file_cb(void *baton,
               svn_stream_t *contents,
               apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision, props,
+                                checksum, contents));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1074,9 +1082,11 @@ alter_symlink_cb(void *baton,
                  const char *target,
                  apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision, props,
+                                   target));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1087,9 +1097,10 @@ delete_cb(void *baton,
           svn_revnum_t revision,
           apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_delete(eb->inner, relpath, revision));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1102,9 +1113,11 @@ copy_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_copy(eb->inner, src_relpath, src_revision, dst_relpath,
+                          replaces_rev));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1117,9 +1130,11 @@ move_cb(void *baton,
         svn_revnum_t replaces_rev,
         apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_move(eb->inner, src_relpath, src_revision, dst_relpath,
+                          replaces_rev));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1130,9 +1145,10 @@ rotate_cb(void *baton,
           const apr_array_header_t *revisions,
           apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_rotate(eb->inner, relpaths, revisions));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1141,9 +1157,10 @@ static svn_error_t *
 complete_cb(void *baton,
             apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_complete(eb->inner));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1152,9 +1169,10 @@ static svn_error_t *
 abort_cb(void *baton,
          apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = baton;
+  struct ev2_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(svn_editor_abort(eb->inner));
+  return SVN_NO_ERROR;
 }
 
 
