@@ -1580,10 +1580,7 @@ do_item_commit(void **dir_baton,
                                  parent_baton, pool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, item->kind,
-                                                  err, ctx, pool));
+        goto fixup_error;
     }
 
   /* If this item is supposed to be added, do so. */
@@ -1607,10 +1604,7 @@ do_item_commit(void **dir_baton,
         }
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, kind, err,
-                                                  ctx, pool));
+        goto fixup_error;
 
       /* Set other prop-changes, if available in the baton */
       if (item->outgoing_prop_changes)
@@ -1633,10 +1627,7 @@ do_item_commit(void **dir_baton,
                 }
 
               if (err)
-                return svn_error_trace(fixup_commit_error(local_abspath,
-                                                          icb->base_url,
-                                                          path, kind, err,
-                                                          ctx, pool));
+                goto fixup_error;
             }
         }
     }
@@ -1654,11 +1645,7 @@ do_item_commit(void **dir_baton,
                                       file_pool, &file_baton);
 
               if (err)
-                return svn_error_trace(fixup_commit_error(local_abspath,
-                                                          icb->base_url,
-                                                          path, kind,
-                                                          err, ctx,
-                                                          pool));
+                goto fixup_error;
             }
         }
       else
@@ -1678,11 +1665,7 @@ do_item_commit(void **dir_baton,
                 }
 
               if (err)
-                return svn_error_trace(fixup_commit_error(local_abspath,
-                                                          icb->base_url,
-                                                          path, kind,
-                                                          err, ctx,
-                                                          pool));
+                goto fixup_error;
             }
         }
 
@@ -1695,10 +1678,7 @@ do_item_commit(void **dir_baton,
               (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, kind, err,
-                                                  ctx, pool));
+        goto fixup_error;
 
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
@@ -1722,11 +1702,7 @@ do_item_commit(void **dir_baton,
                 }
 
               if (err)
-                return svn_error_trace(fixup_commit_error(local_abspath,
-                                                          icb->base_url,
-                                                          path, kind,
-                                                          err, ctx,
-                                                          pool));
+                goto fixup_error;
             }
         }
     }
@@ -1747,10 +1723,7 @@ do_item_commit(void **dir_baton,
                                     file_pool, &file_baton);
 
           if (err)
-            return svn_error_trace(fixup_commit_error(local_abspath,
-                                                      icb->base_url,
-                                                      path, kind,
-                                                      err, ctx, pool));
+            goto fixup_error;
         }
 
       /* Add this file mod to the FILE_MODS hash. */
@@ -1765,13 +1738,16 @@ do_item_commit(void **dir_baton,
       err = editor->close_file(file_baton, NULL, file_pool);
 
       if (err)
-        return svn_error_trace(fixup_commit_error(local_abspath,
-                                                  icb->base_url,
-                                                  path, kind,
-                                                  err, ctx, pool));
+        goto fixup_error;
     }
 
   return SVN_NO_ERROR;
+
+fixup_error:
+  return svn_error_trace(fixup_commit_error(local_abspath,
+                                            icb->base_url,
+                                            path, kind,
+                                            err, ctx, pool));
 }
 
 
