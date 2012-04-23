@@ -378,7 +378,7 @@ import_children(const char *dir_abspath,
     {
       const char *local_abspath;
       const char *relpath;
-      const char *basename = svn__apr_hash_index_key(hi);
+      const char *base_name = svn__apr_hash_index_key(hi);
       const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
@@ -389,8 +389,8 @@ import_children(const char *dir_abspath,
       /* Typically, we started importing from ".", in which case
          edit_path is "".  So below, this_path might become "./blah",
          and this_edit_path might become "blah", for example. */
-      local_abspath = svn_dirent_join(dir_abspath, basename, iterpool);
-      relpath = svn_relpath_join(dir_relpath, basename, iterpool);
+      local_abspath = svn_dirent_join(dir_abspath, base_name, iterpool);
+      relpath = svn_relpath_join(dir_relpath, base_name, iterpool);
 
       if (dirent->kind == svn_node_dir && depth >= svn_depth_immediates)
         {

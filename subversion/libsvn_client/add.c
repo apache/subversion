@@ -934,10 +934,10 @@ mkdir_urls(const apr_array_header_t *urls,
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
       const char *parent;
-      const char *basename;
+      const char *base_name;
       apr_array_header_t *children;
       
-      svn_relpath_split(&parent, &basename, path, pool);
+      svn_relpath_split(&parent, &base_name, path, pool);
 
       children = apr_hash_get(children_hash, parent, APR_HASH_KEY_STRING);
       if (!children)
@@ -946,7 +946,7 @@ mkdir_urls(const apr_array_header_t *urls,
           apr_hash_set(children_hash, parent, APR_HASH_KEY_STRING, children);
         }
 
-      APR_ARRAY_PUSH(children, const char *) = basename;
+      APR_ARRAY_PUSH(children, const char *) = base_name;
     }
 
   /* Calculate the base_relpath. */
