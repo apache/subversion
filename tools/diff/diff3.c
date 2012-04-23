@@ -1,4 +1,4 @@
-/* diff3-test.c -- test driver for 3-way text merges
+/* diff3.c -- test driver for 3-way text merges
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -38,16 +38,16 @@ do_diff3(svn_stream_t *ostream,
 {
   svn_diff_t *diff;
 
-  SVN_ERR(svn_diff_file_diff3(&diff, original, modified, latest, pool));
+  SVN_ERR(svn_diff_file_diff3_2(&diff, original, modified, latest,
+                                svn_diff_file_options_create(pool), pool));
 
   *has_changes = svn_diff_contains_diffs(diff);
 
-  SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                     original, modified, latest,
-                                     NULL, NULL, NULL, NULL,
-                                     FALSE,
-                                     FALSE,
-                                     pool));
+  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+                                      original, modified, latest,
+                                      NULL, NULL, NULL, NULL,
+                                      svn_diff_conflict_display_modified_latest,
+                                      pool));
 
   return NULL;
 }
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
   svn_err = svn_stream_for_stdout(&ostream, pool);
   if (svn_err)
     {
-      svn_handle_error2(svn_err, stdout, FALSE, "diff3-test: ");
+      svn_handle_error2(svn_err, stdout, FALSE, "diff3: ");
       rc = 2;
     }
   else if (argc == 4)
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
         }
       else
         {
-          svn_handle_error2(svn_err, stdout, FALSE, "diff3-test: ");
+          svn_handle_error2(svn_err, stdout, FALSE, "diff3: ");
           rc = 2;
         }
     }

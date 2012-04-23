@@ -41,10 +41,13 @@ from svntest import wc
 from svntest.main import SVN_PROP_MERGEINFO, is_os_windows
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
-XFail = svntest.testcase.XFail
 
 def make_patch_path(sbox, name='my.patch'):
   dir = sbox.add_wc_path('patches')
@@ -671,7 +674,7 @@ def patch_chopped_leading_spaces(sbox):
 
 
 def patch_strip1(sbox):
-  "patch with --strip-count 1"
+  "patch with --strip 1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -838,7 +841,7 @@ def patch_strip1(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--strip-count', '1')
+                                       '--strip', '1')
 
 def patch_no_index_line(sbox):
   "patch with no index lines"
@@ -1031,14 +1034,14 @@ def patch_remove_empty_dirs(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   patch_file_path = make_patch_path(sbox)
 
   # Contents of B:
   # A/B/lamba
   # A/B/F
   # A/B/E/{alpha,beta}
-  # Before patching we've deleted F, which means that B is empty after patching and 
+  # Before patching we've deleted F, which means that B is empty after patching and
   # should be removed.
   #
   # Contents of H:
@@ -1124,7 +1127,7 @@ def patch_remove_empty_dirs(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, 
+  svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
@@ -1946,7 +1949,7 @@ def patch_with_ignore_whitespace(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Apply patch with leading and trailing spaces removed and tabs transformed 
+  # Apply patch with leading and trailing spaces removed and tabs transformed
   # to spaces. The patch should match and the hunks should be written to the
   # target as-is.
 
@@ -2534,26 +2537,25 @@ def patch_dir_properties(sbox):
   modified_prop_contents = "The property 'modified' has changed.\n"
   ignore_prop_contents = "*.o\n.libs\n*.lo\n"
 
-  ### The output for properties set on illegal targets (i.e. svn:excutable
-  ### on a dir) is still subject to change. We might just want to bail out 
-  ### directly instead of catching the error and use the notify mechanism.
   expected_output = [
     ' U        %s\n' % wc_dir,
-    ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
-    'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
+    ' C        %s\n' % os.path.join(wc_dir, 'A', 'B'),
     'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
+    '  Property conflicts: 1\n',
   ]
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     '' : Item(props={'modified' : modified_prop_contents,
-                     'svn:ignore' : ignore_prop_contents})
+                     'svn:ignore' : ignore_prop_contents}),
+    'A/B.svnpatch.rej'  : Item(contents="--- A/B\n+++ A/B\n" +
+                               "Property: svn:executable\n" +
+                               "## -0,0 +1,1 ##\n+*\n"),
     })
   expected_disk.tweak('A/B', props={})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('', status=' M')
-  expected_status.tweak('A/B', status=' M')
+  expected_status.tweak('', status=' M', wc_rev=2)
+  expected_status.tweak('A/B', status=' M', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
@@ -2575,7 +2577,8 @@ def patch_add_path_with_props(sbox):
   patch_file_path = make_patch_path(sbox)
   iota_path = os.path.join(wc_dir, 'iota')
 
-  # Apply patch that adds a file and a dir.
+  # Apply patch that adds two files, one of which is empty.
+  # Both files have properties.
 
   unidiff_patch = [
     "Index: new\n",
@@ -2612,7 +2615,7 @@ def patch_add_path_with_props(sbox):
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'new': Item(contents="This is the file 'new'\n", 
+  expected_disk.add({'new': Item(contents="This is the file 'new'\n",
                                  props={'added' : added_prop_contents})})
   expected_disk.add({'X': Item(contents="",
                                props={'added' : added_prop_contents})})
@@ -3156,8 +3159,7 @@ def patch_old_target_names(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       1, # dry-run
-                                       "--old-patch-target-names")
+                                       1) # dry-run
 
 def patch_reverse_revert(sbox):
   "revert a patch by reverse patching"
@@ -3355,8 +3357,133 @@ def patch_reverse_revert(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--reverse-diff',
-                                       '--old-patch-target-names')
+                                       '--reverse-diff')
+
+def patch_one_property(sbox, trailing_eol):
+  """Helper.  Apply a patch that sets the property 'k' to 'v\n' or to 'v',
+   and check the results."""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: .\n",
+    "===================================================================\n",
+    "diff --git a/subversion/branches/1.6.x b/subversion/branches/1.6.x\n",
+    "--- a/subversion/branches/1.6.x\t(revision 1033278)\n",
+    "+++ b/subversion/branches/1.6.x\t(working copy)\n",
+    "\n",
+    "Property changes on: subversion/branches/1.6.x\n",
+    "___________________________________________________________________\n",
+    "Modified: svn:mergeinfo\n",
+    "   Merged /subversion/trunk:r964349\n",
+    "Added: k\n",
+    "## -0,0 +1 ##\n",
+    "+v\n",
+  ]
+
+  if trailing_eol:
+    value = "v\n"
+  else:
+    value = "v"
+    unidiff_patch += ['\ No newline at end of property']
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'': Item(props={'k' : value})})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+
+  expected_skip = wc.State('.', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--strip', '3')
+
+  if is_os_windows():
+    # On Windows 'svn pg' uses \r\n as EOL.
+    value = value.replace('\n', '\r\n')
+
+  svntest.actions.check_prop('k', wc_dir, [value])
+
+def patch_strip_cwd(sbox):
+  "patch --strip propchanges cwd"
+  return patch_one_property(sbox, True)
+
+@XFail()
+@Issue(3814)
+def patch_set_prop_no_eol(sbox):
+  "patch doesn't append newline to properties"
+  return patch_one_property(sbox, False)
+
+# Regression test for issue #3697
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(3697)
+def patch_add_symlink(sbox):
+  "patch that adds a symlink"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: iota_symlink\n",
+    "===================================================================\n",
+    "--- iota_symlink\t(revision 0)\n",
+    "+++ iota_symlink\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+link iota\n",
+    "\n",
+    "Property changes on: iota_symlink\n",
+    "-------------------------------------------------------------------\n",
+    "Added: svn:special\n",
+    "## -0,0 +1 ##\n",
+    "+*\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'iota_symlink'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'iota_symlink': Item(contents="This is the file 'iota'.\n",
+                                          props={'svn:special' : '*'})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'iota_symlink': Item(status='A ', wc_rev='0')})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 
 ########################################################################
 #Run the tests
@@ -3383,13 +3510,16 @@ test_list = [ None,
               patch_no_eol_at_eof,
               patch_with_properties,
               patch_same_twice,
-              XFail(patch_dir_properties),
+              patch_dir_properties,
               patch_add_path_with_props,
               patch_prop_offset,
               patch_prop_with_fuzz,
               patch_git_empty_files,
               patch_old_target_names,
               patch_reverse_revert,
+              patch_strip_cwd,
+              patch_set_prop_no_eol,
+              patch_add_symlink,
             ]
 
 if __name__ == '__main__':

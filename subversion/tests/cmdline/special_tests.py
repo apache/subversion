@@ -33,9 +33,12 @@ import svntest
 from svntest.main import server_has_mergeinfo
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -46,7 +49,7 @@ Item = svntest.wc.StateItem
 
 
 #----------------------------------------------------------------------
-
+@SkipUnless(svntest.main.is_posix_os)
 def general_symlink(sbox):
   "general symlink handling"
 
@@ -130,6 +133,7 @@ def general_symlink(sbox):
                                         expected_status, None, wc_dir)
 
 
+@SkipUnless(svntest.main.is_posix_os)
 def replace_file_with_symlink(sbox):
   "replace a normal file with a special file"
 
@@ -153,7 +157,7 @@ def replace_file_with_symlink(sbox):
                                                                'log msg',
                                                                wc_dir)
 
-  regex = 'svn: Commit failed'
+  regex = 'svn: E145001: Commit failed'
   for line in stderr_lines:
     if re.match(regex, line):
       break
@@ -161,6 +165,7 @@ def replace_file_with_symlink(sbox):
     raise svntest.Failure
 
 
+@SkipUnless(svntest.main.is_posix_os)
 def import_export_symlink(sbox):
   "import and export a symlink"
 
@@ -217,7 +222,8 @@ def import_export_symlink(sbox):
 
 #----------------------------------------------------------------------
 # Regression test for issue 1986
-
+@Issue(1986)
+@SkipUnless(svntest.main.is_posix_os)
 def copy_tree_with_symlink(sbox):
   "'svn cp dir1 dir2' which contains a symlink"
 
@@ -255,12 +261,16 @@ def copy_tree_with_symlink(sbox):
     'A/D/H2/chi' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/H2/psi' : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D/H2/linktarget' : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-'),
+    # linktarget and newfile are from r2, while h2 is from r1.
+    'A/D/H2/linktarget' : Item(status='A ', copied='+', wc_rev='-',
+                               entry_status='  '),
+    'A/D/H2/newfile' : Item(status='A ', copied='+', wc_rev='-',
+                            entry_status='  '),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@SkipUnless(svntest.main.is_posix_os)
 def replace_symlink_with_file(sbox):
   "replace a special file with a non-special file"
 
@@ -305,7 +315,7 @@ def replace_symlink_with_file(sbox):
                                                                'log msg',
                                                                wc_dir)
 
-  regex = 'svn: Commit failed'
+  regex = 'svn: E145001: Commit failed'
   for line in stderr_lines:
     if re.match(regex, line):
       break
@@ -313,6 +323,7 @@ def replace_symlink_with_file(sbox):
     raise svntest.Failure
 
 
+@SkipUnless(svntest.main.is_posix_os)
 def remove_symlink(sbox):
   "remove a symlink"
 
@@ -356,6 +367,9 @@ def remove_symlink(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
+@SkipUnless(svntest.main.is_posix_os)
+@SkipUnless(server_has_mergeinfo)
+@Issue(2530)
 def merge_symlink_into_file(sbox):
   "merge symlink into file"
 
@@ -401,7 +415,7 @@ def merge_symlink_into_file(sbox):
                        'merge', '-r', '2:4', dprime_url,
                        os.path.join(wc_dir, 'A', 'D'))
 
-  # now revert, and we'll get a strange error
+  # now revert, we once got a strange error
   svntest.main.run_svn(None, 'revert', '-R', wc_dir)
 
   # assuming we got past the revert because someone fixed that bug, lets
@@ -421,6 +435,7 @@ def merge_symlink_into_file(sbox):
 
 
 
+@SkipUnless(svntest.main.is_posix_os)
 def merge_file_into_symlink(sbox):
   "merge file into symlink"
 
@@ -473,11 +488,12 @@ def merge_file_into_symlink(sbox):
   # ok, now merge the change to the file into the symlink we created, this
   # gives us a weird error
   svntest.main.run_svn(None,
-                       'merge', '-r', '4:5', d_url,
+                       'merge', '-r', '4:5', '--allow-mixed-revisions', d_url,
                        os.path.join(wc_dir, 'A', 'Dprime'))
 
 # Issue 2701: Tests to see repository with symlinks can be checked out on all
 # platforms.
+@Issue(2701)
 def checkout_repo_with_symlinks(sbox):
   "checkout a repository containing symlinks"
 
@@ -505,6 +521,8 @@ def checkout_repo_with_symlinks(sbox):
                                           expected_wc)
 
 # Issue 2716: 'svn diff' against a symlink to a directory within the wc
+@Issue(2716)
+@SkipUnless(svntest.main.is_posix_os)
 def diff_symlink_to_dir(sbox):
   "diff a symlink to a directory"
 
@@ -542,6 +560,7 @@ def diff_symlink_to_dir(sbox):
 
 # Issue 2692 (part of): Check that the client can check out a repository
 # that contains an unknown special file type.
+@Issue(2692)
 def checkout_repo_with_unknown_special_type(sbox):
   "checkout repository with unknown special file type"
 
@@ -592,6 +611,8 @@ def replace_symlink_with_dir(sbox):
 
 # test for issue #1808: svn up deletes local symlink that obstructs
 # versioned file
+@Issue(1808)
+@SkipUnless(svntest.main.is_posix_os)
 def update_obstructing_symlink(sbox):
   "symlink obstructs incoming delete"
 
@@ -624,7 +645,7 @@ def warn_on_reserved_name(sbox):
   svntest.actions.run_and_verify_svn(
     "Locking a file with a reserved name failed to result in an error",
     None,
-    ".*Skipping argument: '.+' ends in a reserved name.*",
+    ".*Skipping argument: E200025: '.+' ends in a reserved name.*",
     'lock', reserved_path)
 
 
@@ -636,9 +657,12 @@ def propvalue_normalized(sbox):
 
   # Add a "symlink"
   iota2_path = sbox.ospath('iota2')
-  svntest.main.file_write(iota2_path, "This is the file 'iota2'.\n")
+  svntest.main.file_write(iota2_path, "symlink destination")
   svntest.main.run_svn(None, 'add', iota2_path)
   svntest.main.run_svn(None, 'propset', 'svn:special', 'yes', iota2_path)
+  if svntest.main.is_posix_os():
+    os.remove(iota2_path)
+    os.symlink("symlink destination", iota2_path)
 
   # Property value should be SVN_PROP_BOOLEAN_TRUE
   expected_propval = ['*']
@@ -658,35 +682,91 @@ def propvalue_normalized(sbox):
                                         expected_status, None,
                                         wc_dir)
 
-  svntest.main.run_svn(None, 'update')
+  svntest.main.run_svn(None, 'update', wc_dir)
   svntest.actions.run_and_verify_svn(None, expected_propval, [],
                                      'propget', '--strict', 'svn:special',
                                      iota2_path)
 
 
+# on users@: http://mid.gmane.org/1292856447.8650.24.camel@nimble.325Bayport
+@SkipUnless(svntest.main.is_posix_os)
+def unrelated_changed_special_status(sbox):
+  "commit foo while bar changed special status"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  os.chdir(os.path.join(sbox.wc_dir, 'A/D/H'))
+
+  open('chi', 'a').write('random local mod')
+  os.unlink('psi')
+  os.symlink('omega', 'psi') # omega is versioned!
+  svntest.main.run_svn(None, 'changelist', 'chi cl', 'chi')
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '--changelist', 'chi cl',
+                                     '-m', 'psi changed special status')
+
+
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_destination_change(sbox):
+  "revert a symlink destination change"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new symlink and commit it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  os.symlink('linktarget', newfile_path)
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Modify the symlink to point somewhere else
+  os.remove(newfile_path)
+  os.symlink('linktarget2', newfile_path)
+
+  expected_status.tweak('newfile', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert should restore the symlink to point to the original destination
+  svntest.main.run_svn(None, 'revert', '-R', wc_dir)
+  expected_status.tweak('newfile', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now replace the symlink with a normal file and try to commit, we
 ########################################################################
 # Run the tests
 
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(general_symlink, svntest.main.is_posix_os),
-              SkipUnless(replace_file_with_symlink, svntest.main.is_posix_os),
-              SkipUnless(import_export_symlink, svntest.main.is_posix_os),
-              SkipUnless(copy_tree_with_symlink, svntest.main.is_posix_os),
-              SkipUnless(replace_symlink_with_file, svntest.main.is_posix_os),
-              SkipUnless(remove_symlink, svntest.main.is_posix_os),
-              SkipUnless(SkipUnless(merge_symlink_into_file,
-                                    svntest.main.is_posix_os),
-                         server_has_mergeinfo),
-              SkipUnless(merge_file_into_symlink, svntest.main.is_posix_os),
+              general_symlink,
+              replace_file_with_symlink,
+              import_export_symlink,
+              copy_tree_with_symlink,
+              replace_symlink_with_file,
+              remove_symlink,
+              merge_symlink_into_file,
+              merge_file_into_symlink,
               checkout_repo_with_symlinks,
-              SkipUnless(diff_symlink_to_dir, svntest.main.is_posix_os),
+              diff_symlink_to_dir,
               checkout_repo_with_unknown_special_type,
               replace_symlink_with_dir,
-              SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
+              update_obstructing_symlink,
               warn_on_reserved_name,
-              Skip(propvalue_normalized, svntest.main.is_posix_os),
+              propvalue_normalized,
+              unrelated_changed_special_status,
+              symlink_destination_change,
              ]
 
 if __name__ == '__main__':

@@ -23,11 +23,11 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.*;
+
 /**
  * The description of a merge conflict, encountered during
  * merge/update/switch operations.
- *
- * @since 1.5
  */
 public class ConflictDescriptor
 {
@@ -239,7 +239,6 @@ public class ConflictDescriptor
 
         /**
          * Object is already added or schedule-add.
-         * @since New in 1.6.
          */
         added;
     }

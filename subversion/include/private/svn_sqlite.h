@@ -47,18 +47,18 @@ typedef enum svn_sqlite__mode_e {
 } svn_sqlite__mode_t;
 
 
-/* Steps the given statement; if it returns SQLITE_DONE, resets the statement.
-   Otherwise, raises an SVN error.  */
+/* Step the given statement; if it returns SQLITE_DONE, reset the statement.
+   Otherwise, raise an SVN error.  */
 svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt);
 
-/* Steps the given statement; raises an SVN error (and resets the
+/* Step the given statement; raise an SVN error (and reset the
    statement) if it doesn't return SQLITE_ROW. */
 svn_error_t *
 svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 
-/* Steps the given statement; raises an SVN error (and resets the
-   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets
+/* Step the given statement; raise an SVN error (and reset the
+   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Set
    *GOT_ROW to true iff it got SQLITE_ROW.
 */
 svn_error_t *
@@ -70,8 +70,8 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
-/* Perform an an update/delete an then return the number of affected rows.
-   If AFFECTED_ROWS is not NULL, then *AFFECTED_ROWS will be set to the
+/* Perform an update/delete and then return the number of affected rows.
+   If AFFECTED_ROWS is not NULL, then set *AFFECTED_ROWS to the
    number of rows changed.
    STMT will be reset prior to returning. */
 svn_error_t *
@@ -118,7 +118,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
-/* Explicity close the connection in DB. */
+/* Explicitly close the connection in DB. */
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db);
 
@@ -126,18 +126,13 @@ svn_sqlite__close(svn_sqlite__db_t *db);
 svn_error_t *
 svn_sqlite__exec_statements(svn_sqlite__db_t *db, int stmt_idx);
 
-/* Returns the statement in *STMT which has been prepared from the
-   STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
-   pool as the DB, and will be cleaned up with DB is closed. */
+/* Return the statement in *STMT which has been prepared from the
+   STATEMENTS[STMT_IDX] string, where STATEMENTS is the array that was
+   passed to svn_sqlite__open().  This statement is allocated in the same
+   pool as the DB, and will be cleaned up when DB is closed. */
 svn_error_t *
 svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                           int stmt_idx);
-
-/* Prepares TEXT as a statement in DB, returning a statement in *STMT,
-   allocated in RESULT_POOL. */
-svn_error_t *
-svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
-                    const char *text, apr_pool_t *result_pool);
 
 
 /* ---------------------------------------------------------------------
@@ -201,7 +196,7 @@ svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt, int slot,
                         svn_revnum_t value);
 
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
-/   binding will occur. PROPS will be stored as a serialized skel. */
+   binding will occur. PROPS will be stored as a serialized skel. */
 svn_error_t *
 svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             int slot,
@@ -224,7 +219,7 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
 */
 
 /* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. The return
-   value will be NULL if the column is null.If RESULT_POOL is not NULL,
+   value will be NULL if the column is null. If RESULT_POOL is not NULL,
    allocate the return value (if any) in it. Otherwise, the value will
    become invalid on the next invocation of svn_sqlite__column_* */
 const void *
@@ -290,6 +285,11 @@ svn_sqlite__column_checksum(const svn_checksum_t **checksum,
 svn_boolean_t
 svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column);
 
+/* Return the number of bytes the column uses in a text or blob representation.
+   0 for NULL columns. */
+int
+svn_sqlite__column_bytes(svn_sqlite__stmt_t *stmt, int column);
+
 
 /* --------------------------------------------------------------------- */
 
@@ -317,27 +317,30 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
                              void *cb_baton, apr_pool_t *scratch_pool);
 
+/* Like svn_sqlite__with_transaction(), but takes out a 'RESERVED' lock
+   immediately, instead of using the default deferred locking scheme. */
+svn_error_t *
+svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
+                                       svn_sqlite__transaction_callback_t cb_func,
+                                       void *cb_baton,
+                                       apr_pool_t *scratch_pool);
+
 
 /* Helper function to handle several SQLite operations inside a shared lock.
    This callback is similar to svn_sqlite__with_transaction(), but can be
    nested (even with a transaction) and changes in the callback are always
    committed when this function returns.
 
-   Behavior on an application crash while this function is running is
-   UNDEFINED: Either everything is committed (for < 3.6.8) or is not (for
-   >= 3.6.8 where this function uses a SAVEPOINT), so this should only be used
-   for operations that are safe under these conditions or just for reading.
-
-   Use a transaction when you need explicit behavior.
-
    For SQLite 3.6.8 and later using this function as a wrapper around a group
    of operations can give a *huge* performance boost as the shared-read lock
    will be shared over multiple statements, instead of being reobtained
    everytime, which requires disk and/or network io.
 
-   ### It might be possible to implement the same lock behavior for < 3.6.8
-       by keeping a read SQLite statement open, but this wouldn't replicate
-       the rollback behavior on crashing. Maybe we should just require 3.6.8?
+   SCRATCH_POOL will be passed to the callback (NULL is valid).
+
+   ### Since we now require SQLite >= 3.6.18, this function has the effect of
+       always behaving like a defered transaction.  Can it be combined with
+       svn_sqlite__with_transaction()?
  */
 svn_error_t *
 svn_sqlite__with_lock(svn_sqlite__db_t *db,

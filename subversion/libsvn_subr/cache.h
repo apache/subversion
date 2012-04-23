@@ -30,7 +30,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct {
+typedef struct svn_cache__vtable_t {
   svn_error_t *(*get)(void **value,
                       svn_boolean_t *found,
                       void *cache_implementation,
@@ -47,6 +47,27 @@ typedef struct {
                        svn_iter_apr_hash_cb_t func,
                        void *baton,
                        apr_pool_t *pool);
+
+  svn_boolean_t (*is_cachable)(void *cache_implementation,
+                               apr_size_t size);
+
+  svn_error_t *(*get_partial)(void **value,
+                              svn_boolean_t *found,
+                              void *cache_implementation,
+                              const void *key,
+                              svn_cache__partial_getter_func_t func,
+                              void *baton,
+                              apr_pool_t *pool);
+  svn_error_t *(*set_partial)(void *cache_implementation,
+                              const void *key,
+                              svn_cache__partial_setter_func_t func,
+                              void *baton,
+                              apr_pool_t *scratch_pool);
+
+  svn_error_t *(*get_info)(void *cache_implementation,
+                           svn_cache__info_t *info,
+                           svn_boolean_t reset,
+                           apr_pool_t *pool);
 } svn_cache__vtable_t;
 
 struct svn_cache__t {
@@ -54,6 +75,18 @@ struct svn_cache__t {
   svn_cache__error_handler_t error_handler;
   void *error_baton;
   void *cache_internal;
+
+  /* Total number of calls to getters. */
+  apr_uint64_t reads;
+
+  /* Total number of calls to set(). */
+  apr_uint64_t writes;
+
+  /* Total number of getter calls that returned a cached item. */
+  apr_uint64_t hits;
+
+  /* Total number of function calls that returned an error. */
+  apr_uint64_t failures;
 };
 
 

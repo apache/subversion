@@ -114,6 +114,10 @@ find_char_backward(const char *str, apr_size_t len, char ch)
 
 /* svn_string functions */
 
+/* Return a new svn_string_t object, allocated in POOL, initialized with
+ * DATA and SIZE.  Do not copy the contents of DATA, just store the pointer.
+ * SIZE is the length in bytes of DATA, excluding the required NUL
+ * terminator. */
 static svn_string_t *
 create_string(const char *data, apr_size_t size,
               apr_pool_t *pool)
@@ -131,9 +135,18 @@ create_string(const char *data, apr_size_t size,
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
+  void *mem;
   char *data;
+  svn_string_t *new_string;
 
-  data = apr_palloc(pool, size + 1);
+  /* Allocate memory for svn_string_t and data in one chunk. */
+  mem = apr_palloc(pool, sizeof(*new_string) + size + 1);
+  data = (char*)mem + sizeof(*new_string);
+
+  new_string = mem;
+  new_string->data = data;
+  new_string->len = size;
+
   memcpy(data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
@@ -141,8 +154,7 @@ svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
      call.  Heck, that's why they call it the caller! */
   data[size] = '\0';
 
-  /* wrap an svn_string_t around the new data */
-  return create_string(data, size, pool);
+  return new_string;
 }
 
 
@@ -246,7 +258,15 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
 svn_stringbuf_t *
 svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 {
-  char *data = apr_palloc(pool, ++blocksize); /* + space for '\0' */
+  char *data;
+
+  /* apr_palloc will allocate multiples of 8.
+   * Thus, we would waste some of that memory if we stuck to the
+   * smaller size. Note that this is safe even if apr_palloc would
+   * use some other aligment or none at all. */
+
+  ++blocksize; /* + space for '\0' */
+  data = apr_palloc(pool, APR_ALIGN_DEFAULT(blocksize));
 
   data[0] = '\0';
 
@@ -257,9 +277,7 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
-  /* Ensure string buffer of size + 1 */
   svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
-
   memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
@@ -364,12 +382,18 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
   if (str->blocksize < minimum_size)
     {
       if (str->blocksize == 0)
-        str->blocksize = minimum_size;
+        /* APR will increase odd allocation sizes to the next
+         * multiple for 8, for instance. Take advantage of that
+         * knowledge and allow for the extra size to be used. */
+        str->blocksize = APR_ALIGN_DEFAULT(minimum_size);
       else
         while (str->blocksize < minimum_size)
           {
+            /* str->blocksize is aligned;
+             * doubling it should keep it aligned */
             apr_size_t prev_size = str->blocksize;
             str->blocksize *= 2;
+
             /* check for apr_size_t overflow */
             if (prev_size > str->blocksize)
               {
@@ -388,27 +412,59 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 }
 
 
+/* WARNING - Optimized code ahead!
+ * This function has been hand-tuned for performance. Please read
+ * the comments below before modifying the code.
+ */
 void
 svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
 {
+  char *dest;
+  apr_size_t old_len = str->len;
+
   /* In most cases, there will be pre-allocated memory left
    * to just write the new byte at the end of the used section
    * and terminate the string properly.
    */
-  apr_size_t old_len = str->len;
   if (str->blocksize > old_len + 1)
     {
-      char *dest = str->data;
+      /* The following read does not depend this write, so we
+       * can issue the write first to minimize register pressure:
+       * The value of old_len+1 is no longer needed; on most processors,
+       * dest[old_len+1] will be calculated implicitly as part of
+       * the addressing scheme.
+       */
+      str->len = old_len+1;
 
+      /* Since the compiler cannot be sure that *src->data and *src
+       * don't overlap, we read src->data *once* before writing
+       * to *src->data. Replacing dest with str->data would force
+       * the compiler to read it again after the first byte.
+       */
+      dest = str->data;
+
+      /* If not already available in a register as per ABI, load
+       * "byte" into the register (e.g. the one freed from old_len+1),
+       * then write it to the string buffer and terminate it properly.
+       *
+       * Including the "byte" fetch, all operations so far could be
+       * issued at once and be scheduled at the CPU's descression.
+       * Most likely, no-one will soon depend on the data that will be
+       * written in this function. So, no stalls there, either.
+       */
       dest[old_len] = byte;
       dest[old_len+1] = '\0';
-
-      str->len = old_len+1;
     }
   else
     {
       /* we need to re-allocate the string buffer
        * -> let the more generic implementation take care of that part
+       */
+
+      /* Depending on the ABI, "byte" is a register value. If we were
+       * to take its address directly, the compiler might decide to
+       * put in on the stack *unconditionally*, even if that would
+       * only be necessary for this block.
        */
       char b = byte;
       svn_stringbuf_appendbytes(str, &b, 1);
@@ -577,6 +633,22 @@ svn_boolean_t svn_cstring_match_glob_list(const char *str,
       const char *this_pattern = APR_ARRAY_IDX(list, i, char *);
 
       if (apr_fnmatch(this_pattern, str, 0) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+svn_boolean_t
+svn_cstring_match_list(const char *str, const apr_array_header_t *list)
+{
+  int i;
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      const char *this_str = APR_ARRAY_IDX(list, i, char *);
+
+      if (strcmp(this_str, str) == 0)
         return TRUE;
     }
 

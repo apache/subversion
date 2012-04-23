@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
 /*** Code. ***/
@@ -82,50 +83,6 @@ error_if_wcprop_name(const char *name)
     }
 
   return SVN_NO_ERROR;
-}
-
-
-/* A baton for propset_walk_cb. */
-struct propset_walk_baton
-{
-  const char *propname;  /* The name of the property to set. */
-  const svn_string_t *propval;  /* The value to set. */
-  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
-  svn_boolean_t force;  /* True iff force was passed. */
-  apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
-};
-
-/* An node-walk callback for svn_client_propset4.
- *
- * For LOCAL_ABSPATH, set the property named wb->PROPNAME to the value
- * wb->PROPVAL, where "wb" is the WALK_BATON of type "struct
- * propset_walk_baton *".
- */
-static svn_error_t *
-propset_walk_cb(const char *local_abspath,
-                void *walk_baton,
-                apr_pool_t *pool)
-{
-  struct propset_walk_baton *wb = walk_baton;
-  svn_error_t *err;
-
-  /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
-                                 wb->changelist_hash, pool))
-    return SVN_NO_ERROR;
-
-  err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
-                         wb->force, wb->notify_func, wb->notify_baton, pool);
-  if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
-              || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-
-  return svn_error_return(err);
 }
 
 
@@ -301,7 +258,7 @@ struct set_props_baton
   const char *propname;
   const svn_string_t *propval;
   svn_boolean_t skip_checks;
-  apr_hash_t *changelist_hash;
+  const apr_array_header_t *changelist_filter;
 };
 
 /* Working copy lock callback for svn_client_propset4 */
@@ -312,52 +269,33 @@ set_props_cb(void *baton,
 {
   struct set_props_baton *bt = baton;
 
-  if (bt->depth >= svn_depth_files && bt->kind == svn_node_dir)
-    {
-      struct propset_walk_baton wb;
+  SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath, bt->propname,
+                           bt->propval, bt->depth, bt->skip_checks,
+                           bt->changelist_filter,
+                           bt->ctx->cancel_func, bt->ctx->cancel_baton,
+                           bt->ctx->notify_func2, bt->ctx->notify_baton2,
+                           scratch_pool));
 
-      wb.wc_ctx = bt->ctx->wc_ctx;
-      wb.propname = bt->propname;
-      wb.propval = bt->propval;
-      wb.force = bt->skip_checks;
-      wb.changelist_hash = bt->changelist_hash;
-      wb.notify_func = bt->ctx->notify_func2;
-      wb.notify_baton = bt->ctx->notify_baton2;
-      SVN_ERR(svn_wc__node_walk_children(bt->ctx->wc_ctx, bt->local_abspath,
-                                         FALSE, propset_walk_cb, &wb,
-                                         bt->depth, bt->ctx->cancel_func,
-                                         bt->ctx->cancel_baton, scratch_pool));
-    }
-  else if (svn_wc__changelist_match(bt->ctx->wc_ctx, bt->local_abspath,
-                                    bt->changelist_hash, scratch_pool))
-    {
-      SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath,
-                               bt->propname, bt->propval, bt->skip_checks,
-                               bt->ctx->notify_func2, bt->ctx->notify_baton2,
-                               scratch_pool));
-    }
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_propset4(const char *propname,
-                    const svn_string_t *propval,
-                    const char *target,
-                    svn_depth_t depth,
-                    svn_boolean_t skip_checks,
-                    svn_revnum_t base_revision_for_url,
-                    const apr_array_header_t *changelists,
-                    const apr_hash_t *revprop_table,
-                    svn_commit_callback2_t commit_callback,
-                    void *commit_baton,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+/* Check that PROPNAME is a valid name for a versioned property.  Return an
+ * error if it is not valid, specifically if it is:
+ *   - the name of a standard Subversion rev-prop; or
+ *   - in the namespace of WC-props; or
+ *   - not a well-formed property name (except if PROPVAL is NULL: in other
+ *     words we do allow deleting a prop with an ill-formed name).
+ *
+ * Since Subversion controls the "svn:" property namespace, we don't honor
+ * a 'skip_checks' flag here.  Checks for unusual property combinations such
+ * as svn:eol-style with a non-text svn:mime-type might understandably be
+ * skipped, but things such as using a property name reserved for revprops
+ * on a local target are never allowed.
+ */
+static svn_error_t *
+check_prop_name(const char *propname,
+                const svn_string_t *propval)
 {
-  /* Since Subversion controls the "svn:" property namespace, we
-     don't honor the 'skip_checks' flag here.  Unusual property
-     combinations, like svn:eol-style with a non-text svn:mime-type,
-     are understandable, but revprops on local targets are not. */
-
   if (is_revision_prop_name(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Revision property '%s' not allowed "
@@ -369,66 +307,69 @@ svn_client_propset4(const char *propname,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
-  if (svn_path_is_url(target))
-    {
-      /* The rationale for requiring the base_revision_for_url
-         argument is that without it, it's too easy to possibly
-         overwrite someone else's change without noticing.  (See also
-         tools/examples/svnput.c). */
-      if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
-        return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                 _("Setting property on non-local target '%s' "
-                                   "needs a base revision"), target);
+  return SVN_NO_ERROR;
+}
 
-      if (depth > svn_depth_empty)
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Setting property recursively on non-local "
-                                   "target '%s' is not supported"), target);
+svn_error_t *
+svn_client_propset_local(const char *propname,
+                         const svn_string_t *propval,
+                         const apr_array_header_t *targets,
+                         svn_depth_t depth,
+                         svn_boolean_t skip_checks,
+                         const apr_array_header_t *changelists,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_boolean_t targets_are_urls;
+  int i;
 
-      /* ### When you set svn:eol-style or svn:keywords on a wc file,
-         ### Subversion sends a textdelta at commit time to properly
-         ### normalize the file in the repository.  If we want to
-         ### support editing these properties on URLs, then we should
-         ### generate the same textdelta; for now, we won't support
-         ### editing these properties on URLs.  (Admittedly, this
-         ### means that all the machinery with get_file_for_validation
-         ### is unused.)
-       */
-      if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
-          (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Setting property '%s' on non-local target "
-                                   "'%s' is not supported"), propname, target);
+  if (targets->nelts == 0)
+    return SVN_NO_ERROR;
 
-      return propset_on_url(propname, propval, target, skip_checks,
-                            base_revision_for_url, revprop_table,
-                            commit_callback, commit_baton, ctx, pool);
-    }
-  else
+  /* Check for homogeneity among our targets. */
+  targets_are_urls = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
+  SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
+
+  if (targets_are_urls)
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Targets must be working copy paths"));
+
+  SVN_ERR(check_prop_name(propname, propval));
+
+  for (i = 0; i < targets->nelts; i++)
     {
       svn_node_kind_t kind;
-      apr_hash_t *changelist_hash = NULL;
       const char *target_abspath;
       svn_error_t *err;
       struct set_props_baton baton;
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+      svn_pool_clear(iterpool);
 
-      if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                           changelists, pool));
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
+
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                             iterpool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)
         {
-          /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
-             for this function. */
-          return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, err,
-                                   _("'%s' is not under version control"),
-                                   svn_dirent_local_style(target_abspath,
-                                                          pool));
+          if (ctx->notify_func2)
+            {
+              svn_wc_notify_t *notify = svn_wc_create_notify(
+                                          target_abspath,
+                                          svn_wc_notify_path_nonexistent,
+                                          iterpool);
+
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+            }
+
+          svn_error_clear(err);
         }
       else
         SVN_ERR(err);
@@ -440,14 +381,64 @@ svn_client_propset4(const char *propname,
       baton.propname = propname;
       baton.propval = propval;
       baton.skip_checks = skip_checks;
-      baton.changelist_hash = changelist_hash;
+      baton.changelist_filter = changelists;
 
       SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
-                                           ctx->wc_ctx, target_abspath, FALSE,
-                                           pool, pool));
-
-      return SVN_NO_ERROR;
+                                           ctx->wc_ctx, target_abspath,
+                                           FALSE, iterpool, iterpool));
     }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_propset_remote(const char *propname,
+                          const svn_string_t *propval,
+                          const char *url,
+                          svn_boolean_t skip_checks,
+                          svn_revnum_t base_revision_for_url,
+                          const apr_hash_t *revprop_table,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool)
+{
+  if (!svn_path_is_url(url))
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Targets must be URLs"));
+
+  SVN_ERR(check_prop_name(propname, propval));
+
+  /* The rationale for requiring the base_revision_for_url
+     argument is that without it, it's too easy to possibly
+     overwrite someone else's change without noticing.  (See also
+     tools/examples/svnput.c). */
+  if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Setting property on non-local targets "
+                              "needs a base revision"));
+
+  /* ### When you set svn:eol-style or svn:keywords on a wc file,
+     ### Subversion sends a textdelta at commit time to properly
+     ### normalize the file in the repository.  If we want to
+     ### support editing these properties on URLs, then we should
+     ### generate the same textdelta; for now, we won't support
+     ### editing these properties on URLs.  (Admittedly, this
+     ### means that all the machinery with get_file_for_validation
+     ### is unused.)
+   */
+  if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
+      (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Setting property '%s' on non-local "
+                               "targets is not supported"), propname);
+
+  SVN_ERR(propset_on_url(propname, propval, url, skip_checks,
+                         base_revision_for_url, revprop_table,
+                         commit_callback, commit_baton, ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -491,7 +482,7 @@ check_and_set_revprop(svn_revnum_t *set_rev,
         }
     }
 
-  SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+  SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname,
                                   NULL, propval, pool));
 
   return SVN_NO_ERROR;
@@ -549,7 +540,7 @@ svn_client_revprop_set2(const char *propname,
       	old_value_p = &original_propval;
 
       /* The actual RA call. */
-      SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+      SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname,
                                       old_value_p, propval, pool));
     }
   else
@@ -652,69 +643,6 @@ pristine_or_working_propval(const svn_string_t **propval,
   return SVN_NO_ERROR;
 }
 
-
-/* A baton for propget_walk_cb. */
-struct propget_walk_baton
-{
-  const char *propname;  /* The name of the property to get. */
-  svn_boolean_t pristine;  /* Select base rather than working props. */
-  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
-  apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
-  apr_hash_t *props;  /* Out: mapping of (path:propval). */
-
-  /* Anchor, anchor_abspath pair for converting to relative paths */
-  const char *anchor;
-  const char *anchor_abspath;
-};
-
-/* An entries-walk callback for svn_client_propget.
- *
- * For the path given by PATH and ENTRY,
- * populate wb->PROPS with the values of property wb->PROPNAME,
- * where "wb" is the WALK_BATON of type "struct propget_walk_baton *".
- * If wb->PRISTINE is true, use the base value, else use the working value.
- *
- * The keys of wb->PROPS will be 'const char *' paths, rooted at the
- * path wb->anchor, and the values are 'const svn_string_t *' property values.
- */
-static svn_error_t *
-propget_walk_cb(const char *local_abspath,
-                  void *walk_baton,
-                  apr_pool_t *pool)
-{
-  struct propget_walk_baton *wb = walk_baton;
-  const svn_string_t *propval;
-
-  /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
-                                 wb->changelist_hash, pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, local_abspath,
-                                      wb->propname, wb->pristine,
-                                      apr_hash_pool_get(wb->props), pool));
-
-  if (propval)
-    {
-      const char *path;
-
-      if (wb->anchor && wb->anchor_abspath)
-        {
-          path = svn_dirent_join(wb->anchor,
-                                 svn_dirent_skip_ancestor(wb->anchor_abspath,
-                                                          local_abspath),
-                                 apr_hash_pool_get(wb->props));
-        }
-      else
-        path = apr_pstrdup(apr_hash_pool_get(wb->props), local_abspath);
-
-      apr_hash_set(wb->props, path, APR_HASH_KEY_STRING, propval);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Helper for the remote case of svn_client_propget.
  *
  * Get the value of property PROPNAME in REVNUM, using RA_LIB and
@@ -744,6 +672,9 @@ remote_propget(apr_hash_t *props,
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash;
+  const svn_string_t *val;
+  const char *target_full_url =
+    svn_path_url_add_component2(target_prefix, target_relative, work_pool);
 
   if (kind == svn_node_dir)
     {
@@ -759,29 +690,22 @@ remote_propget(apr_hash_t *props,
     }
   else if (kind == svn_node_none)
     {
-      return svn_error_createf
-        (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-         _("'%s' does not exist in revision %ld"),
-         svn_uri_join(target_prefix, target_relative, work_pool), revnum);
+      return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                               _("'%s' does not exist in revision %ld"),
+                               target_full_url, revnum);
     }
   else
     {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown node kind for '%s'"),
-         svn_uri_join(target_prefix, target_relative, work_pool));
+      return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                               _("Unknown node kind for '%s'"),
+                               target_full_url);
     }
 
-  {
-    svn_string_t *val = apr_hash_get(prop_hash, propname,
-                                     APR_HASH_KEY_STRING);
-    if (val)
-      {
-        apr_hash_set(props,
-                     svn_uri_join(target_prefix, target_relative, perm_pool),
-                     APR_HASH_KEY_STRING, svn_string_dup(val, perm_pool));
-      }
-  }
+  if ((val = apr_hash_get(prop_hash, propname, APR_HASH_KEY_STRING)))
+    {
+      apr_hash_set(props, apr_pstrdup(perm_pool, target_full_url),
+                   APR_HASH_KEY_STRING, svn_string_dup(val, perm_pool));
+    }
 
   if (depth >= svn_depth_files
       && kind == svn_node_dir
@@ -827,9 +751,61 @@ remote_propget(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
+/* Baton for recursive_propget_receiver(). */
+struct recursive_propget_receiver_baton
+{
+  apr_hash_t *props; /* Hash to collect props. */
+  apr_pool_t *pool; /* Pool to allocate additions to PROPS. */
+  apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
+  svn_wc_context_t *wc_ctx;  /* Working copy context. */
+
+  /* Anchor, anchor_abspath pair for converting to relative paths */
+  const char *anchor;
+  const char *anchor_abspath;
+};
+
+/* An implementation of svn_wc__proplist_receiver_t. */
+static svn_error_t *
+recursive_propget_receiver(void *baton,
+                           const char *local_abspath,
+                           apr_hash_t *props,
+                           apr_pool_t *scratch_pool)
+{
+  struct recursive_propget_receiver_baton *b = baton;
+  const char *path;
+
+  /* If the node doesn't pass changelist filtering, get outta here. */
+  if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
+                                 b->changelist_hash, scratch_pool))
+    return SVN_NO_ERROR;
+
+  /* Attempt to convert absolute paths to relative paths for
+   * presentation purposes, if needed. */
+  if (b->anchor && b->anchor_abspath)
+    {
+      path = svn_dirent_join(b->anchor,
+                             svn_dirent_skip_ancestor(b->anchor_abspath,
+                                                      local_abspath),
+                             scratch_pool);
+    }
+  else
+    path = local_abspath;
+
+  if (apr_hash_count(props))
+    {
+      apr_hash_index_t *hi = apr_hash_first(scratch_pool, props);
+      apr_hash_set(b->props, apr_pstrdup(b->pool, path),
+                   APR_HASH_KEY_STRING,
+                   svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.  Additions
+   to *PROPS are allocated in POOL.
 
    CHANGELISTS is an array of const char * changelist names, used as a
    restrictive filter on items whose properties are set; that is,
@@ -843,6 +819,7 @@ static svn_error_t *
 get_prop_from_wc(apr_hash_t *props,
                  const char *propname,
                  const char *target,
+                 svn_boolean_t base_props,
                  svn_boolean_t pristine,
                  svn_node_kind_t kind,
                  svn_depth_t depth,
@@ -851,8 +828,9 @@ get_prop_from_wc(apr_hash_t *props,
                  apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
-  struct propget_walk_baton wb;
+  struct recursive_propget_receiver_baton rb;
   const char *target_abspath;
+
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
@@ -867,35 +845,48 @@ get_prop_from_wc(apr_hash_t *props,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  if (strcmp(target_abspath, target) != 0)
+  rb.props = props;
+  rb.pool = pool;
+  rb.wc_ctx = ctx->wc_ctx;
+  rb.changelist_hash = changelist_hash;
+
+  if (strcmp(target, target_abspath) != 0)
     {
-      wb.anchor = target;
-      wb.anchor_abspath = target_abspath;
+      rb.anchor = target;
+      rb.anchor_abspath = target_abspath;
     }
   else
     {
-      wb.anchor = NULL;
-      wb.anchor_abspath = NULL;
+      rb.anchor = NULL;
+      rb.anchor_abspath = NULL;
     }
-
-  wb.propname = propname;
-  wb.pristine = pristine;
-  wb.changelist_hash = changelist_hash;
-  wb.props = props;
-  wb.wc_ctx = ctx->wc_ctx;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && kind == svn_node_dir)
     {
-      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath, FALSE,
-                                         propget_walk_cb, &wb, depth,
-                                         ctx->cancel_func, ctx->cancel_baton,
-                                         pool));
+      SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
+                                          propname, depth,
+                                          base_props, pristine,
+                                          recursive_propget_receiver, &rb,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          pool));
     }
   else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
                                     changelist_hash, pool))
     {
-      SVN_ERR(propget_walk_cb(target_abspath, &wb, pool));
+      const svn_string_t *propval;
+
+      SVN_ERR(pristine_or_working_propval(&propval, ctx->wc_ctx, target_abspath,
+                                          propname, pristine, pool, pool));
+      if (propval)
+        {
+          apr_hash_t *target_props = apr_hash_make(pool);
+
+          apr_hash_set(target_props, target_abspath, APR_HASH_KEY_STRING,
+                       propval);
+          SVN_ERR(recursive_propget_receiver(&rb, target_abspath, target_props,
+                                             pool));      
+        }
     }
 
   return SVN_NO_ERROR;
@@ -966,7 +957,8 @@ svn_client_propget3(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(get_prop_from_wc(*props, propname, path_or_url, pristine, kind,
+      SVN_ERR(get_prop_from_wc(*props, propname, path_or_url,
+                               FALSE, pristine, kind,
                                depth, changelists, ctx, pool));
     }
   else
@@ -1069,6 +1061,8 @@ remote_proplist(const char *target_prefix,
   apr_hash_t *dirents;
   apr_hash_t *prop_hash, *final_hash;
   apr_hash_index_t *hi;
+  const char *target_full_url =
+    svn_path_url_add_component2(target_prefix, target_relative, scratchpool);
 
   if (kind == svn_node_dir)
     {
@@ -1084,10 +1078,9 @@ remote_proplist(const char *target_prefix,
     }
   else
     {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown node kind for '%s'"),
-         svn_uri_join(target_prefix, target_relative, pool));
+      return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                               _("Unknown node kind for '%s'"),
+                               target_full_url);
     }
 
   /* Filter out non-regular properties, since the RA layer returns all
@@ -1113,9 +1106,7 @@ remote_proplist(const char *target_prefix,
         }
     }
 
-  call_receiver(svn_uri_join(target_prefix, target_relative, scratchpool),
-                final_hash, receiver, receiver_baton,
-                pool);
+  call_receiver(target_full_url, final_hash, receiver, receiver_baton, pool);
 
   if (depth > svn_depth_empty
       && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
@@ -1163,64 +1154,50 @@ remote_proplist(const char *target_prefix,
 }
 
 
-/* A baton for proplist_walk_cb. */
-struct proplist_walk_baton
+/* Baton for recursive_proplist_receiver(). */
+struct recursive_proplist_receiver_baton
 {
-  svn_boolean_t pristine;  /* Select base rather than working props. */
   apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
-  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
-  svn_proplist_receiver_t receiver;  /* Proplist receiver to call. */
-  void *receiver_baton;    /* Baton for the proplist receiver. */
+  svn_wc_context_t *wc_ctx;  /* Working copy context. */
+  svn_proplist_receiver_t wrapped_receiver;  /* Proplist receiver to call. */
+  void *wrapped_receiver_baton;    /* Baton for the proplist receiver. */
 
   /* Anchor, anchor_abspath pair for converting to relative paths */
   const char *anchor;
   const char *anchor_abspath;
 };
 
-/* An entries-walk callback for svn_client_proplist.
- *
- * For the path given by LOCAL_ABSPATH, populate wb->PROPS with a
- * svn_client_proplist_item_t for each path, where "wb" is the WALK_BATON of
- * type "struct proplist_walk_baton *".  If wb->PRISTINE is true, use the base
- * values, else use the working values.
- */
+/* An implementation of svn_wc__proplist_receiver_t. */
 static svn_error_t *
-proplist_walk_cb(const char *local_abspath,
-                 void *walk_baton,
-                 apr_pool_t *scratch_pool)
+recursive_proplist_receiver(void *baton,
+                            const char *local_abspath,
+                            apr_hash_t *props,
+                            apr_pool_t *scratch_pool)
 {
-  struct proplist_walk_baton *wb = walk_baton;
-  apr_hash_t *props;
+  struct recursive_proplist_receiver_baton *b = baton;
   const char *path;
 
-  /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
-                                 wb->changelist_hash, scratch_pool))
+  /* If the node doesn't pass changelist filtering, get outta here. */
+  if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
+                                 b->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
-  SVN_ERR(pristine_or_working_props(&props, wb->wc_ctx, local_abspath,
-                                    wb->pristine, scratch_pool, scratch_pool));
-
-  /* Bail if this node is defined to have no properties.  */
-  if (props == NULL)
-    return SVN_NO_ERROR;
-
-  if (wb->anchor && wb->anchor_abspath)
+  /* Attempt to convert absolute paths to relative paths for
+   * presentation purposes, if needed. */
+  if (b->anchor && b->anchor_abspath)
     {
-      path = svn_dirent_join(wb->anchor,
-                             svn_dirent_skip_ancestor(wb->anchor_abspath,
+      path = svn_dirent_join(b->anchor,
+                             svn_dirent_skip_ancestor(b->anchor_abspath,
                                                       local_abspath),
                              scratch_pool);
     }
   else
     path = local_abspath;
 
-  return call_receiver(path, props, wb->receiver, wb->receiver_baton,
-                       scratch_pool);
+  return svn_error_return(b->wrapped_receiver(b->wrapped_receiver_baton,
+                                              path, props, scratch_pool));
 }
 
-
-/* Note: this implementation is very similar to svn_client_propget3(). */
 svn_error_t *
 svn_client_proplist3(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
@@ -1276,31 +1253,32 @@ svn_client_proplist3(const char *path_or_url,
                                            changelists, pool));
 
       /* Fetch, recursively or not. */
-      if (depth >= svn_depth_files && (kind == svn_node_dir))
+      if (kind == svn_node_dir)
         {
-          struct proplist_walk_baton wb;
+          struct recursive_proplist_receiver_baton rb;
 
-          wb.wc_ctx = ctx->wc_ctx;
-          wb.pristine = pristine;
-          wb.changelist_hash = changelist_hash;
-          wb.receiver = receiver;
-          wb.receiver_baton = receiver_baton;
+          rb.wc_ctx = ctx->wc_ctx;
+          rb.changelist_hash = changelist_hash;
+          rb.wrapped_receiver = receiver;
+          rb.wrapped_receiver_baton = receiver_baton;
 
           if (strcmp(path_or_url, local_abspath) != 0)
             {
-              wb.anchor = path_or_url;
-              wb.anchor_abspath = local_abspath;
+              rb.anchor = path_or_url;
+              rb.anchor_abspath = local_abspath;
             }
           else
             {
-              wb.anchor = NULL;
-              wb.anchor_abspath = NULL;
+              rb.anchor = NULL;
+              rb.anchor_abspath = NULL;
             }
 
-          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                             proplist_walk_cb, &wb, depth,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton, pool));
+          SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
+                                              depth,
+                                              FALSE, pristine,
+                                              recursive_proplist_receiver, &rb,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, pool));
         }
       else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
                                         changelist_hash, pool))

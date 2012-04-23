@@ -168,9 +168,6 @@ typedef struct fs_vtable_t
   svn_error_t *(*begin_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                             svn_revnum_t rev, apr_uint32_t flags,
                             apr_pool_t *pool);
-  svn_error_t *(*begin_obliteration_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                                         svn_revnum_t replacing_rev,
-                                         apr_pool_t *pool);
   svn_error_t *(*open_txn)(svn_fs_txn_t **txn, svn_fs_t *fs,
                            const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn)(svn_fs_t *fs, const char *txn_id,
@@ -197,6 +194,11 @@ typedef struct fs_vtable_t
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
+  svn_error_t *(*validate_mergeinfo)(svn_mergeinfo_t *validated_mergeinfo,
+                                     svn_fs_t *fs,
+                                     svn_mergeinfo_t mergeinfo,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 } fs_vtable_t;
 
 
@@ -204,8 +206,6 @@ typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn, apr_pool_t *pool);
-  svn_error_t *(*commit_obliteration)(svn_revnum_t replacing_rev,
-                                      svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);
@@ -331,6 +331,7 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t validate_inherited_mergeinfo,
                                 svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
 } root_vtable_t;

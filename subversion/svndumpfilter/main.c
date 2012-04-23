@@ -485,9 +485,10 @@ new_node_record(void **node_baton,
                                APR_HASH_KEY_STRING);
 
   /* Ensure that paths start with a leading '/'. */
-  node_path = svn_uri_join("/", node_path, pool);
-  if (copyfrom_path)
-    copyfrom_path = svn_uri_join("/", copyfrom_path, pool);
+  if (node_path[0] != '/')
+    node_path = apr_pstrcat(pool, "/", node_path, (char *)NULL);
+  if (copyfrom_path && copyfrom_path[0] != '/')
+    copyfrom_path = apr_pstrcat(pool, "/", copyfrom_path, (char *)NULL);
 
   nb->do_skip = skip_path(node_path, pb->prefixes,
                           pb->do_exclude, pb->glob);
@@ -702,7 +703,6 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       const char *merge_source = svn__apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
-      int i;
 
       /* Determine whether the merge_source is a part of the prefix. */
       if (skip_path(merge_source, pb->prefixes, pb->do_exclude, pb->glob))
@@ -719,6 +719,8 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       /* Possibly renumber revisions in merge source's rangelist. */
       if (pb->do_renumber_revs)
         {
+          int i;
+
           for (i = 0; i < rangelist->nelts; i++)
             {
               struct revmap_t *revmap_start;
@@ -1052,7 +1054,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
                               opt_state ? opt_state->version : FALSE,
-                              FALSE, NULL,
+                              opt_state ? opt_state->quiet : FALSE, NULL,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
 
@@ -1292,7 +1294,7 @@ main(int argc, const char *argv[])
 
   if (argc <= 1)
     {
-      subcommand_help(NULL, NULL, pool);
+      SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
@@ -1318,7 +1320,7 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          subcommand_help(NULL, NULL, pool);
+          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
@@ -1334,6 +1336,7 @@ main(int argc, const char *argv[])
           break;
         case svndumpfilter__version:
           opt_state.version = TRUE;
+          break;
         case svndumpfilter__quiet:
           opt_state.quiet = TRUE;
           break;
@@ -1357,7 +1360,7 @@ main(int argc, const char *argv[])
           break;
         default:
           {
-            subcommand_help(NULL, NULL, pool);
+            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
             svn_pool_destroy(pool);
             return EXIT_FAILURE;
           }
@@ -1383,6 +1386,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svndumpfilter__version,  /* must accept its own option */
+                   svndumpfilter__quiet,
                   } };
 
               subcommand = &pseudo_cmd;
@@ -1392,7 +1396,7 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf
                               (stderr, pool,
                                _("Subcommand argument required\n")));
-              subcommand_help(NULL, NULL, pool);
+              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -1412,7 +1416,7 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                                   _("Unknown command: '%s'\n"),
                                                   first_arg_utf8));
-              subcommand_help(NULL, NULL, pool);
+              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -1436,7 +1440,8 @@ main(int argc, const char *argv[])
              style, and absolute. */
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
           prefix = svn_relpath_internal_style(prefix, pool);
-          prefix = svn_uri_join("/", prefix, pool);
+          if (prefix[0] != '/')
+            prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
         }
 
@@ -1493,7 +1498,7 @@ main(int argc, const char *argv[])
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            subcommand_help(NULL, NULL, pool);
+            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           else
             svn_error_clear(svn_cmdline_fprintf
                             (stderr, pool,

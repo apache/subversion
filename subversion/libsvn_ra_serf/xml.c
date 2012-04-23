@@ -86,8 +86,9 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
  * Look up NAME in the NS_LIST list for previously declared namespace
  * definitions and return a DAV_PROPS_T-tuple that has values.
  */
-svn_ra_serf__dav_props_t
-svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
+void
+svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
+                       svn_ra_serf__ns_t *ns_list,
                        const char *name)
 {
   const char *colon;
@@ -120,7 +121,8 @@ svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
       prop_name.name = name;
     }
 
-  return prop_name;
+  *returned_prop_name = prop_name;
+  return;
 }
 
 void

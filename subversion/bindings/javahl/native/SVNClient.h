@@ -75,12 +75,15 @@ class SVNClient :public SVNBase
              bool ignoreMimeType, bool includeMergedRevisions,
              BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
-                bool recurse);
+                bool ignoreExternals);
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, OutputStream &outputStream);
-  void propertySet(const char *path, const char *name, const char *value,
-                   svn_depth_t depth, StringArray &changelists, bool force,
-                   RevpropTable &revprops, CommitCallback *callback);
+  void propertySetLocal(Targets &targets, const char *name, JNIByteArray &value,
+                        svn_depth_t depth, StringArray &changelists,
+                        bool force);
+  void propertySetRemote(const char *path, const char *name,
+                         JNIByteArray &value, bool force,
+                         RevpropTable &revprops, CommitCallback *callback);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   StringArray &changelists, ProplistCallback *callback);
@@ -107,7 +110,7 @@ class SVNClient :public SVNBase
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
-                 bool allowUnverObstructions);
+                 bool allowUnverObstructions, bool ignoreAncestry);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
@@ -129,7 +132,7 @@ class SVNClient :public SVNBase
               StringArray &changelists, RevpropTable &revprops,
               CommitCallback *callback);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
-                    bool depthIsSticky, bool ignoreExternals,
+                    bool depthIsSticky, bool makeParents, bool ignoreExternals,
                     bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);

@@ -37,38 +37,41 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/**
- * Permanently delete @a path at revision @a revision in @a fs.
+/** Validate that property @a name is valid for use in a Subversion
+ * repository; return @c SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some
+ * "svn:" properties, also validate the @a value, and return
+ * @c SVN_ERR_BAD_PROPERTY_VALUE if it is not valid.
  *
- * Do not change the content of any other node in the repository, even other
- * nodes that were copied from this one. The only other change in the
- * repository is to "copied from" pointers that were pointing to the
- * now-deleted node. These are removed or made to point to a previous
- * version of the now-deleted node.
- * (### TODO: details.)
- *
- * @a path is relative to the repository root and must start with "/".
- *
- * If administratively forbidden, return @c SVN_ERR_RA_NOT_AUTHORIZED. If not
- * implemented by the RA layer or by the server, return
- * @c SVN_ERR_RA_NOT_IMPLEMENTED.
- *
- * @note This functionality is not implemented in pre-1.7 servers and may not
- * be implemented in all 1.7 and later servers.
- *
- * @note TODO: Maybe create svn_repos_fs_begin_obliteration_txn() and
- * svn_repos_fs_commit_obliteration_txn() to enable an obliteration txn to be
- * constructed at a higher level.
+ * Use @a pool for temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_repos__obliterate_path_rev(svn_repos_t *repos,
-                               const char *username,
-                               svn_revnum_t revision,
-                               const char *path,
-                               apr_pool_t *pool);
+svn_repos__validate_prop(const char *name,
+                         const svn_string_t *value,
+                         apr_pool_t *pool);
 
+/**
+ * Given the error @a err from svn_repos_fs_commit_txn(), return an
+ * string containing either or both of the svn_fs_commit_txn() error
+ * and the SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped error from
+ * the post-commit hook.  Any error tracing placeholders in the error
+ * chain are skipped over.
+ *
+ * This function does not modify @a err.
+ *
+ * ### This method should not be necessary, but there are a few
+ * ### places, e.g. mod_dav_svn, where only a single error message
+ * ### string is returned to the caller and it is useful to have both
+ * ### error messages included in the message.
+ *
+ * Use @a pool to do any allocations in.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_repos__post_commit_error_str(svn_error_t *err,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

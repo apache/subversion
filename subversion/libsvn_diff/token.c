@@ -69,10 +69,10 @@ svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 
 
 static svn_error_t *
-svn_diff__tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
-                            void *diff_baton,
-                            const svn_diff_fns_t *vtable,
-                            apr_uint32_t hash, void *token)
+tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
+                  void *diff_baton,
+                  const svn_diff_fns2_t *vtable,
+                  apr_uint32_t hash, void *token)
 {
   svn_diff__node_t *new_node;
   svn_diff__node_t **node_ref;
@@ -137,8 +137,9 @@ svn_error_t *
 svn_diff__get_tokens(svn_diff__position_t **position_list,
                      svn_diff__tree_t *tree,
                      void *diff_baton,
-                     const svn_diff_fns_t *vtable,
+                     const svn_diff_fns2_t *vtable,
                      svn_diff_datasource_e datasource,
+                     apr_off_t prefix_lines,
                      apr_pool_t *pool)
 {
   svn_diff__position_t *start_position;
@@ -151,11 +152,8 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
 
   *position_list = NULL;
 
-
-  SVN_ERR(vtable->datasource_open(diff_baton, datasource));
-
   position_ref = &start_position;
-  offset = 0;
+  offset = prefix_lines;
   hash = 0; /* The callback fn doesn't need to touch it per se */
   while (1)
     {
@@ -165,9 +163,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
         break;
 
       offset++;
-      SVN_ERR(svn_diff__tree_insert_token(&node, tree,
-                                          diff_baton, vtable,
-                                          hash, token));
+      SVN_ERR(tree_insert_token(&node, tree, diff_baton, vtable, hash, token));
 
       /* Create a new position */
       position = apr_palloc(pool, sizeof(*position));

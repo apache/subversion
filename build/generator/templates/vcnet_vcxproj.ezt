@@ -18,6 +18,7 @@
      under the License.
 -->
 ]<?xml version="1.0" encoding="utf-8"?>
+[format "xml"]
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
 [for configs][for platforms]    <ProjectConfiguration Include="[configs.name]|[platforms]">
@@ -60,7 +61,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <BrowseInformation>true</BrowseInformation>
       <DisableSpecificWarnings>4100;4127;4204;4206;4701;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4047;4089;4115;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4047;4089;4113;4115;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
 [is config_type "Application"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
@@ -113,3 +114,4 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+[end]

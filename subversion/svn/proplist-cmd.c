@@ -39,7 +39,7 @@
 
 #include "svn_private_config.h"
 
-typedef struct
+typedef struct proplist_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_boolean_t is_url;
@@ -98,7 +98,8 @@ proplist_receiver(void *baton,
 
   if (!opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
-  return svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose), pool);
+  return svn_cl__print_prop_hash(NULL, prop_hash, (! opt_state->verbose),
+                                 pool);
 }
 
 
@@ -111,7 +112,6 @@ svn_cl__proplist(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -159,11 +159,12 @@ svn_cl__proplist(apr_getopt_t *os,
                                 rev));
 
           SVN_ERR(svn_cl__print_prop_hash
-                  (proplist, (! opt_state->verbose), scratch_pool));
+                  (NULL, proplist, (! opt_state->verbose), scratch_pool));
         }
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
+      int i;
       apr_pool_t *iterpool;
       svn_proplist_receiver_t pl_receiver;
 

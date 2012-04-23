@@ -95,6 +95,7 @@ class GeneratorBase(gen_base.GeneratorBase):
 
     # Instrumentation options
     self.disable_shared = None
+    self.static_apr = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
@@ -157,6 +158,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.enable_ml = 1
       elif opt == '--disable-shared':
         self.disable_shared = 1
+      elif opt == '--with-static-apr':
+        self.static_apr = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vs_version = '2002'
@@ -255,8 +258,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find Sqlite
     self._find_sqlite()
 
-    # Look for ML
+    # Look for ZLib and ML
     if self.zlib_path:
+      self._find_zlib()
       self._find_ml()
 
     # Find neon version
@@ -281,12 +285,20 @@ class WinGeneratorBase(GeneratorBase):
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
         print('Wrote %s' % svnissdeb)
 
+    #Make the project files directory if it doesn't exist
+    #TODO win32 might not be the best path as win64 stuff will go here too
+    self.projfilesdir=os.path.join("build","win32",subdir)
+    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
+    if not os.path.exists(self.projfilesdir):
+      os.makedirs(self.projfilesdir)
+
     # Generate the build_zlib.bat file
     if self.zlib_path:
       data = {'zlib_path': os.path.abspath(self.zlib_path),
+              'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
-      bat = os.path.join('build', 'win32', 'build_zlib.bat')
-      self.write_with_template(bat, 'build_zlib.ezt', data)
+      bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
+      self.write_with_template(bat, 'templates/build_zlib.ezt', data)
 
     # Generate the build_locale.bat file
     pofiles = []
@@ -296,15 +308,9 @@ class WinGeneratorBase(GeneratorBase):
           pofiles.append(POFile(po[:-3]))
 
     data = {'pofiles': pofiles}
-    self.write_with_template(os.path.join('build', 'win32', 'build_locale.bat'),
-                             'build_locale.ezt', data)
-
-    #Make the project files directory if it doesn't exist
-    #TODO win32 might not be the best path as win64 stuff will go here too
-    self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
-    if not os.path.exists(self.projfilesdir):
-      os.makedirs(self.projfilesdir)
+    self.write_with_template(os.path.join(self.projfilesdir,
+                                          'build_locale.bat'),
+                             'templates/build_locale.ezt', data)
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
@@ -581,16 +587,16 @@ class WinGeneratorBase(GeneratorBase):
       for header in target.msvc_export:
         deps.append(self.path('subversion/include', header))
 
-      cbuild = "python $(InputPath) %s > %s" \
-               % (" ".join(deps), def_file)
+      cbuild = "%s $(InputPath) %s > %s" \
+               % (sys.executable, " ".join(deps), def_file)
 
       cdesc = 'Generating %s ' % def_file
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, 
+      sources.append(ProjectItem(path=gsrc, reldir=None,
                                  custom_build=cbuild,
                                  custom_target=def_file,
                                  custom_desc=cdesc,
-                                 user_deps=deps, 
+                                 user_deps=deps,
                                  extension=''))
 
       sources.append(ProjectItem(path=def_file, reldir=None,
@@ -677,8 +683,10 @@ class WinGeneratorBase(GeneratorBase):
       path = self.neon_path + target.external_project[4:]
     elif target.external_project[:5] == 'serf/' and self.serf_lib:
       path = self.serf_path + target.external_project[4:]
-    else:
+    elif target.external_project.find('/') != -1:
       path = target.external_project
+    else:
+      path = os.path.join(self.projfilesdir, target.external_project)
 
     return "%s.%s" % (gen_base.native_path(path), proj_ext)
 
@@ -846,6 +854,9 @@ class WinGeneratorBase(GeneratorBase):
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
+      
+    if self.static_apr:
+      fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
 
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
@@ -884,6 +895,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+
+    # use static linking to Expat
+    fakedefines.append("XML_STATIC")
 
     return fakedefines
 
@@ -927,6 +941,10 @@ class WinGeneratorBase(GeneratorBase):
             or isinstance(target, gen_base.TargetSWIGLib)):
       if self.swig_vernum >= 103028:
         fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+        if target.lang == 'perl':
+          # At least swigwin 1.3.38+ uses perl5 as directory name. Just add it
+          # to the list to make sure we don't break old versions
+          fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
       else:
         fakeincludes.append(self.swig_libdir)
       if target.lang == "python":
@@ -1115,7 +1133,7 @@ class WinGeneratorBase(GeneratorBase):
     if not self.zlib_path:
       return
     zlib_path = os.path.abspath(self.zlib_path)
-    self.move_proj_file(os.path.join('build', 'win32'), name,
+    self.move_proj_file(self.projfilesdir, name,
                         (('zlib_path', zlib_path),
                          ('zlib_sources',
                           glob.glob(os.path.join(zlib_path, '*.c'))
@@ -1125,7 +1143,9 @@ class WinGeneratorBase(GeneratorBase):
                                                    'contrib/masmx86/*.asm'))),
                          ('zlib_headers',
                           glob.glob(os.path.join(zlib_path, '*.h'))),
+                         ('zlib_version', self.zlib_version),
                          ('project_guid', self.makeguid('zlib')),
+                         ('use_ml', self.have_ml and 1 or None),
                         ))
 
   def write_neon_project_file(self, name):
@@ -1173,6 +1193,7 @@ class WinGeneratorBase(GeneratorBase):
                          ('apr_path', os.path.abspath(self.apr_path)),
                          ('apr_util_path', os.path.abspath(self.apr_util_path)),
                          ('project_guid', self.makeguid('serf')),
+                         ('apr_static', self.static_apr),
                         ))
 
   def move_proj_file(self, path, name, params=()):
@@ -1180,7 +1201,7 @@ class WinGeneratorBase(GeneratorBase):
     ### these projects include zlib, neon, serf, locale, config, etc.
 
     dest_file = os.path.join(path, name)
-    source_template = name + '.ezt'
+    source_template = os.path.join('templates', name + '.ezt')
     data = {
       'version' : self.vcproj_version,
       'configs' : self.configs,
@@ -1308,7 +1329,7 @@ class WinGeneratorBase(GeneratorBase):
     libdir = ''
 
     if self.swig_path is not None:
-      self.swig_exe = os.path.join(self.swig_path, 'swig')
+      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
     else:
       self.swig_exe = 'swig'
 
@@ -1473,10 +1494,15 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
+    
+    suffix = ''
     if major_ver > 0:
-      self.apr_lib = 'libapr-%d.lib' % major_ver
+        suffix = '-%d' % major_ver
+    
+    if self.static_apr:
+      self.apr_lib = 'apr%s.lib' % suffix
     else:
-      self.apr_lib = 'libapr.lib'
+      self.apr_lib = 'libapr%s.lib' % suffix
 
   def _find_apr_util(self):
     "Find the APR-util library and version"
@@ -1495,10 +1521,15 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
+
+    suffix = ''
     if major_ver > 0:
-      self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
+        suffix = '-%d' % major_ver
+
+    if self.static_apr:
+      self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
-      self.aprutil_lib = 'libaprutil.lib'
+      self.aprutil_lib = 'libaprutil%s.lib' % suffix
 
   def _find_sqlite(self):
     "Find the Sqlite library and version"
@@ -1537,12 +1568,39 @@ class WinGeneratorBase(GeneratorBase):
     msg = 'Found SQLite version %s\n'
 
     major, minor, patch = version
-    if major < 3 or (major == 3 and minor < 4):
-      sys.stderr.write("ERROR: SQLite 3.4.0 or higher is required "
+    if major < 3 or (major == 3 and minor < 6) \
+                 or (major == 3 and minor == 6 and patch < 18):
+      sys.stderr.write("ERROR: SQLite 3.6.18 or higher is required "
                        "(%s found)\n" % self.sqlite_version);
       sys.exit(1)
     else:
       print(msg % self.sqlite_version)
+
+  def _find_zlib(self):
+    "Find the ZLib library and version"
+
+    if not self.zlib_path:
+      self.zlib_version = '1'
+      return
+
+    header_file = os.path.join(self.zlib_path, 'zlib.h')
+
+    if not os.path.exists(header_file):
+      self.zlib_version = '1'
+      return
+
+    fp = open(header_file)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.search(r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
+
+    version = tuple(map(int, vermatch.groups()))
+
+    self.zlib_version = '%d.%d.%d' % version
+
+    msg = 'Found ZLib version %s\n'
+
+    print(msg % self.zlib_version)
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"

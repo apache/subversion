@@ -37,7 +37,7 @@
 
 #include "svn_private_config.h"
 
-typedef struct
+typedef struct blame_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_stream_t *out;
@@ -203,11 +203,11 @@ blame_receiver(void *baton,
          we may need to adjust this. */
       if (merged_revision < revision)
         {
-          svn_stream_printf(out, pool, "G ");
+          SVN_ERR(svn_stream_printf(out, pool, "G "));
           use_merged = TRUE;
         }
       else
-        svn_stream_printf(out, pool, "  ");
+        SVN_ERR(svn_stream_printf(out, pool, "  "));
     }
 
   if (use_merged)
@@ -245,6 +245,7 @@ svn_cl__blame(apr_getopt_t *os,
   int i;
   svn_boolean_t end_revision_unspecified = FALSE;
   svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
+  svn_boolean_t seen_nonexistent_target = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -377,6 +378,15 @@ svn_cl__blame(apr_getopt_t *os,
                                           _("Skipping binary file: '%s'\n"),
                                           target));
             }
+          else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+                   err->apr_err == SVN_ERR_FS_NOT_FILE ||
+                   err->apr_err == SVN_ERR_FS_NOT_FOUND)
+            {
+              svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(err);
+              err = NULL;
+              seen_nonexistent_target = TRUE;
+            }
           else
             {
               return svn_error_return(err);
@@ -396,5 +406,11 @@ svn_cl__blame(apr_getopt_t *os,
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("blame", pool));
 
-  return SVN_NO_ERROR;
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not perform blame on all targets because some "
+        "targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

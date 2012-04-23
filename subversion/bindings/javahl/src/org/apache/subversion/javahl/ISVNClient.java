@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.types.*;
 
 import java.io.OutputStream;
 import java.util.Collection;
@@ -33,7 +34,9 @@ import java.util.Map;
 
 /**
  * This interface is the commom interface for all subversion
- * operations. It is implemented by SVNClient and SVNClientSynchronized
+ * operations. It is implemented by SVNClient
+ *
+ * @since 1.7
  */
 public interface ISVNClient
 {
@@ -44,7 +47,6 @@ public interface ISVNClient
 
     /**
      * @return Version information about the underlying native libraries.
-     * @since 1.0
      */
     public Version getVersion();
 
@@ -55,7 +57,6 @@ public interface ISVNClient
      * href="http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt">
      * Instructions on changing this as a work-around for the behavior of
      * ASP.Net on Windows.</a>
-     * @since 1.3
      */
     public String getAdminDirectoryName();
 
@@ -63,7 +64,6 @@ public interface ISVNClient
      * @param name The name of the directory to compare.
      * @return Whether <code>name</code> is that of a working copy
      * administrative directory.
-     * @since 1.3
      */
     public boolean isAdminDirectory(String name);
 
@@ -77,7 +77,6 @@ public interface ISVNClient
      * @param noIgnore    get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
      * @param changelists changelists to filter by
-     * @since 1.5
      */
     void status(String path, Depth depth, boolean onServer,
                 boolean getAll, boolean noIgnore, boolean ignoreExternals,
@@ -93,7 +92,6 @@ public interface ISVNClient
      * @param direntFields    the fields to retrieve
      * @param fetchLocks      whether to fetch lock information
      * @param callback        the callback to receive the directory entries
-     * @since 1.5
      */
     void list(String url, Revision revision, Revision pegRevision,
               Depth depth, int direntFields, boolean fetchLocks,
@@ -107,7 +105,6 @@ public interface ISVNClient
      * @throws IllegalArgumentException If <code>username</code> is
      * <code>null</code>.
      * @see #password(String)
-     * @since 1.0
      */
     void username(String username);
 
@@ -118,7 +115,6 @@ public interface ISVNClient
      * @throws IllegalArgumentException If <code>password</code> is
      * <code>null</code>.
      * @see #username(String)
-     * @since 1.0
      */
     void password(String password);
 
@@ -128,7 +124,6 @@ public interface ISVNClient
      * <code>--no-auth-cache</code> and <code>--non-interactive</code> arguments
      * accepted by the command-line client.
      * @param prompt the callback interface
-     * @since 1.0
      */
     void setPrompt(UserPasswordCallback prompt);
 
@@ -146,7 +141,6 @@ public interface ISVNClient
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
-     * @since 1.6
      */
     void logMessages(String path, Revision pegRevision,
                      List<RevisionRange> ranges, boolean stopOnCopy,
@@ -165,7 +159,6 @@ public interface ISVNClient
      * @param ignoreExternals if externals are ignored during checkout
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
-     * @since 1.5
      */
     long checkout(String moduleName, String destPath, Revision revision,
                   Revision pegRevision, Depth depth,
@@ -177,7 +170,6 @@ public interface ISVNClient
      * to the calling program.
      * @param notify listener that the SVN library should call on many
      *               file operations.
-     * @since 1.2
      */
     void notification2(ClientNotifyCallback notify);
 
@@ -185,7 +177,6 @@ public interface ISVNClient
      * Set the conflict resolution callback.
      *
      * @param listener The conflict resolution callback.
-     * @since 1.5
      */
     void setConflictResolver(ConflictResolverCallback listener);
 
@@ -193,21 +184,19 @@ public interface ISVNClient
      * Set the progress callback.
      *
      * @param listener The progress callback.
-     * @since 1.5
      */
     void setProgressCallback(ProgressCallback listener);
 
     /**
      * Sets a file for deletion.
      * @param path      path or url to be deleted
-     * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
      * @param keepLocal only remove the paths from the repository.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback
      * @throws ClientException
-     * @since 1.5
      */
     void remove(Set<String> path, boolean force, boolean keepLocal,
                 Map<String, String> revpropTable, CommitMessageCallback handler,
@@ -220,7 +209,6 @@ public interface ISVNClient
      * @param depth     the depth to recurse into subdirectories
      * @param changelists changelists to filter by
      * @throws ClientException
-     * @since 1.5
      */
     void revert(String path, Depth depth, Collection<String> changelists)
             throws ClientException;
@@ -235,7 +223,6 @@ public interface ISVNClient
      *                  ignore patterns
      * @param addParents add any intermediate parents to the working copy
      * @throws ClientException
-     * @since 1.5
      */
     void add(String path, Depth depth, boolean force, boolean noIgnores,
              boolean addParents)
@@ -253,28 +240,24 @@ public interface ISVNClient
      * @param ignoreExternals if externals are ignored during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
-     * @since 1.5
      */
     long[] update(Set<String> path, Revision revision, Depth depth,
-                  boolean depthIsSticky, boolean ignoreExternals,
-                  boolean allowUnverObstructions) throws ClientException;
+                  boolean depthIsSticky, boolean makeParents,
+                  boolean ignoreExternals, boolean allowUnverObstructions)
+        throws ClientException;
 
     /**
      * Commits changes to the repository.
      * @param path            files to commit.
-     * @param message         log message.
      * @param depth           how deep to recurse in subdirectories
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelists  if non-null, filter paths using changelists
+     * @param handler   the commit message callback
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
-     * @return The new revision number created by the commit, or
-     * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
-     * invalid.
      * @throws ClientException
-     * @since 1.5
      */
     void commit(Set<String> path, Depth depth, boolean noUnlock,
                 boolean keepChangelist, Collection<String> changelists,
@@ -287,8 +270,6 @@ public interface ISVNClient
      *
      * @param sources A list of <code>CopySource</code> objects.
      * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
@@ -297,8 +278,9 @@ public interface ISVNClient
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback, may be <code>null</code>
+     *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
-     * @since 1.7
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
@@ -311,8 +293,6 @@ public interface ISVNClient
      *
      * @param srcPaths Source paths or URLs.
      * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
      * @param force Whether to perform the move even if local
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
@@ -321,8 +301,9 @@ public interface ISVNClient
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback, may be <code>null</code>
+     *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the move operation fails.
-     * @since 1.5
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
@@ -334,13 +315,12 @@ public interface ISVNClient
      * Creates a directory directly in a repository or creates a
      * directory on disk and schedules it for addition.
      * @param path      directories to be created
-     * @param message   commit message to used if path contains urls
      * @param makeParents Whether to create intermediate parents
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the handler to use if paths contains URLs
      * @throws ClientException
-     * @since 1.5
      */
     void mkdir(Set<String> path, boolean makeParents,
                Map<String, String> revpropTable,
@@ -362,7 +342,6 @@ public interface ISVNClient
      * @param conflictResult Which version to choose in the event of a
      *                       conflict.
      * @throws SubversionException If an error occurs.
-     * @since 1.5
      */
     void resolve(String path, Depth depth, ConflictResult.Choice conflictResult)
         throws SubversionException;
@@ -381,7 +360,6 @@ public interface ISVNClient
      * @param depth           how deep to recurse in subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
-     * @since 1.5
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
@@ -399,12 +377,14 @@ public interface ISVNClient
      *                      then also set the ambient depth value to depth.
      * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @param ignoreAncestry whether to skip common ancestry sanity check between
+                             <code>path</code> and <code>url</code>
      * @throws ClientException
-     * @since 1.5
      */
     long doSwitch(String path, String url, Revision revision,
                   Revision pegRevision, Depth depth, boolean depthIsSticky,
-                  boolean ignoreExternals, boolean allowUnverObstructions)
+                  boolean ignoreExternals, boolean allowUnverObstructions,
+                  boolean ignoreAncestry)
             throws ClientException;
 
     /**
@@ -412,7 +392,6 @@ public interface ISVNClient
      * head.
      * @param path      the local path
      * @param url       the target url
-     * @param message   the log message.
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
@@ -420,9 +399,9 @@ public interface ISVNClient
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback
      * @throws ClientException
      *
-     * @since 1.5
      */
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
@@ -436,7 +415,6 @@ public interface ISVNClient
      * @param pegRevision Peg revision used to interpret path.
      * @return The list of URLs, empty if there are no suggestions.
      * @throws ClientException If an error occurs.
-     * @since 1.5
      */
     Set<String> suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException;
@@ -455,7 +433,6 @@ public interface ISVNClient
      * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
-     * @since 1.5
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force, Depth depth,
@@ -474,7 +451,6 @@ public interface ISVNClient
      * @param dryRun        do not change anything
      * @param recordOnly    record mergeinfo but do not run merge
      * @throws ClientException
-     * @since 1.5
      */
     void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
                String localPath, boolean force, Depth depth,
@@ -496,7 +472,6 @@ public interface ISVNClient
      * @param localPath     target local path
      * @param dryRun        do not change anything
      * @throws ClientException
-     * @since 1.5
      */
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
@@ -509,7 +484,6 @@ public interface ISVNClient
      * <code>path</code>.
      * @return The merge history of <code>path</code>.
      * @throws SubversionException
-     * @since 1.5
      */
     Mergeinfo getMergeinfo(String path, Revision pegRevision)
         throws SubversionException;
@@ -525,9 +499,8 @@ public interface ISVNClient
      * @param depth                  the depth to recurse to
      * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
-     * @since 1.7
      */
-    void getMergeinfoLog(MergeinfoLogKind kind, String pathOrUrl,
+    void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
                          Depth depth, Set<String> revProps,
@@ -549,7 +522,6 @@ public interface ISVNClient
      * @param copiesAsAdds  if set, copied files will be shown in their
      *                      entirety, not as diffs from their sources
      * @throws ClientException
-     * @since 1.7
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, String outFileName,
@@ -574,7 +546,6 @@ public interface ISVNClient
      * @param copiesAsAdds  if set, copied files will be shown in their
      *                      entirety, not as diffs from their sources
      * @throws ClientException
-     * @since 1.7
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String relativeToDir, String outFileName,
@@ -602,7 +573,6 @@ public interface ISVNClient
      * is invoked with a description of the difference.
      *
      * @throws ClientException
-     * @since 1.5
      */
     void diffSummarize(String target1, Revision revision1,
                        String target2, Revision revision2,
@@ -636,7 +606,6 @@ public interface ISVNClient
      * is invoked with a description of the difference.
      *
      * @throws ClientException
-     * @since 1.5
      */
     void diffSummarize(String target, Revision pegRevision,
                        Revision startRevision, Revision endRevision,
@@ -654,7 +623,6 @@ public interface ISVNClient
      * @param changelists changelists to filter by
      * @param callback    the callback to use to return the properties
      * @throws ClientException
-     * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
                     Depth depth, Collection<String> changelists,
@@ -664,9 +632,10 @@ public interface ISVNClient
     /**
      * Sets one property of an item with a String value
      *
-     * @param path    path of the item
+     * @param paths   paths of the items
      * @param name    name of the property
-     * @param value   new value of the property
+     * @param value   new value of the property. Set value to <code>
+     * null</code> to delete a property
      * @param depth   the depth to recurse into subdirectories
      * @param changelists changelists to filter by
      * @param force   do not check if the value is valid
@@ -674,41 +643,15 @@ public interface ISVNClient
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @throws ClientException
-     * @since 1.5
      */
-    void propertySet(String path, String name, String value, Depth depth,
-                     Collection<String> changelists, boolean force,
-                     Map<String, String> revpropTable, CommitCallback callback)
+    void propertySetLocal(Set<String> paths, String name, byte[] value,
+                          Depth depth, Collection<String> changelists,
+                          boolean force)
             throws ClientException;
 
-    /**
-     * Remove one property of an item.
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param depth     the depth to recurse into subdirectories
-     * @param changelists changelists to filter by
-     * @throws ClientException
-     * @since 1.5
-     */
-    void propertyRemove(String path, String name, Depth depth,
-                        Collection<String> changelists, CommitCallback callback)
-            throws ClientException;
-
-    /**
-     * Create and sets one property of an item with a byte array value
-     *
-     * @param path    path of the item
-     * @param name    name of the property
-     * @param value   new value of the property
-     * @param depth   depth to set property on the subdirectories
-     * @param changelists changelists to filter by
-     * @param force   do not check if the value is valid
-     * @throws ClientException
-     * @since 1.5
-     */
-    void propertyCreate(String path, String name, String value, Depth depth,
-                        Collection<String> changelists, boolean force,
-                        CommitCallback callback)
+    void propertySetRemote(String path, String name, byte[] value,
+                           boolean force, Map<String, String> revpropTable,
+                           CommitCallback callback)
             throws ClientException;
 
     /**
@@ -718,7 +661,6 @@ public interface ISVNClient
      * @param rev       revision to retrieve
      * @return the Property
      * @throws ClientException
-     * @since 1.0
      */
     byte[] revProperty(String path, String name, Revision rev)
             throws ClientException;
@@ -729,7 +671,6 @@ public interface ISVNClient
      * @param rev       revision to retrieve
      * @return the Properties
      * @throws ClientException
-     * @since 1.2
      */
     Map<String, byte[]> revProperties(String path, Revision rev)
             throws ClientException;
@@ -743,7 +684,6 @@ public interface ISVNClient
      * @param originalValue the original value of the property.
      * @param force     use force to set
      * @throws ClientException
-     * @since 1.6
      */
     void setRevProperty(String path, String name, Revision rev, String value,
                         String originalValue, boolean force)
@@ -757,7 +697,6 @@ public interface ISVNClient
      * @param pegRevision the revision to interpret path
      * @return the Property
      * @throws ClientException
-     * @since 1.2
      */
     byte[] propertyGet(String path, String name, Revision revision,
                        Revision pegRevision)
@@ -770,7 +709,6 @@ public interface ISVNClient
      * @param pegRevision the revision to interpret path
      * @return  the content as byte array
      * @throws ClientException
-     * @since 1.2
      */
     byte[] fileContent(String path, Revision revision, Revision pegRevision)
             throws ClientException;
@@ -787,7 +725,6 @@ public interface ISVNClient
      * @throws ClientException
      * @see java.io.PipedOutputStream
      * @see java.io.PipedInputStream
-     * @since 1.0
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
                            OutputStream stream)
@@ -798,11 +735,10 @@ public interface ISVNClient
      * @param from      old url
      * @param to        new url
      * @param path      working copy path
-     * @param recurse   recurse into subdirectories
+     * @param ignoreExternals if externals are ignored during relocate
      * @throws ClientException
-     * @since 1.0
      */
-    void relocate(String from, String to, String path, boolean recurse)
+    void relocate(String from, String to, String path, boolean ignoreExternals)
             throws ClientException;
 
     /**
@@ -818,7 +754,6 @@ public interface ISVNClient
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
-     * @since 1.7
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
@@ -834,7 +769,6 @@ public interface ISVNClient
      * @param configDir Path of the directory, or <code>null</code>
      * for the platform's default.
      * @throws ClientException
-     * @since 1.0
      */
     void setConfigDirectory(String configDir) throws ClientException;
 
@@ -842,14 +776,12 @@ public interface ISVNClient
      * Get the configuration directory
      * @return  the directory
      * @throws ClientException
-     * @since 1.0
      */
     String getConfigDirectory() throws ClientException;
 
     /**
      * cancel the active operation
      * @throws ClientException
-     * @since 1.0
      */
     void cancelOperation() throws ClientException;
 
@@ -859,7 +791,6 @@ public interface ISVNClient
      * @param changelist  changelist name
      * @param depth       the depth to recurse
      * @param changelists changelists to filter by
-     * @since 1.5
      */
     void addToChangelist(Set<String> paths, String changelist, Depth depth,
                          Collection<String> changelists)
@@ -870,7 +801,6 @@ public interface ISVNClient
      * @param paths       paths to remove from the changelist
      * @param depth       the depth to recurse
      * @param changelists changelists to filter by
-     * @since 1.5
      */
     void removeFromChangelists(Set<String> paths, Depth depth,
                                Collection<String> changelists)
@@ -882,7 +812,6 @@ public interface ISVNClient
      * @param changelists the changelists to look under
      * @param depth       the depth to recurse
      * @param callback    the callback to return the changelists through
-     * @since 1.5
      */
     void getChangelists(String rootPath, Collection<String> changelists,
                         Depth depth, ChangelistCallback callback)
@@ -894,7 +823,6 @@ public interface ISVNClient
      * @param comment
      * @param force break an existing lock
      * @throws ClientException
-     * @since 1.2
      */
     void lock(Set<String> path, String comment, boolean force)
             throws ClientException;
@@ -904,7 +832,6 @@ public interface ISVNClient
      * @param path  path of the item
      * @param force break an existing lock
      * @throws ClientException
-     * @since 1.2
      */
     void unlock(Set<String> path, boolean force)
             throws ClientException;
@@ -917,7 +844,6 @@ public interface ISVNClient
      * @param depth         the depth to recurse
      * @param changelists   if non-null, filter paths using changelists
      * @param callback      a callback to receive the infos retrieved
-     * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
                Depth depth, Collection<String> changelists,
@@ -931,7 +857,6 @@ public interface ISVNClient
      * @param lastChanged   last changed rather than current revisions
      * @return      the compact "version number"
      * @throws ClientException
-     * @since 1.2
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;
@@ -940,11 +865,10 @@ public interface ISVNClient
      * Recursively upgrade a working copy to a new metadata storage format.
      * @param path                  path of the working copy
      * @throws ClientException
-     * @since 1.7
      */
     void upgrade(String path)
             throws ClientException;
-    
+
     /**
      * Apply a unidiff patch.
      * @param patchPath        the path of the patch

@@ -56,6 +56,8 @@ svn_cl__mkdir(apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
+
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {
       ctx->log_msg_func3 = NULL;

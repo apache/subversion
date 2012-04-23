@@ -31,6 +31,7 @@
 
 #include "client.h"
 
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 /* Get the directory entries of DIR at REV (relative to the root of
@@ -99,7 +100,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
       if (locks)
         {
-          const char *abs_path = svn_uri_join(fs_path, path, iterpool);
+          const char *abs_path = svn_fspath__join(fs_path, path, iterpool);
           lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
         }
       else
@@ -181,11 +182,6 @@ svn_client_list2(const char *path_or_url,
                  doesn't support svn_ra_reparent anyway, so don't try it. */
               svn_uri_split(&parent_url, &base_name, url, pool);
 
-              /* 'base_name' is now the last component of an URL, but we want
-                 to use it as a plain file name. Therefore, we must URI-decode
-                 it. */
-              base_name = svn_path_uri_decode(base_name, pool);
-
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            NULL, parent_url,
                                                            NULL, NULL, FALSE,
@@ -246,8 +242,8 @@ svn_client_list2(const char *path_or_url,
 
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("URL '%s' non-existent in that revision"),
-                             url);
+                             _("URL '%s' non-existent in revision %ld"),
+                             url, rev);
 
   /* Maybe get all locks under url. */
   if (fetch_locks)

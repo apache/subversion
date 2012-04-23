@@ -85,7 +85,7 @@ StatusCallback::doStatus(const char *local_abspath,
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doStatus",
-                             "(L"JAVA_PACKAGE"/Status;)V");
+                             "(L"JAVA_PACKAGE"/types/Status;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }

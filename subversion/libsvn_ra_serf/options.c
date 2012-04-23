@@ -39,6 +39,7 @@
 #include "svn_version.h"
 #include "svn_dirent_uri.h"
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
 
 #include "ra_serf.h"
 
@@ -48,7 +49,7 @@
 /*
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
-typedef enum {
+typedef enum options_state_e {
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF,
@@ -187,7 +188,7 @@ end_options(svn_ra_serf__xml_parser_t *parser,
     {
       options_ctx->collect_cdata = FALSE;
       options_ctx->activity_collection =
-                 svn_uri_canonicalize(options_ctx->attr_val, options_ctx->pool);
+        svn_urlpath__canonicalize(options_ctx->attr_val, options_ctx->pool);
       pop_state(options_ctx);
     }
 
@@ -294,33 +295,31 @@ capabilities_headers_iterator_callback(void *baton,
          efficiently, but that wouldn't be worth it until we have many
          more capabilities. */
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         {
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
         }
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
           apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_server_yes);
         }
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS,
-                                      vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
         }
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS,
-                                      vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
         }
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         {
           apr_hash_set(orc->session->capabilities,
                        SVN_RA_CAPABILITY_PARTIAL_REPLAY,
@@ -333,13 +332,14 @@ capabilities_headers_iterator_callback(void *baton,
     {
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
-          orc->session->repos_root = orc->session->repos_url;
+          orc->session->repos_root = orc->session->session_url;
           orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
           orc->session->repos_root_str =
-            svn_uri_canonicalize(apr_uri_unparse(orc->session->pool,
-                                                 &orc->session->repos_root,
-                                                 0),
-                                  orc->session->pool);
+            svn_urlpath__canonicalize(
+                apr_uri_unparse(orc->session->pool,
+                                &orc->session->repos_root,
+                                0),
+                orc->session->pool);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
@@ -372,6 +372,14 @@ capabilities_headers_iterator_callback(void *baton,
       else if (svn_cstring_casecmp(key, SVN_DAV_TXN_ROOT_STUB_HEADER) == 0)
         {
           orc->session->txn_root_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_VTXN_STUB_HEADER) == 0)
+        {
+          orc->session->vtxn_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_VTXN_ROOT_STUB_HEADER) == 0)
+        {
+          orc->session->vtxn_root_stub = apr_pstrdup(orc->session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_REPOS_UUID_HEADER) == 0)
         {
@@ -494,8 +502,9 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
-  svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
-                                  serf_sess->repos_url.path, pool);
+  SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, serf_sess,
+                                          serf_sess->conns[0],
+                                          serf_sess->session_url.path, pool));
 
   err = svn_ra_serf__context_run_wait(
             svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
@@ -510,10 +519,10 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       *corrected_url = opt_ctx->parser_ctx->location;
       return SVN_NO_ERROR;
     }
-                        
+
   return svn_error_compose_create(
              svn_ra_serf__error_on_status(opt_ctx->status_code,
-                                          serf_sess->repos_url.path,
+                                          serf_sess->session_url.path,
                                           opt_ctx->parser_ctx->location),
              err);
 }
@@ -566,12 +575,15 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
+          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE,
+                                           &validate_inherited_mergeinfo,
+                                           FALSE, pool);
 
           if (err)
             {

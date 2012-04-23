@@ -38,9 +38,12 @@ from svntest.actions import run_and_verify_status
 from svntest.actions import get_virginal_state
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 AnyOutput = svntest.verify.AnyOutput
 
@@ -477,6 +480,7 @@ def ensure_tree_conflict(sbox, operation,
           verbose_print("--- Merging")
           run_and_verify_svn(None, expected_stdout, [],
                              'merge', '--ignore-ancestry',
+                             '--allow-mixed-revisions',
                              '-r', str(source_left_rev) + ':' + str(source_right_rev),
                              source_url, target_path)
         else:
@@ -636,6 +640,8 @@ def up_sw_dir_del_onto_del(sbox):
 #   Adding         branch1\dC\D
 #
 #   Committed revision 4.
+@XFail(svntest.main.is_ra_type_dav)
+@Issue(3314)
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
   # WC state: as scheduled (no obstruction)
@@ -684,6 +690,9 @@ def merge_dir_mod_onto_not_dir(sbox):
   test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
   test_tc_merge(sbox2, d_mods, wc_scen = d_dels)
 
+# Test for issue #3150 'tree conflicts with directories as victims'.
+@XFail()
+@Issue(3150)
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
@@ -704,6 +713,8 @@ def merge_dir_add_onto_not_none(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(3805)
 def force_del_tc_inside(sbox):
   "--force del on dir with TCs inside"
   ### This test is currently marked XFail because we don't remove tree
@@ -796,6 +807,8 @@ def force_del_tc_inside(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(3805)
 def force_del_tc_is_target(sbox):
   "--force del on tree-conflicted targets"
   #          A/C
@@ -885,6 +898,13 @@ def force_del_tc_is_target(sbox):
 
 #----------------------------------------------------------------------
 
+# A regression test to check that "rm --keep-local" on a tree-conflicted
+# node leaves the WC in a valid state in which simple commands such as
+# "status" do not error out.  At one time the command left the WC in an
+# invalid state.  (Before r989189, "rm --keep-local" used to have the effect
+# of "disarming" the conflict in the sense that "commit" would ignore the
+# conflict.)
+
 def query_absent_tree_conflicted_dir(sbox):
   "query an unversioned tree-conflicted dir"
 
@@ -929,10 +949,10 @@ def query_absent_tree_conflicted_dir(sbox):
                         None, None, None, None, None, 1,
                         wc_dir)
 
-  # Delete A/C with --keep-local, in effect disarming the tree-conflict.
+  # Delete A/C with --keep-local.
   run_and_verify_svn(None,
-                     ['D         ' + C_C_path + '\n',
-                      'D         ' + C_path + '\n'],
+                     verify.UnorderedOutput(['D         ' + C_C_path + '\n',
+                                             'D         ' + C_path + '\n']),
                      [],
                      'delete', C_path, '--keep-local')
 
@@ -942,7 +962,7 @@ def query_absent_tree_conflicted_dir(sbox):
 
   # Try to access the absent tree-conflict as explicit target.
   # They should succeed without error. We don't care what they return.
-  ### Currently, these fail like
+  # These used to fail like this:
   ## CMD: svn status -v -u -q
   ## [...]
   ## subversion/svn/status-cmd.c:248: (apr_err=155035)
@@ -964,6 +984,7 @@ def query_absent_tree_conflicted_dir(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(3608)
 def up_add_onto_add_revert(sbox):
   "issue #3608: reverting an add onto add conflict"
 
@@ -995,8 +1016,8 @@ def up_add_onto_add_revert(sbox):
 
   expected_status = get_virginal_state(wc2_dir, 2)
   expected_status.add({
-    'newfile' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
-    'NewDir'  : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    'newfile' : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
+    'NewDir'  : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
     })
 
   run_and_verify_update(wc2_dir,
@@ -1026,6 +1047,8 @@ def up_add_onto_add_revert(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #3525 and #3533
 #
+@XFail()
+@Issues(3525,3533)
 def lock_update_only(sbox):
   "lock status update shouldn't flag tree conflict"
 
@@ -1048,17 +1071,47 @@ def lock_update_only(sbox):
   # In our other working copy, steal that lock.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', '', '--force', file_path)
-  
+
   # Now update the first working copy.  It should appear as a no-op.
   expected_disk = main.greek_state.copy()
   expected_disk.remove('iota')
   expected_status = get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='D ')
+  expected_status.tweak('iota', status='D ', writelocked='O')
   run_and_verify_update(wc_dir,
                         None, expected_disk, expected_status,
                         None, None, None, None, None, 1,
                         wc_dir)
 
+
+#----------------------------------------------------------------------
+@Issue(3469)
+def at_directory_external(sbox):
+  "tree conflict at directory external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2: create a directory external: ^/E -> ^/A
+  svntest.main.run_svn(None, 'ps', 'svn:externals', '^/A E', wc_dir)
+  svntest.main.run_svn(None, 'commit', '-m', 'ps', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # r3: modify ^/A/B/E/alpha
+  open(sbox.ospath('A/B/E/alpha'), 'a').write('This is still A/B/E/alpha.\n')
+  svntest.main.run_svn(None, 'commit', '-m', 'file mod', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+  merge_rev = svntest.main.youngest(sbox.repo_dir)
+
+  # r4: create ^/A/B/E/alpha2
+  open(sbox.ospath('A/B/E/alpha2'), 'a').write("This is the file 'alpha2'.\n")
+  svntest.main.run_svn(None, 'add', sbox.ospath('A/B/E/alpha2'))
+  svntest.main.run_svn(None, 'commit', '-m', 'file add', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+  merge_rev2 = svntest.main.youngest(sbox.repo_dir)
+
+  # r5: merge those
+  svntest.main.run_svn(None, "merge", '-c', merge_rev, '^/A/B', wc_dir)
+  svntest.main.run_svn(None, "merge", '-c', merge_rev2, '^/A/B', wc_dir)
 
 #######################################################################
 # Run the tests
@@ -1073,21 +1126,21 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              XFail(up_sw_dir_add_onto_add,
-                    svntest.main.is_ra_type_dav),
+              up_sw_dir_add_onto_add,
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
               merge_file_add_onto_not_none,
               merge_dir_mod_onto_not_dir,
-              XFail(merge_dir_del_onto_not_same),
+              merge_dir_del_onto_not_same,
               merge_dir_del_onto_not_dir,
               merge_dir_add_onto_not_none,
-              XFail(force_del_tc_inside),
-              XFail(force_del_tc_is_target),
+              force_del_tc_inside,
+              force_del_tc_is_target,
               query_absent_tree_conflicted_dir,
-              XFail(up_add_onto_add_revert),
-              XFail(lock_update_only),
+              up_add_onto_add_revert,
+              lock_update_only,
+              at_directory_external,
              ]
 
 if __name__ == '__main__':

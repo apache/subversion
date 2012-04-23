@@ -68,9 +68,9 @@ public class CopySource implements java.io.Serializable
         this.pegRevision = pegRevision;
     }
 
-    public org.apache.subversion.javahl.CopySource toApache()
+    public org.apache.subversion.javahl.types.CopySource toApache()
     {
-        return new org.apache.subversion.javahl.CopySource(path,
+        return new org.apache.subversion.javahl.types.CopySource(path,
                 revision == null ? null : revision.toApache(),
                 pegRevision == null ? null : pegRevision.toApache());
     }

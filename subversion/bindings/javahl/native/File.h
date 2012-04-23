@@ -49,7 +49,7 @@ class File
   ~File();
   const char *getAbsPath();
   const char *getInternalStyle(const SVN::Pool &pool);
-  bool isNull();
+  bool isNull() const;
 };
 
 #endif // FILE_H

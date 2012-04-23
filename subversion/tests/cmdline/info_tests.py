@@ -33,8 +33,12 @@ import shutil, stat, re, os
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 ######################################################################
@@ -167,7 +171,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*local %s, incoming %s*" % (reason, action)
+    expected_str1 = ".*local %s, incoming %s.*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -187,22 +191,15 @@ def info_with_tree_conflicts(sbox):
                                             },
                           )])
 
-  # Check recursive info.  Just ensure that all victims are listed.
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info',
-                                                                G, '-R')
+  # Check recursive info.
+  expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
-    found = False
-    expected = ".*incoming %s.*" % (action)
-    for item in output:
-      if re.search(expected, item):
-        found = True
-        break
-    if not found:
-      raise svntest.verify.SVNUnexpectedStdout(
-        "Tree conflict missing in svn info -R output:\n"
-        "  Expected: '%s'\n"
-        "  Found: '%s'" % (expected, output))
+    path = os.path.join(G, fname)
+    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    expected_infos.append({ 'Path' : re.escape(path),
+                            'Tree conflict' : tree_conflict_re })
+  expected_infos.sort(key=lambda info: info['Path'])
+  svntest.actions.run_and_verify_info(expected_infos, G, '-R')
 
 def info_on_added_file(sbox):
   """info on added file"""
@@ -223,7 +220,6 @@ def info_on_added_file(sbox):
               'Name' : 'new_file',
               'URL' : '.*/new_file',
               'Repository Root' : '.*',
-              'Revision' : '0',
               'Node Kind' : 'file',
               'Schedule' : 'add',
               'Repository UUID' : uuid_regex,
@@ -240,7 +236,7 @@ def info_on_added_file(sbox):
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'file',
                                      'path'     : new_file,
-                                     'revision' : '0'}),
+                                     'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_file'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
@@ -262,7 +258,6 @@ def info_on_mkdir(sbox):
   expected = {'Path' : re.escape(new_dir),
               'URL' : '.*/new_dir',
               'Repository Root' : '.*',
-              'Revision' : '0',
               'Node Kind' : 'directory',
               'Schedule' : 'add',
               'Repository UUID' : uuid_regex,
@@ -278,12 +273,62 @@ def info_on_mkdir(sbox):
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'dir',
                                      'path'     : new_dir,
-                                     'revision' : '0'}),
+                                     'revision' : 'Resource is not under version control.'}),
                        ('url',      {}, '.*/new_dir'),
                        ('root',     {}, '.*'),
                        ('uuid',     {}, uuid_regex),
                        ('depth',    {}, 'infinity'),
                        ('schedule', {}, 'add')])
+
+def info_wcroot_abspaths(sbox):
+  """wc root paths in 'svn info' output"""
+
+  def check_wcroot_paths(lines, wcroot_abspath):
+    "check that paths found on input lines beginning 'Path: ' are as expected"
+    path = None
+    target = None
+    for line in lines:
+      if line.startswith('Path: '):
+        target = line[6:].rstrip()
+      if line.startswith('Working Copy Root Path: '):
+        path = line[24:].rstrip()
+      if target is not None and path is not None:
+        break
+
+    if target is None:
+      target = "(UNKNOWN)"
+
+    if path is None:
+      print "No WC root path for '%s'" % (target)
+      raise svntest.Failure
+
+    if path != wcroot_abspath:
+      print("For target '%s'..." % (target))
+      print("   Reported WC root path: %s" % (path))
+      print("   Expected WC root path: %s" % (wcroot_abspath))
+      raise svntest.Failure
+
+  sbox.build(read_only=True)
+  exit_code, output, errput = svntest.main.run_svn(None, 'info', '-R', sbox.wc_dir)
+  check_wcroot_paths(output, os.path.abspath(sbox.wc_dir))
+
+def info_url_special_characters(sbox):
+  """special characters in svn info URL"""
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  special_urls = [sbox.repo_url + '/A' + '/%2E',
+                  sbox.repo_url + '%2F' + 'A']
+
+  expected = {'Path' : 'A',
+              'Repository Root' : '.*',
+              'Revision' : '1',
+              'Node Kind' : 'dir',
+             }
+
+  for url in special_urls:
+    svntest.actions.run_and_verify_info([expected], url)
+
 
 ########################################################################
 # Run the tests
@@ -293,6 +338,8 @@ test_list = [ None,
               info_with_tree_conflicts,
               info_on_added_file,
               info_on_mkdir,
+              info_wcroot_abspaths,
+              info_url_special_characters,
              ]
 
 if __name__ == '__main__':

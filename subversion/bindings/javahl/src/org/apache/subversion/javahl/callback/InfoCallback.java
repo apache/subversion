@@ -23,8 +23,8 @@
 
 package org.apache.subversion.javahl.callback;
 
-import org.apache.subversion.javahl.Info2;
 import org.apache.subversion.javahl.ISVNClient;
+import org.apache.subversion.javahl.types.Info;
 
 /**
  * This interface is used to retrieve info each result in a
@@ -36,5 +36,5 @@ public interface InfoCallback
      * the method will be called for every line in a file.
      * @param info      the Info2 object
      */
-    public void singleInfo(Info2 info);
+    public void singleInfo(Info info);
 }

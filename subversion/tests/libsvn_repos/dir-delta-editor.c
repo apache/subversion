@@ -31,6 +31,8 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"

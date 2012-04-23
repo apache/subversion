@@ -192,7 +192,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
   const char *wc_path, *wc_abspath;
   const char *repos_url1, *repos_url2, *path_in_repos1, *path_in_repos2;
   int operation, action, reason;
-  int peg_rev1, peg_rev2;
+  long peg_rev1, peg_rev2;
   int kind, kind1, kind2;
 
   if (argc != 13)
@@ -200,7 +200,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
                             "Wrong number of arguments");
 
   /* Read the parameters */
-  wc_path = svn_path_internal_style(argv[i++], pool);
+  wc_path = svn_dirent_internal_style(argv[i++], pool);
   SVN_ERR(read_enum_field(&kind, node_kind_map, argv[i++], pool));
   SVN_ERR(read_enum_field(&operation, operation_map, argv[i++], pool));
   SVN_ERR(read_enum_field(&action, action_map, argv[i++], pool));

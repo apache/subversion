@@ -119,7 +119,7 @@ simple_extend(const char *adm_path,  /* ### adm_abspath?  */
   if (subdir)
     child = svn_dirent_join(subdir, child, result_pool);
   if (extension)
-    child = apr_pstrcat(result_pool, child, extension, NULL);
+    child = apr_pstrcat(result_pool, child, extension, (char *)NULL);
 
   if (use_tmp)
     return svn_dirent_join_many(result_pool,
@@ -195,14 +195,40 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
   const svn_checksum_t *checksum;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &checksum,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                        &checksum, NULL, NULL,
+                                        db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+  /* Sanity */
+  if (kind != svn_wc__db_kind_file)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can only get the pristine contents of files; "
+                               "'%s' is not a file"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  if (status == svn_wc__db_status_not_present)
+    /* We know that the delete of this node has been committed.
+       This should be the same as if called on an unknown path. */
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because its delete is already committed"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else if (status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because it has an unexpected status"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
   if (checksum == NULL)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("Node '%s' has no pristine text"),
@@ -214,93 +240,9 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__ultimate_base_text_path(const char **result_abspath,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  const svn_checksum_t *checksum;
-
-  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, &checksum,
-                                   NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-  if (checksum == NULL)
-    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                             _("Node '%s' has no pristine base text"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
-                                       checksum,
-                                       result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__ultimate_base_text_path(result_abspath, db, local_abspath,
-                                          result_pool, scratch_pool));
-  /* Return an error if the file does not exist */
-  {
-    svn_node_kind_t kind;
-
-    SVN_ERR(svn_io_check_path(*result_abspath, &kind, scratch_pool));
-    if (kind != svn_node_file)
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                               _("File '%s' has no text base"),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_wc__db_kind_t kind;
-  svn_wc__db_status_t status;
-  const svn_checksum_t *checksum;
-
-  SVN_ERR(svn_wc__db_base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, &checksum,
-                                   NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-  if (kind != svn_wc__db_kind_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_FILE, NULL,
-                             _("Base node of '%s' is not a file"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  if (status != svn_wc__db_status_normal)
-    {
-      SVN_ERR_ASSERT(checksum == NULL);
-      *contents = NULL;
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR_ASSERT(checksum != NULL);
-  SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
-                                   checksum, result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_filesize_t *size,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *result_pool,
@@ -310,11 +252,13 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   svn_wc__db_kind_t kind;
   const svn_checksum_t *sha1_checksum;
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &sha1_checksum,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath, scratch_pool, scratch_pool));
+  if (size)
+    *size = SVN_INVALID_FILESIZE;
+
+  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                        &sha1_checksum, NULL, NULL,
+                                        db, local_abspath,
+                                        scratch_pool, scratch_pool));
 
   /* Sanity */
   if (kind != svn_wc__db_kind_file)
@@ -324,22 +268,11 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  if (status == svn_wc__db_status_added)
+  if (status == svn_wc__db_status_added && !sha1_checksum)
     {
-      /* For an added node, we return "no stream". Make sure this is not
-         copied-here or moved-here, in which case we return the copy/move
-         source's contents.  */
-      SVN_ERR(svn_wc__db_scan_addition(&status,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-      if (status == svn_wc__db_status_added)
-        {
-          /* Simply added. The pristine base does not exist. */
-          *contents = NULL;
-          return SVN_NO_ERROR;
-        }
+      /* Simply added. The pristine base does not exist. */
+      *contents = NULL;
+      return SVN_NO_ERROR;
     }
   else if (status == svn_wc__db_status_not_present)
     /* We know that the delete of this node has been committed.
@@ -358,119 +291,12 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
   if (sha1_checksum)
-    SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
+    SVN_ERR(svn_wc__db_pristine_read(contents, size, db, local_abspath,
                                      sha1_checksum,
                                      result_pool, scratch_pool));
   else
     *contents = NULL;
 
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
-                                    const svn_checksum_t **md5_checksum,
-                                    svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  const svn_checksum_t *checksum;
-
-  err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, &checksum,
-                                 NULL, NULL, NULL,
-                                 db, local_abspath,
-                                 result_pool, scratch_pool);
-  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      || checksum == NULL)
-    {
-      svn_error_clear(err);
-      if (sha1_checksum)
-        *sha1_checksum = NULL;
-      if (md5_checksum)
-        *md5_checksum = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  if (checksum->kind == svn_checksum_sha1)
-    {
-      if (sha1_checksum)
-        *sha1_checksum = checksum;
-      if (md5_checksum)
-        SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
-                                            checksum,
-                                            result_pool, scratch_pool));
-    }
-  else
-    {
-      if (sha1_checksum)
-        SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
-                                             checksum,
-                                             result_pool, scratch_pool));
-      if (md5_checksum)
-        *md5_checksum = checksum;
-    }
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__get_working_checksums(const svn_checksum_t **sha1_checksum,
-                              const svn_checksum_t **md5_checksum,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
-{
-  const svn_checksum_t *checksum;
-
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &checksum,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               result_pool, scratch_pool));
-
-  if (checksum->kind == svn_checksum_sha1)
-    {
-      if (sha1_checksum)
-        *sha1_checksum = checksum;
-      if (md5_checksum)
-        SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
-                                            checksum,
-                                            result_pool, scratch_pool));
-    }
-  else
-    {
-      if (sha1_checksum)
-        SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
-                                             checksum,
-                                             result_pool, scratch_pool));
-      if (md5_checksum)
-        *md5_checksum = checksum;
-    }
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool)
-{
-  const char *text_base_abspath;
-
-  SVN_ERR(svn_wc__text_base_path_to_read(&text_base_abspath,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_stat(finfo, text_base_abspath,
-                      APR_FINFO_MIN | APR_FINFO_LINK,
-                      result_pool));
   return SVN_NO_ERROR;
 }
 
@@ -607,8 +433,6 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
     repos_relpath = "";
-  else
-    repos_relpath = svn_path_uri_decode(repos_relpath, scratch_pool);
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
@@ -623,6 +447,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   /* When the directory exists and is scheduled for deletion or is not-present
@@ -682,11 +507,14 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
               || strcmp(copyfrom_repos_relpath, repos_relpath))
             return
               svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                                _("URL '%s' doesn't match existing "
-                                  "URL '%s' in '%s'"),
+                                _("URL '%s' (uuid: '%s') doesn't match existing "
+                                  "URL '%s' (uuid: '%s') in '%s'"),
                                 url,
-                                svn_uri_join(db_repos_root_url,
-                                             db_repos_relpath, scratch_pool),
+                                db_repos_uuid,
+                                svn_path_url_add_component2(db_repos_root_url,
+                                                            db_repos_relpath,
+                                                            scratch_pool),
+                                repos_uuid,
                                 local_abspath);
         }
     }
@@ -774,12 +602,11 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   svn_wc__db_t *db;
   const char *local_abspath;
   const char *temp_dir;
-  apr_file_t *file;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(fp || new_name);
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+  SVN_ERR(svn_wc__db_open(&db,
                           NULL /* config */,
                           TRUE /* auto_upgrade */,
                           TRUE /* enforce_empty_wq */,
@@ -792,23 +619,8 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   if (err)
     return svn_error_return(err);
 
-  SVN_ERR(svn_io_open_unique_file3(&file, new_name, temp_dir,
+  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
                                    delete_when, pool, pool));
 
-  if (fp)
-    *fp = file;
-  else
-    SVN_ERR(svn_io_file_close(file, pool));
-
   return SVN_NO_ERROR;
-}
-
-
-const char *
-svn_wc__nonexistent_path(svn_wc__db_t *db,
-                         const char *adm_abspath,
-                         apr_pool_t *scratch_pool)
-{
-  return svn_wc__adm_child(adm_abspath, SVN_WC__ADM_NONEXISTENT_PATH,
-                           scratch_pool);
 }

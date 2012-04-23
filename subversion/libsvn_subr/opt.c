@@ -88,18 +88,21 @@ svn_opt_get_option_from_code2(int code,
   for (i = 0; option_table[i].optch; i++)
     if (option_table[i].optch == code)
       {
-        int j;
         if (command)
-          for (j = 0; ((j < SVN_OPT_MAX_OPTIONS) &&
-                       command->desc_overrides[j].optch); j++)
-            if (command->desc_overrides[j].optch == code)
-              {
-                apr_getopt_option_t *tmpopt =
-                    apr_palloc(pool, sizeof(*tmpopt));
-                *tmpopt = option_table[i];
-                tmpopt->description = command->desc_overrides[j].desc;
-                return tmpopt;
-              }
+          {
+            int j;
+
+            for (j = 0; ((j < SVN_OPT_MAX_OPTIONS) &&
+                         command->desc_overrides[j].optch); j++)
+              if (command->desc_overrides[j].optch == code)
+                {
+                  apr_getopt_option_t *tmpopt =
+                      apr_palloc(pool, sizeof(*tmpopt));
+                  *tmpopt = option_table[i];
+                  tmpopt->description = command->desc_overrides[j].desc;
+                  return tmpopt;
+                }
+          }
         return &(option_table[i]);
       }
 
@@ -118,6 +121,84 @@ svn_opt_get_option_from_code(int code,
       return &(option_table[i]);
 
   return NULL;
+}
+
+
+/* Like svn_opt_get_option_from_code2(), but also, if CODE appears a second
+ * time in OPTION_TABLE with a different name, then set *LONG_ALIAS to that
+ * second name, else set it to NULL. */
+static const apr_getopt_option_t *
+get_option_from_code(const char **long_alias,
+                     int code,
+                     const apr_getopt_option_t *option_table,
+                     const svn_opt_subcommand_desc2_t *command,
+                     apr_pool_t *pool)
+{
+  const apr_getopt_option_t *i;
+  const apr_getopt_option_t *opt
+    = svn_opt_get_option_from_code2(code, option_table, command, pool);
+
+  /* Find a long alias in the table, if there is one. */
+  *long_alias = NULL;
+  for (i = option_table; i->optch; i++)
+    {
+      if (i->optch == code && i->name != opt->name)
+        {
+          *long_alias = i->name;
+          break;
+        }
+    }
+
+  return opt;
+}
+
+
+/* Print an option OPT nicely into a STRING allocated in POOL.
+ * If OPT has a single-character short form, then print OPT->name (if not
+ * NULL) as an alias, else print LONG_ALIAS (if not NULL) as an alias.
+ * If DOC is set, include the generic documentation string of OPT,
+ * localized to the current locale if a translation is available.
+ */
+static void
+format_option(const char **string,
+              const apr_getopt_option_t *opt,
+              const char *long_alias,
+              svn_boolean_t doc,
+              apr_pool_t *pool)
+{
+  char *opts;
+
+  if (opt == NULL)
+    {
+      *string = "?";
+      return;
+    }
+
+  /* We have a valid option which may or may not have a "short
+     name" (a single-character alias for the long option). */
+  if (opt->optch <= 255)
+    opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
+  else if (long_alias)
+    opts = apr_psprintf(pool, "--%s [--%s]", opt->name, long_alias);
+  else
+    opts = apr_psprintf(pool, "--%s", opt->name);
+
+  if (opt->has_arg)
+    opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
+
+  if (doc)
+    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
+
+  *string = opts;
+}
+
+void
+svn_opt_format_option(const char **string,
+                      const apr_getopt_option_t *opt,
+                      svn_boolean_t doc,
+                      apr_pool_t *pool)
+{
+  format_option(string, opt, NULL, doc, pool);
 }
 
 
@@ -204,6 +285,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
   if (help)
     {
       const apr_getopt_option_t *option;
+      const char *long_alias;
       svn_boolean_t have_options = FALSE;
 
       SVN_ERR(svn_cmdline_fprintf(stream, pool, ": %s", _(cmd->help)));
@@ -221,16 +303,14 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
 
               /* convert each option code into an option */
-              option =
-                svn_opt_get_option_from_code2(cmd->valid_options[i],
-                                              options_table,
-                                              cmd, pool);
+              option = get_option_from_code(&long_alias, cmd->valid_options[i],
+                                            options_table, cmd, pool);
 
               /* print the option's docstring */
               if (option && option->description)
                 {
                   const char *optstr;
-                  svn_opt_format_option(&optstr, option, TRUE, pool);
+                  format_option(&optstr, option, long_alias, TRUE, pool);
                   SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
                                               optstr));
                 }
@@ -247,16 +327,14 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
             {
 
               /* convert each option code into an option */
-              option =
-                svn_opt_get_option_from_code2(global_options[i],
-                                              options_table,
-                                              cmd, pool);
+              option = get_option_from_code(&long_alias, global_options[i],
+                                            options_table, cmd, pool);
 
               /* print the option's docstring */
               if (option && option->description)
                 {
                   const char *optstr;
-                  svn_opt_format_option(&optstr, option, TRUE, pool);
+                  format_option(&optstr, option, long_alias, TRUE, pool);
                   SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
                                               optstr));
                 }
@@ -305,38 +383,16 @@ svn_opt_print_generic_help2(const char *header,
   return;
 
  print_error:
-  svn_handle_error2(err, stderr, FALSE, "svn: ");
+  /* Issue #3014:
+   * Don't print anything on broken pipes. The pipe was likely
+   * closed by the process at the other end. We expect that
+   * process to perform error reporting as necessary.
+   *
+   * ### This assumes that there is only one error in a chain for
+   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+  if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+    svn_handle_error2(err, stderr, FALSE, "svn: ");
   svn_error_clear(err);
-}
-
-void
-svn_opt_format_option(const char **string,
-                      const apr_getopt_option_t *opt,
-                      svn_boolean_t doc,
-                      apr_pool_t *pool)
-{
-  char *opts;
-
-  if (opt == NULL)
-    {
-      *string = "?";
-      return;
-    }
-
-  /* We have a valid option which may or may not have a "short
-     name" (a single-character alias for the long option). */
-  if (opt->optch <= 255)
-    opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
-  else
-    opts = apr_psprintf(pool, "--%s", opt->name);
-
-  if (opt->has_arg)
-    opts = apr_pstrcat(pool, opts, _(" ARG"), NULL);
-
-  if (doc)
-    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
-
-  *string = opts;
 }
 
 
@@ -614,7 +670,7 @@ svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
                                  apr_pool_t *pool)
 {
   if (targets->nelts == 0)
-    array_push_str(targets, "", pool); /* Ha! "", not ".", is the canonical */
+    APR_ARRAY_PUSH(targets, const char *) = ""; /* Ha! "", not ".", is the canonical */
   assert(targets->nelts);
 }
 
@@ -833,7 +889,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
             }
         }
 
-      target = apr_pstrcat(pool, true_target, peg_rev, NULL);
+      target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
@@ -1000,7 +1056,7 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2010 The Apache Software Foundation.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2011 The Apache Software Foundation.\n"
                               "This software consists of"
                               " contributions made by many people;\n"
                               "see the NOTICE file for more information.\n"
@@ -1031,18 +1087,21 @@ svn_opt_print_help3(apr_getopt_t *os,
                     apr_pool_t *pool)
 {
   apr_array_header_t *targets = NULL;
-  int i;
 
   if (os)
     SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
 
   if (os && targets->nelts)  /* help on subcommand(s) requested */
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
-                                 cmd_table, option_table,
-                                 global_options, pool);
-      }
+    {
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
+                                   cmd_table, option_table,
+                                   global_options, pool);
+        }
+    }
   else if (print_version)   /* just --version */
     SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
                                         pool));

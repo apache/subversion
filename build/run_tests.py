@@ -42,9 +42,9 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-LINE_LENGTH = 40
+LINE_LENGTH = 45
 
-import os, re, subprocess, sys
+import os, re, subprocess, sys, imp
 from datetime import datetime
 
 import getopt
@@ -52,6 +52,10 @@ try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
+
+# Ensure the compiled C tests use a known locale (Python tests set the locale
+# explicitly).
+os.environ['LC_ALL'] = 'C'
 
 class TextColors:
   '''Some ANSI terminal constants for output color'''
@@ -75,7 +79,8 @@ class TestHarness:
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
-               list_tests=None, svn_bin=None):
+               list_tests=None, svn_bin=None, mode_filter=None,
+               milestone_filter=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -87,6 +92,12 @@ class TestHarness:
     HTTP_LIBRARY is the HTTP library for DAV-based communications.
     SERVER_MINOR_VERSION is the minor version of the server being tested.
     SVN_BIN is the path where the svn binaries are installed.
+    MODE_FILTER restricts the TestHarness to tests with the expected mode
+    XFail, Skip, Pass, or All tests (default).  MILESTONE_FILTER is a
+    string representation of a valid regular expression pattern; when used
+    in conjunction with LIST_TESTS, the only tests that are listed are
+    those with an associated issue in the tracker which has a target
+    milestone that matches the regex.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -108,7 +119,9 @@ class TestHarness:
     if config_file is not None:
       self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
+    self.milestone_filter = milestone_filter
     self.svn_bin = svn_bin
+    self.mode_filter = mode_filter
     self.log = None
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
@@ -147,16 +160,26 @@ class TestHarness:
         sys.stdout.write('%s\n       [[%s'
                          % (x[:wip], x[wip + len(wimptag):]))
 
-    passed = [x for x in log_lines if x[:6] == 'PASS: ']
+    if self.list_tests:
+      passed = [x for x in log_lines if x[8:13] == '     ']
+    else:
+      passed = [x for x in log_lines if x[:6] == 'PASS: ']
 
-    skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
-    if skipped:
+    if self.list_tests:
+      skipped = [x for x in log_lines if x[8:12] == 'SKIP']
+    else:
+      skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
+
+    if skipped and not self.list_tests:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
 
-    xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
-    if xfailed:
+    if self.list_tests:
+      xfailed = [x for x in log_lines if x[8:13] == 'XFAIL']
+    else:
+      xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
+    if xfailed and not self.list_tests:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         printxfail(x)
@@ -174,21 +197,40 @@ class TestHarness:
         sys.stdout.write(x)
 
     # Print summaries, from least interesting to most interesting.
-    print('Summary of test results:')
+    if self.list_tests:
+      print('Summary of test listing:')
+    else:
+      print('Summary of test results:')
     if passed:
-      print('  %d test%s PASSED'
-            % (len(passed), 's'*min(len(passed) - 1, 1)))
+      if self.list_tests:
+        print('  %d test%s are set to PASS'
+              % (len(passed), 's'*min(len(passed) - 1, 1)))
+      else:
+        print('  %d test%s PASSED'
+              % (len(passed), 's'*min(len(passed) - 1, 1)))
     if skipped:
-      print('  %d test%s SKIPPED'
-            % (len(skipped), 's'*min(len(skipped) - 1, 1)))
+      if self.list_tests:
+        print('  %d test%s are set as SKIP'
+              % (len(skipped), 's'*min(len(skipped) - 1, 1)))
+      else:
+        print('  %d test%s SKIPPED'
+              % (len(skipped), 's'*min(len(skipped) - 1, 1)))
     if xfailed:
       passwimp = [x for x in xfailed if 0 <= x.find(wimptag)]
       if passwimp:
-        print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
-              % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
+        if self.list_tests:
+          print('  %d test%s are set to XFAIL (%d WORK-IN-PROGRESS)'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
+        else:
+          print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
       else:
-        print('  %d test%s XFAILED'
-              % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
+        if self.list_tests:
+          print('  %d test%s are set as XFAIL'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
+        else:
+          print('  %d test%s XFAILED'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
     if xpassed:
       failwimp = [x for x in xpassed if 0 <= x.find(wimptag)]
       if failwimp:
@@ -237,43 +279,14 @@ class TestHarness:
       self.log.close()
       self.log = None
 
-  def _run_test(self, prog, test_nr, total_tests):
-    "Run a single test. Return the test's exit code."
-
-    if self.log:
-      log = self.log
-    else:
-      log = sys.stdout
-
-    test_nums = None
-    if '#' in prog:
-      prog, test_nums = prog.split('#')
-
+  def _run_c_test(self, prog, test_nums, dot_count):
+    'Run a c test, escaping parameters as required.'
     progdir, progbase = os.path.split(prog)
-    if self.log:
-      # Using write here because we don't want even a trailing space
-      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
-      sys.stdout.write('Running tests in %s' % (test_info, ))
-      sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
-      sys.stdout.flush()
 
-    log.write('START: %s\n' % progbase)
-    log.flush()
+    if self.list_tests and self.milestone_filter:
+      print 'WARNING: --milestone-filter option does not currently work with C tests'
 
-    start_time = datetime.now()
-    if progbase[-3:] == '.py':
-      progname = sys.executable
-      cmdline = [progname,
-                 os.path.join(self.srcdir, prog)]
-      if self.base_url is not None:
-        cmdline.append('--url=' + self.base_url)
-      if self.enable_sasl is not None:
-        cmdline.append('--enable-sasl')
-      if self.parallel is not None:
-        cmdline.append('--parallel')
-      if self.config_file is not None:
-        cmdline.append('--config-file=' + self.config_file)
-    elif os.access(prog, os.X_OK):
+    if os.access(progbase, os.X_OK):
       progname = './' + progbase
       cmdline = [progname,
                  '--srcdir=' + os.path.join(self.srcdir, progdir)]
@@ -290,27 +303,205 @@ class TestHarness:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
       cmdline.append('--fs-type=' + self.fs_type)
-    if self.http_library is not None:
-      cmdline.append('--http-library=' + self.http_library)
     if self.server_minor_version is not None:
       cmdline.append('--server-minor-version=' + self.server_minor_version)
     if self.list_tests is not None:
       cmdline.append('--list')
-    if self.svn_bin is not None:
-      cmdline.append('--bin=' + self.svn_bin)
-    if self.fsfs_sharding is not None:
-      cmdline.append('--fsfs-sharding=%d' % self.fsfs_sharding)
-    if self.fsfs_packing is not None:
-      cmdline.append('--fsfs-packing')
+    if self.mode_filter is not None:
+      cmdline.append('--mode-filter=' + self.mode_filter)
 
     if test_nums:
       test_nums = test_nums.split(',')
       cmdline.extend(test_nums)
 
+    if test_nums:
+      total = len(test_nums)
+    else:
+      total_cmdline = [cmdline[0], '--list']
+      prog = subprocess.Popen(total_cmdline, stdout=subprocess.PIPE)
+      lines = prog.stdout.readlines()
+      total = len(lines) - 2
+
+    # This has to be class-scoped for use in the progress_func()
+    self.dots_written = 0
+    def progress_func(completed):
+      dots = (completed * dot_count) / total
+
+      dots_to_write = dots - self.dots_written
+      if self.log:
+        os.write(sys.stdout.fileno(), '.' * dots_to_write)
+
+      self.dots_written = dots
+
+    tests_completed = 0
+    prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE,
+                            stderr=self.log)
+    line = prog.stdout.readline()
+    while line:
+      # If using --log-to-stdout self.log in None.
+      if self.log:
+        self.log.write(line)
+
+      if line.startswith('PASS') or line.startswith('FAIL') \
+           or line.startswith('XFAIL') or line.startswith('XPASS') \
+           or line.startswith('SKIP'):
+        tests_completed += 1
+        progress_func(tests_completed)
+
+      line = prog.stdout.readline()
+
+    prog.wait()
+    return prog.returncode
+
+  def _run_py_test(self, prog, test_nums, dot_count):
+    'Run a python test, passing parameters as needed.'
+    progdir, progbase = os.path.split(prog)
+
+    old_path = sys.path[:]
+    sys.path = [progdir] + sys.path
+
+    try:
+      prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
+                                 ('.py', 'U', imp.PY_SOURCE))
+    except:
+      print('Don\'t know what to do about ' + progbase)
+      raise
+
+    import svntest.main
+
+    # set up our options
+    svntest.main.create_default_options()
+    if self.base_url is not None:
+      svntest.main.options.test_area_url = self.base_url
+    if self.enable_sasl is not None:
+      svntest.main.options.enable_sasl = True
+    if self.parallel is not None:
+      svntest.main.options.parallel = svntest.main.default_num_threads
+    if self.config_file is not None:
+      svntest.main.options.config_file = self.config_file
+    if self.verbose is not None:
+      svntest.main.options.verbose = True
+    if self.cleanup is not None:
+      svntest.main.options.cleanup = True
+    if self.fs_type is not None:
+      svntest.main.options.fs_type = self.fs_type
+    if self.http_library is not None:
+      svntest.main.options.http_library = self.http_library
+    if self.server_minor_version is not None:
+      svntest.main.options.server_minor_version = self.server_minor_version
+    if self.list_tests is not None:
+      svntest.main.options.list_tests = True
+    if self.milestone_filter is not None:
+      svntest.main.options.milestone_filter = self.milestone_filter
+    if self.svn_bin is not None:
+      svntest.main.options.svn_bin = self.svn_bin
+    if self.fsfs_sharding is not None:
+      svntest.main.options.fsfs_sharding = self.fsfs_sharding
+    if self.fsfs_packing is not None:
+      svntest.main.options.fsfs_packing = self.fsfs_packing
+    if self.mode_filter is not None:
+      svntest.main.options.mode_filter = self.mode_filter
+
+    svntest.main.options.srcdir = self.srcdir
+
+    # setup the output pipes
+    if self.log:
+      sys.stdout.flush()
+      sys.stderr.flush()
+      self.log.flush()
+      old_stdout = os.dup(1)
+      old_stderr = os.dup(2)
+      os.dup2(self.log.fileno(), 1)
+      os.dup2(self.log.fileno(), 2)
+
+    # This has to be class-scoped for use in the progress_func()
+    self.dots_written = 0
+    def progress_func(completed, total):
+      dots = (completed * dot_count) / total
+
+      dots_to_write = dots - self.dots_written
+      if self.log:
+        os.write(old_stdout, '.' * dots_to_write)
+
+      self.dots_written = dots
+
+    serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
+
+    # run the tests
+    svntest.testcase.TextColors.disable()
+
+    if self.list_tests:
+      prog_f = None
+    else:
+      prog_f = progress_func
+      
+    if test_nums:
+      test_selection = [test_nums]
+    else:
+      test_selection = []
+
+    failed = svntest.main.execute_tests(prog_mod.test_list,
+                                        serial_only=serial_only,
+                                        test_name=progbase,
+                                        progress_func=prog_f,
+                                        test_selection=test_selection)
+
+    # restore some values
+    sys.path = old_path
+    if self.log:
+      sys.stdout.flush()
+      sys.stderr.flush()
+      os.dup2(old_stdout, 1)
+      os.dup2(old_stderr, 2)
+      os.close(old_stdout)
+      os.close(old_stderr)
+
+    return failed
+
+  def _run_test(self, prog, test_nr, total_tests):
+    "Run a single test. Return the test's exit code."
+
+    if self.log:
+      log = self.log
+    else:
+      log = sys.stdout
+
+    test_nums = None
+    if '#' in prog:
+      prog, test_nums = prog.split('#')
+
+    progdir, progbase = os.path.split(prog)
+    if self.log:
+      # Using write here because we don't want even a trailing space
+      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      if self.list_tests:
+        sys.stdout.write('Listing tests in %s' % (test_info, ))
+      else:
+        sys.stdout.write('Running tests in %s' % (test_info, ))
+      sys.stdout.flush()
+    else:
+      # ### Hack for --log-to-stdout to work (but not print any dots).
+      test_info = ''
+
+    if self.list_tests:
+      log.write('LISTING: %s\n' % progbase)
+    else:
+      log.write('START: %s\n' % progbase)
+
+    log.flush()
+
+    start_time = datetime.now()
+
+    progabs = os.path.abspath(os.path.join(self.srcdir, prog))
     old_cwd = os.getcwd()
     try:
       os.chdir(progdir)
-      failed = self._run_prog(progname, cmdline)
+      if progbase[-3:] == '.py':
+        failed = self._run_py_test(progabs, test_nums,
+                                   (LINE_LENGTH - len(test_info)))
+      else:
+        failed = self._run_c_test(prog, test_nums,
+                                  (LINE_LENGTH - len(test_info)))
     except:
       os.chdir(old_cwd)
       raise
@@ -328,28 +519,26 @@ class TestHarness:
       else:
         log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
 
-    # Log the elapsed time.
-    elapsed_time = str(datetime.now() - start_time)
-    log.write('END: %s\n' % progbase)
-    log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+    if not self.list_tests:
+      # Log the elapsed time.
+      elapsed_time = str(datetime.now() - start_time)
+      log.write('END: %s\n' % progbase)
+      log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+
     log.write('\n')
 
-    # If we printed a "Running all tests in ..." line, add the test result.
+    # If we are only listing the tests just add a newline, otherwise if
+    # we printed a "Running all tests in ..." line, add the test result.
     if self.log:
-      if failed:
-        print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
+      if self.list_tests:
+        print ''
       else:
-        print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
+        if failed:
+          print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
+        else:
+          print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
 
     return failed
-
-  def _run_prog(self, progname, arglist):
-    '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
-    arguments (a list/tuple of arg0..argN), redirecting standard output and
-    error to the log file. Return the command's exit code.'''
-    prog = subprocess.Popen(arglist, stdout=self.log, stderr=self.log)
-    prog.wait()
-    return prog.returncode
 
 
 def main():

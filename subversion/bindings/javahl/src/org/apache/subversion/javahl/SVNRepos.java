@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.types.*;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -190,7 +191,6 @@ public class SVNRepos implements ISVNRepos
      * @param usePostRevPropChangeHook Whether to run the
      * <i>post-revprop-change</i> hook script.
      * @throws SubversionException If a problem occurs.
-     * @since 1.5.0
      */
     public native void setRevProp(File path, Revision rev,
                                   String propName, String propValue,
@@ -207,7 +207,6 @@ public class SVNRepos implements ISVNRepos
      * @param path              the path to the repository
      * @param depth             the depth to recurse
      * @throws ClientException  throw in case of problem
-     * @since 1.7
      */
     public native Set<Lock> lslocks(File path, Depth depth)
             throws ClientException;
@@ -217,7 +216,6 @@ public class SVNRepos implements ISVNRepos
      * @param path              the path to the repository
      * @param locks             the name of the locked items
      * @throws ClientException  throw in case of problem
-     * @since 1.2
      */
     public native void rmlocks(File path, String[] locks)
             throws ClientException;

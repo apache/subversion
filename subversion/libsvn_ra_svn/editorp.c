@@ -34,8 +34,11 @@
 #include "svn_delta.h"
 #include "svn_dirent_uri.h"
 #include "svn_ra_svn.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_private_config.h"
+
+#include "private/svn_fspath.h"
 
 #include "ra_svn.h"
 
@@ -48,7 +51,7 @@
  * connection; both ends are useful for both server and client.
  */
 
-typedef struct {
+typedef struct ra_svn_edit_baton_t {
   svn_ra_svn_conn_t *conn;
   svn_ra_svn_edit_callback callback;    /* Called on successful completion. */
   void *callback_baton;
@@ -57,14 +60,14 @@ typedef struct {
 } ra_svn_edit_baton_t;
 
 /* Works for both directories and files. */
-typedef struct {
+typedef struct ra_svn_baton_t {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;
   ra_svn_edit_baton_t *eb;
   const char *token;
 } ra_svn_baton_t;
 
-typedef struct {
+typedef struct ra_svn_driver_state_t {
   const svn_delta_editor_t *editor;
   void *edit_baton;
   apr_hash_t *tokens;
@@ -85,7 +88,7 @@ typedef struct {
    field in this structure is vestigial for files, and we use it for a
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
-typedef struct {
+typedef struct ra_svn_token_entry_t {
   const char *token;
   void *baton;
   svn_boolean_t is_file;
@@ -313,10 +316,16 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   diff_stream = svn_stream_create(b, pool);
   svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
-  if (svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 1, pool);
+
+  /* If the connection does not support SVNDIFF1 or if we don't want to use
+   * compression, use the non-compressing "version 0" implementation */ 
+  if (   svn_ra_svn_compression_level(b->conn) > 0
+      && svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1)) 
+    svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 1,
+                            b->conn->compression_level, pool);
   else
-    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 0, pool);
+    svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 0,
+                            b->conn->compression_level, pool);
   return SVN_NO_ERROR;
 }
 
@@ -500,7 +509,7 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, pool));
   return SVN_NO_ERROR;
 }
@@ -520,9 +529,18 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
+
+  /* Some operations pass COPY_PATH as a full URL (commits, etc.).
+     Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
   if (copy_path)
-    copy_path = svn_uri_canonicalize(copy_path, pool);
+    {
+      if (svn_path_is_url(copy_path))
+        copy_path = svn_uri_canonicalize(copy_path, pool);
+      else
+        copy_path = svn_fspath__canonicalize(copy_path, pool);
+    }
+
   SVN_CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path,
                                         copy_rev, subpool, &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -544,7 +562,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
                                          &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -618,9 +636,18 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                  &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
+
+  /* Some operations pass COPY_PATH as a full URL (commits, etc.).
+     Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
   if (copy_path)
-    copy_path = svn_uri_canonicalize(copy_path, pool);
+    {
+      if (svn_path_is_url(copy_path))
+        copy_path = svn_uri_canonicalize(copy_path, pool);
+      else
+        copy_path = svn_fspath__canonicalize(copy_path, pool);
+    }
+
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
                                    ds->file_pool, &file_entry->baton));
@@ -640,7 +667,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                  &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, ds->file_pool,
                                     &file_entry->baton));

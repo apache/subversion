@@ -57,7 +57,7 @@ struct log_receiver_baton
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
 
-  /* Whether to show diffs in the log. */
+  /* Whether to show diffs in the log. (maps to --diff) */
   svn_boolean_t show_diff;
 
   /* Diff arguments received from command line. */
@@ -163,9 +163,6 @@ log_entry_receiver(void *baton,
   const char *date;
   const char *message;
 
-  /* Number of lines in the msg. */
-  int lines;
-
   if (lb->ctx->cancel_func)
     SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
 
@@ -201,7 +198,9 @@ log_entry_receiver(void *baton,
 
   if (message != NULL)
     {
-      lines = svn_cstring_count_newlines(message) + 1;
+      /* Number of lines in the msg. */
+      int lines = svn_cstring_count_newlines(message) + 1;
+
       SVN_ERR(svn_cmdline_printf(pool,
                                  Q_(" | %d line", " | %d lines", lines),
                                  lines));
@@ -229,6 +228,9 @@ log_entry_receiver(void *baton,
             = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
           const char *copy_data = "";
 
+          if (lb->ctx->cancel_func)
+            SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
+
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
@@ -249,7 +251,10 @@ log_entry_receiver(void *baton,
       int i;
 
       /* Print the result of merge line */
-      SVN_ERR(svn_cmdline_printf(pool, _("Merged via:")));
+      if (log_entry->subtractive_merge)
+        SVN_ERR(svn_cmdline_printf(pool, _("Reverse merged via:")));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, _("Merged via:")));
       for (i = 0; i < lb->merge_stack->nelts; i++)
         {
           svn_revnum_t rev = APR_ARRAY_IDX(lb->merge_stack, i, svn_revnum_t);
@@ -284,7 +289,7 @@ log_entry_receiver(void *baton,
 
       /* Fall back to "" to get options initialized either way. */
       if (lb->diff_extensions)
-        diff_options = svn_cstring_split(lb->diff_extensions, " \t\n\r", 
+        diff_options = svn_cstring_split(lb->diff_extensions, " \t\n\r",
                                          TRUE, pool);
       else
         diff_options = NULL;
@@ -586,25 +591,25 @@ svn_cl__log(apr_getopt_t *os,
     {
       if (opt_state->show_diff)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'show-diff' option is not supported in "
+                                _("'diff' option is not supported in "
                                   "XML mode"));
     }
 
   if (opt_state->quiet && opt_state->show_diff)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'quiet' and 'show-diff' options are "
+                            _("'quiet' and 'diff' options are "
                               "mutually exclusive"));
   if (opt_state->diff_cmd && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'diff-cmd' option requires 'show-diff' "
+                            _("'diff-cmd' option requires 'diff' "
                               "option"));
   if (opt_state->internal_diff && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'internal-diff' option requires "
-                              "'show-diff' option"));
+                              "'diff' option"));
   if (opt_state->extensions && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'extensions' option requires 'show-diff' "
+                            _("'extensions' option requires 'diff' "
                               "option"));
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -631,9 +636,9 @@ svn_cl__log(apr_getopt_t *os,
           range = APR_ARRAY_IDX(opt_state->revision_ranges, i,
                                 svn_opt_revision_range_t *);
           if (range->start.value.number < range->end.value.number)
-            range->start = range->end;
+            range->start.value.number++;
           else
-            range->end = range->start;
+            range->end.value.number++;
         }
     }
 
@@ -648,12 +653,11 @@ svn_cl__log(apr_getopt_t *os,
           target = APR_ARRAY_IDX(targets, i, const char *);
 
           if (svn_path_is_url(target) || target[0] == '/')
-            return svn_error_return(svn_error_createf(
-                                      SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      _("Only relative paths can be specified"
-                                        " after a URL for 'svn log', "
-                                        "but '%s' is not a relative path"),
-                                      target));
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Only relative paths can be specified"
+                                       " after a URL for 'svn log', "
+                                       "but '%s' is not a relative path"),
+                                     target);
         }
     }
 
@@ -661,7 +665,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.omit_log_message = opt_state->quiet;
   SVN_ERR(svn_client_url_from_path2(&lb.target_url, true_path, ctx,
                                     pool, pool));
-  lb.show_diff = (! opt_state->quiet) && opt_state->show_diff;
+  lb.show_diff = opt_state->show_diff;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;

@@ -457,7 +457,7 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 /*** Editor Wrapping ***/
 
 /* this could be more perlish */
-typedef struct {
+typedef struct item_baton {
     SV *editor;     /* the editor handling the callbacks */
     SV *baton;      /* the dir/file baton (or NULL for edit baton) */
 } item_baton;
@@ -1343,7 +1343,7 @@ apr_pool_t *svn_swig_pl_make_pool(SV *obj)
 
 /* stream interpolability with io::handle */
 
-typedef struct  {
+typedef struct io_baton_t {
     SV *obj;
     IO *io;
 } io_baton_t;
@@ -1417,7 +1417,6 @@ static apr_status_t io_handle_cleanup(void *baton)
 svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj)
 {
     IO *io;
-    int simple_type = 1;
 
     if (!SvOK(obj)) {
         *stream = NULL;
@@ -1425,6 +1424,7 @@ svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj)
     }
 
     if (obj && sv_isobject(obj)) {
+      int simple_type = 1;
       if (sv_derived_from(obj, "SVN::Stream"))
         svn_swig_pl_callback_thunk(CALL_METHOD, (void *)"svn_stream",
                                    &obj, "O", obj);

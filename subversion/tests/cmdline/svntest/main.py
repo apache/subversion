@@ -29,11 +29,12 @@ import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
 import subprocess
-import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
 import optparse # for argument parsing
+import xml
+import urllib
 
 try:
   # Python >=3.0
@@ -73,6 +74,8 @@ from svntest import Skip
 #
 #####################################################################
 # Global stuff
+
+default_num_threads = 5
 
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
@@ -160,6 +163,7 @@ svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
+wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -330,7 +334,9 @@ def get_fsfs_format_file_path(repo_dir):
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
   as lists of lines (including line terminators).  See run_command_stdin()
-  for details.  If ERROR_EXPECTED is None, any stderr also will be printed."""
+  for details.  If ERROR_EXPECTED is None, any stderr output will be
+  printed and any stderr output or a non-zero exit code will raise an
+  exception."""
 
   return run_command_stdin(command, error_expected, 0, binary_mode,
                            None, *varargs)
@@ -343,23 +349,22 @@ _safe_arg_re = re.compile(r'^[A-Za-z\d\.\_\/\-\:\@]+$')
 def _quote_arg(arg):
   """Quote ARG for a command line.
 
-  Simply surround every argument in double-quotes unless it contains
+  Return a quoted version of the string ARG, or just ARG if it contains
   only universally harmless characters.
 
   WARNING: This function cannot handle arbitrary command-line
-  arguments.  It can easily be confused by shell metacharacters.  A
-  perfect job would be difficult and OS-dependent (see, for example,
-  http://msdn.microsoft.com/library/en-us/vccelng/htm/progs_12.asp).
-  In other words, this function is just good enough for what we need
-  here."""
+  arguments: it is just good enough for what we need here."""
 
   arg = str(arg)
   if _safe_arg_re.match(arg):
     return arg
+
+  if windows:
+    # Note: subprocess.list2cmdline is Windows-specific.
+    return subprocess.list2cmdline([arg])
   else:
-    if os.name != 'nt':
-      arg = arg.replace('$', '\$')
-    return '"%s"' % (arg,)
+    # Quoting suitable for most Unix shells.
+    return "'" + arg.replace("'", "'\\''") + "'"
 
 def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
@@ -375,15 +380,7 @@ def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
-  # Quote only the arguments on Windows.  Later versions of subprocess,
-  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
-  if sys.platform == 'win32':
-    args = command[1:]
-    args = ' '.join([_quote_arg(x) for x in args])
-    command = command[0] + ' ' + args
-    command_string = command
-  else:
-    command_string = ' '.join(command)
+  command_string = command[0] + ' ' + ' '.join(map(_quote_arg, command[1:]))
 
   if not stdin:
     stdin = subprocess.PIPE
@@ -445,6 +442,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if exit_code and options.verbose:
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (command_string, exit_code))
+      sys.stderr.flush()
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
@@ -493,7 +491,8 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
   line terminators).
-  If ERROR_EXPECTED is None, any stderr also will be printed."""
+  If ERROR_EXPECTED is None, any stderr output will be printed and any
+  stderr output or a non-zero exit code will raise an exception."""
 
   if options.verbose:
     start = time.time()
@@ -512,7 +511,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
     for x in stderr_lines:
       sys.stdout.write(x)
 
-  if (not error_expected) and (stderr_lines):
+  if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     if not options.verbose:
       for x in stderr_lines:
         sys.stdout.write(x)
@@ -578,8 +577,9 @@ def _with_auth(args):
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return exit code as int; stdout, stderr as
-  lists of lines (including line terminators).
-  If ERROR_EXPECTED is None, any stderr also will be printed.  If
+  lists of lines (including line terminators).  If ERROR_EXPECTED is
+  None, any stderr output will be printed and any stderr output or a
+  non-zero exit code will raise an exception.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   return run_command(svn_binary, error_expected, 0,
@@ -599,12 +599,12 @@ def run_svnlook(*varargs):
 
 def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
-  list of lines (including line terminators)."""
+  list of lines (including line terminators).  Use binary mode for output."""
   if stdin_input:
-    return run_command_stdin(svnrdump_binary, 0, 1, 0, stdin_input,
+    return run_command_stdin(svnrdump_binary, 0, 1, 1, stdin_input,
                              *(_with_auth(_with_config_dir(varargs))))
   else:
-    return run_command(svnrdump_binary, 1, 0,
+    return run_command(svnrdump_binary, 1, 1,
                        *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnsync(*varargs):
@@ -642,7 +642,7 @@ def run_entriesdump_subdirs(path):
   return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
-  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
+  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,
   and stderr.  For HTTP, default HTTP library is used."""
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
@@ -650,10 +650,28 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   #                                                      0, 0, None, path)
 
   # This passes HTTP_LIBRARY in addition to our params.
-  return run_command(atomic_ra_revprop_change_binary, True, False, 
+  return run_command(atomic_ra_revprop_change_binary, True, False,
                      url, revision, propname, skel,
                      options.http_library, want_error and 1 or 0)
 
+def run_wc_lock_tester(recursive, path):
+  "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
+  if recursive:
+    option = "-r"
+  else:
+    option = "-1"
+  return run_command(wc_lock_tester_binary, False, False, option, path)
+
+
+def youngest(repos_path):
+  "run 'svnlook youngest' on REPOS_PATH, returns revision as int"
+  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0, 
+                                                      'youngest', repos_path)
+  if exit_code or stderr_lines:
+    raise Failure("Unexpected failure of 'svnlook youngest':\n%s" % stderr_lines)
+  if len(stdout_lines) != 1:
+    raise Failure("Wrong output from 'svnlook youngest':\n%s" % stdout_lines)
+  return int(stdout_lines[0].rstrip())
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
@@ -737,7 +755,7 @@ def create_repos(path):
     # (e.g. due to a missing 'svnadmin' binary).
     raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
-  # Allow unauthenticated users to write to the repos, for ra_svn testing.
+  # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
              "[general]\nauth-access = write\n");
   if options.enable_sasl:
@@ -1055,6 +1073,9 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_bdb():
+  return options.fs_type == 'bdb'
+
 def is_os_windows():
   return os.name == 'nt'
 
@@ -1113,7 +1134,7 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = sys.argv[0]
+    command = os.path.abspath(sys.argv[0])
 
     args = []
     args.append(str(index))
@@ -1133,6 +1154,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-library=' + options.http_library)
     if options.server_minor_version:
       args.append('--server-minor-version=' + str(options.server_minor_version))
+    if options.mode_filter:
+      args.append('--mode-filter=' + options.mode_filter)
+    if options.milestone_filter:
+      args.append('--milestone-filter=' + options.milestone_filter)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1153,17 +1178,60 @@ class TestRunner:
     self.pred = svntest.testcase.create_test_case(func)
     self.index = index
 
-  def list(self):
-    if options.verbose and self.pred.inprogress:
-      print(" %2d     %-5s  %s [[%s]]" % (self.index,
+  def list(self, milestones_dict=None):
+    """Print test doc strings.  MILESTONES_DICT is an optional mapping
+    of issue numbers to target milestones."""
+    if options.mode_filter.upper() == 'ALL' \
+       or options.mode_filter.upper() == self.pred.list_mode().upper() \
+       or (options.mode_filter.upper() == 'PASS' \
+           and self.pred.list_mode() == ''):
+      issues = []
+      tail = ''
+      if self.pred.issues:
+        if not options.milestone_filter or milestones_dict is None:
+          issues = self.pred.issues
+        else: # Limit listing by requested target milestone(s).
+          filter_issues = []
+          matches_filter = False
+
+          # Get the milestones for all the issues associated with this test.
+          # If any one of them matches the MILESTONE_FILTER then we'll print
+          # them all.
+          for issue in self.pred.issues:
+            # A safe starting assumption.
+            milestone = 'unknown'
+            if milestones_dict:
+              if milestones_dict.has_key(str(issue)):
+                milestone = milestones_dict[str(issue)]
+
+            filter_issues.append(str(issue) + '(' + milestone + ')')
+            pattern = re.compile(options.milestone_filter)
+            if pattern.match(milestone):
+              matches_filter = True
+
+          # Did at least one of the associated issues meet our filter?
+          if matches_filter:
+            issues = filter_issues
+
+        tail += " [%s]" % ','.join(['#%s' % str(i) for i in issues])
+
+      # If there is no filter or this test made if through
+      # the filter then print it!
+      if options.milestone_filter is None or len(issues):
+        if options.verbose and self.pred.inprogress:
+          tail += " [[%s]]" % self.pred.inprogress
+        else:
+          print(" %3d    %-5s  %s%s" % (self.index,
                                         self.pred.list_mode(),
                                         self.pred.description,
-                                        self.pred.inprogress))
-    else:
-      print(" %2d     %-5s  %s" % (self.index,
-                                   self.pred.list_mode(),
-                                   self.pred.description))
+                                        tail))
     sys.stdout.flush()
+
+  def get_mode(self):
+    return self.pred.list_mode()
+
+  def get_issues(self):
+    return self.pred.issues
 
   def get_function_name(self):
     return self.pred.get_function_name()
@@ -1228,6 +1296,7 @@ class TestRunner:
       # *is* information in the exception's arguments, then print it.
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
+        print('CWD: %s' % os.getcwd())
         if ex_args:
           print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
@@ -1243,6 +1312,7 @@ class TestRunner:
       raise
     except:
       result = svntest.testcase.RESULT_FAIL
+      print('CWD: %s' % os.getcwd())
       print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
       sys.stdout.flush()
@@ -1271,15 +1341,25 @@ def run_one_test(n, test_list, finished_tests = None):
   If we're running the tests in parallel spawn the test in a new process.
   """
 
-  if (n < 1) or (n > len(test_list) - 1):
+  # allow N to be negative, so './basic_tests.py -- -1' works
+  num_tests = len(test_list) - 1
+  if (n == 0) or (abs(n) > num_tests):
     print("There is no test %s.\n" % n)
     return 1
+  if n < 0:
+    n += 1+num_tests
 
-  # Run the test.
-  exit_code = TestRunner(test_list[n], n).run()
-  return exit_code
+  test_mode = TestRunner(test_list[n], n).get_mode().upper()
+  if options.mode_filter.upper() == 'ALL' \
+     or options.mode_filter.upper() == test_mode \
+     or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
+    # Run the test.
+    exit_code = TestRunner(test_list[n], n).run()
+    return exit_code
+  else:
+    return 0
 
-def _internal_run_tests(test_list, testnums, parallel):
+def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
 
   If we're running the tests in parallel spawn as much parallel processes
@@ -1291,10 +1371,20 @@ def _internal_run_tests(test_list, testnums, parallel):
   finished_tests = []
   tests_started = 0
 
+  # Some of the tests use sys.argv[0] to locate their test data
+  # directory.  Perhaps we should just be passing srcdir to the tests?
+  if srcdir:
+    sys.argv[0] = os.path.join(srcdir, 'subversion', 'tests', 'cmdline',
+                               sys.argv[0])
+
   if not parallel:
-    for testnum in testnums:
+    for i, testnum in enumerate(testnums):
+      
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
+      # signal progress
+      if progress_func:
+        progress_func(i+1, len(testnums))
   else:
     number_queue = queue.Queue()
     for num in testnums:
@@ -1312,6 +1402,10 @@ def _internal_run_tests(test_list, testnums, parallel):
     for t in threads:
       results += t.results
     results.sort()
+
+    # signal some kind of progress
+    if progress_func:
+      progress_func(len(testnums), len(testnums))
 
     # terminate the line of dots
     print("")
@@ -1340,20 +1434,26 @@ def create_default_options():
 def _create_parser():
   """Return a parser for our test suite."""
   # set up the parser
+  _default_http_library = 'serf'
   usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
+  parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
+                    help='Limit --list to those with target milestone specified')
   parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
-  parser.add_option('-p', '--parallel', action='store_const', const=5,
-                    dest='parallel',
+  parser.add_option('-p', '--parallel', action='store_const',
+                    const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
                          'child process')
+  parser.add_option('--mode-filter', action='store', dest='mode_filter',
+                    default='ALL',
+                    help='Limit tests to those with type specified (e.g. XFAIL)')
   parser.add_option('--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('--fs-type', action='store',
@@ -1370,7 +1470,7 @@ def _create_parser():
   parser.add_option('--http-library', action='store',
                     help="Make svn use this DAV library (neon or serf) if " +
                          "it supports both, else assume it's using this " +
-                         "one; the default is neon")
+                         "one; the default is " + _default_http_library)
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server ('4', " +
                          "'5', or '6').")
@@ -1388,12 +1488,14 @@ def _create_parser():
                          'test output and ignores all exceptions in the ' +
                          'run_and_verify* functions. This option is only ' +
                          'useful during test development!')
+  parser.add_option('--srcdir', action='store', dest='srcdir',
+                    help='Source directory.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=7,
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
-        http_library='serf')
+        http_library=_default_http_library)
 
   return parser
 
@@ -1424,10 +1526,6 @@ def _parse_options(arglist=sys.argv[1:]):
   return (parser, args)
 
 
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
 def run_tests(test_list, serial_only = False):
   """Main routine to run all tests in TEST_LIST.
 
@@ -1435,6 +1533,61 @@ def run_tests(test_list, serial_only = False):
         appropriate exit code.
   """
 
+  sys.exit(execute_tests(test_list, serial_only))
+
+def get_target_milestones_for_issues(issue_numbers):
+  xml_url = "http://subversion.tigris.org/issues/xml.cgi?id="
+  issue_dict = {}
+
+  if isinstance(issue_numbers, int):
+    issue_numbers = [str(issue_numbers)]
+  elif isinstance(issue_numbers, str):
+    issue_numbers = [issue_numbers]
+
+  if issue_numbers is None or len(issue_numbers) == 0:
+    return issue_dict
+
+  for num in issue_numbers:
+    xml_url += str(num) + ','
+    issue_dict[str(num)] = 'unknown'
+
+  try:
+    # Parse the xml for ISSUE_NO from the issue tracker into a Document.
+    issue_xml_f = urllib.urlopen(xml_url)
+  except:
+    print "WARNING: Unable to contact issue tracker; " \
+          "milestones defaulting to 'unknown'."
+    return issue_dict
+
+  try:
+    xmldoc = xml.dom.minidom.parse(issue_xml_f)
+    issue_xml_f.close()
+  
+    # Get the target milestone for each issue.
+    issue_element = xmldoc.getElementsByTagName('issue')
+    for i in issue_element:
+      issue_id_element = i.getElementsByTagName('issue_id')
+      issue_id = issue_id_element[0].childNodes[0].nodeValue
+      milestone_element = i.getElementsByTagName('target_milestone')
+      milestone = milestone_element[0].childNodes[0].nodeValue
+      issue_dict[issue_id] = milestone
+  except:
+    print "ERROR: Unable to parse target milestones from issue tracker"
+    raise
+
+  return issue_dict
+
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# This routine parses sys.argv to decide what to do.
+def execute_tests(test_list, serial_only = False, test_name = None,
+                  progress_func = None, test_selection = []):
+  """Similar to run_tests(), but just returns the exit code, rather than
+  exiting the process.  This function can be used when a caller doesn't
+  want the process to die."""
+
+  global pristine_url
   global pristine_greek_repos_url
   global svn_binary
   global svnadmin_binary
@@ -1444,16 +1597,20 @@ def run_tests(test_list, serial_only = False):
   global svnversion_binary
   global options
 
+  if test_name:
+    sys.argv[0] = test_name
+
   testnums = []
 
   if not options:
+    # Override which tests to run from the commandline
     (parser, args) = _parse_options()
+    test_selection = args
   else:
-    args = []
     parser = _create_parser()
 
   # parse the positional arguments (test nums, names)
-  for arg in args:
+  for arg in test_selection:
     appended = False
     try:
       testnums.append(int(arg))
@@ -1535,13 +1692,37 @@ def run_tests(test_list, serial_only = False):
     testnums = list(range(1, len(test_list)))
 
   if options.list_tests:
-    print("Test #  Mode   Test Description")
-    print("------  -----  ----------------")
-    for testnum in testnums:
-      TestRunner(test_list[testnum], testnum).list()
 
-    # done. just exit with success.
-    sys.exit(0)
+    # If we want to list the target milestones, then get all the issues
+    # associated with all the individual tests.
+    milestones_dict = None
+    if options.milestone_filter:
+      issues_dict = {}
+      for testnum in testnums:
+        issues = TestRunner(test_list[testnum], testnum).get_issues()
+        test_mode = TestRunner(test_list[testnum], testnum).get_mode().upper()
+        if issues:
+          for issue in issues:
+            if (options.mode_filter.upper() == 'ALL' or
+                options.mode_filter.upper() == test_mode or
+                (options.mode_filter.upper() == 'PASS' and test_mode == '')):
+              issues_dict[issue]=issue
+      milestones_dict = get_target_milestones_for_issues(issues_dict.keys())
+
+    header = "Test #  Mode   Test Description\n" \
+             "------  -----  ----------------"
+    printed_header = False
+    for testnum in testnums:
+      test_mode = TestRunner(test_list[testnum], testnum).get_mode().upper()
+      if options.mode_filter.upper() == 'ALL' \
+         or options.mode_filter.upper() == test_mode \
+         or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
+        if not printed_header:
+          print header
+          printed_header = True
+        TestRunner(test_list[testnum], testnum).list(milestones_dict)
+    # We are simply listing the tests so always exit with success.
+    return 0
 
   # don't run tests in parallel when the tests don't support it or there
   # are only a few tests to run.
@@ -1556,7 +1737,8 @@ def run_tests(test_list, serial_only = False):
     svntest.actions.setup_pristine_greek_repository()
 
   # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel)
+  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
+                                  options.srcdir, progress_func)
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
@@ -1567,4 +1749,4 @@ def run_tests(test_list, serial_only = False):
   svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  return exit_code

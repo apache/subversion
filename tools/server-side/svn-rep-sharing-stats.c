@@ -329,12 +329,10 @@ pretty_print(const char *name,
   for (hi = apr_hash_first(scratch_pool, reps_ref_counts);
        hi; hi = apr_hash_next(hi))
     {
-      const struct key_t *key;
       struct value_t *value;
 
       SVN_ERR(cancel_func(NULL));
 
-      key = svn__apr_hash_index_key(hi);
       value = svn__apr_hash_index_val(hi);
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,

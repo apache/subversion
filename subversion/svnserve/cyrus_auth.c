@@ -360,8 +360,10 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
         return fail_cmd(conn, pool, sasl_ctx);
 
       if ((p = strchr(user, '@')) != NULL)
-        /* Drop the realm part. */
-        b->user = apr_pstrndup(b->pool, user, p - (const char *)user);
+        {
+          /* Drop the realm part. */
+          b->user = apr_pstrndup(b->pool, user, p - (const char *)user);
+        }
       else
         {
           svn_error_t *err;

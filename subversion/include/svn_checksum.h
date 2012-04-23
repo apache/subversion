@@ -42,7 +42,7 @@ extern "C" {
  *
  * @since New in 1.6.
  */
-typedef enum
+typedef enum svn_checksum_kind_t
 {
   /** The checksum is (or should be set to) an MD5 checksum. */
   svn_checksum_md5,
@@ -121,9 +121,11 @@ svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
 
 /** Return the hex representation of @a checksum, allocating the
  * string in @a pool.  If @a checksum->digest is all zeros (that is,
- * 0, not '0'), then return NULL.
+ * 0, not '0') then return NULL. In 1.7+, @a checksum may be NULL
+ * and NULL will be returned in that case.
  *
  * @since New in 1.6.
+ * @note Passing NULL for @a checksum in 1.6 will cause a segfault.
  */
 const char *
 svn_checksum_to_cstring(const svn_checksum_t *checksum,
@@ -236,6 +238,28 @@ svn_checksum_final(svn_checksum_t **checksum,
  */
 apr_size_t
 svn_checksum_size(const svn_checksum_t *checksum);
+
+
+/**
+ * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and 
+ * @a expected checksums which do not match.  Use @a fmt, and the following
+ * parameters to populate the error message.
+ *
+ * @note This function does not actually check for the mismatch, it just
+ * constructs the error.
+ *
+ * @a scratch_pool is used for temporary allocations; the returned error
+ * will be allocated in its own pool (as is typical).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_checksum_mismatch_err(const svn_checksum_t *expected,
+                          const svn_checksum_t *actual,
+                          apr_pool_t *scratch_pool,
+                          const char *fmt,
+                          ...)
+  __attribute__ ((format(printf, 4, 5)));
 
 
 /**

@@ -35,12 +35,12 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum drev_state_e {
   NONE = 0,
   VERSION_NAME,
 } drev_state_e;
 
-typedef struct {
+typedef struct drev_context_t {
   apr_pool_t *pool;
 
   const char *path;

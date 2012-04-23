@@ -152,15 +152,18 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
 ;;; Net if you don't have a local copy, but it requires a very recent
 ;;; version of Emacs, so I didn't bother with it here.  -kfogel)
 
-(defvar svn-source-tree-top (expand-file-name "~/projects/svn/")
-  "*Top directory of your Subversion source tree.  You almost
-certainly want to set this in your .emacs, to override the default;
-use `(setq svn-source-tree-top \"/path/to/the/tree\")'.")
+(defvar svn-site-source-tree-top (expand-file-name "~/projects/svn/site/")
+  "*Top directory of your Subversion site source tree of
+repository \"http://svn.apache.org/repos/asf/subversion/site\".
+You almost certainly want to set this in your .emacs, to override
+the default; use `(setq svn-site-source-tree-top
+\"/path/to/the/site/tree\")'.")
 
-(defvar svn-faq-file (concat svn-source-tree-top "/www/faq.html")
+(defvar svn-faq-file (concat svn-site-source-tree-top "/publish/faq.html")
   "*A local copy of the Subversion FAQ.")
 
-(defvar svn-hacking-file (concat svn-source-tree-top "/www/hacking.html")
+(defvar svn-hacking-file (concat svn-site-source-tree-top 
+                                 "/docs/community-guide/community-guide.html")
   "*A local copy of the Subversion hacking.html file.")
 
 ;; Helper for referring to issue numbers in a user-friendly way.
@@ -188,11 +191,13 @@ the resulting URL."
              (start (car bounds))
              (end   (cdr bounds)))
         (delete-region start end)))
-  (insert (format "http://svn.collab.net/viewcvs/svn?rev=%s&view=rev" rev)))
+  (insert (format "http://svn.apache.org/viewcvs?view=revision&revision=%s" 
+                  rev)))
 
-(defconst svn-url-base "http://subversion.tigris.org/")
+(defconst svn-url-base "http://subversion.apache.org/")
 (defconst svn-faq-url (concat svn-url-base "faq.html"))
-(defconst svn-hacking-url (concat svn-url-base "hacking.html"))
+(defconst svn-hacking-url (concat svn-url-base 
+                                  "docs/community-guide/community-guide.html"))
 
 (defun svn-html-get-targets (file)
   "Build a list of targets for the Subversion web file FILE."

@@ -238,24 +238,23 @@ svn_cl__merge(apr_getopt_t *os,
      sourcepaths. */
   if (sourcepath1 && sourcepath2 && strcmp(targetpath, "") == 0)
     {
-      /* If the sourcepath is a URL, it can only refer to a target in the
-         current working directory.
-         However, if the sourcepath is a local path, it can refer to a target
-         somewhere deeper in the directory structure. */
+      /* If the sourcepath is a URL, it can only refer to a target in
+         the current working directory.  However, if the sourcepath is
+         a local path, it can refer to a target somewhere deeper in
+         the directory structure. */
       if (svn_path_is_url(sourcepath1))
         {
-          const char *sp1_basename, *sp2_basename;
-          sp1_basename = svn_uri_basename(sourcepath1, pool);
-          sp2_basename = svn_uri_basename(sourcepath2, pool);
+          const char *sp1_basename = svn_uri_basename(sourcepath1, pool);
+          const char *sp2_basename = svn_uri_basename(sourcepath2, pool);
 
           if (strcmp(sp1_basename, sp2_basename) == 0)
             {
               svn_node_kind_t kind;
-              const char *decoded_path = svn_path_uri_decode(sp1_basename, pool);
-              SVN_ERR(svn_io_check_path(decoded_path, &kind, pool));
+
+              SVN_ERR(svn_io_check_path(sp1_basename, &kind, pool));
               if (kind == svn_node_file)
                 {
-                  targetpath = decoded_path;
+                  targetpath = sp1_basename;
                 }
             }
         }
@@ -293,6 +292,10 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("--reintegrate can only be used with "
                                   "a single merge source"));
+      if (opt_state->allow_mixed_rev)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--allow-mixed-revisions cannot be used "
+                                  "with --reintegrate"));
     }
 
   if (! two_sources_specified) /* TODO: Switch order of if */
@@ -322,7 +325,7 @@ svn_cl__merge(apr_getopt_t *os,
                                            opt_state->dry_run,
                                            options, ctx, pool);
       else
-        err = svn_client_merge_peg3(sourcepath1,
+        err = svn_client_merge_peg4(sourcepath1,
                                     ranges_to_merge,
                                     &peg_revision1,
                                     targetpath,
@@ -331,6 +334,7 @@ svn_cl__merge(apr_getopt_t *os,
                                     opt_state->force,
                                     opt_state->record_only,
                                     opt_state->dry_run,
+                                    opt_state->allow_mixed_rev,
                                     options,
                                     ctx,
                                     pool);
@@ -342,7 +346,7 @@ svn_cl__merge(apr_getopt_t *os,
                                                  NULL,
                                                  _("Merge sources must both be "
                                                    "either paths or URLs")));
-      err = svn_client_merge3(sourcepath1,
+      err = svn_client_merge4(sourcepath1,
                               &first_range_start,
                               sourcepath2,
                               &first_range_end,
@@ -352,6 +356,7 @@ svn_cl__merge(apr_getopt_t *os,
                               opt_state->force,
                               opt_state->record_only,
                               opt_state->dry_run,
+                              opt_state->allow_mixed_rev,
                               options,
                               ctx,
                               pool);

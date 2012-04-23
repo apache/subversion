@@ -29,8 +29,12 @@
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
+#include "private/svn_fspath.h"
+
 #include "ra_neon.h"
 
+
+#define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
 
 static const svn_ra_neon__xml_elm_t options_elements[] =
 {
@@ -41,7 +45,7 @@ static const svn_ra_neon__xml_elm_t options_elements[] =
   { NULL }
 };
 
-typedef struct {
+typedef struct options_ctx_t {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
     svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */
@@ -108,9 +112,9 @@ end_element(void *baton, int state,
   options_ctx_t *oc = baton;
 
   if (state == ELEM_href)
-    oc->activity_coll = svn_string_create(svn_uri_canonicalize(oc->cdata->data,
-                                                               oc->pool),
-                                          oc->pool);
+    oc->activity_coll =
+      svn_string_create(svn_urlpath__canonicalize(oc->cdata->data, oc->pool),
+                        oc->pool);
 
   return SVN_NO_ERROR;
 }
@@ -187,26 +191,25 @@ parse_capabilities(ne_request *req,
          slightly more efficiently, but that wouldn't be worth it
          until we have many more capabilities. */
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         /* The server doesn't know what repository we're referring
            to, so it can't just say capability_yes. */
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_server_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
-                                      vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                      APR_HASH_KEY_STRING, capability_yes);
     }
@@ -234,7 +237,19 @@ parse_capabilities(ne_request *req,
   /* HTTP v2 stuff */
   if ((val = ne_get_response_header(req, SVN_DAV_ME_RESOURCE_HEADER)))
     {
-      ras->me_resource = apr_pstrdup(ras->pool, val);
+#ifdef SVN_DEBUG
+      /* ### This section is throw in here for development use.  It
+         ### allows devs the chance to force the client to speak v1,
+         ### even if the server is capable of speaking v2.  We should
+         ### probably remove it before 1.7 goes final. */
+      char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
+
+      if (! (ignore_v2_env_var
+             && apr_strnatcasecmp(ignore_v2_env_var, "yes") == 0))
+        ras->me_resource = apr_pstrdup(ras->pool, val);
+#else
+        ras->me_resource = apr_pstrdup(ras->pool, val);
+#endif
     }
   if ((val = ne_get_response_header(req, SVN_DAV_REV_ROOT_STUB_HEADER)))
     {
@@ -251,6 +266,14 @@ parse_capabilities(ne_request *req,
   if ((val = ne_get_response_header(req, SVN_DAV_TXN_STUB_HEADER)))
     {
       ras->txn_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_VTXN_ROOT_STUB_HEADER)))
+    {
+      ras->vtxn_root_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_VTXN_STUB_HEADER)))
+    {
+      ras->vtxn_stub = apr_pstrdup(ras->pool, val);
     }
 }
 
@@ -336,7 +359,7 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
 {
   svn_revnum_t ignored_revnum;
   if (! ras->act_coll)
-    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
                                                &ignored_revnum, pool));
   *activity_coll = svn_string_create(ras->act_coll, pool);
   return SVN_NO_ERROR;
@@ -395,12 +418,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
+          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE,
+                                           &validate_inherited_mergeinfo,
+                                           FALSE, pool);
 
           if (err)
             {

@@ -322,6 +322,28 @@ svn_auth_get_windows_ssl_client_cert_pw_provider
 /* CryptoApi.                                                            */
 /*-----------------------------------------------------------------------*/
 
+/* Helper to create CryptoAPI CERT_CONTEXT from base64 encoded BASE64_CERT.
+ * Returns NULL on error.
+ */
+static PCCERT_CONTEXT
+certcontext_from_base64(const char *base64_cert, apr_pool_t *pool)
+{
+  PCCERT_CONTEXT cert_context = NULL;
+  int cert_len;
+  BYTE *binary_cert;
+
+  /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
+  binary_cert = apr_palloc(pool,
+                           apr_base64_decode_len(base64_cert));
+  cert_len = apr_base64_decode((char*)binary_cert, base64_cert);
+
+  /* Parse the certificate into a context. */
+  cert_context = CertCreateCertificateContext
+    (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
+
+  return cert_context;
+}
+
 /* Helper for windows_ssl_server_trust_first_credentials for validating
  * certificate using CryptoApi. Sets *OK_P to TRUE if base64 encoded ASCII_CERT
  * certificate considered as valid.
@@ -334,19 +356,11 @@ windows_validate_certificate(svn_boolean_t *ok_p,
   PCCERT_CONTEXT cert_context = NULL;
   CERT_CHAIN_PARA chain_para;
   PCCERT_CHAIN_CONTEXT chain_context = NULL;
-  int cert_len;
-  BYTE *binary_cert;
 
   *ok_p = FALSE;
 
-  /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
-  binary_cert = apr_palloc(pool,
-                           apr_base64_decode_len(ascii_cert));
-  cert_len = apr_base64_decode((char*)binary_cert, ascii_cert);
-
   /* Parse the certificate into a context. */
-  cert_context = CertCreateCertificateContext
-    (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
+  cert_context = certcontext_from_base64(ascii_cert, pool);
 
   if (cert_context)
     {

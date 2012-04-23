@@ -31,9 +31,12 @@ import string, sys, os, re
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -100,9 +103,10 @@ def clname_from_lastchar_cb(full_path):
 
 
 # Regular expressions for 'svn changelist' output.
+_re_cl_rem_pattern = "^D \[(.*)\] (.*)"
 _re_cl_skip = re.compile("Skipped '(.*)'")
 _re_cl_add  = re.compile("^A \[(.*)\] (.*)")
-_re_cl_rem  = re.compile("^D \[(.*)\] (.*)")
+_re_cl_rem  = re.compile(_re_cl_rem_pattern)
 
 def verify_changelist_output(output, expected_adds=None,
                              expected_removals=None,
@@ -871,7 +875,7 @@ def tree_conflicts_and_changelists_on_commit1(sbox):
   # item.
   svntest.main.run_svn(None, "changelist", "list", iota, rho)
 
-  expected_error = ("svn: Aborting commit: '.*" + re.escape(rho)
+  expected_error = ("svn: E155015: Aborting commit: '.*" + re.escape(rho)
                     + "' remains in .*conflict")
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -960,7 +964,7 @@ def tree_conflicts_and_changelists_on_commit2(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify that the current situation does not commit.
-  expected_error = "svn: Aborting commit:.* remains in .*conflict";
+  expected_error = "svn: E155015: Aborting commit:.* remains in .*conflict";
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None, None,
@@ -1043,7 +1047,7 @@ def tree_conflicts_and_changelists_on_commit3(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify that the current situation does not commit.
-  expected_error = "svn: Aborting commit:.* remains in .*conflict";
+  expected_error = "svn: E155015: Aborting commit:.* remains in .*conflict";
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None, None,
@@ -1126,6 +1130,80 @@ def move_added_keeps_changelist(sbox):
   ]
   svntest.actions.run_and_verify_info(expected_infos, kappa2_path)
 
+@Issue(3820)
+def change_to_dir(sbox):
+  "change file in changelist to dir"
+
+  sbox.build()
+
+  # No changelist initially
+  expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu visible in changelist
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'qq', sbox.ospath('A/mu'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after delete
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu removed from changelist after replace with directory
+  svntest.actions.run_and_verify_svn(None, '^A|' + _re_cl_rem_pattern, [],
+                                     'mkdir', sbox.ospath('A/mu'))
+  expected_infos = [{'Changelist' : None}] # No Name for directories?
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  svntest.main.run_svn(None, "commit", "-m", "r2: replace A/mu: file->dir",
+                       sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  svntest.main.run_svn(None, "update", "-r", "1", sbox.ospath('A'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  expected_infos = [{'Changelist' : None}] # No Name for directories?
+  svntest.main.run_svn(None, "merge", "-c", "2", sbox.ospath('A'),
+                       sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+
+@Issue(3822)
+def revert_deleted_in_changelist(sbox):
+  "revert a deleted file in a changelist"
+
+  sbox.build(read_only = True)
+
+  # No changelist initially
+  expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu visible in changelist
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'qq', sbox.ospath('A/mu'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after delete
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after revert
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after parent delete
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after revert
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
 
 
 ########################################################################
@@ -1146,6 +1224,8 @@ test_list = [ None,
               tree_conflicts_and_changelists_on_commit3,
               move_keeps_changelist,
               move_added_keeps_changelist,
+              change_to_dir,
+              revert_deleted_in_changelist,
              ]
 
 if __name__ == '__main__':

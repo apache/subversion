@@ -326,12 +326,12 @@ svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict
     new_conflict->property_name = apr_pstrdup(pool, conflict->property_name);
   if (conflict->mime_type)
     new_conflict->mime_type = apr_pstrdup(pool, conflict->mime_type);
-  if (conflict->base_file)
-    new_conflict->base_file = apr_pstrdup(pool, conflict->base_file);
-  if (conflict->their_file)
-    new_conflict->their_file = apr_pstrdup(pool, conflict->their_file);
-  if (conflict->my_file)
-    new_conflict->my_file = apr_pstrdup(pool, conflict->my_file);
+  if (conflict->base_abspath)
+    new_conflict->base_abspath = apr_pstrdup(pool, conflict->base_abspath);
+  if (conflict->their_abspath)
+    new_conflict->their_abspath = apr_pstrdup(pool, conflict->their_abspath);
+  if (conflict->my_abspath)
+    new_conflict->my_abspath = apr_pstrdup(pool, conflict->my_abspath);
   if (conflict->merged_file)
     new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
   if (conflict->src_left_version)
@@ -346,7 +346,7 @@ svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict
 
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create(const char *repos_url,
-                               const char* path_in_repos,
+                               const char *path_in_repos,
                                svn_revnum_t peg_rev,
                                svn_node_kind_t node_kind,
                                apr_pool_t *pool)
@@ -426,19 +426,21 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 
       case svn_wc_conflict_kind_text:
         new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = conflict->mime_type
-                              ? apr_pstrdup(result_pool, conflict->mime_type)
-                              : NULL;
-        new_conflict->base_file = apr_pstrdup(result_pool,
-                                              conflict->base_file);
-        new_conflict->their_file = apr_pstrdup(result_pool,
-                                               conflict->their_file);
-        new_conflict->my_file = apr_pstrdup(result_pool,
-                                            conflict->my_file);
-        new_conflict->merged_file = conflict->merged_file
-                                    ? apr_pstrdup(result_pool,
-                                                  conflict->merged_file)
-                                    : NULL;
+        if (conflict->mime_type)
+          new_conflict->mime_type = apr_pstrdup(result_pool,
+                                                conflict->mime_type);
+        if (conflict->base_abspath)
+          new_conflict->base_file = svn_dirent_basename(conflict->base_abspath,
+                                                        result_pool);
+        if (conflict->their_abspath)
+          new_conflict->their_file = svn_dirent_basename(conflict->their_abspath,
+                                                         result_pool);
+        if (conflict->my_abspath)
+          new_conflict->my_file = svn_dirent_basename(conflict->my_abspath,
+                                                      result_pool);
+        if (conflict->merged_file)
+          new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                  conflict->merged_file);
         break;
 
       case svn_wc_conflict_kind_tree:
@@ -458,6 +460,7 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
                   apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *new_conflict;
+  const char *dir_abspath;
 
   if (conflict == NULL)
     return NULL;
@@ -486,16 +489,21 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
         /* Falling through. */
 
       case svn_wc_conflict_kind_text:
+        dir_abspath = svn_dirent_dirname(new_conflict->local_abspath,
+                                         result_pool);
         new_conflict->is_binary = conflict->is_binary;
         new_conflict->mime_type = conflict->mime_type
                               ? apr_pstrdup(result_pool, conflict->mime_type)
                               : NULL;
-        new_conflict->base_file = apr_pstrdup(result_pool,
-                                              conflict->base_file);
-        new_conflict->their_file = apr_pstrdup(result_pool,
-                                               conflict->their_file);
-        new_conflict->my_file = apr_pstrdup(result_pool,
-                                            conflict->my_file);
+        new_conflict->base_abspath = svn_dirent_join(dir_abspath,
+                                                     conflict->base_file,
+                                                     result_pool);
+        new_conflict->their_abspath = svn_dirent_join(dir_abspath,
+                                                      conflict->their_file,
+                                                      result_pool);
+        new_conflict->my_abspath = svn_dirent_join(dir_abspath,
+                                                   conflict->my_file,
+                                                   result_pool);
         new_conflict->merged_file = conflict->merged_file
                                     ? apr_pstrdup(result_pool,
                                                   conflict->merged_file)
@@ -642,7 +650,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   if (old_status->versioned
       && old_status->conflicted
       && old_status->node_status != svn_wc_status_obstructed
-      && (old_status->kind == svn_node_file 
+      && (old_status->kind == svn_node_file
           || old_status->node_status != svn_wc_status_missing))
     {
       svn_boolean_t text_conflict_p, prop_conflict_p;

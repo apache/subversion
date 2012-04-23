@@ -82,7 +82,8 @@ resolve_repos_relative_url(const char **absolute_url,
    * arguments, it is presumed that the output will be canonicalized after
    * this function, which will remove any duplicate path separator.
    */
-  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1, NULL);
+  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1,
+                              (char *)NULL);
 
   return SVN_NO_ERROR;
 }
@@ -113,7 +114,7 @@ check_root_url_of_target(const char **root_url,
   if (!svn_path_is_url(truepath))
     SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err =  svn_client__get_repos_root(&tmp_root_url, truepath, &opt_rev,
+  err =  svn_client__get_repos_root(&tmp_root_url, truepath,
                                     ctx, pool, pool);
 
   if (err)
@@ -270,7 +271,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
                 }
             }
 
-          target = apr_pstrcat(pool, true_target, peg_rev, NULL);
+          target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
 
           if (rel_url_found)
             {
@@ -290,9 +291,16 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
        * arguments.
        */
       if (root_url == NULL)
-        SVN_ERR_W(svn_client_root_url_from_path(&root_url, "", ctx, pool),
-                  "Resolving '^/': no repository root found in the "
-                  "target arguments or in the current directory");
+        {
+          svn_error_t *err2;
+          err2 = svn_client_root_url_from_path(&root_url, "", ctx, pool);
+
+          if (err2 || root_url == NULL)
+            return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, err2,
+                                    _("Resolving '^/': no repository root "
+                                      "found in the target arguments or "
+                                      "in the current directory"));
+        }
 
       *targets_p = apr_array_make(pool, output_targets->nelts,
                                   sizeof(const char *));
@@ -317,7 +325,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
               SVN_ERR(svn_opt__arg_canonicalize_url(&true_target, abs_target,
                                                     pool));
 
-              target = apr_pstrcat(pool, true_target, peg_rev, NULL);
+              target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
             }
 
           APR_ARRAY_PUSH(*targets_p, const char *) = target;

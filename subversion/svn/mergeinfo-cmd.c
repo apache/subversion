@@ -48,9 +48,9 @@ print_log_rev(void *baton,
               apr_pool_t *pool)
 {
   if (log_entry->non_inheritable)
-    svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision);
+    SVN_ERR(svn_cmdline_printf(pool, "r%ld*\n", log_entry->revision));
   else
-    svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
+    SVN_ERR(svn_cmdline_printf(pool, "r%ld\n", log_entry->revision));
 
   return SVN_NO_ERROR;
 }

@@ -33,9 +33,13 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
@@ -79,6 +83,7 @@ def mergeinfo(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['1'], sbox.repo_url, wc_dir)
 
+@SkipUnless(server_has_mergeinfo)
 def explicit_mergeinfo_source(sbox):
   "'mergeinfo' with source selection"
 
@@ -108,6 +113,7 @@ def explicit_mergeinfo_source(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['1'], G_path, H_path)
 
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_non_source(sbox):
   "'mergeinfo' with uninteresting source selection"
 
@@ -129,10 +135,11 @@ def mergeinfo_non_source(sbox):
 
   # Check on a source we haven't "merged" from.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['2'], H2_url, H_path)
+                                           [], H2_url, H_path)
 
 #----------------------------------------------------------------------
 # Issue #3138
+@Issue(3138)
 def mergeinfo_on_unknown_url(sbox):
   "mergeinfo of an unknown url should return error"
 
@@ -155,6 +162,7 @@ def mergeinfo_on_unknown_url(sbox):
 # Test for issue #3126 'svn mergeinfo shows too few or too many
 # eligible revisions'.  Specifically
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
+@Issue(3126)
 def non_inheritable_mergeinfo(sbox):
   "non-inheritable mergeinfo shows as merged"
 
@@ -169,7 +177,7 @@ def non_inheritable_mergeinfo(sbox):
 
   # Update the WC, then merge r4 from A to A_COPY and r6 from A to A_COPY
   # at --depth empty and commit the merges as r7.
-  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(6), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=6)
   svntest.actions.run_and_verify_svn(
@@ -195,7 +203,7 @@ def non_inheritable_mergeinfo(sbox):
                                         expected_status, None, wc_dir)
 
   # Update the WC a last time to ensure full inheritance.
-  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [], 'up',
                                      wc_dir)
 
   # Despite being non-inheritable, r6 should still show as merged to A_COPY
@@ -225,6 +233,8 @@ def non_inheritable_mergeinfo(sbox):
 #
 # Test for issue #3242 'Subversion demands unnecessary access to parent
 # directories of operations'
+@Issue(3242)
+@SkipUnless(server_has_mergeinfo)
 def recursive_mergeinfo(sbox):
   "test svn mergeinfo -R"
 
@@ -248,7 +258,7 @@ def recursive_mergeinfo(sbox):
   nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2")
 
   # Rename A to A2 in r7.
-  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(6), [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ren', A_path, A2_path)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -264,7 +274,7 @@ def recursive_mergeinfo(sbox):
   # Do several merges to create varied subtree mergeinfo
 
   # Merge r4 from A2 to A_COPY at depth empty
-  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(8), [], 'up',
                                      wc_dir)
   svntest.actions.run_and_verify_svn(
     None,
@@ -318,7 +328,7 @@ def recursive_mergeinfo(sbox):
   # Commit everything this far as r9
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir, '-m', 'Many merges')
-  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(9), [], 'up',
                                      wc_dir)
 
   # Test svn mergeinfo -R / --depth infinity.
@@ -375,8 +385,9 @@ def recursive_mergeinfo(sbox):
     sbox.repo_url + '/A2/D/H/omega',
     sbox.repo_url + '/A_COPY/D/H/omega',
     '--show-revs', 'merged')
-  
+
 # Test for issue #3180 'svn mergeinfo ignores peg rev for WC target'.
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_on_pegged_wc_path(sbox):
   "svn mergeinfo on pegged working copy target"
 
@@ -412,7 +423,8 @@ def mergeinfo_on_pegged_wc_path(sbox):
     expected_merge_output([[5]],
                           ['U    ' + beta_COPY_path + '\n',
                            ' U   ' + A_COPY_path + '\n']),
-    [], 'merge', '-c5', sbox.repo_url + '/A', A_COPY_path)
+    [], 'merge', '-c5', '--allow-mixed-revisions',
+    sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir,
                                      '-m', 'Merge r5')
@@ -485,13 +497,12 @@ def mergeinfo_on_pegged_wc_path(sbox):
 test_list = [ None,
               no_mergeinfo,
               mergeinfo,
-              SkipUnless(explicit_mergeinfo_source, server_has_mergeinfo),
-              XFail(mergeinfo_non_source, server_has_mergeinfo),
+              explicit_mergeinfo_source,
+              mergeinfo_non_source,
               mergeinfo_on_unknown_url,
               non_inheritable_mergeinfo,
-              SkipUnless(recursive_mergeinfo, server_has_mergeinfo),
-              SkipUnless(mergeinfo_on_pegged_wc_path,
-                         server_has_mergeinfo),
+              recursive_mergeinfo,
+              mergeinfo_on_pegged_wc_path,
              ]
 
 if __name__ == '__main__':

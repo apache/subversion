@@ -44,12 +44,12 @@ class InfoCallback
 
   static svn_error_t *callback(void *baton,
                                const char *path,
-                               const svn_info_t *info,
+                               const svn_info2_t *info,
                                apr_pool_t *pool);
 
  protected:
   svn_error_t *singleInfo(const char *path,
-                          const svn_info_t *info,
+                          const svn_info2_t *info,
                           apr_pool_t *pool);
 
  private:

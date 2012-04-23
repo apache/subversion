@@ -23,6 +23,8 @@
 
 
 
+#define SVN_DEPRECATED
+
 #include <limits.h>
 #include "svn_mergeinfo.h"
 #include "../../libsvn_client/mergeinfo.h"
@@ -34,7 +36,7 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
-typedef struct {
+typedef struct mergeinfo_catalog_item {
   const char *path;
   const char *unparsed_mergeinfo;
   svn_boolean_t remains;
@@ -240,7 +242,7 @@ check_patch_result(const char *path, const char **expected_lines, const char *eo
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR_ASSERT(i == num_expected_lines);
+  SVN_TEST_ASSERT(i == num_expected_lines);
   SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
@@ -339,6 +341,7 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
@@ -371,7 +374,7 @@ test_patch(const svn_test_opts_t *opts,
     {
       apr_size_t len = strlen(unidiff_patch[i]);
       SVN_ERR(svn_io_file_write(patch_file, unidiff_patch[i], &len, pool));
-      SVN_ERR_ASSERT(len == strlen(unidiff_patch[i]));
+      SVN_TEST_ASSERT(len == strlen(unidiff_patch[i]));
     }
   SVN_ERR(svn_io_file_flush_to_disk(patch_file, pool));
 
@@ -379,18 +382,18 @@ test_patch(const svn_test_opts_t *opts,
   pcb.patched_tempfiles = apr_hash_make(pool);
   pcb.reject_tempfiles = apr_hash_make(pool);
   pcb.state_pool = pool;
-  SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE, FALSE,
+  SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
                            FALSE, FALSE, patch_collection_func, &pcb,
                            ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
-  SVN_ERR_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   key = "A/D/gamma";
   patched_tempfile_path = apr_hash_get(pcb.patched_tempfiles, key,
                                        APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
                              EXPECTED_GAMMA_LINES, pool));
-  SVN_ERR_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
   key = "A/D/gamma";
   reject_tempfile_path = apr_hash_get(pcb.reject_tempfiles, key,
                                      APR_HASH_KEY_STRING);
@@ -428,6 +431,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
                                            pool));
@@ -545,6 +549,133 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* This is for issue #3234. */
+static svn_error_t *
+test_copy_crash(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_array_header_t *sources;
+  svn_revnum_t committed_rev;
+  svn_opt_revision_t rev;
+  svn_client_copy_source_t source;
+  svn_client_ctx_t *ctx;
+  const char *dest;
+  const char *repos_url;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-copy-crash",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
+                                           pool));
+
+  svn_client_create_context(&ctx, pool);
+
+  rev.kind = svn_opt_revision_head;
+  dest = svn_path_url_add_component2(repos_url, "A/E", pool);
+  source.path = svn_path_url_add_component2(repos_url, "A/B", pool);
+  source.revision = &rev;
+  source.peg_revision = &rev;
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+
+  /* This shouldn't crash. */
+  SVN_ERR(svn_client_copy6(sources, dest, FALSE, TRUE, FALSE, NULL, NULL, NULL,
+                           ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
+#ifdef TEST16K_ADD
+static svn_error_t *
+test_16k_add(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t committed_rev;
+  svn_opt_revision_t rev;
+  svn_client_ctx_t *ctx;
+  const char *repos_url;
+  const char *cwd, *wc_path;
+  svn_opt_revision_t peg_rev;
+  apr_array_header_t *targets;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-16k-repos",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+
+  /* Check out the HEAD revision */
+  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-16k-repos",
+                                           pool));
+
+  /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
+     directly inside a 1.6 wc doesn't work reliably, an intervening
+     unversioned directory prevents the problems. */
+  wc_path = svn_dirent_join(cwd, "test-16k", pool);
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  wc_path = svn_dirent_join(wc_path, "trunk", pool);
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path,
+                               &peg_rev, &rev, svn_depth_infinity,
+                               TRUE, FALSE, ctx, pool));
+
+  for (i = 0; i < 16384; i++)
+    {
+      const char *path;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_io_open_unique_file3(NULL, &path, wc_path,
+                                       svn_io_file_del_none,
+                                       iterpool, iterpool));
+
+      SVN_ERR(svn_client_add4(path, svn_depth_unknown, FALSE, FALSE, FALSE,
+                              ctx, iterpool));
+    }
+
+  targets = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(targets, const char *) = wc_path;
+  svn_pool_clear(iterpool);
+
+  SVN_ERR(svn_client_commit5(targets, svn_depth_infinity, FALSE, FALSE, 
+                             NULL, NULL, NULL, NULL, ctx, iterpool));
+
+
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -556,5 +687,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_client_args_to_target_array"),
     SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
+    SVN_TEST_OPTS_PASS(test_copy_crash, "test a crash in svn_client_copy5"),
+#ifdef TEST16K_ADD
+    SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
+#endif
     SVN_TEST_NULL
   };

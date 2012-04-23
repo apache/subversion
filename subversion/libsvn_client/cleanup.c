@@ -52,9 +52,8 @@ svn_client_cleanup(const char *path,
   svn_error_t *err;
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
@@ -130,9 +129,8 @@ svn_client_upgrade(const char *path,
   info_baton.last_uuid = NULL;
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,
@@ -163,11 +161,9 @@ svn_client_upgrade(const char *path,
       externals_p = apr_array_make(iterpool, 1,
                                    sizeof(svn_wc_external_item2_t*));
 
-      SVN_ERR(svn_wc_parse_externals_description3(&externals_p,
-                                            svn_dirent_dirname(path,
-                                                               iterpool),
-                                                  external_desc->data, TRUE,
-                                                  iterpool));
+      SVN_ERR(svn_wc_parse_externals_description3(
+                  &externals_p, svn_dirent_dirname(path, iterpool),
+                  external_desc->data, TRUE, iterpool));
       for (i = 0; i < externals_p->nelts; i++)
         {
           svn_wc_external_item2_t *item;
@@ -178,7 +174,7 @@ svn_client_upgrade(const char *path,
 
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
-          external_path = svn_dirent_join(externals_parent, item->target_dir, 
+          external_path = svn_dirent_join(externals_parent, item->target_dir,
                                           iterpool);
 
           SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,

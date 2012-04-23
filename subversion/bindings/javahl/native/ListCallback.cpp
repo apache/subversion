@@ -90,8 +90,8 @@ ListCallback::doList(const char *path,
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doEntry",
-                             "(L"JAVA_PACKAGE"/DirEntry;"
-                             "L"JAVA_PACKAGE"/Lock;)V");
+                             "(L"JAVA_PACKAGE"/types/DirEntry;"
+                             "L"JAVA_PACKAGE"/types/Lock;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -131,7 +131,7 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/DirEntry");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -140,7 +140,7 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/NodeKind;"
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
                              "JZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;

@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#define SVN_DEPRECATED
+
 #include <apr_pools.h>
 #include <apr_time.h>
 
@@ -74,7 +76,7 @@ struct svn_wc_adm_access_t
 /* This is a placeholder used in the set hash to represent missing
    directories.  Only its address is important, it contains no useful
    data. */
-static const svn_wc_adm_access_t missing;
+static const svn_wc_adm_access_t missing = { 0 };
 #define IS_MISSING(lock) ((lock) == &missing)
 
 /* ### hack for now. future functionality coming in a future revision.  */
@@ -96,12 +98,6 @@ static svn_error_t *
 close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
              apr_pool_t *scratch_pool);
-
-static svn_error_t *
-alloc_db(svn_wc__db_t **db,
-         svn_config_t *config,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool);
 
 
 svn_error_t *
@@ -162,19 +158,20 @@ svn_wc__internal_check_wc(int *wc_format,
                 return SVN_NO_ERROR;
               }
           }
-      
+
         err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool);
-      
+
         if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           {
             svn_error_clear(err);
             *wc_format = 0;
-            return SVN_NO_ERROR; 
+            return SVN_NO_ERROR;
           }
         else
           SVN_ERR(err);
@@ -256,7 +253,8 @@ pool_cleanup_locked(void *p)
          run, but the subpools will NOT be destroyed)  */
       scratch_pool = svn_pool_create(lock->pool);
 
-      err = alloc_db(&db, NULL /* config */, scratch_pool, scratch_pool);
+      err = svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+                            scratch_pool, scratch_pool);
       if (!err)
         {
           err = svn_wc__db_wq_fetch(&id, &work_item, db, lock->abspath,
@@ -417,24 +415,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
 /* */
 static svn_error_t *
-alloc_db(svn_wc__db_t **db,
-         svn_config_t *config,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool)
-{
-  svn_wc__db_openmode_t mode;
-
-  /* ### need to determine MODE based on callers' needs.  */
-  mode = svn_wc__db_openmode_default;
-  SVN_ERR(svn_wc__db_open(db, mode, config, TRUE, TRUE,
-                          result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* */
-static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 {
   /* ### sometimes we replace &missing with a now-valid lock.  */
@@ -543,18 +523,8 @@ open_single(svn_wc_adm_access_t **adm_access,
 
   /* The format version must match exactly. Note that wc_db will perform
      an auto-upgrade if allowed. If it does *not*, then it has decided a
-     manual upgrade is required.
-
-     Note: if it decided on a manual upgrade, then we "should" never even
-     reach this code. An error should have been raised earlier.  */
-  if (wc_format != SVN_WC__VERSION)
-    {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               _("Working copy format of '%s' is too old (%d); "
-                                 "please run 'svn upgrade'"),
-                               svn_dirent_local_style(path, scratch_pool),
-                               wc_format);
-    }
+     manual upgrade is required and it should have raised an error.  */
+  SVN_ERR_ASSERT(wc_format == SVN_WC__VERSION);
 
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock,
@@ -652,7 +622,7 @@ adm_available(svn_boolean_t *available,
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   *available = !(status == svn_wc__db_status_absent
@@ -826,7 +796,8 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
          do it here.  */
       /* ### we could optimize around levels_to_lock==0, but much of this
          ### is going to be simplified soon anyways.  */
-      SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
+      SVN_ERR(svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+                              pool, pool));
       db_provided = FALSE;
     }
 
@@ -854,7 +825,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
       svn_wc__db_t *db;
 
       /* Ugh. Too bad about having to open a DB.  */
-      SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+      SVN_ERR(svn_wc__db_open(&db,
                               NULL /* ### config */, TRUE, TRUE, pool, pool));
       err = probe(db, &dir, path, pool);
       svn_error_clear(svn_wc__db_close(db));
@@ -1122,6 +1093,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
                                &node_repos_root, &node_repos_uuid, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -1138,6 +1110,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
                                &parent_repos_uuid, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, parent_abspath,
                                scratch_pool, scratch_pool));
 
@@ -1195,7 +1168,8 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
      ### given that we need DB for format detection, may as well keep this.
      ### in any case, much of this is going to be simplified soon anyways.  */
   if (!db_provided)
-    SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
+    SVN_ERR(svn_wc__db_open(&db, NULL, /* ### config. need! */ TRUE, TRUE,
+                            pool, pool));
 
   if (svn_path_is_empty(path)
       || svn_dirent_is_root(path, strlen(path))
@@ -1555,6 +1529,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_kind_t kind;
   svn_error_t *err;
+
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
                                (lock_root_abspath != NULL),
                                scratch_pool));
@@ -1621,7 +1596,9 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   if (lock_root_abspath)
     *lock_root_abspath = apr_pstrdup(result_pool, local_abspath);
 
-  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, -1, FALSE,
+  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath,
+                                   -1 /* levels_to_lock (infinite) */,
+                                   FALSE /* steal_lock */,
                                    scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1660,6 +1637,7 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
 {
   svn_error_t *err1, *err2;
   const char *lock_root_abspath;
+
   SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, wc_ctx, local_abspath,
                                      lock_anchor, scratch_pool, scratch_pool));
   err1 = svn_error_return(func(baton, result_pool, scratch_pool));
@@ -1667,16 +1645,5 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
   return svn_error_compose_create(err1, err2);
 }
 
-svn_error_t *
-svn_wc__path_switched(svn_boolean_t *switched,
-                      svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
-{
-  svn_boolean_t wc_root;
-
-  return svn_wc__check_wc_root(&wc_root, NULL, switched, wc_ctx->db,
-                               local_abspath, scratch_pool);
-}
 
 

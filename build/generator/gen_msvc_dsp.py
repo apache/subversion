@@ -98,11 +98,36 @@ class Generator(gen_win.WinGeneratorBase):
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
 
-    self.write_with_template(fname, 'msvc_dsp.ezt', data)
+    self.write_with_template(fname, 'templates/msvc_dsp.ezt', data)
 
   def write(self):
     "Write a Workspace (.dsw)"
+    
+    # Gather sql targets for inclusion in svn_config project.
+    class _eztdata(object):
+      def __init__(self, **kw):
+        vars(self).update(kw)
 
+    import sys
+    sql=[]
+    for hdrfile, sqlfile in sorted(self.graph.get_deps(gen_base.DT_SQLHDR),
+                                   key=lambda t: t[0]):
+      sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
+                          source=sqlfile[0].replace('/', '\\'),
+                          svn_python=sys.executable))
+
+    self.move_proj_file(self.projfilesdir,
+                        'svn_config.dsp',
+                          (
+                            ('sql', sql),
+                            ('project_guid', self.makeguid('__CONFIG__')),
+                          )
+                        )
+    self.move_proj_file(self.projfilesdir,
+                        'svn_locale.dsp',
+                        (
+                          ('project_guid', self.makeguid('svn_locale')),
+                        ))
     self.write_zlib_project_file('zlib.dsp')
     self.write_neon_project_file('neon.dsp')
     self.write_serf_project_file('serf.dsp')
@@ -145,4 +170,4 @@ class Generator(gen_win.WinGeneratorBase):
       'targets' : targets,
       }
 
-    self.write_with_template('subversion_msvc.dsw', 'msvc_dsw.ezt', data)
+    self.write_with_template('subversion_msvc.dsw', 'templates/msvc_dsw.ezt', data)

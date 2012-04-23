@@ -1012,7 +1012,7 @@ c2r_svn_string(void *value, void *ctx)
   return c2r_string2(s->data);
 }
 
-typedef struct {
+typedef struct prop_hash_each_arg_t {
   apr_array_header_t *array;
   apr_pool_t *pool;
 } prop_hash_each_arg_t;
@@ -1231,10 +1231,10 @@ svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 static void
 r2c_swig_type2(VALUE value, const char *type_name, void **result)
 {
+#ifdef SWIG_IsOK
   int res;
   res = SWIG_ConvertPtr(value, result, SWIG_TypeQuery(type_name),
                         SWIG_POINTER_EXCEPTION);
-#ifdef SWIG_IsOK
   if (!SWIG_IsOK(res)) {
     VALUE message = rb_funcall(value, rb_intern("inspect"), 0);
     rb_str_cat2(message, "must be ");
@@ -1576,19 +1576,19 @@ svn_swig_rb_hash_to_apr_hash_merge_range(VALUE hash, apr_pool_t *pool)
 
 
 /* callback */
-typedef struct {
+typedef struct callback_baton_t {
   VALUE pool;
   VALUE receiver;
   ID message;
   VALUE args;
 } callback_baton_t;
 
-typedef struct {
+typedef struct callback_rescue_baton_t {
   svn_error_t **err;
   VALUE pool;
 } callback_rescue_baton_t;
 
-typedef struct {
+typedef struct callback_handle_error_baton_t {
   callback_baton_t *callback_baton;
   callback_rescue_baton_t *rescue_baton;
 } callback_handle_error_baton_t;
@@ -1675,7 +1675,7 @@ invoke_callback_handle_error(VALUE baton, VALUE pool, svn_error_t **err)
 
 
 /* svn_delta_editor_t */
-typedef struct {
+typedef struct item_baton {
   VALUE editor;
   VALUE baton;
 } item_baton;

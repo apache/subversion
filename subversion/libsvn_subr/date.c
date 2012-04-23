@@ -42,7 +42,7 @@ enum rule_action {
 };
 
 /* How to handle a particular character in a template */
-typedef struct
+typedef struct rule
 {
   char key;                /* The template char that this rule matches */
   const char *valid;       /* String of valid chars for this rule */
@@ -53,7 +53,7 @@ typedef struct
 } rule;
 
 /* The parsed values, before localtime/gmt processing */
-typedef struct
+typedef struct match_state
 {
   apr_time_exp_t base;
   apr_int32_t offhours;

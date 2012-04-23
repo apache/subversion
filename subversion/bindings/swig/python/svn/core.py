@@ -68,7 +68,7 @@ class SubversionException(Exception):
 
   def __str__(self):
     dump = '%d - %s' % (self.apr_err, self.message)
-    if self.file != None:    
+    if self.file != None:
       dump = dump + '\n at %s:%d' % (self.file, self.line)
     if self.child != None:
       dump = dump + '\n' + self.child.__str__()

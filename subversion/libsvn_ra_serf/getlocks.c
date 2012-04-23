@@ -41,6 +41,7 @@
 #include "svn_time.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -49,7 +50,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum lock_state_e {
   NONE = 0,
   REPORT,
   LOCK,
@@ -61,7 +62,7 @@ typedef enum {
   EXPIRATION_DATE,
 } lock_state_e;
 
-typedef struct {
+typedef struct lock_info_t {
   /* Temporary pool */
   apr_pool_t *pool;
 
@@ -73,11 +74,11 @@ typedef struct {
 
 } lock_info_t;
 
-typedef struct {
+typedef struct lock_context_t {
   apr_pool_t *pool;
 
   /* target and requested depth of the operation. */
-  const char *path; 
+  const char *path;
   svn_depth_t requested_depth;
 
   /* return hash */
@@ -203,10 +204,10 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
       else if ((lock_ctx->requested_depth == svn_depth_files) ||
                (lock_ctx->requested_depth == svn_depth_immediates))
         {
-          const char *rel_uri = svn_uri_is_child(lock_ctx->path,
-                                                 info->lock->path,
-                                                 info->pool);
-          if (rel_uri && (svn_path_component_count(rel_uri) == 1))
+          const char *rel_path = svn_fspath__is_child(lock_ctx->path,
+                                                      info->lock->path,
+                                                      info->pool);
+          if (rel_path && (svn_path_component_count(rel_path) == 1))
             apr_hash_set(lock_ctx->hash, info->lock->path,
                          APR_HASH_KEY_STRING, info->lock);
         }
@@ -330,13 +331,13 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   const char *req_url, *rel_path;
   int status_code;
 
-  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
                                          NULL, pool));
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
   lock_ctx->pool = pool;
-  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, NULL);
+  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
   lock_ctx->requested_depth = depth;
   lock_ctx->hash = apr_hash_make(pool);
   lock_ctx->done = FALSE;

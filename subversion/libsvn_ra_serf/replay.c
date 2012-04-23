@@ -47,7 +47,7 @@
 /*
  * This enum represents the current state of our XML parsing.
  */
-typedef enum {
+typedef enum replay_state_e {
   NONE = 0,
   REPORT,
   OPEN_DIR,
@@ -76,7 +76,7 @@ typedef svn_error_t *
                  const svn_string_t *value,
                  apr_pool_t *pool);
 
-typedef struct {
+typedef struct prop_info_t {
   apr_pool_t *pool;
 
   change_prop_t change;
@@ -647,7 +647,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = session->repos_url_str;
+  handler->path = session->session_url_str;
   handler->body_delegate = create_replay_body;
   handler->body_delegate_baton = replay_ctx;
   handler->body_type = "text/xml";
@@ -781,7 +781,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                                              replay_ctx->revprop_target,
                                              replay_ctx->revprop_rev,
                                              "0", all_props,
-                                             TRUE, NULL,
+                                             NULL,
                                              replay_ctx->src_rev_pool));
 
           replay_ctx->prop_ctx = prop_ctx;
@@ -790,7 +790,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));
 
           handler->method = "REPORT";
-          handler->path = session->repos_url_str;
+          handler->path = session->session_url_str;
           handler->body_delegate = create_replay_body;
           handler->body_delegate_baton = replay_ctx;
           handler->conn = session->conns[0];

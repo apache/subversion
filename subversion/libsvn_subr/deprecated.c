@@ -250,6 +250,16 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
 }
 
 svn_error_t *
+svn_subst_translate_string(svn_string_t **new_value,
+                           const svn_string_t *value,
+                           const char *encoding,
+                           apr_pool_t *pool)
+{
+  return svn_subst_translate_string2(new_value, NULL, NULL, value,
+                                     encoding, FALSE, pool, pool);
+}
+
+svn_error_t *
 svn_subst_stream_detranslated(svn_stream_t **stream_p,
                               const char *src,
                               svn_subst_eol_style_t eol_style,
@@ -549,17 +559,20 @@ svn_opt_print_help(apr_getopt_t *os,
                    apr_pool_t *pool)
 {
   apr_array_header_t *targets = NULL;
-  int i;
 
   if (os)
     SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
 
   if (os && targets->nelts)  /* help on subcommand(s) requested */
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
-                                cmd_table, option_table, pool);
-      }
+    {
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
+                                  cmd_table, option_table, pool);
+        }
+    }
   else if (print_version)   /* just --version */
     SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
                                         pool));
@@ -749,6 +762,29 @@ svn_io_get_dirents(apr_hash_t **dirents,
      so this is actually portable, since the kind field of svn_io_dirent_t
      is first in that struct. */
   return svn_io_get_dirents2(dirents, path, pool);
+}
+
+svn_error_t *
+svn_io_start_cmd(apr_proc_t *cmd_proc,
+                 const char *path,
+                 const char *cmd,
+                 const char *const *args,
+                 svn_boolean_t inherit,
+                 apr_file_t *infile,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 apr_pool_t *pool)
+{
+  return svn_io_start_cmd2(cmd_proc, path, cmd, args, inherit, FALSE,
+                           infile, FALSE, outfile, FALSE, errfile, pool);
+}
+
+svn_error_t *
+svn_io_file_read_full(apr_file_t *file, void *buf,
+                      apr_size_t nbytes, apr_size_t *bytes_read,
+                      apr_pool_t *pool)
+{
+  return svn_io_file_read_full2(file, buf, nbytes, bytes_read, NULL, pool);
 }
 
 struct walk_func_filter_baton_t
@@ -1034,4 +1070,17 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                                                      rangelist,
                                                      start, end, TRUE,
                                                      pool, pool));
+}
+
+/*** From config.c ***/
+
+svn_error_t *
+svn_config_read(svn_config_t **cfgp, const char *file,
+                svn_boolean_t must_exist,
+                apr_pool_t *pool)
+{
+  return svn_error_return(svn_config_read2(cfgp, file,
+                                           must_exist,
+                                           FALSE,
+                                           pool));
 }

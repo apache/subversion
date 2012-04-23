@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "client.h"
 
+#include "svn_path.h"
 #include "svn_dirent_uri.h"
 #include "svn_delta.h"
 #include "svn_client.h"
@@ -84,16 +85,6 @@ tweak_status(void *baton,
   const char *path = local_abspath;
   svn_client_status_t *cst;
 
-  /* If we know that the target was deleted in HEAD of the repository,
-     we need to note that fact in all the status structures that come
-     through here. */
-  if (sb->deleted_in_repos)
-    {
-      svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
-      new_status->repos_text_status = svn_wc_status_deleted;
-      status = new_status;
-    }
-
   if (sb->anchor_abspath)
     path = svn_dirent_join(sb->anchor_relpath,
                            svn_dirent_skip_ancestor(sb->anchor_abspath, path),
@@ -102,12 +93,26 @@ tweak_status(void *baton,
   /* If the status item has an entry, but doesn't belong to one of the
      changelists our caller is interested in, we filter our this status
      transmission.  */
-  if (! svn_wc__changelist_match(sb->wc_ctx, local_abspath,
-                                 sb->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
+  if (sb->changelist_hash
+      && (! status->changelist
+          || ! apr_hash_get(sb->changelist_hash, status->changelist,
+                            APR_HASH_KEY_STRING)))
+    {
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(create_client_status(&cst, sb->wc_ctx, local_abspath, status,
                                scratch_pool, scratch_pool));
+
+  /* If we know that the target was deleted in HEAD of the repository,
+     we need to note that fact in all the status structures that come
+     through here. */
+  if (sb->deleted_in_repos)
+    {
+      svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
+      new_status->repos_node_status = svn_wc_status_deleted;
+      status = new_status;
+    }
 
   /* Call the real status function/baton. */
   return sb->real_status_func(sb->real_status_baton, path, cst,
@@ -159,18 +164,18 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
                    const char *lock_token, apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
-  const char *ancestor;
-  apr_size_t len;
 
-  ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
-
-  /* If we got a shorter ancestor, truncate our current ancestor.
-     Note that svn_dirent_get_longest_ancestor will allocate its return
-     value even if it identical to one of its arguments. */
-  len = strlen(ancestor);
-  if (len < strlen(rb->ancestor))
+  if (!svn_uri_is_ancestor(rb->ancestor, url))
     {
-      rb->ancestor[len] = '\0';
+      const char *ancestor;
+
+      ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
+
+      /* If we got a shorter ancestor, truncate our current ancestor.
+         Note that svn_dirent_get_longest_ancestor will allocate its return
+         value even if it identical to one of its arguments. */
+
+      rb->ancestor[strlen(ancestor)] = '\0';
       rb->depth = svn_depth_infinity;
     }
 
@@ -266,7 +271,11 @@ svn_client_status5(svn_revnum_t *result_rev,
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
-  struct svn_cl__externals_store externals_store = { NULL };
+  struct svn_client__external_func_baton_t externals_store = { NULL };
+
+  if (svn_path_is_url(path))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
@@ -287,17 +296,16 @@ svn_client_status5(svn_revnum_t *result_rev,
     SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
     err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
 
-    if (err && ((err->apr_err == SVN_ERR_WC_MISSING) ||
-                (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)))
-    {
-      /* This error code is checked for in svn to continue after an error */
-      svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                               _("'%s' is not a working copy"),
-                               svn_dirent_local_style(path, pool));
-    }
-
-    SVN_ERR(err);
+    if (err && (err->apr_err == SVN_ERR_WC_MISSING))
+      {
+        /* Calling code expects SVN_ERR_WC_NOT_WORKING_COPY. */
+        svn_error_clear(err);
+        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                 _("'%s' is not a working copy"),
+                                 svn_dirent_local_style(path, pool));
+      }
+    else if (err)
+      return err;
 
     /* Dir must be an existing directory or the status editor fails */
     if (kind == svn_node_dir && disk_kind == svn_node_dir)
@@ -351,7 +359,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   if (!ignore_externals)
     {
-      externals_store.pool = pool;
+      externals_store.result_pool = pool;
       externals_store.externals_new = apr_hash_make(pool);
     }
 
@@ -382,23 +390,28 @@ svn_client_status5(svn_revnum_t *result_rev,
            _("Entry '%s' has no URL"),
            svn_dirent_local_style(dir, pool));
 
-      SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, ctx->wc_ctx,
-                                    dir_abspath, target_basename,
-                                    depth, get_all,
-                                    no_ignore, ignores, tweak_status, &sb,
-                                    ignore_externals ? NULL
-                                                     : svn_cl__store_externals,
-                                    ignore_externals ? NULL
-                                                     : &externals_store,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
-
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
                                                    dir_abspath,
                                                    NULL, FALSE, TRUE,
                                                    ctx, pool));
+
+      SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                    SVN_RA_CAPABILITY_DEPTH, pool));
+
+      SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
+                                    &edit_revision, ctx->wc_ctx,
+                                    dir_abspath, target_basename,
+                                    depth, get_all,
+                                    no_ignore, server_supports_depth,
+                                    ignores, tweak_status, &sb,
+                                    ignore_externals
+                                        ? NULL
+                                        : svn_client__external_info_gatherer,
+                                    ignore_externals ? NULL : &externals_store,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
+
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
          us a whole lot of hassle; if it does, the cost of this
@@ -415,21 +428,8 @@ svn_client_status5(svn_revnum_t *result_rev,
              versioned, then it must have since been deleted from the
              repository.  (Note that "locally replaced" doesn't count
              as "added" in this case.)  */
-
-          /* ### FIXME:  WC-1 code here was just (! added).  Not sure
-             ### if this WC-NG approach matches semantically.  */
           SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx,
                                         dir_abspath, pool));
-          if (added)
-            {
-              svn_boolean_t replaced;
-
-              SVN_ERR(svn_wc__node_is_replaced(&replaced, ctx->wc_ctx,
-                                               dir_abspath, pool));
-              if (replaced)
-                added = FALSE;
-            }
-
           if (! added)
             sb.deleted_in_repos = TRUE;
 
@@ -480,9 +480,6 @@ svn_client_status5(svn_revnum_t *result_rev,
           else
             rb.depth = depth;
 
-          SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                        SVN_RA_CAPABILITY_DEPTH, pool));
-
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
@@ -490,14 +487,18 @@ svn_client_status5(svn_revnum_t *result_rev,
           SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
                                           target_abspath,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          depth, TRUE, (! server_supports_depth),
-                                          FALSE, NULL, NULL, NULL, NULL, pool));
+                                          depth, TRUE,
+                                          (! server_supports_depth),
+                                          FALSE, NULL, NULL,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          NULL, NULL, pool));
         }
 
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify
-            = svn_wc_create_notify(target_abspath, svn_wc_notify_status_completed, pool);
+            = svn_wc_create_notify(target_abspath,
+                                   svn_wc_notify_status_completed, pool);
           notify->revision = edit_revision;
           (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
@@ -509,12 +510,12 @@ svn_client_status5(svn_revnum_t *result_rev,
   else
     {
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
-                               depth, get_all, no_ignore, ignores,
+                               depth, get_all, no_ignore, FALSE, ignores,
                                tweak_status, &sb,
-                               ignore_externals ? NULL
-                                                : svn_cl__store_externals,
-                               ignore_externals ? NULL
-                                                : &externals_store,
+                               ignore_externals
+                                   ? NULL
+                                   : svn_client__external_info_gatherer,
+                               ignore_externals ? NULL : &externals_store,
                                ctx->cancel_func, ctx->cancel_baton,
                                pool);
 
@@ -578,6 +579,9 @@ svn_client_status_dup(const svn_client_status_t *status,
 
   if (status->changelist)
     st->changelist = apr_pstrdup(result_pool, status->changelist);
+
+  if (status->ood_changed_author)
+    st->ood_changed_author = apr_pstrdup(result_pool, status->ood_changed_author);
 
   if (status->repos_lock)
     st->repos_lock = svn_lock_dup(status->repos_lock, result_pool);

@@ -28,6 +28,8 @@
 #include <httpd.h>
 #include <http_core.h>
 
+#include "private/svn_fspath.h"
+
 #include "dav_svn.h"
 
 
@@ -49,7 +51,8 @@ static void proxy_request_fixup(request_rec *r,
     r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
                                                            master_uri,
                                                            uri_segment,
-                                                           NULL), r->pool);
+                                                           (char *)NULL),
+                                               r->pool);
     r->handler = "proxy-server";
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
@@ -83,11 +86,11 @@ int dav_svn__proxy_request_fixup(request_rec *r)
             r->method_number == M_GET) {
             if ((seg = ap_strstr(r->uri, root_dir))) {
                 if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                 "/wrk/", NULL))
+                                                 "/wrk/", (char *)NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                    "/txn/", NULL))
+                                                    "/txn/", (char *)NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                    "/txr/", NULL))) {
+                                                    "/txr/", (char *)NULL))) {
                     seg += strlen(root_dir);
                     proxy_request_fixup(r, master_uri, seg);
                 }
@@ -146,10 +149,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (uri.path)
-        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
-    else
-        canonicalized_uri = uri.path;
+    canonicalized_uri = svn_urlpath__canonicalize(uri.path, r->pool);
     if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
@@ -239,9 +239,8 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
         new_uri = ap_construct_url(r->pool,
                                    apr_pstrcat(r->pool,
                                                dav_svn__get_root_dir(r), "/",
-                                               start_foo, NULL),
+                                               start_foo, (char *)NULL),
                                    r);
-        new_uri = svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
     return ap_pass_brigade(f->next, bb);
@@ -268,10 +267,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (uri.path)
-        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
-    else
-        canonicalized_uri = uri.path;
+    canonicalized_uri = svn_urlpath__canonicalize(uri.path, r->pool);
     if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
