@@ -48,6 +48,7 @@
 
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
+#include "private/svn_delta_private.h"
 
 
 /* ### This file maps URL schemes to particular RA libraries.

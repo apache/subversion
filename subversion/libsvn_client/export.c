@@ -44,6 +44,7 @@
 #include "svn_private_config.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_delta_private.h"
 
 
 /*** Code. ***/
