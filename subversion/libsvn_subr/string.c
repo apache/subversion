@@ -942,8 +942,10 @@ static const char decimal_table[100][4]
       *(apr_uint16_t*)(dest) = *(apr_uint16_t*)(source);
 #else
 #  define COPY_TWO_BYTES(dest,source) \
+    do { \
       (dest)[0] = (source)[0]; \
-      (dest)[1] = (source)[1];
+      (dest)[1] = (source)[1]; \
+    while (0)
 #endif
 
 apr_size_t
