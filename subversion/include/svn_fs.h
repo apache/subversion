@@ -1040,7 +1040,7 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  *
  * @a flags determines transaction enforcement behaviors, and is composed
  * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.).
- * It is a property of the transaction (even if it constructed over multiple
+ * It is a property of the transaction (even if constructed over multiple
  * drives; see @a autocommit, below).
  * 
  * @note If you're building a txn for committing, you probably
