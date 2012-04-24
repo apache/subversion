@@ -157,7 +157,16 @@ Candidate changes:
      Undefined behaviour by using memory after free(); does not appear to
      affect 1.7 but may affect 3rd party clients using the RA API.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+ * r1329876
+   Properly report files that have just their lock removed as part of
+   an update.
+   Justification:
+     Allows api users to use notifications to update their status cache.
+     Unreported nodes are assumed to be unchanged.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
