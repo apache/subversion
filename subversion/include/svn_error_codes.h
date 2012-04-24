@@ -768,9 +768,9 @@ SVN_ERROR_START
              "base value")
 
   /** @since New in 1.8. */
-  SVN_ERRDEF(SVN_ERR_FS_NO_EDITOR_COMMIT_RESULTS,
+  SVN_ERRDEF(SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION,
              SVN_ERR_FS_CATEGORY_START + 50,
-             "The editor has not committed the underlying transaction")
+             "The filesystem editor completion process was not followed")
 
   /* repos errors */
 

@@ -1254,7 +1254,6 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
 
   SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
                                repos->fs, SVN_FS_TXN_CHECK_LOCKS,
-                               TRUE /* autocommit */,
                                cancel_func, cancel_baton,
                                result_pool, scratch_pool));
 

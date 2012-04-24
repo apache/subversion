@@ -1036,8 +1036,6 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  * revision of @a fs, and return its name @a *txn_name and an @a *editor
  * that can be used to make changes into it.
  *
- * ### next two paragraphs copied from svn_fs_begin_txn2().. xref or deprecate?
- *
  * @a flags determines transaction enforcement behaviors, and is composed
  * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
  * property of the underlying transaction, and will not change if multiple
@@ -1047,10 +1045,10 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
  * honors the repository's hook configurations.
  *
- * When @a autocommit is true, calling svn_editor_complete() will attempt to
- * commit the transaction.  ### return the resulting revnum and conflict string
- *
- * @note Most callers will pass #TRUE for @a autocommit.
+ * When svn_editor_complete() is called for @a editor, internal resources
+ * will be cleaned and nothing more will happen. If you wish to commit the
+ * transaction, call svn_fs_editor_commit() instead. It is illegal to call
+ * both; the second call will return #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION.
  *
  * @see svn_fs_commit_txn()
  *
@@ -1061,7 +1059,6 @@ svn_fs_editor_create(svn_editor_t **editor,
                      const char **txn_name,
                      svn_fs_t *fs,
                      apr_uint32_t flags,
-                     svn_boolean_t autocommit,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *result_pool,
@@ -1085,34 +1082,48 @@ svn_fs_editor_create_for(svn_editor_t **editor,
 
 
 /**
- * After svn_editor_complete() has been called on @a editor, this function
- * is used to fetch the results of the underlying commit operation. If a
- * commit has not occurred (because svn_editor_complete() has not been
- * called, or the autocommit flag was #FALSE), then
- * #SVN_ERR_FS_NO_EDITOR_COMMIT_RESULTS will be returned.
+ * Commit the transaction represented by @a editor.
  *
- * @a revision will be set to the committed revision, if any. If
- * svn_editor_complete() does not return an error, then a revision number
- * will be returned. If any error is returned by svn_editor_complete(),
- * then @a revision will be set to #SVN_INVALID_REVNUM.
+ * If the commit to the filesystem succeeds, then @a revision will be set
+ * to the resulting revision number. Note that further errors may occur,
+ * as described below. If the commit process does not succeed, for whatever
+ * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
  *
- * @a post_commit_err contains any error that may have occurred after the
- * revision was committed (ie. during FS transaction cleanup). If no such
- * error occurred, then @a post_commit_err will be set to @c NULL.
+ * If a conflict occurs during the commit, then @a conflict_path will
+ * indicate which path caused the conflict. #SVN_NO_ERROR will be returned.
+ * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
+ * message that incorporates @a conflict_path.
  *
- * If the svn_editor_complete() call returned #SVN_ERR_FS_CONFLICT, then
- * this function will place the conflicted path into @a conflict_path.
- * In this situation, @a revision will be set to #SVN_INVALID_REVNUM and
- * @a post_commit_err will be set to @c NULL.
+ * If a non-conflict error occurs during the commit, then that error will
+ * be returned.
+ *
+ * If the commit completes (and a revision is returned in @a revision), then
+ * it is still possible for an error to occur during the cleanup process.
+ * Any such error will be returned in @a post_commit_err. The caller must
+ * properly use or clear that error.
+ *
+ * If svn_editor_complete() has already been called on @a editor, then
+ * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
+ *
+ * @note After calling this function, @a editor will be marked as completed
+ * and no further operations may be performed on it.
+ *
+ * @a result_pool will be used to allocate space for @a conflict_path.
+ * @a scratch_pool will be used for all temporary allocations.
+ *
+ * As is standard with any Subversion API, @a revision, @a post_commit_err,
+ * and @a conflict_path (the OUT parameters) have an indeterminate value if
+ * an error is returned.
  *
  * @since New in 1.8.
  */
 svn_error_t *
-svn_fs_editor_get_commit_results(svn_revnum_t *revision,
-                                 svn_error_t **post_commit_err,
-                                 const char **conflict_path,
-                                 const svn_editor_t *editor,
-                                 apr_pool_t *result_pool);
+svn_fs_editor_commit(svn_revnum_t *revision,
+                     svn_error_t **post_commit_err,
+                     const char **conflict_path,
+                     svn_editor_t *editor,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 
 /** @} */

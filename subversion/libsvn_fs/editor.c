@@ -38,8 +38,8 @@ struct edit_baton {
   /* The transaction associated with this editor.  */
   svn_fs_txn_t *txn;
 
-  /* Should the transaction be committed when complete_cb() is invoked?  */
-  svn_boolean_t autocommit;
+  /* Has this editor been completed?  */
+  svn_boolean_t completed;
 
   /* We sometimes need the cancellation beyond what svn_editor_t provides  */
   svn_cancel_func_t cancel_func;
@@ -326,14 +326,16 @@ complete_cb(void *baton,
 {
   struct edit_baton *eb = baton;
 
+  /* Watch out for a following call to svn_fs_editor_commit(). Note that
+     we are likely here because svn_fs_editor_commit() was called, and it
+     invoked svn_editor_complete().  */
+  eb->completed = TRUE;
+
   if (eb->root != NULL)
     {
       svn_fs_close_root(eb->root);
       eb->root = NULL;
     }
-
-  /* ### check AUTOCOMMIT  */
-  /* ### how to return the results of the commit? eg. revision  */
 
   return SVN_NO_ERROR;
 }
@@ -345,6 +347,10 @@ abort_cb(void *baton,
          apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  svn_error_t *err;
+
+  /* Don't allow a following call to svn_fs_editor_commit().  */
+  eb->completed = TRUE;
 
   if (eb->root != NULL)
     {
@@ -353,16 +359,18 @@ abort_cb(void *baton,
     }
 
   /* ### should we examine the error and attempt svn_fs_purge_txn() ?  */
-  SVN_ERR(svn_fs_abort_txn(eb->txn, scratch_pool));
+  err = svn_fs_abort_txn(eb->txn, scratch_pool);
 
-  return SVN_NO_ERROR;
+  /* For safety, clear the now-useless txn.  */
+  eb->txn = NULL;
+
+  return svn_error_trace(err);
 }
 
 
 static svn_error_t *
 make_editor(svn_editor_t **editor,
             svn_fs_txn_t *txn,
-            svn_boolean_t autocommit,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
             apr_pool_t *result_pool,
@@ -386,7 +394,6 @@ make_editor(svn_editor_t **editor,
   struct edit_baton *eb = apr_pcalloc(result_pool, sizeof(*eb));
 
   eb->txn = txn;
-  eb->autocommit = autocommit;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
   eb->txn_pool = result_pool;
@@ -404,7 +411,6 @@ svn_fs_editor_create(svn_editor_t **editor,
                      const char **txn_name,
                      svn_fs_t *fs,
                      apr_uint32_t flags,
-                     svn_boolean_t autocommit,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *result_pool,
@@ -416,7 +422,7 @@ svn_fs_editor_create(svn_editor_t **editor,
   SVN_ERR(svn_fs_youngest_rev(&revision, fs, scratch_pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, revision, flags, result_pool));
   SVN_ERR(svn_fs_txn_name(txn_name, txn, result_pool));
-  return svn_error_trace(make_editor(editor, txn, autocommit,
+  return svn_error_trace(make_editor(editor, txn,
                                      cancel_func, cancel_baton,
                                      result_pool, scratch_pool));
 }
@@ -434,26 +440,83 @@ svn_fs_editor_create_for(svn_editor_t **editor,
   svn_fs_txn_t *txn;
 
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, result_pool));
-  return svn_error_trace(make_editor(editor, txn, FALSE /* autocommit */,
+  return svn_error_trace(make_editor(editor, txn,
                                      cancel_func, cancel_baton,
                                      result_pool, scratch_pool));
 }
 
 
 svn_error_t *
-svn_fs_editor_get_commit_results(svn_revnum_t *revision,
-                                 svn_error_t **post_commit_err,
-                                 const char **conflict_path,
-                                 const svn_editor_t *editor,
-                                 apr_pool_t *result_pool)
+svn_fs_editor_commit(svn_revnum_t *revision,
+                     svn_error_t **post_commit_err,
+                     const char **conflict_path,
+                     svn_editor_t *editor,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  struct ev2_baton *eb = svn_editor_get_baton(editor);
+  struct edit_baton *eb = svn_editor_get_baton(editor);
+  const char *inner_conflict_path;
+  svn_error_t *err = NULL;
 
-  UNUSED(eb);
+  /* make sure people are using the correct sequencing.  */
+  if (eb->completed)
+    return svn_error_create(SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION,
+                            NULL, NULL);
 
   *revision = SVN_INVALID_REVNUM;
   *post_commit_err = NULL;
   *conflict_path = NULL;
 
-  return SVN_NO_ERROR;
+  /* Clean up internal resources (eg. eb->root). This also allows the
+     editor infrastructure to know this editor is "complete".  */
+  SVN_ERR(svn_editor_complete(editor));
+
+  /* Note: docco for svn_fs_commit_txn() states that CONFLICT_PATH will
+     be allocated in the txn's pool. But it lies. Regardless, we want
+     it placed into RESULT_POOL.  */
+
+  err = svn_fs_commit_txn(&inner_conflict_path,
+                          revision,
+                          eb->txn,
+                          scratch_pool);
+  if (SVN_IS_VALID_REVNUM(*revision))
+    {
+      if (err)
+        {
+          /* Case 3. ERR is a post-commit (cleanup) error.  */
+
+          /* Pass responsibility via POST_COMMIT_ERR.  */
+          *post_commit_err = err;
+          err = SVN_NO_ERROR;
+        }
+      /* else: Case 1.  */
+    }
+  else
+    {
+      SVN_ERR_ASSERT(err != NULL);
+      if (err->apr_err == SVN_ERR_FS_CONFLICT)
+        {
+          /* Case 2.  */
+
+          /* Copy this into the correct pool (see note above).  */
+          *conflict_path = apr_pstrdup(result_pool, inner_conflict_path);
+
+          /* Return sucess. The caller should inspect CONFLICT_PATH to
+             determine this particular case.  */
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      /* else: Case 4.  */
+
+      /* Abort the TXN. Nobody wants to use it.  */
+      /* ### should we examine the error and attempt svn_fs_purge_txn() ?  */
+      err = svn_error_compose_create(
+        err,
+        svn_fs_abort_txn(eb->txn, scratch_pool));
+    }
+
+  /* For safety, clear the now-useless txn.  */
+  eb->txn = NULL;
+
+  return svn_error_trace(err);
 }
