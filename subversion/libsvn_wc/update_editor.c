@@ -4560,23 +4560,27 @@ close_file(void *file_baton,
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
-  if (eb->notify_func && !fb->already_notified && fb->edited)
+  if (eb->notify_func && !fb->already_notified
+      && (fb->edited || lock_state == svn_wc_notify_lock_state_unlocked))
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->shadowed)
-        action = fb->adding_file
-                        ? svn_wc_notify_update_shadowed_add
-                        : svn_wc_notify_update_shadowed_update;
-      else if (fb->obstruction_found || fb->add_existed)
+      if (fb->edited)
         {
-          if (content_state != svn_wc_notify_state_conflicted)
-            action = svn_wc_notify_exists;
-        }
-      else if (fb->adding_file)
-        {
-          action = svn_wc_notify_update_add;
+          if (fb->shadowed)
+            action = fb->adding_file
+                            ? svn_wc_notify_update_shadowed_add
+                            : svn_wc_notify_update_shadowed_update;
+          else if (fb->obstruction_found || fb->add_existed)
+            {
+              if (content_state != svn_wc_notify_state_conflicted)
+                action = svn_wc_notify_exists;
+            }
+          else if (fb->adding_file)
+            {
+              action = svn_wc_notify_update_add;
+            }
         }
 
       /* If the file was moved-away, notify for the moved-away node.
