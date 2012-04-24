@@ -74,6 +74,7 @@ extern "C" {
   } while (0)
 
 /** Handy macro for testing string equality.
+ * EXPR and/or EXPECTED_EXPR may be NULL.
  */
 #define SVN_TEST_STRING_ASSERT(expr, expected_expr)                 \
   do {                                                              \
@@ -82,8 +83,8 @@ extern "C" {
                                                                     \
     if (tst_str2 == NULL && tst_str1 == NULL)                       \
       break;                                                        \
-    if (   (tst_str2 != NULL && tst_str1 == NULL)                   \
-        || (strcmp(tst_str2, tst_str1) != 0)  )                     \
+    if ((tst_str1 == NULL) || (tst_str2 == NULL)                    \
+        || (strcmp(tst_str2, tst_str1) != 0))                       \
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
           "Strings not equal\n  Expected: '%s'\n  Found:    '%s'"   \
           "\n  at %s:%d",                                           \
