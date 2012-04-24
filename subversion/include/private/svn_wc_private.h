@@ -633,11 +633,11 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
  * Set *REVISION, *REPOS_RELPATH, *REPOS_ROOT_URL and *REPOS_UUID to the
  * location that this node was checked out at or last updated/switched to,
  * regardless of any uncommitted changes (delete, replace and/or
- * copy-here/move-here).  For a locally added/copied/moved-here node that is
- * not part of a replace, return @c SVN_INVALID_REVNUM/NULL/NULL/NULL.
+ * copy-here/move-here).
  *
- * If there is no base node at @a local_abspath, return a
- * @c SVN_ERR_WC_PATH_NOT_FOUND error.
+ * If there is no base node at @a local_abspath (such as when there is a
+ * locally added/copied/moved-here node that is not part of a replace),
+ * return @c SVN_INVALID_REVNUM/NULL/NULL/NULL.
  *
  * All output arguments may be NULL.
  *
@@ -702,8 +702,8 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
  * Return the revision number of the base for this node's next commit,
  * reflecting any local tree modifications affecting this node.
  *
- * If this node has no uncommitted changes, return the same as
- * svn_wc__node_get_base_rev().
+ * If this node has no uncommitted changes, return the same revision as
+ * svn_wc__node_get_base().
  *
  * If this node is moved-here or copied-here (possibly as part of a replace),
  * return the revision of the copy/move source. Do the same even when the node
