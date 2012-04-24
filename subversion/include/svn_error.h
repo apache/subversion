@@ -462,8 +462,10 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
 /** Like SVN_ERR_ASSERT(), but append ERR to the returned error chain.
  *
- * If EXPR is true, return a malfunction error whose chain includes ERR.
- * If EXPR is false, do nothing.  (In particular, this does not clear ERR.)
+ * If EXPR is false, return a malfunction error whose chain includes ERR.
+ * If EXPR is true, do nothing.  (In particular, this does not clear ERR.)
+ *
+ * Types: (svn_boolean_t expr, svn_error_t *err)
  *
  * @since New in 1.8.
  */
