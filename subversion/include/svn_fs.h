@@ -1032,18 +1032,20 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  */
 
 /**
- * Get an @a *editor to create a new filesystem transaction with, based on
- * based on @a revision of @a fs.  The transaction's name is returned as @a
- * *txn_name.
+ * Create a new filesystem transaction, based on based on @a revision of @a fs,
+ * and return its name @a *txn_name and an @a *editor that can be used to
+ * make changes into it.
  *
  * ### next two paragraphs copied from svn_fs_begin_txn2().. xref or deprecate?
  *
  * @a flags determines transaction enforcement behaviors, and is composed
  * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.).
+ * It is a property of the transaction (even if it constructed over multiple
+ * drives; see @a autocommit, below).
  * 
  * @note If you're building a txn for committing, you probably
  * don't want to call this directly.  Instead, call
- * svn_repos_fs_begin_txn_for_commit(), which honors the
+ * svn_repos__get_commit_ev2(), which honors the
  * repository's hook configurations.
  *
  * When @a autocommit is true, calling svn_editor_complete() will attempt to
@@ -1069,10 +1071,8 @@ svn_fs_editor_create(svn_editor_t **editor,
 
 
 /**
- * Like svn_fs_editor_create_for(), but open an existing transaction
+ * Like svn_fs_editor_create(), but open an existing transaction
  * @a txn_name and continue editing it.
- *
- * @todo ### Take FLAGS and/or AUTOCOMMIT parameters?
  *
  * @since New in 1.8.
  */
