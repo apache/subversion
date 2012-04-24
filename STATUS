@@ -151,6 +151,14 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1329388
+   Destroy neon request object so that request cleanups are not delayed.
+   Justification:
+     Undefined behaviour by using memory after free(); does not appear to
+     affect 1.7 but may affect 3rd party clients using the RA API.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
