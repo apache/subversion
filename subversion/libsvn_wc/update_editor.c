@@ -4582,6 +4582,11 @@ close_file(void *file_baton,
               action = svn_wc_notify_update_add;
             }
         }
+      else
+        {
+          SVN_ERR_ASSERT(lock_state == svn_wc_notify_lock_state_unlocked);
+          action = svn_wc_notify_update_broken_lock;
+        }
 
       /* If the file was moved-away, notify for the moved-away node.
        * The original location only had its BASE info changed and

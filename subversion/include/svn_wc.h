@@ -1219,7 +1219,11 @@ typedef enum svn_wc_notify_action_t
 
   /** The operation skipped the path because it was conflicted.
    * @since New in 1.7. */
-  svn_wc_notify_skip_conflicted
+  svn_wc_notify_skip_conflicted,
+
+  /** Just the lock on a file was removed during update.
+   * @since New in 1.8. */
+  svn_wc_notify_update_broken_lock
 
 } svn_wc_notify_action_t;
 
