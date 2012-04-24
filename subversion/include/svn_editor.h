@@ -585,6 +585,17 @@ svn_editor_create(svn_editor_t **editor,
                   apr_pool_t *scratch_pool);
 
 
+/** Return an editor's private baton.
+ *
+ * In some cases, the baton is required outside of the callbacks. This
+ * function returns the private baton for use.
+ *
+ * @since New in 1.8.
+ */
+void *
+svn_editor_get_baton(const svn_editor_t *editor);
+
+
 /** Sets the #svn_editor_cb_add_directory_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).

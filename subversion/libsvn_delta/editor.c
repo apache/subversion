@@ -221,6 +221,13 @@ svn_editor_create(svn_editor_t **editor,
 }
 
 
+void *
+svn_editor_get_baton(const svn_editor_t *editor)
+{
+  return editor->baton;
+}
+
+
 svn_error_t *
 svn_editor_setcb_add_directory(svn_editor_t *editor,
                                svn_editor_cb_add_directory_t callback,
