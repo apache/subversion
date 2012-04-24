@@ -460,6 +460,29 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
     abort();                                                 \
   } while (1)
 
+/** Like SVN_ERR_ASSERT(), but append ERR to the returned error chain.
+ *
+ * If EXPR is true, return a malfunction error whose chain includes ERR.
+ * If EXPR is false, do nothing.  (In particular, this does not clear ERR.)
+ *
+ * @since New in 1.8.
+ */
+#ifdef __clang_analyzer__
+#include <assert.h>
+/* Just ignore ERR.  If the assert triggers, it'll be our least concern. */
+#define SVN_ERR_ASSERT2(expr, err)       assert((expr))
+#else
+#define SVN_ERR_ASSERT2(expr, err)                                      \
+  do {                                                                  \
+    if (!(expr)) {                                                      \
+      return svn_error_compose_create(                                  \
+               svn_error__malfunction(TRUE, __FILE__, __LINE__, #expr), \
+               (err));                                                  \
+    }                                                                   \
+  } while (0)
+#endif
+
+
 /** Check that a condition is true: if not, report an error and possibly
  * terminate the program.
  *
