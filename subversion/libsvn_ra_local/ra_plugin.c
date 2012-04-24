@@ -1565,7 +1565,6 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
                              apr_pool_t *scratch_pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  svn_revnum_t revision;
 
   /* NOTE: the RA callbacks are ignored. We pass everything directly to
      the REPOS editor.  */
@@ -1583,17 +1582,13 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
   apr_hash_set(revprops, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
                svn_string_create(sess->username, scratch_pool));
 
-  /* Commit against the youngest revision.  */
-  SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, scratch_pool));
-
   /* ### we may need to switch this to deltify_etc. however, it seems that
      ### svnserve does not deltify after a commit. look into this...
      ### note that deltify_etc also unlocks things. check into how svnserve
      ### handles that aspect.  */
 
   return svn_error_trace(svn_repos__get_commit_ev2(
-                           editor, sess->repos, NULL /* authz */, revision,
-                           revprops,
+                           editor, sess->repos, NULL /* authz */, revprops,
                            commit_cb, commit_baton, cancel_func, cancel_baton,
                            result_pool, scratch_pool));
 }

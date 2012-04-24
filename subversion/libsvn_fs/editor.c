@@ -403,7 +403,6 @@ svn_error_t *
 svn_fs_editor_create(svn_editor_t **editor,
                      const char **txn_name,
                      svn_fs_t *fs,
-                     svn_revnum_t revision,
                      apr_uint32_t flags,
                      svn_boolean_t autocommit,
                      svn_cancel_func_t cancel_func,
@@ -411,8 +410,10 @@ svn_fs_editor_create(svn_editor_t **editor,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
+  svn_revnum_t revision;
   svn_fs_txn_t *txn;
 
+  SVN_ERR(svn_fs_youngest_rev(&revision, fs, scratch_pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, revision, flags, result_pool));
   SVN_ERR(svn_fs_txn_name(txn_name, txn, result_pool));
   return svn_error_trace(make_editor(editor, txn, autocommit,

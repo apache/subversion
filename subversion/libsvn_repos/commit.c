@@ -1210,7 +1210,6 @@ svn_error_t *
 svn_repos__get_commit_ev2(svn_editor_t **editor,
                           svn_repos_t *repos,
                           svn_authz_t *authz,
-                          svn_revnum_t revision,
                           apr_hash_t *revprops,
                           svn_commit_callback2_t commit_cb,
                           void *commit_baton,
@@ -1253,13 +1252,8 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   eb->commit_cb = commit_cb;
   eb->commit_baton = commit_baton;
 
-  /* ### should we ignore REVISION and always use youngest? seems the FS
-     ### editor should just "figure it out" with whatever revision we
-     ### specify.  */
-
   SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
-                               repos->fs, revision,
-                               SVN_FS_TXN_CHECK_LOCKS,
+                               repos->fs, SVN_FS_TXN_CHECK_LOCKS,
                                TRUE /* autocommit */,
                                cancel_func, cancel_baton,
                                result_pool, scratch_pool));
