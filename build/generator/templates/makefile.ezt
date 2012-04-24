@@ -38,6 +38,8 @@ TEST_DEPS =[for test_deps] [test_deps][end]
 
 TEST_PROGRAMS =[for test_progs] [test_progs][end]
 
+check-deps test-deps: [for test_helpers] [test_helpers][end]
+
 MANPAGES =[for manpages] [manpages][end]
 
 CLEAN_FILES =[for cfiles] [cfiles][end]

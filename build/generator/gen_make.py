@@ -141,6 +141,7 @@ class Generator(gen_base.GeneratorBase):
     data.bdb_test_progs = self.bdb_test_progs + self.bdb_scripts
     data.test_deps = self.test_deps + self.scripts
     data.test_progs = self.test_progs + self.scripts
+    data.test_helpers = self.test_helpers
 
     # write list of all manpages
     data.manpages = self.manpages
