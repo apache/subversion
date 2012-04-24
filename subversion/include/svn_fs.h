@@ -880,6 +880,13 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
  * something else went wrong in post commit FS processing.
+ *
+ * ### need to document this better. there are four combinations of
+ * ### return values:
+ * ### 1) err=NULL. conflict=NULL. new_rev is valid
+ * ### 2) err=SVN_ERR_FS_CONFLICT. conflict is set. new_rev=SVN_INVALID_REVNUM
+ * ### 3) err=!NULL. conflict=NULL. new_rev is valid
+ * ### 4) err=!NULL. conflict=NULL. new_rev=SVN_INVALID_REVNUM
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
