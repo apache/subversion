@@ -945,7 +945,7 @@ static const char decimal_table[100][4]
     do { \
       (dest)[0] = (source)[0]; \
       (dest)[1] = (source)[1]; \
-    while (0)
+    } while (0)
 #endif
 
 apr_size_t
