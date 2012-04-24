@@ -874,7 +874,8 @@ svn_editor_add_absent(svn_editor_t *editor,
  * (e.g. it has not yet been committed), then @a revision should be
  * #SVN_INVALID_REVNUM.
  *
- * For a description of @a props, see svn_editor_add_file().
+ * For a description of @a props, see svn_editor_add_file(). @a props
+ * may not be NULL.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
