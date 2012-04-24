@@ -1083,6 +1083,38 @@ svn_fs_editor_create_for(svn_editor_t **editor,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+
+/**
+ * After svn_editor_complete() has been called on @a editor, this function
+ * is used to fetch the results of the underlying commit operation. If a
+ * commit has not occurred (because svn_editor_complete() has not been
+ * called, or the autocommit flag was #FALSE), then
+ * #SVN_ERR_FS_NO_EDITOR_COMMIT_RESULTS will be returned.
+ *
+ * @a revision will be set to the committed revision, if any. If
+ * svn_editor_complete() does not return an error, then a revision number
+ * will be returned. If any error is returned by svn_editor_complete(),
+ * then @a revision will be set to #SVN_INVALID_REVNUM.
+ *
+ * @a post_commit_err contains any error that may have occurred after the
+ * revision was committed (ie. during FS transaction cleanup). If no such
+ * error occurred, then @a post_commit_err will be set to @c NULL.
+ *
+ * If the svn_editor_complete() call returned #SVN_ERR_FS_CONFLICT, then
+ * this function will place the conflicted path into @a conflict_path.
+ * In this situation, @a revision will be set to #SVN_INVALID_REVNUM and
+ * @a post_commit_err will be set to @c NULL.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_get_commit_results(svn_revnum_t *revision,
+                                 svn_error_t **post_commit_err,
+                                 const char **conflict_path,
+                                 const svn_editor_t *editor,
+                                 apr_pool_t *result_pool);
+
+
 /** @} */
 
 

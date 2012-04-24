@@ -439,3 +439,21 @@ svn_fs_editor_create_for(svn_editor_t **editor,
                                      result_pool, scratch_pool));
 }
 
+
+svn_error_t *
+svn_fs_editor_get_commit_results(svn_revnum_t *revision,
+                                 svn_error_t **post_commit_err,
+                                 const char **conflict_path,
+                                 const svn_editor_t *editor,
+                                 apr_pool_t *result_pool)
+{
+  struct ev2_baton *eb = svn_editor_get_baton(editor);
+
+  UNUSED(eb);
+
+  *revision = SVN_INVALID_REVNUM;
+  *post_commit_err = NULL;
+  *conflict_path = NULL;
+
+  return SVN_NO_ERROR;
+}

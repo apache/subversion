@@ -767,6 +767,11 @@ SVN_ERROR_START
              "Property value in filesystem differs from the provided "
              "base value")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_FS_NO_EDITOR_COMMIT_RESULTS,
+             SVN_ERR_FS_CATEGORY_START + 50,
+             "The editor has not committed the underlying transaction")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
