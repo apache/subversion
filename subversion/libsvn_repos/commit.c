@@ -136,6 +136,13 @@ struct ev2_baton
   /* The repository we are editing.  */
   svn_repos_t *repos;
 
+  /* The authz baton for checks; NULL to skip authz.  */
+  svn_authz_t *authz;
+
+  /* Callback to provide info about the committed revision.  */
+  svn_commit_callback2_t commit_cb;
+  void *commit_baton;
+
   /* The FS txn editor  */
   svn_editor_t *inner;
 
@@ -1176,11 +1183,37 @@ abort_cb(void *baton,
 }
 
 
+static svn_error_t *
+apply_revprops(svn_fs_t *fs,
+               const char *txn_name,
+               apr_hash_t *revprops,
+               apr_pool_t *scratch_pool)
+{
+  svn_fs_txn_t *txn;
+  const apr_array_header_t *revprops_array;
+
+  /* The FS editor has a TXN inside it, but we can't access it. Open another
+     based on the TXN_NAME.  */
+  SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, scratch_pool));
+
+  /* Validate and apply the revision properties.  */
+  revprops_array = svn_prop_hash_to_array(revprops, scratch_pool);
+  SVN_ERR(svn_repos_fs_change_txn_props(txn, revprops_array, scratch_pool));
+
+  /* ### do we need to force the txn to close, or is it enough to wait
+     ### for the pool to be cleared?  */
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos__get_commit_ev2(svn_editor_t **editor,
                           svn_repos_t *repos,
+                          svn_authz_t *authz,
                           svn_revnum_t revision,
-                          apr_hash_t *revprop_table,
+                          apr_hash_t *revprops,
+                          svn_commit_callback2_t commit_cb,
+                          void *commit_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           apr_pool_t *result_pool,
@@ -1201,9 +1234,28 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
     complete_cb,
     abort_cb
   };
-  struct ev2_baton *eb = apr_palloc(result_pool, sizeof(*eb));
+  struct ev2_baton *eb;
+  const svn_string_t *author;
 
+  /* Can the user modify the repository at all?  */
+  /* ### check against AUTHZ.  */
+
+  /* Okay... some access is allowed. Let's run the start-commit hook.  */
+  author = apr_hash_get(revprops, SVN_PROP_REVISION_AUTHOR,
+                        APR_HASH_KEY_STRING);
+  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+                                        repos->client_capabilities,
+                                        scratch_pool));
+
+  eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;
+  eb->authz = authz;
+  eb->commit_cb = commit_cb;
+  eb->commit_baton = commit_baton;
+
+  /* ### should we ignore REVISION and always use youngest? seems the FS
+     ### editor should just "figure it out" with whatever revision we
+     ### specify.  */
 
   SVN_ERR(svn_fs_editor_create(&eb->inner, &eb->txn_name,
                                repos->fs, revision,
@@ -1212,6 +1264,10 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
                                cancel_func, cancel_baton,
                                result_pool, scratch_pool));
 
+  /* The TXN has been created. Go ahead and apply all revision properties.  */
+  SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
+
+  /* Wrap the FS editor within our editor.  */
   SVN_ERR(svn_editor_create(editor, eb, cancel_func, cancel_baton,
                             result_pool, scratch_pool));
   SVN_ERR(svn_editor_setcb_many(*editor, &editor_cbs, scratch_pool));
