@@ -711,10 +711,10 @@ test_namespaces(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#if APR_HAS_THREADS
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
+#if APR_HAS_THREADS
   SVN_ERR(init_test_shm(pool));
 
   SVN_ERR(calibrate_concurrency(pool));
@@ -723,8 +723,10 @@ test_multithreaded(apr_pool_t *pool)
   SVN_ERR(run_threads(pool, hw_thread_count, suggested_iterations, test_pipeline));
 
   return SVN_NO_ERROR;
-}
+#else
+  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 #endif
+}
 
 static svn_error_t *
 test_multiprocess(apr_pool_t *pool)
@@ -762,10 +764,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "basic r/w access to multiple atomics"),
     SVN_TEST_PASS2(test_namespaces,
                    "use different namespaces"),
-#if APR_HAS_THREADS
     SVN_TEST_PASS2(test_multithreaded,
                    "multithreaded access to atomics"),
-#endif
     SVN_TEST_PASS2(test_multiprocess,
                    "multi-process access to atomics"),
     SVN_TEST_NULL
