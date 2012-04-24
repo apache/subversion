@@ -661,12 +661,13 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 
 #ifdef SVN_DEBUG
   /* Check postconditions. */
-  /* ### TODO: don't leak an error when these trigger */
   if (conflict_p)
     {
-      SVN_ERR_ASSERT(! (SVN_IS_VALID_REVNUM(*new_rev) && *conflict_p != NULL));
-      SVN_ERR_ASSERT((*conflict_p != NULL)
-                     == (err && err->apr_err == SVN_ERR_FS_CONFLICT));
+      SVN_ERR_ASSERT2(! (SVN_IS_VALID_REVNUM(*new_rev) && *conflict_p != NULL),
+                      err);
+      SVN_ERR_ASSERT2((*conflict_p != NULL)
+                      == (err && err->apr_err == SVN_ERR_FS_CONFLICT),
+                      err);
     }
 #endif
 
