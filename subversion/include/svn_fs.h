@@ -887,6 +887,15 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * ### 2) err=SVN_ERR_FS_CONFLICT. conflict is set. new_rev=SVN_INVALID_REVNUM
  * ### 3) err=!NULL. conflict=NULL. new_rev is valid
  * ### 4) err=!NULL. conflict=NULL. new_rev=SVN_INVALID_REVNUM
+ * ###
+ * ### some invariants:
+ * ###   *conflict_p will be non-NULL IFF SVN_ERR_FS_CONFLICT
+ * ###   if *conflict_p is set (and SVN_ERR_FS_CONFLICT), then new_rev
+ * ###     will always be SVN_INVALID_REVNUM
+ * ###   *conflict_p will always be initialized to NULL, or to a valid
+ * ###     conflict string
+ * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
+ * ###     to a valid, committed revision number
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
