@@ -1032,21 +1032,20 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  */
 
 /**
- * Create a new filesystem transaction, based on based on @a revision of @a fs,
- * and return its name @a *txn_name and an @a *editor that can be used to
- * make changes into it.
+ * Create a new filesystem transaction, based on based on the youngest
+ * revision of @a fs, and return its name @a *txn_name and an @a *editor
+ * that can be used to make changes into it.
  *
  * ### next two paragraphs copied from svn_fs_begin_txn2().. xref or deprecate?
  *
  * @a flags determines transaction enforcement behaviors, and is composed
- * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.).
- * It is a property of the transaction (even if constructed over multiple
- * drives; see @a autocommit, below).
+ * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
+ * property of the underlying transaction, and will not change if multiple
+ * editors are used to refer to that transaction (see @a autocommit, below).
  * 
- * @note If you're building a txn for committing, you probably
- * don't want to call this directly.  Instead, call
- * svn_repos__get_commit_ev2(), which honors the
- * repository's hook configurations.
+ * @note If you're building a txn for committing, you probably don't want
+ * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
+ * honors the repository's hook configurations.
  *
  * When @a autocommit is true, calling svn_editor_complete() will attempt to
  * commit the transaction.  ### return the resulting revnum and conflict string
@@ -1061,7 +1060,6 @@ svn_error_t *
 svn_fs_editor_create(svn_editor_t **editor,
                      const char **txn_name,
                      svn_fs_t *fs,
-                     svn_revnum_t revision,
                      apr_uint32_t flags,
                      svn_boolean_t autocommit,
                      svn_cancel_func_t cancel_func,

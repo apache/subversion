@@ -94,7 +94,6 @@ svn_error_t *
 svn_repos__get_commit_ev2(svn_editor_t **editor,
                           svn_repos_t *repos,
                           svn_authz_t *authz,
-                          svn_revnum_t revision,
                           apr_hash_t *revprops,
                           svn_commit_callback2_t commit_cb,
                           void *commit_baton,
