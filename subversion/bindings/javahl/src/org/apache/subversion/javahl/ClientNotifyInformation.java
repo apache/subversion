@@ -546,6 +546,10 @@ public class ClientNotifyInformation extends EventObject
         /** Operation skipped the path because it was conflicted */
         skip_conflicted ("skipped conflicted path");
 
+        /** The lock on a file was removed during update */
+        update_broken_lock ("broken lock removed");
+
+
         /**
          * The description of the action.
          */
