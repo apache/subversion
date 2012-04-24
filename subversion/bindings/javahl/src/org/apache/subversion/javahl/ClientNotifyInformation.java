@@ -544,7 +544,7 @@ public class ClientNotifyInformation extends EventObject
         failed_forbidden_by_server ("failed forbidden by server"),
 
         /** Operation skipped the path because it was conflicted */
-        skip_conflicted ("skipped conflicted path");
+        skip_conflicted ("skipped conflicted path"),
 
         /** The lock on a file was removed during update */
         update_broken_lock ("broken lock removed");
