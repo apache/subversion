@@ -149,6 +149,29 @@ mergeinfo for the merge is set on the deepest directories present.</p>
 
 </ul>
 
+<h3>Rationale</h3>
+
+<p><em>[JAF] The above may be the actual behaviour but sounds too simplistic
+  to be the desired behaviour.  Although a simple depth attribute is
+  recorded for each dir in the WC, the ambient depth of a dir in the WC is
+  not simply one of empty/files/immediates/infinity, but rather is a tree in
+  which different branches are populated to different depths.  Surely the
+  merge ought to respond to the ambient depth rather than the simple depth
+  attribute.</em></p>
+
+<p><em>[JAF] It's not clear whether an incoming addition should be honoured
+  if the added node would fall outside the ambient depth.  The sparse-
+  directories design doesn't seem to address this case for updates, let
+  alone merges.  It would be silly if a merge could delete such a node (that
+  was present in the WC despite being outside its parent's 'depth'
+  attribute) and could not then re-add a node of the same name in order to
+  perform both halves of an incoming replacement.  <a
+  href="http://subversion.tigris.org/issues/show_bug.cgi?id=4164" >Issue
+  #4164 "inconsistencies in merge handling of adds vs. edits in shallow
+  targets"</a> is related.</em></p>
+
+<p>See <a href="../sparse-directories.txt">sparse-directories design</a>.</p>
+
 </div>  <!-- sparse-checkouts -->
 
 <div class="h2" id="switched-paths">
