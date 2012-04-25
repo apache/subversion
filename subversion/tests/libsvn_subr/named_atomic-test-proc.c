@@ -55,6 +55,9 @@ main(int argc, const char *argv[])
   /* lean & mean parameter parsing */
   if (argc != 5)
     {
+      if (argc == 1) /* used to test that this executable can be started */
+        exit(0);
+
       printf("Usage: named_atomic-proc-test ID COUNT ITERATIONS NS.\n");
       exit(1);
     }
@@ -69,15 +72,15 @@ main(int argc, const char *argv[])
   err = test_pipeline(id, count, iterations, pool);
   if (err)
   {
+    const char *prefix = apr_psprintf(pool, "Process %d: ", id);
     got_error = TRUE;
-    svn_handle_error2(err, stderr, FALSE, "svn:");
+    svn_handle_error2(err, stdout, FALSE, prefix);
     svn_error_clear(err);
   }
 
   /* Clean up APR */
-  svn_pool_destroy(pool); 
+  svn_pool_destroy(pool);
   apr_terminate();
 
   return got_error;
 }
-  

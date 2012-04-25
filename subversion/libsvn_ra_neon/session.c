@@ -1109,9 +1109,9 @@ static svn_error_t *svn_ra_neon__get_session_url(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
-                                                const char **url,
-                                                apr_pool_t *pool)
+svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
+                                         const char **url,
+                                         apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
 

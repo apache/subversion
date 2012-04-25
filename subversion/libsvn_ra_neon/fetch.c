@@ -1869,6 +1869,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
                                    " element"));
       svn_stringbuf_set(rb->namestr, name);
 
+      att = svn_xml_get_attr_value("rev", atts);
+      if (att) /* Not available on older repositories! */
+        crev = SVN_STR_TO_REV(att);
+
       parent_dir = &TOP_DIR(rb);
 
       /* Pool use is a little non-standard here.  When lots of items in the
@@ -1883,8 +1887,8 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       svn_path_add_component(pathbuf, rb->namestr->data);
 
       SVN_ERR((*rb->editor->delete_entry)(pathbuf->data,
-                                          SVN_INVALID_REVNUM,
-                                          TOP_DIR(rb).baton,
+                                          crev,
+                                          parent_dir->baton,
                                           subpool));
       svn_pool_destroy(subpool);
       break;

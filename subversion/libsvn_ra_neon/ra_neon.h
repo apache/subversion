@@ -1200,6 +1200,10 @@ svn_error_t *
 svn_ra_neon__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
 
+svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
+                                         const char **url,
+                                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

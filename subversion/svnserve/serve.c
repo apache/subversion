@@ -1655,7 +1655,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
               /* created_rev, last_author, time */
               SVN_CMD_ERR(svn_repos_get_committed_info(&created_rev,
                                                        &cdate,
-                                                       &last_author, 
+                                                       &last_author,
                                                        root,
                                                        file_path,
                                                        subpool));

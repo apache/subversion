@@ -99,9 +99,9 @@
 
 /* The following are names of atomics that will be used to communicate
  * revprop updates across all processes on this machine. */
-#define ATOMIC_REVPROP_GENERATION "RevPropGeneration"
-#define ATOMIC_REVPROP_TIMEOUT    "RevPropTimeout"
-#define ATOMIC_REVPROP_NAMESPACE  "RevPropAtomics"
+#define ATOMIC_REVPROP_GENERATION "rev-prop-generation"
+#define ATOMIC_REVPROP_TIMEOUT    "rev-prop-timeout"
+#define ATOMIC_REVPROP_NAMESPACE  "rev-prop-atomics"
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -2808,10 +2808,9 @@ ensure_revprop_namespace(svn_fs_t *fs)
 
   return ffd->revprop_namespace == NULL
     ? svn_atomic_namespace__create(&ffd->revprop_namespace,
-                                   apr_pstrcat(fs->pool,
-                                               fs->path,
-                                               ATOMIC_REVPROP_NAMESPACE,
-                                               (char *)NULL),
+                                   svn_dirent_join(fs->path,
+                                                   ATOMIC_REVPROP_NAMESPACE,
+                                                   fs->pool),
                                    fs->pool)
     : SVN_NO_ERROR;
 }
@@ -2836,7 +2835,7 @@ static svn_error_t *
 ensure_revprop_timeout(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  
+
   SVN_ERR(ensure_revprop_namespace(fs));
   return ffd->revprop_timeout == NULL
     ? svn_named_atomic__get(&ffd->revprop_timeout,
@@ -2892,7 +2891,7 @@ read_revprop_generation(apr_int64_t *generation,
 {
   apr_int64_t current = 0;
   fs_fs_data_t *ffd = fs->fsap_data;
-  
+
   /* read the current revprop generation number */
   SVN_ERR(ensure_revprop_generation(fs));
   SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
@@ -2935,7 +2934,7 @@ begin_revprop_change(svn_fs_t *fs)
 {
   apr_int64_t current;
   fs_fs_data_t *ffd = fs->fsap_data;
-  
+
   /* set the timeout for the write operation */
   SVN_ERR(ensure_revprop_timeout(fs));
   SVN_ERR(svn_named_atomic__write(NULL,
@@ -2966,7 +2965,7 @@ end_revprop_change(svn_fs_t *fs)
 {
   apr_int64_t current = 1;
   fs_fs_data_t *ffd = fs->fsap_data;
-  
+
   /* set the revprop generation to an even value to indicate
    * that a write has been completed
    */

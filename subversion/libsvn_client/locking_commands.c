@@ -345,8 +345,9 @@ organize_lock_targets(const char **common_parent_url,
             {
               svn_revnum_t *revnum;
               revnum = apr_palloc(result_pool, sizeof(* revnum));
-              SVN_ERR(svn_wc__node_get_base_rev(revnum, ctx->wc_ctx,
-                                                abs_path, result_pool));
+              SVN_ERR(svn_wc__node_get_base(revnum, NULL, NULL, NULL,
+                                            ctx->wc_ctx, abs_path,
+                                            result_pool, iterpool));
               apr_hash_set(rel_targets_ret, rel_url,
                            APR_HASH_KEY_STRING, revnum);
             }

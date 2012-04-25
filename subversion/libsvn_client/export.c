@@ -42,6 +42,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -957,8 +958,7 @@ close_file(void *file_baton,
 
   SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5, text_digest,
                                  pool));
-  actual_checksum = svn_checksum__from_digest(fb->text_digest,
-                                              svn_checksum_md5, pool);
+  actual_checksum = svn_checksum__from_digest_md5(fb->text_digest, pool);
 
   /* Note that text_digest can be NULL when talking to certain repositories.
      In that case text_checksum will be NULL and the following match code

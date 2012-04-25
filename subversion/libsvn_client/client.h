@@ -879,10 +879,10 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If MD5_CHECKSUMS is not NULL, set *MD5_CHECKSUMS to a hash containing,
+   If SHA1_CHECKSUMS is not NULL, set *SHA1_CHECKSUMS to a hash containing,
    for each file transmitted, a mapping from the commit-item's (const
-   char *) path to the (const svn_checksum_t *) MD5 checksum of its new text
-   base.  Similarly for SHA1_CHECKSUMS.
+   char *) path to the (const svn_checksum_t *) SHA1 checksum of its new text
+   base.
 
    Use RESULT_POOL for all allocating the resulting hashes and SCRATCH_POOL
    for temporary allocations.
@@ -893,7 +893,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
@@ -1082,8 +1081,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 /* Return a set of callbacks to use with the Ev2 shims. */
 svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
-                               svn_ra_session_t *ra_session,
-                               const char *anchor_abspath,
+                               apr_hash_t *relpath_map,
                                apr_pool_t *result_pool);
 
 /* Return true if KIND is a revision kind that is dependent on the working

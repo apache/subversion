@@ -895,8 +895,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   SVN_ERR(svn_wc__node_get_url(&target_base.url, ctx->wc_ctx, target_abspath,
                                pool, pool));
-  SVN_ERR(svn_wc__node_get_base_rev(&target_base.rev, ctx->wc_ctx,
-                                    target_abspath, pool));
+  SVN_ERR(svn_wc__node_get_base(&target_base.rev, NULL, NULL, NULL,
+                                ctx->wc_ctx, target_abspath, pool, pool));
   SVN_ERR(svn_wc__node_get_repos_info(&target_base.repos_root_url,
                                       &target_base.repos_uuid,
                                       ctx->wc_ctx, target_abspath, pool, pool));
@@ -2941,30 +2941,56 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
       if (notify->action == svn_wc_notify_update_add)
         {
-          svn_boolean_t is_root_of_added_subtree = FALSE;
-          const char *added_path = apr_pstrdup(notify_b->pool,
-                                               notify_abspath);
-          const char *added_path_parent = NULL;
+          svn_boolean_t root_of_added_subtree = TRUE;
 
           /* Stash the root path of any added subtrees. */
           if (notify_b->added_abspaths == NULL)
             {
+              /* The first added path is always a root. */
               notify_b->added_abspaths = apr_hash_make(notify_b->pool);
-              is_root_of_added_subtree = TRUE;
             }
           else
             {
-              added_path_parent = svn_dirent_dirname(added_path, pool);
-              /* ### Bug. Testing whether its immediate parent is in the
-               * hash isn't enough: this is letting every other level of
-               * the added subtree hierarchy into the hash. */
-              if (!apr_hash_get(notify_b->added_abspaths, added_path_parent,
-                                APR_HASH_KEY_STRING))
-                is_root_of_added_subtree = TRUE;
+              const char *added_path_parent =
+                svn_dirent_dirname(notify_abspath, pool);
+              apr_pool_t *subpool = svn_pool_create(pool);
+
+              /* Is NOTIFY->PATH the root of an added subtree? */
+              while (strcmp(notify_b->merge_b->target->abspath,
+                            added_path_parent))
+                {
+                  if (apr_hash_get(notify_b->added_abspaths,
+                                   added_path_parent,
+                                   APR_HASH_KEY_STRING))
+                    {
+                      root_of_added_subtree = FALSE;
+                      break;
+                    }
+
+                  added_path_parent = svn_dirent_dirname(
+                    added_path_parent, subpool);
+                }
+
+              svn_pool_destroy(subpool);
             }
-          if (is_root_of_added_subtree)
-            apr_hash_set(notify_b->added_abspaths, added_path,
-                         APR_HASH_KEY_STRING, added_path);
+
+          if (root_of_added_subtree)
+            {
+              const char *added_root_path = apr_pstrdup(notify_b->pool,
+                                                        notify_abspath);
+              apr_hash_set(notify_b->added_abspaths, added_root_path,
+                           APR_HASH_KEY_STRING, added_root_path);
+            }
+        }
+
+      if (notify->action == svn_wc_notify_update_delete
+          && notify_b->added_abspaths)
+        {
+          /* Issue #4166: If a previous merge added NOTIFY_ABSPATH, but we
+             are now deleting it, then remove it from the list of added
+             paths. */
+          apr_hash_set(notify_b->added_abspaths, notify_abspath,
+                       APR_HASH_KEY_STRING, NULL);
         }
     }
 
@@ -4061,8 +4087,9 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
      So in the name of user friendliness, return an error suggesting a helpful
      course of action.
   */
-  SVN_ERR(svn_wc__node_get_base_rev(&child_base_revision, ctx->wc_ctx,
-                                     child->abspath, scratch_pool));
+  SVN_ERR(svn_wc__node_get_base(&child_base_revision, NULL, NULL, NULL,
+                                ctx->wc_ctx, child->abspath,
+                                scratch_pool, scratch_pool));
   /* If CHILD has no base revision then it hasn't been committed yet, so it
      can't have any "future" history. */
   if (SVN_IS_VALID_REVNUM(child_base_revision)
@@ -11005,7 +11032,7 @@ find_base_on_source(svn_client__pathrev_t **base_p,
 
 /* Find a merge base location on the target branch, like in a reintegrate
  * merge.
- * 
+ *
  *                     MID    RIGHT
  *          o-----------o-------o---
  *         /    prev.  /         \
@@ -11017,7 +11044,7 @@ find_base_on_source(svn_client__pathrev_t **base_p,
  * Set *BASE_P to the latest location on the history of S_T->target at
  * which all revisions up to *BASE_P are recorded as merged into RIGHT
  * (which is S_T->source).
- * 
+ *
  * ### TODO: Set *MID_P to the first location on the history of
  * S_T->source at which all revisions up to BASE_P are recorded as merged.
  */

@@ -1883,6 +1883,8 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
   /* We need this only in case of an error but this is cheap to get -
    * so we do it here for clarity. */
   apr_err = apr_file_name_get(&fname, lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
   /* Get lock on the filehandle. */
   apr_err = apr_file_lock(lockfile_handle, locktype);
@@ -1909,11 +1911,11 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
         case APR_FLOCK_SHARED:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get shared lock on file '%s'"),
-                                    svn_dirent_local_style(fname, pool));
+                                    fname);
         case APR_FLOCK_EXCLUSIVE:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get exclusive lock on file '%s'"),
-                                    svn_dirent_local_style(fname, pool));
+                                    fname);
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1935,22 +1937,26 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
                         apr_pool_t *pool)
 {
   const char *fname;
-  apr_status_t apr_err = apr_file_unlock(lockfile_handle);
+  apr_status_t apr_err;
 
   /* We need this only in case of an error but this is cheap to get -
    * so we do it here for clarity. */
   apr_err = apr_file_name_get(&fname, lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
+  /* The actual unlock attempt. */
+  apr_err = apr_file_unlock(lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"), fname);
+  
 /* On Windows and OS/2 file locks are automatically released when
    the file handle closes */
 #if !defined(WIN32) && !defined(__OS2__)
   apr_pool_cleanup_kill(pool, lockfile_handle, file_clear_locks);
 #endif
 
-  return apr_err
-    ? svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
-                                  svn_dirent_local_style(fname, pool))
-    : SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

@@ -36,6 +36,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
@@ -688,9 +689,8 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
   const svn_checksum_t *md5_checksum;
 
   if (digest)
-    md5_checksum = svn_checksum__from_digest(
-                   digest, svn_checksum_md5,
-                   svn_wc__get_committed_queue_pool(*queue));
+    md5_checksum = svn_checksum__from_digest_md5(
+                     digest, svn_wc__get_committed_queue_pool(*queue));
   else
     md5_checksum = NULL;
 
@@ -748,7 +748,7 @@ svn_wc_process_committed4(const char *path,
     new_date = 0;
 
   if (digest)
-    md5_checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+    md5_checksum = svn_checksum__from_digest_md5(digest, pool);
   else
     md5_checksum = NULL;
 

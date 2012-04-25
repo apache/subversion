@@ -61,6 +61,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
@@ -1494,9 +1495,8 @@ window_handler(svn_txdelta_window_t *window,
 
   if (!window)
     {
-      fb->result_checksum = svn_checksum__from_digest(whb->result_digest,
-                                                      svn_checksum_md5,
-                                                      fb->pool);
+      fb->result_checksum = svn_checksum__from_digest_md5(whb->result_digest,
+                                                          fb->pool);
     }
 
   return SVN_NO_ERROR;
