@@ -61,8 +61,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
     * client: fix regression in update with --depth option (issue #4136)
     * propset: avoid undefined behaviour in error path (r1325361)
-    * libsvn_wc: always reset sqlite statements upon error (r1328846, -7, -52)
-    * libsvn_wc: work around sqlite-3.7.11 query-abort bug (r1328846, -7, -52)
+    * reset sqlite statements, partly to fix sqlite-3.7.11 compat (r1328846)
     * client: fix assertion in 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
     * client: notify upon 'update' just removing locks on files (r1329876)
 
