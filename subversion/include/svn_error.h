@@ -472,9 +472,9 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 #ifdef __clang_analyzer__
 #include <assert.h>
 /* Just ignore ERR.  If the assert triggers, it'll be our least concern. */
-#define SVN_ERR_ASSERT2(expr, err)       assert((expr))
+#define SVN_ERR_ASSERT_E(expr, err)       assert((expr))
 #else
-#define SVN_ERR_ASSERT2(expr, err)                                      \
+#define SVN_ERR_ASSERT_E(expr, err)                                      \
   do {                                                                  \
     if (!(expr)) {                                                      \
       return svn_error_compose_create(                                  \
@@ -503,6 +503,8 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  * evaluation of this expression is not compiled out in release-mode builds.
  *
  * @since New in 1.6.
+ *
+ * @see SVN_ERR_ASSERT_E()
  */
 #ifdef __clang_analyzer__
 #include <assert.h>
