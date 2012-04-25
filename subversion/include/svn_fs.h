@@ -1117,7 +1117,7 @@ svn_fs_editor_create_for(svn_editor_t **editor,
  * @note To summarize, there are three possible outcomes of this function:
  * successful commit (with or without an associated @a *post_commit_err);
  * failed commit due to a conflict (reported via @a *conflict_path); and
- * failed commit for some other reason (reported via teh returned error.
+ * failed commit for some other reason (reported via the returned error.)
  *
  * @since New in 1.8.
  */
