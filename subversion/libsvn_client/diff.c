@@ -1409,7 +1409,8 @@ convert_to_url(const char **url,
 
 /** Check if paths PATH_OR_URL1 and PATH_OR_URL2 are urls and if the
  * revisions REVISION1 and REVISION2 are local. If PEG_REVISION is not
- * unspecified, ensure that at least one of the two revisions is non-local.
+ * unspecified, ensure that at least one of the two revisions is not
+ * BASE or WORKING.
  * If PATH_OR_URL1 can only be found in the repository, set *IS_REPOS1
  * to TRUE. If PATH_OR_URL2 can only be found in the repository, set
  * *IS_REPOS2 to TRUE. */
@@ -1430,8 +1431,8 @@ check_paths(svn_boolean_t *is_repos1,
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Not all required revisions are specified"));
 
-  /* Revisions can be said to be local or remote.  BASE and WORKING,
-     for example, are local.  */
+  /* Revisions can be said to be local or remote.
+   * BASE and WORKING are local revisions.  */
   is_local_rev1 =
     ((revision1->kind == svn_opt_revision_base)
      || (revision1->kind == svn_opt_revision_working));
@@ -1442,8 +1443,8 @@ check_paths(svn_boolean_t *is_repos1,
   if (peg_revision->kind != svn_opt_revision_unspecified &&
       is_local_rev1 && is_local_rev2)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                            _("At least one revision must be non-local "
-                              "for a pegged diff"));
+                            _("At least one revision must be something other "
+                              "than BASE or WORKING when diffing a URL"));
 
   /* Working copy paths with non-local revisions get turned into
      URLs.  We don't do that here, though.  We simply record that it
