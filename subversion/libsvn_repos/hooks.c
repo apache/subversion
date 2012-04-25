@@ -280,7 +280,7 @@ run_hook_cmd(svn_string_t **result,
 
       *result = svn_string_create_from_buf(native_stdout, pool);
     }
-  else
+  else if (!result)
     {
       apr_err = apr_file_close(null_handle);
       if (!err && apr_err)
