@@ -232,25 +232,19 @@ run_hook_cmd(svn_string_t **result,
                           env_from_env_hash(hooks_env, pool, pool),
                           FALSE, FALSE, stdin_handle, result != NULL,
                           null_handle, TRUE, NULL, pool);
-
-  if (err)
-    {
-      /* CMD_PROC is not safe to use. Bail. */
-      return svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to start '%s' hook"), cmd);
-    }
-  else
-    {
-      err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
-    }
+  if (!err)
+    err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe
      and null file */
-  apr_err = apr_file_close(cmd_proc.err);
-  if (!err && apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Error closing read end of stderr pipe"));
+  if (cmd_proc.err)
+    {
+      apr_err = apr_file_close(cmd_proc.err);
+      if (!err && apr_err)
+        return svn_error_wrap_apr
+          (apr_err, _("Error closing read end of stderr pipe"));
+    }
 
   if (!err && result)
     {
