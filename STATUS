@@ -55,6 +55,13 @@ Candidate changes:
      +1: lgo
      +0: gstein (haven't reviewed these specific revisions yet)
 
+ * r1330410
+   Fix an error leak in the hook script invocation code.
+   Justification:
+     This bug can cause a server process to hang.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
