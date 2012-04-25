@@ -141,13 +141,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
- * r1330258
-   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
-   Justification:
-     Regression from 1.6. Users should not run into assertions.
-   Votes:
-     +1: stsp, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -172,3 +165,10 @@ Approved changes:
      r1328847 avoids fixes (and introduces) some whitepace inconsistencies.
    Votes:
      +1: rhuijben, danielsh, stsp
+
+ * r1330258
+   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
+   Justification:
+     Regression from 1.6. Users should not run into assertions.
+   Votes:
+     +1: stsp, danielsh, philip
