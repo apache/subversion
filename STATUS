@@ -80,7 +80,7 @@ Candidate changes:
    Justification:
      Avoids segfault.
    Branch:
-     1.7.x-r1306111
+     ^/subversion/branches/1.7.x-r1306111
    Votes:
      +1: danielsh
 
