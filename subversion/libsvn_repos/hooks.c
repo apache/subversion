@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "repos.h"
@@ -213,6 +214,7 @@ run_hook_cmd(svn_string_t **result,
   apr_status_t apr_err;
   svn_error_t *err;
   apr_proc_t cmd_proc = {0};
+  apr_pool_t *cmd_pool;
 
   if (result)
     {
@@ -228,24 +230,20 @@ run_hook_cmd(svn_string_t **result,
             (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
     }
 
+  /* Tie resources allocated for the command to a special pool which we can
+   * destroy in order to clean up the stderr pipe opened for the process. */
+  cmd_pool = svn_pool_create(pool);
+
   err = svn_io_start_cmd3(&cmd_proc, ".", cmd, args,
                           env_from_env_hash(hooks_env, pool, pool),
                           FALSE, FALSE, stdin_handle, result != NULL,
-                          null_handle, TRUE, NULL, pool);
+                          null_handle, TRUE, NULL, cmd_pool);
   if (!err)
     err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe
      and null file */
-  if (cmd_proc.err)
-    {
-      apr_err = apr_file_close(cmd_proc.err);
-      if (!err && apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Error closing read end of stderr pipe"));
-    }
-
   if (!err && result)
     {
       svn_stringbuf_t *native_stdout;
@@ -254,14 +252,10 @@ run_hook_cmd(svn_string_t **result,
         *result = svn_stringbuf__morph_into_string(native_stdout);
     }
 
-  if (cmd_proc.out)
-    {
-      apr_err = apr_file_close(cmd_proc.out);
-      if (!err && apr_err)
-        return svn_error_wrap_apr(apr_err,
-                                  _("Error closing read end of stderr pipe"));
-    }
+  /* Close resources allocated by svn_io_start_cmd3(), such as the pipe. */
+  svn_pool_destroy(cmd_pool);
 
+  /* Close the null handle. */
   if (null_handle)
     {
       apr_err = apr_file_close(null_handle);
