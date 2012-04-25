@@ -1084,22 +1084,22 @@ svn_fs_editor_create_for(svn_editor_t **editor,
 /**
  * Commit the transaction represented by @a editor.
  *
- * If the commit to the filesystem succeeds, then @a revision will be set
+ * If the commit to the filesystem succeeds, then @a *revision will be set
  * to the resulting revision number. Note that further errors may occur,
  * as described below. If the commit process does not succeed, for whatever
  * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
  *
- * If a conflict occurs during the commit, then @a conflict_path will
- * indicate which path caused the conflict. #SVN_NO_ERROR will be returned.
+ * If a conflict occurs during the commit, then @a *conflict_path will
+ * be set to a path that caused the conflict. #SVN_NO_ERROR will be returned.
  * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
- * message that incorporates @a conflict_path.
+ * message that incorporates @a *conflict_path.
  *
  * If a non-conflict error occurs during the commit, then that error will
  * be returned.
  *
- * If the commit completes (and a revision is returned in @a revision), then
+ * If the commit completes (and a revision is returned in @a *revision), then
  * it is still possible for an error to occur during the cleanup process.
- * Any such error will be returned in @a post_commit_err. The caller must
+ * Any such error will be returned in @a *post_commit_err. The caller must
  * properly use or clear that error.
  *
  * If svn_editor_complete() has already been called on @a editor, then
