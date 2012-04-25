@@ -47,29 +47,40 @@ Version 1.7.5
 (26 Apr 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.5
 
-  User-visible changes:
+ User-visible changes:
+  - General:
+    * http://: report deleted-revision upon delete during update (r1327474)
+
+  - Client-side bugfixes:
     * avoid potential segfault when canonicalizing properties (r1296369)
-    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
     * improve memory and file-handle management with externals (issue #4130)
     * ra_serf: convert assertions to "MERGE failed" errors (r1302417)
-    * mod_dav_svn: raise an error on MERGE of non-existent resource (r1298343)
     * fix undefined behaviour during multi-segment reverse merges (issue #4144)
     * client: fix potential use of freed memory in the diff code (r1311935)
     * client: improve performance of scanning for working copy root (r1306334)
     * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
     * client: fix regression in update with --depth option (issue #4136)
     * propset: avoid undefined behaviour in error path (r1325361)
-    * mod_dav_svn: support compiling/running under httpd-2.4 (r1232267)
-    * mod_dav_svn: forbid BDB repositories under httpd's event MPM (issue #4157)
-    * http://: report deleted-revision upon delete during update (r1327474)
     * libsvn_wc: always reset sqlite statements upon error (r1328846, -7, -52)
     * libsvn_wc: work around sqlite-3.7.11 query-abort bug (r1328846, -7, -52)
     * client: fix assertion in 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
 
-  Developer-visible changes:
+  - Server-side bugfixes:
+    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
+    * mod_dav_svn: raise an error on MERGE of non-existent resource (r1298343)
+    * mod_dav_svn: support compiling/running under httpd-2.4 (r1232267)
+    * mod_dav_svn: forbid BDB repositories under httpd's event MPM (issue #4157)
+
+  - Other tool improvements and bugfixes:
+    (none)
+
+ Developer-visible changes:
+  - General:
+    * windows example distribution scripts: include svnrdump (r1295007)
+
+  - Bindings:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
     * swig-rb tests: avoid FAILs on APR hash order (r1310535, r1310594)
-    * windows example distribution scripts: include svnrdump (r1295007)
 
 
 Version 1.7.4
