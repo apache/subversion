@@ -64,6 +64,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * ra_dav: report revision upon delete during update (r1327474)
       [TODO: what's the user-visible effect of that?]
     * libsvn_wc: don't leak sqlite statements (r1328846, -7, -52)
+    * diff: fix assertion in 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
 
   Developer-visible changes:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
