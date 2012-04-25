@@ -2696,8 +2696,10 @@ main(int argc, const char *argv[])
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          err = svn_error_quick_wrap(err,
-                                     _("Try 'svn help' for more info"));
+          err = svn_error_quick_wrap(
+                  err, apr_psprintf(pool,
+                                    _("Try 'svn help %s' for more information"),
+                                    subcommand->name));
         }
       if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
         {
