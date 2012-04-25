@@ -139,6 +139,10 @@ struct ev2_baton
   /* The authz baton for checks; NULL to skip authz.  */
   svn_authz_t *authz;
 
+  /* The repository name and user for performing authz checks.  */
+  const char *authz_repos_name;
+  const char *authz_user;
+
   /* Callback to provide info about the committed revision.  */
   svn_commit_callback2_t commit_cb;
   void *commit_baton;
@@ -991,6 +995,36 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 }
 
 
+static svn_error_t *
+ev2_check_authz(const struct ev2_baton *eb,
+                const char *relpath,
+                svn_repos_authz_access_t required,
+                apr_pool_t *scratch_pool)
+{
+  const char *fspath;
+  svn_boolean_t allowed;
+
+  if (eb->authz == NULL)
+    return SVN_NO_ERROR;
+
+  if (relpath)
+    fspath = apr_pstrcat(scratch_pool, "/", relpath, NULL);
+  else
+    fspath = NULL;
+
+  SVN_ERR(svn_repos_authz_check_access(eb->authz, eb->authz_repos_name, fspath,
+                                       eb->authz_user, required,
+                                       &allowed, scratch_pool));
+  if (!allowed)
+    return svn_error_create(required & svn_authz_write
+                            ? SVN_ERR_AUTHZ_UNWRITABLE
+                            : SVN_ERR_AUTHZ_UNREADABLE,
+                            NULL, "Access denied");
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements svn_editor_cb_add_directory_t */
 static svn_error_t *
 add_directory_cb(void *baton,
@@ -1264,6 +1298,8 @@ svn_error_t *
 svn_repos__get_commit_ev2(svn_editor_t **editor,
                           svn_repos_t *repos,
                           svn_authz_t *authz,
+                          const char *authz_repos_name,
+                          const char *authz_user,
                           apr_hash_t *revprops,
                           svn_commit_callback2_t commit_cb,
                           void *commit_baton,
@@ -1303,6 +1339,8 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;
   eb->authz = authz;
+  eb->authz_repos_name = authz_repos_name;
+  eb->authz_user = authz_user;
   eb->commit_cb = commit_cb;
   eb->commit_baton = commit_baton;
 

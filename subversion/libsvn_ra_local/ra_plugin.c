@@ -1588,7 +1588,9 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
      ### handles that aspect.  */
 
   return svn_error_trace(svn_repos__get_commit_ev2(
-                           editor, sess->repos, NULL /* authz */, revprops,
+                           editor, sess->repos, NULL /* authz */,
+                           NULL /* authz_repos_name */, NULL /* authz_user */,
+                           revprops,
                            commit_cb, commit_baton, cancel_func, cancel_baton,
                            result_pool, scratch_pool));
 }
