@@ -2465,9 +2465,9 @@ def update_wc_on_windows_drive(sbox):
                                        sbox.repo_url, wc_dir)
 
     # Make some local modifications
-    mu_path = sbox.ospath('A/mu')
+    mu_path = os.path.join(wc_dir, 'A', 'mu')
     svntest.main.file_append(mu_path, '\nAppended text for mu')
-    zeta_path = sbox.ospath('zeta')
+    zeta_path = os.path.join(wc_dir, 'zeta')
     svntest.main.file_append(zeta_path, "This is the file 'zeta'\n")
     svntest.main.run_svn(None, 'add', zeta_path)
 
@@ -2488,7 +2488,7 @@ def update_wc_on_windows_drive(sbox):
                                           wc_dir, zeta_path)
 
     # Non recursive commit
-    dir1_path = sbox.ospath('dir1')
+    dir1_path = os.path.join(wc_dir, 'dir1')
     os.mkdir(dir1_path)
     svntest.main.run_svn(None, 'add', '-N', dir1_path)
     file1_path = os.path.join(dir1_path, 'file1')
