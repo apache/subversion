@@ -165,6 +165,40 @@ out_of_date(const char *path, svn_node_kind_t kind)
 }
 
 
+static svn_error_t *
+invoke_commit_cb(svn_commit_callback2_t commit_cb,
+                 void *commit_baton,
+                 svn_fs_t *fs,
+                 svn_revnum_t revision,
+                 const char *post_commit_errstr,
+                 apr_pool_t *scratch_pool)
+{
+  /* FS interface returns non-const values.  */
+  /* const */ svn_string_t *date;
+  /* const */ svn_string_t *author;
+  svn_commit_info_t *commit_info;
+
+  if (commit_cb == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_revision_prop(&date, fs, revision, SVN_PROP_REVISION_DATE,
+                               scratch_pool));
+  SVN_ERR(svn_fs_revision_prop(&author, fs, revision,
+                               SVN_PROP_REVISION_AUTHOR,
+                               scratch_pool));
+
+  commit_info = svn_create_commit_info(scratch_pool);
+
+  /* fill up the svn_commit_info structure */
+  commit_info->revision = revision;
+  commit_info->date = date ? date->data : NULL;
+  commit_info->author = author ? author->data : NULL;
+  commit_info->post_commit_err = post_commit_errstr;
+
+  return svn_error_trace(commit_cb(commit_info, commit_baton, scratch_pool));
+}
+
+
 
 /* If EDITOR_BATON contains a valid authz callback, verify that the
    REQUIRED access to PATH in ROOT is authorized.  Return an error
@@ -725,7 +759,6 @@ close_edit(void *edit_baton,
              display it as a warning) and clear the error. */
           post_commit_err = svn_repos__post_commit_error_str(err, pool);
           svn_error_clear(err);
-          err = SVN_NO_ERROR;
         }
     }
   else
@@ -752,41 +785,19 @@ close_edit(void *edit_baton,
                                          svn_fs_abort_txn(eb->txn, pool)));
     }
 
+  /* At this point, the post-commit error has been converted to a string.
+     That information will be passed to a callback, if provided. If the
+     callback invocation fails in some way, that failure is returned here.
+     IOW, the post-commit error information is low priority compared to
+     other gunk here.  */
+
   /* Pass new revision information to the caller's callback. */
-  {
-    svn_string_t *date, *author;
-    svn_commit_info_t *commit_info;
-
-    /* Even if there was a post-commit hook failure, it's more serious
-       if one of the calls here fails, so we explicitly check for errors
-       here, while saving the possible post-commit error for later. */
-
-    err = svn_fs_revision_prop(&date, svn_repos_fs(eb->repos),
-                                new_revision, SVN_PROP_REVISION_DATE,
-                                pool);
-    if (! err)
-      {
-        err = svn_fs_revision_prop(&author, svn_repos_fs(eb->repos),
-                                   new_revision, SVN_PROP_REVISION_AUTHOR,
-                                   pool);
-      }
-
-    if ((! err) && eb->commit_callback)
-      {
-        commit_info = svn_create_commit_info(pool);
-
-        /* fill up the svn_commit_info structure */
-        commit_info->revision = new_revision;
-        commit_info->date = date ? date->data : NULL;
-        commit_info->author = author ? author->data : NULL;
-        commit_info->post_commit_err = post_commit_err;
-        err = (*eb->commit_callback)(commit_info,
-                                     eb->commit_callback_baton,
-                                     pool);
-      }
-  }
-
-  return svn_error_trace(err);
+  return svn_error_trace(invoke_commit_cb(eb->commit_callback,
+                                          eb->commit_callback_baton,
+                                          eb->repos->fs,
+                                          new_revision,
+                                          post_commit_err,
+                                          pool));
 }
 
 
@@ -1165,9 +1176,52 @@ complete_cb(void *baton,
             apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
+  svn_revnum_t revision;
+  svn_error_t *post_commit_err;
+  const char *conflict_path;
+  svn_error_t *err;
+  const char *post_commit_errstr;
 
-  SVN_ERR(svn_editor_complete(eb->inner));
-  return SVN_NO_ERROR;
+  /* The transaction has been fully edited. Let the pre-commit hook
+     have a look at the thing.  */
+  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, eb->txn_name, scratch_pool));
+
+  /* Hook is done. Let's do the actual commit.  */
+  SVN_ERR(svn_fs_editor_commit(&revision, &post_commit_err, &conflict_path,
+                               eb->inner, scratch_pool, scratch_pool));
+
+  /* Did a conflict occur during the commit process?  */
+  if (conflict_path != NULL)
+    return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+                             _("Conflict at '%s'"), conflict_path);
+
+  /* Since did not receive an error during the commit process, and no
+     conflict was specified... we committed a revision. Run the hooks.
+     Other errors may have occurred within the FS (specified by the
+     POST_COMMIT_ERR localvar), but we need to run the hooks.  */
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  err = svn_repos__hooks_post_commit(eb->repos, revision, eb->txn_name,
+                                     scratch_pool);
+  if (err)
+    err = svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
+                           _("Commit succeeded, but post-commit hook failed"));
+
+  /* Combine the FS errors with the hook errors, and stringify.  */
+  err = svn_error_compose_create(post_commit_err, err);
+  if (err)
+    {
+      post_commit_errstr = svn_repos__post_commit_error_str(err, scratch_pool);
+      svn_error_clear(err);
+    }
+  else
+    {
+      post_commit_errstr = NULL;
+    }
+
+  return svn_error_trace(invoke_commit_cb(eb->commit_cb, eb->commit_baton,
+                                          eb->repos->fs, revision,
+                                          post_commit_errstr,
+                                          scratch_pool));
 }
 
 
