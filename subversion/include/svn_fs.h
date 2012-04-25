@@ -1096,6 +1096,9 @@ svn_fs_editor_create_for(svn_editor_t **editor,
  *
  * If a non-conflict error occurs during the commit, then that error will
  * be returned.
+ * As is standard with any Subversion API, @a revision, @a post_commit_err,
+ * and @a conflict_path (the OUT parameters) have an indeterminate value if
+ * an error is returned.
  *
  * If the commit completes (and a revision is returned in @a *revision), then
  * it is still possible for an error to occur during the cleanup process.
@@ -1111,9 +1114,10 @@ svn_fs_editor_create_for(svn_editor_t **editor,
  * @a result_pool will be used to allocate space for @a conflict_path.
  * @a scratch_pool will be used for all temporary allocations.
  *
- * As is standard with any Subversion API, @a revision, @a post_commit_err,
- * and @a conflict_path (the OUT parameters) have an indeterminate value if
- * an error is returned.
+ * @note To summarize, there are three possible outcomes of this function:
+ * successful commit (with or without an associated @a *post_commit_err);
+ * failed commit due to a conflict (reported via @a *conflict_path); and
+ * failed commit for some other reason (reported via teh returned error.
  *
  * @since New in 1.8.
  */
