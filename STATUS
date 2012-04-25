@@ -124,6 +124,13 @@ Candidate changes:
      +1: pburba
      -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared")
 
+ * r1330382
+   Fix issue 4167, 'svn st -u --xml' on items deleted from repository
+   Justification:
+     Regression from 1.6
+   Votes:
+     +1: philip, rhuijben
+
 Veto-blocked changes:
 =====================
 
