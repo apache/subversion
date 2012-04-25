@@ -1439,25 +1439,18 @@ check_paths(svn_boolean_t *is_repos1,
     ((revision2->kind == svn_opt_revision_base)
      || (revision2->kind == svn_opt_revision_working));
 
-  if (peg_revision->kind != svn_opt_revision_unspecified)
-    {
-      if (is_local_rev1 && is_local_rev2)
-        return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                _("At least one revision must be non-local "
-                                  "for a pegged diff"));
+  if (peg_revision->kind != svn_opt_revision_unspecified &&
+      is_local_rev1 && is_local_rev2)
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("At least one revision must be non-local "
+                              "for a pegged diff"));
 
-      *is_repos1 = ! is_local_rev1 || svn_path_is_url(path_or_url1);
-      *is_repos2 = ! is_local_rev2 || svn_path_is_url(path_or_url2);
-    }
-  else
-    {
-      /* Working copy paths with non-local revisions get turned into
-         URLs.  We don't do that here, though.  We simply record that it
-         needs to be done, which is information that helps us choose our
-         diff helper function.  */
-      *is_repos1 = ! is_local_rev1 || svn_path_is_url(path_or_url1);
-      *is_repos2 = ! is_local_rev2 || svn_path_is_url(path_or_url2);
-    }
+  /* Working copy paths with non-local revisions get turned into
+     URLs.  We don't do that here, though.  We simply record that it
+     needs to be done, which is information that helps us choose our
+     diff helper function.  */
+  *is_repos1 = ! is_local_rev1 || svn_path_is_url(path_or_url1);
+  *is_repos2 = ! is_local_rev2 || svn_path_is_url(path_or_url2);
 
   return SVN_NO_ERROR;
 }
