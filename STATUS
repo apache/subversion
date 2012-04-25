@@ -146,7 +146,7 @@ Candidate changes:
    Justification:
      Regression from 1.6. Users should not run into assertions.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
