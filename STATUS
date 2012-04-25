@@ -124,17 +124,6 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1328846, r1328847, r1328852
-   Reset some sqlite statements before returning.
-   Justification:
-     This avoids a bug in sqlite 3.7.11  and might fix problems for third
-     party api users that call this function multiple times.
-   Notes:
-     r1328846 and r1328852 are the actual fix.
-     r1328847 avoids fixes (and introduces) some whitepace inconsistencies.
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1329417
    Fix issue #4166 'multiple merge editor drives which add then delete a
    subtree fail'.
@@ -142,6 +131,7 @@ Candidate changes:
      Prevents merge failure in an edge case.
    Votes:
      +1: pburba
+     -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared")
 
  * r1329388
    Destroy neon request object so that request cleanups are not delayed.
@@ -158,7 +148,7 @@ Candidate changes:
      Allows api users to use notifications to update their status cache.
      Unreported nodes are assumed to be unchanged.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
@@ -173,3 +163,14 @@ Approved changes:
      The ra layers should behave as similar as possible
    Votes:
      +1: rhuijben, philip, stsp
+
+ * r1328846, r1328847, r1328852
+   Reset some sqlite statements before returning.
+   Justification:
+     This avoids a bug in sqlite 3.7.11  and might fix problems for third
+     party api users that call this function multiple times.
+   Notes:
+     r1328846 and r1328852 are the actual fix.
+     r1328847 avoids fixes (and introduces) some whitepace inconsistencies.
+   Votes:
+     +1: rhuijben, danielsh, stsp
