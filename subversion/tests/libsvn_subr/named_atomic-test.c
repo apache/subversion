@@ -156,19 +156,19 @@ init_test_shm(apr_pool_t *pool)
       SVN_ERR(svn_io_open_unique_file3(NULL,
                                        &name_namespace,
                                        NULL,
-                                       svn_io_file_del_none,
+                                       svn_io_file_del_on_pool_cleanup,
                                        global_pool,
                                        pool));
       SVN_ERR(svn_io_open_unique_file3(NULL,
                                        &name_namespace1,
                                        NULL,
-                                       svn_io_file_del_none,
+                                       svn_io_file_del_on_pool_cleanup,
                                        global_pool,
                                        pool));
       SVN_ERR(svn_io_open_unique_file3(NULL,
                                        &name_namespace2,
                                        NULL,
-                                       svn_io_file_del_none,
+                                       svn_io_file_del_on_pool_cleanup,
                                        global_pool,
                                        pool));
     }
