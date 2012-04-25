@@ -261,7 +261,8 @@ run_hook_cmd(svn_string_t **result,
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
 
-      *result = svn_stringbuf__morph_into_string(native_stdout);
+      if (!err)
+        *result = svn_stringbuf__morph_into_string(native_stdout);
     }
   if (null_handle)
     {
