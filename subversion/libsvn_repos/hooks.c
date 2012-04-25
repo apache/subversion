@@ -255,7 +255,7 @@ run_hook_cmd(svn_string_t **result,
   if (!err && result)
     {
       svn_stringbuf_t *native_stdout;
-      SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, cmd_proc.out, pool));
+      err = svn_stringbuf_from_aprfile(&native_stdout, cmd_proc.out, pool);
       apr_err = apr_file_close(cmd_proc.out);
       if (!err && apr_err)
         return svn_error_wrap_apr
@@ -263,7 +263,7 @@ run_hook_cmd(svn_string_t **result,
 
       *result = svn_stringbuf__morph_into_string(native_stdout);
     }
-  else if (null_handle)
+  if (null_handle)
     {
       apr_err = apr_file_close(null_handle);
       if (!err && apr_err)
