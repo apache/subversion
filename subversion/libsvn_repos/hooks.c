@@ -263,7 +263,7 @@ run_hook_cmd(svn_string_t **result,
 
       *result = svn_stringbuf__morph_into_string(native_stdout);
     }
-  else
+  else if (null_handle)
     {
       apr_err = apr_file_close(null_handle);
       if (!err && apr_err)
