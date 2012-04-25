@@ -959,7 +959,7 @@ refresh_locks(dav_lockdb *lockdb,
   else if (serr)
     return dav_svn__sanitize_error(serr, "Failed to refresh existing lock.",
                                    HTTP_INTERNAL_SERVER_ERROR,
-                                  resource->info->r);
+                                   resource->info->r);
 
   /* Convert the refreshed lock into a dav_lock and return it. */
   svn_lock_to_dav_lock(&dlock, slock, FALSE, resource->exists, resource->pool);
