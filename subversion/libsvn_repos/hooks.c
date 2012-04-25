@@ -240,6 +240,13 @@ run_hook_cmd(svn_string_t **result,
                           null_handle, TRUE, NULL, cmd_pool);
   if (!err)
     err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
+  else
+    {
+      /* The command could not be started for some reason.
+       * Put a hook failure error into the error chain. */
+      err = svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, err,
+                              _("Failed to start '%s' hook"), cmd);
+    }
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe
