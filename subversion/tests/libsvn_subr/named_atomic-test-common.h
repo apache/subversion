@@ -210,7 +210,7 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
                                             apr_itoa(pool,
                                                      id),
                                             NULL),
-                                TRUE));
+                                FALSE));
   SVN_ERR(svn_named_atomic__get(&atomic_out,
                                 ns,
                                 apr_pstrcat(pool,
@@ -218,10 +218,10 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
                                             apr_itoa(pool,
                                                      (id + 1) % count),
                                             NULL),
-                                TRUE));
+                                FALSE));
 
   /* our iteration counter */
-  SVN_ERR(svn_named_atomic__get(&atomic_counter, ns, "counter", TRUE));
+  SVN_ERR(svn_named_atomic__get(&atomic_counter, ns, "counter", FALSE));
 
   /* safeguard our execution time. Limit it to 20s */
   init_watchdog(&watchdog, atomic_counter, iterations, 20000000);
