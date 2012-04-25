@@ -691,7 +691,8 @@ svn_repos__post_commit_error_str(svn_error_t *err,
   else
     hook_err2 = hook_err1;
 
-  /* This implementation counts on svn_repos_fs_commit_txn() returning
+  /* This implementation counts on svn_repos_fs_commit_txn() and
+     libsvn_repos/commit.c:complete_cb() returning
      svn_fs_commit_txn() as the parent error with a child
      SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED error.  If the parent error
      is SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED then there was no error
