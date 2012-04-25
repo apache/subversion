@@ -428,15 +428,7 @@ deltify_etc(const svn_commit_info_t *commit_info,
      deltification. */
   err2 = svn_fs_deltify_revision(deb->fs, commit_info->revision, scratch_pool);
 
-  /* It's more interesting if the original callback failed, so let
-     that one dominate. */
-  if (err1)
-    {
-      svn_error_clear(err2);
-      return err1;
-    }
-
-  return err2;
+  return svn_error_compose_create(err1, err2);
 }
 
 
