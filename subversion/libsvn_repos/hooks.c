@@ -242,9 +242,8 @@ run_hook_cmd(svn_string_t **result,
     err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
   else
     {
-      /* The command could not be started for some reason.
-       * Put a hook failure error into the error chain. */
-      err = svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, err,
+      /* The command could not be started for some reason. */
+      err = svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, err,
                               _("Failed to start '%s' hook"), cmd);
     }
 
