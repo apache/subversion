@@ -1629,6 +1629,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
           /* The client does not properly handle a missing CDATE. For
              interoperability purposes, we must fill in some junk.
+
              See libsvn_ra_svn/client.c:ra_svn_get_dir()  */
           cdate = (entry->time == (time_t) -1)
             ? missing_date
