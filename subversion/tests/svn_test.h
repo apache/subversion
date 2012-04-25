@@ -74,7 +74,9 @@ extern "C" {
   } while (0)
 
 /** Handy macro for testing string equality.
- * EXPR and/or EXPECTED_EXPR may be NULL.
+ *
+ * EXPR and/or EXPECTED_EXPR may be NULL which compares equal to NULL and
+ * not equal to any non-NULL string.
  */
 #define SVN_TEST_STRING_ASSERT(expr, expected_expr)                 \
   do {                                                              \
