@@ -2953,7 +2953,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
             {
               const char *added_path_parent =
                 svn_dirent_dirname(notify_abspath, pool);
-              apr_pool_t *iterpool = svn_pool_create(pool);
+              apr_pool_t *subpool = svn_pool_create(pool);
 
               /* Is NOTIFY->PATH the root of an added subtree? */
               while (strcmp(notify_b->merge_b->target->abspath,
@@ -2967,12 +2967,11 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                       break;
                     }
 
-                  svn_pool_clear(iterpool);
                   added_path_parent = svn_dirent_dirname(
-                    added_path_parent, iterpool);
+                    added_path_parent, subpool);
                 }
 
-              svn_pool_destroy(iterpool);
+              svn_pool_destroy(subpool);
             }
 
           if (root_of_added_subtree)
