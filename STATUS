@@ -119,6 +119,16 @@ Candidate changes:
      -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared".
                Backport branch added - pburba)
 
+ * r1330444, 1330520
+   Fix issue #4169 'added subtrees with non-inheritable mergeinfo cause
+   spurious subtree mergeinfo'.
+   Justification:
+     Prevents spurious subtree mergeinfo in an edge case.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4169
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
