@@ -212,7 +212,7 @@ run_hook_cmd(svn_string_t **result,
   apr_file_t *null_handle;
   apr_status_t apr_err;
   svn_error_t *err;
-  apr_proc_t cmd_proc;
+  apr_proc_t cmd_proc = {0};
 
   if (result)
     {
