@@ -193,6 +193,8 @@ add_symlink_cb(void *baton,
                             NULL /* result_checksum */,
                             scratch_pool));
   /* ### SVN_ERR(svn_stream_printf(fs_contents, ..., scratch_pool));  */
+  apr_hash_set(props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING,
+               SVN_PROP_SPECIAL_VALUE);
 
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
 #endif
