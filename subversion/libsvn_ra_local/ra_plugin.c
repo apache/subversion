@@ -369,11 +369,12 @@ struct deltify_etc_baton
 {
   svn_fs_t *fs;                     /* the fs to deltify in */
   svn_repos_t *repos;               /* repos for unlocking */
-  const char *fs_path;              /* fs-path part of split session URL */
+  const char *fspath_base;          /* fs-path part of split session URL */
+
   apr_hash_t *lock_tokens;          /* tokens to unlock, if any */
-  apr_pool_t *pool;                 /* pool for scratch work */
-  svn_commit_callback2_t callback;  /* the original callback */
-  void *callback_baton;             /* the original callback's baton */
+
+  svn_commit_callback2_t commit_cb; /* the original callback */
+  void *commit_baton;               /* the original callback's baton */
 };
 
 /* This implements 'svn_commit_callback_t'.  Its invokes the original
@@ -382,48 +383,50 @@ struct deltify_etc_baton
    BATON is 'struct deltify_etc_baton *'. */
 static svn_error_t *
 deltify_etc(const svn_commit_info_t *commit_info,
-            void *baton, apr_pool_t *pool)
+            void *baton,
+            apr_pool_t *scratch_pool)
 {
-  struct deltify_etc_baton *db = baton;
+  struct deltify_etc_baton *deb = baton;
   svn_error_t *err1 = SVN_NO_ERROR;
   svn_error_t *err2;
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
 
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
-  if (db->callback)
-    err1 = db->callback(commit_info, db->callback_baton, pool);
+  if (deb->commit_cb)
+    err1 = deb->commit_cb(commit_info, deb->commit_baton, scratch_pool);
 
   /* Maybe unlock the paths. */
-  if (db->lock_tokens)
+  if (deb->lock_tokens)
     {
-      iterpool = svn_pool_create(db->pool);
-      for (hi = apr_hash_first(db->pool, db->lock_tokens); hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, deb->lock_tokens); hi;
            hi = apr_hash_next(hi))
         {
-          const void *rel_path;
-          void *val;
-          const char *abs_path, *token;
+          const void *relpath = svn__apr_hash_index_key(hi);
+          const char *token = svn__apr_hash_index_val(hi);
+          const char *fspath;
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, &rel_path, NULL, &val);
-          token = val;
-          abs_path = svn_fspath__join(db->fs_path, rel_path, iterpool);
+
+          fspath = svn_fspath__join(deb->fspath_base, relpath, iterpool);
+
           /* We may get errors here if the lock was broken or stolen
              after the commit succeeded.  This is fine and should be
              ignored. */
-          svn_error_clear(svn_repos_fs_unlock(db->repos, abs_path, token,
+          svn_error_clear(svn_repos_fs_unlock(deb->repos, fspath, token,
                                               FALSE, iterpool));
         }
+
       svn_pool_destroy(iterpool);
     }
 
   /* But, deltification shouldn't be stopped just because someone's
      random callback failed, so proceed unconditionally on to
      deltification. */
-  err2 = svn_fs_deltify_revision(db->fs, commit_info->revision, db->pool);
+  err2 = svn_fs_deltify_revision(deb->fs, commit_info->revision, scratch_pool);
 
   /* It's more interesting if the original callback failed, so let
      that one dominate. */
@@ -734,18 +737,18 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  struct deltify_etc_baton *db = apr_palloc(pool, sizeof(*db));
+  struct deltify_etc_baton *deb = apr_palloc(pool, sizeof(*deb));
 
-  db->fs = sess->fs;
-  db->repos = sess->repos;
-  db->fs_path = sess->fs_path->data;
+  /* Prepare the baton for deltify_etc()  */
+  deb->fs = sess->fs;
+  deb->repos = sess->repos;
+  deb->fspath_base = sess->fs_path->data;
   if (! keep_locks)
-    db->lock_tokens = lock_tokens;
+    deb->lock_tokens = lock_tokens;
   else
-    db->lock_tokens = NULL;
-  db->pool = pool;
-  db->callback = callback;
-  db->callback_baton = callback_baton;
+    deb->lock_tokens = NULL;
+  deb->commit_cb = callback;
+  deb->commit_baton = callback_baton;
 
   SVN_ERR(get_username(session, pool));
 
@@ -762,7 +765,7 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   return svn_repos_get_commit_editor5
          (editor, edit_baton, sess->repos, NULL,
           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
-          revprop_table, deltify_etc, db, NULL, NULL, pool);
+          revprop_table, deltify_etc, deb, NULL, NULL, pool);
 }
 
 
@@ -1565,9 +1568,21 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
                              apr_pool_t *scratch_pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
+  struct deltify_etc_baton *deb = apr_palloc(result_pool, sizeof(*deb));
 
   /* NOTE: the RA callbacks are ignored. We pass everything directly to
      the REPOS editor.  */
+
+  /* Prepare the baton for deltify_etc()  */
+  deb->fs = sess->fs;
+  deb->repos = sess->repos;
+  deb->fspath_base = sess->fs_path->data;
+  if (! keep_locks)
+    deb->lock_tokens = lock_tokens;
+  else
+    deb->lock_tokens = NULL;
+  deb->commit_cb = commit_cb;
+  deb->commit_baton = commit_baton;
 
   /* Ensure there is a username (and an FS access context) associated with
      the session and its FS handle.  */
@@ -1582,16 +1597,11 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
   apr_hash_set(revprops, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
                svn_string_create(sess->username, scratch_pool));
 
-  /* ### we may need to switch this to deltify_etc. however, it seems that
-     ### svnserve does not deltify after a commit. look into this...
-     ### note that deltify_etc also unlocks things. check into how svnserve
-     ### handles that aspect.  */
-
   return svn_error_trace(svn_repos__get_commit_ev2(
                            editor, sess->repos, NULL /* authz */,
                            NULL /* authz_repos_name */, NULL /* authz_user */,
                            revprops,
-                           commit_cb, commit_baton, cancel_func, cancel_baton,
+                           deltify_etc, deb, cancel_func, cancel_baton,
                            result_pool, scratch_pool));
 }
 
