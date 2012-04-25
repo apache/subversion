@@ -640,14 +640,20 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
   /* Send the delta stream if desired, or just a NULL window if not. */
   SVN_ERR(b->editor->apply_textdelta(file_baton, s_hex_digest, pool,
                                      &dhandler, &dbaton));
-  if (b->text_deltas)
+
+  if (dhandler != svn_delta_noop_window_handler)
     {
-      SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
-                                           b->t_root, t_path, pool));
-      return svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool);
+      if (b->text_deltas)
+        {
+          SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
+                                               b->t_root, t_path, pool));
+          SVN_ERR(svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool));
+        }
+      else
+        SVN_ERR(dhandler(NULL, dbaton));
     }
-  else
-    return dhandler(NULL, dbaton);
+
+  return SVN_NO_ERROR;
 }
 
 /* Determine if the user is authorized to view B->t_root/PATH. */

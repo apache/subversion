@@ -765,10 +765,19 @@ append_locks(dav_lockdb *lockdb,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock creation is not allowed.");
     }
+  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+                    serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||
+                    serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
+                    serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
+                    serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
+                    serr->apr_err == SVN_ERR_FS_OUT_OF_DATE))
+     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Failed to create new lock.",
+                                 resource->pool);
   else if (serr)
-    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                "Failed to create new lock.",
-                                resource->pool);
+    return dav_svn__sanitize_error(serr, "Failed to create new lock.",
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   resource->info->r);
 
 
   /* A standard webdav LOCK response doesn't include any information
@@ -956,10 +965,19 @@ refresh_locks(dav_lockdb *lockdb,
                                 DAV_ERR_LOCK_SAVE_LOCK,
                                 "Anonymous lock refreshing is not allowed.");
     }
+  else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
+                    serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||
+                    serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
+                    serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
+                    serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
+                    serr->apr_err == SVN_ERR_FS_OUT_OF_DATE))
+     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Failed to refresh existing lock.",
+                                 resource->pool);
   else if (serr)
-    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                "Failed to refresh existing lock.",
-                                resource->pool);
+    return dav_svn__sanitize_error(serr, "Failed to refresh existing lock.",
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   resource->info->r);
 
   /* Convert the refreshed lock into a dav_lock and return it. */
   svn_lock_to_dav_lock(&dlock, slock, FALSE, resource->exists, resource->pool);

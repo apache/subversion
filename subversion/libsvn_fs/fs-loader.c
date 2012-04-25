@@ -199,14 +199,27 @@ svn_fs_type(const char **fs_type, const char *path, apr_pool_t *pool)
   apr_size_t len;
 
   /* Read the fsap-name file to get the FSAP name, or assume the (old)
-     default. */
+     default.  For old repositories I suppose we could check some
+     other file, DB_CONFIG or strings say, but for now just check the
+     directory exists. */
   filename = svn_dirent_join(path, FS_TYPE_FILENAME, pool);
   err = svn_io_file_open(&file, filename, APR_READ|APR_BUFFERED, 0, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
-      svn_error_clear(err);
-      *fs_type = apr_pstrdup(pool, SVN_FS_TYPE_BDB);
-      return SVN_NO_ERROR;
+      svn_node_kind_t kind;
+      svn_error_t *err2 = svn_io_check_path(path, &kind, pool);
+      if (err2)
+        {
+          svn_error_clear(err2);
+          return err;
+        }
+      if (kind == svn_node_dir)
+        {
+          svn_error_clear(err);
+          *fs_type = SVN_FS_TYPE_BDB;
+          return SVN_NO_ERROR;
+        }
+      return err;
     }
   else if (err)
     return err;
@@ -632,6 +645,7 @@ svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
+  svn_error_t *err;
 #ifdef PACK_AFTER_EVERY_COMMIT
   svn_fs_root_t *txn_root;
   svn_fs_t *fs;
@@ -643,11 +657,25 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   fs_path = svn_fs_path(fs, pool);
 #endif
 
-  SVN_ERR(txn->vtable->commit(conflict_p, new_rev, txn, pool));
+  err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
+
+#ifdef SVN_DEBUG
+  /* Check postconditions. */
+  if (conflict_p)
+    {
+      SVN_ERR_ASSERT_E(! (SVN_IS_VALID_REVNUM(*new_rev) && *conflict_p != NULL),
+                       err);
+      SVN_ERR_ASSERT_E((*conflict_p != NULL)
+                       == (err && err->apr_err == SVN_ERR_FS_CONFLICT),
+                       err);
+    }
+#endif
+
+  SVN_ERR(err);
 
 #ifdef PACK_AFTER_EVERY_COMMIT
   {
-    svn_error_t *err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
+    err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
     if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
       /* Pre-1.6 filesystem. */
       svn_error_clear(err);

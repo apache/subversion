@@ -876,38 +876,40 @@ svn_wc__node_has_working(svn_boolean_t *has_working,
 }
 
 
-static svn_error_t *
-get_base_rev(svn_revnum_t *base_revision,
-             svn_wc__db_t *db,
-             const char *local_abspath,
-             apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__node_get_base(svn_revnum_t *revision,
+                      const char **repos_relpath,
+                      const char **repos_root_url,
+                      const char **repos_uuid,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
 
-  err = svn_wc__db_base_get_info(NULL, NULL, base_revision, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
-                                 db, local_abspath,
-                                 scratch_pool, scratch_pool);
-
-  if (!err || err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-    return svn_error_trace(err);
-
-  svn_error_clear(err);
-
-  *base_revision = SVN_INVALID_REVNUM;
+  err = svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
+                                 repos_root_url, repos_uuid, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL,
+                                 wc_ctx->db, local_abspath,
+                                 result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      if (revision)
+        *revision = SVN_INVALID_REVNUM;
+      if (repos_relpath)
+        *repos_relpath = NULL;
+      if (repos_root_url)
+        *repos_root_url = NULL;
+      if (repos_uuid)
+        *repos_uuid = NULL;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(get_base_rev(base_revision, wc_ctx->db,
-                                      local_abspath, scratch_pool));
 }
 
 svn_error_t *

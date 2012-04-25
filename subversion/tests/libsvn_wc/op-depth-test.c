@@ -4639,13 +4639,17 @@ test_scan_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "X/B"));
   SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "X/B"));
 
-  /* Not clear what this should give: Y or A/B/C or ... ? */
+  SVN_ERR(svn_wc__db_final_moved_to(&moved_to_abspath, b.wc_ctx->db,
+                                    wc_path(&b, "A/B/C"), pool, pool));
+  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "Y"));
+
+  /* Not clear what this should give: Y or X/B/C or ... ? */
   SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
                                    NULL, &moved_to_op_root_abspath,
                                    b.wc_ctx->db, wc_path(&b, "A/B/C"),
                                    pool, pool));
-  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "Y"));
-  SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "Y"));
+  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "X/B/C"));
+  SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "X/B"));
 
   SVN_ERR(svn_wc__db_scan_deletion(NULL, &moved_to_abspath,
                                    NULL, &moved_to_op_root_abspath,
@@ -4659,8 +4663,8 @@ test_scan_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
                                    NULL, &moved_to_op_root_abspath,
                                    b.wc_ctx->db, wc_path(&b, "A2/B"),
                                    pool, pool));
-  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "Z"));
-  SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "Z"));
+  SVN_TEST_STRING_ASSERT(moved_to_abspath, wc_path(&b, "X/B"));
+  SVN_TEST_STRING_ASSERT(moved_to_op_root_abspath, wc_path(&b, "X"));
 
   return SVN_NO_ERROR;
 }
@@ -4756,7 +4760,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move_added"),
     SVN_TEST_OPTS_XFAIL(move_update,
                        "move_update"),
-    SVN_TEST_OPTS_XFAIL(test_scan_delete,
-                       "scan_delete"),
+    SVN_TEST_OPTS_WIMP(test_scan_delete,
+                       "scan_delete", "move tracking"),
     SVN_TEST_NULL
   };

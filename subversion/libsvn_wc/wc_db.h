@@ -2437,6 +2437,10 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
+
+   ### Either delete this function and use _base_get_info instead, or
+   ### add a 'revision' output to make a complete repository node location
+   ### and rename to not say 'scan', because it doesn't.
 */
 svn_error_t *
 svn_wc__db_scan_base_repos(const char **repos_relpath,
@@ -3093,6 +3097,16 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   const char *wri_abspath,
                   apr_pool_t *scratch_pool);
 
+
+/* Set *FINAL_ABSPATH to the final moved-to location for LOCAL_ABSPATH
+ * after following any and all nested moves or set *FINAL_ABSPATH to
+ * NULL if LOCAL_ABSPATH is not moved. */
+svn_error_t *
+svn_wc__db_final_moved_to(const char **final_abspath,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /* @} */
 

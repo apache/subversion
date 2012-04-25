@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_base64.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 /* When asked to format the the base64-encoded output as multiple lines,
    we put this many chars in each line (plus one new line char) unless
@@ -560,7 +561,7 @@ svn_stringbuf_t *
 svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
 {
   svn_checksum_t *checksum
-    = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+    = svn_checksum__from_digest_md5(digest, pool);
 
   return base64_from_checksum(checksum, pool);
 }
