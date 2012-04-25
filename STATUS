@@ -116,7 +116,7 @@ Candidate changes:
      +1: pburba
      -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared")
 
- * r1330410, r1330424
+ * r1330410, r1330424, r1330431
    Fix an error leak in the hook script invocation code.
    Justification:
      This bug can cause a server process to hang.
