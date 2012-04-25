@@ -48,8 +48,8 @@ Version 1.7.5
 http://svn.apache.org/repos/asf/subversion/tags/1.7.5
 
  User-visible changes:
-  - General:
-    * http://: report deleted-revision upon delete during update (r1327474)
+  - Client- and server-side bugfixes:
+    * http: report deleted-revision upon delete during update (r1327474)
 
   - Client-side bugfixes:
     * avoid potential segfault when canonicalizing properties (r1296369)
