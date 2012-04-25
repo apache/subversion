@@ -54,7 +54,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
   - Client-side bugfixes:
     * avoid potential segfault when canonicalizing properties (r1296369)
     * improve memory and file-handle management with externals (issue #4130)
-    * ra_serf: convert assertions to "MERGE failed" errors (r1302417)
+    * serf: convert assertions to "MERGE failed" errors (r1302417)
     * fix undefined behaviour during multi-segment reverse merges (issue #4144)
     * client: fix potential use of freed memory in the diff code (r1311935)
     * client: improve performance of scanning for working copy root (r1306334)
@@ -64,6 +64,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * libsvn_wc: always reset sqlite statements upon error (r1328846, -7, -52)
     * libsvn_wc: work around sqlite-3.7.11 query-abort bug (r1328846, -7, -52)
     * client: fix assertion in 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
+    * client: notify upon 'update' just removing locks on files (r1329876)
 
   - Server-side bugfixes:
     * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
