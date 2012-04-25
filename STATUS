@@ -132,15 +132,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1329876
-   Properly report files that have just their lock removed as part of
-   an update.
-   Justification:
-     Allows api users to use notifications to update their status cache.
-     Unreported nodes are assumed to be unchanged.
-   Votes:
-     +1: rhuijben, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -172,3 +163,12 @@ Approved changes:
      Regression from 1.6. Users should not run into assertions.
    Votes:
      +1: stsp, danielsh, philip
+
+ * r1329876
+   Properly report files that have just their lock removed as part of
+   an update.
+   Justification:
+     Allows api users to use notifications to update their status cache.
+     Unreported nodes are assumed to be unchanged.
+   Votes:
+     +1: rhuijben, stsp, philip
