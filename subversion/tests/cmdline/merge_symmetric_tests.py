@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  merge_tests.py:  testing "symmetric merge" scenarios
+#  merge_symmetric_tests.py:  testing "symmetric merge" scenarios
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
