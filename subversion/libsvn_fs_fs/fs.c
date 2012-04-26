@@ -73,7 +73,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      know of a better way of associating such data with the
      repository. */
 
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, ffd->uuid,
+  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
@@ -130,7 +130,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__revision_prop,
   svn_fs_fs__revision_proplist,
   svn_fs_fs__change_rev_prop,
-  svn_fs_fs__get_uuid,
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,

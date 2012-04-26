@@ -59,10 +59,8 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 svn_error_t *
 svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
-/* Like svn_fs_get_uuid(), but in libsvn_fs_util and returns a const char *
-   (allocated in RESULT_POOL), or NULL in case of errors. */
-const char *
-svn_fs__identifier(svn_fs_t *fs, apr_pool_t *result_pool);
+/** Temporary, to be removed in the next revision. */
+#define svn_fs__identifier(fs, unused) ((fs)->uuid)
 
 /* Constructing nice error messages for roots.  */
 
