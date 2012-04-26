@@ -62,10 +62,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * fix regression from 1.6 in update with --depth option (issue #4136)
     * propset: avoid undefined behaviour in error path (r1325361)
     * reset sqlite statements, partly for sqlite-3.7.11 compat (r1328846, et al)
-    * fix assertion during 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
+    * [reverted/renominated] fix assertion during 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
     * notify upon 'update' just removing locks on files (r1329876)
     * neon: fix potential use of freed memory during commits (r1329388)
     * 'status --xml' doesn't show repository deletes correctly (issue #4167)
+    * fix assert on svn:externals with drive letter on Windows (issue #4173)
+    * fix 'svn update --depth=empty' against 1.4 servers (issue #4046)
+    * handle missing svn:date reported by svnserve gracefully (r1306111)
 
   - Server-side bugfixes:
     * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
