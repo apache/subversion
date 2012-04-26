@@ -129,6 +129,17 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r1330258
+   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
+   Justification:
+     Regression from 1.6. Users should not run into assertions.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4161
+   Notes:
+     A previous backport of this change was incorrect and had to be reverted.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
