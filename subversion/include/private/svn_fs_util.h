@@ -106,14 +106,14 @@ svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
      _("File is not mutable: filesystem '%s', revision %ld, path '%s'"), \
      svn_dirent_local_style(fs->path, scratch_pool), rev, path_in_repo)
 
-/* FS is of type "svn fs_t *".*/
+/* FS is of type "svn_fs_t *".*/
 #define SVN_FS__ERR_NOT_DIRECTORY(fs, path_in_repo, scratch_pool) \
   svn_error_createf(                                              \
      SVN_ERR_FS_NOT_DIRECTORY, 0,                                 \
      _("'%s' is not a directory in filesystem '%s'"),             \
      path_in_repo, svn_dirent_local_style(fs->path, scratch_pool))
 
-/* FS is of type "svn fs_t *".   */
+/* FS is of type "svn_fs_t *".   */
 #define SVN_FS__ERR_NOT_FILE(fs, path_in_repo, scratch_pool)      \
   svn_error_createf(                                              \
      SVN_ERR_FS_NOT_FILE, 0,                                      \
@@ -121,28 +121,28 @@ svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
      path_in_repo, svn_dirent_local_style(fs->path, scratch_pool))
 
 
-/* FS is of type "svn fs_t *", LOCK is of type "svn_lock_t *".   */
+/* FS is of type "svn_fs_t *", LOCK is of type "svn_lock_t *".   */
 #define SVN_FS__ERR_PATH_ALREADY_LOCKED(fs, lock, scratch_pool)             \
   svn_error_createf(                                                        \
      SVN_ERR_FS_PATH_ALREADY_LOCKED, 0,                                     \
      _("Path '%s' is already locked by user '%s' in filesystem '%s'"),      \
      lock->path, lock->owner, svn_dirent_local_style(fs->path, scratch_pool))
 
-/* FS is of type "svn fs_t *". */
+/* FS is of type "svn_fs_t *". */
 #define SVN_FS__ERR_NO_SUCH_LOCK(fs, path_in_repo, scratch_pool)  \
   svn_error_createf(                                              \
      SVN_ERR_FS_NO_SUCH_LOCK, 0,                                  \
      _("No lock on path '%s' in filesystem '%s'"),                \
      path_in_repo, svn_dirent_local_style(fs->path, scratch_pool))
 
-/* FS is of type "svn fs_t *". */
+/* FS is of type "svn_fs_t *". */
 #define SVN_FS__ERR_LOCK_EXPIRED(fs, token, scratch_pool)        \
   svn_error_createf(                                             \
      SVN_ERR_FS_LOCK_EXPIRED, 0,                                 \
      _("Lock has expired: lock-token '%s' in filesystem '%s'"),  \
      token, svn_dirent_local_style(fs->path, scratch_pool))
 
-/* FS is of type "svn fs_t *". */
+/* FS is of type "svn_fs_t *". */
 #define SVN_FS__ERR_NO_USER(fs, scratch_pool)                       \
   svn_error_createf(                                                \
      SVN_ERR_FS_NO_USER, 0,                                         \
@@ -151,7 +151,7 @@ svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
 /* SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose
    LOCK_OWNER doesn't match the USERNAME associated with FS.
-   FS is of type "svn fs_t *". */
+   FS is of type "svn_fs_t *". */
 #define SVN_FS__ERR_LOCK_OWNER_MISMATCH(fs, username, lock_owner, pool) \
   svn_error_createf(                                                    \
      SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,                                 \
