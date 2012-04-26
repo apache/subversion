@@ -159,15 +159,12 @@ struct ev2_file_baton
 
 enum action_code_t
 {
-  ACTION_MOVE,
   ACTION_MKDIR,
   ACTION_COPY,
   ACTION_PROPSET,
   ACTION_PUT,
-  ACTION_ADD,
   ACTION_DELETE,
-  ACTION_ADD_ABSENT,
-  ACTION_UNLOCK
+  ACTION_ADD_ABSENT
 };
 
 struct path_action
@@ -210,6 +207,9 @@ struct change_node
      RESTRUCTURE must be RESTRUCTURE_ADD.  */
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
+
+  /* Record whether an incoming propchange unlocked this node.  */
+  svn_boolean_t unlock;
 };
 
 
@@ -412,20 +412,6 @@ process_actions(struct ev2_edit_baton *eb,
               break;
             }
 
-          case ACTION_ADD_ABSENT:
-            {
-              kind = *((svn_kind_t *) action->args);
-              SVN_ERR(svn_editor_add_absent(eb->editor, path, kind,
-                                            SVN_INVALID_REVNUM));
-              break;
-            }
-
-          case ACTION_UNLOCK:
-            {
-              SVN_ERR(eb->do_unlock(eb->unlock_baton, path, scratch_pool));
-              break;
-            }
-
           default:
             SVN_ERR_MALFUNCTION();
         }
@@ -433,6 +419,16 @@ process_actions(struct ev2_edit_baton *eb,
 
   if (change != NULL)
     {
+      if (change->unlock)
+        SVN_ERR(eb->do_unlock(eb->unlock_baton, path, scratch_pool));
+
+      if (change->action == RESTRUCTURE_ADD_ABSENT)
+        {
+          SVN_ERR(svn_editor_add_absent(eb->editor, path, change->kind,
+                                        delete_revnum));
+          return SVN_NO_ERROR;
+        }
+
       if (change->action == RESTRUCTURE_ADD)
         {
           kind = change->kind;
@@ -781,11 +777,12 @@ ev2_absent_directory(const char *path,
                      apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *pb = parent_baton;
-  svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
   const char *relpath = map_to_repos_relpath(pb->eb, path, scratch_pool);
+  struct change_node *change = locate_change(pb->eb, relpath);
 
-  *kind = svn_kind_dir;
-  SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD_ABSENT, kind));
+  /* ### assert that RESTRUCTURE is NONE or DELETE?  */
+  change->action = RESTRUCTURE_ADD_ABSENT;
+  change->kind = svn_kind_dir;
 
   return SVN_NO_ERROR;
 }
@@ -963,7 +960,13 @@ ev2_change_file_prop(void *file_baton,
     {
       /* We special case the lock token propery deletion, which is the
          server's way of telling the client to unlock the path. */
-      SVN_ERR(add_action(fb->eb, fb->path, ACTION_UNLOCK, NULL));
+
+      /* ### this duplicates much of apply_propedit(). fix in future.  */
+      const char *relpath = map_to_repos_relpath(fb->eb, fb->path,
+                                                 scratch_pool);
+      struct change_node *change = locate_change(fb->eb, relpath);
+
+      change->unlock = TRUE;
     }
 
   SVN_ERR(apply_propedit(fb->eb, fb->path, svn_kind_file, fb->base_revision,
@@ -986,11 +989,12 @@ ev2_absent_file(const char *path,
                 apr_pool_t *scratch_pool)
 {
   struct ev2_dir_baton *pb = parent_baton;
-  svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
   const char *relpath = map_to_repos_relpath(pb->eb, path, scratch_pool);
+  struct change_node *change = locate_change(pb->eb, relpath);
 
-  *kind = svn_kind_file;
-  SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD_ABSENT, kind));
+  /* ### assert that RESTRUCTURE is NONE or DELETE?  */
+  change->action = RESTRUCTURE_ADD_ABSENT;
+  change->kind = svn_kind_file;
 
   return SVN_NO_ERROR;
 }
