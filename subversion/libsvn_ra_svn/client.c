@@ -1095,7 +1095,18 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       dirent->size = size;/* FIXME: svn_filesize_t */
       dirent->has_props = has_props;
       dirent->created_rev = crev;
-      SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
+      /* NOTE: the tuple's format string says CDATE may be NULL. But this
+         function does not allow that. The server has always sent us some
+         random date, however, so this just happens to work. But let's
+         be wary of servers that are (improperly) fixed to send NULL.
+
+         Note: they should NOT be "fixed" to send NULL, as that would break
+         any older clients which received that NULL. But we may as well
+         be defensive against a malicous server.  */
+      if (cdate == NULL)
+        dirent->time = 0;
+      else
+        SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
       dirent->last_author = cauthor;
       apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
     }
