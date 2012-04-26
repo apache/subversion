@@ -412,35 +412,6 @@ process_actions(struct ev2_edit_baton *eb,
               break;
             }
 
-          case ACTION_ADD:
-            {
-              kind = *((svn_kind_t *) action->args);
-              need_add = TRUE;
-
-              if (kind == svn_kind_dir)
-                {
-                  children = get_children(eb, path, scratch_pool);
-                }
-              else
-                {
-                  /* The default is an empty file. */
-                  contents = svn_stream_empty(scratch_pool);
-                  checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
-                                                         scratch_pool);
-                }
-              break;
-            }
-
-          case ACTION_COPY:
-            {
-              struct copy_args *c_args = action->args;
-
-              copyfrom_path = c_args->copyfrom_path;
-              copyfrom_rev = c_args->copyfrom_rev;
-              need_copy = TRUE;
-              break;
-            }
-
           case ACTION_ADD_ABSENT:
             {
               kind = *((svn_kind_t *) action->args);
@@ -462,6 +433,41 @@ process_actions(struct ev2_edit_baton *eb,
 
   if (change != NULL)
     {
+      if (change->action == RESTRUCTURE_ADD)
+        {
+          kind = change->kind;
+
+          if (kind == svn_kind_dir)
+            {
+              children = get_children(eb, path, scratch_pool);
+            }
+          else
+            {
+              /* If this file is copied here, then we don't need CONTENTS.
+                 Otherwise, the contents comes from apply_txdelta() and has
+                 been saved at CONTENTS_ABSPATH. If apply_txdelta() was not
+                 called, then we're adding an empty file.  */
+              if (change->copyfrom_path == NULL
+                  && change->contents_abspath == NULL)
+                {
+                  contents = svn_stream_empty(scratch_pool);
+                  checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                         scratch_pool);
+                }
+            }
+
+          if (change->copyfrom_path != NULL)
+            {
+              need_copy = TRUE;
+              copyfrom_path = change->copyfrom_path;
+              copyfrom_rev = change->copyfrom_rev;
+            }
+          else
+            {
+              need_add = TRUE;
+            }
+        }
+
       if (change->contents_abspath != NULL)
         {
           /* We can only set text on files. */
@@ -660,8 +666,8 @@ ev2_delete_entry(const char *path,
 
 #if 0
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->base_revision)
-                 || change->base_revision == revision);
-  change->base_revision = revision;
+                 || change->base_revision == *revnum);
+  change->base_revision = *revnum;
 #endif
 
   return SVN_NO_ERROR;
@@ -684,6 +690,7 @@ ev2_add_directory(const char *path,
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD;
+  change->kind = svn_kind_dir;
 
   cb->eb = pb->eb;
   cb->path = apr_pstrdup(result_pool, relpath);
@@ -692,12 +699,6 @@ ev2_add_directory(const char *path,
 
   if (!copyfrom_path)
     {
-      /* A simple add. */
-      svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-
-      *kind = svn_kind_dir;
-      SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD, kind));
-
       if (pb->copyfrom_relpath)
         {
           const char *name = svn_relpath_basename(relpath, scratch_pool);
@@ -714,10 +715,6 @@ ev2_add_directory(const char *path,
       change->copyfrom_path = map_to_repos_relpath(pb->eb, copyfrom_path,
                                                    pb->eb->edit_pool);
       change->copyfrom_rev = copyfrom_revision;
-
-      args->copyfrom_path = change->copyfrom_path;
-      args->copyfrom_rev = change->copyfrom_rev;
-      SVN_ERR(add_action(pb->eb, relpath, ACTION_COPY, args));
 
       cb->copyfrom_relpath = change->copyfrom_path;
       cb->copyfrom_rev = change->copyfrom_rev;
@@ -810,6 +807,7 @@ ev2_add_file(const char *path,
 
   /* ### assert that RESTRUCTURE is NONE or DELETE?  */
   change->action = RESTRUCTURE_ADD;
+  change->kind = svn_kind_file;
 
   fb->eb = pb->eb;
   fb->path = apr_pstrdup(result_pool, relpath);
@@ -818,14 +816,8 @@ ev2_add_file(const char *path,
 
   if (!copyfrom_path)
     {
-      /* A simple add. */
-      svn_kind_t *kind = apr_palloc(pb->eb->edit_pool, sizeof(*kind));
-
       /* Don't bother fetching the base, as in an add we don't have a base. */
       fb->delta_base = NULL;
-
-      *kind = svn_kind_file;
-      SVN_ERR(add_action(pb->eb, relpath, ACTION_ADD, kind));
     }
   else
     {
@@ -841,10 +833,6 @@ ev2_add_file(const char *path,
                                       change->copyfrom_path,
                                       change->copyfrom_rev,
                                       result_pool, scratch_pool));
-
-      args->copyfrom_path = change->copyfrom_path;
-      args->copyfrom_rev = change->copyfrom_rev;
-      SVN_ERR(add_action(pb->eb, relpath, ACTION_COPY, args));
     }
 
   return SVN_NO_ERROR;
