@@ -2674,10 +2674,8 @@ typedef struct notification_receiver_baton_t
      MERGE_B->REINTEGRATE_MERGE are both false. */
   apr_hash_t *skipped_abspaths;
 
-  /* A list of the absolute root paths of any added subtrees which might
-     require their own explicit mergeinfo.  Is NULL if
-     MERGE_B->SOURCES_ANCESTRAL and MERGE_B->REINTEGRATE_MERGE are both
-     false. */
+  /* A hash of (const char *) absolute WC paths mapped to the same which
+     represent the roots of subtrees added by the merge.  May be NULL. */
   apr_hash_t *added_abspaths;
 
   /* A list of tree conflict victim absolute paths which may be NULL.  Is NULL
@@ -2813,6 +2811,67 @@ notify_merge_completed(const char *target_abspath,
     }
 }
 
+/* Helper for notification_receiver: Cache the roots of subtrees added under
+   TARGET_ABSPATH.
+
+   If *ADDED_ABSPATHS is not null, then it is a hash of (const char *)
+   absolute WC paths mapped to the same.  If it is null, then allocate a
+   new hash in RESULT_POOL.
+
+   If ADDED_ABSPATH is a subtree of TARGET_ABSPATH, is not already found in
+   *ADDED_ABSPATHS, nor is a subtree of any path already found within the
+   hash, then add a copy of ADDED_ABSPATH to *ADDED_ABSPATHS.
+
+   All additions to *ADDED_ABSPATHS are allocated in RESULT_POOL.
+   SCRATCH_POOL is used for temporary allocations. */
+static void
+update_the_list_of_added_subtrees(const char *target_abspath,
+                                  const char *added_abspath,
+                                  apr_hash_t **added_abspaths,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_boolean_t root_of_added_subtree = TRUE;
+
+  /* Stash the root path of any added subtrees. */
+  if (*added_abspaths == NULL)
+    {
+      /* The first added path is always a root. */
+      *added_abspaths = apr_hash_make(result_pool);
+    }
+  else
+    {
+      const char *added_path_parent =
+        svn_dirent_dirname(added_abspath, scratch_pool);
+      apr_pool_t *subpool = svn_pool_create(scratch_pool);
+
+      /* Is NOTIFY->PATH the root of an added subtree? */
+      while (strcmp(target_abspath, added_path_parent))
+        {
+          if (apr_hash_get(*added_abspaths,
+                           added_path_parent,
+                           APR_HASH_KEY_STRING))
+            {
+              root_of_added_subtree = FALSE;
+              break;
+            }
+
+          added_path_parent = svn_dirent_dirname(
+            added_path_parent, subpool);
+        }
+
+      svn_pool_destroy(subpool);
+    }
+
+  if (root_of_added_subtree)
+    {
+      const char *added_root_path = apr_pstrdup(result_pool,
+                                                added_abspath);
+      apr_hash_set(*added_abspaths, added_root_path,
+                   APR_HASH_KEY_STRING, added_root_path);
+    }
+}
+
 /* Is the notification the result of a real operative merge? */
 #define IS_OPERATIVE_NOTIFICATION(notify)  \
                     (notify->content_state == svn_wc_notify_state_conflicted \
@@ -2941,46 +3000,10 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
       if (notify->action == svn_wc_notify_update_add)
         {
-          svn_boolean_t root_of_added_subtree = TRUE;
-
-          /* Stash the root path of any added subtrees. */
-          if (notify_b->added_abspaths == NULL)
-            {
-              /* The first added path is always a root. */
-              notify_b->added_abspaths = apr_hash_make(notify_b->pool);
-            }
-          else
-            {
-              const char *added_path_parent =
-                svn_dirent_dirname(notify_abspath, pool);
-              apr_pool_t *subpool = svn_pool_create(pool);
-
-              /* Is NOTIFY->PATH the root of an added subtree? */
-              while (strcmp(notify_b->merge_b->target->abspath,
-                            added_path_parent))
-                {
-                  if (apr_hash_get(notify_b->added_abspaths,
-                                   added_path_parent,
-                                   APR_HASH_KEY_STRING))
-                    {
-                      root_of_added_subtree = FALSE;
-                      break;
-                    }
-
-                  added_path_parent = svn_dirent_dirname(
-                    added_path_parent, subpool);
-                }
-
-              svn_pool_destroy(subpool);
-            }
-
-          if (root_of_added_subtree)
-            {
-              const char *added_root_path = apr_pstrdup(notify_b->pool,
-                                                        notify_abspath);
-              apr_hash_set(notify_b->added_abspaths, added_root_path,
-                           APR_HASH_KEY_STRING, added_root_path);
-            }
+          update_the_list_of_added_subtrees(notify_b->merge_b->target->abspath,
+                                            notify_abspath,
+                                            &(notify_b->added_abspaths),
+                                            notify_b->pool, pool);
         }
 
       if (notify->action == svn_wc_notify_update_delete
