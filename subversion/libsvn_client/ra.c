@@ -964,3 +964,144 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
   svn_pool_destroy(sesspool);
   return SVN_NO_ERROR;
 }
+
+
+struct ra_ev2_baton {
+  /* The working copy context, from the client context.  */
+  svn_wc_context_t *wc_ctx;
+
+  /* For a given REPOS_RELPATH, provide a LOCAL_ABSPATH that represents
+     that repository node.  */
+  apr_hash_t *relpath_map;
+};
+
+
+svn_error_t *
+svn_client__ra_provide_base(svn_stream_t **contents,
+                            svn_revnum_t *revision,
+                            void *baton,
+                            const char *repos_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  struct ra_ev2_baton *reb = baton;
+  const char *local_abspath;
+  svn_error_t *err;
+
+  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
+                               APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  err = svn_wc_get_pristine_contents2(contents, reb->wc_ctx, local_abspath,
+                                      result_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (*contents != NULL)
+    {
+      /* The pristine contents refer to the BASE, or to the pristine of
+         a copy/move to this location. Fetch the correct revision.  */
+      SVN_ERR(svn_wc__node_get_commit_base_rev(revision, wc_ctx, local_abspath,
+                                               scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__ra_provide_props(apr_hash_t **props,
+                             svn_revnum_t *revision,
+                             void *baton,
+                             const char *repos_relpath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  struct ra_ev2_baton *reb = baton;
+  const char *local_abspath;
+  svn_error_t *err;
+
+  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
+                               APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  err = svn_wc_get_pristine_props(props, reb->wc_ctx, local_abspath,
+                                  result_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (*props != NULL)
+    {
+      /* The pristine props refer to the BASE, or to the pristine props of
+         a copy/move to this location. Fetch the correct revision.  */
+      SVN_ERR(svn_wc__node_get_commit_base_rev(revision, wc_ctx, local_abspath,
+                                               scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+                                void *baton,
+                                const char *repos_relpath,
+                                svn_revnum_t src_revision,
+                                apr_pool_t *scratch_pool)
+{
+  struct ra_ev2_baton *reb = baton;
+  svn_node_kind_t node_kind;
+  const char *local_abspath;
+
+  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
+                               APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *kind = svn_kind_unknown;
+      return SVN_NO_ERROR;
+    }
+
+  /* ### what to do with SRC_REVISION?  */
+
+  SVN_ERR(svn_wc_read_kind(&node_kind, reb->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+
+void *
+svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
+                             apr_hash_t *relpath_map,
+                             apr_pool_t *result_pool)
+{
+  struct ra_ev2_baton *reb = apr_palloc(result_pool, sizeof(*reb));
+
+  reb->wc_ctx = wc_ctx;
+  reb->relpath_map = relpath_map;
+
+  return reb;
+}
