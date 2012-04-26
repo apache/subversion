@@ -90,7 +90,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4166
    Votes:
-     +1: pburba
+     +1: pburba, philip
      -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared".
                Backport branch added - pburba)
 
@@ -103,17 +103,6 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4169
    Votes:
      +1: pburba, rhuijben
-
- * r1330258
-   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
-   Justification:
-     Regression from 1.6. Users should not run into assertions.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4161
-   Notes:
-     A previous backport of this change was incorrect and had to be reverted.
-   Votes:
-     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -147,3 +136,14 @@ Approved changes:
      ^/subversion/branches/1.7.x-r1306111
    Votes:
      +1: danielsh, stsp, rhuijben
+
+ * r1330258
+   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
+   Justification:
+     Regression from 1.6. Users should not run into assertions.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4161
+   Notes:
+     A previous backport of this change was incorrect and had to be reverted.
+   Votes:
+     +1: stsp, philip, rhuijben
