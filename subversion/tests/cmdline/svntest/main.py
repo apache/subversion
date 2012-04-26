@@ -511,6 +511,17 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
+  for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
+    if 'svnadmin' in command:
+      break
+    # Does the server leak the repository on-disk path?
+    # (prop_tests-12 installs a hook script that does that intentionally)
+    if any(map(lambda line: 'cmdline/svn-test-work/repositories' in line \
+                            or 'cmdline/svn-test-work/local_tmp/repos' in line,
+               lines)) \
+       and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
+      raise Failure("Repository diskpath in %s: %r" % (name, lines))
+
   if log_with_timestamps:
     stop = time.time()
     logger.info('<TIME = %.6f>' % (stop - start))
