@@ -1233,6 +1233,7 @@ svn_fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 svn_error_t *
 svn_fs_get_uuid(svn_fs_t *fs, const char **uuid, apr_pool_t *pool)
 {
+  /* If you change this, consider changing svn_fs__identifier(). */
   return svn_error_trace(fs->vtable->get_uuid(fs, uuid, pool));
 }
 
