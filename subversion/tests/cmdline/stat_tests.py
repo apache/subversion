@@ -946,6 +946,22 @@ def status_in_xml(sbox):
 
   svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '-m', 'repo delete',
+                                     sbox.repo_url + '/A/B/E/alpha')
+
+  expected_entries = {sbox.ospath('A/B/E/alpha')
+                      : {'wcprops' : 'none',
+                         'wcitem' : 'normal',
+                         'wcrev' : '1',
+                         'crev' : '1',
+                         'author' : svntest.main.wc_author,
+                         'rprops' : 'none',
+                         'ritem' : 'deleted'}}
+
+  svntest.actions.run_and_verify_status_xml(expected_entries,
+                                            sbox.ospath('A/B/E/alpha'), '-u')
+
 #----------------------------------------------------------------------
 
 def status_ignored_dir(sbox):

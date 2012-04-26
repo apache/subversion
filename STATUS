@@ -135,13 +135,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1330382
-   Fix issue 4167, 'svn st -u --xml' on items deleted from repository
-   Justification:
-     Regression from 1.6
-   Votes:
-     +1: philip, rhuijben, stsp
-
  * r1200896, r1203977, r1205968, r1309992, r1310378, r1310428
    Various updates to the Emacs client code (dsvn.el and vc-svn.el).
    Justification:
