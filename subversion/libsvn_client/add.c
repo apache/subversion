@@ -954,16 +954,18 @@ mkdir_urls(const apr_array_header_t *urls,
   base_relpath = svn_uri_skip_ancestor(repos_root, common, pool);
 
   /* Fetch RA commit editor */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx, NULL,
-                                                       pool)));
-  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
-                                    commit_revprops,
-                                    commit_callback,
-                                    commit_baton,
-                                    NULL, TRUE, /* No lock tokens */
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
+  SVN_ERR(svn_ra__get_commit_ev2(&editor, ra_session,
+                                 commit_revprops,
+                                 commit_callback,
+                                 commit_baton,
+                                 NULL, TRUE, /* No lock tokens */
+                                 svn_client__ra_provide_base,
+                                 svn_client__ra_provide_props,
+                                 svn_client__ra_get_copysrc_kind,
+                                 svn_client__ra_make_cb_baton(ctx->wc_ctx,
+                                                              NULL, pool),
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool, pool));
 
   return svn_error_trace(drive_editor(editor, targets, children_hash,
                                       base_relpath, pool));
