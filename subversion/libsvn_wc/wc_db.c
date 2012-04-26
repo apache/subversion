@@ -10179,20 +10179,18 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 }
 
 static svn_error_t *
-final_moved_to(const char **final_relpath,
-               apr_int64_t op_depth,
-               svn_wc__db_wcroot_t *wcroot,
-               const char *local_relpath,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+follow_moved_to(apr_array_header_t **moved_tos,
+                apr_int64_t op_depth,
+                svn_wc__db_wcroot_t *wcroot,
+                const char *local_relpath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t working_op_depth;
-  const char *node_relpath;
+  const char *node_relpath, *node_moved_to = NULL;
   int i;
-
-  *final_relpath = NULL;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_OP_DEPTH_MOVED_TO));
@@ -10202,20 +10200,30 @@ final_moved_to(const char **final_relpath,
   if (have_row)
     {
       working_op_depth = svn_sqlite__column_int64(stmt, 0);
-      *final_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
+      node_moved_to = svn_sqlite__column_text(stmt, 1, result_pool);
       /* ### verify moved_here? */
+
+      if (node_moved_to)
+        {
+          struct svn_wc__db_moved_to_t *moved_to;
+
+          moved_to = apr_palloc(result_pool, sizeof(*moved_to));
+          moved_to->op_depth = working_op_depth;
+          moved_to->local_relpath = node_moved_to;
+          APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
+        }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* A working row with moved_to, or no working row, and we are done. */
-  if (*final_relpath || !have_row)
+  if (node_moved_to || !have_row)
     return SVN_NO_ERROR;
 
   /* Need to handle being moved via an ancestor. */
   node_relpath = local_relpath;
   for (i = relpath_depth(local_relpath); i > working_op_depth; --i)
     {
-      const char *moved_to_relpath, *node_moved_to_relpath;
+      const char *node_moved_to_relpath;
 
       node_relpath = svn_relpath_dirname(node_relpath, scratch_pool);
 
@@ -10230,18 +10238,22 @@ final_moved_to(const char **final_relpath,
       SVN_ERR(svn_sqlite__reset(stmt));
       if (node_moved_to_relpath)
         {
-          moved_to_relpath
+          struct svn_wc__db_moved_to_t *moved_to;
+          const char *moved_to_relpath
             = svn_relpath_join(node_moved_to_relpath,
                                svn_relpath_skip_ancestor(node_relpath,
                                                          local_relpath),
                                result_pool);
 
-          SVN_ERR(final_moved_to(final_relpath,
-                                 relpath_depth(node_moved_to_relpath),
-                                 wcroot, moved_to_relpath,
-                                 result_pool, scratch_pool));
-          if (!*final_relpath)
-            *final_relpath = moved_to_relpath;
+          moved_to = apr_palloc(result_pool, sizeof(*moved_to));
+          moved_to->op_depth = working_op_depth;
+          moved_to->local_relpath = moved_to_relpath;
+          APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
+
+          SVN_ERR(follow_moved_to(moved_tos,
+                                  relpath_depth(node_moved_to_relpath),
+                                  wcroot, moved_to_relpath,
+                                  result_pool, scratch_pool));
           break;
         }
     }
@@ -10250,14 +10262,14 @@ final_moved_to(const char **final_relpath,
 }
 
 svn_error_t *
-svn_wc__db_final_moved_to(const char **final_abspath,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath, *final_relpath;
+  const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -10265,15 +10277,14 @@ svn_wc__db_final_moved_to(const char **final_abspath,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* ### Wrap in a transaction */
-  SVN_ERR(final_moved_to(&final_relpath, 0, wcroot, local_relpath,
-                         result_pool, scratch_pool));
+  *moved_tos = apr_array_make(result_pool, 0,
+                              sizeof(struct svn_wc__db_moved_to_t *));
 
-  if (final_relpath)
-    *final_abspath = svn_dirent_join(wcroot->abspath, final_relpath,
-                                     result_pool);
-  else
-    *final_abspath = NULL;
+  /* ### Wrap in a transaction */
+  SVN_ERR(follow_moved_to(moved_tos, 0, wcroot, local_relpath,
+                          result_pool, scratch_pool));
+
+  /* ### Convert moved_to to abspath */
 
   return SVN_NO_ERROR;
 }
