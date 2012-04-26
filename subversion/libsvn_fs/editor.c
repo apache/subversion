@@ -471,16 +471,17 @@ svn_fs_editor_commit(svn_revnum_t *revision,
 
   /* Clean up internal resources (eg. eb->root). This also allows the
      editor infrastructure to know this editor is "complete".  */
-  SVN_ERR(svn_editor_complete(editor));
+  err = svn_editor_complete(editor);
 
   /* Note: docco for svn_fs_commit_txn() states that CONFLICT_PATH will
      be allocated in the txn's pool. But it lies. Regardless, we want
      it placed into RESULT_POOL.  */
 
-  err = svn_fs_commit_txn(&inner_conflict_path,
-                          revision,
-                          eb->txn,
-                          scratch_pool);
+  if (!err)
+    err = svn_fs_commit_txn(&inner_conflict_path,
+                            revision,
+                            eb->txn,
+                            scratch_pool);
   if (SVN_IS_VALID_REVNUM(*revision))
     {
       if (err)

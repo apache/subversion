@@ -1109,7 +1109,9 @@ svn_fs_editor_create_for(svn_editor_t **editor,
  * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
  *
  * @note After calling this function, @a editor will be marked as completed
- * and no further operations may be performed on it.
+ * and no further operations may be performed on it. The underlying
+ * transaction will either be committed or aborted once this function is
+ * called. It cannot be recovered for additional work.
  *
  * @a result_pool will be used to allocate space for @a conflict_path.
  * @a scratch_pool will be used for all temporary allocations.
