@@ -171,22 +171,3 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
 
   return SVN_NO_ERROR;
 }
-
-const char *
-svn_fs__identifier(svn_fs_t *fs, apr_pool_t *result_pool)
-{
-  const char *uuid;
-  svn_error_t *err;
-
-  err = fs->vtable->get_uuid(fs, &uuid, result_pool);
-  if (err)
-    {
-      /* Log the error and discard it. */
-      fs->warning(fs->warning_baton, err);
-      svn_error_clear(err);
-      return NULL;
-    }
-  
-  return uuid;
-}
-

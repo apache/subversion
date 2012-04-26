@@ -108,9 +108,6 @@ typedef struct base_fs_data_t
      transaction trail alive. */
   svn_boolean_t in_txn_trail;
 
-  /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
-  const char *uuid;
-
   /* The format number of this FS. */
   int format;
 

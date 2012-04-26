@@ -353,16 +353,6 @@ svn_fs_set_warning_func(svn_fs_t *fs, svn_fs_warning_callback_t warning,
   fs->warning_baton = warning_baton;
 }
 
-/* Read FS's UUID to cause it to be cached. */
-/* ### Implementation detail?  Without this, r1330906 reenters trails. */
-static svn_error_t *
-cache_uuid(svn_fs_t *fs, apr_pool_t *scratch_pool)
-{
-  const char *uuid;
-  SVN_ERR(svn_fs_get_uuid(fs, &uuid, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
               apr_pool_t *pool)
@@ -383,7 +373,6 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->create(*fs_p, path, pool, common_pool));
-  SVN_ERR(cache_uuid(*fs_p, pool));
   return SVN_NO_ERROR;
 }
 
@@ -397,7 +386,6 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = fs_new(fs_config, pool);
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->open_fs(*fs_p, path, pool, common_pool));
-  SVN_ERR(cache_uuid(*fs_p, pool));
   return SVN_NO_ERROR;
 }
 
@@ -574,7 +562,6 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   /* Perform the actual creation. */
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->create(fs, path, fs->pool, common_pool));
-  SVN_ERR(cache_uuid(fs, fs->pool)); /* No better pool.. */
   return SVN_NO_ERROR;
 }
 
@@ -586,7 +573,6 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
                        vtable->open_fs(fs, path, fs->pool, common_pool));
-  SVN_ERR(cache_uuid(fs, fs->pool)); /* No better pool.. */
   return SVN_NO_ERROR;
 }
 
@@ -1248,7 +1234,8 @@ svn_error_t *
 svn_fs_get_uuid(svn_fs_t *fs, const char **uuid, apr_pool_t *pool)
 {
   /* If you change this, consider changing svn_fs__identifier(). */
-  return svn_error_trace(fs->vtable->get_uuid(fs, uuid, pool));
+  *uuid = apr_pstrdup(pool, fs->uuid);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

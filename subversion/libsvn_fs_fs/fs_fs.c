@@ -1307,7 +1307,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   limit = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
-  ffd->uuid = apr_pstrdup(fs->pool, buf);
+  fs->uuid = apr_pstrdup(fs->pool, buf);
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
@@ -7500,17 +7500,6 @@ svn_fs_fs__recover(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__get_uuid(svn_fs_t *fs,
-                    const char **uuid_p,
-                    apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  *uuid_p = apr_pstrdup(pool, ffd->uuid);
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_fs__set_uuid(svn_fs_t *fs,
                     const char *uuid,
                     apr_pool_t *pool)
@@ -7519,7 +7508,6 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   apr_size_t my_uuid_len;
   const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   if (! uuid)
     uuid = svn_uuid_generate(pool);
@@ -7540,7 +7528,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
-  ffd->uuid = my_uuid;
+  fs->uuid = my_uuid;
 
   return SVN_NO_ERROR;
 }
@@ -8709,7 +8697,7 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
 
   /* Make sure the UUID of source and destination match up.
    * We don't want to copy over a different repository. */
-  if (strcmp(src_ffd->uuid, dst_ffd->uuid) != 0)
+  if (strcmp(src_fs->uuid, dst_fs->uuid) != 0)
     return svn_error_create(SVN_ERR_RA_UUID_MISMATCH, NULL,
                             _("The UUID of the hotcopy source does "
                               "not match the UUID of the hotcopy "
@@ -9155,7 +9143,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create lock file and UUID. */
   SVN_ERR(svn_io_file_create(path_lock(dst_fs, pool), "", pool));
-  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_ffd->uuid, pool));
+  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, dst_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
