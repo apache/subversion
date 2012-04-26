@@ -5856,23 +5856,6 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
  * @{
  */
 
-/* A word about the implementation of working copy property storage:
- *
- * Since properties are key/val pairs, you'd think we store them in
- * some sort of Berkeley DB-ish format, and even store pending changes
- * to them that way too.
- *
- * However, we already have libsvn_subr/hashdump.c working, and it
- * uses a human-readable format.  That will be very handy when we're
- * debugging, and presumably we will not be dealing with any huge
- * properties or property lists initially.  Therefore, we will
- * continue to use hashdump as the internal mechanism for storing and
- * reading from property lists, but note that the interface here is
- * _not_ dependent on that.  We can swap in a DB-based implementation
- * at any time and users of this library will never know the
- * difference.
- */
-
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of
  * @a local_abspath.  Allocate the table, names, and values in
