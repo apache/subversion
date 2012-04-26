@@ -1100,6 +1100,9 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
 {
   struct ra_ev2_baton *reb = apr_palloc(result_pool, sizeof(*reb));
 
+  SVN_ERR_ASSERT_NO_RETURN(wc_ctx != NULL);
+  SVN_ERR_ASSERT_NO_RETURN(relpath_map != NULL);
+
   reb->wc_ctx = wc_ctx;
   reb->relpath_map = relpath_map;
 
