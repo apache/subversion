@@ -766,11 +766,9 @@ append_locks(dav_lockdb *lockdb,
                                 "Anonymous lock creation is not allowed.");
     }
   else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
-                    serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
-                    serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
-                    serr->apr_err == SVN_ERR_FS_OUT_OF_DATE))
+                    SVN_ERR_IS_LOCK_ERROR(serr)))
      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Failed to create new lock.",
                                  resource->pool);
@@ -966,11 +964,9 @@ refresh_locks(dav_lockdb *lockdb,
                                 "Anonymous lock refreshing is not allowed.");
     }
   else if (serr && (serr->apr_err == SVN_ERR_REPOS_HOOK_FAILURE ||
-                    serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||
                     serr->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
                     serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||
-                    serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
-                    serr->apr_err == SVN_ERR_FS_OUT_OF_DATE))
+                    SVN_ERR_IS_LOCK_ERROR(serr)))
      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Failed to refresh existing lock.",
                                  resource->pool);
