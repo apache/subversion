@@ -521,17 +521,13 @@ test24(apr_pool_t *pool)
   SVN_TEST_ASSERT(length == 1);
   SVN_TEST_STRING_ASSERT(buffer, "0");
 
-  length = svn__i64toa(buffer, -0x8000000000000000ll);
+  length = svn__i64toa(buffer, 0x8000000000000000ll);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
 
   length = svn__i64toa(buffer, 0x7fffffffffffffffll);
   SVN_TEST_ASSERT(length == 19);
   SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
-
-  length = svn__i64toa(buffer, APR_INT64_MIN);
-  SVN_TEST_ASSERT(length == 20);
-  SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
 
   length = svn__ui64toa(buffer, 0);
   SVN_TEST_ASSERT(length == 1);
