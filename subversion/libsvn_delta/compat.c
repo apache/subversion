@@ -222,36 +222,6 @@ struct change_node
 };
 
 
-static svn_error_t *
-add_action(struct ev2_edit_baton *eb,
-           const char *path,
-           enum action_code_t action,
-           void *args)
-{
-  struct path_action *p_action;
-  apr_array_header_t *action_list = apr_hash_get(eb->paths, path,
-                                                 APR_HASH_KEY_STRING);
-
-  p_action = apr_palloc(eb->edit_pool, sizeof(*p_action));
-  p_action->action = action;
-  p_action->args = args;
-
-  if (action_list == NULL)
-    {
-      const char *path_dup = apr_pstrdup(eb->edit_pool, path);
-
-      action_list = apr_array_make(eb->edit_pool, 1,
-                                   sizeof(struct path_action *));
-      apr_hash_set(eb->paths, path_dup, APR_HASH_KEY_STRING, action_list);
-      APR_ARRAY_PUSH(eb->path_order, const char *) = path_dup;
-    }
-
-  APR_ARRAY_PUSH(action_list, struct path_action *) = p_action;
-
-  return SVN_NO_ERROR;
-}
-
-
 static struct change_node *
 locate_change(struct ev2_edit_baton *eb,
               const char *relpath)
