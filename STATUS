@@ -138,7 +138,7 @@ Candidate changes:
    Notes:
      A previous backport of this change was incorrect and had to be reverted.
    Votes:
-     +1: stsp, philip
+     +1: stsp
 
 Veto-blocked changes:
 =====================
