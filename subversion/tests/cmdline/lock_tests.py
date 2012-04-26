@@ -1693,6 +1693,12 @@ def update_locked_deleted(sbox):
   expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha',
                         status='D ', writelocked='O')
 
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(status='  '),
+    'A/B/E/alpha'       : Item(status='  '),
+    'iota'              : Item(status='  '),
+  })
+
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         None, expected_status)
 

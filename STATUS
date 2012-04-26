@@ -135,15 +135,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1329876
-   Properly report files that have just their lock removed as part of
-   an update.
-   Justification:
-     Allows api users to use notifications to update their status cache.
-     Unreported nodes are assumed to be unchanged.
-   Votes:
-     +1: rhuijben, stsp, philip
-
  * r1329388
    Destroy neon request object so that request cleanups are not delayed.
    Justification:
