@@ -43,6 +43,8 @@ Candidate changes:
      bump.
    Votes:
      +1: rhuijben
+     +0: pburba (I can't replicate the build problem, I can build with or
+                 without the patch).
 
  * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
    r1294134, r1294147, r1294586
