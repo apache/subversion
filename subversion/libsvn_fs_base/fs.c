@@ -473,15 +473,6 @@ bdb_write_config(svn_fs_t *fs)
 
 
 
-static svn_error_t *
-base_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
-{
-  /* Nothing to do here. */
-  return SVN_NO_ERROR;
-}
-
-
-
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
@@ -691,7 +682,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
-  return base_serialized_init(fs, common_pool, pool);
+  return SVN_NO_ERROR;;
 
 error:
   svn_error_clear(cleanup_fs(fs));
@@ -775,7 +766,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       if (svn_err) goto error;
     }
 
-  return base_serialized_init(fs, common_pool, pool);
+  return SVN_NO_ERROR;
 
  error:
   svn_error_clear(cleanup_fs(fs));
