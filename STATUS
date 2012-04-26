@@ -135,14 +135,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1327474, r1327490, r1327495, r1328353
-   Allow an optional value of the delta editor to be transfered via
-   mod_dav_svn, ra_serf and ra_neon.
-   Justification:
-     The ra layers should behave as similar as possible
-   Votes:
-     +1: rhuijben, philip, stsp
-
  * r1328846, r1328847, r1328852
    Reset some sqlite statements before returning.
    Justification:

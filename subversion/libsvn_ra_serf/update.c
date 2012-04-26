@@ -1557,9 +1557,11 @@ start_report(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "delete-entry") == 0)
     {
       const char *file_name;
+      const char *rev_str;
       report_info_t *info;
       apr_pool_t *tmppool;
       const char *full_path;
+      svn_revnum_t delete_rev = SVN_INVALID_REVNUM;
 
       file_name = svn_xml_get_attr_value("name", attrs);
 
@@ -1570,6 +1572,10 @@ start_report(svn_ra_serf__xml_parser_t *parser,
             _("Missing name attr in delete-entry element"));
         }
 
+      rev_str = svn_xml_get_attr_value("rev", attrs);
+      if (rev_str) /* Not available on older repositories! */
+        delete_rev = SVN_STR_TO_REV(rev_str);
+
       info = parser->state->private;
 
       SVN_ERR(open_dir(info->dir));
@@ -1579,7 +1585,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       full_path = svn_relpath_join(info->dir->name, file_name, tmppool);
 
       SVN_ERR(info->dir->update_editor->delete_entry(full_path,
-                                                     SVN_INVALID_REVNUM,
+                                                     delete_rev,
                                                      info->dir->dir_baton,
                                                      tmppool));
 
