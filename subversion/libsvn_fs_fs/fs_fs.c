@@ -9143,7 +9143,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create lock file and UUID. */
   SVN_ERR(svn_io_file_create(path_lock(dst_fs, pool), "", pool));
-  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, dst_fs->uuid, pool));
+  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
