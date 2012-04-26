@@ -512,7 +512,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         *varargs)
 
   for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
-    if 'svnadmin' in command:
+    if is_ra_type_file() or 'svnadmin' in command:
       break
     # Does the server leak the repository on-disk path?
     # (prop_tests-12 installs a hook script that does that intentionally)
