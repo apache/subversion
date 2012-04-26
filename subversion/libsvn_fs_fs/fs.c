@@ -293,10 +293,34 @@ fs_hotcopy(svn_fs_t *src_fs,
            void *cancel_baton,
            apr_pool_t *pool)
 {
-  SVN_ERR(initialize_fs_struct(src_fs));
-  SVN_ERR(fs_serialized_init(src_fs, pool, pool));
-  SVN_ERR(initialize_fs_struct(dst_fs));
-  SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
+    {
+      svn_fs_t *fs = src_fs;
+      const char *path = src_path;
+
+      SVN_ERR(svn_fs__check_fs(fs, FALSE));
+      SVN_ERR(initialize_fs_struct(fs));
+      SVN_ERR(svn_fs_fs__open(fs, path, pool));
+      SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+      SVN_ERR(fs_serialized_init(fs, pool, pool));
+    }
+
+    {
+      svn_fs_t *fs = dst_fs;
+      const char *path = dst_path;
+
+      SVN_ERR(svn_fs__check_fs(fs, FALSE));
+      SVN_ERR(initialize_fs_struct(fs));
+#if 0 
+      /* In INCREMENTAL mode, svn_fs_fs__hotcopy() will open DST_FS.
+         Otherwise, it's not an FS yet --- possibly just an empty dir --- so
+         can't be opened.
+       */
+      SVN_ERR(svn_fs_fs__open(fs, path, pool));
+      SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+#endif
+      SVN_ERR(fs_serialized_init(fs, pool, pool));
+    }
+
   return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
                             incremental, cancel_func, cancel_baton, pool);
 }
