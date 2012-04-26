@@ -214,6 +214,7 @@ typedef svn_error_t *(*svn_ra__get_copysrc_kind_cb_t)(
    in order to determine whether to use delta->add_directory() or the
    delta->add_file() vtable entry to perform the copy.
    ### unclear on impact if this is NULL.
+   ### this callback will disappear when "everything" is running Ev2
 
    CB_BATON is the baton used/shared by the above three callbacks.
 
