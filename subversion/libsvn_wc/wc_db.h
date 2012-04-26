@@ -3098,15 +3098,22 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   apr_pool_t *scratch_pool);
 
 
-/* Set *FINAL_ABSPATH to the final moved-to location for LOCAL_ABSPATH
- * after following any and all nested moves or set *FINAL_ABSPATH to
- * NULL if LOCAL_ABSPATH is not moved. */
+/* Possibly need two structures, one with relpaths and with abspaths?
+ * Only exposed for testing at present. */
+struct svn_wc__db_moved_to_t {
+  const char *local_relpath;  /* moved-to destination */
+  apr_int64_t op_depth;       /* op-root of source */
+};
+
+/* Set *FINAL_ABSPATH to an array of svn_wc__db_moved_to_t for
+ * LOCAL_ABSPATH after following any and all nested moves.
+ * Only exposed for testing at present. */
 svn_error_t *
-svn_wc__db_final_moved_to(const char **final_abspath,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* @} */
 

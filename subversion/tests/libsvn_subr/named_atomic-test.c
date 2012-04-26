@@ -156,19 +156,19 @@ init_test_shm(apr_pool_t *pool)
       SVN_ERR(svn_io_open_unique_file3(NULL,
                                        &name_namespace,
                                        NULL,
-                                       svn_io_file_del_none,
+                                       svn_io_file_del_on_pool_cleanup,
                                        global_pool,
                                        pool));
       SVN_ERR(svn_io_open_unique_file3(NULL,
                                        &name_namespace1,
                                        NULL,
-                                       svn_io_file_del_none,
+                                       svn_io_file_del_on_pool_cleanup,
                                        global_pool,
                                        pool));
       SVN_ERR(svn_io_open_unique_file3(NULL,
                                        &name_namespace2,
                                        NULL,
-                                       svn_io_file_del_none,
+                                       svn_io_file_del_on_pool_cleanup,
                                        global_pool,
                                        pool));
     }
@@ -211,20 +211,19 @@ init_concurrency_test_shm(apr_pool_t *pool, int count)
 {
   svn_atomic_namespace__t *ns;
   svn_named_atomic__t *atomic;
-  apr_pool_t *scratch = svn_pool_create(pool);
   int i;
 
   /* get the two I/O atomics for this thread */
-  SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, scratch));
+  SVN_ERR(svn_atomic_namespace__create(&ns, name_namespace, pool));
 
   /* reset the I/O atomics for all threads */
   for (i = 0; i < count; ++i)
     {
       SVN_ERR(svn_named_atomic__get(&atomic,
                                     ns,
-                                    apr_pstrcat(scratch,
+                                    apr_pstrcat(pool,
                                                 ATOMIC_NAME,
-                                                apr_itoa(scratch, i),
+                                                apr_itoa(pool, i),
                                                 NULL),
                                     TRUE));
       SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
@@ -232,8 +231,6 @@ init_concurrency_test_shm(apr_pool_t *pool, int count)
 
   SVN_ERR(svn_named_atomic__get(&atomic, ns, "counter", TRUE));
   SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
-
-  apr_pool_clear(scratch);
 
   return SVN_NO_ERROR;
 }
@@ -407,12 +404,14 @@ calibrate_iterations(apr_pool_t *pool, int count)
 
   for (calib_iterations = 10; taken < 100000.0; calib_iterations *= 2)
     {
-      SVN_ERR(init_concurrency_test_shm(pool, count));
+      apr_pool_t *scratch = svn_pool_create(pool);
+      SVN_ERR(init_concurrency_test_shm(scratch, count));
 
       start = apr_time_now();
       SVN_ERR(run_procs(pool, TEST_PROC, count, calib_iterations));
 
       taken = (double)(apr_time_now() - start);
+      apr_pool_destroy(scratch);
     }
 
   /* scale that to 1s */
@@ -711,10 +710,10 @@ test_namespaces(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#if APR_HAS_THREADS
 static svn_error_t *
 test_multithreaded(apr_pool_t *pool)
 {
+#if APR_HAS_THREADS
   SVN_ERR(init_test_shm(pool));
 
   SVN_ERR(calibrate_concurrency(pool));
@@ -723,8 +722,10 @@ test_multithreaded(apr_pool_t *pool)
   SVN_ERR(run_threads(pool, hw_thread_count, suggested_iterations, test_pipeline));
 
   return SVN_NO_ERROR;
-}
+#else
+  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
 #endif
+}
 
 static svn_error_t *
 test_multiprocess(apr_pool_t *pool)
@@ -762,10 +763,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "basic r/w access to multiple atomics"),
     SVN_TEST_PASS2(test_namespaces,
                    "use different namespaces"),
-#if APR_HAS_THREADS
     SVN_TEST_PASS2(test_multithreaded,
                    "multithreaded access to atomics"),
-#endif
     SVN_TEST_PASS2(test_multiprocess,
                    "multi-process access to atomics"),
     SVN_TEST_NULL
