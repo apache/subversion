@@ -115,7 +115,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4166
    Votes:
-     +1: pburba
+     +1: pburba, philip
      -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared".
                Backport branch added - pburba)
 
