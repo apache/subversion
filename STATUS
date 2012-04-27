@@ -121,15 +121,6 @@ Approved changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
- * r1306111
-   Handle NULL dates in libsvn_ra_svn.
-   Justification:
-     Avoids segfault.
-   Branch:
-     ^/subversion/branches/1.7.x-r1306111
-   Votes:
-     +1: danielsh, stsp, rhuijben
-
  * r1330258
    Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
    Justification:
