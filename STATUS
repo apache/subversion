@@ -121,13 +121,6 @@ Approved changes:
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
 
- * r1190463
-   Issue 4046, "svn update --depth=empty" against 1.4 servers.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, stsp, rhuijben
-
  * r1306111
    Handle NULL dates in libsvn_ra_svn.
    Justification:
