@@ -327,20 +327,14 @@ process_actions(struct ev2_edit_baton *eb,
                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *props = NULL;
-  svn_boolean_t need_add = FALSE;
-  svn_boolean_t need_copy = FALSE;
-  const char *copyfrom_path;
-  svn_revnum_t copyfrom_rev;
-  apr_array_header_t *children = NULL;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
-  svn_revnum_t delete_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t props_base_revision = SVN_INVALID_REVNUM;
   svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
   svn_kind_t kind = svn_kind_unknown;
 
   SVN_ERR_ASSERT(change != NULL);
-  if (change != NULL)
+
     {
       if (change->unlock)
         SVN_ERR(eb->do_unlock(eb->unlock_baton, repos_relpath, scratch_pool));
@@ -362,44 +356,6 @@ process_actions(struct ev2_edit_baton *eb,
 
           /* No further work possible on this node.  */
           return SVN_NO_ERROR;
-        }
-
-      if (change->action == RESTRUCTURE_ADD)
-        {
-          kind = change->kind;
-
-          /* An add might be a replace. Grab the revnum we're replacing.  */
-          delete_revnum = change->deleting;
-
-          if (kind == svn_kind_dir)
-            {
-              children = get_children(eb, repos_relpath, scratch_pool);
-            }
-          else
-            {
-              /* If this file is copied here, then we don't need CONTENTS.
-                 Otherwise, the contents comes from apply_txdelta() and has
-                 been saved at CONTENTS_ABSPATH. If apply_txdelta() was not
-                 called, then we're adding an empty file.  */
-              if (change->copyfrom_path == NULL
-                  && change->contents_abspath == NULL)
-                {
-                  contents = svn_stream_empty(scratch_pool);
-                  checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
-                                                         scratch_pool);
-                }
-            }
-
-          if (change->copyfrom_path != NULL)
-            {
-              need_copy = TRUE;
-              copyfrom_path = change->copyfrom_path;
-              copyfrom_rev = change->copyfrom_rev;
-            }
-          else
-            {
-              need_add = TRUE;
-            }
         }
 
       if (change->contents_abspath != NULL)
@@ -424,42 +380,63 @@ process_actions(struct ev2_edit_baton *eb,
           props = change->props;
           props_base_revision = change->changing;
         }
-    }
 
-  /* We've now got a wholistic view of what has happened to this node,
-   * so we can call our own editor APIs on it. */
-
-  if (need_add)
-    {
-      if (props == NULL)
-        props = apr_hash_make(scratch_pool);
-
-      if (kind == svn_kind_dir)
+      if (change->action == RESTRUCTURE_ADD)
         {
-          SVN_ERR(svn_editor_add_directory(eb->editor, repos_relpath, children,
-                                           props, delete_revnum));
-        }
-      else
-        {
-          SVN_ERR(svn_editor_add_file(eb->editor, repos_relpath, checksum,
-                                      contents, props, delete_revnum));
-        }
+          /* An add might be a replace. Grab the revnum we're replacing.  */
+          svn_revnum_t delete_revnum = change->deleting;
 
-      /* No further work possible on this node.  */
-      return SVN_NO_ERROR;
-    }
+          kind = change->kind;
 
-  if (need_copy)
-    {
-      SVN_ERR(svn_editor_copy(eb->editor, copyfrom_path, copyfrom_rev,
-                              repos_relpath, delete_revnum));
-      /* Fall through to possibly make changes post-copy.  */
+          if (change->copyfrom_path != NULL)
+            {
+              SVN_ERR(svn_editor_copy(eb->editor, change->copyfrom_path,
+                                      change->copyfrom_rev,
+                                      repos_relpath, delete_revnum));
+              /* Fall through to possibly make changes post-copy.  */
+            }
+          else
+            {
+              /* If no properties were defined, then use an empty set.  */
+              if (props == NULL)
+                props = apr_hash_make(scratch_pool);
+
+              if (kind == svn_kind_dir)
+                {
+                  const apr_array_header_t *children;
+
+                  children = get_children(eb, repos_relpath, scratch_pool);
+                  SVN_ERR(svn_editor_add_directory(eb->editor, repos_relpath,
+                                                   children, props,
+                                                   delete_revnum));
+                }
+              else
+                {
+                  /* If this file was added, but apply_txdelta() was not
+                     called (ie. no CONTENTS_ABSPATH), then we're adding
+                     an empty file.  */
+                  if (change->contents_abspath == NULL)
+                    {
+                      contents = svn_stream_empty(scratch_pool);
+                      checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                             scratch_pool);
+                    }
+
+                  SVN_ERR(svn_editor_add_file(eb->editor, repos_relpath,
+                                              checksum, contents, props,
+                                              delete_revnum));
+                }
+
+              /* No further work possible on this node.  */
+              return SVN_NO_ERROR;
+            }
+        }
     }
 
 #if 0
   /* There *should* be work for this node. But it seems that isn't true
      in some cases. Future investigation...  */
-  SVN_ERR_ASSERT(need_copy || props || contents);
+  SVN_ERR_ASSERT(props || contents);
 #endif
   if (props || contents)
     {
