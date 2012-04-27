@@ -300,7 +300,13 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
                                           va_arg(ap, const char *)));
             break;
 
+          case 'd':
+            SVN_ERR(svn_sqlite__bind_int(stmt, count,
+                                         va_arg(ap, int)));
+            break;
+
           case 'i':
+          case 'L':
             SVN_ERR(svn_sqlite__bind_int64(stmt, count,
                                            va_arg(ap, apr_int64_t)));
             break;
