@@ -336,6 +336,7 @@ fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
   fs->access_ctx = NULL;
   fs->vtable = NULL;
   fs->fsap_data = NULL;
+  fs->uuid = NULL;
   return fs;
 }
 
