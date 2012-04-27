@@ -60,7 +60,10 @@ svn_error_t *
 svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
 /* An identifier for FS to be used in the text of error messages.
-   (Not used anywhere but in this header.) */
+   (Not used anywhere but in this header.)
+
+   Note: we log the UUID, rather than (fs)->path, since some of these
+   errors are marshalled to the client. */
 #define svn_fs__identifier(fs) ((fs)->uuid)
 
 /* Constructing nice error messages for roots.  */
