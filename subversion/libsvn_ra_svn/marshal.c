@@ -464,7 +464,7 @@ svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(writebuf_writechar(conn, pool, ':'));
     }
   else
-    write_number(conn, pool, str->len, ':');
+    SVN_ERR(write_number(conn, pool, str->len, ':'));
 
   SVN_ERR(writebuf_write(conn, pool, str->data, str->len));
   SVN_ERR(writebuf_writechar(conn, pool, ' '));
@@ -482,7 +482,7 @@ svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
       SVN_ERR(writebuf_writechar(conn, pool, ':'));
     }
   else
-    write_number(conn, pool, len, ':');
+    SVN_ERR(write_number(conn, pool, len, ':'));
 
   SVN_ERR(writebuf_write(conn, pool, s, len));
   SVN_ERR(writebuf_writechar(conn, pool, ' '));
