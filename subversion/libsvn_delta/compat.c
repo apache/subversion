@@ -112,9 +112,8 @@ struct ev2_edit_baton
 {
   svn_editor_t *editor;
 
-  /* ### need to ensure we understand the proper root for these relpaths  */
-  apr_hash_t *changes;  /* RELPATH -> struct change_node  */
-  apr_hash_t *paths;
+  apr_hash_t *changes;  /* REPOS_RELPATH -> struct change_node  */
+
   apr_array_header_t *path_order;
   int paths_processed;
 
@@ -167,18 +166,6 @@ enum action_code_t
   ACTION_ADD_ABSENT
 };
 
-struct path_action
-{
-  enum action_code_t action;
-  void *args;
-};
-
-struct copy_args
-{
-  const char *copyfrom_path;
-  svn_revnum_t copyfrom_rev;
-};
-
 enum restructure_action_t
 {
   RESTRUCTURE_NONE = 0,
@@ -228,25 +215,13 @@ locate_change(struct ev2_edit_baton *eb,
 {
   struct change_node *change = apr_hash_get(eb->changes, relpath,
                                             APR_HASH_KEY_STRING);
-  apr_array_header_t *action_list;
 
   if (change != NULL)
     return change;
 
-  /* Shift RELPATH into the proper pool.  */
+  /* Shift RELPATH into the proper pool, and record the observed order.  */
   relpath = apr_pstrdup(eb->edit_pool, relpath);
-
-  /* Investigate whether there is an action in PATHS. Any presence there
-     will determine whether we need to update PATH_ORDER.  */
-  action_list = apr_hash_get(eb->paths, relpath, APR_HASH_KEY_STRING);
-  if (action_list == NULL)
-    {
-      /* Store an empty ACTION_LIST into PATHS.  */
-      action_list = apr_array_make(eb->edit_pool, 1,
-                                   sizeof(struct path_action *));
-      apr_hash_set(eb->paths, relpath, APR_HASH_KEY_STRING, action_list);
-      APR_ARRAY_PUSH(eb->path_order, const char *) = relpath;
-    }
+  APR_ARRAY_PUSH(eb->path_order, const char *) = relpath;
 
   /* Return an empty change. Callers will tweak as needed.  */
   change = apr_pcalloc(eb->edit_pool, sizeof(*change));
@@ -323,17 +298,13 @@ get_children(struct ev2_edit_baton *eb,
   apr_array_header_t *children = apr_array_make(pool, 1, sizeof(const char *));
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, eb->paths); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, eb->changes); hi; hi = apr_hash_next(hi))
     {
-      const char *p = svn__apr_hash_index_key(hi);
+      const char *repos_relpath = svn__apr_hash_index_key(hi);
       const char *child;
 
-      /* Sanitize our paths. */
-      if (*p == '/')
-        p++;
-
       /* Find potential children. */
-      child = svn_relpath_skip_ancestor(path, p);
+      child = svn_relpath_skip_ancestor(path, repos_relpath);
       if (!child || !*child)
         continue;
 
@@ -351,8 +322,7 @@ get_children(struct ev2_edit_baton *eb,
 
 static svn_error_t *
 process_actions(struct ev2_edit_baton *eb,
-                const char *path,
-                apr_array_header_t *actions,
+                const char *repos_relpath,
                 const struct change_node *change,
                 apr_pool_t *scratch_pool)
 {
@@ -369,31 +339,26 @@ process_actions(struct ev2_edit_baton *eb,
   svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
   svn_kind_t kind = svn_kind_unknown;
 
-  if (*path == '/')
-    {
-      path++;
-      *eb->found_abs_paths = TRUE;
-    }
-
   SVN_ERR_ASSERT(change != NULL);
   if (change != NULL)
     {
       if (change->unlock)
-        SVN_ERR(eb->do_unlock(eb->unlock_baton, path, scratch_pool));
+        SVN_ERR(eb->do_unlock(eb->unlock_baton, repos_relpath, scratch_pool));
 
       if (change->action == RESTRUCTURE_DELETE)
         {
           /* If the action was left as RESTRUCTURE_DELETE, then a
              replacement is not occurring. Just do the delete and bail.  */
-          SVN_ERR(svn_editor_delete(eb->editor, path, change->deleting));
+          SVN_ERR(svn_editor_delete(eb->editor, repos_relpath,
+                                    change->deleting));
 
           /* No further work possible on this node.  */
           return SVN_NO_ERROR;
         }
       if (change->action == RESTRUCTURE_ADD_ABSENT)
         {
-          SVN_ERR(svn_editor_add_absent(eb->editor, path, change->kind,
-                                        change->deleting));
+          SVN_ERR(svn_editor_add_absent(eb->editor, repos_relpath,
+                                        change->kind, change->deleting));
 
           /* No further work possible on this node.  */
           return SVN_NO_ERROR;
@@ -408,7 +373,7 @@ process_actions(struct ev2_edit_baton *eb,
 
           if (kind == svn_kind_dir)
             {
-              children = get_children(eb, path, scratch_pool);
+              children = get_children(eb, repos_relpath, scratch_pool);
             }
           else
             {
@@ -471,13 +436,13 @@ process_actions(struct ev2_edit_baton *eb,
 
       if (kind == svn_kind_dir)
         {
-          SVN_ERR(svn_editor_add_directory(eb->editor, path, children,
+          SVN_ERR(svn_editor_add_directory(eb->editor, repos_relpath, children,
                                            props, delete_revnum));
         }
       else
         {
-          SVN_ERR(svn_editor_add_file(eb->editor, path, checksum, contents,
-                                      props, delete_revnum));
+          SVN_ERR(svn_editor_add_file(eb->editor, repos_relpath, checksum,
+                                      contents, props, delete_revnum));
         }
 
       /* No further work possible on this node.  */
@@ -486,8 +451,8 @@ process_actions(struct ev2_edit_baton *eb,
 
   if (need_copy)
     {
-      SVN_ERR(svn_editor_copy(eb->editor, copyfrom_path, copyfrom_rev, path,
-                              delete_revnum));
+      SVN_ERR(svn_editor_copy(eb->editor, copyfrom_path, copyfrom_rev,
+                              repos_relpath, delete_revnum));
       /* Fall through to possibly make changes post-copy.  */
     }
 
@@ -514,10 +479,11 @@ process_actions(struct ev2_edit_baton *eb,
         base_revision = SVN_INVALID_REVNUM;
 
       if (kind == svn_kind_dir)
-        SVN_ERR(svn_editor_alter_directory(eb->editor, path, base_revision,
-                                           props));
+        SVN_ERR(svn_editor_alter_directory(eb->editor, repos_relpath,
+                                           base_revision, props));
       else
-        SVN_ERR(svn_editor_alter_file(eb->editor, path, base_revision, props,
+        SVN_ERR(svn_editor_alter_file(eb->editor, repos_relpath,
+                                      base_revision, props,
                                       checksum, contents));
     }
 
@@ -536,16 +502,16 @@ run_ev2_actions(struct ev2_edit_baton *eb,
      as part of close_edit() and then some more as part of abort_edit()  */
   for (; eb->paths_processed < eb->path_order->nelts; ++eb->paths_processed)
     {
-      const char *path = APR_ARRAY_IDX(eb->path_order, eb->paths_processed,
-                                       const char *);
-      apr_array_header_t *actions = apr_hash_get(eb->paths, path,
-                                                 APR_HASH_KEY_STRING);
-      struct change_node *change = apr_hash_get(eb->changes, path,
-                                                APR_HASH_KEY_STRING);
+      const char *repos_relpath = APR_ARRAY_IDX(eb->path_order,
+                                                eb->paths_processed,
+                                                const char *);
+      const struct change_node *change = apr_hash_get(eb->changes,
+                                                      repos_relpath,
+                                                      APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(process_actions(eb, path, actions, change, iterpool));
+      SVN_ERR(process_actions(eb, repos_relpath, change, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -670,7 +636,6 @@ ev2_add_directory(const char *path,
   else
     {
       /* A copy */
-      struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
 
       change->copyfrom_path = map_to_repos_relpath(pb->eb, copyfrom_path,
                                                    pb->eb->edit_pool);
@@ -783,7 +748,6 @@ ev2_add_file(const char *path,
   else
     {
       /* A copy */
-      struct copy_args *args = apr_palloc(pb->eb->edit_pool, sizeof(*args));
 
       change->copyfrom_path = map_to_repos_relpath(fb->eb, copyfrom_path,
                                                    fb->eb->edit_pool);
@@ -1051,7 +1015,6 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
 
   eb->editor = editor;
   eb->changes = apr_hash_make(pool);
-  eb->paths = apr_hash_make(pool);
   eb->path_order = apr_array_make(pool, 1, sizeof(const char *));
   eb->edit_pool = pool;
   eb->found_abs_paths = found_abs_paths;
@@ -1120,7 +1083,6 @@ struct editor_baton
   const char *repos_root;
   const char *base_relpath;
 
-  apr_hash_t *paths;
   apr_pool_t *edit_pool;
 };
 
@@ -2007,7 +1969,6 @@ svn_delta__editor_from_delta(svn_editor_t **editor_p,
   eb->deditor = deditor;
   eb->dedit_baton = dedit_baton;
   eb->edit_pool = result_pool;
-  eb->paths = apr_hash_make(result_pool);
   eb->repos_root = apr_pstrdup(result_pool, repos_root);
   eb->base_relpath = apr_pstrdup(result_pool, base_relpath);
 
