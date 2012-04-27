@@ -73,6 +73,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      know of a better way of associating such data with the
      repository. */
 
+  SVN_ERR_ASSERT(fs->uuid);
   key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, fs->uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);

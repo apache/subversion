@@ -427,6 +427,7 @@ def dump_quiet(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail(svntest.main.is_fs_type_fsfs)
 def hotcopy_dot(sbox):
   "'svnadmin hotcopy PATH .'"
   sbox.build()
@@ -1280,6 +1281,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
 @SkipUnless(svntest.main.is_posix_os)
 @Issue(2591)
+@XFail(svntest.main.is_fs_type_fsfs)
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 
@@ -1597,6 +1599,7 @@ def load_ranges(sbox):
                                            expected_dump, new_dumpdata)
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
+@XFail(svntest.main.is_fs_type_fsfs)
 def hotcopy_incremental(sbox):
   "'svnadmin hotcopy --incremental PATH .'"
   sbox.build()
@@ -1620,6 +1623,7 @@ def hotcopy_incremental(sbox):
       sbox.simple_commit()
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
+@XFail(svntest.main.is_fs_type_fsfs)
 def hotcopy_incremental_packed(sbox):
   "'svnadmin hotcopy --incremental' with packing"
   sbox.build()
