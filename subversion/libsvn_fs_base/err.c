@@ -62,10 +62,11 @@ svn_fs_base__err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs_base__err_dangling_rev(svn_fs_t *fs, svn_revnum_t rev)
 {
+  /* Log the UUID as this error may be reported to the client. */
   return svn_error_createf
     (SVN_ERR_FS_NO_SUCH_REVISION, 0,
      _("No such revision %ld in filesystem '%s'"),
-     rev, fs->path);
+     rev, fs->uuid);
 }
 
 
