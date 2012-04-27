@@ -120,14 +120,3 @@ Approved changes:
      +1: philip, rhuijben
      +1: stsp (cannot test this, but the trunk windows buildsbots are
                happy and the diff makes sense)
-
- * r1330258
-   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
-   Justification:
-     Regression from 1.6. Users should not run into assertions.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4161
-   Notes:
-     A previous backport of this change was incorrect and had to be reverted.
-   Votes:
-     +1: stsp, philip, rhuijben
