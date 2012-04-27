@@ -329,8 +329,6 @@ process_actions(struct ev2_edit_baton *eb,
   apr_hash_t *props = NULL;
   svn_stream_t *contents = NULL;
   svn_checksum_t *checksum = NULL;
-  svn_revnum_t props_base_revision = SVN_INVALID_REVNUM;
-  svn_revnum_t text_base_revision = SVN_INVALID_REVNUM;
   svn_kind_t kind = svn_kind_unknown;
 
   SVN_ERR_ASSERT(change != NULL);
@@ -368,8 +366,6 @@ process_actions(struct ev2_edit_baton *eb,
                                     svn_checksum_sha1, scratch_pool));
       SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
                                        scratch_pool, scratch_pool));
-
-      text_base_revision = change->changing;
     }
 
   if (change->props != NULL)
@@ -377,7 +373,6 @@ process_actions(struct ev2_edit_baton *eb,
       /* ### validate we aren't overwriting KIND?  */
       kind = change->kind;
       props = change->props;
-      props_base_revision = change->changing;
     }
 
   if (change->action == RESTRUCTURE_ADD)
@@ -438,27 +433,16 @@ process_actions(struct ev2_edit_baton *eb,
 #endif
   if (props || contents)
     {
-      /* We fetched and modified the props or content in some way. Apply 'em
-         now.  */
-      svn_revnum_t base_revision;
-
-      if (SVN_IS_VALID_REVNUM(props_base_revision)
-          && SVN_IS_VALID_REVNUM(text_base_revision))
-        SVN_ERR_ASSERT(props_base_revision == text_base_revision);
-
-      if (SVN_IS_VALID_REVNUM(props_base_revision))
-        base_revision = props_base_revision;
-      else if (SVN_IS_VALID_REVNUM(text_base_revision))
-        base_revision = text_base_revision;
-      else
-        base_revision = SVN_INVALID_REVNUM;
+      /* Changes to properties or content should have indicated the revision
+         it was intending to change.  */
+      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(change->changing));
 
       if (kind == svn_kind_dir)
         SVN_ERR(svn_editor_alter_directory(eb->editor, repos_relpath,
-                                           base_revision, props));
+                                           change->changing, props));
       else
         SVN_ERR(svn_editor_alter_file(eb->editor, repos_relpath,
-                                      base_revision, props,
+                                      change->changing, props,
                                       checksum, contents));
     }
 
