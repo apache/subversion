@@ -992,8 +992,10 @@ def status_ignored_dir(sbox):
 @Issue(2030)
 def status_unversioned_dir(sbox):
   "status on unversioned dir"
-  sbox.build(read_only = True)
-  dir = sbox.repo_dir
+  sbox.build(read_only = True, create_wc = False)
+  dir = sbox.wc_dir
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  os.mkdir(dir)
   expected_err = "svn: warning: W155007: '.*(/|\\\\)" + os.path.basename(dir) + \
                  "' is not a working copy"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
