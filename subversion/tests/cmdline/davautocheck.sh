@@ -433,6 +433,7 @@ rm "$HTTPD_CFG-copy"
 say "HTTPD is good"
 
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
+  echo "http://localhost:$HTTPD_PORT"
   exit
 fi
 
