@@ -335,101 +335,99 @@ process_actions(struct ev2_edit_baton *eb,
 
   SVN_ERR_ASSERT(change != NULL);
 
+  if (change->unlock)
+    SVN_ERR(eb->do_unlock(eb->unlock_baton, repos_relpath, scratch_pool));
+
+  if (change->action == RESTRUCTURE_DELETE)
     {
-      if (change->unlock)
-        SVN_ERR(eb->do_unlock(eb->unlock_baton, repos_relpath, scratch_pool));
+      /* If the action was left as RESTRUCTURE_DELETE, then a
+         replacement is not occurring. Just do the delete and bail.  */
+      SVN_ERR(svn_editor_delete(eb->editor, repos_relpath,
+                                change->deleting));
 
-      if (change->action == RESTRUCTURE_DELETE)
+      /* No further work possible on this node.  */
+      return SVN_NO_ERROR;
+    }
+  if (change->action == RESTRUCTURE_ADD_ABSENT)
+    {
+      SVN_ERR(svn_editor_add_absent(eb->editor, repos_relpath,
+                                    change->kind, change->deleting));
+
+      /* No further work possible on this node.  */
+      return SVN_NO_ERROR;
+    }
+
+  if (change->contents_abspath != NULL)
+    {
+      /* We can only set text on files. */
+      /* ### validate we aren't overwriting KIND?  */
+      kind = svn_kind_file;
+
+      /* ### the checksum might be in CHANGE->CHECKSUM  */
+      SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
+                                    svn_checksum_sha1, scratch_pool));
+      SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
+                                       scratch_pool, scratch_pool));
+
+      text_base_revision = change->changing;
+    }
+
+  if (change->props != NULL)
+    {
+      /* ### validate we aren't overwriting KIND?  */
+      kind = change->kind;
+      props = change->props;
+      props_base_revision = change->changing;
+    }
+
+  if (change->action == RESTRUCTURE_ADD)
+    {
+      /* An add might be a replace. Grab the revnum we're replacing.  */
+      svn_revnum_t delete_revnum = change->deleting;
+
+      kind = change->kind;
+
+      if (change->copyfrom_path != NULL)
         {
-          /* If the action was left as RESTRUCTURE_DELETE, then a
-             replacement is not occurring. Just do the delete and bail.  */
-          SVN_ERR(svn_editor_delete(eb->editor, repos_relpath,
-                                    change->deleting));
-
-          /* No further work possible on this node.  */
-          return SVN_NO_ERROR;
+          SVN_ERR(svn_editor_copy(eb->editor, change->copyfrom_path,
+                                  change->copyfrom_rev,
+                                  repos_relpath, delete_revnum));
+          /* Fall through to possibly make changes post-copy.  */
         }
-      if (change->action == RESTRUCTURE_ADD_ABSENT)
+      else
         {
-          SVN_ERR(svn_editor_add_absent(eb->editor, repos_relpath,
-                                        change->kind, change->deleting));
+          /* If no properties were defined, then use an empty set.  */
+          if (props == NULL)
+            props = apr_hash_make(scratch_pool);
 
-          /* No further work possible on this node.  */
-          return SVN_NO_ERROR;
-        }
-
-      if (change->contents_abspath != NULL)
-        {
-          /* We can only set text on files. */
-          /* ### validate we aren't overwriting KIND?  */
-          kind = svn_kind_file;
-
-          /* ### the checksum might be in CHANGE->CHECKSUM  */
-          SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
-                                        svn_checksum_sha1, scratch_pool));
-          SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
-                                           scratch_pool, scratch_pool));
-
-          text_base_revision = change->changing;
-        }
-
-      if (change->props != NULL)
-        {
-          /* ### validate we aren't overwriting KIND?  */
-          kind = change->kind;
-          props = change->props;
-          props_base_revision = change->changing;
-        }
-
-      if (change->action == RESTRUCTURE_ADD)
-        {
-          /* An add might be a replace. Grab the revnum we're replacing.  */
-          svn_revnum_t delete_revnum = change->deleting;
-
-          kind = change->kind;
-
-          if (change->copyfrom_path != NULL)
+          if (kind == svn_kind_dir)
             {
-              SVN_ERR(svn_editor_copy(eb->editor, change->copyfrom_path,
-                                      change->copyfrom_rev,
-                                      repos_relpath, delete_revnum));
-              /* Fall through to possibly make changes post-copy.  */
+              const apr_array_header_t *children;
+
+              children = get_children(eb, repos_relpath, scratch_pool);
+              SVN_ERR(svn_editor_add_directory(eb->editor, repos_relpath,
+                                               children, props,
+                                               delete_revnum));
             }
           else
             {
-              /* If no properties were defined, then use an empty set.  */
-              if (props == NULL)
-                props = apr_hash_make(scratch_pool);
-
-              if (kind == svn_kind_dir)
+              /* If this file was added, but apply_txdelta() was not
+                 called (ie. no CONTENTS_ABSPATH), then we're adding
+                 an empty file.  */
+              if (change->contents_abspath == NULL)
                 {
-                  const apr_array_header_t *children;
-
-                  children = get_children(eb, repos_relpath, scratch_pool);
-                  SVN_ERR(svn_editor_add_directory(eb->editor, repos_relpath,
-                                                   children, props,
-                                                   delete_revnum));
-                }
-              else
-                {
-                  /* If this file was added, but apply_txdelta() was not
-                     called (ie. no CONTENTS_ABSPATH), then we're adding
-                     an empty file.  */
-                  if (change->contents_abspath == NULL)
-                    {
-                      contents = svn_stream_empty(scratch_pool);
-                      checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
-                                                             scratch_pool);
-                    }
-
-                  SVN_ERR(svn_editor_add_file(eb->editor, repos_relpath,
-                                              checksum, contents, props,
-                                              delete_revnum));
+                  contents = svn_stream_empty(scratch_pool);
+                  checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                         scratch_pool);
                 }
 
-              /* No further work possible on this node.  */
-              return SVN_NO_ERROR;
+              SVN_ERR(svn_editor_add_file(eb->editor, repos_relpath,
+                                          checksum, contents, props,
+                                          delete_revnum));
             }
+
+          /* No further work possible on this node.  */
+          return SVN_NO_ERROR;
         }
     }
 
@@ -445,7 +443,7 @@ process_actions(struct ev2_edit_baton *eb,
       svn_revnum_t base_revision;
 
       if (SVN_IS_VALID_REVNUM(props_base_revision)
-            && SVN_IS_VALID_REVNUM(text_base_revision))
+          && SVN_IS_VALID_REVNUM(text_base_revision))
         SVN_ERR_ASSERT(props_base_revision == text_base_revision);
 
       if (SVN_IS_VALID_REVNUM(props_base_revision))
