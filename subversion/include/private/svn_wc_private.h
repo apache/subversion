@@ -689,34 +689,33 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                     apr_pool_t *scratch_pool);
 
 
-/** This whole function is for legacy, and it sucks. It does not really
- * make sense to get the copy-from revision number without the copy-from
- * URL, but higher level code currently wants that. This should go away.
- * (This function serves to get away from entry_t->revision without having to
- * change the public API.)
+/**
+ * Return the location of the base for this node's next commit,
+ * reflecting any local tree modifications affecting this node.
  *
- * Get the base revision of @a local_abspath using @a wc_ctx.  If @a
+ * Get the base location of @a local_abspath using @a wc_ctx.  If @a
  * local_abspath is not in the working copy, return @c
  * SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * Return the revision number of the base for this node's next commit,
- * reflecting any local tree modifications affecting this node.
- *
- * If this node has no uncommitted changes, return the same revision as
+ * If this node has no uncommitted changes, return the same location as
  * svn_wc__node_get_base().
  *
  * If this node is moved-here or copied-here (possibly as part of a replace),
- * return the revision of the copy/move source. Do the same even when the node
+ * return the location of the copy/move source. Do the same even when the node
  * has been removed from a recursive copy (subpath excluded from the copy).
  *
- * Else, if this node is locally added, return SVN_INVALID_REVNUM, or if this
- * node is locally deleted or replaced, return the revert-base revision.
+ * Else, if this node is locally added, return SVN_INVALID_REVNUM/NULL, or
+ * if locally deleted or replaced, return the revert-base location.
  */
 svn_error_t *
-svn_wc__node_get_commit_base_rev(svn_revnum_t *base_revision,
-                                 svn_wc_context_t *wc_ctx,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool);
+svn_wc__node_get_commit_base(svn_revnum_t *revision,
+                             const char **repos_relpath,
+                             const char **repos_root_url,
+                             const char **repos_uuid,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /**
  * Fetch lock information (if any) for @a local_abspath using @a wc_ctx:
