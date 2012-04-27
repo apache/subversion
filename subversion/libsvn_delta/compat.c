@@ -383,7 +383,7 @@ process_actions(struct ev2_edit_baton *eb,
   if (change->action == RESTRUCTURE_ADD)
     {
       /* An add might be a replace. Grab the revnum we're replacing.  */
-      svn_revnum_t delete_revnum = change->deleting;
+      svn_revnum_t replaces_rev = change->deleting;
 
       kind = change->kind;
 
@@ -391,7 +391,7 @@ process_actions(struct ev2_edit_baton *eb,
         {
           SVN_ERR(svn_editor_copy(eb->editor, change->copyfrom_path,
                                   change->copyfrom_rev,
-                                  repos_relpath, delete_revnum));
+                                  repos_relpath, replaces_rev));
           /* Fall through to possibly make changes post-copy.  */
         }
       else
@@ -407,7 +407,7 @@ process_actions(struct ev2_edit_baton *eb,
               children = get_children(eb, repos_relpath, scratch_pool);
               SVN_ERR(svn_editor_add_directory(eb->editor, repos_relpath,
                                                children, props,
-                                               delete_revnum));
+                                               replaces_rev));
             }
           else
             {
@@ -423,7 +423,7 @@ process_actions(struct ev2_edit_baton *eb,
 
               SVN_ERR(svn_editor_add_file(eb->editor, repos_relpath,
                                           checksum, contents, props,
-                                          delete_revnum));
+                                          replaces_rev));
             }
 
           /* No further work possible on this node.  */
