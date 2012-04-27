@@ -306,7 +306,6 @@ fs_hotcopy(svn_fs_t *src_fs,
 
     {
       svn_fs_t *fs = dst_fs;
-      const char *path = dst_path;
 
       SVN_ERR(svn_fs__check_fs(fs, FALSE));
       SVN_ERR(initialize_fs_struct(fs));
