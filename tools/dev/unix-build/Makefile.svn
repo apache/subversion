@@ -30,6 +30,7 @@
 #   |______________________________________________________________|
 
 ENABLE_PERL_BINDINGS ?= yes
+THREADING ?= yes
 ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
@@ -292,7 +293,7 @@ $(APR_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifdef THREADING
+ifeq ($(THREADING),yes)
 THREADS_FLAG=--enable-threads
 else
 THREADS_FLAG=--disable-threads
@@ -779,7 +780,7 @@ $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
 
-ifdef THREADING
+ifeq ($(THREADING),yes)
 THREADSAFE_FLAG=--enable-threadsafe
 else
 THREADSAFE_FLAG=--disable-threadsafe
