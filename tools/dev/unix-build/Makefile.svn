@@ -305,11 +305,6 @@ endif
 
 # configure apr
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
-	cp $(APR_SRCDIR)/build/apr_hints.m4 \
-		$(APR_SRCDIR)/build/apr_hints.m4.orig
-	cat $(APR_SRCDIR)/build/apr_hints.m4.orig \
-		| sed -e '/^.*APR_ADDTO(CPPFLAGS, \[-D_POSIX_THREADS\]).*$$/d' \
-			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
