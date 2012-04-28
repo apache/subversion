@@ -1059,7 +1059,7 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
-                "snni", /* symlink_target, file_external, moved_to, moved_here */
+                "snnd", /* symlink_target, file_external, moved_to, moved_here */
                 wcroot->wc_id, local_relpath,
                 piwb->op_depth,
                 parent_relpath,
@@ -1073,7 +1073,7 @@ insert_working_node(void *baton,
                 /* Note: incomplete nodes may have a NULL target.  */
                 (piwb->kind == svn_kind_symlink)
                             ? piwb->target : NULL,
-                (apr_int64_t)piwb->moved_here));
+                piwb->moved_here));
 
   if (piwb->kind == svn_kind_file)
     {
@@ -3124,8 +3124,8 @@ svn_wc__db_committable_externals_below(apr_array_header_t **externals,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
-                            (apr_int64_t)(immediates_only ? 1 : 0)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            (immediates_only ? 1 : 0)));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -3676,7 +3676,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                * Perform a normal copy operation in these cases. */
               if (!(status == svn_wc__db_status_added ||
                     (status == svn_wc__db_status_copied && op_root)))
-                SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
+                SVN_ERR(svn_sqlite__bind_int(stmt, 7, 1));
             }
           else
             {
@@ -3696,7 +3696,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
               SVN_ERR(svn_sqlite__step(&have_row, info_stmt));
               SVN_ERR_ASSERT(have_row);
               if (svn_sqlite__column_boolean(info_stmt, 15))
-                SVN_ERR(svn_sqlite__bind_int64(stmt, 7, 1));
+                SVN_ERR(svn_sqlite__bind_int(stmt, 7, 1));
               SVN_ERR(svn_sqlite__reset(info_stmt));
             }
         }
@@ -3968,13 +3968,13 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
 
       /* Perhaps we should avoid setting moved_here to 0 and leave it
          null instead? */
-      SVN_ERR(svn_sqlite__bindf(stmt, "issdsti",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issdstd",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_dirname(dst_relpath, iterpool),
                         presence_map, dst_presence,
-                        (apr_int64_t)(is_move ? 1 : 0)));
+                        (is_move ? 1 : 0)));
 
       if (src_op_depth > 0)
         SVN_ERR(svn_sqlite__bind_int(stmt, 8, src_op_depth));
@@ -5659,7 +5659,7 @@ revert_list_read(void *baton,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      svn_boolean_t is_actual = (svn_sqlite__column_int64(stmt, 5) != 0);
+      svn_boolean_t is_actual = svn_sqlite__column_boolean(stmt, 5);
       svn_boolean_t another_row = FALSE;
 
       if (is_actual)
@@ -11720,8 +11720,8 @@ wclock_obtain_cb(void *baton,
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_WC_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
-                            (apr_int64_t) bt->levels_to_lock));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            bt->levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
