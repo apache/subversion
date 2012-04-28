@@ -851,10 +851,10 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
 
 /* Set permissions PERMS on the FILE. This is a cheaper variant of the
  * file_perms_set wrapper() function because no locale-dependent string
- * conversion is required.
+ * conversion is required. POOL will be used for allocations.
  */
 static svn_error_t *
-file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms, apr_pool_t *pool)
 {
   const char *fname_apr;
   apr_status_t status;
@@ -866,7 +866,7 @@ file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
   status = apr_file_perms_set(fname_apr, perms);
   if (status)
     return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
-                              fname_apr);
+                              svn_dirent_local_style(fname_apr, pool));
   else
     return SVN_NO_ERROR;
 }
@@ -1911,11 +1911,11 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
         case APR_FLOCK_SHARED:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get shared lock on file '%s'"),
-                                    fname);
+                                    svn_dirent_local_style(fname, pool));
         case APR_FLOCK_EXCLUSIVE:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get exclusive lock on file '%s'"),
-                                    fname);
+                                    svn_dirent_local_style(fname, pool));
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1948,7 +1948,8 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
   /* The actual unlock attempt. */
   apr_err = apr_file_unlock(lockfile_handle);
   if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"), fname);
+    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
+                              svn_dirent_local_style(fname, pool));
   
 /* On Windows and OS/2 file locks are automatically released when
    the file handle closes */
@@ -4296,7 +4297,7 @@ svn_io_open_unique_file3(apr_file_t **file,
   if (!using_system_temp_dir)
     {
       SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-      SVN_ERR(file_perms_set2(tempfile, perms));
+      SVN_ERR(file_perms_set2(tempfile, perms, scratch_pool));
     }
 #endif
 
