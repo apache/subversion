@@ -1058,15 +1058,12 @@ add_directory_cb(void *baton,
                  apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
-
-    change->action = RESTRUCTURE_ADD;
-    change->kind = svn_kind_dir;
-    change->deleting = replaces_rev;
-    change->props = apr_hash_copy(eb->edit_pool, props);
-  }
+  change->action = RESTRUCTURE_ADD;
+  change->kind = svn_kind_dir;
+  change->deleting = replaces_rev;
+  change->props = apr_hash_copy(eb->edit_pool, props);
 
   return SVN_NO_ERROR;
 }
@@ -1085,6 +1082,7 @@ add_file_cb(void *baton,
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
   svn_checksum_t *md5_checksum;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
   /* We may need to re-checksum these contents */
   if (!(checksum && checksum->kind == svn_checksum_md5))
@@ -1099,16 +1097,12 @@ add_file_cb(void *baton,
                                  eb->edit_pool, scratch_pool));
   SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL, scratch_pool));
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
-
-    change->action = RESTRUCTURE_ADD;
-    change->kind = svn_kind_file;
-    change->deleting = replaces_rev;
-    change->props = apr_hash_copy(eb->edit_pool, props);
-    change->contents_abspath = tmp_filename;
-    change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
-  }
+  change->action = RESTRUCTURE_ADD;
+  change->kind = svn_kind_file;
+  change->deleting = replaces_rev;
+  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->contents_abspath = tmp_filename;
+  change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1124,16 +1118,13 @@ add_symlink_cb(void *baton,
 {
 #if 0
   struct editor_baton *eb = baton;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
-
-    change->action = RESTRUCTURE_ADD;
-    change->kind = svn_kind_symlink;
-    change->deleting = replaces_rev;
-    change->props = apr_hash_copy(eb->edit_pool, props);
-    /* ### target  */
-  }
+  change->action = RESTRUCTURE_ADD;
+  change->kind = svn_kind_symlink;
+  change->deleting = replaces_rev;
+  change->props = apr_hash_copy(eb->edit_pool, props);
+  /* ### target  */
 #endif
 
   SVN__NOT_IMPLEMENTED();
@@ -1149,14 +1140,11 @@ add_absent_cb(void *baton,
               apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
-
-    change->action = RESTRUCTURE_ADD_ABSENT;
-    change->kind = kind;
-    change->deleting = replaces_rev;
-  }
+  change->action = RESTRUCTURE_ADD_ABSENT;
+  change->kind = kind;
+  change->deleting = replaces_rev;
 
   return SVN_NO_ERROR;
 }
@@ -1170,18 +1158,15 @@ alter_directory_cb(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
   /* ### should we verify the kind is truly a directory?  */
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
-
-    /* Note: this node may already have information in CHANGE as a result
-       of an earlier copy/move operation.  */
-    change->kind = svn_kind_dir;
-    change->changing = revision;
-    change->props = apr_hash_copy(eb->edit_pool, props);
-  }
+  /* Note: this node may already have information in CHANGE as a result
+     of an earlier copy/move operation.  */
+  change->kind = svn_kind_dir;
+  change->changing = revision;
+  change->props = apr_hash_copy(eb->edit_pool, props);
 
   return SVN_NO_ERROR;
 }
@@ -1200,6 +1185,7 @@ alter_file_cb(void *baton,
   const char *tmp_filename;
   svn_stream_t *tmp_stream;
   svn_checksum_t *md5_checksum;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
   /* ### should we verify the kind is truly a file?  */
 
@@ -1221,22 +1207,18 @@ alter_file_cb(void *baton,
                                scratch_pool));
     }
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
+  /* Note: this node may already have information in CHANGE as a result
+     of an earlier copy/move operation.  */
 
-    /* Note: this node may already have information in CHANGE as a result
-       of an earlier copy/move operation.  */
-
-    change->kind = svn_kind_file;
-    change->changing = revision;
-    if (props != NULL)
-      change->props = apr_hash_copy(eb->edit_pool, props);
-    if (contents != NULL)
-      {
-        change->contents_abspath = tmp_filename;
-        change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
-      }
-  }
+  change->kind = svn_kind_file;
+  change->changing = revision;
+  if (props != NULL)
+    change->props = apr_hash_copy(eb->edit_pool, props);
+  if (contents != NULL)
+    {
+      change->contents_abspath = tmp_filename;
+      change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1266,14 +1248,11 @@ delete_cb(void *baton,
           apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  struct change_node *change = insert_change(relpath, eb->changes);
 
-  {
-    struct change_node *change = insert_change(relpath, eb->changes);
-
-    change->action = RESTRUCTURE_DELETE;
-    /* change->kind = svn_kind_unknown;  */
-    change->deleting = revision;
-  }
+  change->action = RESTRUCTURE_DELETE;
+  /* change->kind = svn_kind_unknown;  */
+  change->deleting = revision;
 
   return SVN_NO_ERROR;
 }
@@ -1288,25 +1267,22 @@ copy_cb(void *baton,
         apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  struct change_node *change = insert_change(dst_relpath, eb->changes);
 
-  {
-    struct change_node *change = insert_change(dst_relpath, eb->changes);
+  change->action = RESTRUCTURE_ADD;
+  /* change->kind = svn_kind_unknown;  */
+  change->deleting = replaces_rev;
+  change->copyfrom_path = apr_pstrdup(eb->edit_pool, src_relpath);
+  change->copyfrom_rev = src_revision;
 
-    change->action = RESTRUCTURE_ADD;
-    /* change->kind = svn_kind_unknown;  */
-    change->deleting = replaces_rev;
-    change->copyfrom_path = apr_pstrdup(eb->edit_pool, src_relpath);
-    change->copyfrom_rev = src_revision;
+  /* We need the source's kind to know whether to call add_directory()
+     or add_file() later on.  */
+  SVN_ERR(eb->fetch_kind_func(&change->kind, eb->fetch_kind_baton,
+                              change->copyfrom_path,
+                              change->copyfrom_rev,
+                              scratch_pool));
 
-    /* We need the source's kind to know whether to call add_directory()
-       or add_file() later on.  */
-    SVN_ERR(eb->fetch_kind_func(&change->kind, eb->fetch_kind_baton,
-                                change->copyfrom_path,
-                                change->copyfrom_rev,
-                                scratch_pool));
-
-    /* Note: this node may later have alter_*() called on it.  */
-  }
+  /* Note: this node may later have alter_*() called on it.  */
 
   return SVN_NO_ERROR;
 }
@@ -1321,33 +1297,30 @@ move_cb(void *baton,
         apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
+  struct change_node *change;
 
   /* Remap a move into a DELETE + COPY.  */
-  {
-    struct change_node *change = insert_change(src_relpath, eb->changes);
 
-    change->action = RESTRUCTURE_DELETE;
-    /* change->kind = svn_kind_unknown;  */
-    change->deleting = src_revision;
-  }
-  {
-    struct change_node *change = insert_change(dst_relpath, eb->changes);
+  change = insert_change(src_relpath, eb->changes);
+  change->action = RESTRUCTURE_DELETE;
+  /* change->kind = svn_kind_unknown;  */
+  change->deleting = src_revision;
 
-    change->action = RESTRUCTURE_ADD;
-    /* change->kind = svn_kind_unknown;  */
-    change->deleting = replaces_rev;
-    change->copyfrom_path = apr_pstrdup(eb->edit_pool, src_relpath);
-    change->copyfrom_rev = src_revision;
+  change = insert_change(dst_relpath, eb->changes);
+  change->action = RESTRUCTURE_ADD;
+  /* change->kind = svn_kind_unknown;  */
+  change->deleting = replaces_rev;
+  change->copyfrom_path = apr_pstrdup(eb->edit_pool, src_relpath);
+  change->copyfrom_rev = src_revision;
 
-    /* We need the source's kind to know whether to call add_directory()
-       or add_file() later on.  */
-    SVN_ERR(eb->fetch_kind_func(&change->kind, eb->fetch_kind_baton,
-                                change->copyfrom_path,
-                                change->copyfrom_rev,
-                                scratch_pool));
+  /* We need the source's kind to know whether to call add_directory()
+     or add_file() later on.  */
+  SVN_ERR(eb->fetch_kind_func(&change->kind, eb->fetch_kind_baton,
+                              change->copyfrom_path,
+                              change->copyfrom_rev,
+                              scratch_pool));
 
-    /* Note: this node may later have alter_*() called on it.  */
-  }
+  /* Note: this node may later have alter_*() called on it.  */
 
   return SVN_NO_ERROR;
 }
