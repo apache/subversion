@@ -1085,8 +1085,7 @@ insert_working_node(void *baton,
     {
       SVN_ERR(svn_sqlite__bind_int64(stmt, 5, piwb->original_repos_id));
       SVN_ERR(svn_sqlite__bind_text(stmt, 6, piwb->original_repos_relpath));
-      /* ### Shouldn't this use __bind_revnum?  (If not, say why.) */
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 7, piwb->original_revnum));
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 7, piwb->original_revnum));
     }
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
