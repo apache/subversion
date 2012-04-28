@@ -2132,7 +2132,7 @@ drive_changes(const struct editor_baton *eb,
 {
   struct change_node *change;
   apr_array_header_t *paths = apr_array_make(scratch_pool, 10,
-                                             sizeof(const char *));;
+                                             sizeof(const char *));
   apr_hash_index_t *hi;
 
   /* If we never opened a root baton, then the caller aborted the editor
