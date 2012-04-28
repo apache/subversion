@@ -397,7 +397,7 @@ check_cancel(svn_editor_t *editor)
       END_CALLBACK(editor);
     }
 
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -448,7 +448,7 @@ svn_editor_add_directory(svn_editor_t *editor,
 #endif
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -486,7 +486,7 @@ svn_editor_add_file(svn_editor_t *editor,
   CLEAR_INCOMPLETE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -519,7 +519,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
   CLEAR_INCOMPLETE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -550,7 +550,7 @@ svn_editor_add_absent(svn_editor_t *editor,
   CLEAR_INCOMPLETE(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -581,7 +581,7 @@ svn_editor_alter_directory(svn_editor_t *editor,
   MARK_COMPLETED(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -619,7 +619,7 @@ svn_editor_alter_file(svn_editor_t *editor,
   MARK_COMPLETED(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -652,7 +652,7 @@ svn_editor_alter_symlink(svn_editor_t *editor,
   MARK_COMPLETED(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -680,7 +680,7 @@ svn_editor_delete(svn_editor_t *editor,
   MARK_COMPLETED(editor, relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -713,7 +713,7 @@ svn_editor_copy(svn_editor_t *editor,
   CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -748,7 +748,7 @@ svn_editor_move(svn_editor_t *editor,
   CLEAR_INCOMPLETE(editor, dst_relpath);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -795,7 +795,7 @@ svn_editor_rotate(svn_editor_t *editor,
 #endif
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -819,7 +819,7 @@ svn_editor_complete(svn_editor_t *editor)
   MARK_FINISHED(editor);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
 
 
@@ -840,5 +840,5 @@ svn_editor_abort(svn_editor_t *editor)
   MARK_FINISHED(editor);
 
   svn_pool_clear(editor->scratch_pool);
-  return err;
+  return svn_error_trace(err);
 }
