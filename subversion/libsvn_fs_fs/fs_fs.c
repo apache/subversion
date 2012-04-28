@@ -59,6 +59,7 @@
 #include "rep-cache.h"
 #include "temp_serializer.h"
 
+#include "private/svn_string_private.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -233,6 +234,12 @@ static APR_INLINE const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
+}
+
+static const char *
+path_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_REVPROP_GENERATION, pool);
 }
 
 static const char *
@@ -2800,6 +2807,95 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
+/* Revprop caching management.
+ *
+ * Revprop caching needs to be activated and will be deactivated for the
+ * respective FS instance if the necessary infrastructure could not be
+ * initialized.  In deactivated mode, there is almost no runtime overhead
+ * associated with revprop caching.  As long as no revprops are being read
+ * or changed, revprop caching imposes no overhead.
+ *
+ * When activated, we cache revprops using (revision, generation) pairs
+ * as keys with the generation being incremented upon every revprop change.
+ * Since the cache is process-local, the generation needs to be tracked
+ * for at least as long as the process lives but may be reset afterwards.
+ *
+ * To track the revprop generation, we use two-layer approach. On the lower
+ * level, we use named atomics to have a system-wide consistent value for
+ * the current revprop generation.  However, those named atomics will only
+ * remain valid for as long as at least one process / thread in the system
+ * accesses revprops in the respective repository.  The underlying shared
+ * memory gets cleaned up afterwards.
+ *
+ * On the second level, we will use a persistent file to track the latest
+ * revprop generation.  It will be written upon each revprop change but
+ * only be read if we are the first process to initialize the named atomics
+ * with that value.
+ *
+ * The overhead for the second and following accesses to revprops is
+ * almost zero on most systems.
+ */
+
+/* Read revprop generation as stored on disk for repository FS. The result
+ * is returned in *CURRENT. Default to 2 if no such file is available.
+ */
+static svn_error_t *
+read_revprop_generation_file(apr_int64_t *current,
+                             svn_fs_t *fs,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_file_t *file;
+  char buf[80];
+  apr_size_t len;
+  const char *path = path_revprop_generation(fs, pool);
+
+  err = svn_io_file_open(&file, path,
+                         APR_READ | APR_BUFFERED,
+                         APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      *current = 2;
+
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  len = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
+
+  /* Check that the first line contains only digits. */
+  SVN_ERR(check_file_buffer_numeric(buf, 0, path,
+                                    "Revprop Generation", pool));
+  SVN_ERR(svn_cstring_atoi64(current, buf));
+
+  return svn_io_file_close(file, pool);
+}
+
+/* Write the CURRENT revprop generation to disk for repository FS.
+ */
+static svn_error_t *
+write_revprop_generation_file(svn_fs_t *fs,
+                              apr_int64_t current,
+                              apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *tmp_path;
+
+  char buf[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__i64toa(buf, current);
+  buf[len] = '\n';
+
+  SVN_ERR(svn_io_open_unique_file3(&file, &tmp_path, fs->path,
+                                   svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_io_file_write_full(file, buf, len + 1, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return move_into_place(tmp_path, path_revprop_generation(fs, pool),
+                         tmp_path, pool);
+}
+
 /* Make sure the revprop_namespace member in FS is set. */
 static svn_error_t *
 ensure_revprop_namespace(svn_fs_t *fs)
@@ -2815,19 +2911,39 @@ ensure_revprop_namespace(svn_fs_t *fs)
     : SVN_NO_ERROR;
 }
 
-/* Make sure the revprop_generation member in FS is set. */
+/* Make sure the revprop_generation member in FS is set and, if necessary,
+ * initialized with the latest value stored on disk.
+ */
 static svn_error_t *
-ensure_revprop_generation(svn_fs_t *fs)
+ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR(ensure_revprop_namespace(fs));
-  return ffd->revprop_generation == NULL
-    ? svn_named_atomic__get(&ffd->revprop_generation,
-                            ffd->revprop_namespace,
-                            ATOMIC_REVPROP_GENERATION,
-                            TRUE)
-    : SVN_NO_ERROR;
+  if (ffd->revprop_generation == NULL)
+    {
+      apr_int64_t current = 0;
+      
+      SVN_ERR(svn_named_atomic__get(&ffd->revprop_generation,
+                                    ffd->revprop_namespace,
+                                    ATOMIC_REVPROP_GENERATION,
+                                    TRUE));
+
+      /* If the generation is at 0, we just created a new namespace
+       * (it would be at least 2 otherwise). Read the lastest generation
+       * from disk and if we are the first one to initialize the atomic
+       * (i.e. is still 0), set it to the value just gotten.
+       */
+      SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
+      if (current == 0)
+        {
+          SVN_ERR(read_revprop_generation_file(&current, fs, pool));
+          SVN_ERR(svn_named_atomic__cmpxchg(NULL, current, 0,
+                                            ffd->revprop_generation));
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* Make sure the revprop_timeout member in FS is set. */
@@ -2848,7 +2964,7 @@ ensure_revprop_timeout(svn_fs_t *fs)
 /* Test whether revprop cache and necessary infrastructure are
    available in FS. */
 static svn_boolean_t
-has_revprop_cache(svn_fs_t *fs)
+has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *error;
@@ -2868,7 +2984,7 @@ has_revprop_cache(svn_fs_t *fs)
     }
 
   /* try to access our SHM-backed infrastructure */
-  error = ensure_revprop_generation(fs);
+  error = ensure_revprop_generation(fs, pool);
   if (error)
     {
       /* failure -> disable revprop cache for good */
@@ -2887,13 +3003,14 @@ has_revprop_cache(svn_fs_t *fs)
    Use the access object in FS to set the shared mem values. */
 static svn_error_t *
 read_revprop_generation(apr_int64_t *generation,
-                        svn_fs_t *fs)
+                        svn_fs_t *fs,
+                        apr_pool_t *pool)
 {
   apr_int64_t current = 0;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* read the current revprop generation number */
-  SVN_ERR(ensure_revprop_generation(fs));
+  SVN_ERR(ensure_revprop_generation(fs, pool));
   SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
 
   /* is an unfinished revprop write under the way? */
@@ -2930,7 +3047,7 @@ read_revprop_generation(apr_int64_t *generation,
    readers shall recover from that state & re-read revprops.
    Use the access object in FS to set the shared mem value. */
 static svn_error_t *
-begin_revprop_change(svn_fs_t *fs)
+begin_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
 {
   apr_int64_t current;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2944,7 +3061,7 @@ begin_revprop_change(svn_fs_t *fs)
   /* set the revprop generation to an odd value to indicate
    * that a write is in progress
    */
-  SVN_ERR(ensure_revprop_generation(fs));
+  SVN_ERR(ensure_revprop_generation(fs, pool));
   do
     {
       SVN_ERR(svn_named_atomic__add(&current,
@@ -2961,7 +3078,7 @@ begin_revprop_change(svn_fs_t *fs)
    b) the write process has been completed (no recovery required)
    Use the access object in FS to set the shared mem value. */
 static svn_error_t *
-end_revprop_change(svn_fs_t *fs)
+end_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
 {
   apr_int64_t current = 1;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2969,7 +3086,7 @@ end_revprop_change(svn_fs_t *fs)
   /* set the revprop generation to an even value to indicate
    * that a write has been completed
    */
-  SVN_ERR(ensure_revprop_generation(fs));
+  SVN_ERR(ensure_revprop_generation(fs, pool));
   do
     {
       SVN_ERR(svn_named_atomic__add(&current,
@@ -2978,7 +3095,11 @@ end_revprop_change(svn_fs_t *fs)
     }
   while (current % 2);
 
-  return SVN_NO_ERROR;
+  /* Save the latest generation to disk. FS is currently in a "locked"
+   * state such that we can be sure the be the only ones to write that
+   * file.
+   */
+  return write_revprop_generation_file(fs, current, pool);
 }
 
 /* Set the revision property list of revision REV in filesystem FS to
@@ -3000,7 +3121,7 @@ set_revision_proplist(svn_fs_t *fs,
       svn_node_kind_t kind = svn_node_none;
 
       /* test whether revprops already exist for this revision */
-      if (has_revprop_cache(fs))
+      if (has_revprop_cache(fs, pool))
         SVN_ERR(svn_io_check_path(final_path, &kind, pool));
 
       /* ### do we have a directory sitting around already? we really shouldn't
@@ -3020,13 +3141,13 @@ set_revision_proplist(svn_fs_t *fs,
       /* Now, we may actually be replacing revprops. Make sure that all other
          threads and processes will know about this. */
       if (kind != svn_node_none)
-        SVN_ERR(begin_revprop_change(fs));
+        SVN_ERR(begin_revprop_change(fs, pool));
 
       SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
 
       /* Indicate that the update (if relevant) has been completed. */
       if (kind != svn_node_none)
-        SVN_ERR(end_revprop_change(fs));
+        SVN_ERR(end_revprop_change(fs, pool));
     }
 
   return SVN_NO_ERROR;
@@ -3045,12 +3166,12 @@ revision_proplist(apr_hash_t **proplist_p,
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   /* Try cache lookup first. */
-  if (has_revprop_cache(fs))
+  if (has_revprop_cache(fs, pool))
     {
       apr_int64_t generation;
       svn_boolean_t is_cached;
 
-      SVN_ERR(read_revprop_generation(&generation, fs));
+      SVN_ERR(read_revprop_generation(&generation, fs, pool));
 
       key = svn_fs_fs__combine_two_numbers(rev, generation, pool);
       SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
@@ -3114,7 +3235,7 @@ revision_proplist(apr_hash_t **proplist_p,
     }
 
   /* Cache the result, if caching has been activated. */
-  if (has_revprop_cache(fs))
+  if (has_revprop_cache(fs, pool))
     SVN_ERR(svn_cache__set(ffd->revprop_cache, key, proplist, pool));
 
   *proplist_p = proplist;
