@@ -341,6 +341,36 @@ return_atomic(svn_named_atomic__t **atomic,
 /* Implement API */
 
 svn_boolean_t
+svn_named_atomic__is_supported(void)
+{
+#ifdef _WIN32
+  static svn_tristate_t result = svn_tristate_unknown;
+
+  if (result == svn_tristate_unknown)
+    {
+      /* APR SHM implementation requires the creation of global objects */
+      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
+                                         NULL,
+                                         PAGE_READONLY,
+                                         0,
+                                         1,
+                                         "Global\\__RandomXZY_svn");
+      if (handle != NULL)
+        {
+          CloseHandle(handle);
+          result = svn_tristate_true;
+        }
+      else
+        result = svn_tristate_false;
+    }
+
+  return result == svn_tristate_true ? TRUE : FALSE;
+#else
+  return TRUE;
+#endif
+}
+
+svn_boolean_t
 svn_named_atomic__is_efficient(void)
 {
   return NA_SYNCHRONIZE_IS_FAST;
