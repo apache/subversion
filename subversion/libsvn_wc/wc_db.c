@@ -105,7 +105,7 @@
 
 /* Check if the column contains actual properties. The empty set of properties
    is stored as "()", so we have properties if the size of the column is
-   larger then 2. */
+   larger than 2. */
 #define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
                  (svn_sqlite__column_bytes(stmt, i) > 2)
 
