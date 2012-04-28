@@ -1444,8 +1444,7 @@ insert_node(svn_sqlite__db_t *sdb,
                                      node->repos_id));
       SVN_ERR(svn_sqlite__bind_text(stmt, 6,
                                     node->repos_relpath));
-      /* ### Shouldn't this use __bind_revnum?  (If not, say why.) */
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 7, node->revision));
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 7, node->revision));
     }
 
   if (node->presence == svn_wc__db_status_normal)
