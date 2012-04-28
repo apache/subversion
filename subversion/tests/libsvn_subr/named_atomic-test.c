@@ -45,37 +45,6 @@ static int hw_thread_count = 0;
  * (will be calibrated to about 1s runtime)*/
 static int suggested_iterations = 0;
 
-/* Return FALSE if we can't create SHMs due to missing privileges
- */
-static svn_boolean_t
-has_sufficient_privileges(void)
-{
-#ifdef _WIN32
-  static svn_tristate_t result = svn_tristate_unknown;
-
-  if (result == svn_tristate_unknown)
-    {
-      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
-                                         NULL,
-                                         PAGE_READONLY,
-                                         0,
-                                         1,
-                                         "Global\\__RandomXZY_svn");
-      if (handle != NULL)
-        {
-          CloseHandle(handle);
-          result = svn_tristate_true;
-        }
-      else
-        result = svn_tristate_false;
-    }
-
-  return result == svn_tristate_true ? TRUE : FALSE;
-#else
-  return TRUE;
-#endif
-}
-
 /* If possible, translate PROC to a global path and set DIRECTORY to
  * the current directory.
  */
@@ -174,7 +143,7 @@ init_test_shm(apr_pool_t *pool)
     }
 
   /* skip tests if the current user does not have the required privileges */
-  if (!has_sufficient_privileges())
+  if (!svn_named_atomic__is_supported())
     return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
                               "user has insufficient privileges");
 
