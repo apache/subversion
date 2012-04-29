@@ -439,6 +439,8 @@ static svn_error_t *write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   apr_size_t written;
 
+  /* SVN_INT64_BUFFER_SIZE includes space for a terminating NUL that
+   * svn__ui64toa will always append. */
   if (conn->write_pos + SVN_INT64_BUFFER_SIZE >= sizeof(conn->write_buf))
     SVN_ERR(writebuf_flush(conn, pool));
 
