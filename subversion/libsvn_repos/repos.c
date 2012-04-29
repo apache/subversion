@@ -1184,9 +1184,9 @@ create_repos_structure(svn_repos_t *repos,
   /* Write the top-level README file. */
   {
     const char * const readme_header =
-      "This is a Subversion repository; use the 'svnadmin' tool to examine"  NL
-      "it.  Do not add, delete, or modify files here unless you know how"    NL
-      "to avoid corrupting the repository."                                  NL
+      "This is a Subversion repository; use the 'svnadmin' and 'svnlook' "   NL
+      "tools to examine it.  Do not add, delete, or modify files here "      NL
+      "unless you know how to avoid corrupting the repository."              NL
       ""                                                                     NL;
     const char * const readme_bdb_insert =
       "The directory \"" SVN_REPOS__DB_DIR "\" contains a Berkeley DB environment."  NL
