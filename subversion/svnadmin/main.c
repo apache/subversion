@@ -115,7 +115,7 @@ open_repos(svn_repos_t **repos,
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                APR_HASH_KEY_STRING, "1");
   apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-               APR_HASH_KEY_STRING, "0");
+               APR_HASH_KEY_STRING, "1");
 
   /* now, open the requested repository */
   SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
