@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_editor.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
@@ -102,6 +103,62 @@ add_new_props(svn_fs_root_t *root,
 }
 
 
+static svn_error_t *
+alter_props(svn_fs_root_t *root,
+            const char *fspath,
+            apr_hash_t *props,
+            apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *old_props;
+  apr_array_header_t *propdiffs;
+  int i;
+
+  SVN_ERR(svn_fs_node_proplist(&old_props, root, fspath, scratch_pool));
+
+  SVN_ERR(svn_prop_diffs(&propdiffs, props, old_props, scratch_pool));
+
+  for (i = 0; i < propdiffs->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
+
+      svn_pool_clear(iterpool);
+
+      /* Add, change, or delete properties.  */
+      SVN_ERR(svn_fs_change_node_prop(root, fspath, prop->name, prop->value,
+                                      iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_text(svn_fs_root_t *root,
+         const char *fspath,
+         const svn_checksum_t *checksum,
+         svn_stream_t *contents,
+         svn_cancel_func_t cancel_func,
+         void *cancel_baton,
+         apr_pool_t *scratch_pool)
+{
+  svn_stream_t *fs_contents;
+
+  /* ### We probably don't have an MD5 checksum, so no digest is available
+     ### for svn_fs_apply_text() to validate. It would be nice to have an
+     ### FS API that takes our CHECKSUM/CONTENTS pair (and PROPS!).  */
+  SVN_ERR(svn_fs_apply_text(&fs_contents, root, fspath,
+                            NULL /* result_checksum */,
+                            scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, fs_contents,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements svn_editor_cb_add_directory_t */
 static svn_error_t *
 add_directory_cb(void *baton,
@@ -121,6 +178,7 @@ add_directory_cb(void *baton,
   SVN_ERR(get_root(&root, eb));
 
   /* ### validate REPLACES_REV  */
+  /* ### we probably have to delete first?  */
 
   SVN_ERR(svn_fs_make_dir(root, fspath, scratch_pool));
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
@@ -142,25 +200,16 @@ add_file_cb(void *baton,
   struct edit_baton *eb = baton;
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
-  svn_stream_t *fs_contents;
 
   SVN_ERR(get_root(&root, eb));
 
-  /* ### do something with CHECKSUM  */
   /* ### validate REPLACES_REV  */
+  /* ### we probably have to delete first?  */
 
   SVN_ERR(svn_fs_make_file(root, fspath, scratch_pool));
 
-  /* ### We probably don't have an MD5 checksum, so no digest is available
-     ### for svn_fs_apply_text() to validate. It would be nice to have an
-     ### FS API that takes our CONTENTS/CHECKSUM pair (and PROPS!).  */
-  SVN_ERR(svn_fs_apply_text(&fs_contents, root, fspath,
-                            NULL /* result_checksum */,
-                            scratch_pool));
-  SVN_ERR(svn_stream_copy3(contents, fs_contents,
-                           eb->cancel_func, eb->cancel_baton,
-                           scratch_pool));
-
+  SVN_ERR(set_text(root, fspath, checksum, contents,
+                   eb->cancel_func, eb->cancel_baton, scratch_pool));
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -184,6 +233,7 @@ add_symlink_cb(void *baton,
   SVN_ERR(get_root(&root, eb));
 
   /* ### validate REPLACES_REV  */
+  /* ### we probably have to delete first?  */
 
   /* ### we probably need to construct a file with specific contents
      ### (until the FS grows some symlink APIs)  */
@@ -229,8 +279,16 @@ alter_directory_cb(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *fspath = FSPATH(relpath, scratch_pool);
+  svn_fs_root_t *root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(get_root(&root, eb));
+
+  /* ### validate the revision  */
+
+  SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -245,8 +303,18 @@ alter_file_cb(void *baton,
               apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *fspath = FSPATH(relpath, scratch_pool);
+  svn_fs_root_t *root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(get_root(&root, eb));
+
+  /* ### validate the revision  */
+
+  SVN_ERR(set_text(root, fspath, checksum, contents,
+                   eb->cancel_func, eb->cancel_baton, scratch_pool));
+  SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -273,8 +341,16 @@ delete_cb(void *baton,
           apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *fspath = FSPATH(relpath, scratch_pool);
+  svn_fs_root_t *root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(get_root(&root, eb));
+
+  /* ### validate the revision  */
+
+  SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -288,8 +364,22 @@ copy_cb(void *baton,
         apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *src_fspath = FSPATH(src_relpath, scratch_pool);
+  const char *dst_fspath = FSPATH(dst_relpath, scratch_pool);
+  svn_fs_root_t *root;
+  svn_fs_root_t *src_root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(get_root(&root, eb));
+
+  /* ### validate the REPLACES_REV  */
+  /* ### can we copy over the top of something, or delete first?  */
+
+  SVN_ERR(svn_fs_revision_root(&src_root, svn_fs_root_fs(root), src_revision,
+                               scratch_pool));
+  SVN_ERR(svn_fs_copy(src_root, src_fspath, root, dst_fspath, scratch_pool));
+  svn_fs_close_root(src_root);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -303,8 +393,29 @@ move_cb(void *baton,
         apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *src_fspath = FSPATH(src_relpath, scratch_pool);
+  const char *dst_fspath = FSPATH(dst_relpath, scratch_pool);
+  svn_fs_root_t *root;
+  svn_fs_root_t *src_root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_ERR(get_root(&root, eb));
+
+  /* ### validate the SRC_REVISION  */
+  /* ### validate the REPLACES_REV  */
+  /* ### can we copy over the top of something, or delete first?  */
+
+  /* ### would be nice to have svn_fs_move()  */
+
+  /* Copy the src to the dst. */
+  SVN_ERR(svn_fs_revision_root(&src_root, svn_fs_root_fs(root), src_revision,
+                               scratch_pool));
+  SVN_ERR(svn_fs_copy(src_root, src_fspath, root, dst_fspath, scratch_pool));
+  svn_fs_close_root(src_root);
+
+  /* Notice: we're deleting the src repos path from the dst root. */
+  SVN_ERR(svn_fs_delete(root, src_fspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
