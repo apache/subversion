@@ -211,6 +211,14 @@ svn_stream_close(svn_stream_t *stream)
   return stream->close_fn(stream->baton);
 }
 
+svn_error_t *
+svn_stream_puts(svn_stream_t *stream,
+                const char *str)
+{
+  apr_size_t len;
+  len = strlen(str);
+  return svn_stream_write(stream, str, &len);
+}
 
 svn_error_t *
 svn_stream_printf(svn_stream_t *stream,
@@ -220,7 +228,6 @@ svn_stream_printf(svn_stream_t *stream,
 {
   const char *message;
   va_list ap;
-  apr_size_t len;
 
   /* any format controls or is this a static string? */
   if (strchr(fmt, '%'))
@@ -232,8 +239,7 @@ svn_stream_printf(svn_stream_t *stream,
   else
     message = fmt;
 
-  len = strlen(message);
-  return svn_stream_write(stream, message, &len);
+  return svn_stream_puts(stream, message);
 }
 
 
