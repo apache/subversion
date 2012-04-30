@@ -2391,7 +2391,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                               noderev->copyroot_path));
 
   if (noderev->is_fresh_txn_root)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
+    SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
 
   if (include_mergeinfo)
     {
@@ -2401,10 +2401,10 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                                   noderev->mergeinfo_count));
 
       if (noderev->has_mergeinfo)
-        SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
+        SVN_ERR(svn_stream_puts(outfile, HEADER_MINFO_HERE ": y\n"));
     }
 
-  return svn_stream_printf(outfile, pool, "\n");
+  return svn_stream_puts(outfile, "\n");
 }
 
 svn_error_t *
@@ -5970,7 +5970,7 @@ rep_write_contents_close(void *baton)
   else
     {
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
+      SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
 
       b->noderev->data_rep = rep;
     }
@@ -6185,7 +6185,7 @@ write_hash_rep(representation_t *rep,
   stream = svn_stream_create(whb, pool);
   svn_stream_set_write(stream, write_hash_handler);
 
-  SVN_ERR(svn_stream_printf(whb->stream, pool, "PLAIN\n"));
+  SVN_ERR(svn_stream_puts(whb->stream, "PLAIN\n"));
 
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
@@ -6208,7 +6208,7 @@ write_hash_rep(representation_t *rep,
   else
     {
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_printf(whb->stream, pool, "ENDREP\n"));
+      SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
       /* update the representation */
       rep->size = whb->size;
@@ -6316,7 +6316,7 @@ write_hash_delta_rep(representation_t *rep,
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(get_file_offset(&rep_end, file, pool));
-      SVN_ERR(svn_stream_printf(file_stream, pool, "ENDREP\n"));
+      SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       /* update the representation */
       rep->expanded_size = whb->size;

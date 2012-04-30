@@ -282,11 +282,11 @@ dump_node(struct edit_baton *eb,
                             SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
                             path));
   if (kind == svn_node_file)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
+    SVN_ERR(svn_stream_puts(eb->stream,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
   else if (kind == svn_node_dir)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
+    SVN_ERR(svn_stream_puts(eb->stream,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
@@ -301,9 +301,8 @@ dump_node(struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": change\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
 
       /* either the text or props changed, or possibly both. */
       SVN_ERR(svn_fs_revision_root(&compare_root,
@@ -323,9 +322,9 @@ dump_node(struct edit_baton *eb,
       if (! is_copy)
         {
           /* a simple delete+add, implied by a single 'replace' action. */
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": replace\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": replace\n"));
 
           /* definitely need to dump all content for a replace. */
           if (kind == svn_node_file)
@@ -338,9 +337,9 @@ dump_node(struct edit_baton *eb,
 
           /* the path & kind headers have already been printed;  just
              add a delete action, and end the current record.*/
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": delete\n\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": delete\n\n"));
 
           /* recurse:  print an additional add-with-history record. */
           SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
@@ -354,9 +353,8 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_delete)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": delete\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
       /* we can leave this routine quietly now, don't need to dump
          any content. */
@@ -365,8 +363,8 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_add)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (! is_copy)
         {
@@ -511,9 +509,8 @@ dump_node(struct edit_baton *eb,
              saying that our property contents are a delta. */
           SVN_ERR(svn_fs_node_proplist(&oldhash, compare_root, compare_path,
                                        pool));
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_PROP_DELTA
-                                    ": true\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_PROP_DELTA ": true\n"));
         }
       else
         oldhash = apr_hash_make(pool);
@@ -544,9 +541,8 @@ dump_node(struct edit_baton *eb,
              saying our text contents are a delta. */
           SVN_ERR(store_delta(&delta_file, &textlen, compare_root,
                               compare_path, eb->fs_root, path, pool));
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_TEXT_DELTA
-                                    ": true\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_TEXT_DELTA ": true\n"));
 
           if (compare_root)
             {

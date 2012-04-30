@@ -237,7 +237,7 @@ hash_write(apr_hash_t *hash, apr_hash_t *oldhash, svn_stream_t *stream,
                                 valstr->len));
       len = valstr->len;
       SVN_ERR(svn_stream_write(stream, valstr->data, &len));
-      SVN_ERR(svn_stream_printf(stream, subpool, "\n"));
+      SVN_ERR(svn_stream_puts(stream, "\n"));
     }
 
   if (oldhash)

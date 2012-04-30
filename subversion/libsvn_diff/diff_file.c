@@ -2127,7 +2127,7 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
   if (btn->output_stream == btn->context_saver->stream)
     {
       if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
-        SVN_ERR(svn_stream_printf(btn->real_output_stream, btn->pool, "@@\n"));
+        SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
 
