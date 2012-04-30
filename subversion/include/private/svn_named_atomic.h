@@ -51,6 +51,16 @@ typedef struct svn_named_atomic__t svn_named_atomic__t;
  */
 #define SVN_NAMED_ATOMIC__MAX_NAME_LENGTH 30
 
+/** Returns #FALSE when named atomics are not available to our process
+ * and svn_atomic_namespace__create is likely to fail.
+ *
+ * Please note that the actual check will be performed only once and later
+ * changes in process privileges will not reflect in the outcome of future
+ * calls to this function.
+ */
+svn_boolean_t
+svn_named_atomic__is_supported(void);
+
 /** Returns #TRUE on platforms that don't need expensive synchronization
  * objects to serialize access to named atomics. If this returns #FALSE,
  * reading from or modifying a #svn_named_atomic__t may be as expensive

@@ -1217,9 +1217,9 @@ insert_dirs(svn_test__sandbox_t *b,
       if (nodes->local_relpath[0])
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sissrs",
+          SVN_ERR(svn_sqlite__bindf(stmt, "sdssrs",
                                     nodes->local_relpath,
-                                    (apr_int64_t)nodes->op_depth,
+                                    nodes->op_depth,
                                     nodes->presence,
                                     nodes->repo_relpath,
                                     nodes->repo_revnum,
@@ -1229,9 +1229,9 @@ insert_dirs(svn_test__sandbox_t *b,
       else
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sissr",
+          SVN_ERR(svn_sqlite__bindf(stmt, "sdssr",
                                     nodes->local_relpath,
-                                    (apr_int64_t)nodes->op_depth,
+                                    nodes->op_depth,
                                     nodes->presence,
                                     nodes->repo_relpath,
                                     nodes->repo_revnum));
@@ -4579,7 +4579,7 @@ move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 static svn_error_t *
 check_moved_to(apr_array_header_t *moved_tos,
                int i,
-               apr_int64_t op_depth,
+               int op_depth,
                const char *local_relpath)
 {
   struct svn_wc__db_moved_to_t *moved_to;
@@ -4593,7 +4593,7 @@ check_moved_to(apr_array_header_t *moved_tos,
   if (moved_to->op_depth != op_depth
       || strcmp(moved_to->local_relpath, local_relpath))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "expected: {%ld '%s'} found[%d]: {%ld '%s'}",
+                             "expected: {%d '%s'} found[%d]: {%d '%s'}",
                              op_depth, local_relpath, i,
                              moved_to->op_depth, moved_to->local_relpath);
 

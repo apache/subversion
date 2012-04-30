@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_editor.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
@@ -102,6 +103,135 @@ add_new_props(svn_fs_root_t *root,
 }
 
 
+static svn_error_t *
+alter_props(svn_fs_root_t *root,
+            const char *fspath,
+            apr_hash_t *props,
+            apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *old_props;
+  apr_array_header_t *propdiffs;
+  int i;
+
+  SVN_ERR(svn_fs_node_proplist(&old_props, root, fspath, scratch_pool));
+
+  SVN_ERR(svn_prop_diffs(&propdiffs, props, old_props, scratch_pool));
+
+  for (i = 0; i < propdiffs->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
+
+      svn_pool_clear(iterpool);
+
+      /* Add, change, or delete properties.  */
+      SVN_ERR(svn_fs_change_node_prop(root, fspath, prop->name, prop->value,
+                                      iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_text(svn_fs_root_t *root,
+         const char *fspath,
+         const svn_checksum_t *checksum,
+         svn_stream_t *contents,
+         svn_cancel_func_t cancel_func,
+         void *cancel_baton,
+         apr_pool_t *scratch_pool)
+{
+  svn_stream_t *fs_contents;
+
+  /* ### We probably don't have an MD5 checksum, so no digest is available
+     ### for svn_fs_apply_text() to validate. It would be nice to have an
+     ### FS API that takes our CHECKSUM/CONTENTS pair (and PROPS!).  */
+  SVN_ERR(svn_fs_apply_text(&fs_contents, root, fspath,
+                            NULL /* result_checksum */,
+                            scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, fs_contents,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* The caller wants to modify REVISION of FSPATH. Is that allowed?  */
+static svn_error_t *
+can_modify(svn_fs_root_t *txn_root,
+           const char *fspath,
+           svn_revnum_t revision,
+           apr_pool_t *scratch_pool)
+{
+  svn_revnum_t created_rev;
+
+  /* Out-of-dateness check:  compare the created-rev of the noden
+     in the txn against the created-rev of FSPATH.  */
+  SVN_ERR(svn_fs_node_created_rev(&created_rev, txn_root, fspath,
+                                  scratch_pool));
+
+  /* If CREATED_REV is invalid, that means it's already mutable in the
+     txn, which means it has already passed this out-of-dateness check.
+     (Usually, this happens when looking at a parent directory of an
+     already-modified node)  */
+  if (SVN_IS_VALID_REVNUM(created_rev) && revision != created_rev)
+    {
+      if (revision < created_rev)
+        {
+          /* We asked to change a node that is *older* than what we found
+             in the transaction. The client is out of date.  */
+          return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                   _("'%s' is out of date; try updating"),
+                                   fspath);
+        }
+
+      /* revision > created_rev  */
+      {
+        /* We asked to change a node that is *newer* than what we found
+           in the transaction. Given that the transaction was based off
+           of 'youngest', then either:
+           - the caller asked to modify a future node
+           - the caller has committed more revisions since this txn
+           was constructed, and is asking to modify a node in one
+           of those new revisions.
+           In either case, the node may not have changed in those new
+           revisions; use the node's ID to determine this case.  */
+        const svn_fs_id_t *txn_noderev_id;
+        svn_fs_root_t *rev_root;
+        const svn_fs_id_t *new_noderev_id;
+
+        /* The ID of the node that we would be modifying in the txn  */
+        SVN_ERR(svn_fs_node_id(&txn_noderev_id, txn_root, fspath,
+                               scratch_pool));
+
+        /* Get the ID from the future/new revision.  */
+        SVN_ERR(svn_fs_revision_root(&rev_root, svn_fs_root_fs(txn_root),
+                                     revision, scratch_pool));
+        SVN_ERR(svn_fs_node_id(&new_noderev_id, rev_root, fspath,
+                               scratch_pool));
+        svn_fs_close_root(rev_root);
+
+        /* Has the target node changed in the future?  */
+        if (svn_fs_compare_ids(txn_noderev_id, new_noderev_id) != 0)
+          {
+            /* Restarting the commit will base the txn on the future/new
+               revision, allowing the modification at REVISION.  */
+            /* ### use a custom error code  */
+            return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+                                     _("'%s' has been modified since the "
+                                       "commit began (restart the commit)"),
+                                     fspath);
+          }
+      }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements svn_editor_cb_add_directory_t */
 static svn_error_t *
 add_directory_cb(void *baton,
@@ -120,7 +250,12 @@ add_directory_cb(void *baton,
 
   SVN_ERR(get_root(&root, eb));
 
-  /* ### validate REPLACES_REV  */
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      SVN_ERR(can_modify(root, fspath, replaces_rev, scratch_pool));
+      SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
+    }
+  /* else better not be there!  */
 
   SVN_ERR(svn_fs_make_dir(root, fspath, scratch_pool));
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
@@ -142,25 +277,20 @@ add_file_cb(void *baton,
   struct edit_baton *eb = baton;
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
-  svn_stream_t *fs_contents;
 
   SVN_ERR(get_root(&root, eb));
 
-  /* ### do something with CHECKSUM  */
-  /* ### validate REPLACES_REV  */
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      SVN_ERR(can_modify(root, fspath, replaces_rev, scratch_pool));
+      SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
+    }
+  /* else better not be there!  */
 
   SVN_ERR(svn_fs_make_file(root, fspath, scratch_pool));
 
-  /* ### We probably don't have an MD5 checksum, so no digest is available
-     ### for svn_fs_apply_text() to validate. It would be nice to have an
-     ### FS API that takes our CONTENTS/CHECKSUM pair (and PROPS!).  */
-  SVN_ERR(svn_fs_apply_text(&fs_contents, root, fspath,
-                            NULL /* result_checksum */,
-                            scratch_pool));
-  SVN_ERR(svn_stream_copy3(contents, fs_contents,
-                           eb->cancel_func, eb->cancel_baton,
-                           scratch_pool));
-
+  SVN_ERR(set_text(root, fspath, checksum, contents,
+                   eb->cancel_func, eb->cancel_baton, scratch_pool));
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -179,11 +309,15 @@ add_symlink_cb(void *baton,
   struct edit_baton *eb = baton;
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
-  svn_stream_t *fs_contents;
 
   SVN_ERR(get_root(&root, eb));
 
-  /* ### validate REPLACES_REV  */
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      SVN_ERR(can_modify(root, fspath, replaces_rev, scratch_pool));
+      SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
+    }
+  /* else better not be there!  */
 
   /* ### we probably need to construct a file with specific contents
      ### (until the FS grows some symlink APIs)  */
@@ -198,7 +332,6 @@ add_symlink_cb(void *baton,
 
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
 #endif
-  UNUSED(fspath); UNUSED(fs_contents);
 
   SVN__NOT_IMPLEMENTED();
 }
@@ -214,6 +347,7 @@ add_absent_cb(void *baton,
 {
   /* This is a programming error. Code should not attempt to create these
      kinds of nodes within the FS.  */
+  /* ### use a custom error code  */
   return svn_error_create(
            SVN_ERR_UNSUPPORTED_FEATURE, NULL,
            N_("The filesystem does not support 'absent' nodes"));
@@ -229,8 +363,22 @@ alter_directory_cb(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *fspath = FSPATH(relpath, scratch_pool);
+  svn_fs_root_t *root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  if (!SVN_IS_VALID_REVNUM(revision))
+    /* ### use a custom error code?  */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             N_("Revision for modification of '%s' "
+                                "is required"),
+                             fspath);
+
+  SVN_ERR(get_root(&root, eb));
+  SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
+
+  SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -245,8 +393,24 @@ alter_file_cb(void *baton,
               apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *fspath = FSPATH(relpath, scratch_pool);
+  svn_fs_root_t *root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  if (!SVN_IS_VALID_REVNUM(revision))
+    /* ### use a custom error code?  */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             N_("Revision for modification of '%s' "
+                                "is required"),
+                             fspath);
+
+  SVN_ERR(get_root(&root, eb));
+  SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
+
+  SVN_ERR(set_text(root, fspath, checksum, contents,
+                   eb->cancel_func, eb->cancel_baton, scratch_pool));
+  SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -273,8 +437,22 @@ delete_cb(void *baton,
           apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *fspath = FSPATH(relpath, scratch_pool);
+  svn_fs_root_t *root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  if (!SVN_IS_VALID_REVNUM(revision))
+    /* ### use a custom error code?  */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             N_("Revision for deletion of '%s' "
+                                "is required"),
+                             fspath);
+
+  SVN_ERR(get_root(&root, eb));
+  SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
+
+  SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -288,8 +466,33 @@ copy_cb(void *baton,
         apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *src_fspath = FSPATH(src_relpath, scratch_pool);
+  const char *dst_fspath = FSPATH(dst_relpath, scratch_pool);
+  svn_fs_root_t *root;
+  svn_fs_root_t *src_root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  if (!SVN_IS_VALID_REVNUM(src_revision))
+    /* ### use a custom error code?  */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             N_("Source revision for copy of '%s' "
+                                "is required"),
+                             src_fspath);
+
+  SVN_ERR(get_root(&root, eb));
+
+  /* Check if we can we replace the maybe-specified destination (revision).  */
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      SVN_ERR(can_modify(root, dst_fspath, replaces_rev, scratch_pool));
+      SVN_ERR(svn_fs_delete(root, dst_fspath, scratch_pool));
+    }
+
+  SVN_ERR(svn_fs_revision_root(&src_root, svn_fs_root_fs(root), src_revision,
+                               scratch_pool));
+  SVN_ERR(svn_fs_copy(src_root, src_fspath, root, dst_fspath, scratch_pool));
+  svn_fs_close_root(src_root);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -303,8 +506,41 @@ move_cb(void *baton,
         apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
+  const char *src_fspath = FSPATH(src_relpath, scratch_pool);
+  const char *dst_fspath = FSPATH(dst_relpath, scratch_pool);
+  svn_fs_root_t *root;
+  svn_fs_root_t *src_root;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  if (!SVN_IS_VALID_REVNUM(src_revision))
+    /* ### use a custom error code?  */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             N_("Source revision for move of '%s' "
+                                "is required"),
+                             src_fspath);
+
+  SVN_ERR(get_root(&root, eb));
+
+  /* Check if we delete the specified source (revision), and can we replace
+     the maybe-specified destination (revision).  */
+  SVN_ERR(can_modify(root, src_fspath, src_revision, scratch_pool));
+  if (SVN_IS_VALID_REVNUM(replaces_rev))
+    {
+      SVN_ERR(can_modify(root, dst_fspath, replaces_rev, scratch_pool));
+      SVN_ERR(svn_fs_delete(root, dst_fspath, scratch_pool));
+    }
+
+  /* ### would be nice to have svn_fs_move()  */
+
+  /* Copy the src to the dst. */
+  SVN_ERR(svn_fs_revision_root(&src_root, svn_fs_root_fs(root), src_revision,
+                               scratch_pool));
+  SVN_ERR(svn_fs_copy(src_root, src_fspath, root, dst_fspath, scratch_pool));
+  svn_fs_close_root(src_root);
+
+  /* Notice: we're deleting the src repos path from the dst root. */
+  SVN_ERR(svn_fs_delete(root, src_fspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 

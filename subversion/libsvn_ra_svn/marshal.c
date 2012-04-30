@@ -439,6 +439,8 @@ static svn_error_t *write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   apr_size_t written;
 
+  /* SVN_INT64_BUFFER_SIZE includes space for a terminating NUL that
+   * svn__ui64toa will always append. */
   if (conn->write_pos + SVN_INT64_BUFFER_SIZE >= sizeof(conn->write_buf))
     SVN_ERR(writebuf_flush(conn, pool));
 
@@ -464,7 +466,7 @@ svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(writebuf_writechar(conn, pool, ':'));
     }
   else
-    write_number(conn, pool, str->len, ':');
+    SVN_ERR(write_number(conn, pool, str->len, ':'));
 
   SVN_ERR(writebuf_write(conn, pool, str->data, str->len));
   SVN_ERR(writebuf_writechar(conn, pool, ' '));
@@ -482,7 +484,7 @@ svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
       SVN_ERR(writebuf_writechar(conn, pool, ':'));
     }
   else
-    write_number(conn, pool, len, ':');
+    SVN_ERR(write_number(conn, pool, len, ':'));
 
   SVN_ERR(writebuf_write(conn, pool, s, len));
   SVN_ERR(writebuf_writechar(conn, pool, ' '));

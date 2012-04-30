@@ -211,6 +211,14 @@ svn_stream_close(svn_stream_t *stream)
   return stream->close_fn(stream->baton);
 }
 
+svn_error_t *
+svn_stream_puts(svn_stream_t *stream,
+                const char *str)
+{
+  apr_size_t len;
+  len = strlen(str);
+  return svn_stream_write(stream, str, &len);
+}
 
 svn_error_t *
 svn_stream_printf(svn_stream_t *stream,
@@ -220,20 +228,12 @@ svn_stream_printf(svn_stream_t *stream,
 {
   const char *message;
   va_list ap;
-  apr_size_t len;
 
-  /* any format controls or is this a static string? */
-  if (strchr(fmt, '%'))
-    {
-      va_start(ap, fmt);
-      message = apr_pvsprintf(pool, fmt, ap);
-      va_end(ap);
-    }
-  else
-    message = fmt;
+  va_start(ap, fmt);
+  message = apr_pvsprintf(pool, fmt, ap);
+  va_end(ap);
 
-  len = strlen(message);
-  return svn_stream_write(stream, message, &len);
+  return svn_stream_puts(stream, message);
 }
 
 
@@ -246,7 +246,6 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
 {
   const char *message, *translated;
   va_list ap;
-  apr_size_t len;
 
   va_start(ap, fmt);
   message = apr_pvsprintf(pool, fmt, ap);
@@ -255,9 +254,7 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated, message, encoding,
                                         pool));
 
-  len = strlen(translated);
-
-  return svn_stream_write(stream, translated, &len);
+  return svn_stream_puts(stream, translated);
 }
 
 /* Size that 90% of the lines we encounter will be not longer than.

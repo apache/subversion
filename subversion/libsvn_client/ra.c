@@ -1012,8 +1012,9 @@ svn_client__ra_provide_base(svn_stream_t **contents,
     {
       /* The pristine contents refer to the BASE, or to the pristine of
          a copy/move to this location. Fetch the correct revision.  */
-      SVN_ERR(svn_wc__node_get_commit_base_rev(revision, reb->wc_ctx,
-                                               local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_get_commit_base(revision, NULL, NULL, NULL,
+                                           reb->wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1056,8 +1057,9 @@ svn_client__ra_provide_props(apr_hash_t **props,
     {
       /* The pristine props refer to the BASE, or to the pristine props of
          a copy/move to this location. Fetch the correct revision.  */
-      SVN_ERR(svn_wc__node_get_commit_base_rev(revision, reb->wc_ctx,
-                                               local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_get_commit_base(revision, NULL, NULL, NULL,
+                                           reb->wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1099,6 +1101,9 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
                              apr_pool_t *result_pool)
 {
   struct ra_ev2_baton *reb = apr_palloc(result_pool, sizeof(*reb));
+
+  SVN_ERR_ASSERT_NO_RETURN(wc_ctx != NULL);
+  SVN_ERR_ASSERT_NO_RETURN(relpath_map != NULL);
 
   reb->wc_ctx = wc_ctx;
   reb->relpath_map = relpath_map;

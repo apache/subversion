@@ -962,36 +962,54 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
 
 
 svn_error_t *
-svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
-                                     svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *scratch_pool)
+svn_wc__internal_get_commit_base(svn_revnum_t *commit_base_revision,
+                                 const char **repos_relpath,
+                                 const char **repos_root_url,
+                                 const char **repos_uuid,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
   svn_revnum_t revision;
-  svn_revnum_t original_revision;
+  svn_revnum_t orig_revision;
+  const char *orig_repos_relpath;
+  const char *orig_repos_root_url;
+  const char *orig_repos_uuid;
 
   *commit_base_revision = SVN_INVALID_REVNUM;
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL,
+                               &revision, repos_relpath,
+                               repos_root_url, repos_uuid,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &orig_repos_relpath, &orig_repos_root_url,
+                               &orig_repos_uuid, &orig_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, &original_revision, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
                                &have_base, &have_more_work, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (SVN_IS_VALID_REVNUM(revision))
     {
       /* We are looking directly at BASE */
-      *commit_base_revision = revision;
+      if (commit_base_revision)
+        *commit_base_revision = revision;
       return SVN_NO_ERROR;
     }
-  else if (SVN_IS_VALID_REVNUM(original_revision))
+  else if (SVN_IS_VALID_REVNUM(orig_revision))
     {
       /* We are looking at a copied node */
-      *commit_base_revision = original_revision;
+      if (commit_base_revision)
+        *commit_base_revision = orig_revision;
+      if (repos_relpath)
+        *repos_relpath = orig_repos_relpath;
+      if (repos_root_url)
+        *repos_root_url = orig_repos_root_url;
+      if (repos_uuid)
+        *repos_uuid = orig_repos_uuid;
       return SVN_NO_ERROR;
     }
 
@@ -999,8 +1017,9 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
     {
       /* If the node was copied/moved-here, return the copy/move source
          revision (not this node's base revision). */
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, commit_base_revision,
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                       repos_relpath, repos_root_url,
+                                       repos_uuid, commit_base_revision,
                                        NULL, NULL, db, local_abspath,
                                        scratch_pool, scratch_pool));
 
@@ -1021,10 +1040,10 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
         {
           /* This is a deletion within a copied subtree. Get the copied-from
            * revision. */
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL,
-                                           commit_base_revision, NULL, NULL,
-                                           db,
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
+                                           repos_relpath, repos_root_url,
+                                           repos_uuid, commit_base_revision,
+                                           NULL, NULL, db,
                                            svn_dirent_dirname(work_del_abspath,
                                                               scratch_pool),
                                            scratch_pool, scratch_pool));
@@ -1040,7 +1059,8 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
   if (have_base && !have_more_work)
     {
       SVN_ERR(svn_wc__db_base_get_info(&status, NULL, commit_base_revision,
-                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                       repos_relpath, repos_root_url,
+                                       repos_uuid, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
@@ -1053,14 +1073,19 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
 }
 
 svn_error_t *
-svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
-                                 svn_wc_context_t *wc_ctx,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool)
+svn_wc__node_get_commit_base(svn_revnum_t *revision,
+                             const char **repos_relpath,
+                             const char **repos_root_url,
+                             const char **repos_uuid,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__internal_get_commit_base_rev(
-                           commit_base_revision, wc_ctx->db, local_abspath,
-                           scratch_pool));
+  return svn_error_trace(svn_wc__internal_get_commit_base(
+                           revision, repos_relpath, repos_root_url, repos_uuid,
+                           wc_ctx->db, local_abspath,
+                           result_pool, scratch_pool));
 }
 
 svn_error_t *

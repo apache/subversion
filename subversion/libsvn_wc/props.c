@@ -79,14 +79,12 @@ append_prop_conflict(svn_stream_t *stream,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   const svn_string_t *conflict_desc;
-  apr_size_t len;
   const char *native_text;
 
   SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel, pool, pool));
   native_text = svn_utf_cstring_from_utf8_fuzzy(conflict_desc->data, pool);
 
-  len = strlen(native_text);
-  return svn_stream_write(stream, native_text, &len);
+  return svn_stream_puts(stream, native_text);
 }
 
 

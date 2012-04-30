@@ -95,7 +95,7 @@ finish_report(void *report_baton,
               apr_pool_t *pool)
 {
   struct report_baton *rb = report_baton;
-  SVN_ERR(svn_stream_printf(rb->out, pool, "finish_report()\n"));
+  SVN_ERR(svn_stream_puts(rb->out, "finish_report()\n"));
   SVN_ERR(rb->wrapped_reporter->finish_report(rb->wrapped_report_baton, pool));
   return SVN_NO_ERROR;
 }
@@ -105,7 +105,7 @@ abort_report(void *report_baton,
              apr_pool_t *pool)
 {
   struct report_baton *rb = report_baton;
-  SVN_ERR(svn_stream_printf(rb->out, pool, "abort_report()\n"));
+  SVN_ERR(svn_stream_puts(rb->out, "abort_report()\n"));
   SVN_ERR(rb->wrapped_reporter->abort_report(rb->wrapped_report_baton, pool));
   return SVN_NO_ERROR;
 }

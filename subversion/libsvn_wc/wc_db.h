@@ -2957,7 +2957,8 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
-apr_int64_t svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+int
+svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
 /* Set *HAVE_WORK TRUE if there is a working layer below the top layer and
    *HAVE_BASE if there is a base layer. Set *STATUS to the status of the
@@ -3102,7 +3103,7 @@ svn_wc__db_verify(svn_wc__db_t *db,
  * Only exposed for testing at present. */
 struct svn_wc__db_moved_to_t {
   const char *local_relpath;  /* moved-to destination */
-  apr_int64_t op_depth;       /* op-root of source */
+  int op_depth;       /* op-root of source */
 };
 
 /* Set *FINAL_ABSPATH to an array of svn_wc__db_moved_to_t for

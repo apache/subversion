@@ -1179,6 +1179,14 @@ svn_stream_tee(svn_stream_t *out1,
                svn_stream_t *out2,
                apr_pool_t *pool);
 
+/** Write NULL-terminated string @a str to @a stream.
+ *
+ * @since New in 1.8.
+ *
+ */
+svn_error_t *
+svn_stream_puts(svn_stream_t *stream,
+                const char *str);
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.
