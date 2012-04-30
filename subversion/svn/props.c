@@ -94,7 +94,6 @@ svn_cl__print_prop_hash(svn_stream_t *out,
       const char *pname = svn__apr_hash_index_key(hi);
       svn_string_t *propval = svn__apr_hash_index_val(hi);
       const char *pname_stdout;
-      apr_size_t len;
 
       if (svn_prop_needs_translation(pname))
         SVN_ERR(svn_subst_detranslate_string(&propval, propval,
@@ -112,8 +111,7 @@ svn_cl__print_prop_hash(svn_stream_t *out,
                                               FALSE, /* no expansion */
                                               pool));
 
-          len = strlen(pname_stdout);
-          SVN_ERR(svn_stream_write(out, pname_stdout, &len));
+          SVN_ERR(svn_stream_puts(out, pname_stdout));
         }
       else
         {
@@ -134,8 +132,7 @@ svn_cl__print_prop_hash(svn_stream_t *out,
                                                               pool);
           if (out)
             {
-              len = strlen(indented_newval);
-              SVN_ERR(svn_stream_write(out, indented_newval, &len));
+              SVN_ERR(svn_stream_puts(out, indented_newval));
             }
           else
             {

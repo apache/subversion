@@ -808,15 +808,13 @@ output_merge_token_range(apr_size_t *lines_printed_p,
 static svn_error_t *
 output_marker_eol(merge_output_baton_t *btn)
 {
-  apr_size_t len = strlen(btn->marker_eol);
-  return svn_stream_write(btn->output_stream, btn->marker_eol, &len);
+  return svn_stream_puts(btn->output_stream, btn->marker_eol);
 }
 
 static svn_error_t *
 output_merge_marker(merge_output_baton_t *btn, int idx)
 {
-  apr_size_t len = strlen(btn->markers[idx]);
-  SVN_ERR(svn_stream_write(btn->output_stream, btn->markers[idx], &len));
+  SVN_ERR(svn_stream_puts(btn->output_stream, btn->markers[idx]));
   return output_marker_eol(btn);
 }
 

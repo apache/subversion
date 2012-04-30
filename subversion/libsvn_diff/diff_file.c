@@ -2043,8 +2043,7 @@ output_line(svn_diff3__file_output_baton_t *baton,
 static svn_error_t *
 output_marker_eol(svn_diff3__file_output_baton_t *btn)
 {
-  apr_size_t len = strlen(btn->marker_eol);
-  return svn_stream_write(btn->output_stream, btn->marker_eol, &len);
+  return svn_stream_puts(btn->output_stream, btn->marker_eol);
 }
 
 static svn_error_t *
@@ -2179,7 +2178,6 @@ output_conflict(void *baton,
                 svn_diff_t *diff)
 {
   svn_diff3__file_output_baton_t *file_baton = baton;
-  apr_size_t len;
 
   svn_diff_conflict_display_style_t style = file_baton->conflict_style;
 
@@ -2201,33 +2199,28 @@ output_conflict(void *baton,
   if (style == svn_diff_conflict_display_modified_latest ||
       style == svn_diff_conflict_display_modified_original_latest)
     {
-      len = strlen(file_baton->conflict_modified);
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_modified,
-                               &len));
+      SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                               file_baton->conflict_modified));
       SVN_ERR(output_marker_eol(file_baton));
 
       SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
 
       if (style == svn_diff_conflict_display_modified_original_latest)
         {
-          len = strlen(file_baton->conflict_original);
-          SVN_ERR(svn_stream_write(file_baton->output_stream,
-                                   file_baton->conflict_original, &len));
+          SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                                   file_baton->conflict_original));
           SVN_ERR(output_marker_eol(file_baton));
           SVN_ERR(output_hunk(baton, 0, original_start, original_length));
         }
 
-      len = strlen(file_baton->conflict_separator);
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_separator, &len));
+      SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                              file_baton->conflict_separator));
       SVN_ERR(output_marker_eol(file_baton));
 
       SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
 
-      len = strlen(file_baton->conflict_latest);
-      SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_latest, &len));
+      SVN_ERR(svn_stream_puts(file_baton->output_stream,
+                              file_baton->conflict_latest));
       SVN_ERR(output_marker_eol(file_baton));
     }
   else if (style == svn_diff_conflict_display_modified)

@@ -572,8 +572,7 @@ repos_notify_handler(void *baton,
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      len = strlen(notify->warning_str);
-      svn_error_clear(svn_stream_write(feedback_stream, notify->warning_str, &len));
+      svn_error_clear(svn_stream_puts(feedback_stream, notify->warning_str));
       return;
 
     case svn_repos_notify_dump_rev_end:

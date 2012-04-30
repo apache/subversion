@@ -252,7 +252,6 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
 {
   const char *message, *translated;
   va_list ap;
-  apr_size_t len;
 
   va_start(ap, fmt);
   message = apr_pvsprintf(pool, fmt, ap);
@@ -261,9 +260,7 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated, message, encoding,
                                         pool));
 
-  len = strlen(translated);
-
-  return svn_stream_write(stream, translated, &len);
+  return svn_stream_puts(stream, translated);
 }
 
 /* Size that 90% of the lines we encounter will be not longer than.
