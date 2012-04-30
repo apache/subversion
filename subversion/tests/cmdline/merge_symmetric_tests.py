@@ -447,6 +447,216 @@ def merge_twice_same_direction_2(sbox):
 
 #----------------------------------------------------------------------
 
+#   Merge to and fro
+
+def init_merge_to_and_fro_1(sbox, mod_6, mod_7):
+  """"""
+
+  #   A (--o------?-
+  #     (     \
+  #   B (---o--x---?
+  #     2  34  5  67
+
+  make_branches(sbox)
+  modify_branch(sbox, 'A', 3)
+  modify_branch(sbox, 'B', 4)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A3'],
+                  expect_mi=[2, 3, 4],
+                  expect_3ways=[three_way_merge('A1', 'A4')])
+
+  if mod_6:
+    modify_branch(sbox, 'A', 6)
+  else:
+    no_op_commit(sbox)  # r6
+
+  if mod_7:
+    modify_branch(sbox, 'B', 7)
+  else:
+    no_op_commit(sbox)  # r7
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_1_1(sbox):
+  """merge_to_and_fro_1_1"""
+
+  #   A (--o------.---x
+  #     (     \      /
+  #   B (---o--x---.---
+  #     2  34  5  67  8
+
+  init_merge_to_and_fro_1(sbox, mod_6=False, mod_7=False)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=['B4'],
+                  expect_mi=[2, 3, 4, 5, 6, 7],
+                  expect_3ways=[three_way_merge('A4', 'B7')])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_1_2(sbox):
+  """merge_to_and_fro_1_2"""
+
+  #   A (--o------o---x
+  #     (     \      /
+  #   B (---o--x---o---
+  #     2  34  5  67  8
+
+  init_merge_to_and_fro_1(sbox, mod_6=True, mod_7=True)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=['B4', 'B7'],
+                  expect_mi=[2, 3, 4, 5, 6, 7],
+                  expect_3ways=[three_way_merge('A4', 'B7')])
+
+def init_merge_to_and_fro_2(sbox, mod_9, mod_10):
+  """"""
+
+  #   A (--o------o------?-
+  #     (     \      \
+  #   B (---o--x---o--x---?
+  #     2  34  5  67  8--90
+
+  init_merge_to_and_fro_1(sbox, mod_6=True, mod_7=True)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A6'],
+                  expect_mi=[5, 6, 7],
+                  expect_3ways=[three_way_merge('A4', 'A7')])
+
+  if mod_9:
+    modify_branch(sbox, 'A', 9)
+  else:
+    no_op_commit(sbox)  # r9
+
+  if mod_10:
+    modify_branch(sbox, 'B', 10)
+  else:
+    no_op_commit(sbox)  # r10
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_2_1(sbox):
+  """merge_to_and_fro_2_1"""
+
+  #   A (--o------o------.---x
+  #     (     \      \      /
+  #   B (---o--x---o--x---.---
+  #     2  34  5  67  8  90  1
+
+  init_merge_to_and_fro_2(sbox, mod_9=False, mod_10=False)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=['B4', 'B7'],
+                  expect_mi=[2, 3, 4, 5, 6, 7, 8, 9, 10],
+                  expect_3ways=[three_way_merge('A7', 'B10')])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_2_2(sbox):
+  """merge_to_and_fro_2_2"""
+
+  #   A (--o------o------o---x
+  #     (     \      \      /
+  #   B (---o--x---o--x---o---
+  #     2  34  5  67  8  90  1
+
+  init_merge_to_and_fro_2(sbox, mod_9=True, mod_10=True)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=['B4', 'B7', 'B10'],
+                  expect_mi=[2, 3, 4, 5, 6, 7, 8, 9, 10],
+                  expect_3ways=[three_way_merge('A7', 'B10')])
+
+def init_merge_to_and_fro_3(sbox, mod_9, mod_10):
+  """MOD_N is True to make an actual change in revision N, or False to
+     make a no-op commit."""
+
+  #   A (--o------o---x--?-
+  #     (     \      /
+  #   B (---o--x---o------?
+  #     2  34  5  67  8  90
+
+  init_merge_to_and_fro_1(sbox, mod_6=True, mod_7=True)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=['B4', 'B7'],
+                  expect_mi=[2, 3, 4, 5, 6, 7],
+                  expect_3ways=[three_way_merge('A4', 'B7')])
+
+  if mod_9:
+    modify_branch(sbox, 'A', 9)
+  else:
+    no_op_commit(sbox)  # r9
+
+  if mod_10:
+    modify_branch(sbox, 'B', 10)
+  else:
+    no_op_commit(sbox)  # r10
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_3_1(sbox):
+  """merge_to_and_fro_3_1"""
+
+  #   A (--o------o---x--.---x
+  #     (     \      /      /
+  #   B (---o--x---o------.---
+  #     2  34  5  67  8  90  1
+
+  init_merge_to_and_fro_3(sbox, mod_9=False, mod_10=False)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=[],
+                  expect_mi=[8, 9, 10],
+                  expect_3ways=[three_way_merge_no_op('B7', 'B10')])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_3_2(sbox):
+  """merge_to_and_fro_3_2"""
+
+  #   A (--o------o---x--o---x
+  #     (     \      /      /
+  #   B (---o--x---o------o---
+  #     2  34  5  67  8  90  1
+
+  init_merge_to_and_fro_3(sbox, mod_9=True, mod_10=True)
+
+  symmetric_merge(sbox, 'B', 'A',
+                  expect_changes=['B10'],
+                  expect_mi=[8, 9, 10],
+                  expect_3ways=[three_way_merge('B7', 'B10')])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_4_1(sbox):
+  """merge_to_and_fro_4_1"""
+
+  #   A (--o------o---x--.----
+  #     (     \      /      \
+  #   B (---o--x---o------.--x
+  #     2  34  5  67  8  90  1
+
+  init_merge_to_and_fro_3(sbox, mod_9=False, mod_10=False)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A6'],
+                  expect_mi=[5, 6, 7, 8, 9, 10],
+                  expect_3ways=[three_way_merge_no_op('B7', 'A10')])
+
+@SkipUnless(server_has_mergeinfo)
+def merge_to_and_fro_4_2(sbox):
+  """merge_to_and_fro_4_2"""
+
+  #   A (--o------o---x--o----
+  #     (     \      /      \
+  #   B (---o--x---o------o--x
+  #     2  34  5  67  8  90  1
+
+  init_merge_to_and_fro_3(sbox, mod_9=True, mod_10=True)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A6', 'A9'],
+                  expect_mi=[5, 6, 7, 8, 9, 10],
+                  expect_3ways=[three_way_merge('B7', 'A10')])
+
+#----------------------------------------------------------------------
+
 # Cherry2, fwd
 
 @SkipUnless(server_has_mergeinfo)
@@ -485,6 +695,14 @@ test_list = [ None,
               merge_once_4,
               merge_twice_same_direction_1,
               merge_twice_same_direction_2,
+              merge_to_and_fro_1_1,
+              merge_to_and_fro_1_2,
+              merge_to_and_fro_2_1,
+              merge_to_and_fro_2_2,
+              merge_to_and_fro_3_1,
+              merge_to_and_fro_3_2,
+              merge_to_and_fro_4_1,
+              merge_to_and_fro_4_2,
               cherry2_fwd,
              ]
 
