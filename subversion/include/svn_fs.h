@@ -865,7 +865,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
- * the conflict in @a txn, with the same lifetime as @a txn;
+ * the conflict in @a txn, allocated within @a pool;
  * otherwise, set @a *conflict_p to NULL.
  *
  * If the commit succeeds, @a txn is invalid.
