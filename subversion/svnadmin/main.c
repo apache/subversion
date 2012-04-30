@@ -727,8 +727,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_pack_shard_end:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        _("done.\n")));
+      svn_error_clear(svn_stream_puts(feedback_stream, _("done.\n")));
       return;
 
     case svn_repos_notify_pack_shard_start_revprop:
@@ -743,8 +742,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_pack_shard_end_revprop:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        _("done.\n")));
+      svn_error_clear(svn_stream_puts(feedback_stream, _("done.\n")));
       return;
 
     case svn_repos_notify_load_txn_committed:
@@ -838,7 +836,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_upgrade_start:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+      svn_error_clear(svn_stream_puts(feedback_stream,
                              _("Repository lock acquired.\n"
                                "Please wait; upgrading the"
                                " repository may take some time...\n")));
