@@ -399,8 +399,8 @@ svn_path_compare_paths(const char *path1,
   apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
   apr_size_t i = 0;
 
-  assert(is_canonical(path1, strlen(path1)));
-  assert(is_canonical(path2, strlen(path2)));
+  assert(is_canonical(path1, path1_len));
+  assert(is_canonical(path2, path2_len));
 
   /* Skip past common prefix. */
   while (i < min_len && path1[i] == path2[i])
