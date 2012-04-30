@@ -881,6 +881,9 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * even though a non-@c NULL function return value may indicate that
  * something else went wrong in post commit FS processing.
  *
+ * @note See api-errata/1.8/fs001.txt for information on how this
+ * function was documented in versions prior to 1.8.
+ *
  * ### need to document this better. there are four combinations of
  * ### return values:
  * ### 1) err=NULL. conflict=NULL. new_rev is valid
