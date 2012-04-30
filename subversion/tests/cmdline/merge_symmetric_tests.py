@@ -238,7 +238,7 @@ def expected_symmetric_merge_output(target, expect_3ways):
   # Match any content modifications; but not of the root of the branch
   # because we don't intentionally modify the branch root node in most
   # tests and we don't want to accidentally overlook a mergeinfo change.
-  lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target + "/.*\n"]
+  lines = ["(A |D |[UG] | [UG]|[UG][UG])   " + target + os.path.sep + ".*\n"]
 
   # Match mergeinfo changes.  (### Subtrees are not yet supported here.)
   lines += [" [UG]   " + target + "\n"]
