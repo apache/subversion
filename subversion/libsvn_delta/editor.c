@@ -694,7 +694,6 @@ svn_editor_copy(svn_editor_t *editor,
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(src_revision));
   SVN_ERR_ASSERT(svn_relpath_is_canonical(dst_relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ADD(editor, dst_relpath);
@@ -728,7 +727,6 @@ svn_editor_move(svn_editor_t *editor,
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(src_revision));
   SVN_ERR_ASSERT(svn_relpath_is_canonical(dst_relpath));
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_NOT_BE_COMPLETED(editor, src_relpath);
