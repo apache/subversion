@@ -2841,9 +2841,9 @@ update_the_list_of_added_subtrees(const char *target_abspath,
     }
   else
     {
-      const char *added_path_parent =
-        svn_dirent_dirname(added_abspath, scratch_pool);
       apr_pool_t *subpool = svn_pool_create(scratch_pool);
+      const char *added_path_parent =
+        svn_dirent_dirname(added_abspath, subpool);
 
       /* Is NOTIFY->PATH the root of an added subtree? */
       while (strcmp(target_abspath, added_path_parent))
