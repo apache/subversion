@@ -229,15 +229,9 @@ svn_stream_printf(svn_stream_t *stream,
   const char *message;
   va_list ap;
 
-  /* any format controls or is this a static string? */
-  if (strchr(fmt, '%'))
-    {
-      va_start(ap, fmt);
-      message = apr_pvsprintf(pool, fmt, ap);
-      va_end(ap);
-    }
-  else
-    message = fmt;
+  va_start(ap, fmt);
+  message = apr_pvsprintf(pool, fmt, ap);
+  va_end(ap);
 
   return svn_stream_puts(stream, message);
 }
