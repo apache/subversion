@@ -684,6 +684,59 @@ drive_editor(svn_editor_t *editor,
 }
 
 static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  *props = apr_hash_make(result_pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *path_infos = baton;
+  int i;
+
+  /* Find the correct path_info, and return its source kind.  While iterating
+     over the list is O(n), in practice this is a very short list (and this
+     is temporary code anyway). */
+  for (i = 0; i < path_infos->nelts; i++)
+    {
+      path_driver_info_t *path_info = APR_ARRAY_IDX(path_infos, i,
+                                                    path_driver_info_t *);
+
+      if (strcmp(path_info->src_relpath, path) == 0)
+        {
+          *kind = svn__kind_from_node_kind(path_info->src_kind, FALSE);
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *kind = svn_kind_unknown;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *filename = NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t make_parents,
                     const apr_hash_t *revprop_table,
@@ -700,6 +753,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
   int i;
+  svn_delta_shim_callbacks_t *shim_callbacks;
   svn_client__copy_pair_t *first_pair =
     APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *);
 
@@ -902,9 +956,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       NULL, pool)));
+  shim_callbacks = svn_delta_shim_callbacks_default(pool);
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session, shim_callbacks));
+  shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
+  shim_callbacks->fetch_baton = path_infos;
+
   SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
