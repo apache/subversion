@@ -315,6 +315,37 @@ def no_op_commit(sbox):
 
 #----------------------------------------------------------------------
 
+def init_mod_merge_mod(sbox, mod_6, mod_7):
+  """Modify both branches, merge A -> B, optionally modify again.
+     MOD_6 is True to modify A in r6, MOD_7 is True to modify B in r7,
+     otherwise make no-op commits for r6 and/or r7."""
+
+  #   A (--o------?-
+  #     (     \
+  #   B (---o--x---?
+  #     2  34  5  67
+
+  make_branches(sbox)
+  modify_branch(sbox, 'A', 3)
+  modify_branch(sbox, 'B', 4)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A3'],
+                  expect_mi=[2, 3, 4],
+                  expect_3ways=[three_way_merge('A1', 'A4')])
+
+  if mod_6:
+    modify_branch(sbox, 'A', 6)
+  else:
+    no_op_commit(sbox)  # r6
+
+  if mod_7:
+    modify_branch(sbox, 'B', 7)
+  else:
+    no_op_commit(sbox)  # r7
+
+########################################################################
+
 # Merge once
 
 @SkipUnless(server_has_mergeinfo)
@@ -402,17 +433,7 @@ def merge_twice_same_direction_1(sbox):
   #   B (---o--x------x
   #     2  34  5  67  8
 
-  make_branches(sbox)
-  modify_branch(sbox, 'A', 3)
-  modify_branch(sbox, 'B', 4)
-
-  symmetric_merge(sbox, 'A', 'B',
-                  expect_changes=['A3'],
-                  expect_mi=[2, 3, 4],
-                  expect_3ways=[three_way_merge('A1', 'A4')])
-
-  no_op_commit(sbox)  # r6
-  no_op_commit(sbox)  # r7
+  init_mod_merge_mod(sbox, mod_6=False, mod_7=False)
 
   symmetric_merge(sbox, 'A', 'B',
                   expect_changes=[],
@@ -428,17 +449,7 @@ def merge_twice_same_direction_2(sbox):
   #   B (---o--x---o--x
   #     2  34  5  67  8
 
-  make_branches(sbox)
-  modify_branch(sbox, 'A', 3)
-  modify_branch(sbox, 'B', 4)
-
-  symmetric_merge(sbox, 'A', 'B',
-                  expect_changes=['A3'],
-                  expect_mi=[2, 3, 4],
-                  expect_3ways=[three_way_merge('A1', 'A4')])
-
-  modify_branch(sbox, 'A', 6)
-  modify_branch(sbox, 'B', 7)
+  init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
   symmetric_merge(sbox, 'A', 'B',
                   expect_changes=['A6'],
@@ -449,43 +460,16 @@ def merge_twice_same_direction_2(sbox):
 
 #   Merge to and fro
 
-def init_merge_to_and_fro_1(sbox, mod_6, mod_7):
-  """"""
-
-  #   A (--o------?-
-  #     (     \
-  #   B (---o--x---?
-  #     2  34  5  67
-
-  make_branches(sbox)
-  modify_branch(sbox, 'A', 3)
-  modify_branch(sbox, 'B', 4)
-
-  symmetric_merge(sbox, 'A', 'B',
-                  expect_changes=['A3'],
-                  expect_mi=[2, 3, 4],
-                  expect_3ways=[three_way_merge('A1', 'A4')])
-
-  if mod_6:
-    modify_branch(sbox, 'A', 6)
-  else:
-    no_op_commit(sbox)  # r6
-
-  if mod_7:
-    modify_branch(sbox, 'B', 7)
-  else:
-    no_op_commit(sbox)  # r7
-
 @SkipUnless(server_has_mergeinfo)
 def merge_to_and_fro_1_1(sbox):
   """merge_to_and_fro_1_1"""
 
-  #   A (--o------.---x
+  #   A (--o----------x
   #     (     \      /
-  #   B (---o--x---.---
+  #   B (---o--x-------
   #     2  34  5  67  8
 
-  init_merge_to_and_fro_1(sbox, mod_6=False, mod_7=False)
+  init_mod_merge_mod(sbox, mod_6=False, mod_7=False)
 
   symmetric_merge(sbox, 'B', 'A',
                   expect_changes=['B4'],
@@ -501,7 +485,7 @@ def merge_to_and_fro_1_2(sbox):
   #   B (---o--x---o---
   #     2  34  5  67  8
 
-  init_merge_to_and_fro_1(sbox, mod_6=True, mod_7=True)
+  init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
   symmetric_merge(sbox, 'B', 'A',
                   expect_changes=['B4', 'B7'],
@@ -509,14 +493,16 @@ def merge_to_and_fro_1_2(sbox):
                   expect_3ways=[three_way_merge('A4', 'B7')])
 
 def init_merge_to_and_fro_2(sbox, mod_9, mod_10):
-  """"""
+  """Set up branches A and B for the merge_to_and_fro_2 scenarios.
+     MOD_9 is True to modify A in r9, MOD_10 is True to modify B in r10,
+     otherwise make no-op commits for r9 and/or r10."""
 
   #   A (--o------o------?-
   #     (     \      \
   #   B (---o--x---o--x---?
   #     2  34  5  67  8--90
 
-  init_merge_to_and_fro_1(sbox, mod_6=True, mod_7=True)
+  init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
   symmetric_merge(sbox, 'A', 'B',
                   expect_changes=['A6'],
@@ -537,9 +523,9 @@ def init_merge_to_and_fro_2(sbox, mod_9, mod_10):
 def merge_to_and_fro_2_1(sbox):
   """merge_to_and_fro_2_1"""
 
-  #   A (--o------o------.---x
+  #   A (--o------o----------x
   #     (     \      \      /
-  #   B (---o--x---o--x---.---
+  #   B (---o--x---o--x-------
   #     2  34  5  67  8  90  1
 
   init_merge_to_and_fro_2(sbox, mod_9=False, mod_10=False)
@@ -566,15 +552,16 @@ def merge_to_and_fro_2_2(sbox):
                   expect_3ways=[three_way_merge('A7', 'B10')])
 
 def init_merge_to_and_fro_3(sbox, mod_9, mod_10):
-  """MOD_N is True to make an actual change in revision N, or False to
-     make a no-op commit."""
+  """Set up branches A and B for the merge_to_and_fro_3/4 scenarios.
+     MOD_9 is True to modify A in r9, MOD_10 is True to modify B in r10,
+     otherwise make no-op commits for r9 and/or r10."""
 
   #   A (--o------o---x--?-
   #     (     \      /
   #   B (---o--x---o------?
   #     2  34  5  67  8  90
 
-  init_merge_to_and_fro_1(sbox, mod_6=True, mod_7=True)
+  init_mod_merge_mod(sbox, mod_6=True, mod_7=True)
 
   symmetric_merge(sbox, 'B', 'A',
                   expect_changes=['B4', 'B7'],
@@ -595,9 +582,9 @@ def init_merge_to_and_fro_3(sbox, mod_9, mod_10):
 def merge_to_and_fro_3_1(sbox):
   """merge_to_and_fro_3_1"""
 
-  #   A (--o------o---x--.---x
+  #   A (--o------o---x------x
   #     (     \      /      /
-  #   B (---o--x---o------.---
+  #   B (---o--x---o----------
   #     2  34  5  67  8  90  1
 
   init_merge_to_and_fro_3(sbox, mod_9=False, mod_10=False)
@@ -627,9 +614,9 @@ def merge_to_and_fro_3_2(sbox):
 def merge_to_and_fro_4_1(sbox):
   """merge_to_and_fro_4_1"""
 
-  #   A (--o------o---x--.----
+  #   A (--o------o---x-------
   #     (     \      /      \
-  #   B (---o--x---o------.--x
+  #   B (---o--x---o---------x
   #     2  34  5  67  8  90  1
 
   init_merge_to_and_fro_3(sbox, mod_9=False, mod_10=False)
@@ -661,26 +648,22 @@ def merge_to_and_fro_4_2(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 def cherry2_fwd(sbox):
-  """cherry2-fwd"""
+  """cherry2_fwd"""
 
-  #   A (--o-----?-----c--o---
-  #     (    \        /     \
-  #   B (--o--x--o-[o]-------x
-  #     2 34  5  6  7  8  9
+  #   A (--o------------c--o---
+  #     (    \         /     \
+  #   B (--o--x---o-[o]-------x
+  #     2 34  5  67  8  9  0  1
 
-  make_branches(sbox)
-  modify_branch(sbox, 'A', 3)
-  modify_branch(sbox, 'B', 4)
-  symmetric_merge(sbox, 'A', 'B')
-  modify_branch(sbox, 'B', 6)
-  modify_branch(sbox, 'B', 7)
-  cherry_pick(sbox, 7, 'B', 'A')
-  modify_branch(sbox, 'A', 9)
+  init_mod_merge_mod(sbox, mod_6=False, mod_7=True)
+  modify_branch(sbox, 'B', 8)
+  cherry_pick(sbox, 8, 'B', 'A')
+  modify_branch(sbox, 'A', 10)
 
   symmetric_merge(sbox, 'A', 'B',
-                  expect_changes=['A9'],  # and NOT A8
-                  expect_mi=[5, 6, 7, 8, 9],
-                  expect_3ways=[three_way_merge('A8', 'A9')])
+                  expect_changes=['A10'],  # and NOT A9
+                  expect_mi=[5, 6, 7, 8, 9, 10],
+                  expect_3ways=[three_way_merge('A9', 'A10')])
 
 
 ########################################################################
