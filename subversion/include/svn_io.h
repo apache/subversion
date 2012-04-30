@@ -1180,6 +1180,9 @@ svn_stream_tee(svn_stream_t *out1,
                apr_pool_t *pool);
 
 /** Write NULL-terminated string @a str to @a stream.
+ *
+ * @since New in 1.8.
+ *
  */
 svn_error_t *
 svn_stream_puts(svn_stream_t *stream,
