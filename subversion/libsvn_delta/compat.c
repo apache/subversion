@@ -1042,7 +1042,9 @@ insert_change(const char *relpath,
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
 
-  apr_hash_set(changes, relpath, APR_HASH_KEY_STRING, change);
+  apr_hash_set(changes,
+               apr_pstrdup(result_pool, relpath), APR_HASH_KEY_STRING,
+               change);
 
   return change;
 }
