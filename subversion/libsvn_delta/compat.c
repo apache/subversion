@@ -1065,7 +1065,7 @@ add_directory_cb(void *baton,
   change->action = RESTRUCTURE_ADD;
   change->kind = svn_kind_dir;
   change->deleting = replaces_rev;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1102,7 +1102,7 @@ add_file_cb(void *baton,
   change->action = RESTRUCTURE_ADD;
   change->kind = svn_kind_file;
   change->deleting = replaces_rev;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
   change->contents_abspath = tmp_filename;
   change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
 
@@ -1125,7 +1125,7 @@ add_symlink_cb(void *baton,
   change->action = RESTRUCTURE_ADD;
   change->kind = svn_kind_symlink;
   change->deleting = replaces_rev;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
   /* ### target  */
 #endif
 
@@ -1168,7 +1168,7 @@ alter_directory_cb(void *baton,
      of an earlier copy/move operation.  */
   change->kind = svn_kind_dir;
   change->changing = revision;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1215,7 +1215,7 @@ alter_file_cb(void *baton,
   change->kind = svn_kind_file;
   change->changing = revision;
   if (props != NULL)
-    change->props = apr_hash_copy(eb->edit_pool, props);
+    change->props = svn_prop_hash_dup(props, eb->edit_pool);
   if (contents != NULL)
     {
       change->contents_abspath = tmp_filename;
@@ -1336,6 +1336,98 @@ rotate_cb(void *baton,
 {
   SVN__NOT_IMPLEMENTED();
   return SVN_NO_ERROR;
+}
+
+
+static int
+sort_deletes_first(const svn_sort__item_t *item1,
+                   const svn_sort__item_t *item2)
+{
+  const char *relpath1 = item1->key;
+  const char *relpath2 = item2->key;
+  const char *slash1;
+  const char *slash2;
+  int len1;
+  int len2;
+
+  /* Are these two items siblings? The 'if' statement tests if they are
+     siblings in the root directory, or that slashes were found in both
+     paths, that the length of the paths to those slashes match, and that
+     the path contents up to those slashes also match.  */
+  slash1 = strrchr(relpath1, '/');
+  slash2 = strrchr(relpath2, '/');
+  if ((slash1 == NULL && slash2 == NULL)
+      || (slash1 != NULL
+          && slash2 != NULL
+          && (len1 = slash1 - relpath1) == (len2 = slash2 - relpath2)
+          && memcmp(relpath1, relpath2, len1) == 0))
+    {
+      const struct change_node *change1 = item1->value;
+      const struct change_node *change2 = item2->value;
+
+      if (change1->action == RESTRUCTURE_DELETE)
+        {
+          if (change2->action == RESTRUCTURE_DELETE)
+            {
+              /* If both items are being deleted, then we don't care about
+                 the order. State they are equal.  */
+              return 0;
+            }
+
+          /* ITEM1 is being deleted. Sort it before the surviving item.  */
+          return -1;
+        }
+      if (change2->action == RESTRUCTURE_DELETE)
+        /* ITEM2 is being deleted. Sort it before the surviving item.  */
+        return 1;
+
+      /* Normally, we don't care about the ordering of two siblings. However,
+         if these siblings are directories, then we need to provide an
+         ordering so that the quicksort algorithm will further sort them
+         relative to the maybe-directory's children.
+
+         Without this additional ordering, we could see that A/B/E and A/B/F
+         are equal. And then A/B/E/child is sorted before A/B/F. But since
+         E and F are "equal", A/B/E could arrive *after* A/B/F and after the
+         A/B/E/child node.  */
+
+      /* FALLTHROUGH */
+    }
+
+  /* Use svn_path_compare_paths() to get correct depth-based ordering.  */
+  return svn_path_compare_paths(relpath1, relpath2);
+}
+
+
+static const apr_array_header_t *
+get_sorted_paths(apr_hash_t *changes,
+                 const char *base_relpath,
+                 apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *items;
+  apr_array_header_t *paths;
+  int i;
+
+  /* Construct a sorted array of svn_sort__item_t structs. Within a given
+     directory, nodes that are to be deleted will appear first.  */
+  items = svn_sort__hash(changes, sort_deletes_first, scratch_pool);
+
+  /* Build a new array with just the paths, trimmed to relative paths for
+     the Ev1 drive.  */
+  paths = apr_array_make(scratch_pool, items->nelts, sizeof(const char *));
+  for (i = items->nelts; i--; )
+    {
+      const svn_sort__item_t *item;
+
+      item = &APR_ARRAY_IDX(items, i, const svn_sort__item_t);
+      APR_ARRAY_IDX(paths, i, const char *)
+        = svn_relpath_skip_ancestor(base_relpath, item->key);
+    }
+
+  /* We didn't use PUSH, so set the proper number of elements.  */
+  paths->nelts = items->nelts;
+
+  return paths;
 }
 
 
@@ -1566,9 +1658,7 @@ drive_changes(const struct editor_baton *eb,
               apr_pool_t *scratch_pool)
 {
   struct change_node *change;
-  apr_array_header_t *paths = apr_array_make(scratch_pool, 10,
-                                             sizeof(const char *));
-  apr_hash_index_t *hi;
+  const apr_array_header_t *paths;
 
   /* If we never opened a root baton, then the caller aborted the editor
      before it even began. There is nothing to do. Bail.  */
@@ -1583,14 +1673,13 @@ drive_changes(const struct editor_baton *eb,
   change->kind = svn_kind_dir;
   /* No property changes (tho they might exist from a real change).  */
 
-  for (hi = apr_hash_first(scratch_pool, eb->changes); hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *relpath = svn__apr_hash_index_key(hi);
-      const char *ev1_relpath = svn_relpath_skip_ancestor(eb->base_relpath,
-                                                          relpath);
-      APR_ARRAY_PUSH(paths, const char *) = ev1_relpath;
-    }
+  /* Get a sorted list of Ev1-relative paths.  */
+  paths = get_sorted_paths(eb->changes, eb->base_relpath, scratch_pool);
+
+#if 1
+  /* ### something is still broken. sort the paths normally for now.  */
+  qsort(paths->elts, paths->nelts, paths->elt_size, svn_sort_compare_paths);
+#endif
 
   /* We need to pass SVN_INVALID_REVNUM to the path_driver. It uses this
      revision whenever it opens directory batons. If we specified a "real"
@@ -1610,10 +1699,9 @@ drive_changes(const struct editor_baton *eb,
      SVN_INVALID_REVNUM, so we can't be the only goofball.
 
      Note: dropping const on the callback_baton.  */
-  SVN_ERR(svn_delta_path_driver(eb->deditor, eb->dedit_baton,
-                                SVN_INVALID_REVNUM, paths,
-                                apply_change, (void *)eb,
-                                scratch_pool));
+  SVN_ERR(svn_delta_path_driver2(eb->deditor, eb->dedit_baton, paths,
+                                 apply_change, (void *)eb,
+                                 scratch_pool));
 
   return SVN_NO_ERROR;
 }
