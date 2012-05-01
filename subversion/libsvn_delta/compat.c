@@ -1065,7 +1065,7 @@ add_directory_cb(void *baton,
   change->action = RESTRUCTURE_ADD;
   change->kind = svn_kind_dir;
   change->deleting = replaces_rev;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1102,7 +1102,7 @@ add_file_cb(void *baton,
   change->action = RESTRUCTURE_ADD;
   change->kind = svn_kind_file;
   change->deleting = replaces_rev;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
   change->contents_abspath = tmp_filename;
   change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
 
@@ -1125,7 +1125,7 @@ add_symlink_cb(void *baton,
   change->action = RESTRUCTURE_ADD;
   change->kind = svn_kind_symlink;
   change->deleting = replaces_rev;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
   /* ### target  */
 #endif
 
@@ -1168,7 +1168,7 @@ alter_directory_cb(void *baton,
      of an earlier copy/move operation.  */
   change->kind = svn_kind_dir;
   change->changing = revision;
-  change->props = apr_hash_copy(eb->edit_pool, props);
+  change->props = svn_prop_hash_dup(props, eb->edit_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1215,7 +1215,7 @@ alter_file_cb(void *baton,
   change->kind = svn_kind_file;
   change->changing = revision;
   if (props != NULL)
-    change->props = apr_hash_copy(eb->edit_pool, props);
+    change->props = svn_prop_hash_dup(props, eb->edit_pool);
   if (contents != NULL)
     {
       change->contents_abspath = tmp_filename;
