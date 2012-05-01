@@ -37,6 +37,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_iter.h"
+#include "svn_subst.h"
 #include "svn_hash.h"
 
 #include <assert.h>
@@ -1971,5 +1972,95 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
   apr_hash_set(new_revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
                svn_string_create(log_msg, pool));
   *revprop_table_out = new_revprop_table;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_detranslated_stream(svn_stream_t **fstream,
+                                    svn_checksum_t **checksum,
+                                    const char *local_abspath,
+                                    apr_hash_t *properties,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_stream_t *contents;
+  const svn_string_t *eol_style_val = NULL;
+  const svn_string_t *keywords_val = NULL;
+  svn_boolean_t special = FALSE;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  apr_hash_t *keywords;
+
+  /* If there are properties, look for EOL-style and keywords ones. */
+  if (properties)
+    {
+      eol_style_val = apr_hash_get(properties, SVN_PROP_EOL_STYLE,
+                                   sizeof(SVN_PROP_EOL_STYLE) - 1);
+      keywords_val = apr_hash_get(properties, SVN_PROP_KEYWORDS,
+                                  sizeof(SVN_PROP_KEYWORDS) - 1);
+      if (apr_hash_get(properties, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING))
+        special = TRUE;
+    }
+
+  if (eol_style_val)
+    svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val->data);
+  else
+    {
+      eol = NULL;
+      eol_style = svn_subst_eol_style_none;
+    }
+
+  if (keywords_val)
+    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_val->data,
+                                      APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                      "", 0, "", scratch_pool));
+  else
+    keywords = NULL;
+
+  if (special)
+    {
+      SVN_ERR(svn_subst_read_specialfile(&contents, local_abspath,
+                                         scratch_pool, scratch_pool));
+    }
+  else
+    {
+      /* Open the working copy file. */
+      SVN_ERR(svn_stream_open_readonly(&contents, local_abspath, scratch_pool,
+                                       scratch_pool));
+
+      /* If we have EOL styles or keywords, then detranslate the file. */
+      if (svn_subst_translation_required(eol_style, eol, keywords,
+                                         FALSE, TRUE))
+        {
+          if (eol_style == svn_subst_eol_style_unknown)
+            return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                    _("%s property on '%s' contains "
+                                      "unrecognized EOL-style '%s'"),
+                                    SVN_PROP_EOL_STYLE,
+                                    svn_dirent_local_style(local_abspath,
+                                                           scratch_pool),
+                                    eol_style_val->data);
+
+          /* We're importing, so translate files with 'native' eol-style to
+           * repository-normal form, not to this platform's native EOL. */
+          if (eol_style == svn_subst_eol_style_native)
+            eol = SVN_SUBST_NATIVE_EOL_STR;
+
+          /* Wrap the working copy stream with a filter to detranslate it. */
+          contents = svn_subst_stream_translated(contents,
+                                                 eol,
+                                                 TRUE /* repair */,
+                                                 keywords,
+                                                 FALSE /* expand */,
+                                                 scratch_pool);
+        }
+    }
+
+  *fstream = svn_stream_buffered(result_pool);
+  contents = svn_stream_checksummed2(contents, checksum, NULL,
+                                     svn_checksum_sha1, TRUE, scratch_pool);
+  SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(*fstream, result_pool),
+                           NULL, NULL, scratch_pool));
+
   return SVN_NO_ERROR;
 }

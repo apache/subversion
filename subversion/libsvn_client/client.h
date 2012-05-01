@@ -1109,6 +1109,19 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Return in FSTREAM a readable stream for the contents of LOCAL_ABSPATH,
+   with the appropriate detranslation as given by PROPERTIES.  CHECKSUM will
+   contain the expected SHA1 checksum of the contents.
+
+   Both CHECKSUM AND FSTREAM are allocated in RESULT_POOL. */
+svn_error_t *
+svn_client__get_detranslated_stream(svn_stream_t **fstream,
+                                    svn_checksum_t **checksum,
+                                    const char *local_abspath,
+                                    apr_hash_t *properties,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 
 struct svn_client__shim_callbacks_baton
 {
