@@ -801,6 +801,8 @@ ev2_apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct change_node *change;
   svn_stream_t *target;
+  /* ### fix this. for now, we know this has a "short" lifetime.  */
+  apr_pool_t *scratch_pool = handler_pool;
 
   change = locate_change(fb->eb, fb->path);
   SVN_ERR_ASSERT(change->contents_abspath == NULL);
@@ -812,11 +814,11 @@ ev2_apply_textdelta(void *file_baton,
     hb->source = svn_stream_empty(handler_pool);
   else
     SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
-                                     result_pool));
+                                     scratch_pool));
 
   SVN_ERR(svn_stream_open_unique(&target, &change->contents_abspath, NULL,
                                  svn_io_file_del_on_pool_cleanup,
-                                 fb->eb->edit_pool, result_pool));
+                                 fb->eb->edit_pool, scratch_pool));
 
   svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
