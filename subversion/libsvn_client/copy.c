@@ -957,12 +957,12 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   /* Fetch RA commit editor. */
   shim_callbacks = svn_delta_shim_callbacks_default(pool);
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session, shim_callbacks));
   shim_callbacks->fetch_props_func = fetch_props_func;
   shim_callbacks->fetch_base_func = fetch_base_func;
   shim_callbacks->fetch_kind_func = fetch_kind_func;
   shim_callbacks->fetch_baton = path_infos;
 
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session, shim_callbacks));
   SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
