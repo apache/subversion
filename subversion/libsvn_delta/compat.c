@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#include <stddef.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"
@@ -1347,8 +1349,8 @@ sort_deletes_first(const svn_sort__item_t *item1,
   const char *relpath2 = item2->key;
   const char *slash1;
   const char *slash2;
-  int len1;
-  int len2;
+  ptrdiff_t len1;
+  ptrdiff_t len2;
 
   /* Are these two items siblings? The 'if' statement tests if they are
      siblings in the root directory, or that slashes were found in both
