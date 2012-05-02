@@ -1977,7 +1977,8 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
 
 svn_error_t *
 svn_client__get_detranslated_stream(svn_stream_t **fstream,
-                                    svn_checksum_t **checksum,
+                                    svn_checksum_t **sha1_checksum,
+                                    svn_checksum_t **md5_checksum,
                                     const char *local_abspath,
                                     apr_hash_t *properties,
                                     apr_pool_t *result_pool,
@@ -2056,9 +2057,14 @@ svn_client__get_detranslated_stream(svn_stream_t **fstream,
         }
     }
 
+  if (sha1_checksum)
+    contents = svn_stream_checksummed2(contents, sha1_checksum, NULL,
+                                       svn_checksum_sha1, TRUE, scratch_pool);
+  if (md5_checksum)
+    contents = svn_stream_checksummed2(contents, md5_checksum, NULL,
+                                       svn_checksum_md5, TRUE, scratch_pool);
+
   *fstream = svn_stream_buffered(result_pool);
-  contents = svn_stream_checksummed2(contents, checksum, NULL,
-                                     svn_checksum_sha1, TRUE, scratch_pool);
   SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(*fstream, result_pool),
                            NULL, NULL, scratch_pool));
 

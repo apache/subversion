@@ -141,7 +141,7 @@ import_file(svn_editor_t *editor,
                  svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool));
 
   /* Now, transmit the file contents. */
-  SVN_ERR(svn_client__get_detranslated_stream(&contents, &checksum,
+  SVN_ERR(svn_client__get_detranslated_stream(&contents, &checksum, NULL,
                                               local_abspath,
                                               properties, pool, pool));
 

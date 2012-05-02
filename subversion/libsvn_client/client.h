@@ -1116,7 +1116,8 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
    Both CHECKSUM AND FSTREAM are allocated in RESULT_POOL. */
 svn_error_t *
 svn_client__get_detranslated_stream(svn_stream_t **fstream,
-                                    svn_checksum_t **checksum,
+                                    svn_checksum_t **sha1_checksum,
+                                    svn_checksum_t **md5_checksum,
                                     const char *local_abspath,
                                     apr_hash_t *properties,
                                     apr_pool_t *result_pool,
