@@ -1087,6 +1087,35 @@ svn_wc__node_pristine_install(svn_wc_context_t *wc_ctx,
                               const svn_checksum_t *md5_checksum,
                               apr_pool_t *scratch_pool);
 
+/* If requested set *CONTENTS to a readable stream that will yield the pristine
+   text identified by SHA1_CHECKSUM (must be a SHA-1 checksum) within the WC
+   identified by WRI_ABSPATH in DB.
+
+   Even if the pristine text is removed from the store while it is being
+   read, the stream will remain valid and readable until it is closed.
+
+   Allocate the stream in RESULT_POOL. */
+svn_error_t *
+svn_wc__node_pristine_read(svn_stream_t **contents,
+                           svn_wc_context_t *wc_ctx,
+                           const char *wri_abspath,
+                           const svn_checksum_t *sha1_checksum,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/* Set *TEMP_DIR_ABSPATH to a directory in which the caller should create
+   a uniquely named file for later installation as a pristine text file.
+
+   The directory is guaranteed to be one that svn_wc__node_pristine_install()
+   can use: specifically, one from which it can atomically move the file.
+
+   Allocate *TEMP_DIR_ABSPATH in RESULT_POOL. */
+svn_error_t *
+svn_wc__node_pristine_get_tempdir(const char **temp_dir_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *wri_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Gets an array of const char *repos_relpaths of descendants of LOCAL_ABSPATH,
  * which must be the op root of an addition, copy or move. The descendants

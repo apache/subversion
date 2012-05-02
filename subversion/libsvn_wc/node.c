@@ -1648,6 +1648,33 @@ svn_wc__node_pristine_install(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
+svn_wc__node_pristine_read(svn_stream_t **contents,
+                           svn_wc_context_t *wc_ctx,
+                           const char *wri_abspath,
+                           const svn_checksum_t *sha1_checksum,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__db_pristine_read(contents, NULL, wc_ctx->db,
+                                                  wri_abspath, sha1_checksum,
+                                                  result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_wc__node_pristine_get_tempdir(const char **temp_dir_abspath,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *wri_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__node_pristine_get_tempdir(temp_dir_abspath,
+                                                           wc_ctx->db,
+                                                           wri_abspath,
+                                                           result_pool,
+                                                           scratch_pool));
+}
+
+svn_error_t *
 svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
                                     svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
