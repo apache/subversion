@@ -178,7 +178,7 @@ def get_mergeinfo_change(sbox, target):
                                               sbox.ospath(target))
   merged_revs = []
   for line in out:
-    match = re.match(r'   Merged /(\w+):r([0-9-]+)', line)
+    match = re.match(r'   Merged /(\w+):r(.*)', line)
     if match:
       for r_range in match.group(2).split(','):
         if '-' in r_range:
@@ -263,6 +263,7 @@ def expected_symmetric_merge_output(target, expect_3ways):
   # differences between repository URLs' notifications when it need not
   # or should not; so expect that.
   lines += ["--- Merging differences between repository URLs into '%s':\n" % (target,),
+            "--- Recording mergeinfo for merge of r.* through r.* into '%s':\n" % (target,),
             "--- Recording mergeinfo for merge between repository URLs into '%s':\n" % (target,)]
 
   return expected_merge_output(rev_ranges, lines, target=target)
@@ -664,17 +665,37 @@ def merge_to_and_fro_4_2(sbox):
 
 #----------------------------------------------------------------------
 
-# Cherry2, fwd
+# Cherry-pick scenarios
+
+@SkipUnless(server_has_mergeinfo)
+def cherry1_fwd(sbox):
+  """cherry1_fwd"""
+
+  #   A (--o------o--[o]----o---
+  #     (     \         \     \
+  #   B (---o--x---------c-----x
+  #     2  34  5  67  8  9  0  1
+
+  init_mod_merge_mod(sbox, mod_6=True, mod_7=False)
+  modify_branch(sbox, 'A', 8)
+  cherry_pick(sbox, 8, 'A', 'B')
+  modify_branch(sbox, 'A', 10)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A6', 'A10'],  # and NOT A8
+                  expect_mi=[5, 6, 7, 9, 10],
+                  expect_3ways=[three_way_merge('A4', 'A7'),
+                                three_way_merge('A8', 'A10')])
 
 @SkipUnless(server_has_mergeinfo)
 @XFail()
 def cherry2_fwd(sbox):
   """cherry2_fwd"""
 
-  #   A (--o------------c--o---
-  #     (    \         /     \
-  #   B (--o--x---o-[o]-------x
-  #     2 34  5  67  8  9  0  1
+  #   A (--o-------------c--o---
+  #     (     \         /     \
+  #   B (---o--x---o-[o]-------x
+  #     2  34  5  67  8  9  0  1
 
   init_mod_merge_mod(sbox, mod_6=False, mod_7=True)
   modify_branch(sbox, 'B', 8)
@@ -686,6 +707,36 @@ def cherry2_fwd(sbox):
                   expect_mi=[5, 6, 7, 8, 9, 10],
                   expect_3ways=[three_way_merge('A9', 'A10')])
 
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+def cherry3_fwd(sbox):
+  """cherry3_fwd"""
+
+  #   A (--o--------------c--o----
+  #     (          \     /     \
+  #     (           \   /       \
+  #   B (---o--o-[o]-x-/---------x
+  #               \__/
+  #     2  34  5  6  7    8  9   0
+
+  make_branches(sbox)
+  modify_branch(sbox, 'A', 3)
+  modify_branch(sbox, 'B', 4)
+  modify_branch(sbox, 'B', 5)
+  modify_branch(sbox, 'B', 6)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A3'],
+                  expect_mi=[2, 3, 4, 5, 6],
+                  expect_3ways=[three_way_merge('A1', 'A6')])
+
+  cherry_pick(sbox, 6, 'B', 'A')
+  modify_branch(sbox, 'A', 9)
+
+  symmetric_merge(sbox, 'A', 'B',
+                  expect_changes=['A9'],  # and NOT A8
+                  expect_mi=[7, 8, 9],
+                  expect_3ways=[three_way_merge('A8', 'A9')])
 
 ########################################################################
 # Run the tests
@@ -707,7 +758,9 @@ test_list = [ None,
               merge_to_and_fro_3_2,
               merge_to_and_fro_4_1,
               merge_to_and_fro_4_2,
+              cherry1_fwd,
               cherry2_fwd,
+              cherry3_fwd,
              ]
 
 if __name__ == '__main__':
