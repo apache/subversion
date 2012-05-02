@@ -595,11 +595,6 @@ svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx)
   return ctx->done;
 }
 
-int
-svn_ra_serf__propfind_status_code(svn_ra_serf__propfind_context_t *ctx)
-{
-  return ctx->status_code;
-}
 
 /*
  * This helper function will block until the PROP_CTX indicates that is done

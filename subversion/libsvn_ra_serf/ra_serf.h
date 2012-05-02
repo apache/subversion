@@ -858,11 +858,6 @@ typedef struct svn_ra_serf__propfind_context_t svn_ra_serf__propfind_context_t;
 svn_boolean_t
 svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
 
-/*
- * Returns the response status code of the PROPFIND @a ctx.
- */
-int
-svn_ra_serf__propfind_status_code(svn_ra_serf__propfind_context_t *ctx);
 
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
