@@ -1634,6 +1634,20 @@ svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
 }
 
 svn_error_t *
+svn_wc__node_pristine_install(svn_wc_context_t *wc_ctx,
+                              const char *tempfile_abspath,
+                              const svn_checksum_t *sha1_checksum,
+                              const svn_checksum_t *md5_checksum,
+                              apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__db_pristine_install(wc_ctx->db,
+                                                     tempfile_abspath,
+                                                     sha1_checksum,
+                                                     md5_checksum,
+                                                     scratch_pool));
+}
+
+svn_error_t *
 svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
                                     svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,

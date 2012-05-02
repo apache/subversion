@@ -1076,6 +1076,17 @@ svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Install the file TEMPFILE_ABSPATH (which is sitting in a directory given by
+   svn_wc__db_pristine_get_tempdir()) into the pristine data store, to be
+   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM, and whose
+   MD-5 checksum is MD5_CHECKSUM. */
+svn_error_t *
+svn_wc__node_pristine_install(svn_wc_context_t *wc_ctx,
+                              const char *tempfile_abspath,
+                              const svn_checksum_t *sha1_checksum,
+                              const svn_checksum_t *md5_checksum,
+                              apr_pool_t *scratch_pool);
+
 
 /* Gets an array of const char *repos_relpaths of descendants of LOCAL_ABSPATH,
  * which must be the op root of an addition, copy or move. The descendants
