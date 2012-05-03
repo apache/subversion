@@ -30,7 +30,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_temp_serializer.h"
-#include "private/svn_hash_private.h"
+#include "private/svn_subr_private.h"
 
 #include "temp_serializer.h"
 

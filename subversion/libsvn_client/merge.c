@@ -59,7 +59,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_client_private.h"
-#include "private/svn_hash_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
