@@ -81,7 +81,7 @@ default_num_threads = 5
 # Set up logging
 logger = logging.getLogger()
 handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('[%(levelname)s] %(message)s')
+formatter = logging.Formatter('%(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -1685,7 +1685,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     parser = _create_parser()
 
   if options.log_with_timestamps:
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
+    formatter = logging.Formatter('[%(asctime)s] %(message)s',
                                   '%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
 
