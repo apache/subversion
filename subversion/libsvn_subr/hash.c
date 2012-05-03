@@ -40,7 +40,7 @@
 #include "svn_pools.h"
 
 #include "private/svn_dep_compat.h"
-#include "private/svn_hash_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
