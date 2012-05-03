@@ -619,8 +619,7 @@ capture_commit_info(const svn_commit_info_t *commit_info,
 
 
 static svn_error_t *
-get_ra_editor(const svn_delta_editor_t **editor,
-              void **edit_baton,
+get_ra_editor(svn_editor_t **editor,
               svn_ra_session_t *ra_session,
               svn_client_ctx_t *ctx,
               const char *log_msg,
@@ -638,7 +637,6 @@ get_ra_editor(const svn_delta_editor_t **editor,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
-#ifdef ENABLE_EV2_SHIMS
   if (commit_items)
     {
       int i;
@@ -663,16 +661,16 @@ get_ra_editor(const svn_delta_editor_t **editor,
         }
       svn_pool_destroy(iterpool);
     }
-#endif
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx,
                                                        relpath_map, pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(ra_session, editor, edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor4(ra_session, editor,
                                     commit_revprops, commit_callback,
                                     commit_baton, lock_tokens, keep_locks,
-                                    pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1279,8 +1277,7 @@ svn_client_commit6(const apr_array_header_t *targets,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
+  svn_editor_t *editor;
   struct capture_baton_t cb;
   svn_ra_session_t *ra_session;
   const char *log_msg;
@@ -1624,10 +1621,9 @@ svn_client_commit6(const apr_array_header_t *targets,
     goto cleanup;
 
   cmt_err = svn_error_trace(
-              get_ra_editor(&editor, &edit_baton, ra_session, ctx,
-                            log_msg, commit_items, revprop_table,
-                            lock_tokens, keep_locks, capture_commit_info,
-                            &cb, pool));
+              get_ra_editor(&editor, ra_session, ctx, log_msg,
+                            commit_items, revprop_table, lock_tokens,
+                            keep_locks, capture_commit_info, &cb, pool));
 
   if (cmt_err)
     goto cleanup;
@@ -1637,7 +1633,7 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   /* Perform the commit. */
   cmt_err = svn_error_trace(
-              svn_client__do_commit(base_url, commit_items, editor, edit_baton,
+              svn_client__do_commit(base_url, commit_items, editor,
                                     notify_prefix, &sha1_checksums, ctx, pool,
                                     iterpool));
 
@@ -1654,15 +1650,14 @@ svn_client_commit6(const apr_array_header_t *targets,
         {
           svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+          svn_checksum_t *checksum = apr_hash_get(sha1_checksums, item->path,
+                                                  APR_HASH_KEY_STRING);
 
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
                        keep_changelists, keep_locks, commit_as_operations,
-                       apr_hash_get(sha1_checksums,
-                                    item->path,
-                                    APR_HASH_KEY_STRING),
-                       iterpool);
+                       checksum, iterpool);
           if (bump_err)
             goto cleanup;
         }
@@ -1684,8 +1679,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */
   if (commit_in_progress)
-    cmt_err = svn_error_compose_create(cmt_err,
-                                       editor->abort_edit(edit_baton, pool));
+    cmt_err = svn_error_compose_create(cmt_err, svn_editor_abort(editor));
 
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in

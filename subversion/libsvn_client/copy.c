@@ -1030,9 +1030,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   struct check_url_kind_baton cukb;
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
-  const svn_delta_editor_t *editor;
+  svn_editor_t *editor;
   apr_hash_t *relpath_map = NULL;
-  void *edit_baton;
   svn_client__committables_t *committables;
   apr_array_header_t *commit_items;
   apr_pool_t *iterpool;
@@ -1268,7 +1267,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
                                             commit_items, pool));
 
-#ifdef ENABLE_EV2_SHIMS
   if (commit_items)
     {
       relpath_map = apr_hash_make(pool);
@@ -1289,7 +1287,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
             apr_hash_set(relpath_map, relpath, APR_HASH_KEY_STRING, item->path);
         }
     }
-#endif
 
   /* Open an RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
@@ -1300,16 +1297,16 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx, relpath_map,
                                                        pool)));
-  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
                                     commit_revprops,
                                     commit_callback,
                                     commit_baton, NULL,
                                     TRUE, /* No lock tokens */
-                                    pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
   /* Perform the commit. */
-  SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
-                                  editor, edit_baton,
+  SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items, editor,
                                   0, /* ### any notify_path_offset needed? */
                                   NULL, ctx, pool, pool),
             _("Commit failed (details follow):"));

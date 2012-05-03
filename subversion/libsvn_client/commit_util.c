@@ -1444,47 +1444,29 @@ struct item_commit_baton
  *
  * This implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
-do_item_commit(void **dir_baton,
-               void *parent_baton,
-               void *callback_baton,
-               const char *path,
-               apr_pool_t *pool)
+do_item_commit(svn_client_commit_item3_t *item,
+               svn_editor_t *editor,
+               const char *notify_path_prefix,
+               const char *base_url,
+               apr_hash_t *checksums,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
 {
-  struct item_commit_baton *icb = callback_baton;
-  const svn_client_commit_item3_t *item = apr_hash_get(icb->commit_items,
-                                                       path,
-                                                       APR_HASH_KEY_STRING);
   svn_node_kind_t kind = item->kind;
-  void *file_baton = NULL;
-  apr_pool_t *file_pool = NULL;
-  const svn_delta_editor_t *editor = icb->editor;
-  apr_hash_t *file_mods = icb->file_mods;
-  svn_client_ctx_t *ctx = icb->ctx;
-  svn_error_t *err;
   const char *local_abspath = NULL;
+  apr_hash_t *props = NULL;
+  svn_checksum_t *sha1_checksum = NULL;
+  svn_checksum_t *md5_checksum = NULL;
+  svn_stream_t *contents = NULL;
+  svn_error_t *err;
 
   /* Do some initializations. */
-  *dir_baton = NULL;
   if (item->kind != svn_node_none && item->path)
     {
       /* We always get an absolute path, see svn_client_commit_item3_t. */
       SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
       local_abspath = item->path;
     }
-
-  /* If this is a file with textual mods, we'll be keeping its baton
-     around until the end of the commit.  So just lump its memory into
-     a single, big, all-the-file-batons-in-here pool.  Otherwise, we
-     can just use POOL, and trust our caller to clean that mess up. */
-  if ((kind == svn_node_file)
-      && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
-    file_pool = apr_hash_pool_get(file_mods);
-  else
-    file_pool = pool;
-
-  /* Call the cancellation function. */
-  if (ctx->cancel_func)
-    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   /* Validation. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
@@ -1493,12 +1475,12 @@ do_item_commit(void **dir_baton,
         return svn_error_createf
           (SVN_ERR_BAD_URL, NULL,
            _("Commit item '%s' has copy flag but no copyfrom URL"),
-           svn_dirent_local_style(path, pool));
+           svn_dirent_local_style(item->path, scratch_pool));
       if (! SVN_IS_VALID_REVNUM(item->copyfrom_rev))
         return svn_error_createf
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Commit item '%s' has copy flag but an invalid revision"),
-           svn_dirent_local_style(path, pool));
+           svn_dirent_local_style(item->path, scratch_pool));
     }
 
   /* If a feedback table was supplied by the application layer,
@@ -1517,32 +1499,33 @@ do_item_commit(void **dir_baton,
           if (item->copyfrom_url)
             notify = svn_wc_create_notify(npath,
                                           svn_wc_notify_commit_copied_replaced,
-                                          pool);
+                                          scratch_pool);
           else
             notify = svn_wc_create_notify(npath, svn_wc_notify_commit_replaced,
-                                          pool);
+                                          scratch_pool);
 
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
           notify = svn_wc_create_notify(npath, svn_wc_notify_commit_deleted,
-                                        pool);
+                                        scratch_pool);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         {
           if (item->copyfrom_url)
             notify = svn_wc_create_notify(npath, svn_wc_notify_commit_copied,
-                                          pool);
+                                          scratch_pool);
           else
             notify = svn_wc_create_notify(npath, svn_wc_notify_commit_added,
-                                          pool);
+                                          scratch_pool);
 
           if (item->kind == svn_node_file)
             {
               const svn_string_t *propval;
 
               SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
-                                       SVN_PROP_MIME_TYPE, pool, pool));
+                                       SVN_PROP_MIME_TYPE, scratch_pool,
+                                       scratch_pool));
 
               if (propval)
                 notify->mime_type = propval->data;
@@ -1552,7 +1535,7 @@ do_item_commit(void **dir_baton,
                || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
         {
           notify = svn_wc_create_notify(npath, svn_wc_notify_commit_modified,
-                                        pool);
+                                        scratch_pool);
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
             notify->content_state = svn_wc_notify_state_changed;
           else
@@ -1568,212 +1551,195 @@ do_item_commit(void **dir_baton,
       if (notify)
         {
           notify->kind = item->kind;
-          notify->path_prefix = icb->notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          notify->path_prefix = notify_path_prefix;
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
         }
     }
 
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      SVN_ERR_ASSERT(parent_baton);
-      err = editor->delete_entry(path, item->revision,
-                                 parent_baton, pool);
+      err = svn_editor_delete(editor, item->session_relpath, item->revision);
 
       if (err)
         goto fixup_error;
     }
 
-  /* If this item is supposed to be added, do so. */
-  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+/*  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS) ||
+        (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))*/
     {
-      if (kind == svn_node_file)
-        {
-          SVN_ERR_ASSERT(parent_baton);
-          err = editor->add_file(
-                   path, parent_baton, item->copyfrom_url,
-                   item->copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
-                   file_pool, &file_baton);
-        }
-      else /* May be svn_node_none when adding parent dirs for a copy. */
-        {
-          SVN_ERR_ASSERT(parent_baton);
-          err = editor->add_directory(
-                   path, parent_baton, item->copyfrom_url,
-                   item->copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
-                   pool, dir_baton);
-        }
+      err = svn_wc_prop_list2(&props, ctx->wc_ctx, item->path, scratch_pool,
+                              scratch_pool);
 
       if (err)
         goto fixup_error;
-
-      /* Set other prop-changes, if available in the baton */
-      if (item->outgoing_prop_changes)
-        {
-          svn_prop_t *prop;
-          apr_array_header_t *prop_changes = item->outgoing_prop_changes;
-          int ctr;
-          for (ctr = 0; ctr < prop_changes->nelts; ctr++)
-            {
-              prop = APR_ARRAY_IDX(prop_changes, ctr, svn_prop_t *);
-              if (kind == svn_node_file)
-                {
-                  err = editor->change_file_prop(file_baton, prop->name,
-                                                 prop->value, pool);
-                }
-              else
-                {
-                  err = editor->change_dir_prop(*dir_baton, prop->name,
-                                                prop->value, pool);
-                }
-
-              if (err)
-                goto fixup_error;
-            }
-        }
     }
 
-  /* Now handle property mods. */
-  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-    {
-      if (kind == svn_node_file)
-        {
-          if (! file_baton)
-            {
-              SVN_ERR_ASSERT(parent_baton);
-              err = editor->open_file(path, parent_baton,
-                                      item->revision,
-                                      file_pool, &file_baton);
-
-              if (err)
-                goto fixup_error;
-            }
-        }
-      else
-        {
-          if (! *dir_baton)
-            {
-              if (! parent_baton)
-                {
-                  err = editor->open_root(icb->edit_baton, item->revision,
-                                          pool, dir_baton);
-                }
-              else
-                {
-                  err = editor->open_directory(path, parent_baton,
-                                               item->revision,
-                                               pool, dir_baton);
-                }
-
-              if (err)
-                goto fixup_error;
-            }
-        }
-
-      /* When committing a directory that no longer exists in the
-         repository, a "not found" error does not occur immediately
-         upon opening the directory.  It appears here during the delta
-         transmisssion. */
-      err = svn_wc_transmit_prop_deltas2(
-              ctx->wc_ctx, local_abspath, editor,
-              (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
-
-      if (err)
-        goto fixup_error;
-
-      /* Make any additional client -> repository prop changes. */
-      if (item->outgoing_prop_changes)
-        {
-          svn_prop_t *prop;
-          int i;
-
-          for (i = 0; i < item->outgoing_prop_changes->nelts; i++)
-            {
-              prop = APR_ARRAY_IDX(item->outgoing_prop_changes, i,
-                                   svn_prop_t *);
-              if (kind == svn_node_file)
-                {
-                  err = editor->change_file_prop(file_baton, prop->name,
-                                           prop->value, pool);
-                }
-              else
-                {
-                  err = editor->change_dir_prop(*dir_baton, prop->name,
-                                          prop->value, pool);
-                }
-
-              if (err)
-                goto fixup_error;
-            }
-        }
-    }
-
-  /* Finally, handle text mods (in that we need to open a file if it
-     hasn't already been opened, and we need to put the file baton in
-     our FILES hash). */
   if ((kind == svn_node_file)
       && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     {
-      struct file_mod_t *mod = apr_palloc(file_pool, sizeof(*mod));
+      const char *pristine_tempdir;
+      const char *pristine_temppath;
+      svn_stream_t *tmp_stream;
 
-      if (! file_baton)
-        {
-          SVN_ERR_ASSERT(parent_baton);
-          err = editor->open_file(path, parent_baton,
-                                    item->revision,
-                                    file_pool, &file_baton);
+      /* Get a de-translated stream of the working contents, along with an
+         appropriate checksum. */
+      err = svn_client__get_detranslated_stream(&contents, &sha1_checksum,
+                                                &md5_checksum,
+                                                item->path, props,
+                                                scratch_pool, scratch_pool);
+      if (err)
+        goto fixup_error;
 
-          if (err)
-            goto fixup_error;
-        }
+#if 0
+      /* This is all messed up.
+         Pristine installation has traditionally happened during the commit,
+         as libsvn_wc was transmitting deltas.  We don't do that anymore, so
+         we have to install pristines elsewhere.
 
-      /* Add this file mod to the FILE_MODS hash. */
-      mod->item = item;
-      mod->file_baton = file_baton;
-      apr_hash_set(file_mods, item->session_relpath, APR_HASH_KEY_STRING, mod);
+         Ideally, we'd do it post commit, so that we don't have non-used
+         pristines just laying around in the case of error during
+         transmission.  Also ideally, we'd detranslate the file directly to
+         disk, and then just move that into place.
+
+         Unfortunately, we aren't yet ideal, so the following will have to
+         suffice. */
+      err = svn_wc__node_pristine_get_tempdir(&pristine_tempdir, ctx->wc_ctx,
+                                              item->path, scratch_pool,
+                                              scratch_pool);
+      if (err)
+        goto fixup_error;
+
+      err = svn_stream_open_unique(&tmp_stream, &pristine_temppath,
+                                   pristine_tempdir,
+                                   svn_io_file_del_none, scratch_pool,
+                                   scratch_pool);
+      if (err)
+        goto fixup_error;
+
+      err = svn_stream_copy3(contents, tmp_stream, ctx->cancel_func,
+                             ctx->cancel_baton, scratch_pool);
+      if (err)
+        goto fixup_error;
+
+      /* ### pristine_temppath should be in the pristine tempdir, but we
+         ### don't honor that right now. :( */
+      err = svn_wc__node_pristine_install(ctx->wc_ctx, pristine_temppath,
+                                          sha1_checksum, md5_checksum,
+                                          scratch_pool);
+      if (err)
+        goto fixup_error;
+
+      err = svn_wc__node_pristine_read(&contents, ctx->wc_ctx, item->path,
+                                       sha1_checksum, scratch_pool,
+                                       scratch_pool);
+      if (err)
+        goto fixup_error;
+#endif
     }
-  else if (file_baton)
+
+  /* If this item is supposed to be added, do so. */
+  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) &&
+        !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
     {
-      /* Close any outstanding file batons that didn't get caught by
-         the "has local mods" conditional above. */
-      err = editor->close_file(file_baton, NULL, file_pool);
+      if (item->kind == svn_node_file)
+        {
+          SVN_ERR_ASSERT(props != NULL);
+          SVN_ERR_ASSERT(contents != NULL);
+          SVN_ERR_ASSERT(sha1_checksum != NULL);
+          err = svn_editor_add_file(editor, item->session_relpath,
+                                    sha1_checksum, contents, props,
+                                    SVN_INVALID_REVNUM);
+        }
+      else /* May be svn_node_none when adding parent dirs for a copy. */
+        {
+          apr_array_header_t *children = NULL;
+          const apr_array_header_t *children_abspaths;
+          int i;
+
+          SVN_ERR_ASSERT(props != NULL);
+
+          SVN_ERR(svn_wc__node_get_children(&children_abspaths,
+                                            ctx->wc_ctx, item->path, FALSE,
+                                            scratch_pool, scratch_pool));
+
+          /* We have to strip out the basenames returned from the above
+             function. */
+          children = apr_array_make(scratch_pool, children_abspaths->nelts,
+                                    sizeof(const char *));
+          for (i = 0; i < children_abspaths->nelts; i++)
+            {
+              const char *child_abspath = APR_ARRAY_IDX(children_abspaths, i,
+                                                        const char *);
+              APR_ARRAY_PUSH(children, const char *) =
+                            svn_dirent_basename(child_abspath, scratch_pool);
+            }
+
+          err = svn_editor_add_directory(editor, item->session_relpath,
+                                         children, props,
+                                         SVN_INVALID_REVNUM);
+        }
 
       if (err)
         goto fixup_error;
+    }
+
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+    {
+      err = svn_editor_copy(editor, item->copyfrom_url, item->copyfrom_rev,
+                            item->session_relpath, SVN_INVALID_REVNUM);
+
+      if (err)
+        goto fixup_error;
+    }
+
+  if ((props || contents)
+        && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+    {
+      if (item->kind == svn_node_file)
+        {
+          err = svn_editor_alter_file(editor, item->session_relpath,
+                                      SVN_INVALID_REVNUM, props, sha1_checksum,
+                                      contents);
+        }
+      else
+        {
+          err = svn_editor_alter_directory(editor, item->session_relpath,
+                                           SVN_INVALID_REVNUM, props);
+        }
+
+      if (err)
+        goto fixup_error;
+    }
+
+  if (checksums && sha1_checksum)
+    {
+      apr_hash_set(checksums, item->path, APR_HASH_KEY_STRING,
+                   svn_checksum_dup(sha1_checksum,
+                                    apr_hash_pool_get(checksums)));
     }
 
   return SVN_NO_ERROR;
 
 fixup_error:
-  return svn_error_trace(fixup_commit_error(local_abspath,
-                                            icb->base_url,
-                                            path, kind,
-                                            err, ctx, pool));
+  return svn_error_trace(fixup_commit_error(local_abspath, base_url,
+                                            item->session_relpath, kind,
+                                            err, ctx, scratch_pool));
 }
 
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       const apr_array_header_t *commit_items,
-                      const svn_delta_editor_t *editor,
-                      void *edit_baton,
+                      svn_editor_t *editor,
                       const char *notify_path_prefix,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  apr_hash_t *file_mods = apr_hash_make(scratch_pool);
-  apr_hash_t *items_hash = apr_hash_make(scratch_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_index_t *hi;
+  apr_hash_t *checksums = apr_hash_make(result_pool);
   int i;
-  struct item_commit_baton cb_baton;
-  apr_array_header_t *paths =
-    apr_array_make(scratch_pool, commit_items->nelts, sizeof(const char *));
-
-  /* Ditto for the checksums. */
-  if (sha1_checksums)
-    *sha1_checksums = apr_hash_make(result_pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      relative paths (which come from the item URLs).  And
@@ -1782,84 +1748,24 @@ svn_client__do_commit(const char *base_url,
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-      const char *path = item->session_relpath;
-      apr_hash_set(items_hash, path, APR_HASH_KEY_STRING, item);
-      APR_ARRAY_PUSH(paths, const char *) = path;
-    }
-
-  /* Setup the callback baton. */
-  cb_baton.editor = editor;
-  cb_baton.edit_baton = edit_baton;
-  cb_baton.file_mods = file_mods;
-  cb_baton.notify_path_prefix = notify_path_prefix;
-  cb_baton.ctx = ctx;
-  cb_baton.commit_items = items_hash;
-  cb_baton.base_url = base_url;
-
-  /* Drive the commit editor! */
-  SVN_ERR(svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                                paths, do_item_commit, &cb_baton,
-                                scratch_pool));
-
-  /* Transmit outstanding text deltas. */
-  for (hi = apr_hash_first(scratch_pool, file_mods);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      struct file_mod_t *mod = svn__apr_hash_index_val(hi);
-      const svn_client_commit_item3_t *item = mod->item;
-      const svn_checksum_t *new_text_base_md5_checksum;
-      const svn_checksum_t *new_text_base_sha1_checksum;
-      svn_boolean_t fulltext = FALSE;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
-      /* Transmit the entry. */
+      /* Call the cancellation function. */
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      if (ctx->notify_func2)
-        {
-          svn_wc_notify_t *notify;
-          notify = svn_wc_create_notify(item->path,
-                                        svn_wc_notify_commit_postfix_txdelta,
-                                        iterpool);
-          notify->kind = svn_node_file;
-          notify->path_prefix = notify_path_prefix;
-          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
-        }
-
-      /* If the node has no history, transmit full text */
-      if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-          && ! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
-        fulltext = TRUE;
-
-      err = svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
-                                         &new_text_base_sha1_checksum,
-                                         ctx->wc_ctx, item->path,
-                                         fulltext, editor, mod->file_baton,
-                                         result_pool, iterpool);
-
-      if (err)
-        {
-          svn_pool_destroy(iterpool); /* Close tempfiles */
-          return svn_error_trace(fixup_commit_error(item->path,
-                                                    base_url,
-                                                    item->session_relpath,
-                                                    svn_node_file,
-                                                    err, ctx, scratch_pool));
-        }
-
-      if (sha1_checksums)
-        apr_hash_set(*sha1_checksums, item->path, APR_HASH_KEY_STRING,
-                     new_text_base_sha1_checksum);
+      SVN_ERR(do_item_commit(item, editor, notify_path_prefix, base_url,
+                             checksums, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
 
+  if (sha1_checksums)
+    *sha1_checksums = checksums;
+
   /* Close the edit. */
-  return svn_error_trace(editor->close_edit(edit_baton, scratch_pool));
+  return svn_error_trace(svn_editor_complete(editor));
 }
 
 
