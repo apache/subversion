@@ -40,6 +40,7 @@
 #include "svn_pools.h"
 
 #include "private/svn_dep_compat.h"
+#include "private/svn_string_private.h"
 #include "private/svn_hash_private.h"
 
 #include "svn_private_config.h"
@@ -496,7 +497,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
                            apr_pool_t *pool)
 {
   int i;
-  apr_hash_t *hash = apr_hash_make(pool);
+  apr_hash_t *hash = svn_hash__make(pool);
   for (i = 0; i < keys->nelts; i++)
     {
       const char *key =
@@ -561,3 +562,127 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
   return default_value;
 }
 
+
+
+/*** Optimized hash functions ***/
+
+/* Optimized version of apr_hashfunc_default. It assumes that the CPU has
+ * 32-bit multiplications with high throughput of at least 1 operation
+ * every 3 cycles. Latency is not an issue. Another optimization is a
+ * mildly unrolled main loop.
+ */
+static unsigned int
+hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
+{
+    unsigned int hash = 0;
+    const unsigned char *key = (const unsigned char *)char_key;
+    const unsigned char *p;
+    apr_ssize_t i;
+
+    if (*klen == APR_HASH_KEY_STRING)
+      {
+        for (p = key; ; p+=4)
+          {
+            unsigned int new_hash = hash * 33 * 33 * 33 * 33;
+            if (!p[0]) break;
+            new_hash += p[0] * 33 * 33 * 33;
+            if (!p[1]) break;
+            new_hash += p[1] * 33 * 33;
+            if (!p[2]) break;
+            new_hash += p[2] * 33;
+            if (!p[3]) break;
+            hash = new_hash + p[3];
+          }
+        for (; *p; p++)
+            hash = hash * 33 + *p;
+
+        *klen = p - key;
+      }
+    else
+      {
+        for (p = key, i = *klen; i >= 4; i-=4, p+=4)
+          {
+            hash = hash * 33 * 33 * 33 * 33
+                 + p[0] * 33 * 33 * 33
+                 + p[1] * 33 * 33
+                 + p[2] * 33
+                 + p[3];
+          }
+        for (; i; i--, p++)
+            hash = hash * 33 + *p;
+      }
+
+    return hash;
+}
+
+#define LOWER_7BITS_SET 0x7f7f7f7f
+#define BIT_7_SET       0x80808080
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+#  define READ_CHUNK(p)\
+     *(const apr_uint32_t *)(p);
+#else
+#  define READ_CHUNK(p) \
+     (   (apr_uint32_t)p[0]        \
+      + ((apr_uint32_t)p[1] << 8)  \
+      + ((apr_uint32_t)p[2] << 16) \
+      + ((apr_uint32_t)p[3] << 24))
+#endif
+
+/* Similar to the previous but operates on 4 bytes at once instead of the
+ * classic unroll. This is particularly fast when unaligned access is
+ * supported.
+ */
+static unsigned int
+hashfunc_fast(const char *char_key, apr_ssize_t *klen)
+{
+    unsigned int hash = 0;
+    const unsigned char *key = (const unsigned char *)char_key;
+    const unsigned char *p;
+    apr_ssize_t i;
+    apr_uint32_t chunk, test;
+
+    if (*klen == APR_HASH_KEY_STRING)
+      {
+        for (p = key; ; p += sizeof(chunk))
+          {
+            /* This is a variant of the well-known strlen test: */
+            chunk = READ_CHUNK(p);
+            test = chunk | ((chunk & LOWER_7BITS_SET) + LOWER_7BITS_SET);
+            if ((test & BIT_7_SET) != BIT_7_SET)
+              break;
+
+            hash = (hash + chunk) * 0xd1f3da69;
+          }
+        for (; i; i--, p++)
+            hash = hash * 33 + *p;
+
+        *klen = p - key;
+      }
+    else
+      {
+        for ( p = key, i = *klen
+            ; i >= sizeof(chunk)
+            ; i -= sizeof(chunk), p += sizeof(chunk))
+          {
+            chunk = READ_CHUNK(p);
+            hash = (hash + chunk) * 0xd1f3da69;
+          }
+        for (; i; i--, p++)
+            hash = hash * 33 + *p;
+      }
+
+    return hash;
+}
+
+apr_hash_t *
+svn_hash__make(apr_pool_t *pool)
+{
+  return apr_hash_make_custom(pool, hashfunc_compatible);
+}
+
+apr_hash_t *
+svn_hash__make_fast(apr_pool_t *pool)
+{
+  return apr_hash_make_custom(pool, hashfunc_fast);
+}

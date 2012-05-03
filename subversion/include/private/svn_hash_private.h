@@ -102,6 +102,31 @@ svn_hash__get_bool(apr_hash_t *hash,
 
 /** @} */
 
+/**
+ * @defgroup svn_hash_create Create optimized APR hash tables
+ * @{
+ */
+
+/** Returns a hash table, allocated in @a pool, with the same ordering of
+ * elements as APR 1.4.5 or earlier (using apr_hashfunc_default) but uses
+ * a faster hash function implementation.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_hash__make(apr_pool_t *pool);
+
+/** Returns a hash table, allocated in @a pool, that is faster to modify
+ * and access then the ones returned by @ref svn_hash__make. The element
+ * order does not match any APR default.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_hash__make_fast(apr_pool_t *pool);
+
+/** @} */
+
 /** @} */
 
 #ifdef __cplusplus

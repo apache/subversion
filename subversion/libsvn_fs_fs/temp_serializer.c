@@ -30,6 +30,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_temp_serializer.h"
+#include "private/svn_hash_private.h"
 
 #include "temp_serializer.h"
 
@@ -359,7 +360,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 static apr_hash_t *
 deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
 {
-  apr_hash_t *result = apr_hash_make(pool);
+  apr_hash_t *result = svn_hash__make(pool);
   apr_size_t i;
   apr_size_t count;
   svn_fs_dirent_t *entry;
@@ -678,7 +679,7 @@ svn_fs_fs__deserialize_properties(void **out,
                                   apr_size_t data_len,
                                   apr_pool_t *pool)
 {
-  apr_hash_t *hash = apr_hash_make(pool);
+  apr_hash_t *hash = svn_hash__make(pool);
   properties_data_t *properties = (properties_data_t *)data;
   size_t i;
 
