@@ -293,7 +293,7 @@ svn_hash__make(apr_pool_t *pool);
 
 /** Returns a hash table, allocated in @a pool, that is faster to modify
  * and access then the ones returned by @ref svn_hash__make. The element
- * order does not match any APR default.
+ * order does not match any APR default and is platform dependent.
  *
  * @since New in 1.8.
  */

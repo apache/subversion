@@ -619,11 +619,10 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
 #define LOWER_7BITS_SET 0x7f7f7f7f
 #define BIT_7_SET       0x80808080
 
-/* Read 4 bytes as little endian at P 
+/* Read 4 bytes at P. LE / BE interpretation is platform-dependent
  */
 #if SVN_UNALIGNED_ACCESS_IS_OK
-#  define READ_CHUNK(p)\
-     *(const apr_uint32_t *)(p);
+#  define READ_CHUNK(p) *(const apr_uint32_t *)(p)
 #else
 #  define READ_CHUNK(p) \
      (   (apr_uint32_t)p[0]        \
