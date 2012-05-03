@@ -1556,7 +1556,9 @@ def _create_parser():
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
                     callback=set_log_level,
-		    help="Set log level (numerically or symbolically)")
+                    help="Set log level (numerically or symbolically). " +
+                         "Symbolic levels are: CRITICAL, ERROR, WARNING, " +
+                         "INFO, DEBUG")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
