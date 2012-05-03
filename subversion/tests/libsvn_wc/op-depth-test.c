@@ -4865,6 +4865,106 @@ test_follow_moved_to(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  apr_array_header_t *moved_tos;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "mixed_rev_move", opts, pool));
+
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_commit(&b, ""));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal", 0, ""},
+      {0, "A",     "normal", 1, "A"},
+      {0, "A/B",   "normal", 2, "A/B"},
+      {0, "A/B/C", "normal", 3, "A/B/C"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(wc_move(&b, "A", "X"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal",       0, ""},
+      {0, "A",     "normal",       1, "A"},
+      {0, "A/B",   "normal",       2, "A/B"},
+      {0, "A/B/C", "normal",       3, "A/B/C"},
+      {1, "A",     "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C", "base-deleted", NO_COPY_FROM},
+      {1, "X",     "normal",       1, "A", MOVED_HERE},
+      {1, "X/B",   "not-present",  2, "A/B"},
+      {2, "X/B",   "normal",       2, "A/B", MOVED_HERE},
+      {2, "X/B/C", "not-present",  3, "A/B/C"},
+      {3, "X/B/C", "normal",       3, "A/B/C", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* ### These values PASS but I'm not sure they are correct. */
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A/B/C"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X/B/C"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 1);
+
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A/B"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X/B"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 1);
+
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 1);
+
+
+  /* This move doesn't record moved-to */
+  SVN_ERR(wc_move(&b, "X/B", "X/Y"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",      "normal",       0, ""},
+      {0, "A",     "normal",       1, "A"},
+      {0, "A/B",   "normal",       2, "A/B"},
+      {0, "A/B/C", "normal",       3, "A/B/C"},
+      {1, "A",     "base-deleted", NO_COPY_FROM, "X"},
+      {1, "A/B",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B/C", "base-deleted", NO_COPY_FROM},
+      {1, "X",     "normal",       1, "A", MOVED_HERE},
+      {1, "X/B",   "not-present",  2, "A/B"},
+      {2, "X/Y",   "normal",       2, "A/B"},
+      {2, "X/Y/C", "not-present",  NO_COPY_FROM},
+      {3, "X/Y/C", "normal",       3, "A/B/C"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  /* ### These values are unchanged, is that right? */
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A/B/C"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X/B/C"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 1);
+
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A/B"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X/B"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 1);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -4960,5 +5060,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "scan_delete"),
     SVN_TEST_OPTS_PASS(test_follow_moved_to,
                        "follow_moved_to"),
+    SVN_TEST_OPTS_PASS(mixed_rev_move,
+                       "mixed_rev_move"),
     SVN_TEST_NULL
   };
