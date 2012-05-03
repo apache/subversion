@@ -40,7 +40,6 @@
 #include "svn_pools.h"
 
 #include "private/svn_dep_compat.h"
-#include "private/svn_string_private.h"
 #include "private/svn_hash_private.h"
 
 #include "svn_private_config.h"
@@ -615,9 +614,13 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
     return hash;
 }
 
+/* Used to detect NUL chars 
+ */
 #define LOWER_7BITS_SET 0x7f7f7f7f
 #define BIT_7_SET       0x80808080
 
+/* Read 4 bytes as little endian at P 
+ */
 #if SVN_UNALIGNED_ACCESS_IS_OK
 #  define READ_CHUNK(p)\
      *(const apr_uint32_t *)(p);
