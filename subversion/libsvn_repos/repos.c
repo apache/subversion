@@ -36,6 +36,7 @@
 #include "svn_version.h"
 
 #include "private/svn_repos_private.h"
+#include "private/svn_hash_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
