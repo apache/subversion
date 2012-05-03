@@ -1326,7 +1326,7 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
 {
   int xml_status;
 
-  xml_status = XML_Parse(ctx->xmlp, data, len, 0);
+  xml_status = XML_Parse(ctx->xmlp, data, (int) len, 0);
   if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
     {
       if (sl == NULL)

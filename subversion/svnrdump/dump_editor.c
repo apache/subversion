@@ -31,6 +31,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "svnrdump.h"
 

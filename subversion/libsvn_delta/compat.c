@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#include <stddef.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"
@@ -799,6 +801,8 @@ ev2_apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct change_node *change;
   svn_stream_t *target;
+  /* ### fix this. for now, we know this has a "short" lifetime.  */
+  apr_pool_t *scratch_pool = handler_pool;
 
   change = locate_change(fb->eb, fb->path);
   SVN_ERR_ASSERT(change->contents_abspath == NULL);
@@ -810,11 +814,11 @@ ev2_apply_textdelta(void *file_baton,
     hb->source = svn_stream_empty(handler_pool);
   else
     SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
-                                     result_pool));
+                                     scratch_pool));
 
   SVN_ERR(svn_stream_open_unique(&target, &change->contents_abspath, NULL,
                                  svn_io_file_del_on_pool_cleanup,
-                                 fb->eb->edit_pool, result_pool));
+                                 fb->eb->edit_pool, scratch_pool));
 
   svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
@@ -1340,15 +1344,40 @@ rotate_cb(void *baton,
 
 
 static int
+count_components(const char *relpath)
+{
+  int count = 1;
+  const char *slash = strchr(relpath, '/');
+
+  while (slash != NULL)
+    {
+      ++count;
+      slash = strchr(slash + 1, '/');
+    }
+  return count;
+}
+
+
+static int
 sort_deletes_first(const svn_sort__item_t *item1,
                    const svn_sort__item_t *item2)
 {
   const char *relpath1 = item1->key;
   const char *relpath2 = item2->key;
+  const struct change_node *change1 = item1->value;
+  const struct change_node *change2 = item2->value;
   const char *slash1;
   const char *slash2;
-  int len1;
-  int len2;
+  ptrdiff_t len1;
+  ptrdiff_t len2;
+
+  /* Force the root to always sort first. Otherwise, it may look like a
+     sibling of its children (no slashes), and could get sorted *after*
+     any children that get deleted.  */
+  if (*relpath1 == '\0')
+    return -1;
+  if (*relpath2 == '\0')
+    return 1;
 
   /* Are these two items siblings? The 'if' statement tests if they are
      siblings in the root directory, or that slashes were found in both
@@ -1362,9 +1391,6 @@ sort_deletes_first(const svn_sort__item_t *item1,
           && (len1 = slash1 - relpath1) == (len2 = slash2 - relpath2)
           && memcmp(relpath1, relpath2, len1) == 0))
     {
-      const struct change_node *change1 = item1->value;
-      const struct change_node *change2 = item2->value;
-
       if (change1->action == RESTRUCTURE_DELETE)
         {
           if (change2->action == RESTRUCTURE_DELETE)
@@ -1392,6 +1418,28 @@ sort_deletes_first(const svn_sort__item_t *item1,
          A/B/E/child node.  */
 
       /* FALLTHROUGH */
+    }
+
+  /* Paths-to-be-deleted with fewer components always sort earlier.
+
+     For example, gamma will sort before E/alpha.
+
+     Without this test, E/alpha lexicographically sorts before gamma,
+     but gamma sorts before E when gamma is to be deleted. This kind of
+     ordering would place E/alpha before E. Not good.
+
+     With this test, gamma sorts before E/alpha. E and E/alpha are then
+     sorted by svn_path_compare_paths() (which places E before E/alpha).  */
+  if (change1->action == RESTRUCTURE_DELETE
+      || change2->action == RESTRUCTURE_DELETE)
+    {
+      int count1 = count_components(relpath1);
+      int count2 = count_components(relpath2);
+
+      if (count1 < count2 && change1->action == RESTRUCTURE_DELETE)
+        return -1;
+      if (count1 > count2 && change2->action == RESTRUCTURE_DELETE)
+        return 1;
     }
 
   /* Use svn_path_compare_paths() to get correct depth-based ordering.  */
@@ -1675,11 +1723,6 @@ drive_changes(const struct editor_baton *eb,
 
   /* Get a sorted list of Ev1-relative paths.  */
   paths = get_sorted_paths(eb->changes, eb->base_relpath, scratch_pool);
-
-#if 1
-  /* ### something is still broken. sort the paths normally for now.  */
-  qsort(paths->elts, paths->nelts, paths->elt_size, svn_sort_compare_paths);
-#endif
 
   /* We need to pass SVN_INVALID_REVNUM to the path_driver. It uses this
      revision whenever it opens directory batons. If we specified a "real"

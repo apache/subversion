@@ -59,6 +59,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -67,7 +68,8 @@
 /* MERGEINFO MERGE SOURCE NORMALIZATION
  *
  * Nearly any helper function herein that accepts two URL/revision
- * pairs expects one of two things to be true:
+ * pairs (or equivalent struct merge_source_t) expects one of two things
+ * to be true:
  *
  *    1.  that mergeinfo is not being recorded at all for this
  *        operation, or
@@ -3758,10 +3760,13 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
    REVISION1 and REVISION2 describe the merge range requested from
    MERGEINFO_PATH.
 
-   TARGET_MERGEINFO is the CHILD->ABSPATH's explicit or inherited mergeinfo.
-   TARGET_MERGEINFO should be NULL if there is no explicit or inherited
-   mergeinfo on CHILD->ABSPATH or an empty hash if CHILD->ABSPATH has empty
-   mergeinfo.
+   TARGET_MERGEINFO is the portion of CHILD->ABSPATH's explicit or inherited
+   mergeinfo that intersects with the merge history described by
+   MERGEINFO_PATH@REVISION1:MERGEINFO_PATH@REVISION2.  TARGET_MERGEINFO
+   should be NULL if there is no explicit or inherited mergeinfo on
+   CHILD->ABSPATH or an empty hash if CHILD->ABSPATH has empty mergeinfo or
+   explicit mergeinfo that exclusively describes non-intersecting history
+   with MERGEINFO_PATH@REVISION1:MERGEINFO_PATH@REVISION2.
 
    SCRATCH_POOL is used for all temporary allocations.
 
@@ -4040,6 +4045,8 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   const char *mergeinfo_path;
   const char *primary_url = (source->loc1->rev < source->loc2->rev)
                             ? source->loc2->url : source->loc1->url;
+  /* Intersection of TARGET_MERGEINFO and the merge history
+     described by SOURCE. */
   svn_mergeinfo_t adjusted_target_mergeinfo = NULL;
   svn_revnum_t child_base_revision;
 
@@ -4047,14 +4054,19 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
                                               primary_url, result_pool));
 
-  /* Consider: CHILD might have explicit mergeinfo '/MERGEINFO_PATH:M-N'
-     where M-N fall into the gap in SOURCE's natural
-     history allowed by 'MERGEINFO MERGE SOURCE NORMALIZATION'.  If this is
-     the case, then '/MERGEINFO_PATH:N' actually refers to a completely
-     different line of history than SOURCE and we
-     *don't* want to consider those revisions merged already. */
+  /* Does SOURCE describe a single, unbroken line of history or is there a
+     copy as allowed by `MERGEINFO MERGE SOURCE NORMALIZATION'? */
   if (implicit_src_gap && child->pre_merge_mergeinfo)
     {
+      /* Handle issue #3242: The presence of IMPLICIT_SRC_GAP implies that
+         a single copy of SOURCE->LOC1->URL@SOURCE->LOC1->REV was made
+         between SOURCE->LOC1->REV + 1 and SOURCE->LOC2->REV and that
+         there exists a single range M:N, where
+         SOURCE->LOC1->REV < M < N < SOURCE->LOC2->REV, such that
+         SOURCE->LOC2->URL@M:SOURCE->LOC2->URL@N either doesn't exist
+         or describes a different line of history than SOURCE.  In either
+         case we don't want to consider this range as merged so remove it
+         from TARGET_MERGEINFO. */
       apr_array_header_t *explicit_mergeinfo_gap_ranges =
         apr_hash_get(child->pre_merge_mergeinfo, mergeinfo_path,
                      APR_HASH_KEY_STRING);
@@ -4072,6 +4084,10 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
     }
   else
     {
+      /* The simple case: SOURCE->LOC1->URL2@SOURCE->LOC1->REV:
+         SOURCE->LOC2->URL2@SOURCE->LOC2->REV describes two locations
+         along a single, unbroken line of history, there is nothing to
+         filter out. */
       adjusted_target_mergeinfo = target_mergeinfo;
     }
 

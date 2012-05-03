@@ -33,6 +33,7 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_debug.h"
+#include "private/svn_subr_private.h"
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean

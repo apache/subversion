@@ -78,18 +78,10 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
-# This enables both a time stamp prefix on all log lines and a
-# '<TIME = 0.042552>' line after running every external command.
-log_with_timestamps = True
-
 # Set up logging
 logger = logging.getLogger()
 handler = logging.StreamHandler(sys.stdout)
-if log_with_timestamps:
-  formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
-                                '%Y-%m-%d %H:%M:%S')
-else:
-  formatter = logging.Formatter('[%(levelname)s] %(message)s')
+formatter = logging.Formatter('%(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -529,9 +521,8 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
        and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
-  if log_with_timestamps:
-    stop = time.time()
-    logger.info('<TIME = %.6f>' % (stop - start))
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
     logger.info(x.rstrip())
   for x in stderr_lines:
@@ -903,9 +894,8 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   load_out.close()
   load_err.close()
 
-  if log_with_timestamps:
-    stop = time.time()
-    logger.info('<TIME = %.6f>' % (stop - start))
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
 
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
@@ -1556,7 +1546,11 @@ def _create_parser():
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
                     callback=set_log_level,
-		    help="Set log level (numerically or symbolically)")
+                    help="Set log level (numerically or symbolically). " +
+                         "Symbolic levels are: CRITICAL, ERROR, WARNING, " +
+                         "INFO, DEBUG")
+  parser.add_option('--log-with-timestamps', action='store_true',
+                    help="Show timestamps in test log.")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
@@ -1689,6 +1683,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     test_selection = args
   else:
     parser = _create_parser()
+
+  if options.log_with_timestamps:
+    formatter = logging.Formatter('[%(asctime)s] %(message)s',
+                                  '%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:

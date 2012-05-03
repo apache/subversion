@@ -595,11 +595,6 @@ svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx)
   return ctx->done;
 }
 
-int
-svn_ra_serf__propfind_status_code(svn_ra_serf__propfind_context_t *ctx)
-{
-  return ctx->status_code;
-}
 
 /*
  * This helper function will block until the PROP_CTX indicates that is done
@@ -1089,7 +1084,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_kind_t *kind,
                                apr_hash_t *props,
                                const char *url,
                                svn_revnum_t revision)
@@ -1108,11 +1103,11 @@ svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
 
   if (strcmp(res_type, "collection") == 0)
     {
-      *kind = svn_node_dir;
+      *kind = svn_kind_dir;
     }
   else
     {
-      *kind = svn_node_file;
+      *kind = svn_kind_file;
     }
 
   return SVN_NO_ERROR;

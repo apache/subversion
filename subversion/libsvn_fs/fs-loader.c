@@ -44,6 +44,7 @@
 #include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_mutex.h"
+#include "private/svn_subr_private.h"
 
 #include "fs-loader.h"
 #include "svn_hash.h"
