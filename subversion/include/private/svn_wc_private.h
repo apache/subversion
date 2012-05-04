@@ -1087,6 +1087,19 @@ svn_wc__node_pristine_install(svn_wc_context_t *wc_ctx,
                               const svn_checksum_t *md5_checksum,
                               apr_pool_t *scratch_pool);
 
+/* Like svn_wc_get_pristine_contents2(), but keyed on the
+   SHA1_CHECKSUM rather than on the local absolute path of the working
+   file.  WCROOT_ABSPATH is the absolute path of the root of the
+   working copy in whose pristine database we'll be looking for these
+   contents.  */
+svn_error_t *
+svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
+                                          svn_wc_context_t *wc_ctx,
+                                          const char *wcroot_abspath,
+                                          const svn_checksum_t *sha1_checksum,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
+
 /* If requested set *CONTENTS to a readable stream that will yield the pristine
    text identified by SHA1_CHECKSUM (must be a SHA-1 checksum) within the WC
    identified by WRI_ABSPATH in DB.

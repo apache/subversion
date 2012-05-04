@@ -237,6 +237,10 @@ typedef struct report_info_t
   /* Checksum for close_file */
   const char *final_checksum;
 
+  /* Stream containing file contents already cached in the working
+     copy (which may be used to avoid a GET request for the same). */
+  svn_stream_t *cached_contents;
+
   /* temporary property for this file which is currently being parsed
    * It will eventually be stored in our parent directory's property hash.
    */
@@ -349,7 +353,7 @@ struct report_context_t {
   /* number of pending PROPFIND requests */
   unsigned int active_propfinds;
 
-  /* completed PROPFIND requests (contains propfind_context_t) */
+  /* completed PROPFIND requests (contains svn_ra_serf__propfind_context_t) */
   svn_ra_serf__list_t *done_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
@@ -1229,6 +1233,179 @@ handle_propchange_only(report_info_t *info,
   return SVN_NO_ERROR;
 }
 
+/* "Fetch" a file whose contents were made available via the
+   get_wc_contents() callback (as opposed to requiring a GET to the
+   server), and feed the information through the associated update
+   editor. */
+static svn_error_t *
+local_fetch(report_info_t *info)
+{
+  const svn_delta_editor_t *update_editor = info->dir->update_editor;
+  svn_txdelta_window_t delta_window = { 0 };
+  svn_txdelta_op_t delta_op;
+  svn_string_t window_data;
+  char read_buf[SVN__STREAM_CHUNK_SIZE + 1];
+
+  SVN_ERR(open_dir(info->dir));
+  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
+
+  /* Expand our full name now if we haven't done so yet. */
+  if (!info->name)
+    {
+      info->name = svn_relpath_join(info->dir->name, info->base_name,
+                                    info->editor_pool);
+    }
+
+  if (SVN_IS_VALID_REVNUM(info->base_rev))
+    {
+      SVN_ERR(update_editor->open_file(info->name,
+                                       info->dir->dir_baton,
+                                       info->base_rev,
+                                       info->editor_pool,
+                                       &info->file_baton));
+    }
+  else
+    {
+      SVN_ERR(update_editor->add_file(info->name,
+                                      info->dir->dir_baton,
+                                      info->copyfrom_path,
+                                      info->copyfrom_rev,
+                                      info->editor_pool,
+                                      &info->file_baton));
+    }
+  
+  SVN_ERR(update_editor->apply_textdelta(info->file_baton,
+                                         info->base_checksum,
+                                         info->editor_pool,
+                                         &info->textdelta,
+                                         &info->textdelta_baton));
+  
+  while (1)
+    {
+      apr_size_t read_len = SVN__STREAM_CHUNK_SIZE;
+      
+      SVN_ERR(svn_stream_read(info->cached_contents, read_buf, &read_len));
+      if (read_len == 0)
+        break;
+      
+      window_data.data = read_buf;
+      window_data.len = read_len;
+      
+      delta_op.action_code = svn_txdelta_new;
+      delta_op.offset = 0;
+      delta_op.length = read_len;
+      
+      delta_window.tview_len = read_len;
+      delta_window.num_ops = 1;
+      delta_window.ops = &delta_op;
+      delta_window.new_data = &window_data;
+      
+      SVN_ERR(info->textdelta(&delta_window, info->textdelta_baton));
+      
+      if (read_len < SVN__STREAM_CHUNK_SIZE)
+        break;
+    }
+  
+  SVN_ERR(info->textdelta(NULL, info->textdelta_baton));
+
+  SVN_ERR(svn_stream_close(info->cached_contents));
+  info->cached_contents = NULL;
+
+  if (info->lock_token)
+    check_lock(info);
+
+  /* set all of the properties we received */
+  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      set_file_props, info,
+                                      info->pool));
+  
+  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      remove_file_props, info,
+                                      info->pool));
+  if (info->fetch_props)
+    {
+      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                          info->url,
+                                          info->target_rev,
+                                          set_file_props, info,
+                                          info->pool));
+    }
+  
+  SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
+                                               info->final_checksum,
+                                               info->pool));
+  
+  /* We're done with our pools. */
+  svn_pool_destroy(info->editor_pool);
+  svn_pool_destroy(info->pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
+handle_local_fetch(serf_request_t *request,
+                   serf_bucket_t *response,
+                   void *handler_baton,
+                   apr_pool_t *pool)
+{
+  report_fetch_t *fetch_ctx = handler_baton;
+  apr_status_t status;
+  serf_status_line sl;
+  svn_error_t *err;
+  const char *data;
+  apr_size_t len;
+
+  /* If the error code wasn't 200, something went wrong. Don't use the returned
+     data as its probably an error message. Just bail out instead. */
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return svn_error_wrap_apr(status, NULL);
+    }
+  if (sl.code != 200)
+    {
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                              _("GET request failed: %d %s"),
+                              sl.code, sl.reason);
+      return error_fetch(request, fetch_ctx, err);
+    }
+
+  while (1)
+    {
+      status = serf_bucket_read(response, 8000, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
+      if (APR_STATUS_IS_EOF(status))
+        {
+          err = local_fetch(fetch_ctx->info);
+          if (err)
+            {
+              return error_fetch(request, fetch_ctx, err);
+            }
+
+          fetch_ctx->done = TRUE;
+          fetch_ctx->done_item.data = fetch_ctx;
+          fetch_ctx->done_item.next = *fetch_ctx->done_list;
+          *fetch_ctx->done_list = &fetch_ctx->done_item;
+          return svn_error_wrap_apr(status, NULL);
+        }
+      if (APR_STATUS_IS_EAGAIN(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
+    }
+  /* not reached */
+}
+
+/* --------------------------------------------------------- */
+
 static svn_error_t *
 fetch_file(report_context_t *ctx, report_info_t *info)
 {
@@ -1239,9 +1416,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   conn = ctx->sess->conns[ctx->sess->cur_conn];
 
   /* go fetch info->name from DAV:checked-in */
-  info->url =
-      svn_ra_serf__get_ver_prop(info->props, info->base_name,
-                                info->base_rev, "DAV:", "checked-in");
+  info->url = svn_ra_serf__get_ver_prop(info->props, info->base_name,
+                                        info->base_rev, "DAV:", "checked-in");
 
   if (!info->url)
     {
@@ -1269,34 +1445,98 @@ fetch_file(report_context_t *ctx, report_info_t *info)
    */
   if (info->fetch_file && ctx->text_deltas)
     {
-      report_fetch_t *fetch_ctx;
+      svn_stream_t *contents = NULL;
 
-      fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
-      fetch_ctx->info = info;
-      fetch_ctx->done_list = &ctx->done_fetches;
-      fetch_ctx->sess = ctx->sess;
-      fetch_ctx->conn = conn;
+      if (ctx->sess->wc_callbacks->get_wc_contents
+          && info->final_sha1_checksum)
+        {
+          svn_error_t *err;
+          svn_checksum_t *sha1_checksum;
 
-      handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
+          err = svn_checksum_parse_hex(&sha1_checksum, svn_checksum_sha1,
+                                       info->final_sha1_checksum, info->pool);
+          if (!err)
+            {
+              err = ctx->sess->wc_callbacks->get_wc_contents(
+                        ctx->sess->wc_callback_baton, &contents,
+                        sha1_checksum, info->pool);
+            }
 
-      handler->method = "GET";
-      handler->path = fetch_ctx->info->url;
+          if (err)
+            {
+              /* Meh.  Maybe we'll care one day why we're in an
+                 errorful state, but this codepath is optional.  */
+              svn_error_clear(err);
+            }
+          else
+            {
+              info->cached_contents = contents;
+            }
+        }          
 
-      handler->conn = conn;
-      handler->session = ctx->sess;
+      /* If the working copy can provided cached contents for this
+         file, we'll send a simple HEAD request (which I'll claim is
+         to verify readability, but really is just so I can provide a
+         Serf-queued-request-compliant way of processing the contents
+         after the PROPFIND for the file's properties ... ugh).
 
-      handler->header_delegate = headers_fetch;
-      handler->header_delegate_baton = fetch_ctx;
+         Otherwise, we use a GET request for the file's contents. */
+      if (info->cached_contents)
+        {
+          report_fetch_t *fetch_ctx;
 
-      handler->response_handler = handle_fetch;
-      handler->response_baton = fetch_ctx;
+          fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
+          fetch_ctx->info = info;
+          fetch_ctx->done_list = &ctx->done_fetches;
+          fetch_ctx->sess = ctx->sess;
+          fetch_ctx->conn = conn;
 
-      handler->response_error = cancel_fetch;
-      handler->response_error_baton = fetch_ctx;
+          handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
 
-      svn_ra_serf__request_create(handler);
+          handler->method = "HEAD";
+          handler->path = fetch_ctx->info->url;
 
-      ctx->active_fetches++;
+          handler->conn = conn;
+          handler->session = ctx->sess;
+
+          handler->response_handler = handle_local_fetch;
+          handler->response_baton = fetch_ctx;
+
+          svn_ra_serf__request_create(handler);
+
+          ctx->active_fetches++;
+        }
+      else
+        {
+          report_fetch_t *fetch_ctx;
+
+          fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
+          fetch_ctx->info = info;
+          fetch_ctx->done_list = &ctx->done_fetches;
+          fetch_ctx->sess = ctx->sess;
+          fetch_ctx->conn = conn;
+
+          handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
+
+          handler->method = "GET";
+          handler->path = fetch_ctx->info->url;
+
+          handler->conn = conn;
+          handler->session = ctx->sess;
+
+          handler->header_delegate = headers_fetch;
+          handler->header_delegate_baton = fetch_ctx;
+
+          handler->response_handler = handle_fetch;
+          handler->response_baton = fetch_ctx;
+
+          handler->response_error = cancel_fetch;
+          handler->response_error_baton = fetch_ctx;
+
+          svn_ra_serf__request_create(handler);
+
+          ctx->active_fetches++;
+        }
     }
   else if (info->propfind)
     {

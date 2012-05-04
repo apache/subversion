@@ -4951,15 +4951,17 @@ mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
-  /* ### These values are unchanged, is that right? */
   SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
                                      wc_path(&b, "A/B/C"), pool, pool));
-  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X/B/C"));
-  SVN_TEST_ASSERT(moved_tos->nelts == 1);
+  SVN_TEST_ASSERT(moved_tos->nelts == 0);
 
   SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
                                      wc_path(&b, "A/B"), pool, pool));
-  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X/B"));
+  SVN_TEST_ASSERT(moved_tos->nelts == 0);
+
+  SVN_ERR(svn_wc__db_follow_moved_to(&moved_tos, b.wc_ctx->db,
+                                     wc_path(&b, "A"), pool, pool));
+  SVN_ERR(check_moved_to(moved_tos, 0, 1, "X"));
   SVN_TEST_ASSERT(moved_tos->nelts == 1);
 
   return SVN_NO_ERROR;
