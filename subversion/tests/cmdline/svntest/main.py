@@ -1716,17 +1716,21 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   else:
     parser = _create_parser()
 
-  # Now that we have some options, let's get the logger configured before
-  # doing anything more
-  if options.log_with_timestamps:
-    formatter = AbbreviatedFormatter('%(levelshort)s:'
-                                     ' [%(asctime)s] %(message)s',
-                                     datefmt='%Y-%m-%d %H:%M:%S')
-  else:
-    formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-  handler = logging.StreamHandler(sys.stdout)
-  handler.setFormatter(formatter)
-  logger.addHandler(handler)
+  # If there are no handlers registered yet, then install our own with
+  # our custom formatter. (anything currently installed *is* our handler
+  # as tested above)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
