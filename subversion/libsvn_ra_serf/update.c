@@ -353,7 +353,7 @@ struct report_context_t {
   /* number of pending PROPFIND requests */
   unsigned int active_propfinds;
 
-  /* completed PROPFIND requests (contains propfind_context_t) */
+  /* completed PROPFIND requests (contains svn_ra_serf__propfind_context_t) */
   svn_ra_serf__list_t *done_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
