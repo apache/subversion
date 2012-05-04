@@ -10203,19 +10203,33 @@ follow_moved_to(apr_array_header_t **moved_tos,
     {
       working_op_depth = svn_sqlite__column_int(stmt, 0);
       node_moved_to = svn_sqlite__column_text(stmt, 1, result_pool);
-      /* ### verify moved_here? */
-
-      if (node_moved_to)
-        {
-          struct svn_wc__db_moved_to_t *moved_to;
-
-          moved_to = apr_palloc(result_pool, sizeof(*moved_to));
-          moved_to->op_depth = working_op_depth;
-          moved_to->local_relpath = node_moved_to;
-          APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
-        }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (node_moved_to)
+    {
+      svn_boolean_t have_row2;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_MOVED_HERE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, node_moved_to,
+                                relpath_depth(node_moved_to)));
+      SVN_ERR(svn_sqlite__step(&have_row2, stmt));
+      if (!have_row2 || !svn_sqlite__column_int(stmt, 0))
+        node_moved_to = NULL;
+      SVN_ERR(svn_sqlite__reset(stmt));
+      /* verify repos_path points back? */
+    }
+
+  if (node_moved_to)
+    {
+      struct svn_wc__db_moved_to_t *moved_to;
+
+      moved_to = apr_palloc(result_pool, sizeof(*moved_to));
+      moved_to->op_depth = working_op_depth;
+      moved_to->local_relpath = node_moved_to;
+      APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
+    }
 
   /* A working row with moved_to, or no working row, and we are done. */
   if (node_moved_to || !have_row)
@@ -10225,7 +10239,7 @@ follow_moved_to(apr_array_header_t **moved_tos,
   node_relpath = local_relpath;
   for (i = relpath_depth(local_relpath); i > working_op_depth; --i)
     {
-      const char *node_moved_to_relpath;
+      const char *node_moved_to_relpath, *moved_to_relpath;
 
       node_relpath = svn_relpath_dirname(node_relpath, scratch_pool);
 
@@ -10236,16 +10250,44 @@ follow_moved_to(apr_array_header_t **moved_tos,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       SVN_ERR_ASSERT(have_row);
       node_moved_to_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      /* ### verify moved_here? */
       SVN_ERR(svn_sqlite__reset(stmt));
       if (node_moved_to_relpath)
         {
-          struct svn_wc__db_moved_to_t *moved_to;
-          const char *moved_to_relpath
+          moved_to_relpath
             = svn_relpath_join(node_moved_to_relpath,
                                svn_relpath_skip_ancestor(node_relpath,
                                                          local_relpath),
                                result_pool);
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_SELECT_MOVED_HERE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                    moved_to_relpath,
+                                    relpath_depth(node_moved_to_relpath)));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          if (!have_row)
+            node_moved_to_relpath = NULL;
+          else if (!svn_sqlite__column_int(stmt, 0))
+            {
+              svn_wc__db_status_t presence
+                = svn_sqlite__column_token(stmt, 1, presence_map);
+              if (presence != svn_wc__db_status_not_present)
+                node_moved_to_relpath = NULL;
+              else
+                {
+                  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+                  if (!have_row && !svn_sqlite__column_int(stmt, 0))
+                    node_moved_to_relpath = NULL;
+                }
+            }
+          SVN_ERR(svn_sqlite__reset(stmt));
+          if (!node_moved_to_relpath)
+            break;
+          /* verify repos_path points back? */
+        }
+      if (node_moved_to_relpath)
+        {
+          struct svn_wc__db_moved_to_t *moved_to;
 
           moved_to = apr_palloc(result_pool, sizeof(*moved_to));
           moved_to->op_depth = working_op_depth;

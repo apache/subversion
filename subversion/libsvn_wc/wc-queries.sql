@@ -301,14 +301,20 @@ WHERE nodes_work.wc_id = ?1 AND nodes_work.local_relpath = ?2
 -- STMT_SELECT_OP_DEPTH_MOVED_TO
 SELECT op_depth, moved_to
 FROM nodes
-WHERE nodes.wc_id = ?1 AND nodes.local_relpath = ?2
+WHERE wc_id = ?1 AND local_relpath = ?2
  AND op_depth = (SELECT MIN(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3)
 
 -- STMT_SELECT_MOVED_TO
 SELECT moved_to
 FROM nodes
-WHERE nodes.wc_id = ?1 AND nodes.local_relpath = ?2 AND op_depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+
+-- STMT_SELECT_MOVED_HERE
+SELECT moved_here, presence
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth >= ?3
+ORDER BY op_depth
                   
 -- STMT_DELETE_LOCK
 DELETE FROM lock
