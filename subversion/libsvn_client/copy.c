@@ -1029,6 +1029,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   const char *top_src_path, *top_dst_url;
   struct check_url_kind_baton cukb;
   const char *top_src_abspath;
+  const char *repos_root;
   svn_ra_session_t *ra_session;
   svn_editor_t *editor;
   apr_hash_t *relpath_map = NULL;
@@ -1293,6 +1294,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                NULL, commit_items,
                                                FALSE, FALSE, ctx, pool));
 
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx, relpath_map,
@@ -1306,7 +1309,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     pool, pool));
 
   /* Perform the commit. */
-  SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items, editor,
+  SVN_ERR_W(svn_client__do_commit(repos_root, commit_items, editor,
                                   0, /* ### any notify_path_offset needed? */
                                   NULL, ctx, pool, pool),
             _("Commit failed (details follow):"));

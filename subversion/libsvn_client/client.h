@@ -919,7 +919,7 @@ svn_client__condense_commit_items(const char **base_url,
    for temporary allocations.
    */
 svn_error_t *
-svn_client__do_commit(const char *base_url,
+svn_client__do_commit(const char *repos_root,
                       const apr_array_header_t *commit_items,
                       svn_editor_t *editor,
                       const char *notify_path_prefix,

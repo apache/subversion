@@ -55,8 +55,8 @@
 /* Wrap an RA error in a nicer error if one is available. */
 static svn_error_t *
 fixup_commit_error(const char *local_abspath,
-                   const char *base_url,
-                   const char *path,
+                   const char *repos_root,
+                   const char *repos_relpath,
                    svn_node_kind_t kind,
                    svn_error_t *err,
                    svn_client_ctx_t *ctx,
@@ -79,7 +79,8 @@ fixup_commit_error(const char *local_abspath,
                                           scratch_pool);
           else
             notify = svn_wc_create_notify_url(
-                                svn_path_url_add_component2(base_url, path,
+                                svn_path_url_add_component2(repos_root,
+                                                            repos_relpath,
                                                             scratch_pool),
                                 svn_wc_notify_failed_out_of_date,
                                 scratch_pool);
@@ -97,8 +98,8 @@ fixup_commit_error(const char *local_abspath,
                                local_abspath
                                   ? svn_dirent_local_style(local_abspath,
                                                            scratch_pool)
-                                  : svn_path_url_add_component2(base_url,
-                                                                path,
+                                  : svn_path_url_add_component2(repos_root,
+                                                                repos_relpath,
                                                                 scratch_pool));
     }
   else if (svn_error_find_cause(err, SVN_ERR_FS_NO_LOCK_TOKEN)
@@ -115,7 +116,8 @@ fixup_commit_error(const char *local_abspath,
                                           scratch_pool);
           else
             notify = svn_wc_create_notify_url(
-                                svn_path_url_add_component2(base_url, path,
+                                svn_path_url_add_component2(repos_root,
+                                                            repos_relpath,
                                                             scratch_pool),
                                 svn_wc_notify_failed_locked,
                                 scratch_pool);
@@ -133,8 +135,8 @@ fixup_commit_error(const char *local_abspath,
                    local_abspath
                       ? svn_dirent_local_style(local_abspath,
                                                scratch_pool)
-                      : svn_path_url_add_component2(base_url,
-                                                    path,
+                      : svn_path_url_add_component2(repos_root,
+                                                    repos_relpath,
                                                     scratch_pool));
     }
   else if (svn_error_find_cause(err, SVN_ERR_RA_DAV_FORBIDDEN)
@@ -151,7 +153,8 @@ fixup_commit_error(const char *local_abspath,
                                     scratch_pool);
           else
             notify = svn_wc_create_notify_url(
-                                svn_path_url_add_component2(base_url, path,
+                                svn_path_url_add_component2(repos_root,
+                                                            repos_relpath,
                                                             scratch_pool),
                                 svn_wc_notify_failed_forbidden_by_server,
                                 scratch_pool);
@@ -169,8 +172,8 @@ fixup_commit_error(const char *local_abspath,
                    local_abspath
                       ? svn_dirent_local_style(local_abspath,
                                                scratch_pool)
-                      : svn_path_url_add_component2(base_url,
-                                                    path,
+                      : svn_path_url_add_component2(repos_root,
+                                                    repos_relpath,
                                                     scratch_pool));
     }
   else
@@ -1447,7 +1450,7 @@ static svn_error_t *
 do_item_commit(svn_client_commit_item3_t *item,
                svn_editor_t *editor,
                const char *notify_path_prefix,
-               const char *base_url,
+               const char *repos_root,
                apr_hash_t *checksums,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool)
@@ -1458,6 +1461,8 @@ do_item_commit(svn_client_commit_item3_t *item,
   svn_checksum_t *sha1_checksum = NULL;
   svn_checksum_t *md5_checksum = NULL;
   svn_stream_t *contents = NULL;
+  const char *repos_relpath = svn_uri_skip_ancestor(repos_root, item->url,
+                                                    scratch_pool);
   svn_error_t *err;
 
   /* Do some initializations. */
@@ -1559,7 +1564,7 @@ do_item_commit(svn_client_commit_item3_t *item,
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      err = svn_editor_delete(editor, item->session_relpath, item->revision);
+      err = svn_editor_delete(editor, repos_relpath, item->revision);
 
       if (err)
         goto fixup_error;
@@ -1645,7 +1650,7 @@ do_item_commit(svn_client_commit_item3_t *item,
           SVN_ERR_ASSERT(props != NULL);
           SVN_ERR_ASSERT(contents != NULL);
           SVN_ERR_ASSERT(sha1_checksum != NULL);
-          err = svn_editor_add_file(editor, item->session_relpath,
+          err = svn_editor_add_file(editor, repos_relpath,
                                     sha1_checksum, contents, props,
                                     SVN_INVALID_REVNUM);
         }
@@ -1673,7 +1678,7 @@ do_item_commit(svn_client_commit_item3_t *item,
                             svn_dirent_basename(child_abspath, scratch_pool);
             }
 
-          err = svn_editor_add_directory(editor, item->session_relpath,
+          err = svn_editor_add_directory(editor, repos_relpath,
                                          children, props,
                                          SVN_INVALID_REVNUM);
         }
@@ -1685,7 +1690,7 @@ do_item_commit(svn_client_commit_item3_t *item,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     {
       err = svn_editor_copy(editor, item->copyfrom_url, item->copyfrom_rev,
-                            item->session_relpath, SVN_INVALID_REVNUM);
+                            repos_relpath, SVN_INVALID_REVNUM);
 
       if (err)
         goto fixup_error;
@@ -1696,13 +1701,13 @@ do_item_commit(svn_client_commit_item3_t *item,
     {
       if (item->kind == svn_node_file)
         {
-          err = svn_editor_alter_file(editor, item->session_relpath,
+          err = svn_editor_alter_file(editor, repos_relpath,
                                       SVN_INVALID_REVNUM, props, sha1_checksum,
                                       contents);
         }
       else
         {
-          err = svn_editor_alter_directory(editor, item->session_relpath,
+          err = svn_editor_alter_directory(editor, repos_relpath,
                                            SVN_INVALID_REVNUM, props);
         }
 
@@ -1720,13 +1725,13 @@ do_item_commit(svn_client_commit_item3_t *item,
   return SVN_NO_ERROR;
 
 fixup_error:
-  return svn_error_trace(fixup_commit_error(local_abspath, base_url,
-                                            item->session_relpath, kind,
+  return svn_error_trace(fixup_commit_error(local_abspath, repos_root,
+                                            repos_relpath, kind,
                                             err, ctx, scratch_pool));
 }
 
 svn_error_t *
-svn_client__do_commit(const char *base_url,
+svn_client__do_commit(const char *repos_root,
                       const apr_array_header_t *commit_items,
                       svn_editor_t *editor,
                       const char *notify_path_prefix,
@@ -1753,7 +1758,7 @@ svn_client__do_commit(const char *base_url,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(do_item_commit(item, editor, notify_path_prefix, base_url,
+      SVN_ERR(do_item_commit(item, editor, notify_path_prefix, repos_root,
                              checksums, ctx, iterpool));
     }
 
