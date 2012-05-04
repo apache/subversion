@@ -359,12 +359,16 @@ static svn_error_t *
 alter_directory_cb(void *baton,
                    const char *relpath,
                    svn_revnum_t revision,
+                   const apr_array_header_t *children,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
+
+  /* Note: we ignore CHILDREN. We have no "incomplete" state to worry about,
+     so we don't need to be aware of what children will be created.  */
 
   if (!SVN_IS_VALID_REVNUM(revision))
     /* ### use a custom error code?  */
