@@ -61,7 +61,7 @@ struct svn_editor_t
   apr_hash_t *completed_nodes;
   svn_boolean_t finished;
 
-  apr_pool_t *result_pool;
+  apr_pool_t *state_pool;
 #endif
 };
 
@@ -105,7 +105,7 @@ static const int marker_added_dir;
 
 #define MARK_RELPATH(editor, relpath, value) \
   apr_hash_set((editor)->completed_nodes, \
-               apr_pstrdup((editor)->result_pool, relpath), \
+               apr_pstrdup((editor)->state_pool, relpath), \
                APR_HASH_KEY_STRING, value)
 
 #define MARK_COMPLETED(editor, relpath) \
@@ -217,9 +217,7 @@ mark_parent_stable(const svn_editor_t *editor,
   SVN_ERR_ASSERT_NO_RETURN(marker != MARKER_ALLOW_ADD);
 
   /* MARKER is NULL. Upgrade it to MARKER_ALLOW_ALTER.  */
-  apr_hash_set(editor->completed_nodes,
-               apr_pstrdup(editor->result_pool, parent), APR_HASH_KEY_STRING,
-               MARKER_ALLOW_ALTER);
+  MARK_RELPATH(editor, parent, MARKER_ALLOW_ALTER);
 }
 
 #else
@@ -274,7 +272,7 @@ svn_editor_create(svn_editor_t **editor,
   (*editor)->pending_incomplete_children = apr_hash_make(result_pool);
   (*editor)->completed_nodes = apr_hash_make(result_pool);
   (*editor)->finished = FALSE;
-  (*editor)->result_pool = result_pool;
+  (*editor)->state_pool = result_pool;
 #endif
 
   return SVN_NO_ERROR;
@@ -501,7 +499,7 @@ svn_editor_add_directory(svn_editor_t *editor,
       {
         const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
         const char *child = svn_relpath_join(relpath, child_basename,
-                                             editor->result_pool);
+                                             editor->state_pool);
 
         apr_hash_set(editor->pending_incomplete_children, child,
                      APR_HASH_KEY_STRING, "");
