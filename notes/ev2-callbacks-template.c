@@ -1,4 +1,7 @@
-/* Use this file to quickly copy/paste handlers for all Ev2 callbacks  */
+/* Use this file to quickly copy/paste handlers for all Ev2 callbacks.
+
+   Please prefix each function to distinguish them from the template,
+   for improved ctags behavior.  */
 
 #define UNUSED(x) ((void)(x))
 
@@ -68,6 +71,7 @@ static svn_error_t *
 alter_directory_cb(void *baton,
                    const char *relpath,
                    svn_revnum_t revision,
+                   const apr_array_header_t *children,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
