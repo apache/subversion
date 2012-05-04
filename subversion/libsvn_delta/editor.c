@@ -624,12 +624,14 @@ svn_error_t *
 svn_editor_alter_directory(svn_editor_t *editor,
                            const char *relpath,
                            svn_revnum_t revision,
+                           const apr_array_header_t *children,
                            apr_hash_t *props)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
-  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(children != NULL || props != NULL);
+  /* ### validate children are just basenames?  */
   SHOULD_NOT_BE_FINISHED(editor);
   SHOULD_ALLOW_ALTER(editor, relpath);
   VERIFY_PARENT_MAY_EXIST(editor, relpath);
@@ -640,13 +642,33 @@ svn_editor_alter_directory(svn_editor_t *editor,
     {
       START_CALLBACK(editor);
       err = editor->funcs.cb_alter_directory(editor->baton,
-                                             relpath, revision, props,
+                                             relpath, revision,
+                                             children, props,
                                              editor->scratch_pool);
       END_CALLBACK(editor);
     }
 
   MARK_COMPLETED(editor, relpath);
   MARK_PARENT_STABLE(editor, relpath);
+
+#ifdef ENABLE_ORDERING_CHECK
+  /* ### this is not entirely correct. we probably need to adjust the
+     ### check_unknown_child() function for this scenario.  */
+#if 0
+  {
+    int i;
+    for (i = 0; i < children->nelts; i++)
+      {
+        const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+        const char *child = svn_relpath_join(relpath, child_basename,
+                                             editor->state_pool);
+
+        apr_hash_set(editor->pending_incomplete_children, child,
+                     APR_HASH_KEY_STRING, "");
+      }
+  }
+#endif
+#endif
 
   svn_pool_clear(editor->scratch_pool);
   return svn_error_trace(err);

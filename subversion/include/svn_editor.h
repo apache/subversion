@@ -246,6 +246,10 @@ extern "C" {
  * In order to reduce complexity of callback receivers, the editor callbacks
  * must be driven in adherence to these rules:
  *
+ * - If any path is added (with add_*) or deleted/moved/rotated, then
+ *   an svn_editor_alter_directory() call must be made for its parent
+ *   directory with the target/eventual set of children.
+ *
  * - svn_editor_add_directory() -- Another svn_editor_add_*() call must
  *   follow for each child mentioned in the @a children argument of any
  *   svn_editor_add_directory() call.
@@ -479,6 +483,7 @@ typedef svn_error_t *(*svn_editor_cb_alter_directory_t)(
   void *baton,
   const char *relpath,
   svn_revnum_t revision,
+  const apr_array_header_t *children,
   apr_hash_t *props,
   apr_pool_t *scratch_pool);
 
@@ -885,8 +890,16 @@ svn_editor_add_absent(svn_editor_t *editor,
  * (e.g. it has not yet been committed), then @a revision should be
  * #SVN_INVALID_REVNUM.
  *
- * For a description of @a props, see svn_editor_add_file(). @a props
- * may not be NULL.
+ * If any changes to the set of children will be made in the future of
+ * the edit drive, then @a children MUST specify the resulting set of
+ * children. See svn_editor_add_directory() for the format of @a children.
+ * If not changes will be made, then NULL may be specified.
+ *
+ * For a description of @a props, see svn_editor_add_file(). If no changes
+ * to the properties will be made (ie. only future changes to the set of
+ * children), then @a props may be NULL.
+ *
+ * It is an error to pass NULL for both @a children and @a props.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.8.
@@ -895,6 +908,7 @@ svn_error_t *
 svn_editor_alter_directory(svn_editor_t *editor,
                            const char *relpath,
                            svn_revnum_t revision,
+                           const apr_array_header_t *children,
                            apr_hash_t *props);
 
 /** Drive @a editor's #svn_editor_cb_alter_file_t callback.
