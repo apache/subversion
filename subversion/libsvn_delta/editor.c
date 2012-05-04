@@ -217,7 +217,8 @@ mark_parent_stable(const svn_editor_t *editor,
   SVN_ERR_ASSERT_NO_RETURN(marker != MARKER_ALLOW_ADD);
 
   /* MARKER is NULL. Upgrade it to MARKER_ALLOW_ALTER.  */
-  apr_hash_set(editor->completed_nodes, parent, APR_HASH_KEY_STRING,
+  apr_hash_set(editor->completed_nodes,
+               apr_pstrdup(editor->result_pool, parent), APR_HASH_KEY_STRING,
                MARKER_ALLOW_ALTER);
 }
 
