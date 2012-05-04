@@ -1591,7 +1591,6 @@ do_item_commit(svn_client_commit_item3_t *item,
       if (err)
         goto fixup_error;
 
-#if 0
       /* This is all messed up.
          Pristine installation has traditionally happened during the commit,
          as libsvn_wc was transmitting deltas.  We don't do that anymore, so
@@ -1635,7 +1634,6 @@ do_item_commit(svn_client_commit_item3_t *item,
                                        scratch_pool);
       if (err)
         goto fixup_error;
-#endif
     }
 
   /* If this item is supposed to be added, do so. */
