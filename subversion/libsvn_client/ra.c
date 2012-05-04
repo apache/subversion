@@ -337,9 +337,24 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           SVN_ERR(err);
         }
 
-      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
-                                  base_dir_abspath, pool, pool));
-      cb->wcroot_abspath = wcroot_abspath;
+      err = svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
+                                base_dir_abspath, pool, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+            {
+              svn_error_clear(err);
+              err = SVN_NO_ERROR;
+            }
+          else
+            {
+              return err;
+            }
+        }
+      else
+        {
+          cb->wcroot_abspath = wcroot_abspath;
+        }
     }
 
   /* If the caller allows for auto-following redirections, and the
