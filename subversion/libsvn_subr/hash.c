@@ -656,7 +656,7 @@ hashfunc_fast(const char *char_key, apr_ssize_t *klen)
 
             hash = (hash + chunk) * 0xd1f3da69;
           }
-        for (; i; i--, p++)
+        for (; *p; p++)
             hash = hash * 33 + *p;
 
         *klen = p - key;
