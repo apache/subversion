@@ -1667,11 +1667,11 @@ svn_wc__node_pristine_get_tempdir(const char **temp_dir_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__node_pristine_get_tempdir(temp_dir_abspath,
-                                                           wc_ctx->db,
-                                                           wri_abspath,
-                                                           result_pool,
-                                                           scratch_pool));
+  return svn_error_trace(svn_wc__db_pristine_get_tempdir(temp_dir_abspath,
+                                                         wc_ctx->db,
+                                                         wri_abspath,
+                                                         result_pool,
+                                                         scratch_pool));
 }
 
 svn_error_t *
