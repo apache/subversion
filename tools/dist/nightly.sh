@@ -72,8 +72,8 @@ cd ..
 
 # Create the information page
 echo '-------------------moving results---------------------'
-./release.py --base-dir ${abscwd}/roll post-candidates trunk-nightly $head \
-    --target $target
+# ./release.py --base-dir ${abscwd}/roll post-candidates trunk-nightly $head \
+#     --target $target
 if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
 if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
 mv roll/deploy $target/dist/r$head
