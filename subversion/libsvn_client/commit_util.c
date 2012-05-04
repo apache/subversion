@@ -1568,6 +1568,8 @@ do_item_commit(svn_client_commit_item3_t *item,
 
       if (err)
         goto fixup_error;
+
+      return SVN_NO_ERROR;
     }
 
 /*  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS) ||
