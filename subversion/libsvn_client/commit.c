@@ -663,14 +663,17 @@ get_ra_editor(svn_editor_t **editor,
     }
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       relpath_map, pool)));
-  SVN_ERR(svn_ra_get_commit_editor4(ra_session, editor,
-                                    commit_revprops, commit_callback,
-                                    commit_baton, lock_tokens, keep_locks,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
+  SVN_ERR(svn_ra__get_commit_ev2(editor, ra_session,
+                                 commit_revprops, commit_callback,
+                                 commit_baton, lock_tokens, keep_locks,
+                                 svn_client__ra_provide_base,
+                                 svn_client__ra_provide_props,
+                                 svn_client__ra_get_copysrc_kind,
+                                 svn_client__ra_make_cb_baton(ctx->wc_ctx,
+                                                              relpath_map,
+                                                              pool),
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool, pool));
 
   return SVN_NO_ERROR;
 }
