@@ -52,6 +52,10 @@ typedef struct callback_baton_t
      this base directory. */
   const char *base_dir_abspath;
 
+  /* Holds the absolute path of the working copy root for the working
+     copy in which BASE_DIR_ABSPATH is found. */
+  const char *wcroot_abspath;
+
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
   const apr_array_header_t *commit_items;
@@ -234,6 +238,30 @@ invalidate_wc_props(void *baton,
 }
 
 
+/* This implements the `svn_ra_get_wc_contents_func_t' interface. */
+static svn_error_t *
+get_wc_contents(void *baton,
+                svn_stream_t **contents,
+                svn_checksum_t *sha1_checksum,
+                apr_pool_t *pool)
+{
+  callback_baton_t *cb = baton;
+
+  if (! cb->wcroot_abspath)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(
+             svn_wc__get_pristine_contents_by_checksum(contents,
+                                                       cb->ctx->wc_ctx,
+                                                       cb->wcroot_abspath,
+                                                       sha1_checksum,
+                                                       pool, pool));
+}
+
+
 static svn_error_t *
 cancel_callback(void *baton)
 {
@@ -284,6 +312,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->progress_baton = ctx->progress_baton;
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
+  cbtable->get_wc_contents = get_wc_contents;
 
   cb->base_dir_abspath = base_dir_abspath;
   cb->commit_items = commit_items;
@@ -291,6 +320,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
   if (base_dir_abspath)
     {
+      const char *wcroot_abspath;
       svn_error_t *err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
                                                      base_dir_abspath,
                                                      pool, pool);
@@ -303,7 +333,13 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           uuid = NULL;
         }
       else
-        SVN_ERR(err);
+        {
+          SVN_ERR(err);
+        }
+
+      SVN_ERR(svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
+                                  base_dir_abspath, pool, pool));
+      cb->wcroot_abspath = wcroot_abspath;
     }
 
   /* If the caller allows for auto-following redirections, and the
