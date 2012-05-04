@@ -10183,6 +10183,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 static svn_error_t *
 follow_moved_to(apr_array_header_t **moved_tos,
                 int op_depth,
+                const char *repos_path,
+                svn_revnum_t revision,
                 svn_wc__db_wcroot_t *wcroot,
                 const char *local_relpath,
                 apr_pool_t *result_pool,
@@ -10194,6 +10196,8 @@ follow_moved_to(apr_array_header_t **moved_tos,
   const char *ancestor_relpath, *node_moved_to = NULL;
   int i;
 
+  SVN_ERR_ASSERT((!op_depth && !repos_path) || (op_depth && repos_path));
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_OP_DEPTH_MOVED_TO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
@@ -10203,6 +10207,19 @@ follow_moved_to(apr_array_header_t **moved_tos,
     {
       working_op_depth = svn_sqlite__column_int(stmt, 0);
       node_moved_to = svn_sqlite__column_text(stmt, 1, result_pool);
+      if (!repos_path)
+        {
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          if (!have_row || svn_sqlite__column_revnum(stmt, 0))
+            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                                     svn_sqlite__reset(stmt),
+                                     _("The base node '%s' was not found."),
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
+                                                            scratch_pool));
+          repos_path = svn_sqlite__column_text(stmt, 2, scratch_pool);
+          revision = svn_sqlite__column_revnum(stmt, 3);
+        }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -10215,10 +10232,11 @@ follow_moved_to(apr_array_header_t **moved_tos,
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, node_moved_to,
                                 relpath_depth(node_moved_to)));
       SVN_ERR(svn_sqlite__step(&have_row2, stmt));
-      if (!have_row2 || !svn_sqlite__column_int(stmt, 0))
+      if (!have_row2 || !svn_sqlite__column_int(stmt, 0)
+          || revision != svn_sqlite__column_revnum(stmt, 3)
+          || strcmp(repos_path, svn_sqlite__column_text(stmt, 2, NULL)))
         node_moved_to = NULL;
       SVN_ERR(svn_sqlite__reset(stmt));
-      /* verify repos_path points back? */
     }
 
   if (node_moved_to)
@@ -10294,7 +10312,7 @@ follow_moved_to(apr_array_header_t **moved_tos,
           APR_ARRAY_PUSH(*moved_tos, struct svn_wc__db_moved_to_t *) = moved_to;
 
           SVN_ERR(follow_moved_to(moved_tos, relpath_depth(ancestor_moved_to),
-                                  wcroot, node_moved_to,
+                                  repos_path, revision, wcroot, node_moved_to,
                                   result_pool, scratch_pool));
           break;
         }
@@ -10323,7 +10341,8 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
                               sizeof(struct svn_wc__db_moved_to_t *));
 
   /* ### Wrap in a transaction */
-  SVN_ERR(follow_moved_to(moved_tos, 0, wcroot, local_relpath,
+  SVN_ERR(follow_moved_to(moved_tos, 0, NULL, SVN_INVALID_REVNUM,
+                          wcroot, local_relpath,
                           result_pool, scratch_pool));
 
   /* ### Convert moved_to to abspath */
