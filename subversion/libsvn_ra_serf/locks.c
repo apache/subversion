@@ -745,7 +745,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       SVN_ERR(svn_ra_serf__context_run_wait(&ctx->done, session, iterpool));
 
-      switch (ctx->status)
+      switch (handler->sline.code)
         {
           case 204:
             break; /* OK */
