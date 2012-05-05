@@ -739,6 +739,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       handler = apr_pcalloc(iterpool, sizeof(*handler));
 
+      handler->handler_pool = iterpool;
       handler->method = "UNLOCK";
       handler->path = req_url;
       handler->conn = session->conns[0];
@@ -761,12 +762,14 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
             /* Api users expect this specific error code to detect failures */
             err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
                                     _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+                                    handler->sline.code,
+                                    handler->sline.reason);
             break;
           default:
             err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+                                    handler->sline.code,
+                                    handler->sline.reason);
         }
 
       if (lock_func)

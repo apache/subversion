@@ -963,8 +963,6 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
         }
 
       ctx->status = sl.code;
-      ctx->reason = sl.reason ? apr_pstrdup(ctx->pool, sl.reason) : NULL;
-      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
       ctx->done = TRUE;
     }
 
@@ -1181,8 +1179,6 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         }
 
       ctx->status = sl.code;
-      ctx->reason = sl.reason ? apr_pstrdup(ctx->pool, sl.reason) : NULL;
-      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
     }
 
   return svn_error_trace(err);

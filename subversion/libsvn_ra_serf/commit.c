@@ -1309,6 +1309,7 @@ open_root(void *edit_baton,
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
+      handler->handler_pool = ctx->pool;
       handler->method = "POST";
       handler->body_type = SVN_SKEL_MIME_TYPE;
       handler->body_delegate = create_txn_post_body;
@@ -1334,10 +1335,11 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&post_ctx->done, ctx->session,
                                             ctx->pool));
 
-      if (post_ctx->status != 201)
+      if (handler->sline.code != 201)
         {
           apr_status_t status = SVN_ERR_RA_DAV_REQUEST_FAILED;
-          switch(post_ctx->status)
+
+          switch (handler->sline.code)
             {
               case 403:
                 status = SVN_ERR_RA_DAV_FORBIDDEN;
@@ -1350,7 +1352,7 @@ open_root(void *edit_baton,
           return svn_error_createf(status, NULL,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
-                                   post_ctx->status, post_ctx->reason,
+                                   handler->sline.code, handler->sline.reason,
                                    ctx->session->session_url.scheme,
                                    ctx->session->session_url.hostinfo);
         }
@@ -1408,6 +1410,7 @@ open_root(void *edit_baton,
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
+      handler->handler_pool = ctx->pool;
       handler->method = "MKACTIVITY";
       handler->path = ctx->activity_url;
       handler->conn = ctx->session->conns[0];
@@ -1424,10 +1427,11 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&mkact_ctx->done, ctx->session,
                                             ctx->pool));
 
-      if (mkact_ctx->status != 201)
+      if (handler->sline.code != 201)
         {
           apr_status_t status = SVN_ERR_RA_DAV_REQUEST_FAILED;
-          switch(mkact_ctx->status)
+
+          switch (handler->sline.code)
             {
               case 403:
                 status = SVN_ERR_RA_DAV_FORBIDDEN;
@@ -1440,7 +1444,7 @@ open_root(void *edit_baton,
           return svn_error_createf(status, NULL,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
-                                   mkact_ctx->status, mkact_ctx->reason,
+                                   handler->sline.code, handler->sline.reason,
                                    ctx->session->session_url.scheme,
                                    ctx->session->session_url.hostinfo);
         }
@@ -1662,6 +1666,7 @@ add_directory(const char *path,
     }
 
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
+  handler->handler_pool = dir->pool;
   handler->conn = dir->commit->conn;
   handler->session = dir->commit->session;
 
@@ -1708,7 +1713,7 @@ add_directory(const char *path,
   SVN_ERR(svn_ra_serf__context_run_wait(&add_dir_ctx->done,
                                         dir->commit->session, dir->pool));
 
-  switch (add_dir_ctx->status)
+  switch (handler->sline.code)
     {
       case 201: /* Created:    item was successfully copied */
       case 204: /* No Content: item successfully replaced an existing target */
@@ -1725,7 +1730,7 @@ add_directory(const char *path,
                                  _("Adding directory failed: %s on %s "
                                    "(%d %s)"),
                                  handler->method, handler->path,
-                                 add_dir_ctx->status, add_dir_ctx->reason);
+                                 handler->sline.code, handler->sline.reason);
     }
 
   *child_baton = dir;
@@ -1930,6 +1935,7 @@ add_file(const char *path,
       head_ctx->pool = new_file->pool;
 
       handler = apr_pcalloc(new_file->pool, sizeof(*handler));
+      handler->handler_pool = new_file->pool;
       handler->session = new_file->commit->session;
       handler->conn = new_file->commit->conn;
       handler->method = "HEAD";
@@ -1944,7 +1950,7 @@ add_file(const char *path,
                                             new_file->commit->session,
                                             new_file->pool));
 
-      if (head_ctx->status != 404)
+      if (handler->sline.code != 404)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"), path);
@@ -2127,7 +2133,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&copy_ctx->done,
                                             ctx->commit->session, pool));
 
-      if (copy_ctx->status != 201 && copy_ctx->status != 204)
+      if (handler->sline.code != 201 && handler->sline.code != 204)
         {
           return svn_error_trace(return_response_err(
                                    handler,
@@ -2181,7 +2187,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&put_ctx->done,
                                             ctx->commit->session, pool));
 
-      if (put_ctx->status != 204 && put_ctx->status != 201)
+      if (handler->sline.code != 204 && handler->sline.code != 201)
         {
           return svn_error_trace(return_response_err(
                                    handler,
@@ -2255,6 +2261,7 @@ close_edit(void *edit_baton,
   if (ctx->activity_url)
     {
       handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->handler_pool = pool;
       handler->method = "DELETE";
       handler->path = ctx->activity_url;
       handler->conn = ctx->conn;
@@ -2271,7 +2278,7 @@ close_edit(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->done, ctx->session,
                                             pool));
 
-      SVN_ERR_ASSERT(delete_ctx->status == 204);
+      SVN_ERR_ASSERT(handler->sline.code == 204);
     }
 
   return SVN_NO_ERROR;
@@ -2296,6 +2303,7 @@ abort_edit(void *edit_baton,
 
   /* DELETE our aborted activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->handler_pool = pool;
   handler->method = "DELETE";
   handler->conn = ctx->session->conns[0];
   handler->session = ctx->session;
@@ -2319,9 +2327,9 @@ abort_edit(void *edit_baton,
   /* 204 if deleted,
      403 if DELETE was forbidden (indicates MKACTIVITY was forbidden too),
      404 if the activity wasn't found. */
-  if (delete_ctx->status != 204 &&
-      delete_ctx->status != 403 &&
-      delete_ctx->status != 404
+  if (handler->sline.code != 204
+      && handler->sline.code != 403
+      && handler->sline.code != 404
       )
     {
       SVN_ERR_MALFUNCTION();

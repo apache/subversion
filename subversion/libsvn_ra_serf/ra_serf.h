@@ -653,13 +653,6 @@ typedef struct svn_ra_serf__simple_request_context_t {
   /* The HTTP status code of the response */
   int status;
 
-  /* The HTTP status line of the response */
-  const char *reason;
-
-  /* The Location header value of the response, or NULL if there
-     wasn't one. */
-  const char *location;
-
   /* This value is set to TRUE when the response is completed. */
   svn_boolean_t done;
 
