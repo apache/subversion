@@ -1636,9 +1636,11 @@ do_item_commit(svn_client_commit_item3_t *item,
       if (err)
         goto fixup_error;
 
-      err = svn_wc__node_pristine_read(&contents, ctx->wc_ctx, item->path,
-                                       sha1_checksum, scratch_pool,
-                                       scratch_pool);
+      err = svn_wc__get_pristine_contents_by_checksum(&contents, ctx->wc_ctx,
+                                                      item->path,
+                                                      sha1_checksum,
+                                                      scratch_pool,
+                                                      scratch_pool);
       if (err)
         goto fixup_error;
     }

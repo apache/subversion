@@ -1100,22 +1100,6 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 
-/* If requested set *CONTENTS to a readable stream that will yield the pristine
-   text identified by SHA1_CHECKSUM (must be a SHA-1 checksum) within the WC
-   identified by WRI_ABSPATH in DB.
-
-   Even if the pristine text is removed from the store while it is being
-   read, the stream will remain valid and readable until it is closed.
-
-   Allocate the stream in RESULT_POOL. */
-svn_error_t *
-svn_wc__node_pristine_read(svn_stream_t **contents,
-                           svn_wc_context_t *wc_ctx,
-                           const char *wri_abspath,
-                           const svn_checksum_t *sha1_checksum,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
 /* Set *TEMP_DIR_ABSPATH to a directory in which the caller should create
    a uniquely named file for later installation as a pristine text file.
 
