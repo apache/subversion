@@ -248,11 +248,11 @@ svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx)
  * the place.
  */
 /* Both server and repository support the capability. */
-static const char *capability_yes = "yes";
+static const char *const capability_yes = "yes";
 /* Either server or repository does not support the capability. */
-static const char *capability_no = "no";
+static const char *const capability_no = "no";
 /* Server supports the capability, but don't yet know if repository does. */
-static const char *capability_server_yes = "server-yes";
+static const char *const capability_server_yes = "server-yes";
 
 
 /* This implements serf_bucket_headers_do_callback_fn_t.
