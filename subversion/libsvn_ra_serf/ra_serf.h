@@ -406,6 +406,11 @@ typedef struct svn_ra_serf__handler_t {
   svn_ra_serf__response_handler_t response_handler;
   void *response_baton;
 
+  /* When REPONSE_HANDLER is invoked, the following fields will be set
+     based on the response header.  */
+  serf_status_line sline;  /* The parsed Status-Line  */
+  const char *location;  /* The Location: header, if any  */
+
   /* The handler and baton pair to be executed when a non-recoverable error
    * is detected.  If it is NULL in the presence of an error, an abort() may
    * be triggered.
@@ -437,6 +442,14 @@ typedef struct svn_ra_serf__handler_t {
   /* The connection and session to be used for this request. */
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__session_t *session;
+
+  /* Internal flag to indicate we've parsed the headers.  */
+  svn_boolean_t reading_body;
+
+  /* Pool for allocating SLINE.REASON and LOCATION. If this pool is NULL,
+     then the requestor does not care about SLINE and LOCATION.  */
+  apr_pool_t *handler_pool;
+
 } svn_ra_serf__handler_t;
 
 /*
