@@ -114,6 +114,23 @@ ssl_convert_serf_failures(int failures)
   return svn_failures;
 }
 
+
+static apr_status_t
+save_error(svn_ra_serf__session_t *session,
+           svn_error_t *err)
+{
+  if (err || session->pending_error)
+    {
+      session->pending_error = svn_error_compose_create(
+                                  session->pending_error,
+                                  err);
+      return session->pending_error->apr_err;
+    }
+
+  return APR_SUCCESS;
+}
+
+
 /* Construct the realmstring, e.g. https://svn.collab.net:443. */
 static const char *
 construct_realm(svn_ra_serf__session_t *session,
@@ -273,21 +290,10 @@ ssl_server_cert_cb(void *baton, int failures,
   svn_error_t *err;
 
   subpool = svn_pool_create(session->pool);
-  err = ssl_server_cert(baton, failures, cert, subpool);
-
+  err = svn_error_trace(ssl_server_cert(baton, failures, cert, subpool));
   svn_pool_destroy(subpool);
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                                    session->pending_error,
-                                                    err);
-
-      return session->pending_error->apr_err;
-    }
-
-  return APR_SUCCESS;
-
+  return save_error(session, err);
 }
 
 static svn_error_t *
@@ -391,24 +397,14 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 {
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
-  apr_status_t status = APR_SUCCESS;
+  svn_error_t *err;
 
-  svn_error_t *err = conn_setup(sock,
-                                read_bkt,
-                                write_bkt,
-                                baton,
-                                pool);
-
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                          session->pending_error,
-                                          err);
-
-      status = session->pending_error->apr_err;
-    }
-
-  return status;
+  err = svn_error_trace(conn_setup(sock,
+                                   read_bkt,
+                                   write_bkt,
+                                   baton,
+                                   pool));
+  return save_error(session, err);
 }
 
 
@@ -447,8 +443,7 @@ accept_head(serf_request_t *request,
 }
 
 static svn_error_t *
-connection_closed(serf_connection_t *conn,
-                  svn_ra_serf__connection_t *sc,
+connection_closed(svn_ra_serf__connection_t *conn,
                   apr_status_t why,
                   apr_pool_t *pool)
 {
@@ -457,8 +452,8 @@ connection_closed(serf_connection_t *conn,
       SVN_ERR_MALFUNCTION();
     }
 
-  if (sc->using_ssl)
-      sc->ssl_context = NULL;
+  if (conn->using_ssl)
+    conn->ssl_context = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -469,15 +464,12 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
                          apr_status_t why,
                          apr_pool_t *pool)
 {
-  svn_ra_serf__connection_t *sc = closed_baton;
+  svn_ra_serf__connection_t *ra_conn = closed_baton;
   svn_error_t *err;
 
-  err = connection_closed(conn, sc, why, pool);
+  err = svn_error_trace(connection_closed(ra_conn, why, pool));
 
-  if (err)
-    sc->session->pending_error = svn_error_compose_create(
-                                            sc->session->pending_error,
-                                            err);
+  (void) save_error(ra_conn->session, err);
 }
 
 
@@ -528,20 +520,11 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
 {
   svn_ra_serf__connection_t *conn = data;
   svn_ra_serf__session_t *session = conn->session;
-  svn_error_t *err = handle_client_cert(data,
-                                        cert_path,
-                                        session->pool);
+  svn_error_t *err;
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                                    session->pending_error,
-                                                    err);
+  err = svn_error_trace(handle_client_cert(data, cert_path, session->pool));
 
-      return session->pending_error->apr_err;
-    }
-
-  return APR_SUCCESS;
+  return save_error(session, err);
 }
 
 /* Implementation for svn_ra_serf__handle_client_cert_pw */
@@ -590,21 +573,14 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 {
   svn_ra_serf__connection_t *conn = data;
   svn_ra_serf__session_t *session = conn->session;
-  svn_error_t *err = handle_client_cert_pw(data,
-                                           cert_path,
-                                           password,
-                                           session->pool);
+  svn_error_t *err;
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                          session->pending_error,
-                                          err);
+  err = svn_error_trace(handle_client_cert_pw(data,
+                                              cert_path,
+                                              password,
+                                              session->pool));
 
-      return session->pending_error->apr_err;
-    }
-
-  return APR_SUCCESS;
+  return save_error(session, err);
 }
 
 
@@ -1642,8 +1618,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 
       if (err)
         {
-          session->pending_error
-              = svn_error_compose_create(session->pending_error, err);
+          (void) save_error(session, err);
           return err->apr_err;
         }
 
@@ -1652,13 +1627,11 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!creds || session->auth_attempts > 4)
         {
           /* No more credentials. */
-          session->pending_error
-              = svn_error_compose_create(
-                    session->pending_error,
-                    svn_error_create(
-                          SVN_ERR_AUTHN_FAILED, NULL,
-                          _("No more credentials or we tried too many times.\n"
-                            "Authentication failed")));
+          (void) save_error(session,
+                            svn_error_create(
+                              SVN_ERR_AUTHN_FAILED, NULL,
+                              _("No more credentials or we tried too many"
+                                "times.\nAuthentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
 
@@ -1676,11 +1649,10 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          session->pending_error
-              = svn_error_compose_create(
-                      ctx->session->pending_error,
-                      svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                                       _("Proxy authentication failed")));
+          (void) save_error(session, 
+                            svn_error_create(
+                              SVN_ERR_AUTHN_FAILED, NULL,
+                              _("Proxy authentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
     }
@@ -1831,20 +1803,14 @@ handle_response_cb(serf_request_t *request,
   svn_ra_serf__handler_t *ctx = baton;
   svn_ra_serf__session_t *session = ctx->session;
   svn_error_t *err;
-  apr_status_t serf_status = APR_SUCCESS;
+  apr_status_t inner_status;
+  apr_status_t outer_status;
 
-  err = svn_error_trace(
-          handle_response(request, response, ctx, &serf_status, pool));
+  err = svn_error_trace(handle_response(request, response,
+                                        ctx, &inner_status, pool));
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(session->pending_error,
-                                                        err);
-
-      serf_status = session->pending_error->apr_err;
-    }
-
-  return serf_status;
+  outer_status = save_error(session, err);
+  return outer_status ? outer_status : inner_status;
 }
 
 /* Perform basic request setup, with special handling for HEAD requests,
@@ -1924,22 +1890,13 @@ setup_request_cb(serf_request_t *request,
      ### the duration of the request.  */
   apr_pool_t *scratch_pool = pool;
 
-  err = setup_request(request, ctx,
-                      req_bkt,
-                      acceptor, acceptor_baton,
-                      handler, handler_baton,
-                      pool /* request_pool */, scratch_pool);
+  err = svn_error_trace(setup_request(request, ctx,
+                                      req_bkt,
+                                      acceptor, acceptor_baton,
+                                      handler, handler_baton,
+                                      pool /* request_pool */, scratch_pool));
 
-  if (err)
-    {
-      ctx->session->pending_error
-                = svn_error_compose_create(ctx->session->pending_error,
-                                           err);
-
-      return err->apr_err;
-    }
-
-  return APR_SUCCESS;
+  return save_error(ctx->session, err);
 }
 
 void
