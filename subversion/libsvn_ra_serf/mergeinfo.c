@@ -294,7 +294,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
 
   err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
-                                      parser_ctx->location);
+                                      handler->location);
   if (err2)
     {
       svn_error_clear(err);

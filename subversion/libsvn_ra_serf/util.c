@@ -1399,31 +1399,16 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   svn_ra_serf__xml_parser_t *ctx = baton;
   svn_error_t *err;
 
+  /* ### get the HANDLER rather than fetching this.  */
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
       return svn_error_wrap_apr(status, NULL);
     }
 
-  if (ctx->status_code)
-    {
-      *ctx->status_code = sl.code;
-    }
-
-  if (sl.code == 301 || sl.code == 302 || sl.code == 307)
-    {
-      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
-    }
-
   /* Woo-hoo.  Nothing here to see.  */
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
-      /* If our caller won't know about the 404, abort() for now. */
-#if 0
-      /* ### wrong thing to do anyways. and caller has HANDLER->SLINE.  */
-      SVN_ERR_ASSERT(ctx->status_code);
-#endif
-
       add_done_item(ctx);
 
       err = svn_ra_serf__handle_server_error(request, response, pool);
