@@ -90,14 +90,13 @@ struct svn_ra_serf__merge_context_t
   apr_pool_t *pool;
 
   svn_ra_serf__session_t *session;
+  svn_ra_serf__handler_t *handler;
 
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
 
   const char *merge_resource_url; /* URL of resource to be merged. */
   const char *merge_url; /* URL at which the MERGE request is aimed. */
-
-  int status;
 
   svn_boolean_t done;
 
@@ -535,6 +534,7 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "MERGE";
   handler->path = merge_ctx->merge_url;
   handler->body_delegate = create_merge_body;
@@ -550,13 +550,14 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   parser_ctx->end = end_merge;
   parser_ctx->cdata = cdata_merge;
   parser_ctx->done = &merge_ctx->done;
-  parser_ctx->status_code = &merge_ctx->status;
 
   handler->header_delegate = setup_merge_headers;
   handler->header_delegate_baton = merge_ctx;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
+
+  merge_ctx->handler = handler;
 
   svn_ra_serf__request_create(handler);
 
@@ -580,5 +581,5 @@ svn_ra_serf__merge_get_commit_info(svn_ra_serf__merge_context_t *ctx)
 int
 svn_ra_serf__merge_get_status(svn_ra_serf__merge_context_t *ctx)
 {
-  return ctx->status;
+  return ctx->handler->sline.code;
 }

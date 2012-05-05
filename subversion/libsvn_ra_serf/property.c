@@ -97,9 +97,6 @@ struct svn_ra_serf__propfind_context_t {
    */
   const char *current_path;
 
-  /* Returned status code. */
-  int status_code;
-
   /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
 
@@ -552,6 +549,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "PROPFIND";
   handler->path = path;
   handler->body_delegate = create_propfind_body;
@@ -571,7 +569,6 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
   parser_ctx->start = start_propfind;
   parser_ctx->end = end_propfind;
   parser_ctx->cdata = cdata_propfind;
-  parser_ctx->status_code = &new_prop_ctx->status_code;
   parser_ctx->done = &new_prop_ctx->done;
   parser_ctx->done_list = new_prop_ctx->done_list;
   parser_ctx->done_item = &new_prop_ctx->done_item;
@@ -609,7 +606,7 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
 
-  err2 = svn_ra_serf__error_on_status(prop_ctx->status_code,
+  err2 = svn_ra_serf__error_on_status(prop_ctx->handler->sline.code,
                                       prop_ctx->path, NULL);
   if (err2)
     {
