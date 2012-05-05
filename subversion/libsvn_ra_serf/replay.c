@@ -747,10 +747,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       svn_ra_serf__list_t *done_list;
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
-      /* We're not really interested in the status code here in replay, but
-         the XML parsing code will abort on error if it doesn't have a place
-         to store the response status code. */
-      int status_code;
 
       if (session->cancel_func)
         SVN_ERR(session->cancel_func(session->cancel_baton));
@@ -823,7 +819,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           parser_ctx->start = start_replay;
           parser_ctx->end = end_replay;
           parser_ctx->cdata = cdata_replay;
-          parser_ctx->status_code = &status_code;
           parser_ctx->done = &replay_ctx->done;
           parser_ctx->done_list = &done_reports;
           parser_ctx->done_item = &replay_ctx->done_item;
