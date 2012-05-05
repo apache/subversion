@@ -1692,6 +1692,10 @@ handle_response(serf_request_t *request,
       return APR_SUCCESS;
     }
 
+  /* If we're reading the body, then skip all this preparation.  */
+  if (handler->reading_body)
+    goto process_body;
+
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
@@ -1774,6 +1778,21 @@ handle_response(serf_request_t *request,
       return SVN_NO_ERROR; /* Error is set in caller */
     }
 
+  /* Stop processing the above, on every packet arrival.  */
+  handler->reading_body = TRUE;
+
+  /* ... and set up the header fields in HANDLER if the caller is
+     interested.  */
+  if (handler->handler_pool != NULL)
+    {
+      handler->sline = sl;
+      handler->sline.reason = apr_pstrdup(handler->handler_pool,
+                                          handler->sline.reason);
+      handler->location = svn_ra_serf__response_get_location(
+                              response, handler->handler_pool);
+    }
+
+ process_body:
   err = handler->response_handler(request, response,
                                   handler->response_baton,
                                   pool);
