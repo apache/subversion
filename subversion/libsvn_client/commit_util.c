@@ -1564,7 +1564,8 @@ do_item_commit(svn_client_commit_item3_t *item,
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      err = svn_editor_delete(editor, repos_relpath, item->revision);
+      err = svn_error_trace(
+                svn_editor_delete(editor, repos_relpath, item->revision));
 
       if (err)
         goto fixup_error;
@@ -1575,8 +1576,9 @@ do_item_commit(svn_client_commit_item3_t *item,
 /*  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS) ||
         (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))*/
     {
-      err = svn_wc_prop_list2(&props, ctx->wc_ctx, item->path, scratch_pool,
-                              scratch_pool);
+      err = svn_error_trace(
+                svn_wc_prop_list2(&props, ctx->wc_ctx, item->path,
+                                  scratch_pool, scratch_pool));
 
       if (err)
         goto fixup_error;
@@ -1591,10 +1593,12 @@ do_item_commit(svn_client_commit_item3_t *item,
 
       /* Get a de-translated stream of the working contents, along with an
          appropriate checksum. */
-      err = svn_client__get_detranslated_stream(&contents, &sha1_checksum,
-                                                &md5_checksum,
-                                                item->path, props,
-                                                scratch_pool, scratch_pool);
+      err = svn_error_trace(
+                svn_client__get_detranslated_stream(&contents, &sha1_checksum,
+                                                    &md5_checksum,
+                                                    item->path, props,
+                                                    scratch_pool,
+                                                    scratch_pool));
       if (err)
         goto fixup_error;
 
@@ -1610,37 +1614,43 @@ do_item_commit(svn_client_commit_item3_t *item,
 
          Unfortunately, we aren't yet ideal, so the following will have to
          suffice. */
-      err = svn_wc__node_pristine_get_tempdir(&pristine_tempdir, ctx->wc_ctx,
-                                              item->path, scratch_pool,
-                                              scratch_pool);
+      err = svn_error_trace(
+                svn_wc__node_pristine_get_tempdir(&pristine_tempdir,
+                                                  ctx->wc_ctx, item->path,
+                                                  scratch_pool, scratch_pool));
       if (err)
         goto fixup_error;
 
-      err = svn_stream_open_unique(&tmp_stream, &pristine_temppath,
-                                   pristine_tempdir,
-                                   svn_io_file_del_none, scratch_pool,
-                                   scratch_pool);
+      err = svn_error_trace(
+                svn_stream_open_unique(&tmp_stream, &pristine_temppath,
+                                       pristine_tempdir,
+                                       svn_io_file_del_none, scratch_pool,
+                                       scratch_pool));
       if (err)
         goto fixup_error;
 
-      err = svn_stream_copy3(contents, tmp_stream, ctx->cancel_func,
-                             ctx->cancel_baton, scratch_pool);
+      err = svn_error_trace(
+                svn_stream_copy3(contents, tmp_stream, ctx->cancel_func,
+                                 ctx->cancel_baton, scratch_pool));
       if (err)
         goto fixup_error;
 
       /* ### pristine_temppath should be in the pristine tempdir, but we
          ### don't honor that right now. :( */
-      err = svn_wc__node_pristine_install(ctx->wc_ctx, pristine_temppath,
-                                          sha1_checksum, md5_checksum,
-                                          scratch_pool);
+      err = svn_error_trace(
+                svn_wc__node_pristine_install(ctx->wc_ctx, pristine_temppath,
+                                              sha1_checksum, md5_checksum,
+                                              scratch_pool));
       if (err)
         goto fixup_error;
 
-      err = svn_wc__get_pristine_contents_by_checksum(&contents, ctx->wc_ctx,
-                                                      item->path,
-                                                      sha1_checksum,
-                                                      scratch_pool,
-                                                      scratch_pool);
+      err = svn_error_trace(
+                svn_wc__get_pristine_contents_by_checksum(&contents,
+                                                          ctx->wc_ctx,
+                                                          item->path,
+                                                          sha1_checksum,
+                                                          scratch_pool,
+                                                          scratch_pool));
       if (err)
         goto fixup_error;
     }
@@ -1654,9 +1664,11 @@ do_item_commit(svn_client_commit_item3_t *item,
           SVN_ERR_ASSERT(props != NULL);
           SVN_ERR_ASSERT(contents != NULL);
           SVN_ERR_ASSERT(sha1_checksum != NULL);
-          err = svn_editor_add_file(editor, repos_relpath,
-                                    sha1_checksum, contents, props,
-                                    SVN_INVALID_REVNUM);
+
+          err = svn_error_trace(
+                    svn_editor_add_file(editor, repos_relpath,
+                                        sha1_checksum, contents, props,
+                                        SVN_INVALID_REVNUM));
         }
       else /* May be svn_node_none when adding parent dirs for a copy. */
         {
@@ -1666,9 +1678,12 @@ do_item_commit(svn_client_commit_item3_t *item,
 
           SVN_ERR_ASSERT(props != NULL);
 
-          SVN_ERR(svn_wc__node_get_children(&children_abspaths,
-                                            ctx->wc_ctx, item->path, FALSE,
-                                            scratch_pool, scratch_pool));
+          err = svn_error_trace(
+                    svn_wc__node_get_children(&children_abspaths,
+                                              ctx->wc_ctx, item->path, FALSE,
+                                              scratch_pool, scratch_pool));
+          if (err)
+            goto fixup_error;
 
           /* We have to strip out the basenames returned from the above
              function. */
@@ -1682,9 +1697,10 @@ do_item_commit(svn_client_commit_item3_t *item,
                             svn_dirent_basename(child_abspath, scratch_pool);
             }
 
-          err = svn_editor_add_directory(editor, repos_relpath,
-                                         children, props,
-                                         SVN_INVALID_REVNUM);
+          err = svn_error_trace(
+                    svn_editor_add_directory(editor, repos_relpath,
+                                             children, props,
+                                             SVN_INVALID_REVNUM));
         }
 
       if (err)
@@ -1693,8 +1709,9 @@ do_item_commit(svn_client_commit_item3_t *item,
 
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     {
-      err = svn_editor_copy(editor, item->copyfrom_url, item->copyfrom_rev,
-                            repos_relpath, SVN_INVALID_REVNUM);
+      err = svn_error_trace(
+                svn_editor_copy(editor, item->copyfrom_url, item->copyfrom_rev,
+                                repos_relpath, SVN_INVALID_REVNUM));
 
       if (err)
         goto fixup_error;
@@ -1705,14 +1722,16 @@ do_item_commit(svn_client_commit_item3_t *item,
     {
       if (item->kind == svn_node_file)
         {
-          err = svn_editor_alter_file(editor, repos_relpath,
-                                      SVN_INVALID_REVNUM, props, sha1_checksum,
-                                      contents);
+          err = svn_error_trace(
+                    svn_editor_alter_file(editor, repos_relpath,
+                                          SVN_INVALID_REVNUM, props,
+                                          sha1_checksum, contents));
         }
       else
         {
-          err = svn_editor_alter_directory(editor, repos_relpath,
-                                           SVN_INVALID_REVNUM, props);
+          err = svn_error_trace(
+                    svn_editor_alter_directory(editor, repos_relpath,
+                                               SVN_INVALID_REVNUM, props));
         }
 
       if (err)
