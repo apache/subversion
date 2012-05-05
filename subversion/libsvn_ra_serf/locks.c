@@ -70,9 +70,7 @@ typedef struct lock_info_t {
 
   svn_boolean_t read_headers;
 
-  /* Our HTTP status code and reason. */
-  int status_code;
-  const char *reason;
+  svn_ra_serf__handler_t *handler;
 
   /* are we done? */
   svn_boolean_t done;
@@ -349,21 +347,8 @@ handle_lock(serf_request_t *request,
       serf_bucket_t *headers;
       const char *val;
 
-      serf_status_line sl;
-      apr_status_t status;
-
-      status = serf_bucket_response_status(response, &sl);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-
-      /* ### get the handler_t in here somehow, and use SLINE.  */
-      ctx->status_code = sl.code;
-      ctx->reason = sl.reason;
-
       /* 423 == Locked */
-      if (sl.code == 423)
+      if (ctx->handler->sline.code == 423)
         {
           /* Older servers may not give a descriptive error, so we'll
              make one of our own if we can't find one in the response. */
@@ -373,7 +358,8 @@ handle_lock(serf_request_t *request,
               err = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
                                       NULL,
                                       _("Lock request failed: %d %s"),
-                                      ctx->status_code, ctx->reason);
+                                      ctx->handler->sline.code,
+                                      ctx->handler->sline.reason);
             }
           return err;
         }
@@ -397,7 +383,7 @@ handle_lock(serf_request_t *request,
     }
 
   /* Forbidden when a lock doesn't exist. */
-  if (ctx->status_code == 403)
+  if (ctx->handler->sline.code == 403)
     {
       /* If we get an "unexpected EOF" error, we'll wrap it with
          generic request failure error. */
@@ -408,7 +394,8 @@ handle_lock(serf_request_t *request,
           err = svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN,
                                   err,
                                   _("Lock request failed: %d %s"),
-                                  ctx->status_code, ctx->reason);
+                                  ctx->handler->sline.code,
+                                  ctx->handler->sline.reason);
         }
       return err;
     }
@@ -537,6 +524,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   handler->response_handler = handle_lock;
   handler->response_baton = parser_ctx;
 
+  lock_ctx->handler = handler;
+
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
 
@@ -625,6 +614,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       handler->response_handler = handle_lock;
       handler->response_baton = parser_ctx;
+
+      lock_ctx->handler = handler;
 
       svn_ra_serf__request_create(handler);
       err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, iterpool);
