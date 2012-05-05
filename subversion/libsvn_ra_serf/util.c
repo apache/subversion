@@ -1820,24 +1820,11 @@ static svn_error_t *
 setup_request(serf_request_t *request,
               svn_ra_serf__handler_t *ctx,
               serf_bucket_t **req_bkt,
-              serf_response_acceptor_t *acceptor,
-              void **acceptor_baton,
-              serf_response_handler_t *handler,
-              void **handler_baton,
               apr_pool_t *request_pool,
               apr_pool_t *scratch_pool)
 {
   serf_bucket_t *body_bkt;
   serf_bucket_t *headers_bkt;
-
-  /* Default response acceptor.  */
-  *acceptor = accept_response;
-  *acceptor_baton = ctx->session;
-
-  if (strcmp(ctx->method, "HEAD") == 0)
-    {
-      *acceptor = accept_head;
-    }
 
   if (ctx->body_delegate)
     {
@@ -1864,9 +1851,6 @@ setup_request(serf_request_t *request,
                                    request_pool));
     }
 
-  *handler = handle_response_cb;
-  *handler_baton = ctx;
-
   return APR_SUCCESS;
 }
 
@@ -1890,10 +1874,16 @@ setup_request_cb(serf_request_t *request,
      ### the duration of the request.  */
   apr_pool_t *scratch_pool = pool;
 
-  err = svn_error_trace(setup_request(request, ctx,
-                                      req_bkt,
-                                      acceptor, acceptor_baton,
-                                      handler, handler_baton,
+  if (strcmp(ctx->method, "HEAD") == 0)
+    *acceptor = accept_head;
+  else
+    *acceptor = accept_response;
+  *acceptor_baton = ctx->session;
+
+  *handler = handle_response_cb;
+  *handler_baton = ctx;
+
+  err = svn_error_trace(setup_request(request, ctx, req_bkt,
                                       pool /* request_pool */, scratch_pool));
 
   return save_error(ctx->session, err);
