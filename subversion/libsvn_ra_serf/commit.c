@@ -220,23 +220,27 @@ typedef struct file_context_t {
 
 static svn_error_t *
 return_response_err(svn_ra_serf__handler_t *handler,
-                    svn_ra_serf__simple_request_context_t *ctx)
+                    svn_error_t *server_err)
 {
   svn_error_t *err;
 
+  /* We should have captured SLINE and LOCATION in the HANDLER.  */
+  SVN_ERR_ASSERT(handler->handler_pool != NULL);
+
   /* Ye Olde Fallback Error */
   err = svn_error_compose_create(
-            ctx->server_error.error,
+            server_err,
             svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               _("%s of '%s': %d %s"),
                               handler->method, handler->path,
-                              ctx->status, ctx->reason));
+                              handler->sline.code, handler->sline.reason));
 
   /* Try to return one of the standard errors for 301, 404, etc.,
      then look for an error embedded in the response.  */
-  return svn_error_compose_create(svn_ra_serf__error_on_status(ctx->status,
-                                                               handler->path,
-                                                               ctx->location),
+  return svn_error_compose_create(svn_ra_serf__error_on_status(
+                                    handler->sline.code,
+                                    handler->path,
+                                    handler->location),
                                   err);
 }
 
@@ -350,6 +354,7 @@ checkout_dir(dir_context_t *dir)
 
   /* Checkout our directory into the activity URL now. */
   handler = apr_pcalloc(dir->pool, sizeof(*handler));
+  handler->handler_pool = dir->pool;
   handler->session = dir->commit->session;
   handler->conn = dir->commit->conn;
 
@@ -399,7 +404,9 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      return return_response_err(handler, &checkout_ctx->progress);
+      return svn_error_trace(return_response_err(
+                               handler,
+                               checkout_ctx->progress.server_error.error));
     }
 
   return SVN_NO_ERROR;
@@ -537,6 +544,7 @@ checkout_file(file_context_t *file)
 
   /* Checkout our file into the activity URL now. */
   handler = apr_pcalloc(file->pool, sizeof(*handler));
+  handler->handler_pool = file->pool;
   handler->session = file->commit->session;
   handler->conn = file->commit->conn;
 
@@ -580,7 +588,9 @@ checkout_file(file_context_t *file)
 
   if (file->checkout->progress.status != 201)
     {
-      return return_response_err(handler, &file->checkout->progress);
+      return svn_error_trace(return_response_err(
+                               handler,
+                               file->checkout->progress.server_error.error));
     }
 
   return SVN_NO_ERROR;
@@ -920,6 +930,7 @@ proppatch_resource(proppatch_context_t *proppatch,
   struct proppatch_body_baton_t pbb;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->handler_pool = pool;
   handler->method = "PROPPATCH";
   handler->path = proppatch->path;
   handler->conn = commit->conn;
@@ -945,9 +956,12 @@ proppatch_resource(proppatch_context_t *proppatch,
   if (proppatch->progress.status != 207 ||
       proppatch->progress.server_error.error)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED,
-        return_response_err(handler, &proppatch->progress),
-        _("At least one property change failed; repository is unchanged"));
+      return svn_error_create(
+               SVN_ERR_RA_DAV_PROPPATCH_FAILED,
+               return_response_err(handler,
+                                   proppatch->progress.server_error.error),
+               _("At least one property change failed; repository"
+                 " is unchanged"));
     }
 
   return SVN_NO_ERROR;
@@ -1539,6 +1553,7 @@ delete_entry(const char *path,
   delete_ctx->keep_locks = dir->commit->keep_locks;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->handler_pool = pool;
   handler->session = dir->commit->session;
   handler->conn = dir->commit->conn;
 
@@ -1587,7 +1602,9 @@ delete_entry(const char *path,
   /* 204 No Content: item successfully deleted */
   if (delete_ctx->progress.status != 204)
     {
-      return return_response_err(handler, &delete_ctx->progress);
+      return svn_error_trace(return_response_err(
+                               handler,
+                               delete_ctx->progress.server_error.error));
     }
 
   apr_hash_set(dir->commit->deleted_entries,
@@ -2090,6 +2107,7 @@ close_file(void *file_baton,
       req_url = svn_path_url_add_component2(basecoll_url, rel_copy_path, pool);
 
       handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->handler_pool = pool;
       handler->method = "COPY";
       handler->path = req_url;
       handler->conn = ctx->commit->conn;
@@ -2111,7 +2129,9 @@ close_file(void *file_baton,
 
       if (copy_ctx->status != 201 && copy_ctx->status != 204)
         {
-          return return_response_err(handler, copy_ctx);
+          return svn_error_trace(return_response_err(
+                                   handler,
+                                   copy_ctx->server_error.error));
         }
     }
 
@@ -2128,6 +2148,7 @@ close_file(void *file_baton,
       svn_ra_serf__simple_request_context_t *put_ctx;
 
       handler = apr_pcalloc(pool, sizeof(*handler));
+      handler->handler_pool = pool;
       handler->method = "PUT";
       handler->path = ctx->url;
       handler->conn = ctx->commit->conn;
@@ -2162,7 +2183,9 @@ close_file(void *file_baton,
 
       if (put_ctx->status != 204 && put_ctx->status != 201)
         {
-          return return_response_err(handler, put_ctx);
+          return svn_error_trace(return_response_err(
+                                   handler,
+                                   put_ctx->server_error.error));
         }
     }
 
