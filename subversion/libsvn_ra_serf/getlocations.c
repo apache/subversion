@@ -70,8 +70,6 @@ typedef struct loc_context_t {
   loc_state_list_t *state;
   loc_state_list_t *free_state;
 
-  int status_code;
-
   svn_boolean_t done;
 } loc_context_t;
 
@@ -250,6 +248,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_get_locations_body;
@@ -264,7 +263,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   parser_ctx->user_data = loc_ctx;
   parser_ctx->start = start_getloc;
   parser_ctx->end = end_getloc;
-  parser_ctx->status_code = &loc_ctx->status_code;
   parser_ctx->done = &loc_ctx->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
@@ -275,7 +273,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(loc_ctx->status_code,
+              svn_ra_serf__error_on_status(handler->sline.code,
                                            req_url,
                                            parser_ctx->location),
               err));

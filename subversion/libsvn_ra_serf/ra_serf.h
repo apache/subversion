@@ -407,7 +407,9 @@ typedef struct svn_ra_serf__handler_t {
   void *response_baton;
 
   /* When REPONSE_HANDLER is invoked, the following fields will be set
-     based on the response header.  */
+     based on the response header. HANDLER_POOL must be non-NULL for these
+     values to be filled in. SLINE.REASON and LOCATION will be allocated
+     within HANDLER_POOL.  */
   serf_status_line sline;  /* The parsed Status-Line  */
   const char *location;  /* The Location: header, if any  */
 

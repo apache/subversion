@@ -326,7 +326,6 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *req_url, *rel_path;
-  int status_code;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
   SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
@@ -355,7 +354,6 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   parser_ctx->end = end_getlocks;
   parser_ctx->cdata = cdata_getlocks;
   parser_ctx->done = &lock_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
@@ -364,6 +362,8 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   handler->response_baton = parser_ctx;
 
   svn_ra_serf__request_create(handler);
+
+  /* ### use svn_ra_serf__error_on_status() ?  */
 
   SVN_ERR(svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool));
 

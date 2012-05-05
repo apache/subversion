@@ -358,6 +358,7 @@ handle_lock(serf_request_t *request,
           return svn_error_wrap_apr(status, NULL);
         }
 
+      /* ### get the handler_t in here somehow, and use SLINE.  */
       ctx->status_code = sl.code;
       ctx->reason = sl.reason;
 
@@ -499,7 +500,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_info_t *lock_ctx;
   const char *req_url;
   svn_error_t *err;
-  int status_code;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
@@ -512,6 +512,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "PROPFIND";
   handler->path = req_url;
   handler->body_type = "text/xml";
@@ -526,7 +527,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   parser_ctx->end = end_lock;
   parser_ctx->cdata = cdata_lock;
   parser_ctx->done = &lock_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->body_delegate = create_getlock_body;
   handler->body_delegate_baton = lock_ctx;
@@ -540,7 +540,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
 
-  if (status_code == 404)
+  if (handler->sline.code == 404)
     {
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, err,
                               _("Malformed URL for repository"));

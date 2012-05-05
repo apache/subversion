@@ -643,10 +643,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_error_t *err;
   const char *report_target;
-  /* We're not really interested in the status code here in replay, but
-     the XML parsing code will abort on error if it doesn't have a place
-     to store the response status code. */
-  int status_code;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
@@ -678,7 +674,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   parser_ctx->start = start_replay;
   parser_ctx->end = end_replay;
   parser_ctx->cdata = cdata_replay;
-  parser_ctx->status_code = &status_code;
   parser_ctx->done = &replay_ctx->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
