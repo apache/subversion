@@ -1588,8 +1588,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
                                   const char *realm,
                                   apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = baton;
-  svn_ra_serf__session_t *session = ctx->session;
+  svn_ra_serf__handler_t *handler = baton;
+  svn_ra_serf__session_t *session = handler->session;
   void *creds;
   svn_auth_cred_simple_t *simple_creds;
   svn_error_t *err;
@@ -1657,12 +1657,12 @@ svn_ra_serf__credentials_callback(char **username, char **password,
         }
     }
 
-  ctx->conn->last_status_code = code;
+  handler->conn->last_status_code = code;
 
   return APR_SUCCESS;
 }
 
-/* Wait for HTTP response status and headers, and invoke CTX->
+/* Wait for HTTP response status and headers, and invoke HANDLER->
    response_handler() to carry out operation-specific processing.
    Afterwards, check for connection close.
 
@@ -1672,21 +1672,22 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 static svn_error_t *
 handle_response(serf_request_t *request,
                 serf_bucket_t *response,
-                svn_ra_serf__handler_t *ctx,
+                svn_ra_serf__handler_t *handler,
                 apr_status_t *serf_status,
                 apr_pool_t *pool)
 {
   serf_status_line sl;
   apr_status_t status;
+  svn_error_t *err;
 
   if (!response)
     {
       /* Uh-oh.  Our connection died.  Requeue. */
-      if (ctx->response_error)
-        SVN_ERR(ctx->response_error(request, response, 0,
-                                    ctx->response_error_baton));
+      if (handler->response_error)
+        SVN_ERR(handler->response_error(request, response, 0,
+                                        handler->response_error_baton));
 
-      svn_ra_serf__request_create(ctx);
+      svn_ra_serf__request_create(handler);
 
       return APR_SUCCESS;
     }
@@ -1721,13 +1722,14 @@ handle_response(serf_request_t *request,
        * the server closed on us early or we're reading too much.  Either way,
        * scream loudly.
        */
-      if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
+      if (strcmp(handler->method, "HEAD") != 0
+          && sl.code != 204
+          && sl.code != 304)
         {
-          svn_error_t *err =
-              svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                svn_error_wrap_apr(status, NULL),
-                                _("Premature EOF seen from server "
-                                  "(http status=%d)"), sl.code);
+          err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                                  svn_error_wrap_apr(status, NULL),
+                                  _("Premature EOF seen from server"
+                                    " (http status=%d)"), sl.code);
           /* This discard may be no-op, but let's preserve the algorithm
              used elsewhere in this function for clarity's sake. */
           svn_ra_serf__response_discard_handler(request, response, NULL, pool);
@@ -1735,15 +1737,15 @@ handle_response(serf_request_t *request,
         }
     }
 
-  if (ctx->conn->last_status_code == 401 && sl.code < 400)
+  if (handler->conn->last_status_code == 401 && sl.code < 400)
     {
-      SVN_ERR(svn_auth_save_credentials(ctx->session->auth_state,
-                                        ctx->session->pool));
-      ctx->session->auth_attempts = 0;
-      ctx->session->auth_state = NULL;
+      SVN_ERR(svn_auth_save_credentials(handler->session->auth_state,
+                                        handler->session->pool));
+      handler->session->auth_attempts = 0;
+      handler->session->auth_state = NULL;
     }
 
-  ctx->conn->last_status_code = sl.code;
+  handler->conn->last_status_code = sl.code;
 
   if (sl.code == 405 || sl.code == 409 || sl.code >= 500)
     {
@@ -1752,62 +1754,61 @@ handle_response(serf_request_t *request,
          5xx (Internal) Server error. */
       SVN_ERR(svn_ra_serf__handle_server_error(request, response, pool));
 
-      if (!ctx->session->pending_error)
+      if (!handler->session->pending_error)
         {
           apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
           /* 405 == Method Not Allowed (Occurs when trying to lock a working
              copy path which no longer exists at HEAD in the repository. */
 
-          if (sl.code == 405 && !strcmp(ctx->method, "LOCK"))
+          if (sl.code == 405 && !strcmp(handler->method, "LOCK"))
             apr_err = SVN_ERR_FS_OUT_OF_DATE;
 
           return
               svn_error_createf(apr_err, NULL,
                                 _("%s request on '%s' failed: %d %s"),
-                                ctx->method, ctx->path, sl.code, sl.reason);
+                                handler->method, handler->path,
+                                sl.code, sl.reason);
         }
 
       return SVN_NO_ERROR; /* Error is set in caller */
     }
-  else
+
+  err = handler->response_handler(request, response,
+                                  handler->response_baton,
+                                  pool);
+
+  if (err
+      && (!SERF_BUCKET_READ_ERROR(err->apr_err)
+          || APR_STATUS_IS_ECONNRESET(err->apr_err)))
     {
-      svn_error_t *err;
-
-      err = ctx->response_handler(request,response, ctx->response_baton, pool);
-
-      if (err
-          && (!SERF_BUCKET_READ_ERROR(err->apr_err)
-               || APR_STATUS_IS_ECONNRESET(err->apr_err)))
-        {
-          /* These errors are special cased in serf
-             ### We hope no handler returns these by accident. */
-          *serf_status = err->apr_err;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-
-      return svn_error_trace(err);
+      /* These errors are special cased in serf
+         ### We hope no handler returns these by accident. */
+      *serf_status = err->apr_err;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
+
+  return svn_error_trace(err);
 }
 
 
 /* Implements serf_response_handler_t for handle_response. Storing
-   errors in ctx->session->pending_error if appropriate. */
+   errors in handler->session->pending_error if appropriate. */
 static apr_status_t
 handle_response_cb(serf_request_t *request,
                    serf_bucket_t *response,
                    void *baton,
                    apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = baton;
-  svn_ra_serf__session_t *session = ctx->session;
+  svn_ra_serf__handler_t *handler = baton;
+  svn_ra_serf__session_t *session = handler->session;
   svn_error_t *err;
   apr_status_t inner_status;
   apr_status_t outer_status;
 
   err = svn_error_trace(handle_response(request, response,
-                                        ctx, &inner_status, pool));
+                                        handler, &inner_status, pool));
 
   outer_status = save_error(session, err);
   return outer_status ? outer_status : inner_status;
@@ -1818,7 +1819,7 @@ handle_response_cb(serf_request_t *request,
    headers and body. */
 static svn_error_t *
 setup_request(serf_request_t *request,
-              svn_ra_serf__handler_t *ctx,
+              svn_ra_serf__handler_t *handler,
               serf_bucket_t **req_bkt,
               apr_pool_t *request_pool,
               apr_pool_t *scratch_pool)
@@ -1826,13 +1827,13 @@ setup_request(serf_request_t *request,
   serf_bucket_t *body_bkt;
   serf_bucket_t *headers_bkt;
 
-  if (ctx->body_delegate)
+  if (handler->body_delegate)
     {
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
 
       /* ### should pass the scratch_pool  */
-      SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
-                                 bkt_alloc, request_pool));
+      SVN_ERR(handler->body_delegate(&body_bkt, handler->body_delegate_baton,
+                                     bkt_alloc, request_pool));
     }
   else
     {
@@ -1840,15 +1841,16 @@ setup_request(serf_request_t *request,
     }
 
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
-                         ctx->conn, ctx->method, ctx->path,
-                         body_bkt, ctx->body_type,
+                         handler->conn, handler->method, handler->path,
+                         body_bkt, handler->body_type,
                          request_pool, scratch_pool));
 
-  if (ctx->header_delegate)
+  if (handler->header_delegate)
     {
       /* ### should pass the scratch_pool  */
-      SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
-                                   request_pool));
+      SVN_ERR(handler->header_delegate(headers_bkt,
+                                       handler->header_delegate_baton,
+                                       request_pool));
     }
 
   return APR_SUCCESS;
@@ -1863,30 +1865,30 @@ setup_request_cb(serf_request_t *request,
               serf_bucket_t **req_bkt,
               serf_response_acceptor_t *acceptor,
               void **acceptor_baton,
-              serf_response_handler_t *handler,
-              void **handler_baton,
+              serf_response_handler_t *s_handler,
+              void **s_handler_baton,
               apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = setup_baton;
+  svn_ra_serf__handler_t *handler = setup_baton;
   svn_error_t *err;
 
   /* ### construct a scratch_pool? serf gives us a pool that will live for
      ### the duration of the request.  */
   apr_pool_t *scratch_pool = pool;
 
-  if (strcmp(ctx->method, "HEAD") == 0)
+  if (strcmp(handler->method, "HEAD") == 0)
     *acceptor = accept_head;
   else
     *acceptor = accept_response;
-  *acceptor_baton = ctx->session;
+  *acceptor_baton = handler->session;
 
-  *handler = handle_response_cb;
-  *handler_baton = ctx;
+  *s_handler = handle_response_cb;
+  *s_handler_baton = handler;
 
-  err = svn_error_trace(setup_request(request, ctx, req_bkt,
+  err = svn_error_trace(setup_request(request, handler, req_bkt,
                                       pool /* request_pool */, scratch_pool));
 
-  return save_error(ctx->session, err);
+  return save_error(handler->session, err);
 }
 
 void
