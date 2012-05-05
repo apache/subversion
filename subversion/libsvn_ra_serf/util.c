@@ -1423,7 +1423,10 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
       /* If our caller won't know about the 404, abort() for now. */
+#if 0
+      /* ### wrong thing to do anyways. and caller has HANDLER->SLINE.  */
       SVN_ERR_ASSERT(ctx->status_code);
+#endif
 
       add_done_item(ctx);
 

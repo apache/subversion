@@ -428,7 +428,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *relative_url, *basecoll_url, *req_url;
-  int status_code;
   svn_error_t *err;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
@@ -448,6 +447,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
@@ -464,7 +464,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   parser_ctx->end = end_blame;
   parser_ctx->cdata = cdata_blame;
   parser_ctx->done = &blame_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -474,7 +473,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool);
 
   err = svn_error_compose_create(
-            svn_ra_serf__error_on_status(status_code,
+            svn_ra_serf__error_on_status(handler->sline.code,
                                          handler->path,
                                          parser_ctx->location),
             err);
