@@ -234,7 +234,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   err = svn_error_compose_create(
          svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
-                                      parser_ctx->location),
+                                      handler->location),
          err);
 
   svn_pool_destroy(gls_ctx->subpool);

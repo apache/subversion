@@ -275,7 +275,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   SVN_ERR(svn_error_compose_create(
               svn_ra_serf__error_on_status(handler->sline.code,
                                            req_url,
-                                           parser_ctx->location),
+                                           handler->location),
               err));
 
   return SVN_NO_ERROR;

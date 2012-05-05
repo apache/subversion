@@ -545,16 +545,6 @@ struct svn_ra_serf__xml_parser_t {
   /* Our previously used states (will be reused). */
   svn_ra_serf__xml_state_t *free_state;
 
-  /* If non-NULL, the status code of the response will be stored here.
-   *
-   * If this is NULL and an error is received, an abort will be triggered.
-   */
-  int *status_code;
-
-  /* If non-NULL, this is the value of the response's Location header.
-   */
-  const char *location;
-
   /* If non-NULL, this value will be set to TRUE when the response is
    * completed.
    */
