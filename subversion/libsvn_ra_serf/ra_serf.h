@@ -386,6 +386,9 @@ typedef svn_error_t *
                                  int status_code,
                                  void *baton);
 
+/* ### we should reorder the types in this file.  */
+typedef struct svn_ra_serf__server_error_t svn_ra_serf__server_error_t;
+
 /*
  * Structure that can be passed to our default handler to guide the
  * execution of the request through its lifecycle.
@@ -399,6 +402,13 @@ typedef struct svn_ra_serf__handler_t {
 
   /* The content-type of the request body. */
   const char *body_type;
+
+  /* Has the request/response been completed?  */
+  svn_boolean_t done;
+
+  /* If we captured an error from the server, then this will be non-NULL.
+     It will be allocated from HANDLER_POOL.  */
+  svn_ra_serf__server_error_t *server_error;
 
   /* The handler and baton pair for our handler. */
   svn_ra_serf__response_handler_t response_handler;
@@ -451,6 +461,19 @@ typedef struct svn_ra_serf__handler_t {
   apr_pool_t *handler_pool;
 
 } svn_ra_serf__handler_t;
+
+
+/* Run one request and process the response.
+
+   Similar to context_run_wait(), but this creates the request for HANDLER
+   and then waits for it to complete.
+
+   WARNING: context_run_wait() does NOT create a request, whereas this
+   function DOES. Avoid a double-create.  */
+svn_error_t *
+svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
+                             apr_pool_t *scratch_pool);
+
 
 /*
  * Helper function to queue a request in the @a handler's connection.
@@ -607,7 +630,7 @@ struct svn_ra_serf__xml_parser_t {
 /*
  * Parses a server-side error message into a local Subversion error.
  */
-typedef struct svn_ra_serf__server_error_t {
+struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
 
@@ -634,7 +657,7 @@ typedef struct svn_ra_serf__server_error_t {
 
   /* XML parser and namespace used to parse the remote response */
   svn_ra_serf__xml_parser_t parser;
-} svn_ra_serf__server_error_t;
+};
 
 /* A simple request context that can be passed to handle_status_only. */
 typedef struct svn_ra_serf__simple_request_context_t {

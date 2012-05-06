@@ -732,6 +732,21 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 }
 
 
+svn_error_t *
+svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
+                             apr_pool_t *scratch_pool)
+{
+  /* Create a serf request based on HANDLER.  */
+  svn_ra_serf__request_create(handler);
+
+  /* Wait until the response logic marks its DONE status.  */
+  return svn_error_trace(svn_ra_serf__context_run_wait(
+                           &handler->done,
+                           handler->session,
+                           scratch_pool));
+}
+
+
 /*
  * Expat callback invoked on a start element tag for an error response.
  */
