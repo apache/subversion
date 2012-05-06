@@ -953,16 +953,6 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
 
   if (err && APR_STATUS_IS_EOF(err->apr_err))
     {
-      serf_status_line sl;
-      apr_status_t status;
-
-      status = serf_bucket_response_status(response, &sl);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-
-      ctx->status = sl.code;
       ctx->done = TRUE;
     }
 
@@ -1109,7 +1099,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
   SVN_ERR_ASSERT(ctx->pool);
 
   /* If necessary, initialize our XML parser. */
-  if (server_err && !server_err->init)
+  if (!server_err->init)
     {
       serf_bucket_t *hdrs;
       const char *val;
@@ -1129,8 +1119,10 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->parser.start = start_207;
           server_err->parser.end = end_207;
           server_err->parser.cdata = cdata_207;
-          server_err->parser.done = &ctx->done;
           server_err->parser.ignore_errors = TRUE;
+
+          /* Get the parser to set our DONE flag.  */
+          server_err->parser.done = &ctx->done;
         }
       else
         {
@@ -1141,7 +1133,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 
   /* If server_err->error still contains APR_SUCCESS, it means that we
      have not successfully parsed the XML yet. */
-  if (server_err && server_err->error
+  if (server_err->error
       && server_err->error->apr_err == APR_SUCCESS)
     {
       err = svn_ra_serf__handle_xml_parser(request, response,
@@ -1165,23 +1157,8 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
       svn_error_clear(err);
     }
 
-  err = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
-
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
-    {
-      serf_status_line sl;
-      apr_status_t status;
-
-      status = serf_bucket_response_status(response, &sl);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-
-      ctx->status = sl.code;
-    }
-
-  return svn_error_trace(err);
+  return svn_error_trace(svn_ra_serf__handle_discard_body(
+                           request, response, NULL, pool));
 }
 
 
