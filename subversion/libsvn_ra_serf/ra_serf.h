@@ -362,7 +362,7 @@ typedef svn_error_t *
 (*svn_ra_serf__response_handler_t)(serf_request_t *request,
                                    serf_bucket_t *response,
                                    void *handler_baton,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
 
 /* Callback for when a request body is needed. */
 /* ### should pass a scratch_pool  */
@@ -701,7 +701,6 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML error response from the
  * the @a response body associated with a @a request.
- * Implements svn_ra_serf__response_handler_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
@@ -712,18 +711,20 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
 
 /*
  * Handler that retrieves the embedded XML multistatus response from the
- * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
+ * the @a RESPONSE body associated with a @a REQUEST.
+ *
  * Implements svn_ra_serf__response_handler_t.
  *
- * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
+ * The @a BATON should be of type svn_ra_serf__handler_t. When the request
+ * is complete, the handler's DONE flag will be set to TRUE.
  *
- * All temporary allocations will be made in a @a pool.
+ * All temporary allocations will be made in a @a scratch_pool.
  */
 svn_error_t *
 svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *scratch_pool);
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is

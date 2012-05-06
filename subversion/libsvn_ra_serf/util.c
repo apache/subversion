@@ -1105,21 +1105,26 @@ svn_error_t *
 svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
-                                     apr_pool_t *pool)
+                                     apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  svn_ra_serf__simple_request_context_t *ctx = baton;
-  svn_ra_serf__server_error_t *server_err = &ctx->server_error;
+  svn_ra_serf__handler_t *handler = baton;
 
-  SVN_ERR_ASSERT(ctx->pool);
+  /* This response handler requires a pool for the server error.  */
+  SVN_ERR_ASSERT(handler->handler_pool);
 
   /* If necessary, initialize our XML parser. */
-  if (!server_err->init)
+  if (handler->server_error == NULL)
     {
+      svn_ra_serf__server_error_t *server_err;
       serf_bucket_t *hdrs;
       const char *val;
 
+      /* ### it would be nice to avoid allocating this every time. we
+         ### could potentially have a flag indicating we have examined
+         ### the Content-Type header already.  */
+      server_err = apr_pcalloc(handler->handler_pool, sizeof(*server_err));
       server_err->init = TRUE;
+
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
@@ -1137,22 +1142,31 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->parser.ignore_errors = TRUE;
 
           /* Get the parser to set our DONE flag.  */
-          server_err->parser.done = &ctx->done;
+          server_err->parser.done = &handler->done;
         }
       else
         {
-          ctx->done = TRUE;
+          /* ### hmm. this is a bit early. we have not seen EOF. if the
+             ### caller thinks we are "done", then it may never call into
+             ### serf_context_run() again to flush the response.  */
+          handler->done = TRUE;
           server_err->error = SVN_NO_ERROR;
         }
+
+      handler->server_error = server_err;
     }
 
   /* If server_err->error still contains APR_SUCCESS, it means that we
      have not successfully parsed the XML yet. */
-  if (server_err->error
-      && server_err->error->apr_err == APR_SUCCESS)
+  if (handler->server_error
+      && handler->server_error->error
+      && handler->server_error->error->apr_err == APR_SUCCESS)
     {
+      svn_error_t *err;
+
       err = svn_ra_serf__handle_xml_parser(request, response,
-                                           &server_err->parser, pool);
+                                           &handler->server_error->parser,
+                                           scratch_pool);
 
       /* APR_EOF will be returned when parsing is complete.  If we see
          any other error, return it immediately.  In practice the only
@@ -1163,17 +1177,26 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         {
           return svn_error_trace(err);
         }
-      else if (ctx->done && server_err->error->apr_err == APR_SUCCESS)
+      else if (handler->done
+               && handler->server_error->error->apr_err == APR_SUCCESS)
         {
-          svn_error_clear(server_err->error);
-          server_err->error = SVN_NO_ERROR;
+          svn_error_clear(handler->server_error->error);
+          handler->server_error->error = SVN_NO_ERROR;
+
+          /* ### it would be nice to do this, but if we enter this response
+             ### handler again, it would be re-created. this throws back to
+             ### the idea of a flag determining whether we haved looked for
+             ### a server error.  */
+#if 0
+          handler->server_error = NULL;
+#endif
         }
 
       svn_error_clear(err);
     }
 
   return svn_error_trace(svn_ra_serf__handle_discard_body(
-                           request, response, NULL, pool));
+                           request, response, NULL, scratch_pool));
 }
 
 
@@ -1794,7 +1817,7 @@ static apr_status_t
 handle_response_cb(serf_request_t *request,
                    serf_bucket_t *response,
                    void *baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t *handler = baton;
   svn_ra_serf__session_t *session = handler->session;
@@ -1803,7 +1826,8 @@ handle_response_cb(serf_request_t *request,
   apr_status_t outer_status;
 
   err = svn_error_trace(handle_response(request, response,
-                                        handler, &inner_status, pool));
+                                        handler, &inner_status,
+                                        scratch_pool));
 
   outer_status = save_error(session, err);
   return outer_status ? outer_status : inner_status;
