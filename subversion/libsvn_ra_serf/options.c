@@ -445,6 +445,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "OPTIONS";
   handler->path = path;
   handler->body_delegate = create_options_body;
