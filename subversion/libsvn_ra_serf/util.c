@@ -1566,7 +1566,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   /* not reached */
 }
 
-/* Implements svn_ra_serf__response_handler_t */
+
 svn_error_t *
 svn_ra_serf__handle_server_error(serf_request_t *request,
                                  serf_bucket_t *response,
@@ -1579,6 +1579,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
 
   return server_err.error;
 }
+
 
 apr_status_t
 svn_ra_serf__credentials_callback(char **username, char **password,
@@ -1704,6 +1705,7 @@ handle_response(serf_request_t *request,
   if (!sl.version && (APR_STATUS_IS_EOF(status) ||
                       APR_STATUS_IS_EAGAIN(status)))
     {
+      /* The response line is not (yet) ready.  */
       *serf_status = status;
       return SVN_NO_ERROR; /* Handled by serf */
     }
@@ -1913,6 +1915,8 @@ setup_request_cb(serf_request_t *request,
 void
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
+  SVN_ERR_ASSERT(handler->handler_pool != NULL);
+
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
   (void) serf_connection_request_create(handler->conn->conn,

@@ -659,7 +659,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
-  /* ### skip setting HANDLER_POOL?  */
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = session->session_url_str;
   handler->body_delegate = create_replay_body;
@@ -798,7 +798,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           /* Send the replay report request. */
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));
 
-          /* ### skip setting HANDLER_POOL?  */
+          handler->handler_pool = replay_ctx->src_rev_pool;
           handler->method = "REPORT";
           handler->path = session->session_url_str;
           handler->body_delegate = create_replay_body;

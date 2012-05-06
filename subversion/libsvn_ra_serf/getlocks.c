@@ -340,7 +340,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
-  /* ### skip setting HANDLER_POOL?  */
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
