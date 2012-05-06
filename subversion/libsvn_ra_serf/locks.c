@@ -591,7 +591,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       handler = apr_pcalloc(iterpool, sizeof(*handler));
 
-      /* ### skip setting HANDLER_POOL?  */
+      handler->handler_pool = iterpool;
       handler->method = "LOCK";
       handler->path = req_url;
       handler->body_type = "text/xml";
