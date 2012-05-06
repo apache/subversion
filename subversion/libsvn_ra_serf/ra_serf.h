@@ -640,9 +640,6 @@ typedef struct svn_ra_serf__server_error_t {
 typedef struct svn_ra_serf__simple_request_context_t {
   apr_pool_t *pool;
 
-  /* The HTTP status code of the response */
-  int status;
-
   /* This value is set to TRUE when the response is completed. */
   svn_boolean_t done;
 

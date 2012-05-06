@@ -49,13 +49,16 @@
 /* Structure associated with a CHECKOUT request. */
 typedef struct checkout_context_t {
 
-  apr_pool_t *pool;
-
-  const char *activity_url;
-  const char *checkout_url;
+  /* Record information about the checked-out resource.  */
   const char *resource_url;
 
+  /* These four fields are used during the actual CHECKOUT. They will be
+     NULL for resources implicitly checked out (ie. an ancestor was
+     checked out).  */
+  svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t progress;
+  apr_pool_t *result_pool;
+  const char *activity_url;
 
 } checkout_context_t;
 
@@ -82,7 +85,7 @@ typedef struct commit_context_t {
 
   /* HTTP v1 stuff (only valid when 'txn_url' is NULL) */
   const char *activity_url;      /* activity base URL... */
-  checkout_context_t *baseline;  /* checkout for the baseline */
+  const checkout_context_t *baseline;  /* checkout for the baseline */
   const char *checked_in_url;    /* checked-in root to base CHECKOUTs from */
   const char *vcc_url;           /* vcc url */
 
@@ -263,8 +266,10 @@ create_checkout_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set", NULL);
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
+  SVN_ERR_ASSERT(ctx->activity_url != NULL);
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
-                                     ctx->activity_url, strlen(ctx->activity_url));
+                                     ctx->activity_url,
+                                     strlen(ctx->activity_url));
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:activity-set");
@@ -279,10 +284,11 @@ create_checkout_body(serf_bucket_t **bkt,
 static svn_error_t *
 handle_checkout(serf_request_t *request,
                 serf_bucket_t *response,
-                void *handler_baton,
+                void *baton,
                 apr_pool_t *pool)
 {
-  checkout_context_t *ctx = handler_baton;
+  checkout_context_t *ctx = baton;
+  svn_ra_serf__handler_t *handler = ctx->handler;
 
   svn_error_t *err = svn_ra_serf__handle_status_only(request, response,
                                                      &ctx->progress, pool);
@@ -295,7 +301,7 @@ handle_checkout(serf_request_t *request,
     return err;
 
   /* Get the resulting location. */
-  if (ctx->progress.done && ctx->progress.status == 201)
+  if (ctx->progress.done && handler->sline.code == 201)
     {
       serf_bucket_t *hdrs;
       apr_uri_t uri;
@@ -313,7 +319,9 @@ handle_checkout(serf_request_t *request,
       if (status)
         err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
 
-      ctx->resource_url = svn_urlpath__canonicalize(uri.path, ctx->pool);
+      SVN_ERR_ASSERT(ctx->result_pool != NULL);
+      ctx->resource_url = svn_urlpath__canonicalize(uri.path,
+                                                    ctx->result_pool);
     }
 
   return err;
@@ -326,6 +334,7 @@ checkout_dir(dir_context_t *dir)
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
   dir_context_t *p_dir = dir;
+  const char *checkout_url;
 
   if (dir->checkout)
     {
@@ -340,9 +349,6 @@ checkout_dir(dir_context_t *dir)
         {
           /* Implicitly checkout this dir now. */
           dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
-          dir->checkout->pool = dir->pool;
-          dir->checkout->progress.pool = dir->pool;
-          dir->checkout->activity_url = dir->commit->activity_url;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
                                         dir->name, dir->pool);
@@ -359,22 +365,23 @@ checkout_dir(dir_context_t *dir)
   handler->conn = dir->commit->conn;
 
   checkout_ctx = apr_pcalloc(dir->pool, sizeof(*checkout_ctx));
-  checkout_ctx->pool = dir->pool;
+  checkout_ctx->handler = handler;
   checkout_ctx->progress.pool = dir->pool;
-
+  checkout_ctx->result_pool = dir->pool;
   checkout_ctx->activity_url = dir->commit->activity_url;
 
   /* We could be called twice for the root: once to checkout the baseline;
    * once to checkout the directory itself if we need to do so.
+   * Note: CHECKOUT_URL should live longer than HANDLER.
    */
   if (!dir->parent_dir && !dir->commit->baseline)
     {
-      checkout_ctx->checkout_url = dir->commit->vcc_url;
+      checkout_url = dir->commit->vcc_url;
       dir->commit->baseline = checkout_ctx;
     }
   else
     {
-      checkout_ctx->checkout_url = dir->url;
+      checkout_url = dir->url;
       dir->checkout = checkout_ctx;
     }
 
@@ -386,7 +393,7 @@ checkout_dir(dir_context_t *dir)
   handler->response_baton = checkout_ctx;
 
   handler->method = "CHECKOUT";
-  handler->path = checkout_ctx->checkout_url;
+  handler->path = checkout_url;
 
   svn_ra_serf__request_create(handler);
 
@@ -402,7 +409,7 @@ checkout_dir(dir_context_t *dir)
       return err;
     }
 
-  if (checkout_ctx->progress.status != 201)
+  if (handler->sline.code != 201)
     {
       return svn_error_trace(return_response_err(
                                handler,
@@ -519,6 +526,7 @@ checkout_file(file_context_t *file)
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
   dir_context_t *parent_dir = file->parent_dir;
+  const char *checkout_url;
 
   /* Is one of our parent dirs newly added?  If so, we're already
    * implicitly checked out.
@@ -529,9 +537,6 @@ checkout_file(file_context_t *file)
         {
           /* Implicitly checkout this file now. */
           file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
-          file->checkout->pool = file->pool;
-          file->checkout->progress.pool = file->pool;
-          file->checkout->activity_url = file->commit->activity_url;
           file->checkout->resource_url =
             svn_path_url_add_component2(parent_dir->checkout->resource_url,
                                         svn_relpath_skip_ancestor(
@@ -549,15 +554,15 @@ checkout_file(file_context_t *file)
   handler->conn = file->commit->conn;
 
   file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
-  file->checkout->pool = file->pool;
+  file->checkout->handler = handler;
   file->checkout->progress.pool = file->pool;
-
+  file->checkout->result_pool = file->pool;
   file->checkout->activity_url = file->commit->activity_url;
 
-  SVN_ERR(get_version_url(&(file->checkout->checkout_url),
+  SVN_ERR(get_version_url(&checkout_url,
                           file->commit->session, file->commit->conn,
                           file->relpath, file->base_revision,
-                          NULL, file->pool));
+                          NULL, handler->handler_pool));
 
   handler->body_delegate = create_checkout_body;
   handler->body_delegate_baton = file->checkout;
@@ -567,7 +572,7 @@ checkout_file(file_context_t *file)
   handler->response_baton = file->checkout;
 
   handler->method = "CHECKOUT";
-  handler->path = file->checkout->checkout_url;
+  handler->path = checkout_url;
 
   svn_ra_serf__request_create(handler);
 
@@ -586,7 +591,7 @@ checkout_file(file_context_t *file)
       return err;
     }
 
-  if (file->checkout->progress.status != 201)
+  if (handler->sline.code != 201)
     {
       return svn_error_trace(return_response_err(
                                handler,
@@ -953,8 +958,8 @@ proppatch_resource(proppatch_context_t *proppatch,
   SVN_ERR(svn_ra_serf__context_run_wait(&proppatch->progress.done,
                                         commit->session, pool));
 
-  if (proppatch->progress.status != 207 ||
-      proppatch->progress.server_error.error)
+  if (handler->sline.code != 207
+      || proppatch->progress.server_error.error)
     {
       return svn_error_create(
                SVN_ERR_RA_DAV_PROPPATCH_FAILED,
@@ -1106,10 +1111,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 
   /* Implicitly checkout this dir now. */
   dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
-  dir->checkout->pool = dir->pool;
-  dir->checkout->progress.pool = dir->pool;
-  dir->checkout->activity_url = dir->commit->activity_url;
-  dir->checkout->resource_url = apr_pstrdup(dir->checkout->pool, uri.path);
+  dir->checkout->resource_url = apr_pstrdup(dir->pool, uri.path);
 
   return SVN_NO_ERROR;
 }
@@ -1604,7 +1606,7 @@ delete_entry(const char *path,
     }
 
   /* 204 No Content: item successfully deleted */
-  if (delete_ctx->progress.status != 204)
+  if (handler->sline.code != 204)
     {
       return svn_error_trace(return_response_err(
                                handler,
