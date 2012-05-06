@@ -1083,19 +1083,24 @@ outside."
       (goto-char (point-max))
       (insert str)
       (goto-char svn-output-marker)
-      (while (cond ((looking-at
-                     "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
-                    (let ((status (match-string 1))
-                          (filename (svn-normalise-path (match-string 2))))
-                      (delete-region (match-beginning 0)
-                                     (match-end 0))
-                      (svn-insert-file filename status))
-                    t)
-                   ((looking-at
-                     "\n\\|Performing status on external item at .*\n")
-                    (delete-region (match-beginning 0)
-                                   (match-end 0))
-                    t))))))
+      (while
+	 (cond
+	  ((looking-at
+	    "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
+	   (let ((status (match-string 1))
+		 (filename (svn-normalise-path (match-string 2))))
+	     (delete-region (match-beginning 0) (match-end 0))
+	     (svn-insert-file filename status))
+	   t)
+	  ((looking-at "\n\\|Performing status on external item at .*\n")
+	   (delete-region (match-beginning 0) (match-end 0))
+	   t)
+	  ((looking-at "      > +\\([^ ].*\\)\n")
+	   (let ((tree-conflict (match-string 1)))
+	     (delete-region (match-beginning 0) (match-end 0))
+	     (svn-update-status-msg svn-last-inserted-marker "TConflict")
+	     (svn-update-conflict-msg svn-last-inserted-marker tree-conflict))
+	   t))))))
 
 (defun svn-status-sentinel (proc reason)
   (with-current-buffer (process-buffer proc)
@@ -1110,15 +1115,23 @@ outside."
       (goto-char (point-max))
       (insert str)
       (goto-char svn-output-marker)
-      (while (looking-at
-              "\\(?:\\(\\?.....\\)\\|\\([ ACDGIMRX!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? [* ] +[^ ]+ +[^ ]+ +[^ ]+\\) +\\([^ ].*\\)\n")
-        (let ((status (or (match-string 1) (match-string 2)))
-              (filename (svn-normalise-path (match-string 3))))
-          (delete-region (match-beginning 0)
-                         (match-end 0))
-	  (when (or (not svn-file-filter)
-		    (member filename svn-file-filter))
-	    (svn-insert-file filename status)))))))
+      (while
+	  (cond
+	   ((looking-at
+	     "\\(?:\\(\\?.....\\)\\|\\([ ACDGIMRX!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? [* ] +[^ ]+ +[^ ]+ +[^ ]+\\) +\\([^ ].*\\)\n")
+	    (let ((status (or (match-string 1) (match-string 2)))
+		  (filename (svn-normalise-path (match-string 3))))
+	      (delete-region (match-beginning 0) (match-end 0))
+	      (when (or (not svn-file-filter)
+			(member filename svn-file-filter))
+		(svn-insert-file filename status)))
+	    t)
+	   ((looking-at "      > +\\([^ ].*\\)\n")
+	    (let ((tree-conflict (match-string 1)))
+	      (delete-region (match-beginning 0) (match-end 0))
+	      (svn-update-status-msg svn-last-inserted-marker "TConflict")
+	      (svn-update-conflict-msg svn-last-inserted-marker tree-conflict))
+	    t))))))
 
 (defun svn-status-v-sentinel (proc reason)
   (with-current-buffer (process-buffer proc)
@@ -1209,11 +1222,12 @@ With prefix arg, prompt for REVISION."
       (goto-char svn-output-marker)
       (while (not nomore)
         (cond ((looking-at
-                "\\([ ADUCGE][ ADUCGE][ B]\\)  \\(.*\\)\n")
+                "\\([ ADUCGE][ ADUCGE][ B]\\)\\([ C]?\\) \\([^ ].*\\)\n")
                (let* ((status (match-string 1))
                       (file-status (elt status 0))
                       (prop-status (elt status 1))
-                      (filename (svn-normalise-path (match-string 2))))
+		      (tree-status (match-string 2))
+                      (filename (svn-normalise-path (match-string 3))))
                  (delete-region (match-beginning 0)
                                 (match-end 0))
                  (svn-insert-file
@@ -1223,7 +1237,9 @@ With prefix arg, prompt for REVISION."
                           (svn-remap-update-to-status file-status)
                           (svn-remap-update-to-status prop-status))
                   ;; Optimize for some common cases
-                  (cond ((= prop-status ?\ )
+                  (cond ((string= tree-status "C")
+			 "TConflict")
+			((= prop-status ?\ )
                          (cdr (assq file-status svn-update-flag-name)))
                         ((= file-status ?\ )
                          (let ((s (format "P %s"
@@ -2104,7 +2120,14 @@ Argument MSG is the character to use."
   (save-excursion
     (goto-char (+ pos svn-status-msg-col))
     (delete-char 9)
-    (insert-and-inherit (format "%9s" msg))))
+    (insert-and-inherit (format "%-9s" msg))))
+
+(defun svn-update-conflict-msg (pos msg)
+  (save-excursion
+    (let ((filename (svn-getprop pos 'file)))
+      (goto-char (+ pos svn-status-file-col (length filename)))
+      (delete-char (- (line-end-position) (point)))
+      (insert-and-inherit (concat " -- " msg)))))
 
 (defun svn-foreach-svn-buffer (file-name function)
   "Call FUNCTION for each svn status buffer that contains FILE-NAME.
