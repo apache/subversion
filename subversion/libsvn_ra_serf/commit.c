@@ -950,21 +950,21 @@ proppatch_resource(proppatch_context_t *proppatch,
   handler->body_delegate_baton = &pbb;
 
   handler->response_handler = svn_ra_serf__handle_multistatus_only;
-  handler->response_baton = &proppatch->progress;
+  handler->response_baton = handler;
 
-  svn_ra_serf__request_create(handler);
-
-  /* If we don't wait for the response, our pool will be gone! */
-  SVN_ERR(svn_ra_serf__context_run_wait(&proppatch->progress.done,
-                                        commit->session, pool));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
   if (handler->sline.code != 207
-      || proppatch->progress.server_error.error)
+      || (handler->server_error != NULL
+          && handler->server_error->error != NULL))
     {
       return svn_error_create(
                SVN_ERR_RA_DAV_PROPPATCH_FAILED,
                return_response_err(handler,
-                                   proppatch->progress.server_error.error),
+                                   handler->server_error != NULL
+                                     ? handler->server_error->error
+                                     : SVN_NO_ERROR
+                                   ),
                _("At least one property change failed; repository"
                  " is unchanged"));
     }
