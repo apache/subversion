@@ -1672,7 +1672,10 @@ do_item_commit(svn_client_commit_item3_t *item,
 
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     {
-      SVN_ERR(svn_editor_copy(editor, item->copyfrom_url, item->copyfrom_rev,
+      const char *src_relpath = svn_uri_skip_ancestor(repos_root,
+                                                      item->copyfrom_url,
+                                                      scratch_pool);
+      SVN_ERR(svn_editor_copy(editor, src_relpath, item->copyfrom_rev,
                               repos_relpath, SVN_INVALID_REVNUM));
     }
 
