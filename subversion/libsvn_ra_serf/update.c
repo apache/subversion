@@ -1493,6 +1493,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
 
+          /* ### skip setting HANDLER_POOL?  */
           handler->method = "HEAD";
           handler->path = fetch_ctx->info->url;
 
@@ -1518,6 +1519,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
 
+          /* ### skip setting HANDLER_POOL?  */
           handler->method = "GET";
           handler->path = fetch_ctx->info->url;
 
@@ -2564,6 +2566,7 @@ finish_report(void *report_baton,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  /* ### skip setting HANDLER_POOL?  */
   handler->method = "REPORT";
   handler->path = report->path;
   handler->body_delegate = create_update_report_body;
@@ -3084,6 +3087,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       stream_ctx->info->name = fetch_url;
 
       handler = apr_pcalloc(pool, sizeof(*handler));
+
+      /* ### skip setting HANDLER_POOL?  */
       handler->method = "GET";
       handler->path = fetch_url;
       handler->conn = conn;

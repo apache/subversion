@@ -181,6 +181,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  /* ### skip setting HANDLER_POOL?  */
   handler->method = "REPORT";
   handler->path = report_target;
   handler->body_type = "text/xml";
