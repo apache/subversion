@@ -1612,8 +1612,6 @@ do_item_commit(svn_client_commit_item3_t *item,
       SVN_ERR(svn_stream_copy3(contents, tmp_stream, ctx->cancel_func,
                                ctx->cancel_baton, scratch_pool));
 
-      /* ### pristine_temppath should be in the pristine tempdir, but we
-         ### don't honor that right now. :( */
       SVN_ERR(svn_wc__node_pristine_install(ctx->wc_ctx, pristine_temppath,
                                             sha1_checksum, md5_checksum,
                                             scratch_pool));
