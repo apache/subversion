@@ -805,6 +805,105 @@ error_fetch(serf_request_t *request,
   return err;
 }
 
+/* Wield the editor referenced by INFO to open (or add) the file
+   file also associated with INFO, setting properties on the file and
+   calling the editor's apply_textdelta() function on it if necessary
+   (or if FORCE_APPLY_TEXTDELTA is set).
+
+   Callers will probably want to also see the function that serves
+   the opposite purpose of this one, close_updated_file().  */
+static svn_error_t *
+open_updated_file(report_info_t *info,
+                  svn_boolean_t force_apply_textdelta,
+                  apr_pool_t *scratch_pool)
+{
+  const svn_delta_editor_t *update_editor = info->dir->update_editor;
+
+  /* Ensure our parent is open. */
+  SVN_ERR(open_dir(info->dir));
+  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
+
+  /* Expand our full name now if we haven't done so yet. */
+  if (!info->name)
+    {
+      info->name = svn_relpath_join(info->dir->name, info->base_name,
+                                    info->editor_pool);
+    }
+
+  /* Open (or add) the file. */
+  if (SVN_IS_VALID_REVNUM(info->base_rev))
+    {
+      SVN_ERR(update_editor->open_file(info->name,
+                                       info->dir->dir_baton,
+                                       info->base_rev,
+                                       info->editor_pool,
+                                       &info->file_baton));
+    }
+  else
+    {
+      SVN_ERR(update_editor->add_file(info->name,
+                                      info->dir->dir_baton,
+                                      info->copyfrom_path,
+                                      info->copyfrom_rev,
+                                      info->editor_pool,
+                                      &info->file_baton));
+    }
+
+  /* Check for lock information. */
+  if (info->lock_token)
+    check_lock(info);
+
+  /* Set all of the properties we received */
+  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      set_file_props, info,
+                                      scratch_pool));
+  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      remove_file_props, info,
+                                      scratch_pool));
+  if (info->fetch_props)
+    {
+      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                          info->url,
+                                          info->target_rev,
+                                          set_file_props, info,
+                                          scratch_pool));
+    }
+
+  /* Get (maybe) a textdelta window handler for transmitting file
+     content changes. */
+  if (info->fetch_file || force_apply_textdelta)
+    {
+      SVN_ERR(update_editor->apply_textdelta(info->file_baton,
+                                             info->base_checksum,
+                                             info->editor_pool,
+                                             &info->textdelta,
+                                             &info->textdelta_baton));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Close the file associated with INFO->file_baton, and cleanup other
+   bits of that structure managed by open_updated_file(). */
+static svn_error_t *
+close_updated_file(report_info_t *info,
+                   apr_pool_t *scratch_pool)
+{
+  /* Close the file via the editor. */
+  SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
+                                               info->final_checksum,
+                                               scratch_pool));
+
+  /* We're done with our editor pool. */
+  svn_pool_destroy(info->editor_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_ra_serf__response_handler_t */
 static svn_error_t *
 handle_fetch(serf_request_t *request,
@@ -829,50 +928,8 @@ handle_fetch(serf_request_t *request,
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       info = fetch_ctx->info;
 
-      err = open_dir(info->dir);
-      if (err)
-        {
-          return error_fetch(request, fetch_ctx, err);
-        }
-
-      info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
-
-      /* Expand our full name now if we haven't done so yet. */
-      if (!info->name)
-        {
-          info->name = svn_relpath_join(info->dir->name, info->base_name,
-                                        info->editor_pool);
-        }
-
-      if (SVN_IS_VALID_REVNUM(info->base_rev))
-        {
-          err = info->dir->update_editor->open_file(info->name,
-                                                    info->dir->dir_baton,
-                                                    info->base_rev,
-                                                    info->editor_pool,
-                                                    &info->file_baton);
-        }
-      else
-        {
-          err = info->dir->update_editor->add_file(info->name,
-                                                   info->dir->dir_baton,
-                                                   info->copyfrom_path,
-                                                   info->copyfrom_rev,
-                                                   info->editor_pool,
-                                                   &info->file_baton);
-        }
-
-      if (err)
-        {
-          return error_fetch(request, fetch_ctx, err);
-        }
-
-      err = info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                      info->base_checksum,
-                                                      info->editor_pool,
-                                                      &info->textdelta,
-                                                      &info->textdelta_baton);
-
+      /* Open the file for editing. */
+      err = open_updated_file(info, FALSE, info->pool);
       if (err)
         {
           return error_fetch(request, fetch_ctx, err);
@@ -987,51 +1044,17 @@ handle_fetch(serf_request_t *request,
         {
           report_info_t *info = fetch_ctx->info;
 
-          /* ### this doesn't feel quite right. but it gets tossed at the
-             ### end of this block, so it will work for now.  */
-          apr_pool_t *scratch_pool = info->editor_pool;
-
           if (fetch_ctx->delta_stream)
             err = svn_error_trace(svn_stream_close(fetch_ctx->delta_stream));
           else
             err = svn_error_trace(info->textdelta(NULL,
                                                   info->textdelta_baton));
-
           if (err)
             {
               return error_fetch(request, fetch_ctx, err);
             }
 
-          if (info->lock_token)
-            check_lock(info);
-
-          /* set all of the properties we received */
-          err = svn_ra_serf__walk_all_props(info->props,
-                                            info->base_name,
-                                            info->base_rev,
-                                            set_file_props, info,
-                                            scratch_pool);
-
-          if (!err)
-            err = svn_ra_serf__walk_all_props(info->dir->removed_props,
-                                              info->base_name,
-                                              info->base_rev,
-                                              remove_file_props, info,
-                                              scratch_pool);
-          if (!err && info->fetch_props)
-            {
-              err = svn_ra_serf__walk_all_props(info->props,
-                                                info->url,
-                                                info->target_rev,
-                                                set_file_props, info,
-                                                scratch_pool);
-            }
-
-          if (!err)
-            err = info->dir->update_editor->close_file(info->file_baton,
-                                                       info->final_checksum,
-                                                       scratch_pool);
-
+          err = close_updated_file(info, info->pool);
           if (err)
             {
               return svn_error_trace(error_fetch(request, fetch_ctx, err));
@@ -1043,8 +1066,7 @@ handle_fetch(serf_request_t *request,
           fetch_ctx->done_item.next = *fetch_ctx->done_list;
           *fetch_ctx->done_list = &fetch_ctx->done_item;
 
-          /* We're done with our pools. */
-          svn_pool_destroy(info->editor_pool);
+          /* We're done with our pool. */
           svn_pool_destroy(info->pool);
 
           if (status)
@@ -1161,71 +1183,13 @@ static svn_error_t *
 handle_propchange_only(report_info_t *info,
                        apr_pool_t *scratch_pool)
 {
-  /* Ensure our parent is open. */
-  SVN_ERR(open_dir(info->dir));
-
-  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
-
-  /* Expand our full name now if we haven't done so yet. */
-  if (!info->name)
-    {
-      info->name = svn_relpath_join(info->dir->name, info->base_name,
-                                    info->editor_pool);
-    }
-
-  if (SVN_IS_VALID_REVNUM(info->base_rev))
-    {
-      SVN_ERR(info->dir->update_editor->open_file(info->name,
-                                                  info->dir->dir_baton,
-                                                  info->base_rev,
-                                                  info->editor_pool,
-                                                  &info->file_baton));
-    }
-  else
-    {
-      SVN_ERR(info->dir->update_editor->add_file(info->name,
-                                                 info->dir->dir_baton,
-                                                 info->copyfrom_path,
-                                                 info->copyfrom_rev,
-                                                 info->editor_pool,
-                                                 &info->file_baton));
-    }
-
-  if (info->fetch_file)
-    {
-      SVN_ERR(info->dir->update_editor->apply_textdelta(info->file_baton,
-                                                    info->base_checksum,
-                                                    info->editor_pool,
-                                                    &info->textdelta,
-                                                    &info->textdelta_baton));
-    }
-
-  if (info->lock_token)
-    check_lock(info);
-
-  /* set all of the properties we received */
-  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                      info->base_name, info->base_rev,
-                                      set_file_props, info,
-                                      scratch_pool));
-  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
-                                      info->base_name, info->base_rev,
-                                      remove_file_props, info,
-                                      scratch_pool));
-  if (info->fetch_props)
-    {
-      SVN_ERR(svn_ra_serf__walk_all_props(info->props, info->url,
-                                          info->target_rev,
-                                          set_file_props, info,
-                                          scratch_pool));
-    }
-
-  SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
-                                               info->final_checksum,
-                                               scratch_pool));
-
-  /* We're done with our pools. */
-  svn_pool_destroy(info->editor_pool);
+  /* Open the file for editing (without forcing an apply_textdelta),
+     pass along any propchanges we've recorded for it, and then close
+     the file. */
+  SVN_ERR(open_updated_file(info, FALSE, scratch_pool));
+  SVN_ERR(close_updated_file(info, scratch_pool));
+  
+  /* We're done with our pool. */
   svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
@@ -1238,80 +1202,18 @@ handle_propchange_only(report_info_t *info,
    server), and feed the information through the associated update
    editor. */
 static svn_error_t *
-local_fetch(report_info_t *info)
+local_fetch(report_info_t *info,
+            apr_pool_t *scratch_pool)
 {
-  const svn_delta_editor_t *update_editor = info->dir->update_editor;
+  SVN_ERR(open_updated_file(info, TRUE, scratch_pool));
 
-  SVN_ERR(open_dir(info->dir));
-  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
-
-  /* Expand our full name now if we haven't done so yet. */
-  if (!info->name)
-    {
-      info->name = svn_relpath_join(info->dir->name, info->base_name,
-                                    info->editor_pool);
-    }
-
-  if (SVN_IS_VALID_REVNUM(info->base_rev))
-    {
-      SVN_ERR(update_editor->open_file(info->name,
-                                       info->dir->dir_baton,
-                                       info->base_rev,
-                                       info->editor_pool,
-                                       &info->file_baton));
-    }
-  else
-    {
-      SVN_ERR(update_editor->add_file(info->name,
-                                      info->dir->dir_baton,
-                                      info->copyfrom_path,
-                                      info->copyfrom_rev,
-                                      info->editor_pool,
-                                      &info->file_baton));
-    }
-  
-  SVN_ERR(update_editor->apply_textdelta(info->file_baton,
-                                         info->base_checksum,
-                                         info->editor_pool,
-                                         &info->textdelta,
-                                         &info->textdelta_baton));
-  
   SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
-                                  info->textdelta_baton, NULL, info->pool));
-
+                                  info->textdelta_baton, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(info->cached_contents));
   info->cached_contents = NULL;
+  SVN_ERR(close_updated_file(info, scratch_pool));
 
-  if (info->lock_token)
-    check_lock(info);
-
-  /* set all of the properties we received */
-  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      set_file_props, info,
-                                      info->pool));
-  
-  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      remove_file_props, info,
-                                      info->pool));
-  if (info->fetch_props)
-    {
-      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                          info->url,
-                                          info->target_rev,
-                                          set_file_props, info,
-                                          info->pool));
-    }
-  
-  SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
-                                               info->final_checksum,
-                                               info->pool));
-  
-  /* We're done with our pools. */
-  svn_pool_destroy(info->editor_pool);
+  /* We're done with our pool. */
   svn_pool_destroy(info->pool);
 
   return SVN_NO_ERROR;
@@ -1355,7 +1257,7 @@ handle_local_fetch(serf_request_t *request,
         }
       if (APR_STATUS_IS_EOF(status))
         {
-          err = local_fetch(fetch_ctx->info);
+          err = local_fetch(fetch_ctx->info, fetch_ctx->info->pool);
           if (err)
             {
               return error_fetch(request, fetch_ctx, err);
