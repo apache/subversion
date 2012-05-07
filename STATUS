@@ -104,6 +104,15 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben
 
+ * r1335104
+   Avoid a sometimes very expensive operation in svn status' external
+   processing. (issue #4178)
+   Justification:
+     See the "svn status <file> is slow under a large check-out" on
+     users{_AT_}subversion.apache.org
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
