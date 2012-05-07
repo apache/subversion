@@ -961,8 +961,6 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   svn_error_t *err;
   svn_ra_serf__simple_request_context_t *ctx = baton;
 
-  SVN_ERR_ASSERT(ctx->pool);
-
   err = svn_ra_serf__handle_discard_body(request, response,
                                          &ctx->server_error, pool);
 
@@ -1687,9 +1685,13 @@ handle_response(serf_request_t *request,
       handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
     }
 
+  /* Keep reading from the network until we've read all the headers.  */
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
+      /* The typical "error" will be APR_EAGAIN, meaning that more input
+         from the network is required to complete the reading of the
+         headers.  */
       if (!APR_STATUS_IS_EOF(status))
         {
           /* Either the headers are not (yet) complete, or there really
@@ -1732,6 +1734,12 @@ handle_response(serf_request_t *request,
         }
     }
 
+  /* ... and set up the header fields in HANDLER.  */
+  handler->location = svn_ra_serf__response_get_location(
+                          response, handler->handler_pool);
+
+  /* On the last request, we failed authentication. We succeeded this time,
+     so let's save away these credentials.  */
   if (handler->conn->last_status_code == 401 && handler->sline.code < 400)
     {
       SVN_ERR(svn_auth_save_credentials(handler->session->auth_state,
@@ -1739,7 +1747,6 @@ handle_response(serf_request_t *request,
       handler->session->auth_attempts = 0;
       handler->session->auth_state = NULL;
     }
-
   handler->conn->last_status_code = handler->sline.code;
 
   if (handler->sline.code == 405
@@ -1773,10 +1780,6 @@ handle_response(serf_request_t *request,
 
       return SVN_NO_ERROR; /* Error is set in caller */
     }
-
-  /* ... and set up the header fields in HANDLER.  */
-  handler->location = svn_ra_serf__response_get_location(
-                          response, handler->handler_pool);
 
   /* Stop processing the above, on every packet arrival.  */
   handler->reading_body = TRUE;

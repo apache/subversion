@@ -691,7 +691,6 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_pool_clear(iterpool);
 
       ctx = apr_pcalloc(iterpool, sizeof(*ctx));
-      ctx->pool = iterpool;
 
       path = svn__apr_hash_index_key(hi);
       token = svn__apr_hash_index_val(hi);
