@@ -52,9 +52,12 @@ typedef struct callback_baton_t
      this base directory. */
   const char *base_dir_abspath;
 
-  /* Holds the absolute path of the working copy root for the working
-     copy in which BASE_DIR_ABSPATH is found. */
-  const char *wcroot_abspath;
+  /* TEMPORARY: Is 'base_dir_abspath' a versioned path?  cmpilato
+     suspects that the commit-to-multiple-disjoint-working-copies
+     code is getting this all wrong, sometimes passing an unversioned
+     (or versioned in a foreign wc) path here which sorta kinda
+     happens to work most of the time but is ultimately incorrect.  */
+  svn_boolean_t base_dir_isversioned;
 
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
@@ -242,12 +245,12 @@ invalidate_wc_props(void *baton,
 static svn_error_t *
 get_wc_contents(void *baton,
                 svn_stream_t **contents,
-                svn_checksum_t *sha1_checksum,
+                const svn_checksum_t *sha1_checksum,
                 apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
 
-  if (! cb->wcroot_abspath)
+  if (! (cb->base_dir_abspath && cb->base_dir_isversioned))
     {
       *contents = NULL;
       return SVN_NO_ERROR;
@@ -256,7 +259,7 @@ get_wc_contents(void *baton,
   return svn_error_trace(
              svn_wc__get_pristine_contents_by_checksum(contents,
                                                        cb->ctx->wc_ctx,
-                                                       cb->wcroot_abspath,
+                                                       cb->base_dir_abspath,
                                                        sha1_checksum,
                                                        pool, pool));
 }
@@ -320,7 +323,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
   if (base_dir_abspath)
     {
-      const char *wcroot_abspath;
       svn_error_t *err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
                                                      base_dir_abspath,
                                                      pool, pool);
@@ -335,25 +337,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
       else
         {
           SVN_ERR(err);
-        }
-
-      err = svn_wc__get_wc_root(&wcroot_abspath, ctx->wc_ctx,
-                                base_dir_abspath, pool, pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-            {
-              svn_error_clear(err);
-              err = SVN_NO_ERROR;
-            }
-          else
-            {
-              return err;
-            }
-        }
-      else
-        {
-          cb->wcroot_abspath = wcroot_abspath;
+          cb->base_dir_isversioned = TRUE;
         }
     }
 

@@ -2253,13 +2253,13 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
 svn_error_t *
 svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           svn_wc_context_t *wc_ctx,
-                                          const char *wcroot_abspath,
+                                          const char *wri_abspath,
                                           const svn_checksum_t *sha1_checksum,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_pristine_read(contents, NULL, wc_ctx->db,
-                                                  wcroot_abspath, sha1_checksum,
+                                                  wri_abspath, sha1_checksum,
                                                   result_pool, scratch_pool));
 }
 
