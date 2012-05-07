@@ -972,6 +972,20 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   return svn_error_trace(err);
 }
 
+
+/* Implements svn_ra_serf__response_handler_t */
+svn_error_t *
+svn_ra_serf__expect_empty_body(serf_request_t *request,
+                               serf_bucket_t *response,
+                               void *baton,
+                               apr_pool_t *scratch_pool)
+{
+  /* This is the same as handle_multistatus_only, I think ... */
+  return svn_error_trace(svn_ra_serf__handle_multistatus_only(
+                           request, response, baton, scratch_pool));
+}
+
+
 /* Given a string like "HTTP/1.1 500 (status)" in BUF, parse out the numeric
    status code into *STATUS_CODE_OUT.  Ignores leading whitespace. */
 static svn_error_t *

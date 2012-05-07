@@ -724,6 +724,28 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
+
+/* Handler that expects an empty body.
+
+   If a body IS present, and it is text/xml, then it will be parsed for
+   a server-side error.
+
+   BATON should be the svn_ra_serf__handler_t running REQUEST.
+
+   Status line information will be in HANDLER->SLINE.
+
+   Any parsed errors will be left in HANDLER->SERVER_ERROR. That member
+   may be NULL if no body was present, or a problem occurred trying to
+   parse the body.
+
+   All temporary allocations will be made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__expect_empty_body(serf_request_t *request,
+                               serf_bucket_t *response,
+                               void *baton,
+                               apr_pool_t *scratch_pool);
+
+
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
