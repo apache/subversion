@@ -1241,10 +1241,6 @@ static svn_error_t *
 local_fetch(report_info_t *info)
 {
   const svn_delta_editor_t *update_editor = info->dir->update_editor;
-  svn_txdelta_window_t delta_window = { 0 };
-  svn_txdelta_op_t delta_op;
-  svn_string_t window_data;
-  char read_buf[SVN__STREAM_CHUNK_SIZE + 1];
 
   SVN_ERR(open_dir(info->dir));
   info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
@@ -1280,33 +1276,8 @@ local_fetch(report_info_t *info)
                                          &info->textdelta,
                                          &info->textdelta_baton));
   
-  while (1)
-    {
-      apr_size_t read_len = SVN__STREAM_CHUNK_SIZE;
-      
-      SVN_ERR(svn_stream_read(info->cached_contents, read_buf, &read_len));
-      if (read_len == 0)
-        break;
-      
-      window_data.data = read_buf;
-      window_data.len = read_len;
-      
-      delta_op.action_code = svn_txdelta_new;
-      delta_op.offset = 0;
-      delta_op.length = read_len;
-      
-      delta_window.tview_len = read_len;
-      delta_window.num_ops = 1;
-      delta_window.ops = &delta_op;
-      delta_window.new_data = &window_data;
-      
-      SVN_ERR(info->textdelta(&delta_window, info->textdelta_baton));
-      
-      if (read_len < SVN__STREAM_CHUNK_SIZE)
-        break;
-    }
-  
-  SVN_ERR(info->textdelta(NULL, info->textdelta_baton));
+  SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
+                                  info->textdelta_baton, NULL, info->pool));
 
   SVN_ERR(svn_stream_close(info->cached_contents));
   info->cached_contents = NULL;
@@ -1370,7 +1341,7 @@ handle_local_fetch(serf_request_t *request,
   if (sl.code != 200)
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("GET request failed: %d %s"),
+                              _("HEAD request failed: %d %s"),
                               sl.code, sl.reason);
       return error_fetch(request, fetch_ctx, err);
     }
