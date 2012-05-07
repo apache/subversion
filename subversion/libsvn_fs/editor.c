@@ -168,7 +168,7 @@ can_modify(svn_fs_root_t *txn_root,
 {
   svn_revnum_t created_rev;
 
-  /* Out-of-dateness check:  compare the created-rev of the noden
+  /* Out-of-dateness check:  compare the created-rev of the node
      in the txn against the created-rev of FSPATH.  */
   SVN_ERR(svn_fs_node_created_rev(&created_rev, txn_root, fspath,
                                   scratch_pool));
@@ -191,11 +191,30 @@ can_modify(svn_fs_root_t *txn_root,
      have supplied a valid revision number [that they expect to change].
      The checks further below will determine the out-of-dateness of the
      specified revision.  */
+  /* ### ugh. descendents of copy/move/rotate destinations carry along
+     ### their original immutable state and (thus) a valid CREATED_REV.
+     ### but they are logically uncommitted, so the caller will pass
+     ### SVN_INVALID_REVNUM. (technically, the caller could provide
+     ### ORIGINAL_REV, but that is semantically incorrect for the Ev2
+     ### API).
+     ###
+     ### for now, we will assume the caller knows what they are doing
+     ### and an invalid revision implies such a descendent. in the
+     ### future, we could examine the ancestor chain looking for a
+     ### copy/move/rotate-here node and allow the modification (and the
+     ### converse: if no such ancestor, the caller must specify the
+     ### correct/intended revision to modify).
+  */
+#if 1
+  if (!SVN_IS_VALID_REVNUM(revision))
+    return SVN_NO_ERROR;
+#else
   if (!SVN_IS_VALID_REVNUM(revision))
     /* ### use a custom error code?  */
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                              N_("Revision for modifying '%s' is required"),
                              fspath);
+#endif
 
       if (revision < created_rev)
         {
