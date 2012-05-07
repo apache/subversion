@@ -951,27 +951,6 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
   return val ? svn_urlpath__canonicalize(val, pool) : NULL;
 }
 
-/* Implements svn_ra_serf__response_handler_t */
-svn_error_t *
-svn_ra_serf__handle_status_only(serf_request_t *request,
-                                serf_bucket_t *response,
-                                void *baton,
-                                apr_pool_t *pool)
-{
-  svn_error_t *err;
-  svn_ra_serf__simple_request_context_t *ctx = baton;
-
-  err = svn_ra_serf__handle_discard_body(request, response,
-                                         &ctx->server_error, pool);
-
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
-    {
-      ctx->done = TRUE;
-    }
-
-  return svn_error_trace(err);
-}
-
 
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
