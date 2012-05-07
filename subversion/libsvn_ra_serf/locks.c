@@ -562,7 +562,10 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
   iterpool = svn_pool_create(scratch_pool);
 
   /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
-     loop is just a temporary shim. */
+     ### loop is just a temporary shim.
+     ### an alternative, which is backwards-compat with all servers is to
+     ### pipeline these requests. ie. stop using run_wait/run_one.  */
+
   for (hi = apr_hash_first(scratch_pool, path_revs);
        hi;
        hi = apr_hash_next(hi))
