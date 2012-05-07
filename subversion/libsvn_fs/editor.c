@@ -177,7 +177,7 @@ can_modify(svn_fs_root_t *txn_root,
      have no (committed) revision number. Let the caller go ahead and
      modify these nodes.
 
-     Note: strictly speaking, they might be performeing an "illegal" edit
+     Note: strictly speaking, they might be performing an "illegal" edit
      in certain cases, but let's just assume they're Good Little Boys.
 
      If CREATED_REV is invalid, that means it's already mutable in the
