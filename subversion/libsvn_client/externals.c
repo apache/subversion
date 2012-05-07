@@ -24,7 +24,7 @@
 /* ==================================================================== */
 
 
-
+ 
 /*** Includes. ***/
 
 #include <apr_uri.h>
@@ -41,7 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-
+ 
 /* Closure for handle_external_item_change. */
 struct external_change_baton_t
 {
@@ -1060,7 +1060,7 @@ svn_client__export_externals(apr_hash_t *externals,
 
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
-                               apr_hash_t *externals_new,
+                               apr_hash_t *external_map,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
@@ -1070,69 +1070,59 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
      values. */
-  for (hi = apr_hash_first(pool, externals_new);
+  for (hi = apr_hash_first(pool, external_map);
        hi;
        hi = apr_hash_next(hi))
     {
-      apr_array_header_t *exts;
-      const char *path = svn__apr_hash_index_key(hi);
-      const char *propval = svn__apr_hash_index_val(hi);
-      apr_pool_t *iterpool;
-      int i;
+      svn_node_kind_t external_kind;
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+      const char *defining_abspath = svn__apr_hash_index_val(hi);
+      svn_node_kind_t kind;
+      svn_opt_revision_t opt_rev;
 
-      /* Clear the subpool. */
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
-      /* Parse the svn:externals property value.  This results in a
-         hash mapping subdirectories to externals structures. */
-      SVN_ERR(svn_wc_parse_externals_description3(&exts, path, propval,
-                                                  FALSE, subpool));
+      /* Obtain information on the expected external. */
+      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
+                                         &opt_rev.value.number,
+                                         ctx->wc_ctx, defining_abspath,
+                                         local_abspath, FALSE,
+                                         iterpool, iterpool));
 
-      /* Make a sub-pool of SUBPOOL. */
-      iterpool = svn_pool_create(subpool);
+      if (external_kind != svn_node_dir)
+        continue;
 
-      /* Loop over the subdir array. */
-      for (i = 0; exts && (i < exts->nelts); i++)
-        {
-          const char *fullpath;
-          svn_wc_external_item2_t *external;
-          svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, iterpool));
+      if (kind != svn_node_dir)
+        continue;
 
-          svn_pool_clear(iterpool);
+      if (SVN_IS_VALID_REVNUM(opt_rev.value.number))
+        opt_rev.kind = svn_opt_revision_number;
+      else
+        opt_rev.kind = svn_opt_revision_unspecified;
 
-          external = APR_ARRAY_IDX(exts, i, svn_wc_external_item2_t *);
-          fullpath = svn_dirent_join(path, external->target_dir, iterpool);
-
-          /* If the external target directory doesn't exist on disk,
-             just skip it. */
-          SVN_ERR(svn_io_check_path(fullpath, &kind, iterpool));
-          if (kind != svn_node_dir)
-            continue;
-
-          /* Tell the client we're starting an external status set. */
-          if (ctx->notify_func2)
-            (ctx->notify_func2)(
+      /* Tell the client we're starting an external status set. */
+      if (ctx->notify_func2)
+        ctx->notify_func2(
                ctx->notify_baton2,
-               svn_wc_create_notify(fullpath, svn_wc_notify_status_external,
+               svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_status_external,
                                     iterpool), iterpool);
 
-          /* And then do the status. */
-          SVN_ERR(svn_client_status5(NULL, ctx, fullpath,
-                                     &(external->revision),
-                                     depth, get_all, update,
-                                     no_ignore, FALSE, FALSE, NULL,
-                                     status_func, status_baton,
-                                     iterpool));
-        }
+      /* And then do the status. */
+      SVN_ERR(svn_client_status5(NULL, ctx, local_abspath, &opt_rev, depth,
+                                 get_all, update, no_ignore, FALSE, FALSE,
+                                 NULL, status_func, status_baton,
+                                 iterpool));
     }
 
   /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

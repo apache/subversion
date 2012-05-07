@@ -516,13 +516,13 @@ svn_client_status5(svn_revnum_t *result_rev,
   */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      apr_hash_t *externals_new;
-      SVN_ERR(svn_wc__externals_gather_definitions(&externals_new, NULL,
-                                                   ctx->wc_ctx, target_abspath,
-                                                   depth, pool, pool));
+      apr_hash_t *external_map;
+      SVN_ERR(svn_wc__externals_defined_below(&external_map,
+                                              ctx->wc_ctx, target_abspath,
+                                              pool, pool));
 
 
-      SVN_ERR(svn_client__do_external_status(ctx, externals_new,
+      SVN_ERR(svn_client__do_external_status(ctx, external_map,
                                              depth, get_all,
                                              update, no_ignore,
                                              status_func, status_baton, pool));
