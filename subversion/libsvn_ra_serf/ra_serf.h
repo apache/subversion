@@ -659,27 +659,6 @@ struct svn_ra_serf__server_error_t {
   svn_ra_serf__xml_parser_t parser;
 };
 
-/* A simple request context that can be passed to handle_status_only. */
-typedef struct svn_ra_serf__simple_request_context_t {
-  /* This value is set to TRUE when the response is completed. */
-  svn_boolean_t done;
-
-  /* If an error occurred, this value will be initialized. */
-  svn_ra_serf__server_error_t server_error;
-} svn_ra_serf__simple_request_context_t;
-
-/*
- * Serf handler for @a request / @a response pair that takes in a
- * @a baton (@see svn_ra_serf__simple_request_context_t).
- * Implements svn_ra_serf__response_handler_t.
- *
- * Temporary allocations are made in @a pool.
- */
-svn_error_t *
-svn_ra_serf__handle_status_only(serf_request_t *request,
-                                serf_bucket_t *response,
-                                void *baton,
-                                apr_pool_t *pool);
 
 /*
  * Handler that discards the entire @a response body associated with a
