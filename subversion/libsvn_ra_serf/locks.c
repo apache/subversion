@@ -70,9 +70,7 @@ typedef struct lock_info_t {
 
   svn_boolean_t read_headers;
 
-  /* Our HTTP status code and reason. */
-  int status_code;
-  const char *reason;
+  svn_ra_serf__handler_t *handler;
 
   /* are we done? */
   svn_boolean_t done;
@@ -349,20 +347,8 @@ handle_lock(serf_request_t *request,
       serf_bucket_t *headers;
       const char *val;
 
-      serf_status_line sl;
-      apr_status_t status;
-
-      status = serf_bucket_response_status(response, &sl);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-
-      ctx->status_code = sl.code;
-      ctx->reason = sl.reason;
-
       /* 423 == Locked */
-      if (sl.code == 423)
+      if (ctx->handler->sline.code == 423)
         {
           /* Older servers may not give a descriptive error, so we'll
              make one of our own if we can't find one in the response. */
@@ -372,7 +358,8 @@ handle_lock(serf_request_t *request,
               err = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
                                       NULL,
                                       _("Lock request failed: %d %s"),
-                                      ctx->status_code, ctx->reason);
+                                      ctx->handler->sline.code,
+                                      ctx->handler->sline.reason);
             }
           return err;
         }
@@ -396,7 +383,7 @@ handle_lock(serf_request_t *request,
     }
 
   /* Forbidden when a lock doesn't exist. */
-  if (ctx->status_code == 403)
+  if (ctx->handler->sline.code == 403)
     {
       /* If we get an "unexpected EOF" error, we'll wrap it with
          generic request failure error. */
@@ -407,7 +394,8 @@ handle_lock(serf_request_t *request,
           err = svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN,
                                   err,
                                   _("Lock request failed: %d %s"),
-                                  ctx->status_code, ctx->reason);
+                                  ctx->handler->sline.code,
+                                  ctx->handler->sline.reason);
         }
       return err;
     }
@@ -499,7 +487,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_info_t *lock_ctx;
   const char *req_url;
   svn_error_t *err;
-  int status_code;
 
   req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
@@ -512,6 +499,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "PROPFIND";
   handler->path = req_url;
   handler->body_type = "text/xml";
@@ -526,7 +514,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   parser_ctx->end = end_lock;
   parser_ctx->cdata = cdata_lock;
   parser_ctx->done = &lock_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->body_delegate = create_getlock_body;
   handler->body_delegate_baton = lock_ctx;
@@ -537,10 +524,12 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   handler->response_handler = handle_lock;
   handler->response_baton = parser_ctx;
 
+  lock_ctx->handler = handler;
+
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
 
-  if (status_code == 404)
+  if (handler->sline.code == 404)
     {
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, err,
                               _("Malformed URL for repository"));
@@ -573,7 +562,10 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
   iterpool = svn_pool_create(scratch_pool);
 
   /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
-     loop is just a temporary shim. */
+     ### loop is just a temporary shim.
+     ### an alternative, which is backwards-compat with all servers is to
+     ### pipeline these requests. ie. stop using run_wait/run_one.  */
+
   for (hi = apr_hash_first(scratch_pool, path_revs);
        hi;
        hi = apr_hash_next(hi))
@@ -602,6 +594,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       handler = apr_pcalloc(iterpool, sizeof(*handler));
 
+      handler->handler_pool = iterpool;
       handler->method = "LOCK";
       handler->path = req_url;
       handler->body_type = "text/xml";
@@ -625,6 +618,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       handler->response_handler = handle_lock;
       handler->response_baton = parser_ctx;
+
+      lock_ctx->handler = handler;
 
       svn_ra_serf__request_create(handler);
       err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, iterpool);
@@ -739,6 +734,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       handler = apr_pcalloc(iterpool, sizeof(*handler));
 
+      handler->handler_pool = iterpool;
       handler->method = "UNLOCK";
       handler->path = req_url;
       handler->conn = session->conns[0];
@@ -753,7 +749,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       SVN_ERR(svn_ra_serf__context_run_wait(&ctx->done, session, iterpool));
 
-      switch (ctx->status)
+      switch (handler->sline.code)
         {
           case 204:
             break; /* OK */
@@ -761,12 +757,14 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
             /* Api users expect this specific error code to detect failures */
             err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
                                     _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+                                    handler->sline.code,
+                                    handler->sline.reason);
             break;
           default:
             err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+                                    handler->sline.code,
+                                    handler->sline.reason);
         }
 
       if (lock_func)

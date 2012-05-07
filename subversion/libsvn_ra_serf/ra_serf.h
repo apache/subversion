@@ -311,9 +311,7 @@ static const svn_ra_serf__dav_props_t href_props[] =
 };
 
 /* WC props compatibility with ra_neon. */
-#define SVN_RA_SERF__WC_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
-#define SVN_RA_SERF__WC_ACTIVITY_URL SVN_RA_SERF__WC_NAMESPACE "activity-url"
-#define SVN_RA_SERF__WC_CHECKED_IN_URL SVN_RA_SERF__WC_NAMESPACE "version-url"
+#define SVN_RA_SERF__WC_CHECKED_IN_URL SVN_PROP_WC_PREFIX "ra_dav:version-url"
 
 /** Serf utility functions **/
 
@@ -364,7 +362,7 @@ typedef svn_error_t *
 (*svn_ra_serf__response_handler_t)(serf_request_t *request,
                                    serf_bucket_t *response,
                                    void *handler_baton,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
 
 /* Callback for when a request body is needed. */
 /* ### should pass a scratch_pool  */
@@ -388,6 +386,9 @@ typedef svn_error_t *
                                  int status_code,
                                  void *baton);
 
+/* ### we should reorder the types in this file.  */
+typedef struct svn_ra_serf__server_error_t svn_ra_serf__server_error_t;
+
 /*
  * Structure that can be passed to our default handler to guide the
  * execution of the request through its lifecycle.
@@ -402,9 +403,23 @@ typedef struct svn_ra_serf__handler_t {
   /* The content-type of the request body. */
   const char *body_type;
 
+  /* Has the request/response been completed?  */
+  svn_boolean_t done;
+
+  /* If we captured an error from the server, then this will be non-NULL.
+     It will be allocated from HANDLER_POOL.  */
+  svn_ra_serf__server_error_t *server_error;
+
   /* The handler and baton pair for our handler. */
   svn_ra_serf__response_handler_t response_handler;
   void *response_baton;
+
+  /* When REPONSE_HANDLER is invoked, the following fields will be set
+     based on the response header. HANDLER_POOL must be non-NULL for these
+     values to be filled in. SLINE.REASON and LOCATION will be allocated
+     within HANDLER_POOL.  */
+  serf_status_line sline;  /* The parsed Status-Line  */
+  const char *location;  /* The Location: header, if any  */
 
   /* The handler and baton pair to be executed when a non-recoverable error
    * is detected.  If it is NULL in the presence of an error, an abort() may
@@ -437,7 +452,28 @@ typedef struct svn_ra_serf__handler_t {
   /* The connection and session to be used for this request. */
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__session_t *session;
+
+  /* Internal flag to indicate we've parsed the headers.  */
+  svn_boolean_t reading_body;
+
+  /* Pool for allocating SLINE.REASON and LOCATION. If this pool is NULL,
+     then the requestor does not care about SLINE and LOCATION.  */
+  apr_pool_t *handler_pool;
+
 } svn_ra_serf__handler_t;
+
+
+/* Run one request and process the response.
+
+   Similar to context_run_wait(), but this creates the request for HANDLER
+   and then waits for it to complete.
+
+   WARNING: context_run_wait() does NOT create a request, whereas this
+   function DOES. Avoid a double-create.  */
+svn_error_t *
+svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
+                             apr_pool_t *scratch_pool);
+
 
 /*
  * Helper function to queue a request in the @a handler's connection.
@@ -532,16 +568,6 @@ struct svn_ra_serf__xml_parser_t {
   /* Our previously used states (will be reused). */
   svn_ra_serf__xml_state_t *free_state;
 
-  /* If non-NULL, the status code of the response will be stored here.
-   *
-   * If this is NULL and an error is received, an abort will be triggered.
-   */
-  int *status_code;
-
-  /* If non-NULL, this is the value of the response's Location header.
-   */
-  const char *location;
-
   /* If non-NULL, this value will be set to TRUE when the response is
    * completed.
    */
@@ -604,7 +630,7 @@ struct svn_ra_serf__xml_parser_t {
 /*
  * Parses a server-side error message into a local Subversion error.
  */
-typedef struct svn_ra_serf__server_error_t {
+struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
 
@@ -631,21 +657,11 @@ typedef struct svn_ra_serf__server_error_t {
 
   /* XML parser and namespace used to parse the remote response */
   svn_ra_serf__xml_parser_t parser;
-} svn_ra_serf__server_error_t;
+};
 
 /* A simple request context that can be passed to handle_status_only. */
 typedef struct svn_ra_serf__simple_request_context_t {
   apr_pool_t *pool;
-
-  /* The HTTP status code of the response */
-  int status;
-
-  /* The HTTP status line of the response */
-  const char *reason;
-
-  /* The Location header value of the response, or NULL if there
-     wasn't one. */
-  const char *location;
 
   /* This value is set to TRUE when the response is completed. */
   svn_boolean_t done;
@@ -685,7 +701,6 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML error response from the
  * the @a response body associated with a @a request.
- * Implements svn_ra_serf__response_handler_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
@@ -696,18 +711,20 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
 
 /*
  * Handler that retrieves the embedded XML multistatus response from the
- * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
+ * the @a RESPONSE body associated with a @a REQUEST.
+ *
  * Implements svn_ra_serf__response_handler_t.
  *
- * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
+ * The @a BATON should be of type svn_ra_serf__handler_t. When the request
+ * is complete, the handler's DONE flag will be set to TRUE.
  *
- * All temporary allocations will be made in a @a pool.
+ * All temporary allocations will be made in a @a scratch_pool.
  */
 svn_error_t *
 svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *scratch_pool);
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is

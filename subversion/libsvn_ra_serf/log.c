@@ -102,7 +102,6 @@ typedef struct log_context_t {
 
   /* are we done? */
   svn_boolean_t done;
-  int status_code;
 
   /* log receiver function and baton */
   svn_log_entry_receiver_t receiver;
@@ -702,6 +701,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_log_body;
@@ -718,7 +718,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   parser_ctx->end = end_log;
   parser_ctx->cdata = cdata_log;
   parser_ctx->done = &log_ctx->done;
-  parser_ctx->status_code = &log_ctx->status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -728,9 +727,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&log_ctx->done, session, pool);
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(log_ctx->status_code,
+              svn_ra_serf__error_on_status(handler->sline.code,
                                            req_url,
-                                           parser_ctx->location),
+                                           handler->location),
               err));
 
   return SVN_NO_ERROR;

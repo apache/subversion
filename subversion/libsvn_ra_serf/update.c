@@ -1493,6 +1493,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
 
+          handler->handler_pool = info->dir->pool;
           handler->method = "HEAD";
           handler->path = fetch_ctx->info->url;
 
@@ -1518,6 +1519,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
 
+          handler->handler_pool = info->dir->pool;
           handler->method = "GET";
           handler->path = fetch_ctx->info->url;
 
@@ -2535,7 +2537,6 @@ finish_report(void *report_baton,
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *report_target;
   svn_boolean_t closed_root;
-  int status_code;
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
@@ -2565,6 +2566,7 @@ finish_report(void *report_baton,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = report->path;
   handler->body_delegate = create_update_report_body;
@@ -2584,9 +2586,6 @@ finish_report(void *report_baton,
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
   parser_ctx->done = &report->done;
-  /* While we provide a location here to store the status code, we don't
-     do anything with it. The error in parser_ctx->error is sufficient. */
-  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -3088,6 +3087,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       stream_ctx->info->name = fetch_url;
 
       handler = apr_pcalloc(pool, sizeof(*handler));
+
+      handler->handler_pool = pool;
       handler->method = "GET";
       handler->path = fetch_url;
       handler->conn = conn;

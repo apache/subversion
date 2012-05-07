@@ -171,7 +171,6 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *report_target;
-  int status_code;
 
   date_ctx = apr_palloc(pool, sizeof(*date_ctx));
   date_ctx->time = tm;
@@ -182,6 +181,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = report_target;
   handler->body_type = "text/xml";
@@ -196,7 +196,6 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   parser_ctx->end = end_getdate;
   parser_ctx->cdata = cdata_getdate;
   parser_ctx->done = &date_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->body_delegate = create_getdate_body;
   handler->body_delegate_baton = date_ctx;
@@ -207,6 +206,8 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
 
   *date_ctx->revision = SVN_INVALID_REVNUM;
+
+  /* ### use svn_ra_serf__error_on_status() ?  */
 
   return svn_ra_serf__context_run_wait(&date_ctx->done, session, pool);
 }

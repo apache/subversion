@@ -56,8 +56,6 @@ typedef struct gls_context_t {
   /* True iff we're looking at a child of the outer report tag */
   svn_boolean_t inside_report;
 
-  int status_code;
-
   svn_boolean_t done;
 } gls_context_t;
 
@@ -204,6 +202,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_gls_body;
@@ -218,7 +217,6 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   parser_ctx->user_data = gls_ctx;
   parser_ctx->start = start_gls;
   parser_ctx->end = end_gls;
-  parser_ctx->status_code = &gls_ctx->status_code;
   parser_ctx->done = &gls_ctx->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
@@ -234,10 +232,10 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                               path, peg_revision);
 
   err = svn_error_compose_create(
-         svn_ra_serf__error_on_status(gls_ctx->status_code,
+         svn_ra_serf__error_on_status(handler->sline.code,
                                       handler->path,
-                                      parser_ctx->location),
-         err);;
+                                      handler->location),
+         err);
 
   svn_pool_destroy(gls_ctx->subpool);
 

@@ -195,6 +195,7 @@ update_internal(svn_revnum_t *result_rev,
   const char *corrected_url;
   const char *target;
   const char *repos_root;
+  const char *repos_relpath;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
@@ -207,7 +208,7 @@ update_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
-  svn_boolean_t tree_conflicted;
+  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -221,39 +222,34 @@ update_internal(svn_revnum_t *result_rev,
   else
     target = "";
 
-  /* Get full URL from the ANCHOR. */
-  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
-                               pool, pool));
-  if (! anchor_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(anchor_abspath, pool));
+  /* Check if our anchor exists in BASE. If it doesn't we can't update. */
+  SVN_ERR(svn_wc__node_get_base(&revnum, &repos_relpath, &repos_root, NULL,
+                                ctx->wc_ctx, anchor_abspath, pool, pool));
 
-  /* Check if our anchor exists in BASE. If it doesn't we can't update.
-     ### For performance reasons this should be handled with the same query
-     ### as retrieving the anchor url. */
-  SVN_ERR(svn_wc__node_get_base(&revnum, NULL, NULL, NULL, ctx->wc_ctx,
-                                anchor_abspath, pool, pool));
-
-  /* It does not make sense to update tree-conflict victims. */
-  err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+  /* It does not make sense to update conflict victims. */
+  err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                             &tree_conflicted,
                              ctx->wc_ctx, local_abspath, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
+      text_conflicted = FALSE;
+      prop_conflicted = FALSE;
       tree_conflicted = FALSE;
     }
   else
     SVN_ERR(err);
 
-  if (!SVN_IS_VALID_REVNUM(revnum) || tree_conflicted)
+  if (!SVN_IS_VALID_REVNUM(revnum)
+      || text_conflicted || prop_conflicted || tree_conflicted)
     {
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *nt;
 
           nt = svn_wc_create_notify(local_abspath,
-                                    tree_conflicted
+                                    (text_conflicted || prop_conflicted
+                                                     || tree_conflicted)
                                       ? svn_wc_notify_skip_conflicted
                                       : svn_wc_notify_update_skip_working_only,
                                     pool);
@@ -262,6 +258,12 @@ update_internal(svn_revnum_t *result_rev,
         }
       return SVN_NO_ERROR;
     }
+  else if (! repos_relpath)
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("'%s' has no URL"),
+                               svn_dirent_local_style(anchor_abspath, pool));
+
+  anchor_url = svn_path_url_add_component2(repos_root, repos_relpath, pool);
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -333,8 +335,6 @@ update_internal(svn_revnum_t *result_rev,
                                                anchor_url,
                                                anchor_abspath, NULL, TRUE,
                                                TRUE, ctx, pool));
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */

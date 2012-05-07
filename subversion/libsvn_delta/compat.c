@@ -433,9 +433,11 @@ process_actions(struct ev2_edit_baton *eb,
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(change->changing));
 #endif
 
+      /* ### we need to gather up the target set of children  */
+
       if (kind == svn_kind_dir)
         SVN_ERR(svn_editor_alter_directory(eb->editor, repos_relpath,
-                                           change->changing, props));
+                                           change->changing, NULL, props));
       else
         SVN_ERR(svn_editor_alter_file(eb->editor, repos_relpath,
                                       change->changing, props,
@@ -1160,6 +1162,7 @@ static svn_error_t *
 alter_directory_cb(void *baton,
                    const char *relpath,
                    svn_revnum_t revision,
+                   const apr_array_header_t *children,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
@@ -1167,6 +1170,8 @@ alter_directory_cb(void *baton,
   struct change_node *change = insert_change(relpath, eb->changes);
 
   /* ### should we verify the kind is truly a directory?  */
+
+  /* ### do we need to do anything with CHILDREN?  */
 
   /* Note: this node may already have information in CHANGE as a result
      of an earlier copy/move operation.  */

@@ -188,7 +188,6 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *relative_url, *basecoll_url, *req_url;
-  int status_code = 0;
   svn_error_t *err;
 
   drev_ctx = apr_pcalloc(pool, sizeof(*drev_ctx));
@@ -212,9 +211,9 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   parser_ctx->end = end_getdrev;
   parser_ctx->cdata = cdata_getdrev;
   parser_ctx->done = &drev_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
@@ -231,9 +230,10 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.5.x servers and older don't support this report. */
-  if (status_code == 501)
+  if (handler->sline.code == 501)
     return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("'%s' REPORT not implemented"), "get-deleted-rev");
+                             _("'%s' REPORT not implemented"),
+                             "get-deleted-rev");
   SVN_ERR(err);
   return SVN_NO_ERROR;
 }

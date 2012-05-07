@@ -359,12 +359,16 @@ static svn_error_t *
 alter_directory_cb(void *baton,
                    const char *relpath,
                    svn_revnum_t revision,
+                   const apr_array_header_t *children,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
+
+  /* Note: we ignore CHILDREN. We have no "incomplete" state to worry about,
+     so we don't need to be aware of what children will be created.  */
 
   if (!SVN_IS_VALID_REVNUM(revision))
     /* ### use a custom error code?  */
@@ -406,9 +410,17 @@ alter_file_cb(void *baton,
   SVN_ERR(get_root(&root, eb));
   SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
 
-  SVN_ERR(set_text(root, fspath, checksum, contents,
-                   eb->cancel_func, eb->cancel_baton, scratch_pool));
-  SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+  if (contents != NULL)
+    {
+      SVN_ERR_ASSERT(checksum != NULL);
+      SVN_ERR(set_text(root, fspath, checksum, contents,
+                       eb->cancel_func, eb->cancel_baton, scratch_pool));
+    }
+
+  if (props != NULL)
+    {
+      SVN_ERR(alter_props(root, fspath, props, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }

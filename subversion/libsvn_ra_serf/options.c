@@ -74,24 +74,21 @@ struct svn_ra_serf__options_context_t {
   options_state_list_t *state;
   options_state_list_t *free_state;
 
-  /* HTTP Status code */
-  int status_code;
+  /* Have we extracted options values from the headers already?  */
+  svn_boolean_t headers_processed;
 
   /* are we done? */
   svn_boolean_t done;
 
   svn_ra_serf__session_t *session;
   svn_ra_serf__connection_t *conn;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 
   const char *path;
 
   const char *activity_collection;
   svn_revnum_t youngest_rev;
-
-  serf_response_acceptor_t acceptor;
-  serf_response_handler_t handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
-
 };
 
 static void
@@ -245,29 +242,17 @@ svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx)
   return ctx->youngest_rev;
 }
 
-/* Context for both options_response_handler() and capabilities callback. */
-struct options_response_ctx_t {
-  /* Baton for __handle_xml_parser() */
-  svn_ra_serf__xml_parser_t *parser_ctx;
-
-  /* Session into which we'll store server capabilities */
-  svn_ra_serf__session_t *session;
-
-  /* For temporary work only. */
-  apr_pool_t *pool;
-};
-
 
 /* We use these static pointers so we can employ pointer comparison
  * of our capabilities hash members instead of strcmp()ing all over
  * the place.
  */
 /* Both server and repository support the capability. */
-static const char *capability_yes = "yes";
+static const char *const capability_yes = "yes";
 /* Either server or repository does not support the capability. */
-static const char *capability_no = "no";
+static const char *const capability_no = "no";
 /* Server supports the capability, but don't yet know if repository does. */
-static const char *capability_server_yes = "server-yes";
+static const char *const capability_server_yes = "server-yes";
 
 
 /* This implements serf_bucket_headers_do_callback_fn_t.
@@ -277,7 +262,8 @@ capabilities_headers_iterator_callback(void *baton,
                                        const char *key,
                                        const char *val)
 {
-  struct options_response_ctx_t *orc = baton;
+  svn_ra_serf__options_context_t *opt_ctx = baton;
+  svn_ra_serf__session_t *session = opt_ctx->session;
 
   if (svn_cstring_casecmp(key, "dav") == 0)
     {
@@ -285,7 +271,8 @@ capabilities_headers_iterator_callback(void *baton,
            DAV: version-control,checkout,working-resource
            DAV: merge,baseline,activity,version-controlled-collection
            DAV: http://subversion.tigris.org/xmlns/dav/svn/depth */
-      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE, orc->pool);
+      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE,
+                                                   opt_ctx->pool);
 
       /* Right now we only have a few capabilities to detect, so just
          seek for them directly.  This could be written slightly more
@@ -294,33 +281,35 @@ capabilities_headers_iterator_callback(void *baton,
 
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         {
-          apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_DEPTH, APR_HASH_KEY_STRING,
+                       capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
-          apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_server_yes);
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       capability_server_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
-          apr_hash_set(orc->session->capabilities,
-                       SVN_RA_CAPABILITY_LOG_REVPROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_LOG_REVPROPS, APR_HASH_KEY_STRING,
+                       capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
         {
-          apr_hash_set(orc->session->capabilities,
-                       SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_ATOMIC_REVPROPS, APR_HASH_KEY_STRING,
+                       capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         {
-          apr_hash_set(orc->session->capabilities,
-                       SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-                       APR_HASH_KEY_STRING, capability_yes);
+          apr_hash_set(session->capabilities,
+                       SVN_RA_CAPABILITY_PARTIAL_REPLAY, APR_HASH_KEY_STRING,
+                       capability_yes);
         }
     }
 
@@ -329,14 +318,12 @@ capabilities_headers_iterator_callback(void *baton,
     {
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
-          orc->session->repos_root = orc->session->session_url;
-          orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
-          orc->session->repos_root_str =
+          session->repos_root = session->session_url;
+          session->repos_root.path = apr_pstrdup(session->pool, val);
+          session->repos_root_str =
             svn_urlpath__canonicalize(
-                apr_uri_unparse(orc->session->pool,
-                                &orc->session->repos_root,
-                                0),
-                orc->session->pool);
+                apr_uri_unparse(session->pool, &session->repos_root, 0),
+                session->pool);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
@@ -345,43 +332,44 @@ capabilities_headers_iterator_callback(void *baton,
 
           if (!(ignore_v2_env_var
                 && apr_strnatcasecmp(ignore_v2_env_var, "yes") == 0))
-            orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
+            session->me_resource = apr_pstrdup(session->pool, val);
 #else
-          orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
+          session->me_resource = apr_pstrdup(session->pool, val);
 #endif
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_REV_STUB_HEADER) == 0)
         {
-          orc->session->rev_stub = apr_pstrdup(orc->session->pool, val);
+          session->rev_stub = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_REV_ROOT_STUB_HEADER) == 0)
         {
-          orc->session->rev_root_stub = apr_pstrdup(orc->session->pool, val);
+          session->rev_root_stub = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_TXN_STUB_HEADER) == 0)
         {
-          orc->session->txn_stub = apr_pstrdup(orc->session->pool, val);
+          session->txn_stub = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_TXN_ROOT_STUB_HEADER) == 0)
         {
-          orc->session->txn_root_stub = apr_pstrdup(orc->session->pool, val);
+          session->txn_root_stub = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_VTXN_STUB_HEADER) == 0)
         {
-          orc->session->vtxn_stub = apr_pstrdup(orc->session->pool, val);
+          session->vtxn_stub = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_VTXN_ROOT_STUB_HEADER) == 0)
         {
-          orc->session->vtxn_root_stub = apr_pstrdup(orc->session->pool, val);
+          session->vtxn_root_stub = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_REPOS_UUID_HEADER) == 0)
         {
-          orc->session->uuid = apr_pstrdup(orc->session->pool, val);
+          session->uuid = apr_pstrdup(session->pool, val);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
         {
-          struct svn_ra_serf__options_context_t *user_data =
-            orc->parser_ctx->user_data;
+          struct svn_ra_serf__options_context_t *user_data;
+
+          user_data = opt_ctx->parser_ctx->user_data;
           user_data->youngest_rev = SVN_STR_TO_REV(val);
         }
     }
@@ -400,27 +388,35 @@ options_response_handler(serf_request_t *request,
                          void *baton,
                          apr_pool_t *pool)
 {
-  struct options_response_ctx_t *orc = baton;
-  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
+  svn_ra_serf__options_context_t *opt_ctx = baton;
 
-  /* Start out assuming all capabilities are unsupported. */
-  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-               APR_HASH_KEY_STRING, capability_no);
+  if (!opt_ctx->headers_processed)
+    {
+      svn_ra_serf__session_t *session = opt_ctx->session;
+      serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
 
-  /* Then see which ones we can discover. */
-  serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
+      /* Start out assuming all capabilities are unsupported. */
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                   APR_HASH_KEY_STRING, capability_no);
+      apr_hash_set(session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                   APR_HASH_KEY_STRING, capability_no);
+
+      /* Then see which ones we can discover. */
+      serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
+                             opt_ctx);
+
+      opt_ctx->headers_processed = TRUE;
+    }
 
   /* Execute the 'real' response handler to XML-parse the repsonse body. */
   return svn_ra_serf__handle_xml_parser(request, response,
-                                        orc->parser_ctx, pool);
+                                        opt_ctx->parser_ctx, pool);
 }
 
 
@@ -434,7 +430,6 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   svn_ra_serf__options_context_t *new_ctx;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  struct options_response_ctx_t *options_response_ctx;
 
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
 
@@ -450,6 +445,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "OPTIONS";
   handler->path = path;
   handler->body_delegate = create_options_body;
@@ -465,19 +461,14 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   parser_ctx->end = end_options;
   parser_ctx->cdata = cdata_options;
   parser_ctx->done = &new_ctx->done;
-  parser_ctx->status_code = &new_ctx->status_code;
 
-  options_response_ctx = apr_pcalloc(pool, sizeof(*options_response_ctx));
-  options_response_ctx->parser_ctx = parser_ctx;
-  options_response_ctx->session = session;
-  options_response_ctx->pool = pool;
+  new_ctx->handler = handler;
+  new_ctx->parser_ctx = parser_ctx;
 
   handler->response_handler = options_response_handler;
-  handler->response_baton = options_response_ctx;
+  handler->response_baton = new_ctx;
 
   svn_ra_serf__request_create(handler);
-
-  new_ctx->parser_ctx = parser_ctx;
 
   *opt_ctx = new_ctx;
 
@@ -508,17 +499,17 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
      carries such a thing, report as much.  We'll disregard ERR --
      it's most likely just a complaint about the response body not
      successfully parsing as XML or somesuch. */
-  if (corrected_url && (opt_ctx->status_code == 301))
+  if (corrected_url && (opt_ctx->handler->sline.code == 301))
     {
       svn_error_clear(err);
-      *corrected_url = opt_ctx->parser_ctx->location;
+      *corrected_url = opt_ctx->handler->location;
       return SVN_NO_ERROR;
     }
 
   return svn_error_compose_create(
-             svn_ra_serf__error_on_status(opt_ctx->status_code,
+             svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
                                           serf_sess->session_url.path,
-                                          opt_ctx->parser_ctx->location),
+                                          opt_ctx->handler->location),
              err);
 }
 
