@@ -1685,13 +1685,13 @@ do_item_commit(svn_client_commit_item3_t *item,
       if (item->kind == svn_node_file)
         {
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
-                                        SVN_INVALID_REVNUM, props,
+                                        item->revision, props,
                                         sha1_checksum, contents));
         }
       else
         {
           SVN_ERR(svn_editor_alter_directory(editor, repos_relpath,
-                                             SVN_INVALID_REVNUM, props));
+                                             item->revision, props));
         }
     }
 
