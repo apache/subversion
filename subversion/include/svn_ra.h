@@ -127,7 +127,7 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
  */
 typedef svn_error_t *(*svn_ra_get_wc_contents_func_t)(void *baton,
                                                       svn_stream_t **contents,
-                                                      svn_checksum_t *sha1_checksum,
+                                                      const svn_checksum_t *sha1_checksum,
                                                       apr_pool_t *pool);
 
 

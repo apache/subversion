@@ -168,17 +168,54 @@ can_modify(svn_fs_root_t *txn_root,
 {
   svn_revnum_t created_rev;
 
-  /* Out-of-dateness check:  compare the created-rev of the noden
+  /* Out-of-dateness check:  compare the created-rev of the node
      in the txn against the created-rev of FSPATH.  */
   SVN_ERR(svn_fs_node_created_rev(&created_rev, txn_root, fspath,
                                   scratch_pool));
 
-  /* If CREATED_REV is invalid, that means it's already mutable in the
+  /* Uncommitted nodes (eg. a descendent of a copy/move/rotate destination)
+     have no (committed) revision number. Let the caller go ahead and
+     modify these nodes.
+
+     Note: strictly speaking, they might be performing an "illegal" edit
+     in certain cases, but let's just assume they're Good Little Boys.
+
+     If CREATED_REV is invalid, that means it's already mutable in the
      txn, which means it has already passed this out-of-dateness check.
      (Usually, this happens when looking at a parent directory of an
      already-modified node)  */
-  if (SVN_IS_VALID_REVNUM(created_rev) && revision != created_rev)
-    {
+  if (!SVN_IS_VALID_REVNUM(created_rev))
+    return SVN_NO_ERROR;
+
+  /* If the node is immutable (has a revision), then the caller should
+     have supplied a valid revision number [that they expect to change].
+     The checks further below will determine the out-of-dateness of the
+     specified revision.  */
+  /* ### ugh. descendents of copy/move/rotate destinations carry along
+     ### their original immutable state and (thus) a valid CREATED_REV.
+     ### but they are logically uncommitted, so the caller will pass
+     ### SVN_INVALID_REVNUM. (technically, the caller could provide
+     ### ORIGINAL_REV, but that is semantically incorrect for the Ev2
+     ### API).
+     ###
+     ### for now, we will assume the caller knows what they are doing
+     ### and an invalid revision implies such a descendent. in the
+     ### future, we could examine the ancestor chain looking for a
+     ### copy/move/rotate-here node and allow the modification (and the
+     ### converse: if no such ancestor, the caller must specify the
+     ### correct/intended revision to modify).
+  */
+#if 1
+  if (!SVN_IS_VALID_REVNUM(revision))
+    return SVN_NO_ERROR;
+#else
+  if (!SVN_IS_VALID_REVNUM(revision))
+    /* ### use a custom error code?  */
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             N_("Revision for modifying '%s' is required"),
+                             fspath);
+#endif
+
       if (revision < created_rev)
         {
           /* We asked to change a node that is *older* than what we found
@@ -188,7 +225,7 @@ can_modify(svn_fs_root_t *txn_root,
                                    fspath);
         }
 
-      /* revision > created_rev  */
+    if (revision > created_rev)
       {
         /* We asked to change a node that is *newer* than what we found
            in the transaction. Given that the transaction was based off
@@ -226,7 +263,6 @@ can_modify(svn_fs_root_t *txn_root,
                                      fspath);
           }
       }
-    }
 
   return SVN_NO_ERROR;
 }
@@ -370,13 +406,6 @@ alter_directory_cb(void *baton,
   /* Note: we ignore CHILDREN. We have no "incomplete" state to worry about,
      so we don't need to be aware of what children will be created.  */
 
-  if (!SVN_IS_VALID_REVNUM(revision))
-    /* ### use a custom error code?  */
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             N_("Revision for modification of '%s' "
-                                "is required"),
-                             fspath);
-
   SVN_ERR(get_root(&root, eb));
   SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
 
@@ -399,13 +428,6 @@ alter_file_cb(void *baton,
   struct edit_baton *eb = baton;
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
-
-  if (!SVN_IS_VALID_REVNUM(revision))
-    /* ### use a custom error code?  */
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             N_("Revision for modification of '%s' "
-                                "is required"),
-                             fspath);
 
   SVN_ERR(get_root(&root, eb));
   SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
@@ -452,13 +474,6 @@ delete_cb(void *baton,
   const char *fspath = FSPATH(relpath, scratch_pool);
   svn_fs_root_t *root;
 
-  if (!SVN_IS_VALID_REVNUM(revision))
-    /* ### use a custom error code?  */
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             N_("Revision for deletion of '%s' "
-                                "is required"),
-                             fspath);
-
   SVN_ERR(get_root(&root, eb));
   SVN_ERR(can_modify(root, fspath, revision, scratch_pool));
 
@@ -482,13 +497,6 @@ copy_cb(void *baton,
   const char *dst_fspath = FSPATH(dst_relpath, scratch_pool);
   svn_fs_root_t *root;
   svn_fs_root_t *src_root;
-
-  if (!SVN_IS_VALID_REVNUM(src_revision))
-    /* ### use a custom error code?  */
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             N_("Source revision for copy of '%s' "
-                                "is required"),
-                             src_fspath);
 
   SVN_ERR(get_root(&root, eb));
 
@@ -522,13 +530,6 @@ move_cb(void *baton,
   const char *dst_fspath = FSPATH(dst_relpath, scratch_pool);
   svn_fs_root_t *root;
   svn_fs_root_t *src_root;
-
-  if (!SVN_IS_VALID_REVNUM(src_revision))
-    /* ### use a custom error code?  */
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             N_("Source revision for move of '%s' "
-                                "is required"),
-                             src_fspath);
 
   SVN_ERR(get_root(&root, eb));
 
