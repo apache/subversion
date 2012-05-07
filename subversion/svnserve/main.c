@@ -150,6 +150,11 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_CACHE_REVPROPS  267
 #define SVNSERVE_OPT_SINGLE_CONN     268
 
+/* Helper macros to stringify ra_svn's default port number. */
+#define SVNSERVE_PORT(p) SVNSERVE_PORT_STR(p)
+#define SVNSERVE_PORT_STR(p) #p
+
+
 static const apr_getopt_option_t svnserve__options[] =
   {
     {"daemon",           'd', 0, N_("daemon mode")},
@@ -167,11 +172,11 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
 #ifdef WIN32
-     N_("listen port\n"
+     N_("listen port. The default port is " SVNSERVE_PORT(SVN_RA_SVN_PORT) "\n"
         "                             "
         "[mode: daemon, service, listen-once]")},
 #else
-     N_("listen port\n"
+     N_("listen port. The default port is " SVNSERVE_PORT(SVN_RA_SVN_PORT) ".\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -179,9 +184,13 @@ static const apr_getopt_option_t svnserve__options[] =
 #ifdef WIN32
      N_("listen hostname or IP address\n"
         "                             "
+        "By default svnserve listens on all addresses.\n"
+        "                             "
         "[mode: daemon, service, listen-once]")},
 #else
      N_("listen hostname or IP address\n"
+        "                             "
+        "By default svnserve listens on all addresses.\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
