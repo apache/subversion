@@ -238,7 +238,7 @@ propset_on_url(const char *propname,
                                 props, NULL, NULL);
   else
     err = svn_editor_alter_directory(editor, relpath, base_revision_for_url,
-                                     props);
+                                     NULL, props);
 
   if (err)
     {

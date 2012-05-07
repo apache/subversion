@@ -1689,7 +1689,7 @@ do_item_commit(svn_client_commit_item3_t *item,
       else
         {
           SVN_ERR(svn_editor_alter_directory(editor, repos_relpath,
-                                             item->revision, props));
+                                             item->revision, NULL, props));
         }
     }
 

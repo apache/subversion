@@ -597,7 +597,7 @@ drive_single_path(svn_editor_t *editor,
                                       NULL, NULL));
       else
         SVN_ERR(svn_editor_alter_directory(editor, path_info->dst_relpath,
-                                           SVN_INVALID_REVNUM,
+                                           SVN_INVALID_REVNUM, NULL,
                                            path_info->props));
     }
 
