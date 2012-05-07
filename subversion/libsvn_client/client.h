@@ -1006,11 +1006,12 @@ svn_client__export_externals(apr_hash_t *externals,
                              apr_pool_t *pool);
 
 
-/* Perform status operations on each external in TRAVERSAL_INFO.  All
-   other options are the same as those passed to svn_client_status(). */
+/* Perform status operations on each external in EXTERNAL_MAP, a const char *
+   local_abspath of all externals mapping to the const char* defining_abspath.
+   All other options are the same as those passed to svn_client_status(). */
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
-                               apr_hash_t *external_defs,
+                               apr_hash_t *external_map,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
