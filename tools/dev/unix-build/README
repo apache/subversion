@@ -22,12 +22,25 @@ repository.
 
 Usage
 =====
-First, choose a directory $(SVN_DEV) to set up the environment. Note
-that this directory cannot be changed later because the script
+First, choose a directory $(SVN_DEV) to set up the environment.
+For example, $(SVN_DEV) could be the directory "~/svn".
+Note that this directory cannot be changed later because the script
 hardcodes build and link paths relative to the current working
 directory.
 
-To fetch and build trunk, simply don't pass anything.
+  $ mkdir $(SVN_DEV)
+
+Now change into this directory and make the Makefile available in it:
+
+  $ cd $(SVN_DEV)
+  $ svn checkout https://svn.apache.org/repos/asf/subversion/trunk/tools/dev/unix-build
+  $ ln -s unix-build/Makefile.svn Makefile
+
+To fetch and build trunk, simply don't pass anything, just run 'make':
+
+  $ cd $(SVN_DEV)
+  $ make
+
 Pass the branch you want to build in BRANCH, e.g.
 	$ make BRANCH="1.5.x"
 You can also pass a tag to build: 
