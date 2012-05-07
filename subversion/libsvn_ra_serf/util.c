@@ -1109,26 +1109,24 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 {
   svn_ra_serf__handler_t *handler = baton;
 
-  /* This response handler requires a pool for the server error.  */
-  SVN_ERR_ASSERT(handler->handler_pool);
+  /* We should see this just once, in order to initialize SERVER_ERROR.
+     At that point, the core error processing will take over. If we choose
+     not to parse an error, then we'll never return here (because we
+     change the response handler).  */
+  SVN_ERR_ASSERT(handler->server_error == NULL);
 
-  /* If necessary, initialize our XML parser. */
-  if (handler->server_error == NULL)
     {
-      svn_ra_serf__server_error_t *server_err;
       serf_bucket_t *hdrs;
       const char *val;
-
-      /* ### it would be nice to avoid allocating this every time. we
-         ### could potentially have a flag indicating we have examined
-         ### the Content-Type header already.  */
-      server_err = apr_pcalloc(handler->handler_pool, sizeof(*server_err));
-      server_err->init = TRUE;
 
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
         {
+          svn_ra_serf__server_error_t *server_err;
+
+          server_err = apr_pcalloc(handler->handler_pool, sizeof(*server_err));
+          server_err->init = TRUE;
           server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
           server_err->has_xml_response = TRUE;
           server_err->contains_precondition_error = FALSE;
@@ -1143,6 +1141,8 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 
           /* Get the parser to set our DONE flag.  */
           server_err->parser.done = &handler->done;
+
+          handler->server_error = server_err;
         }
       else
         {
@@ -1150,53 +1150,18 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
              ### caller thinks we are "done", then it may never call into
              ### serf_context_run() again to flush the response.  */
           handler->done = TRUE;
-          server_err->error = SVN_NO_ERROR;
-        }
 
-      handler->server_error = server_err;
+          /* The body was not text/xml, so we don't know what to do with it.
+             Toss anything that arrives.  */
+          handler->response_handler = svn_ra_serf__handle_discard_body;
+          handler->response_baton = NULL;
+        }
     }
 
-  /* If server_err->error still contains APR_SUCCESS, it means that we
-     have not successfully parsed the XML yet. */
-  if (handler->server_error
-      && handler->server_error->error
-      && handler->server_error->error->apr_err == APR_SUCCESS)
-    {
-      svn_error_t *err;
-
-      err = svn_ra_serf__handle_xml_parser(request, response,
-                                           &handler->server_error->parser,
-                                           scratch_pool);
-
-      /* APR_EOF will be returned when parsing is complete.  If we see
-         any other error, return it immediately.  In practice the only
-         other error we expect to see is APR_EAGAIN, which indicates that
-         we could not parse the XML because the contents are not yet
-         available to be read. */
-      if (!err || !APR_STATUS_IS_EOF(err->apr_err))
-        {
-          return svn_error_trace(err);
-        }
-      else if (handler->done
-               && handler->server_error->error->apr_err == APR_SUCCESS)
-        {
-          svn_error_clear(handler->server_error->error);
-          handler->server_error->error = SVN_NO_ERROR;
-
-          /* ### it would be nice to do this, but if we enter this response
-             ### handler again, it would be re-created. this throws back to
-             ### the idea of a flag determining whether we haved looked for
-             ### a server error.  */
-#if 0
-          handler->server_error = NULL;
-#endif
-        }
-
-      svn_error_clear(err);
-    }
-
-  return svn_error_trace(svn_ra_serf__handle_discard_body(
-                           request, response, NULL, scratch_pool));
+  /* Returning SVN_NO_ERROR will return APR_SUCCESS to serf, which tells it
+     to call the response handler again. That will start up the XML parsing,
+     or it will be dropped on the floor (per the decision above).  */
+  return SVN_NO_ERROR;
 }
 
 
@@ -1674,40 +1639,52 @@ handle_response(serf_request_t *request,
                 serf_bucket_t *response,
                 svn_ra_serf__handler_t *handler,
                 apr_status_t *serf_status,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
-  serf_status_line sl;
   apr_status_t status;
   svn_error_t *err;
 
+  /* ### need to verify whether this already gets init'd on every
+     ### successful exit. for an error-exit, it will (properly) be
+     ### ignored by the caller.  */
+  *serf_status = APR_SUCCESS;
+
   if (!response)
     {
-      /* Uh-oh.  Our connection died.  Requeue. */
+      /* Uh-oh. Our connection died.  */
       if (handler->response_error)
         SVN_ERR(handler->response_error(request, response, 0,
                                         handler->response_error_baton));
 
+      /* Requeue another request for this handler.
+         ### how do we know if the handler can deal with this?!  */
       svn_ra_serf__request_create(handler);
 
-      return APR_SUCCESS;
+      return SVN_NO_ERROR;
     }
 
   /* If we're reading the body, then skip all this preparation.  */
   if (handler->reading_body)
     goto process_body;
 
-  status = serf_bucket_response_status(response, &sl);
-  if (SERF_BUCKET_READ_ERROR(status))
+  /* Copy the Status-Line info into HANDLER, if we don't yet have it.  */
+  if (handler->sline.version == 0)
     {
-      *serf_status = status;
-      return SVN_NO_ERROR; /* Handled by serf */
-    }
-  if (!sl.version && (APR_STATUS_IS_EOF(status) ||
-                      APR_STATUS_IS_EAGAIN(status)))
-    {
-      /* The response line is not (yet) ready.  */
-      *serf_status = status;
-      return SVN_NO_ERROR; /* Handled by serf */
+      serf_status_line sl;
+
+      status = serf_bucket_response_status(response, &sl);
+      if (status != APR_SUCCESS)
+        {
+          /* The response line is not (yet) ready, or some other error.  */
+          *serf_status = status;
+          return SVN_NO_ERROR; /* Handled by serf */
+        }
+
+      /* If we got APR_SUCCESS, then we should have Status-Line info.  */
+      SVN_ERR_ASSERT(sl.version != 0);
+
+      handler->sline = sl;
+      handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
     }
 
   status = serf_bucket_response_wait_for_headers(response);
@@ -1715,9 +1692,19 @@ handle_response(serf_request_t *request,
     {
       if (!APR_STATUS_IS_EOF(status))
         {
+          /* Either the headers are not (yet) complete, or there really
+             was an error.  */
           *serf_status = status;
           return SVN_NO_ERROR;
         }
+
+      /* wait_for_headers() will return EOF if there is no body in this
+         response, or if we completely read the body. The latter is not
+         true since we would have set READING_BODY to get the body read,
+         and we would not be back to this code block.
+
+         It can also return EOF if we truly hit EOF while (say) processing
+         the headers. aka Badness.  */
 
       /* Cases where a lack of a response body (via EOF) is okay:
        *  - A HEAD request
@@ -1728,21 +1715,24 @@ handle_response(serf_request_t *request,
        * scream loudly.
        */
       if (strcmp(handler->method, "HEAD") != 0
-          && sl.code != 204
-          && sl.code != 304)
+          && handler->sline.code != 204
+          && handler->sline.code != 304)
         {
           err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
                                   svn_error_wrap_apr(status, NULL),
                                   _("Premature EOF seen from server"
-                                    " (http status=%d)"), sl.code);
+                                    " (http status=%d)"),
+                                  handler->sline.code);
+
           /* This discard may be no-op, but let's preserve the algorithm
              used elsewhere in this function for clarity's sake. */
-          svn_ra_serf__response_discard_handler(request, response, NULL, pool);
+          svn_ra_serf__response_discard_handler(request, response, NULL,
+                                                scratch_pool);
           return err;
         }
     }
 
-  if (handler->conn->last_status_code == 401 && sl.code < 400)
+  if (handler->conn->last_status_code == 401 && handler->sline.code < 400)
     {
       SVN_ERR(svn_auth_save_credentials(handler->session->auth_state,
                                         handler->session->pool));
@@ -1750,14 +1740,20 @@ handle_response(serf_request_t *request,
       handler->session->auth_state = NULL;
     }
 
-  handler->conn->last_status_code = sl.code;
+  handler->conn->last_status_code = handler->sline.code;
 
-  if (sl.code == 405 || sl.code == 409 || sl.code >= 500)
+  if (handler->sline.code == 405
+      || handler->sline.code == 409
+      || handler->sline.code >= 500)
     {
       /* 405 Method Not allowed.
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
-      SVN_ERR(svn_ra_serf__handle_server_error(request, response, pool));
+      /* ### this is completely wrong. it only catches the current network
+         ### packet. we need ongoing parsing. see SERVER_ERROR down below
+         ### in the process_body: area. we'll eventually move to that.  */
+      SVN_ERR(svn_ra_serf__handle_server_error(request, response,
+                                               scratch_pool));
 
       if (!handler->session->pending_error)
         {
@@ -1765,38 +1761,75 @@ handle_response(serf_request_t *request,
 
           /* 405 == Method Not Allowed (Occurs when trying to lock a working
              copy path which no longer exists at HEAD in the repository. */
-
-          if (sl.code == 405 && !strcmp(handler->method, "LOCK"))
+          if (handler->sline.code == 405
+              && strcmp(handler->method, "LOCK") == 0)
             apr_err = SVN_ERR_FS_OUT_OF_DATE;
 
-          return
-              svn_error_createf(apr_err, NULL,
-                                _("%s request on '%s' failed: %d %s"),
-                                handler->method, handler->path,
-                                sl.code, sl.reason);
+          return svn_error_createf(apr_err, NULL,
+                                   _("%s request on '%s' failed: %d %s"),
+                                   handler->method, handler->path,
+                                   handler->sline.code, handler->sline.reason);
         }
 
       return SVN_NO_ERROR; /* Error is set in caller */
     }
 
+  /* ... and set up the header fields in HANDLER.  */
+  handler->location = svn_ra_serf__response_get_location(
+                          response, handler->handler_pool);
+
   /* Stop processing the above, on every packet arrival.  */
   handler->reading_body = TRUE;
 
-  /* ... and set up the header fields in HANDLER if the caller is
-     interested.  */
-  if (handler->handler_pool != NULL)
+ process_body:
+
+  /* If we are supposed to parse the body as a server_error, then do
+     that now.  */
+  if (handler->server_error != NULL)
     {
-      handler->sline = sl;
-      handler->sline.reason = apr_pstrdup(handler->handler_pool,
-                                          handler->sline.reason);
-      handler->location = svn_ra_serf__response_get_location(
-                              response, handler->handler_pool);
+      err = svn_ra_serf__handle_xml_parser(request, response,
+                                           &handler->server_error->parser,
+                                           scratch_pool);
+
+      /* APR_EOF will be returned when parsing is complete.  If we see
+         any other error, return it immediately.
+
+         In practice the only other error we expect to see is APR_EAGAIN,
+         which indicates the network has no more data right now. This
+         svn_error_t will get unwrapped, and that APR_EAGAIN will be
+         returned to serf. We'll get called later, when more network data
+         is available.  */
+      if (!err || !APR_STATUS_IS_EOF(err->apr_err))
+        return svn_error_trace(err);
+
+      /* Clear the EOF. We don't need it.  */
+      svn_error_clear(err);
+
+      /* If the parsing is done, and we did not extract an error, then
+         simply toss everything, and anything else that might arrive.
+         The higher-level code will need to investigate HANDLER->SLINE,
+         as we have no further information for them.  */
+      if (handler->done
+          && handler->server_error->error->apr_err == APR_SUCCESS)
+        {
+          svn_error_clear(handler->server_error->error);
+
+          /* Stop parsing for a server error.  */
+          handler->server_error = NULL;
+
+          /* If anything arrives after this, then just discard it.  */
+          handler->response_handler = svn_ra_serf__handle_discard_body;
+          handler->response_baton = NULL;
+        }
+
+      *serf_status = APR_EOF;
+      return SVN_NO_ERROR;
     }
 
- process_body:
+  /* Pass the body along to the registered response handler.  */
   err = handler->response_handler(request, response,
                                   handler->response_baton,
-                                  pool);
+                                  scratch_pool);
 
   if (err
       && (!SERF_BUCKET_READ_ERROR(err->apr_err)
@@ -1916,6 +1949,20 @@ void
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   SVN_ERR_ASSERT_NO_RETURN(handler->handler_pool != NULL);
+
+  /* In case HANDLER is re-queued, reset the various transient fields.
+
+     ### prior to recent changes, HANDLER was constant. maybe we should
+     ### break out these processing fields, apart from the request
+     ### definition.  */
+  handler->done = FALSE;
+  handler->server_error = NULL;
+  handler->sline.version = 0;
+  handler->location = NULL;
+  handler->reading_body = FALSE;
+
+  /* ### sometimes, we alter the >response_handler. how to reset that?
+     ### so far, that is just to discard the body. maybe a flag?  */
 
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
