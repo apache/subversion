@@ -1915,7 +1915,7 @@ setup_request_cb(serf_request_t *request,
 void
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
-  SVN_ERR_ASSERT(handler->handler_pool != NULL);
+  SVN_ERR_ASSERT_NO_RETURN(handler->handler_pool != NULL);
 
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
