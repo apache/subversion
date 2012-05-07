@@ -23,7 +23,7 @@
 #  svntweet.py  my-config.json
 #
 # With my-config.json containing stream paths and the twitter auth info:
-#    {"stream": "http://svn-master.apache.org:2069/commits/xml",
+#    {"stream": "http://svn.apache.org:2069/commits/xml",
 #     "username": "asfcommits",
 #     "password": "MyLuggageComboIs1234"}
 #
