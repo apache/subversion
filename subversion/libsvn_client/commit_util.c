@@ -1654,7 +1654,7 @@ do_item_commit(svn_client_commit_item3_t *item,
 
           SVN_ERR_ASSERT(props != NULL);
 
-          SVN_ERR(svn_wc__node_get_children(&children_abspaths,
+          SVN_ERR(svn_wc__node_get_children_of_working_node(&children_abspaths,
                                             ctx->wc_ctx, item->path, FALSE,
                                             scratch_pool, scratch_pool));
 
