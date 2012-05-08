@@ -1747,8 +1747,11 @@ svn_client__do_commit(const char *repos_root,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *file_mods = apr_array_make(scratch_pool, 1,
+                                         sizeof(svn_client_commit_item3_t *));
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *checksums = apr_hash_make(result_pool);
+  apr_hash_index_t *hi;
   int i;
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
@@ -1767,6 +1770,32 @@ svn_client__do_commit(const char *repos_root,
 
       SVN_ERR(do_item_commit_wrap_error(item, editor, notify_path_prefix,
                                         repos_root, checksums, ctx, iterpool));
+
+      if ((item->kind == svn_node_file)
+            && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
+        APR_ARRAY_PUSH(file_mods, svn_client_commit_item3_t *) = item;
+    }
+
+  /* This is the old habit of doing things, so right now we just spool several
+     additional notifications to the client, saying we transmitted contents,
+     even though it has already happened. */
+  for (i = 0; i < file_mods->nelts; i++)
+    {
+      const svn_client_commit_item3_t *item =
+                    APR_ARRAY_IDX(file_mods, i, svn_client_commit_item3_t *);
+      svn_pool_clear(iterpool);
+
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+          notify = svn_wc_create_notify(item->path,
+                                        svn_wc_notify_commit_postfix_txdelta,
+                                        iterpool);
+          notify->kind = svn_node_file;
+          notify->path_prefix = notify_path_prefix;
+          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+        }
+
     }
 
   svn_pool_destroy(iterpool);
