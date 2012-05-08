@@ -1461,6 +1461,7 @@ do_item_commit(svn_client_commit_item3_t *item,
   svn_checksum_t *sha1_checksum = NULL;
   svn_checksum_t *md5_checksum = NULL;
   svn_stream_t *contents = NULL;
+  svn_revnum_t replaces_rev = SVN_INVALID_REVNUM;
   const char *repos_relpath = svn_uri_skip_ancestor(repos_root, item->url,
                                                     scratch_pool);
 
@@ -1561,7 +1562,8 @@ do_item_commit(svn_client_commit_item3_t *item,
     }
 
   /* If this item is supposed to be deleted, do so. */
-  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+        && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
     {
       SVN_ERR(svn_editor_delete(editor, repos_relpath, item->revision));
 
@@ -1624,6 +1626,12 @@ do_item_commit(svn_client_commit_item3_t *item,
                                                         scratch_pool));
     }
 
+  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) &&
+        (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+    {
+      replaces_rev = item->revision;
+    }
+
   /* If this item is supposed to be added, do so. */
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) &&
         !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
@@ -1636,7 +1644,7 @@ do_item_commit(svn_client_commit_item3_t *item,
 
           SVN_ERR(svn_editor_add_file(editor, repos_relpath,
                                       sha1_checksum, contents, props,
-                                      SVN_INVALID_REVNUM));
+                                      replaces_rev));
         }
       else /* May be svn_node_none when adding parent dirs for a copy. */
         {
@@ -1664,7 +1672,7 @@ do_item_commit(svn_client_commit_item3_t *item,
 
           SVN_ERR(svn_editor_add_directory(editor, repos_relpath,
                                            children, props,
-                                           SVN_INVALID_REVNUM));
+                                           replaces_rev));
         }
     }
 
@@ -1674,7 +1682,7 @@ do_item_commit(svn_client_commit_item3_t *item,
                                                       item->copyfrom_url,
                                                       scratch_pool);
       SVN_ERR(svn_editor_copy(editor, src_relpath, item->copyfrom_rev,
-                              repos_relpath, SVN_INVALID_REVNUM));
+                              repos_relpath, replaces_rev));
     }
 
   if ((props || contents)
