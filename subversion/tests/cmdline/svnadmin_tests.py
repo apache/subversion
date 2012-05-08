@@ -1281,7 +1281,6 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
 @SkipUnless(svntest.main.is_posix_os)
 @Issue(2591)
-@XFail(svntest.main.is_fs_type_fsfs)
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 

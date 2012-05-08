@@ -9207,6 +9207,20 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 }
 
 
+/* Set up shared data between SRC_FS and DST_FS. */
+static void
+hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
+{
+  fs_fs_data_t *src_ffd = src_fs->fsap_data;
+  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+
+  /* The common pool and mutexes are shared between src and dst filesystems.
+   * During hotcopy we only grab the mutexes for the destination, so there
+   * is no risk of dead-lock. We don't write to the src filesystem. Shared
+   * data for the src_fs has already been initialised in fs_hotcopy(). */
+  dst_ffd->shared = src_ffd->shared;
+}
+
 /* Create an empty filesystem at DST_FS at DST_PATH with the same
  * configuration as SRC_FS (uuid, format, and other parameters).
  * After creation DST_FS has no revisions, not even revision zero. */
@@ -9282,6 +9296,10 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
     }
 
   dst_ffd->youngest_rev_cache = 0;
+
+  hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+  SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -9323,6 +9341,8 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
           SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
           SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
                                                           pool));
+          hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+          SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
         }
     }
   else
