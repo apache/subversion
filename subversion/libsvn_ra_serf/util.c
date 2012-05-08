@@ -1916,7 +1916,6 @@ handle_response_cb(serf_request_t *request,
                    apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t *handler = baton;
-  svn_ra_serf__session_t *session = handler->session;
   svn_error_t *err;
   apr_status_t inner_status;
   apr_status_t outer_status;
@@ -1925,8 +1924,16 @@ handle_response_cb(serf_request_t *request,
                                         handler, &inner_status,
                                         scratch_pool));
 
-  outer_status = save_error(session, err);
-  return outer_status ? outer_status : inner_status;
+  /* Select the right status value to return.  */
+  outer_status = save_error(handler->session, err);
+  if (!outer_status)
+    outer_status = inner_status;
+
+  /* Make sure the DONE flag is set properly.  */
+  if (APR_STATUS_IS_EOF(outer_status) || APR_STATUS_IS_EOF(inner_status))
+    handler->done = TRUE;
+
+  return outer_status;
 }
 
 /* Perform basic request setup, with special handling for HEAD requests,
