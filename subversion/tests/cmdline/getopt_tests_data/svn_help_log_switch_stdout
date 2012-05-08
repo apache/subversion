@@ -38,6 +38,10 @@ usage: 1. log [PATH][@REV]
     svn log http://www.example.com/repo/project foo.c bar.c
     svn log http://www.example.com/repo/project@50 foo.c bar.c
 
+    This command shows the log messages for any incoming changes
+    the next 'svn update' will apply:
+      svn log -rBASE:HEAD
+
     This command shows the log entry for the revision the branch
     ^/branches/foo was created in:
       svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo

@@ -681,6 +681,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"
      "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"
      "\n"
+     "    This command shows the log messages for any incoming changes\n"
+     "    the next 'svn update' will apply:\n"
+     "      svn log -rBASE:HEAD\n"
+     "\n"
      "    This command shows the log entry for the revision the branch\n"
      "    ^/branches/foo was created in:\n"
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
