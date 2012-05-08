@@ -48,11 +48,9 @@ usage: 1. log [PATH][@REV]
     '/trunk' as it appeared in revision 50, using the ^/ URL shortcut:
       svn log ^/trunk@50 foo.c bar.c
 
-    Show the log messages for any incoming changes the next 'svn update'
-    command will apply to the current working copy directory:
-      svn log -rBASE:HEAD
-    (The above applies to the current directory only; Use 'svn status -u'
-     to learn about incoming changes for the entire working copy.)
+    Show the log messages for any incoming changes to foo.c during the
+    next 'svn update':
+      svn log -r BASE:HEAD foo.c
 
     Show the log message for the revision in which /branches/foo
     was created:
