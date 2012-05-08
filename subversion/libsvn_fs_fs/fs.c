@@ -302,14 +302,10 @@ fs_hotcopy(svn_fs_t *src_fs,
 
   SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
   SVN_ERR(initialize_fs_struct(dst_fs));
-#if 0 
   /* In INCREMENTAL mode, svn_fs_fs__hotcopy() will open DST_FS.
      Otherwise, it's not an FS yet --- possibly just an empty dir --- so
      can't be opened.
    */
-  SVN_ERR(svn_fs_fs__open(fs, dst_path, pool));
-  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-#endif
   SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
 
   return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
