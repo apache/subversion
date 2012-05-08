@@ -9199,6 +9199,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
                                  PATH_TXN_CURRENT, pool));
 
+  /* If a revprop generation file exists in the source filesystem,
+   * force a fresh revprop caching namespace for the destination by
+   * setting the generation to zero. We have no idea if the revprops
+   * we copied above really belong to the currently cached generation. */
+  SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
+                            &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),
                        dst_ffd->format, max_files_per_dir, TRUE, pool));
