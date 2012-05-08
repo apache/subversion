@@ -1659,3 +1659,148 @@ svn_stream_buffered(apr_pool_t *result_pool)
   return svn_stream__from_spillbuf(BUFFER_BLOCK_SIZE, BUFFER_MAX_SIZE,
                                    result_pool);
 }
+
+
+
+/*** Lazyopen Streams ***/
+
+/* Custom baton for lazyopen-style wrapper streams. */
+typedef struct lazyopen_baton_t {
+
+  /* Callback function and baton for opening the wrapped stream. */
+  svn_stream_lazyopen_func_t open_func;
+  void *open_baton;
+
+  /* The wrapped stream, or NULL if the stream hasn't yet been
+     opened. */
+  svn_stream_t *real_stream;
+  apr_pool_t *pool;
+
+} lazyopen_baton_t;
+
+
+/* Use B->open_func/baton to create and set B->real_stream iff it
+   isn't already set. */
+static svn_error_t *
+lazyopen_if_unopened(lazyopen_baton_t *b)
+{
+  if (b->real_stream == NULL)
+    {
+      svn_stream_t *stream;
+      apr_pool_t *scratch_pool = svn_pool_create(b->pool);
+
+      SVN_ERR(b->open_func(&stream, b->open_baton,
+                           b->pool, scratch_pool));
+
+      svn_pool_destroy(scratch_pool);
+
+      b->real_stream = stream;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_read_fn_t */
+static svn_error_t *
+read_handler_lazyopen(void *baton,
+                      char *buffer,
+                      apr_size_t *len)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_read(b->real_stream, buffer, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_skip_fn_t */
+static svn_error_t *
+skip_handler_lazyopen(void *baton,
+                      apr_size_t len)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_skip(b->real_stream, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_write_fn_t */
+static svn_error_t *
+write_handler_lazyopen(void *baton,
+                       const char *data,
+                       apr_size_t *len)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_write(b->real_stream, data, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_close_fn_t */
+static svn_error_t *
+close_handler_lazyopen(void *baton)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_close(b->real_stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_mark_fn_t */
+static svn_error_t *
+mark_handler_lazyopen(void *baton,
+                      svn_stream_mark_t **mark,
+                      apr_pool_t *pool)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_mark(b->real_stream, mark, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_seek_fn_t */
+static svn_error_t *
+seek_handler_lazyopen(void *baton,
+                      const svn_stream_mark_t *mark)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_seek(b->real_stream, mark));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_stream_fn_t */
+svn_error_t *
+svn_stream_lazyopen_create(svn_stream_t **stream,
+                           svn_stream_lazyopen_func_t open_func,
+                           void *open_baton,
+                           apr_pool_t *result_pool)
+{
+  lazyopen_baton_t *lob = apr_pcalloc(result_pool, sizeof(*lob));
+
+  lob->open_func = open_func;
+  lob->open_baton = open_baton;
+  lob->real_stream = NULL;
+  lob->pool = result_pool;
+
+  *stream = svn_stream_create(lob, result_pool);
+  svn_stream_set_read(*stream, read_handler_lazyopen);
+  svn_stream_set_skip(*stream, skip_handler_lazyopen);
+  svn_stream_set_write(*stream, write_handler_lazyopen);
+  svn_stream_set_close(*stream, close_handler_lazyopen);
+  svn_stream_set_mark(*stream, mark_handler_lazyopen);
+  svn_stream_set_seek(*stream, seek_handler_lazyopen);
+
+  return SVN_NO_ERROR;
+}
