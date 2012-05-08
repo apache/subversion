@@ -1418,6 +1418,21 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 }
 
 
+/* ### this is still broken conceptually. just shifting incrementally... */
+static svn_error_t *
+handle_server_error(serf_request_t *request,
+                    serf_bucket_t *response,
+                    apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__server_error_t server_err = { 0 };
+
+  svn_error_clear(svn_ra_serf__handle_discard_body(request, response,
+                                                   &server_err, scratch_pool));
+
+  return server_err.error;
+}
+
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
@@ -1442,7 +1457,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
     {
       add_done_item(ctx);
 
-      err = svn_ra_serf__handle_server_error(request, response, pool);
+      err = handle_server_error(request, response, pool);
 
       SVN_ERR(svn_error_compose_create(
         svn_ra_serf__handle_discard_body(request, response, NULL, pool),
@@ -1580,20 +1595,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       /* feed me! */
     }
   /* not reached */
-}
-
-
-svn_error_t *
-svn_ra_serf__handle_server_error(serf_request_t *request,
-                                 serf_bucket_t *response,
-                                 apr_pool_t *pool)
-{
-  svn_ra_serf__server_error_t server_err = { 0 };
-
-  svn_error_clear(svn_ra_serf__handle_discard_body(request, response,
-                                                   &server_err, pool));
-
-  return server_err.error;
 }
 
 
@@ -1811,8 +1812,7 @@ handle_response(serf_request_t *request,
       /* ### this is completely wrong. it only catches the current network
          ### packet. we need ongoing parsing. see SERVER_ERROR down below
          ### in the process_body: area. we'll eventually move to that.  */
-      SVN_ERR(svn_ra_serf__handle_server_error(request, response,
-                                               scratch_pool));
+      SVN_ERR(handle_server_error(request, response, scratch_pool));
 
       if (!handler->session->pending_error)
         {
