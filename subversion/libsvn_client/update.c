@@ -194,7 +194,7 @@ update_internal(svn_revnum_t *result_rev,
   const char *anchor_url;
   const char *corrected_url;
   const char *target;
-  const char *repos_root;
+  const char *repos_root_url;
   const char *repos_relpath;
   svn_error_t *err;
   svn_revnum_t revnum;
@@ -223,7 +223,7 @@ update_internal(svn_revnum_t *result_rev,
     target = "";
 
   /* Check if our anchor exists in BASE. If it doesn't we can't update. */
-  SVN_ERR(svn_wc__node_get_base(&revnum, &repos_relpath, &repos_root, NULL,
+  SVN_ERR(svn_wc__node_get_base(&revnum, &repos_relpath, &repos_root_url, NULL,
                                 ctx->wc_ctx, anchor_abspath, pool, pool));
 
   /* It does not make sense to update conflict victims. */
@@ -263,7 +263,8 @@ update_internal(svn_revnum_t *result_rev,
                                _("'%s' has no URL"),
                                svn_dirent_local_style(anchor_abspath, pool));
 
-  anchor_url = svn_path_url_add_component2(repos_root, repos_relpath, pool);
+  anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                           pool);
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -340,18 +341,19 @@ update_internal(svn_revnum_t *result_rev,
      relocate our working copy first. */
   if (corrected_url)
     {
-      const char *current_repos_root;
-      const char *current_uuid;
+      const char *new_repos_root_url;
 
       /* To relocate everything inside our repository we need the old and new
-         repos root. ### And we should only perform relocates on the wcroot */
-      SVN_ERR(svn_wc__node_get_repos_info(&current_repos_root, &current_uuid,
-                                          ctx->wc_ctx, anchor_abspath,
-                                          pool, pool));
+         repos root. */
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url, pool));
 
-      /* ### Check uuid here before calling relocate? */
-      SVN_ERR(svn_client_relocate2(anchor_abspath, current_repos_root,
-                                   repos_root, ignore_externals, ctx, pool));
+      /* svn_client_relocate2() will check the uuid */
+      SVN_ERR(svn_client_relocate2(anchor_abspath, repos_root_url,
+                                   new_repos_root_url, ignore_externals,
+                                   ctx, pool));
+
+      /* Store updated repository root for externals */
+      repos_root_url = new_repos_root_url;
       anchor_url = corrected_url;
     }
 
@@ -428,7 +430,7 @@ update_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           repos_root, local_abspath,
+                                           repos_root_url, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }

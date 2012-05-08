@@ -456,6 +456,11 @@ typedef struct svn_ra_serf__handler_t {
   /* Internal flag to indicate we've parsed the headers.  */
   svn_boolean_t reading_body;
 
+  /* When this flag will be set, the core handler will discard any unread
+     portion of the response body. The registered response handler will
+     no longer be called.  */
+  svn_boolean_t discard_body;
+
   /* Pool for allocating SLINE.REASON and LOCATION. If this pool is NULL,
      then the requestor does not care about SLINE and LOCATION.  */
   apr_pool_t *handler_pool;
@@ -659,29 +664,6 @@ struct svn_ra_serf__server_error_t {
   svn_ra_serf__xml_parser_t parser;
 };
 
-/* A simple request context that can be passed to handle_status_only. */
-typedef struct svn_ra_serf__simple_request_context_t {
-  apr_pool_t *pool;
-
-  /* This value is set to TRUE when the response is completed. */
-  svn_boolean_t done;
-
-  /* If an error occurred, this value will be initialized. */
-  svn_ra_serf__server_error_t server_error;
-} svn_ra_serf__simple_request_context_t;
-
-/*
- * Serf handler for @a request / @a response pair that takes in a
- * @a baton (@see svn_ra_serf__simple_request_context_t).
- * Implements svn_ra_serf__response_handler_t.
- *
- * Temporary allocations are made in @a pool.
- */
-svn_error_t *
-svn_ra_serf__handle_status_only(serf_request_t *request,
-                                serf_bucket_t *response,
-                                void *baton,
-                                apr_pool_t *pool);
 
 /*
  * Handler that discards the entire @a response body associated with a
@@ -698,16 +680,6 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  void *baton,
                                  apr_pool_t *pool);
 
-/*
- * Handler that retrieves the embedded XML error response from the
- * the @a response body associated with a @a request.
- *
- * All temporary allocations will be made in a @a pool.
- */
-svn_error_t *
-svn_ra_serf__handle_server_error(serf_request_t *request,
-                                 serf_bucket_t *response,
-                                 apr_pool_t *pool);
 
 /*
  * Handler that retrieves the embedded XML multistatus response from the
@@ -725,6 +697,28 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
+
+
+/* Handler that expects an empty body.
+
+   If a body IS present, and it is text/xml, then it will be parsed for
+   a server-side error.
+
+   BATON should be the svn_ra_serf__handler_t running REQUEST.
+
+   Status line information will be in HANDLER->SLINE.
+
+   Any parsed errors will be left in HANDLER->SERVER_ERROR. That member
+   may be NULL if no body was present, or a problem occurred trying to
+   parse the body.
+
+   All temporary allocations will be made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__expect_empty_body(serf_request_t *request,
+                               serf_bucket_t *response,
+                               void *baton,
+                               apr_pool_t *scratch_pool);
+
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is

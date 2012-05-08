@@ -346,8 +346,8 @@ def basic_mkdir_wc_with_parents(sbox):
 
 
 #----------------------------------------------------------------------
-def basic_corruption(sbox):
-  "basic corruption detection"
+def basic_commit_corruption(sbox):
+  "basic corruption detection on commit"
 
   ## I always wanted a test named "basic_corruption". :-)
   ## Here's how it works:
@@ -358,18 +358,11 @@ def basic_corruption(sbox):
   ##    3. Intentionally corrupt `first/A/.svn/text-base/mu.svn-base'.
   ##    4. Try to commit, expect a failure.
   ##    5. Repair the text-base, commit again, expect success.
-  ##    6. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
-  ##    7. Try to update `second', expect failure.
-  ##    8. Repair the text-base, update again, expect success.
   ##
   ## Here we go...
 
   sbox.build()
   wc_dir = sbox.wc_dir
-
-  # Make the "other" working copy
-  other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
@@ -412,6 +405,48 @@ def basic_corruption(sbox):
   os.rename(mu_saved_tb_path, mu_tb_path)
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
+
+  # This commit should succeed.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+#----------------------------------------------------------------------
+def basic_update_corruption(sbox):
+  "basic corruption detection on update"
+
+  ## I always wanted a test named "basic_corruption". :-)
+  ## Here's how it works:
+  ##
+  ##    1. Make a working copy at rev 1, duplicate it.  Now we have
+  ##        two working copies at rev 1.  Call them first and second.
+  ##    2. Make a local mod to `first/A/mu'.
+  ##    3. Repair the text-base, commit again, expect success.
+  ##    4. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
+  ##    5. Try to update `second', expect failure.
+  ##    6. Repair the text-base, update again, expect success.
+  ##
+  ## Here we go...
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make the "other" working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Make a local mod to mu
+  mu_path = sbox.ospath('A/mu')
+  svntest.main.file_append(mu_path, 'appended mu text')
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -2960,7 +2995,8 @@ test_list = [ None,
               basic_mkdir_url,
               basic_mkdir_url_with_parents,
               basic_mkdir_wc_with_parents,
-              basic_corruption,
+              basic_commit_corruption,
+              basic_update_corruption,
               basic_merging_update,
               basic_conflict,
               basic_cleanup,

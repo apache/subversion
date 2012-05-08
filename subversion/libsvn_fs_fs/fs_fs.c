@@ -9199,6 +9199,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
                                  PATH_TXN_CURRENT, pool));
 
+  /* If a revprop generation file exists in the source filesystem,
+   * force a fresh revprop caching namespace for the destination by
+   * setting the generation to zero. We have no idea if the revprops
+   * we copied above really belong to the currently cached generation. */
+  SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
+                            &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),
                        dst_ffd->format, max_files_per_dir, TRUE, pool));
@@ -9206,6 +9215,20 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+/* Set up shared data between SRC_FS and DST_FS. */
+static void
+hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
+{
+  fs_fs_data_t *src_ffd = src_fs->fsap_data;
+  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+
+  /* The common pool and mutexes are shared between src and dst filesystems.
+   * During hotcopy we only grab the mutexes for the destination, so there
+   * is no risk of dead-lock. We don't write to the src filesystem. Shared
+   * data for the src_fs has already been initialised in fs_hotcopy(). */
+  dst_ffd->shared = src_ffd->shared;
+}
 
 /* Create an empty filesystem at DST_FS at DST_PATH with the same
  * configuration as SRC_FS (uuid, format, and other parameters).
@@ -9282,6 +9305,10 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
     }
 
   dst_ffd->youngest_rev_cache = 0;
+
+  hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+  SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -9323,6 +9350,8 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
           SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
           SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
                                                           pool));
+          hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+          SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
         }
     }
   else

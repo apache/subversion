@@ -216,53 +216,53 @@ can_modify(svn_fs_root_t *txn_root,
                              fspath);
 #endif
 
-      if (revision < created_rev)
+  if (revision < created_rev)
+    {
+      /* We asked to change a node that is *older* than what we found
+         in the transaction. The client is out of date.  */
+      return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                               _("'%s' is out of date; try updating"),
+                               fspath);
+    }
+
+  if (revision > created_rev)
+    {
+      /* We asked to change a node that is *newer* than what we found
+         in the transaction. Given that the transaction was based off
+         of 'youngest', then either:
+         - the caller asked to modify a future node
+         - the caller has committed more revisions since this txn
+         was constructed, and is asking to modify a node in one
+         of those new revisions.
+         In either case, the node may not have changed in those new
+         revisions; use the node's ID to determine this case.  */
+      const svn_fs_id_t *txn_noderev_id;
+      svn_fs_root_t *rev_root;
+      const svn_fs_id_t *new_noderev_id;
+
+      /* The ID of the node that we would be modifying in the txn  */
+      SVN_ERR(svn_fs_node_id(&txn_noderev_id, txn_root, fspath,
+                             scratch_pool));
+
+      /* Get the ID from the future/new revision.  */
+      SVN_ERR(svn_fs_revision_root(&rev_root, svn_fs_root_fs(txn_root),
+                                   revision, scratch_pool));
+      SVN_ERR(svn_fs_node_id(&new_noderev_id, rev_root, fspath,
+                             scratch_pool));
+      svn_fs_close_root(rev_root);
+
+      /* Has the target node changed in the future?  */
+      if (svn_fs_compare_ids(txn_noderev_id, new_noderev_id) != 0)
         {
-          /* We asked to change a node that is *older* than what we found
-             in the transaction. The client is out of date.  */
-          return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                   _("'%s' is out of date; try updating"),
+          /* Restarting the commit will base the txn on the future/new
+             revision, allowing the modification at REVISION.  */
+          /* ### use a custom error code  */
+          return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+                                   _("'%s' has been modified since the "
+                                     "commit began (restart the commit)"),
                                    fspath);
         }
-
-    if (revision > created_rev)
-      {
-        /* We asked to change a node that is *newer* than what we found
-           in the transaction. Given that the transaction was based off
-           of 'youngest', then either:
-           - the caller asked to modify a future node
-           - the caller has committed more revisions since this txn
-           was constructed, and is asking to modify a node in one
-           of those new revisions.
-           In either case, the node may not have changed in those new
-           revisions; use the node's ID to determine this case.  */
-        const svn_fs_id_t *txn_noderev_id;
-        svn_fs_root_t *rev_root;
-        const svn_fs_id_t *new_noderev_id;
-
-        /* The ID of the node that we would be modifying in the txn  */
-        SVN_ERR(svn_fs_node_id(&txn_noderev_id, txn_root, fspath,
-                               scratch_pool));
-
-        /* Get the ID from the future/new revision.  */
-        SVN_ERR(svn_fs_revision_root(&rev_root, svn_fs_root_fs(txn_root),
-                                     revision, scratch_pool));
-        SVN_ERR(svn_fs_node_id(&new_noderev_id, rev_root, fspath,
-                               scratch_pool));
-        svn_fs_close_root(rev_root);
-
-        /* Has the target node changed in the future?  */
-        if (svn_fs_compare_ids(txn_noderev_id, new_noderev_id) != 0)
-          {
-            /* Restarting the commit will base the txn on the future/new
-               revision, allowing the modification at REVISION.  */
-            /* ### use a custom error code  */
-            return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
-                                     _("'%s' has been modified since the "
-                                       "commit began (restart the commit)"),
-                                     fspath);
-          }
-      }
+    }
 
   return SVN_NO_ERROR;
 }
