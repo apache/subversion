@@ -295,11 +295,9 @@ fs_hotcopy(svn_fs_t *src_fs,
            apr_pool_t *pool)
 {
     {
-      const char *path = src_path;
-
       SVN_ERR(svn_fs__check_fs(src_fs, FALSE));
       SVN_ERR(initialize_fs_struct(src_fs));
-      SVN_ERR(svn_fs_fs__open(src_fs, path, pool));
+      SVN_ERR(svn_fs_fs__open(src_fs, src_path, pool));
       SVN_ERR(svn_fs_fs__initialize_caches(src_fs, pool));
       SVN_ERR(fs_serialized_init(src_fs, pool, pool));
     }
@@ -312,7 +310,7 @@ fs_hotcopy(svn_fs_t *src_fs,
          Otherwise, it's not an FS yet --- possibly just an empty dir --- so
          can't be opened.
        */
-      SVN_ERR(svn_fs_fs__open(fs, path, pool));
+      SVN_ERR(svn_fs_fs__open(fs, dst_path, pool));
       SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
 #endif
       SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
