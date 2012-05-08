@@ -72,8 +72,6 @@ typedef struct lock_info_t {
 
   svn_ra_serf__handler_t *handler;
 
-  /* are we done? */
-  svn_boolean_t done;
 } lock_info_t;
 
 
@@ -331,6 +329,42 @@ set_lock_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
+
+/* Register an error within the session. If something is already there,
+   then it will take precedence.  */
+static svn_error_t *
+determine_error(svn_ra_serf__handler_t *handler,
+                svn_error_t *err)
+{
+  /* If we found an error in the response, then blend it in.  */
+  if (handler->server_error)
+    {
+      /* Client-side error takes precedence.  */
+      err = svn_error_compose_create(err, handler->server_error->error);
+    }
+  else
+    {
+      apr_status_t errcode;
+
+      if (handler->sline.code == 423)
+        errcode = SVN_ERR_FS_PATH_ALREADY_LOCKED;
+      else if (handler->sline.code == 403)
+        errcode = SVN_ERR_RA_DAV_FORBIDDEN;
+      else
+        return err;
+
+      /* The server did not send us a detailed human-readable error.
+         Provide a generic error.  */
+      err = svn_error_createf(errcode, err,
+                              _("Lock request failed: %d %s"),
+                              handler->sline.code,
+                              handler->sline.reason);
+    }
+
+  return err;
+}
+
+
 /* Implements svn_ra_serf__response_handler_t */
 static svn_error_t *
 handle_lock(serf_request_t *request,
@@ -340,29 +374,23 @@ handle_lock(serf_request_t *request,
 {
   svn_ra_serf__xml_parser_t *xml_ctx = handler_baton;
   lock_info_t *ctx = xml_ctx->user_data;
-  svn_error_t *err;
+
+  /* 403 (Forbidden) when a lock doesn't exist.
+     423 (Locked) when a lock already exists.  */
+  if (ctx->handler->sline.code == 403
+      || ctx->handler->sline.code == 423)
+    {
+      /* Go look in the body for a server-provided error. This will
+         reset flags for the core handler to Do The Right Thing. We
+         won't be back to this handler again.  */
+      return svn_error_trace(svn_ra_serf__expect_empty_body(
+                               request, response, ctx->handler, pool));
+    }
 
   if (ctx->read_headers == FALSE)
     {
       serf_bucket_t *headers;
       const char *val;
-
-      /* 423 == Locked */
-      if (ctx->handler->sline.code == 423)
-        {
-          /* Older servers may not give a descriptive error, so we'll
-             make one of our own if we can't find one in the response. */
-          err = svn_ra_serf__handle_server_error(request, response, pool);
-          if (!err)
-            {
-              err = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
-                                      NULL,
-                                      _("Lock request failed: %d %s"),
-                                      ctx->handler->sline.code,
-                                      ctx->handler->sline.reason);
-            }
-          return err;
-        }
 
       headers = serf_bucket_response_get_headers(response);
 
@@ -380,24 +408,6 @@ handle_lock(serf_request_t *request,
         }
 
       ctx->read_headers = TRUE;
-    }
-
-  /* Forbidden when a lock doesn't exist. */
-  if (ctx->handler->sline.code == 403)
-    {
-      /* If we get an "unexpected EOF" error, we'll wrap it with
-         generic request failure error. */
-      err = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          ctx->done = TRUE;
-          err = svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN,
-                                  err,
-                                  _("Lock request failed: %d %s"),
-                                  ctx->handler->sline.code,
-                                  ctx->handler->sline.reason);
-        }
-      return err;
     }
 
   return svn_ra_serf__handle_xml_parser(request, response,
@@ -513,7 +523,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   parser_ctx->start = start_lock;
   parser_ctx->end = end_lock;
   parser_ctx->cdata = cdata_lock;
-  parser_ctx->done = &lock_ctx->done;
+  parser_ctx->done = &handler->done;
 
   handler->body_delegate = create_getlock_body;
   handler->body_delegate_baton = lock_ctx;
@@ -526,8 +536,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   lock_ctx->handler = handler;
 
-  svn_ra_serf__request_create(handler);
-  err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
+  err = svn_ra_serf__context_run_one(handler, pool);
+  err = determine_error(handler, err);
 
   if (handler->sline.code == 404)
     {
@@ -608,7 +618,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       parser_ctx->start = start_lock;
       parser_ctx->end = end_lock;
       parser_ctx->cdata = cdata_lock;
-      parser_ctx->done = &lock_ctx->done;
+      parser_ctx->done = &handler->done;
 
       handler->header_delegate = set_lock_headers;
       handler->header_delegate_baton = lock_ctx;
@@ -621,8 +631,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       lock_ctx->handler = handler;
 
-      svn_ra_serf__request_create(handler);
-      err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, iterpool);
+      err = svn_ra_serf__context_run_one(handler, iterpool);
+      err = determine_error(handler, err);
 
       if (lock_func)
         new_err = lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock,
