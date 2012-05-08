@@ -456,6 +456,11 @@ typedef struct svn_ra_serf__handler_t {
   /* Internal flag to indicate we've parsed the headers.  */
   svn_boolean_t reading_body;
 
+  /* When this flag will be set, the core handler will discard any unread
+     portion of the response body. The registered response handler will
+     no longer be called.  */
+  svn_boolean_t discard_body;
+
   /* Pool for allocating SLINE.REASON and LOCATION. If this pool is NULL,
      then the requestor does not care about SLINE and LOCATION.  */
   apr_pool_t *handler_pool;
