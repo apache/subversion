@@ -864,6 +864,31 @@ drain_bucket(serf_bucket_t *bucket)
 }
 
 
+static svn_ra_serf__server_error_t *
+begin_error_parsing(svn_ra_serf__xml_start_element_t start,
+                    svn_ra_serf__xml_end_element_t end,
+                    svn_ra_serf__xml_cdata_chunk_handler_t cdata,
+                    apr_pool_t *result_pool)
+{
+  svn_ra_serf__server_error_t *server_err;
+
+  server_err = apr_pcalloc(result_pool, sizeof(*server_err));
+  server_err->init = TRUE;
+  server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
+  server_err->has_xml_response = TRUE;
+  server_err->contains_precondition_error = FALSE;
+  server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
+  server_err->collect_cdata = FALSE;
+  server_err->parser.pool = server_err->error->pool;
+  server_err->parser.user_data = server_err;
+  server_err->parser.start = start;
+  server_err->parser.end = end;
+  server_err->parser.cdata = cdata;
+  server_err->parser.ignore_errors = TRUE;
+
+  return server_err;
+}
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_discard_body(serf_request_t *request,
@@ -886,6 +911,8 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
           val = serf_bucket_headers_get(hdrs, "Content-Type");
           if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
             {
+              /* ### we should figure out how to reuse begin_error_parsing  */
+
               server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
               server_err->has_xml_response = TRUE;
               server_err->contains_precondition_error = FALSE;
@@ -960,9 +987,49 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
                                void *baton,
                                apr_pool_t *scratch_pool)
 {
-  /* This is the same as handle_multistatus_only, I think ... */
-  return svn_error_trace(svn_ra_serf__handle_multistatus_only(
-                           request, response, baton, scratch_pool));
+  svn_ra_serf__handler_t *handler = baton;
+  serf_bucket_t *hdrs;
+  const char *val;
+
+  /* This function is just like handle_multistatus_only() except for the
+     XML parsing callbacks. We want to look for the human-readable element.  */
+
+  /* We should see this just once, in order to initialize SERVER_ERROR.
+     At that point, the core error processing will take over. If we choose
+     not to parse an error, then we'll never return here (because we
+     change the response handler).  */
+  SVN_ERR_ASSERT(handler->server_error == NULL);
+
+  hdrs = serf_bucket_response_get_headers(response);
+  val = serf_bucket_headers_get(hdrs, "Content-Type");
+  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+    {
+      svn_ra_serf__server_error_t *server_err;
+
+      server_err = begin_error_parsing(start_error, end_error, cdata_error,
+                                       handler->handler_pool);
+
+      /* Get the parser to set our DONE flag.  */
+      server_err->parser.done = &handler->done;
+
+      handler->server_error = server_err;
+    }
+  else
+    {
+      /* ### hmm. this is a bit early. we have not seen EOF. if the
+         ### caller thinks we are "done", then it may never call into
+         ### serf_context_run() again to flush the response.  */
+      handler->done = TRUE;
+
+      /* The body was not text/xml, so we don't know what to do with it.
+         Toss anything that arrives.  */
+      handler->discard_body = TRUE;
+    }
+
+  /* Returning SVN_NO_ERROR will return APR_SUCCESS to serf, which tells it
+     to call the response handler again. That will start up the XML parsing,
+     or it will be dropped on the floor (per the decision above).  */
+  return SVN_NO_ERROR;
 }
 
 
@@ -1101,6 +1168,10 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 {
   svn_ra_serf__handler_t *handler = baton;
 
+  /* This function is just like expect_empty_body() except for the
+     XML parsing callbacks. We are looking for very limited pieces of
+     the multistatus response.  */
+
   /* We should see this just once, in order to initialize SERVER_ERROR.
      At that point, the core error processing will take over. If we choose
      not to parse an error, then we'll never return here (because we
@@ -1117,19 +1188,8 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         {
           svn_ra_serf__server_error_t *server_err;
 
-          server_err = apr_pcalloc(handler->handler_pool, sizeof(*server_err));
-          server_err->init = TRUE;
-          server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
-          server_err->has_xml_response = TRUE;
-          server_err->contains_precondition_error = FALSE;
-          server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
-          server_err->collect_cdata = FALSE;
-          server_err->parser.pool = server_err->error->pool;
-          server_err->parser.user_data = server_err;
-          server_err->parser.start = start_207;
-          server_err->parser.end = end_207;
-          server_err->parser.cdata = cdata_207;
-          server_err->parser.ignore_errors = TRUE;
+          server_err = begin_error_parsing(start_207, end_207, cdata_207,
+                                           handler->handler_pool);
 
           /* Get the parser to set our DONE flag.  */
           server_err->parser.done = &handler->done;
