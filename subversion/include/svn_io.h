@@ -1341,9 +1341,9 @@ typedef svn_error_t *
                               apr_pool_t *scratch_pool);
 
 
-/** Set @a *stream to a generic stream which wraps another primary
- * stream, delaying the "opening" of that stream until the first time
- * the stream is accessed.
+/** Return a generic stream which wraps another primary stream,
+ * delaying the "opening" of that stream until the first time the
+ * stream is accessed.
  *
  * @a open_func and @a open_baton are a callback function/baton pair
  * invoked upon the first read of @a *stream which are used to open the
@@ -1351,9 +1351,8 @@ typedef svn_error_t *
  *
  * @since New in 1.8.
  */
-svn_error_t *
-svn_stream_lazyopen_create(svn_stream_t **stream,
-                           svn_stream_lazyopen_func_t open_func,
+svn_stream_t *
+svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
                            apr_pool_t *result_pool);
 

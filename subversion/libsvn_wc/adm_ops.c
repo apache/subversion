@@ -2299,8 +2299,8 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
       gpl_baton->wri_abspath = wri_abspath;
       gpl_baton->sha1_checksum = sha1_checksum;
       
-      SVN_ERR(svn_stream_lazyopen_create(contents, get_pristine_lazyopen_func,
-                                         gpl_baton, result_pool));
+      *contents = svn_stream_lazyopen_create(get_pristine_lazyopen_func,
+                                             gpl_baton, result_pool);
     }
 
   return SVN_NO_ERROR;
