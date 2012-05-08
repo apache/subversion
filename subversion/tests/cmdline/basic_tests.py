@@ -345,7 +345,13 @@ def basic_mkdir_wc_with_parents(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
-#----------------------------------------------------------------------
+#---------------------------------------------------------------------
+# We skip this test over ra_local, because Ev2 doesn't read the pristine
+# store during commit, it only writes to it.  Hence, this type of
+# corruption doesn't impact us, and isn't even detectable (though we would
+# automatically "recover" from it).  Over other RA methods, we do still read
+# the pristine store, so this corruption would be caught.
+@Skip(svntest.main.is_ra_type_file)
 def basic_commit_corruption(sbox):
   "basic corruption detection on commit"
 
