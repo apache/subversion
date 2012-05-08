@@ -846,6 +846,24 @@ cdata_error(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+
+static apr_status_t
+drain_bucket(serf_bucket_t *bucket)
+{
+  /* Read whatever is in the bucket, and just drop it.  */
+  while (1)
+    {
+      apr_status_t status;
+      const char *data;
+      apr_size_t len;
+
+      status = serf_bucket_read(bucket, SERF_READ_ALL_AVAIL, &data, &len);
+      if (status)
+        return status;
+    }
+}
+
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_discard_body(serf_request_t *request,
@@ -906,9 +924,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 
     }
 
-  status = svn_ra_serf__response_discard_handler(request, response,
-                                                 NULL, pool);
-
+  status = drain_bucket(response);
   if (status)
     return svn_error_wrap_apr(status, NULL);
 
@@ -921,22 +937,7 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       void *baton,
                                       apr_pool_t *pool)
 {
-  /* Just loop through and discard the body. */
-  while (1)
-    {
-      apr_status_t status;
-      const char *data;
-      apr_size_t len;
-
-      status = serf_bucket_read(response, SERF_READ_ALL_AVAIL, &data, &len);
-
-      if (status)
-        {
-          return status;
-        }
-
-      /* feed me */
-    }
+  return drain_bucket(response);
 }
 
 const char *
@@ -1144,8 +1145,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 
           /* The body was not text/xml, so we don't know what to do with it.
              Toss anything that arrives.  */
-          handler->response_handler = svn_ra_serf__handle_discard_body;
-          handler->response_baton = NULL;
+          handler->discard_body = TRUE;
         }
     }
 
@@ -1719,10 +1719,9 @@ handle_response(serf_request_t *request,
                                     " (http status=%d)"),
                                   handler->sline.code);
 
-          /* This discard may be no-op, but let's preserve the algorithm
-             used elsewhere in this function for clarity's sake. */
-          svn_ra_serf__response_discard_handler(request, response, NULL,
-                                                scratch_pool);
+          /* In case anything else arrives... discard it.  */
+          handler->discard_body = TRUE;
+
           return err;
         }
     }
@@ -1779,6 +1778,13 @@ handle_response(serf_request_t *request,
 
  process_body:
 
+  /* We've been instructed to ignore the body. Drain whatever is present.  */
+  if (handler->discard_body)
+    {
+      *serf_status = drain_bucket(response);
+      return SVN_NO_ERROR;
+    }
+
   /* If we are supposed to parse the body as a server_error, then do
      that now.  */
   if (handler->server_error != NULL)
@@ -1814,8 +1820,7 @@ handle_response(serf_request_t *request,
           handler->server_error = NULL;
 
           /* If anything arrives after this, then just discard it.  */
-          handler->response_handler = svn_ra_serf__handle_discard_body;
-          handler->response_baton = NULL;
+          handler->discard_body = TRUE;
         }
 
       *serf_status = APR_EOF;
@@ -1956,9 +1961,9 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
   handler->sline.version = 0;
   handler->location = NULL;
   handler->reading_body = FALSE;
+  handler->discard_body = FALSE;
 
-  /* ### sometimes, we alter the >response_handler. how to reset that?
-     ### so far, that is just to discard the body. maybe a flag?  */
+  /* ### do we ever alter the >response_handler?  */
 
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
