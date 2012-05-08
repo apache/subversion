@@ -44,7 +44,7 @@
 /* For use with store_locks_callback, below. */
 struct lock_baton
 {
-  const char *base_path;
+  const char *base_dir_abspath;
   apr_hash_t *urls_to_paths;
   svn_client_ctx_t *ctx;
   apr_pool_t *pool;
@@ -55,8 +55,8 @@ struct lock_baton
  * BATON is a 'struct lock_baton *', PATH is the path being locked,
  * and LOCK is the lock itself.
  *
- * If BATON->base_path is not null, then this function either stores
- * the LOCK on REL_URL or removes any lock tokens from REL_URL
+ * If BATON->base_dir_abspath is not null, then this function either
+ * stores the LOCK on REL_URL or removes any lock tokens from REL_URL
  * (depending on whether DO_LOCK is true or false respectively), but
  * only if RA_ERR is null, or (in the unlock case) is something other
  * than SVN_ERR_FS_LOCK_OWNER_MISMATCH.
@@ -86,20 +86,17 @@ store_locks_callback(void *baton,
   notify->lock = lock;
   notify->err = ra_err;
 
-  if (lb->base_path)
+  if (lb->base_dir_abspath)
     {
       char *path = apr_hash_get(lb->urls_to_paths, rel_url,
                                 APR_HASH_KEY_STRING);
       const char *local_abspath;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                      svn_dirent_join(lb->base_path,
-                                                      path, pool),
-                                      pool));
+      local_abspath = svn_dirent_join(lb->base_dir_abspath, path, pool);
 
       /* Notify a valid working copy path */
       notify->path = local_abspath;
-      notify->path_prefix = lb->base_path;
+      notify->path_prefix = lb->base_dir_abspath;
 
       if (do_lock)
         {
@@ -457,7 +454,7 @@ svn_client_lock(const apr_array_header_t *targets,
                                                NULL, FALSE, FALSE,
                                                ctx, pool));
 
-  cb.base_path = base_dir;
+  cb.base_dir_abspath = base_dir_abspath;
   cb.urls_to_paths = urls_to_paths;
   cb.ctx = ctx;
   cb.pool = pool;
@@ -504,7 +501,7 @@ svn_client_unlock(const apr_array_header_t *targets,
   if (! base_dir && !break_lock)
     SVN_ERR(fetch_tokens(ra_session, path_tokens, pool));
 
-  cb.base_path = base_dir;
+  cb.base_dir_abspath = base_dir_abspath;
   cb.urls_to_paths = urls_to_paths;
   cb.ctx = ctx;
   cb.pool = pool;
