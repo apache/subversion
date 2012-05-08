@@ -1349,6 +1349,9 @@ typedef svn_error_t *
  * invoked upon the first read of @a *stream which are used to open the
  * "real" source stream.
  *
+ * @note If the only "access" the returned stream gets is to close it,
+ * @a open_func will not be called.
+ *
  * @since New in 1.8.
  */
 svn_stream_t *

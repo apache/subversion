@@ -1747,8 +1747,8 @@ close_handler_lazyopen(void *baton)
 {
   lazyopen_baton_t *b = baton;
 
-  SVN_ERR(lazyopen_if_unopened(b));
-  SVN_ERR(svn_stream_close(b->real_stream));
+  if (b->real_stream != NULL)
+    SVN_ERR(svn_stream_close(b->real_stream));
 
   return SVN_NO_ERROR;
 }
