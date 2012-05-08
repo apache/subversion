@@ -65,6 +65,8 @@ def _usage_exit():
   print("  -t, --test=TEST        : Run the TEST test (all is default); use")
   print("                           TEST#n to run a particular test number,")
   print("                           multiples also accepted e.g. '2,4-7'")
+  print("  --log-level=LEVEL      : Set log level to LEVEL (E.g. DEBUG)")
+  print("  --log-to-stdout        : Write log results to stdout")
 
   print("  --svnserve-args=list   : comma-separated list of arguments for")
   print("                           svnserve")
@@ -93,10 +95,9 @@ def _usage_exit():
   print("  -p, --parallel         : run multiple tests in parallel")
   print("  --server-minor-version : the minor version of the server being")
   print("                           tested")
-  print(" --config-file           : Configuration file for tests")
-  print(" --fsfs-sharding         : Specify shard size (for fsfs)")
-  print(" --fsfs-packing          : Run 'svnadmin pack' automatically")
-  print(" --log-to-stdout         : Write log results to stdout")
+  print("  --config-file          : Configuration file for tests")
+  print("  --fsfs-sharding        : Specify shard size (for fsfs)")
+  print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
 
   sys.exit(0)
 
@@ -130,7 +131,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
-                        'config-file=', 'server-minor-version=',
+                        'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
@@ -163,6 +164,7 @@ config_file = None
 log_to_stdout = None
 mode_filter=None
 tests_to_run = []
+log_level = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -230,6 +232,8 @@ for opt, val in opts:
     config_file = val
   elif opt == '--log-to-stdout':
     log_to_stdout = 1
+  elif opt == '--log-level':
+    log_level = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -736,7 +740,8 @@ if not test_javahl:
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
                              list_tests, svn_bin, mode_filter,
-                             milestone_filter)
+                             milestone_filter,
+                             set_log_level=log_level)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)
