@@ -256,6 +256,9 @@ typedef struct report_info_t
  */
 typedef struct report_fetch_t {
 
+  /* The handler representing this particular fetch.  */
+  svn_ra_serf__handler_t *handler;
+
   /* The session we should use to fetch the file. */
   svn_ra_serf__session_t *sess;
 
@@ -916,7 +919,9 @@ handle_fetch(serf_request_t *request,
   apr_status_t status;
   report_fetch_t *fetch_ctx = handler_baton;
   svn_error_t *err;
-  serf_status_line sl;
+
+  /* ### new field. make sure we didn't miss some initialization.  */
+  SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
 
   if (fetch_ctx->read_headers == FALSE)
     {
@@ -952,16 +957,12 @@ handle_fetch(serf_request_t *request,
 
   /* If the error code wasn't 200, something went wrong. Don't use the returned
      data as its probably an error message. Just bail out instead. */
-  status = serf_bucket_response_status(response, &sl);
-  if (SERF_BUCKET_READ_ERROR(status))
-    {
-      return svn_error_wrap_apr(status, NULL);
-    }
-  if (sl.code != 200)
+  if (fetch_ctx->handler->sline.code != 200)
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               _("GET request failed: %d %s"),
-                              sl.code, sl.reason);
+                              fetch_ctx->handler->sline.code,
+                              fetch_ctx->handler->sline.reason);
       return error_fetch(request, fetch_ctx, err);
     }
 
@@ -1088,26 +1089,22 @@ handle_stream(serf_request_t *request,
               apr_pool_t *pool)
 {
   report_fetch_t *fetch_ctx = handler_baton;
-  serf_status_line sl;
   const char *location;
   svn_error_t *err;
   apr_status_t status;
 
-  status = serf_bucket_response_status(response, &sl);
-  if (SERF_BUCKET_READ_ERROR(status))
-    {
-      return svn_error_wrap_apr(status, NULL);
-    }
+  /* ### new field. make sure we didn't miss some initialization.  */
+  SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
 
   /* Woo-hoo.  Nothing here to see.  */
   location = svn_ra_serf__response_get_location(response, pool);
 
-  err = svn_ra_serf__error_on_status(sl.code,
+  err = svn_ra_serf__error_on_status(fetch_ctx->handler->sline.code,
                                      fetch_ctx->info->name,
                                      location);
   if (err)
     {
-      fetch_ctx->done = TRUE;
+      fetch_ctx->handler->done = TRUE;
 
       err = svn_error_compose_create(
                   err,
@@ -1228,23 +1225,21 @@ handle_local_fetch(serf_request_t *request,
 {
   report_fetch_t *fetch_ctx = handler_baton;
   apr_status_t status;
-  serf_status_line sl;
   svn_error_t *err;
   const char *data;
   apr_size_t len;
 
+  /* ### new field. make sure we didn't miss some initialization.  */
+  SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
+
   /* If the error code wasn't 200, something went wrong. Don't use the returned
      data as its probably an error message. Just bail out instead. */
-  status = serf_bucket_response_status(response, &sl);
-  if (SERF_BUCKET_READ_ERROR(status))
-    {
-      return svn_error_wrap_apr(status, NULL);
-    }
-  if (sl.code != 200)
+  if (fetch_ctx->handler->sline.code != 200)
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               _("HEAD request failed: %d %s"),
-                              sl.code, sl.reason);
+                              fetch_ctx->handler->sline.code,
+                              fetch_ctx->handler->sline.reason);
       return error_fetch(request, fetch_ctx, err);
     }
 
@@ -1376,6 +1371,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           handler->response_handler = handle_local_fetch;
           handler->response_baton = fetch_ctx;
 
+          fetch_ctx->handler = handler;
+
           svn_ra_serf__request_create(handler);
 
           ctx->active_fetches++;
@@ -1407,6 +1404,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
 
           handler->response_error = cancel_fetch;
           handler->response_error_baton = fetch_ctx;
+
+          fetch_ctx->handler = handler;
 
           svn_ra_serf__request_create(handler);
 
@@ -2975,6 +2974,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
       handler->response_error = cancel_fetch;
       handler->response_error_baton = stream_ctx;
+
+      stream_ctx->handler = handler;
 
       svn_ra_serf__request_create(handler);
 
