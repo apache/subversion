@@ -306,8 +306,6 @@ fs_hotcopy(svn_fs_t *src_fs,
      Otherwise, it's not an FS yet --- possibly just an empty dir --- so
      can't be opened.
    */
-  SVN_ERR(fs_serialized_init(dst_fs, pool, pool));
-
   return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
                             incremental, cancel_func, cancel_baton, pool);
 }
