@@ -1794,7 +1794,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
-    svnversion_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
+    svnmucc_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
