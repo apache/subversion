@@ -228,11 +228,14 @@ def modify_branch(sbox, branch, number, conflicting=False):
   uniq = branch + str(number)  # something like 'A1' or 'B2'
   if conflicting:
     sbox.simple_propset('conflict', uniq, branch + '/C')
-  elif number % 2 == 0:
+  else:
+    # Make some changes.  We add a property, which we will read later in
+    # logical_changes_in_branch() to check that the correct logical
+    # changes were merged.  We add a file, so that we will notice if
+    # Subversion tries to merge this same logical change into a branch
+    # that already has it (it will raise a tree conflict).
     sbox.simple_propset('prop-' + uniq, uniq, branch + '/D')
     sbox.simple_copy(branch + '/mu', branch + '/mu-' + uniq)
-  else:  # number % 2 == 1
-    sbox.simple_propset('prop-' + uniq, uniq, branch + '/D')
   sbox.simple_commit()
 
 def expected_symmetric_merge_output(target, expect_3ways):
@@ -259,12 +262,11 @@ def expected_symmetric_merge_output(target, expect_3ways):
   # Match mergeinfo changes.  (### Subtrees are not yet supported here.)
   lines += [" [UG]   " + target + "\n"]
 
-  # At the moment, the symmetric merge code sometimes gives 'Merging
-  # differences between repository URLs' notifications when it need not
-  # or should not; so expect that.
-  lines += ["--- Merging differences between repository URLs into '%s':\n" % (target,),
-            "--- Recording mergeinfo for merge of r.* through r.* into '%s':\n" % (target,),
-            "--- Recording mergeinfo for merge between repository URLs into '%s':\n" % (target,)]
+  # At the moment, the symmetric merge code sometimes says 'Merging
+  # differences between repository URLs' and sometimes 'Merging r3 through
+  # r5', but it's not trivial to predict which, so expect either form.
+  lines += ["--- Merging .* into '%s':\n" % (target,),
+            "--- Recording mergeinfo for merge .* into '%s':\n" % (target,)]
 
   return expected_merge_output(rev_ranges, lines, target=target)
 
@@ -272,10 +274,7 @@ def symmetric_merge(sbox, source, target, args=[],
                     expect_changes=None, expect_mi=None, expect_3ways=None):
   """Do a complete, automatic merge from path SOURCE to path TARGET, and
   commit.  Verify the output and that there is no error.
-  ### TODO: Verify the changes made.)
-
-  LINES is a list of regular expressions to match other lines of output; if
-  LINES is 'None' then match all normal (non-conflicting) merges.
+  ### TODO: Verify the changes made.
 
   ARGS are additional arguments passed to svn merge."""
 
