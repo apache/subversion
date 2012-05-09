@@ -67,16 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1329417
-   Fix issue #4166 'multiple merge editor drives which add then delete a
-   subtree fail'.
-   Justification:
-     Prevents merge failure in an edge case.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4166
-   Votes:
-     +1: pburba, philip, stsp
-
  * r1330444, 1330520
    Fix issue #4169 'added subtrees with non-inheritable mergeinfo cause
    spurious subtree mergeinfo'.
