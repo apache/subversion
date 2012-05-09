@@ -2917,8 +2917,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   /* Verify that resource type is not colelction. */
-  SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props, fetch_url,
-                                         SVN_INVALID_REVNUM));
+  SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props, fetch_url));
   if (res_kind != svn_kind_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
@@ -2929,7 +2928,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (props)
     {
       SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props, fetch_url,
-                                         SVN_INVALID_REVNUM, pool, pool));
+                                         pool, pool));
     }
 
   if (stream)

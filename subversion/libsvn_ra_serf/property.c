@@ -825,14 +825,13 @@ svn_error_t *
 svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_hash_t *props,
                            const char *path,
-                           svn_revnum_t revision,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   *flat_props = apr_hash_make(result_pool);
 
   return svn_error_trace(svn_ra_serf__walk_all_props(
-                            props, path, revision,
+                            props, path, SVN_INVALID_REVNUM,
                             set_flat_props,
                             *flat_props /* baton */,
                             scratch_pool));
@@ -1029,15 +1028,12 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
         }
       else
         {
-          apr_hash_t *props;
           svn_revnum_t actual_revision;
 
-          SVN_ERR(svn_ra_serf__retrieve_props(&props, session, conn,
-                                              vcc_url, revision, "0",
-                                              checked_in_props,
+          SVN_ERR(svn_ra_serf__fetch_dav_prop(&baseline_url, conn, vcc_url,
+                                              SVN_INVALID_REVNUM,
+                                              "checked-in",
                                               pool, pool));
-          baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
-                                                   "DAV:", "checked-in");
           if (!baseline_url)
             {
               return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
@@ -1057,7 +1053,8 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
             {
               SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
                                              session, conn,
-                                             baseline_url, revision, pool));
+                                             baseline_url, SVN_INVALID_REVNUM,
+                                             pool));
               SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
                                                 baseline_url, actual_revision,
                                                 basecoll_url, pool));
@@ -1083,13 +1080,11 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_kind_t *kind,
                                apr_hash_t *props,
-                               const char *url,
-                               svn_revnum_t revision)
+                               const char *url)
 {
   const char *res_type;
 
-  res_type = svn_ra_serf__get_ver_prop(props, url, revision,
-                                       "DAV:", "resourcetype");
+  res_type = svn_ra_serf__get_prop(props, url, "DAV:", "resourcetype");
   if (!res_type)
     {
       /* How did this happen? */
@@ -1106,6 +1101,32 @@ svn_ra_serf__get_resource_type(svn_kind_t *kind,
     {
       *kind = svn_kind_file;
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__fetch_dav_prop(const char **value,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t revision,
+                            const char *propname,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(svn_ra_serf__retrieve_props(&props, conn->session, conn, url,
+                                      revision, "0", checked_in_props,
+                                      scratch_pool, scratch_pool));
+
+  /* We wouldn't get here if the resource was not found (404), so the
+     property should be present.
+
+     Note: it is okay to call apr_pstrdup() with NULL.  */
+  *value = apr_pstrdup(result_pool, svn_ra_serf__get_ver_prop(
+                         props, url, revision, "DAV:", propname));
 
   return SVN_NO_ERROR;
 }

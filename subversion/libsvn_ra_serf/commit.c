@@ -497,11 +497,7 @@ get_version_url(const char **checked_in_url,
     }
   else
     {
-      svn_ra_serf__propfind_context_t *propfind_ctx;
-      apr_hash_t *props;
       const char *propfind_url;
-
-      props = apr_hash_make(pool);
 
       if (SVN_IS_VALID_REVNUM(base_revision))
         {
@@ -523,18 +519,10 @@ get_version_url(const char **checked_in_url,
           propfind_url = session->session_url.path;
         }
 
-      /* ### switch to svn_ra_serf__retrieve_props  */
-      SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
-                                         propfind_url, base_revision, "0",
-                                         checked_in_props, NULL, pool));
-      SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
-
-      /* We wouldn't get here if the url wasn't found (404), so the checked-in
-         property should have been set. */
-      root_checkout =
-          svn_ra_serf__get_ver_prop(props, propfind_url,
-                                    base_revision, "DAV:", "checked-in");
-
+      SVN_ERR(svn_ra_serf__fetch_dav_prop(&root_checkout,
+                                          conn, propfind_url, base_revision,
+                                          "checked-in",
+                                          pool, pool));
       if (!root_checkout)
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' not present"),
@@ -2342,8 +2330,8 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   proppatch_context_t *proppatch_ctx;
   commit_context_t *commit;
-  const char *vcc_url, *proppatch_target, *ns;
-  apr_hash_t *props;
+  const char *proppatch_target;
+  const char *ns;
   svn_error_t *err;
 
   if (old_value_p)
@@ -2370,21 +2358,15 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else
     {
-      svn_ra_serf__propfind_context_t *propfind_ctx;
+      const char *vcc_url;
 
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, commit->session,
                                         commit->conn, pool));
 
-      props = apr_hash_make(pool);
-
-      /* ### switch to svn_ra_serf__retrieve_props  */
-      SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, commit->session,
-                                         commit->conn, vcc_url, rev, "0",
-                                         checked_in_props, NULL, pool));
-      SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, commit->session, pool));
-
-      proppatch_target = svn_ra_serf__get_ver_prop(props, vcc_url, rev,
-                                                   "DAV:", "href");
+      SVN_ERR(svn_ra_serf__fetch_dav_prop(&proppatch_target,
+                                          commit->conn, vcc_url, rev,
+                                          "href",
+                                          pool, pool));
     }
 
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)

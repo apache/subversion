@@ -280,33 +280,9 @@ static const svn_ra_serf__dav_props_t all_props[] =
   { NULL }
 };
 
-static const svn_ra_serf__dav_props_t vcc_props[] =
-{
-  { "DAV:", "version-controlled-configuration" },
-  { NULL }
-};
-
 static const svn_ra_serf__dav_props_t check_path_props[] =
 {
   { "DAV:", "resourcetype" },
-  { NULL }
-};
-
-static const svn_ra_serf__dav_props_t uuid_props[] =
-{
-  { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
-  { NULL }
-};
-
-static const svn_ra_serf__dav_props_t repos_root_props[] =
-{
-  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
-  { NULL }
-};
-
-static const svn_ra_serf__dav_props_t href_props[] =
-{
-  { "DAV:", "href" },
   { NULL }
 };
 
@@ -919,6 +895,29 @@ svn_ra_serf__retrieve_props(apr_hash_t **results,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+
+/* Using CONN, fetch a DAV: property from the resource identified by URL
+   within REVISION. The PROPNAME may be one of:
+
+     "checked-in"
+     "href"
+
+   The resulting value will be allocated in RESULT_POOL, and may be NULL
+   if the property does not exist (note: "href" always exists).
+
+   This function performs the request synchronously.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__fetch_dav_prop(const char **value,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t revision,
+                            const char *propname,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
  *
  * The POOL governs allocation.
@@ -992,6 +991,8 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
    rewrite from wire names (DAV) to SVN names. This mapping is managed
    by the svn_ra_serf__set_baton_props() function.
 
+   ### REV is constant: SVN_INVALID_REVNUM
+
    FLAT_PROPS is allocated in RESULT_POOL.
    ### right now, we do a shallow copy from PROPS to FLAT_PROPS. therefore,
    ### the names and values in PROPS must be in the proper pool.
@@ -1001,7 +1002,6 @@ svn_error_t *
 svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_hash_t *props,
                            const char *path,
-                           svn_revnum_t revision,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -1043,8 +1043,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_kind_t *kind,
                                apr_hash_t *props,
-                               const char *url,
-                               svn_revnum_t revision);
+                               const char *url);
 
 
 /** MERGE-related functions **/
