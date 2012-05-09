@@ -1452,6 +1452,7 @@ do_item_commit(svn_client_commit_item3_t *item,
                const char *notify_path_prefix,
                const char *repos_root,
                apr_hash_t *checksums,
+               apr_hash_t *new_children,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool)
 {
@@ -1573,8 +1574,11 @@ do_item_commit(svn_client_commit_item3_t *item,
 /*  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS) ||
         (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))*/
     {
-      SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, item->path,
-                                scratch_pool, scratch_pool));
+      if (item->path)
+        SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, item->path,
+                                  scratch_pool, scratch_pool));
+      else
+        props = apr_hash_make(scratch_pool);
     }
 
   if ((kind == svn_node_file)
@@ -1654,20 +1658,33 @@ do_item_commit(svn_client_commit_item3_t *item,
 
           SVN_ERR_ASSERT(props != NULL);
 
-          SVN_ERR(svn_wc__node_get_children_of_working_node(&children_abspaths,
-                                            ctx->wc_ctx, item->path, FALSE,
-                                            scratch_pool, scratch_pool));
-
-          /* We have to strip out the basenames returned from the above
-             function. */
-          children = apr_array_make(scratch_pool, children_abspaths->nelts,
-                                    sizeof(const char *));
-          for (i = 0; i < children_abspaths->nelts; i++)
+          if (item->path)
             {
-              const char *child_abspath = APR_ARRAY_IDX(children_abspaths, i,
-                                                        const char *);
-              APR_ARRAY_PUSH(children, const char *) =
+              SVN_ERR(svn_wc__node_get_children_of_working_node(
+                                                &children_abspaths,
+                                                ctx->wc_ctx, item->path, FALSE,
+                                                scratch_pool, scratch_pool));
+
+              /* We have to strip out the basenames returned from the above
+                 function. */
+              children = apr_array_make(scratch_pool, children_abspaths->nelts,
+                                        sizeof(const char *));
+              for (i = 0; i < children_abspaths->nelts; i++)
+                {
+                  const char *child_abspath = APR_ARRAY_IDX(children_abspaths,
+                                                            i, const char *);
+                  APR_ARRAY_PUSH(children, const char *) =
                             svn_dirent_basename(child_abspath, scratch_pool);
+                }
+            }
+          else
+            {
+              /* Goofy special case: When doing 'cp --parents', we are adding
+                 directories which don't have a path on disk, but still have
+                 children.  We need to populate the children list
+                 appropriately. */
+              children = apr_hash_get(new_children, item->session_relpath,
+                                      APR_HASH_KEY_STRING);
             }
 
           SVN_ERR(svn_editor_add_directory(editor, repos_relpath,
@@ -1717,11 +1734,12 @@ do_item_commit_wrap_error(svn_client_commit_item3_t *item,
                           const char *notify_path_prefix,
                           const char *repos_root,
                           apr_hash_t *checksums,
+                          apr_hash_t *new_children,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *scratch_pool)
 {
   svn_error_t *err = do_item_commit(item, editor, notify_path_prefix,
-                                    repos_root, checksums, ctx,
+                                    repos_root, checksums, new_children, ctx,
                                     scratch_pool);
 
   if (err)
@@ -1751,8 +1769,38 @@ svn_client__do_commit(const char *repos_root,
                                          sizeof(svn_client_commit_item3_t *));
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *checksums = apr_hash_make(result_pool);
-  apr_hash_index_t *hi;
+  apr_hash_t *new_children = apr_hash_make(scratch_pool);
   int i;
+
+  /* Special loop to look for children of newly-added directories which
+     don't exist on the client, as in the case of 'cp --parents'.
+     
+     ### This information is probably available earlier in the commit
+     ### process, but we just don't capture it.  If/when we rework
+     ### the commit item struct, we should include children as well. */
+  for (i = 0; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      apr_array_header_t *children;
+      svn_client_commit_item3_t *next_item;
+
+      svn_pool_clear(iterpool);
+
+      /* If we have a path, we aren't newly added, nor will any of the
+         rest of our paths, since COMMIT_ITEMS is depth-first sorted. */
+      if (item->path)
+        break;
+
+      children = apr_array_make(scratch_pool, 1, sizeof(const char *));
+      next_item = APR_ARRAY_IDX(commit_items, i+1,
+                                            svn_client_commit_item3_t *);
+      APR_ARRAY_PUSH(children, const char *) =
+            svn_relpath_basename(next_item->session_relpath, scratch_pool);
+                        
+      apr_hash_set(new_children, item->session_relpath, APR_HASH_KEY_STRING,
+                   children);
+    }
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      relative paths (which come from the item URLs).  And
@@ -1769,7 +1817,8 @@ svn_client__do_commit(const char *repos_root,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       SVN_ERR(do_item_commit_wrap_error(item, editor, notify_path_prefix,
-                                        repos_root, checksums, ctx, iterpool));
+                                        repos_root, checksums, new_children,
+                                        ctx, iterpool));
 
       if ((item->kind == svn_node_file)
             && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
