@@ -67,18 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1291797, r1291810
-   On Windows detect where perl is installed and add this information to the
-   include and lib directory settings of the swig-perl projects.
-   Justification:
-     Allows building swig-perl without copying perl libraries manually.
-     Somehow required on the Windows buildbot since the last library version
-     bump.
-   Votes:
-     +1: rhuijben
-     +0: pburba (I can't replicate the build problem, I can build with or
-                 without the patch).
-
  * r1329417
    Fix issue #4166 'multiple merge editor drives which add then delete a
    subtree fail'.
