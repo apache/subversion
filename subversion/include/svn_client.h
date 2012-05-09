@@ -2884,6 +2884,9 @@ svn_client_blame(const char *path_or_url,
  * ### Do we need to say more about the format? A reference perhaps?
  *
  * If @a ignore_properties is TRUE, do not show property differences.
+ * If @a properties_only is TRUE, show only property changes.
+ * The above two options are mutually exclusive. It is an error to set
+ * both to TRUE.
  *
  * Generated headers are encoded using @a header_encoding.
  *
@@ -2930,6 +2933,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
                  svn_boolean_t ignore_properties,
+                 svn_boolean_t properties_only,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -3090,6 +3094,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
                      svn_boolean_t ignore_properties,
+                     svn_boolean_t properties_only,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,

@@ -779,6 +779,9 @@ struct diff_cmd_baton {
   /* Whether property differences are ignored. */
   svn_boolean_t ignore_properties;
 
+  /* Whether to show only property changes. */
+  svn_boolean_t properties_only;
+
   /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
 
@@ -928,6 +931,10 @@ diff_content_changed(const char *path,
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
   const char *path1 = diff_cmd_baton->orig_path_1;
   const char *path2 = diff_cmd_baton->orig_path_2;
+
+  /* If only property differences are shown, there's nothing to do. */
+  if (diff_cmd_baton->properties_only)
+    return SVN_NO_ERROR;
 
   /* Generate the diff headers. */
   SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
@@ -2938,6 +2945,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
                  svn_boolean_t ignore_properties,
+                 svn_boolean_t properties_only,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2947,9 +2955,14 @@ svn_client_diff6(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton = { 0 };
+  svn_opt_revision_t peg_revision;
+
+  if (ignore_properties && properties_only)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Cannot ignore properties and show only "
+                              "properties at the same time"));
 
   /* We will never do a pegged diff from here. */
-  svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
 
   /* setup callback and baton */
@@ -2968,6 +2981,7 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.ignore_properties = ignore_properties;
+  diff_cmd_baton.properties_only = properties_only;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
@@ -2997,6 +3011,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
                      svn_boolean_t ignore_properties,
+                     svn_boolean_t properties_only,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -3006,6 +3021,11 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton = { 0 };
+
+  if (ignore_properties && properties_only)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Cannot ignore properties and show only "
+                              "properties at the same time"));
 
   /* setup callback and baton */
   diff_cmd_baton.orig_path_1 = path_or_url;
@@ -3023,6 +3043,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.ignore_properties = ignore_properties;
+  diff_cmd_baton.properties_only = properties_only;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
