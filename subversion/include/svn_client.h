@@ -2883,6 +2883,8 @@ svn_client_blame(const char *path_or_url,
  * will be used.
  * ### Do we need to say more about the format? A reference perhaps?
  *
+ * If @a ignore_prop_diff is TRUE, do not show property differences.
+ *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
