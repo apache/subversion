@@ -777,7 +777,7 @@ struct diff_cmd_baton {
   const char *relative_to_dir;
 
   /* Whether property differences are ignored. */
-  svn_boolean_t ignore_prop_diff;
+  svn_boolean_t ignore_properties;
 
   /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
@@ -831,7 +831,7 @@ diff_props_changed(svn_wc_notify_state_t *state,
   svn_boolean_t show_diff_header;
 
   /* If property differences are ignored, there's nothing to do. */
-  if (diff_cmd_baton->ignore_prop_diff)
+  if (diff_cmd_baton->ignore_properties)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
@@ -1836,7 +1836,7 @@ do_arbitrary_files_diff(const char *local_abspath1,
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-  if (diff_cmd_baton->ignore_prop_diff)
+  if (diff_cmd_baton->ignore_properties)
     {
       original_props = apr_hash_make(scratch_pool);
       modified_props = apr_hash_make(scratch_pool);
@@ -2937,7 +2937,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
-                 svn_boolean_t ignore_prop_diff,
+                 svn_boolean_t ignore_properties,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -2967,7 +2967,7 @@ svn_client_diff6(const apr_array_header_t *options,
 
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
-  diff_cmd_baton.ignore_prop_diff = ignore_prop_diff;
+  diff_cmd_baton.ignore_properties = ignore_properties;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
@@ -2996,7 +2996,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
-                     svn_boolean_t ignore_prop_diff,
+                     svn_boolean_t ignore_properties,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -3022,7 +3022,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
 
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
-  diff_cmd_baton.ignore_prop_diff = ignore_prop_diff;
+  diff_cmd_baton.ignore_properties = ignore_properties;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;

@@ -2883,7 +2883,7 @@ svn_client_blame(const char *path_or_url,
  * will be used.
  * ### Do we need to say more about the format? A reference perhaps?
  *
- * If @a ignore_prop_diff is TRUE, do not show property differences.
+ * If @a ignore_properties is TRUE, do not show property differences.
  *
  * Generated headers are encoded using @a header_encoding.
  *
@@ -2929,7 +2929,7 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
-                 svn_boolean_t ignore_prop_diff,
+                 svn_boolean_t ignore_properties,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -3089,7 +3089,7 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
-                     svn_boolean_t ignore_prop_diff,
+                     svn_boolean_t ignore_properties,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
