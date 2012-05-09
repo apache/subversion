@@ -85,6 +85,7 @@ tool_versions = {
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
+secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
@@ -417,12 +418,13 @@ def roll_tarballs(args):
             extra_args = '-nightly'
         else:
             extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
-    logging.info('Building UNIX tarballs')
-    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
-                     % (sys.path[0], args.version.base, branch, args.revnum,
-                        extra_args) )
+    # Build Unix last to leave Unix-style svn_version.h for tagging
     logging.info('Buildling Windows tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
+                     % (sys.path[0], args.version.base, branch, args.revnum,
+                        extra_args) )
+    logging.info('Building UNIX tarballs')
+    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
                      % (sys.path[0], args.version.base, branch, args.revnum,
                         extra_args) )
 
@@ -487,6 +489,32 @@ def post_candidates(args):
                              '--username', args.username,
                              get_deploydir(args.base_dir), dist_dev_url])
     (stdout, stderr) = proc.communicate()
+    proc.wait()
+
+#----------------------------------------------------------------------
+# Create tag
+
+def create_tag(args):
+    'Create tag in the repository'
+
+    if args.branch:
+        branch = secure_repos + '/' + args.branch
+    else:
+        branch = secure_repos + '/branches/%d.%d.x' % (args.version.major,
+                                                       args.version.minor)
+
+    tag = secure_repos + '/tags/' + str(args.version)
+
+    svnmucc_cmd = ['svnmucc', '-m',
+                   'Tagging release ' + str(args.version),
+                   '--username', args.username]
+    svnmucc_cmd += ['cp', str(args.revnum), branch, tag]
+    svnmucc_cmd += ['put', os.path.join(get_deploydir(args.base_dir),
+                                        'svn_version.h.dist'),
+                    tag + '/subversion/include/svn_version.h']
+
+    # don't redirect stdout/stderr since svnmucc might ask for a password
+    proc = subprocess.Popen(svnmucc_cmd)
     proc.wait()
 
 #----------------------------------------------------------------------
@@ -764,6 +792,20 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--username', default=getpass.getuser(),
+                    help='''Username for ''' + dist_repos + '''.  The default
+                            is the current username''')
+
+    # Setup the parser for the create-tag subcommand
+    subparser = subparsers.add_parser('create-tag',
+                    help='''Create the release tag.''')
+    subparser.set_defaults(func=create_tag)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=int,
+                    help='''The revision number to base the release on.''')
+    subparser.add_argument('--branch',
+                    help='''The branch to base the release on.''')
     subparser.add_argument('--username', default=getpass.getuser(),
                     help='''Username for ''' + dist_repos + '''.  The default
                             is the current username''')
