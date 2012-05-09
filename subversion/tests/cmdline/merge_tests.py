@@ -17263,6 +17263,181 @@ def merge_adds_then_deletes_subtree(sbox):
                            ' G   ' + C_branch_path + '\n',]),
     [], 'merge', '-c3,4', sbox.repo_url + '/A/C', C_branch_path)
 
+#----------------------------------------------------------------------
+# Test for issue #4169 'added subtrees with non-inheritable mergeinfo
+# cause spurious subtree mergeinfo'.
+@SkipUnless(server_has_mergeinfo)
+@Issue(4169)
+def merge_with_added_subtrees_with_mergeinfo(sbox):
+  "merge with added subtrees with mergeinfo"
+
+  # Some paths we'll care about.
+  A_path      = os.path.join(sbox.wc_dir, 'A')
+  Y_path      = os.path.join(sbox.wc_dir, 'A', 'C', 'X', 'Y')
+  Z_path      = os.path.join(sbox.wc_dir, 'A', 'C', 'X', 'Y', 'Z')
+  nu_path     = os.path.join(sbox.wc_dir, 'A', 'C', 'X', 'Y', 'Z', 'nu')
+  A_COPY_path = os.path.join(sbox.wc_dir, 'A_COPY')
+  Y_COPY_path = os.path.join(sbox.wc_dir, 'A_COPY', 'C', 'X', 'Y')
+  W_COPY_path = os.path.join(sbox.wc_dir, 'A_COPY', 'C', 'X', 'Y', 'Z', 'W')
+  A_COPY2_path = os.path.join(sbox.wc_dir, 'A_COPY_2')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make two branches of ^/A and then make a few edits under A in r4-7:
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
+
+  # r8 - Add a subtree under A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '--parents',
+                                     Z_path)
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Add a subtree on our "trunk"')
+
+  # r9 - Sync ^/A to the first branch A_COPY.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Sync ^/A to ^/A_COPY')
+
+  # r10 - Make some edits on the first branch.
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', 'branch-prop-foo',
+                                     'bar', Y_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', W_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Make some edits on "branch 1"')
+
+  # r11 - Cherry-pick r10 on the first branch back to A, but
+  # do so at depth=empty so non-inheritable mergeinfo is created.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-c10', '--depth=empty',
+                                     sbox.repo_url + '/A_COPY/C/X/Y', Y_path)
+  svntest.actions.run_and_verify_svn(
+    None, None, [], 'ci', wc_dir,
+    '-m', 'Depth empty subtree cherry pick from "branch 1" to "trunk"')
+
+  # Sync ^/A to the second branch A_COPY_2.
+  #
+  # Previously this failed because spurious mergeinfo was created on
+  # A_COPY_2/C/X/Y/Z:
+  #
+  #   >svn merge ^^/A A_COPY_2
+  #   --- Merging r3 through r11 into 'A_COPY_2':
+  #   U    A_COPY_2\B\E\beta
+  #   A    A_COPY_2\C\X
+  #   A    A_COPY_2\C\X\Y
+  #   A    A_COPY_2\C\X\Y\Z
+  #   A    A_COPY_2\C\X\Y\Z\nu
+  #   U    A_COPY_2\D\G\rho
+  #   U    A_COPY_2\D\H\omega
+  #   U    A_COPY_2\D\H\psi
+  #   --- Recording mergeinfo for merge of r3 through r11 into 'A_COPY_2':
+  #    U   A_COPY_2
+  #   --- Recording mergeinfo for merge of r3 through r11 into 'A_COPY_2\C\X\Y':
+  #    G   A_COPY_2\C\X\Y
+  #    vvvvvvvvvvvvvvvvvvvv
+  #    U   A_COPY_2\C\X\Y\Z
+  #    ^^^^^^^^^^^^^^^^^^^^
+  #   
+  #   >svn pl -vR A_COPY_2
+  #   Properties on 'A_COPY_2':
+  #     svn:mergeinfo
+  #       /A:3-11
+  #   Properties on 'A_COPY_2\C\X\Y':
+  #     branch-prop-foo
+  #       bar
+  #     svn:mergeinfo
+  #       /A/C/X/Y:8-11
+  #       /A_COPY/C/X/Y:10*
+  #   vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  #   Properties on 'A_COPY_2\C\X\Y\Z':
+  #     svn:mergeinfo
+  #       /A/C/X/Y/Z:8-11
+  #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY2_path, {
+    'B/E/beta'   : Item(status='U '),
+    'D/G/rho'    : Item(status='U '),
+    'D/H/omega'  : Item(status='U '),
+    'D/H/psi'    : Item(status='U '),
+    'C/X'        : Item(status='A '),
+    'C/X/Y'      : Item(status='A '),
+    'C/X/Y/Z'    : Item(status='A '),
+    'C/X/Y/Z/nu' : Item(status='A '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY2_path, {
+    ''      : Item(status=' U'),
+    'C/X/Y' : Item(status=' G'), # Added with explicit mergeinfo so mergeinfo
+    })                           # describing the merge shows as mer'G'ed.
+  expected_elision_output = wc.State(A_COPY2_path, {
+    })
+  expected_status = wc.State(A_COPY2_path, {
+    ''           : Item(status=' M', wc_rev=11),
+    'B'          : Item(status='  ', wc_rev=11),
+    'mu'         : Item(status='  ', wc_rev=11),
+    'B/E'        : Item(status='  ', wc_rev=11),
+    'B/E/alpha'  : Item(status='  ', wc_rev=11),
+    'B/E/beta'   : Item(status='M ', wc_rev=11),
+    'B/lambda'   : Item(status='  ', wc_rev=11),
+    'B/F'        : Item(status='  ', wc_rev=11),
+    'C'          : Item(status='  ', wc_rev=11),
+    'C/X'        : Item(status='A ', wc_rev='-', copied='+'),
+    'C/X/Y'      : Item(status=' M', wc_rev='-', copied='+'),
+    'C/X/Y/Z'    : Item(status='  ', wc_rev='-', copied='+'),
+    'C/X/Y/Z/nu' : Item(status='  ', wc_rev='-', copied='+'),
+    'D'          : Item(status='  ', wc_rev=11),
+    'D/G'        : Item(status='  ', wc_rev=11),
+    'D/G/pi'     : Item(status='  ', wc_rev=11),
+    'D/G/rho'    : Item(status='M ', wc_rev=11),
+    'D/G/tau'    : Item(status='  ', wc_rev=11),
+    'D/gamma'    : Item(status='  ', wc_rev=11),
+    'D/H'        : Item(status='  ', wc_rev=11),
+    'D/H/chi'    : Item(status='  ', wc_rev=11),
+    'D/H/psi'    : Item(status='M ', wc_rev=11),
+    'D/H/omega'  : Item(status='M ', wc_rev=11),
+    })
+  expected_disk = wc.State('', {
+    ''           : Item(props={SVN_PROP_MERGEINFO : '/A:3-11'}),
+    'B'          : Item(),
+    'mu'         : Item("This is the file 'mu'.\n"),
+    'B/E'        : Item(),
+    'B/E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'   : Item("New content"),
+    'B/lambda'   : Item("This is the file 'lambda'.\n"),
+    'B/F'        : Item(),
+    'C'          : Item(),
+    'C/X'        : Item(),
+    'C/X/Y'      : Item(props={
+      SVN_PROP_MERGEINFO : '/A/C/X/Y:8-11\n/A_COPY/C/X/Y:10*',
+      'branch-prop-foo'  : 'bar'}),
+    'C/X/Y/Z'    : Item(),
+    'C/X/Y/Z/nu' : Item("This is the file 'nu'.\n"),
+    'D'          : Item(),
+    'D/G'        : Item(),
+    'D/G/pi'     : Item("This is the file 'pi'.\n"),
+    'D/G/rho'    : Item("New content"),
+    'D/G/tau'    : Item("This is the file 'tau'.\n"),
+    'D/gamma'    : Item("This is the file 'gamma'.\n"),
+    'D/H'        : Item(),
+    'D/H/chi'    : Item("This is the file 'chi'.\n"),
+    'D/H/psi'    : Item("New content"),
+    'D/H/omega'  : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY2_path, None, None,
+                                       sbox.repo_url + '/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+
 ########################################################################
 # Run the tests
 
@@ -17393,6 +17568,7 @@ test_list = [ None,
               record_only_merge_adds_new_subtree_mergeinfo,
               reverse_merge_with_rename,
               merge_adds_then_deletes_subtree,
+              merge_with_added_subtrees_with_mergeinfo,
              ]
 
 if __name__ == '__main__':
