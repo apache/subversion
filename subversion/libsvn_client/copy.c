@@ -1475,13 +1475,16 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   if (pair->src_kind == svn_node_dir)
     {
       svn_boolean_t sleep_needed = FALSE;
-      const char *tmp_abspath;
+      const char *tmpdir_abspath, *tmp_abspath;
 
       /* Find a temporary location in which to check out the copy source.
        * (This function is deprecated, but we intend to replace this whole
        * code path with something else.) */
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_abspath, dst_abspath,
-                                      svn_io_file_del_on_close, pool));
+      SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
+                                 pool, pool));
+                                 
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
+                                       svn_io_file_del_on_close, pool, pool));
 
       /* Make a new checkout of the requested source. While doing so,
        * resolve pair->src_revnum to an actual revision number in case it

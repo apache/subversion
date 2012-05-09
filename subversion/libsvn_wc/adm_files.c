@@ -634,3 +634,16 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__get_tmpdir(const char **tmpdir_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(tmpdir_abspath,
+                                         wc_ctx->db, local_abspath,
+                                         result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
