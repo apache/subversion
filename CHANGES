@@ -1,5 +1,5 @@
 Version 1.7.5
-(26 Apr 2012, from /branches/1.7.x)
+(?? ??? 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.5
 
  User-visible changes:
@@ -21,9 +21,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * notify upon 'update' just removing locks on files (r1329876)
     * neon: fix potential use of freed memory during commits (r1329388)
     * 'status --xml' doesn't show repository deletes correctly (issue #4167)
-    * fix assert on svn:externals with drive letter on Windows (issue #4173)
+    * fix assert on svn:externals with drive letter on Windows (issue #4073)
     * fix 'svn update --depth=empty' against 1.4 servers (issue #4046)
     * handle missing svn:date reported by svnserve gracefully (r1306111)
+    * fix merges which first add a subtree and then delete it (issue #4166)
+    * fix a regression with checkout of file externals (issue #4087)
+    * don't add spurious mergeinfo to subtrees in edge-case merge (issue #4169)
 
   - Server-side bugfixes:
     * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
@@ -37,10 +40,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
  Developer-visible changes:
   - General:
     * windows example distribution scripts: include svnrdump (r1295007)
+    * fix running the test suite with jsvn (r1335555)
 
   - Bindings:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
     * swig-rb tests: avoid FAILs on APR hash order (r1310535, r1310594)
+    * swig-pl: Improved perl detection in gen-make.py (r1291797, r1291810)
 
 
 Version 1.7.4
