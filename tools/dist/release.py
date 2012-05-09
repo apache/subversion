@@ -51,6 +51,7 @@ import operator
 import itertools
 import subprocess
 import argparse       # standard in Python 2.7
+import getpass
 
 # Find ezt, using Subversion's copy, if there isn't one on the system.
 try:
@@ -483,6 +484,7 @@ def post_candidates(args):
                                % args.version.base,
                              '--auto-props', '--config-option',
                              'config:auto-props:*.asc=svn:eol-style=native',
+                             '--username', args.username,
                              get_deploydir(args.base_dir), dist_dev_url])
     (stdout, stderr) = proc.communicate()
     proc.wait()
@@ -513,7 +515,8 @@ def clean_dist(args):
 
     svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
                    'They are still available at ' +
-                   'http://archive.apache.org/dist/subversion/']
+                   'http://archive.apache.org/dist/subversion/',
+                   '--username', args.username]
     for k, g in itertools.groupby(sorted(versions),
                                   lambda x: (x.major, x.minor)):
         releases = list(g)
@@ -548,7 +551,8 @@ def move_to_dist(args):
       if fnmatch.fnmatch(entry, 'subversion-%s.*' % str(args.version)):
         filenames.append(entry)
     svnmucc_cmd = ['svnmucc', '-m',
-                   'Publish Subversion-%s.' % str(args.version)]
+                   'Publish Subversion-%s.' % str(args.version),
+                   '--username', args.username]
     svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist']
     for filename in filenames:
         svnmucc_cmd += ['mv', dist_dev_url + '/' + filename,
@@ -760,6 +764,9 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--username', default=getpass.getuser(),
+                    help='''Username for ''' + dist_repos + '''.  The default
+                            is the current username''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -768,6 +775,9 @@ def main():
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
+    subparser.add_argument('--username', default=getpass.getuser(),
+                    help='''Username for ''' + dist_repos + '''.  The default
+                            is the current username''')
 
     # The move-to-dist subcommand
     subparser = subparsers.add_parser('move-to-dist',
@@ -777,6 +787,9 @@ def main():
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--username', default=getpass.getuser(),
+                    help='''Username for ''' + dist_repos + '''.  The default
+                            is the current username''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
