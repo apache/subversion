@@ -67,13 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1335555
-   Fix running the test suite with jsvn.
-   Justification:
-     Obvious fix. Tmate folks need this for SVNKit.
-   Votes:
-     +1: stsp, danielsh, rhuijben
-
  * r1291797, r1291810
    On Windows detect where perl is installed and add this information to the
    include and lib directory settings of the swig-perl projects.
