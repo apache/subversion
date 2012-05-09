@@ -34,18 +34,6 @@ Candidate changes:
    Votes:
      +1: stsp, neels
 
- * r1291797, r1291810
-   On Windows detect where perl is installed and add this information to the
-   include and lib directory settings of the swig-perl projects.
-   Justification:
-     Allows building swig-perl without copying perl libraries manually.
-     Somehow required on the Windows buildbot since the last library version
-     bump.
-   Votes:
-     +1: rhuijben
-     +0: pburba (I can't replicate the build problem, I can build with or
-                 without the patch).
-
  * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
    r1294134, r1294147, r1294586
    Two interdependent changes:
@@ -126,3 +114,15 @@ Approved changes:
      Obvious fix. Tmate folks need this for SVNKit.
    Votes:
      +1: stsp, danielsh, rhuijben
+
+ * r1291797, r1291810
+   On Windows detect where perl is installed and add this information to the
+   include and lib directory settings of the swig-perl projects.
+   Justification:
+     Allows building swig-perl without copying perl libraries manually.
+     Somehow required on the Windows buildbot since the last library version
+     bump.
+   Votes:
+     +1: rhuijben
+     +0: pburba (I can't replicate the build problem, I can build with or
+                 without the patch).
