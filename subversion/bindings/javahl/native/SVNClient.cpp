@@ -1030,12 +1030,12 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
                      const char *relativeToDir, OutputStream &outputStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
-                     bool showCopiesAsAdds, bool ignoreProps)
+                     bool showCopiesAsAdds, bool ignoreProps, bool propsOnly)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
          relativeToDir, outputStream, depth, changelists,
          ignoreAncestry, noDiffDelete, force, showCopiesAsAdds,
-         ignoreProps);
+         ignoreProps, propsOnly);
 }
 
 void
