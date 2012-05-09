@@ -1435,8 +1435,8 @@ check_paths(svn_boolean_t *is_repos1,
                                 _("At least one revision must be non-local "
                                   "for a pegged diff"));
 
-      *is_repos1 = ! is_local_rev1;
-      *is_repos2 = ! is_local_rev2;
+      *is_repos1 = ! is_local_rev1 || svn_path_is_url(path1);
+      *is_repos2 = ! is_local_rev2 || svn_path_is_url(path2);
     }
   else
     {

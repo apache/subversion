@@ -1547,7 +1547,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                             pair->src_original,
                                             tmp_abspath,
                                             &pair->src_peg_revision,
-                                            &pair->src_op_revision, NULL,
+                                            &pair->src_op_revision,
                                             svn_depth_infinity,
                                             ignore_externals, FALSE,
                                             &sleep_needed, ctx, pool);

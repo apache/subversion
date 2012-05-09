@@ -2675,6 +2675,16 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                            APR_HASH_KEY_STRING, added_root_path);
             }
         }
+
+      if (notify->action == svn_wc_notify_update_delete
+          && notify_b->added_abspaths)
+        {
+          /* Issue #4166: If a previous merge added NOTIFY_ABSPATH, but we
+             are now deleting it, then remove it from the list of added
+             paths. */
+          apr_hash_set(notify_b->added_abspaths, notify->path,
+                       APR_HASH_KEY_STRING, NULL);
+        }
     }
 
   /* If our merge sources are ancestors of one another... */

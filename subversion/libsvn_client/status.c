@@ -419,7 +419,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                                       pool));
             }
 
-          if (depth_as_sticky)
+          if (depth_as_sticky || !server_supports_depth)
             status_depth = depth;
           else
             status_depth = svn_depth_unknown; /* Use depth from WC */

@@ -15,35 +15,6 @@ Status of 1.7.5:
 Candidate changes:
 ==================
 
- * r1164929, r1200277, r1243694, r1243840, r1243920, r1244466, r1244551, r1295372
-   Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
-   Justification:
-     Regression from 1.6. Some repositories with file externals cannot be
-     checked out with 1.7. Users complained.
-     See http://svn.haxx.se/users/archive-2011-12/0299.shtml
-   Branch:
-     ^/subversion/branches/1.7.x-issue4087
-   Notes:
-     r1164929 and r1200277 were merged to simplify conflict resolution
-     r1243694 implements the workaround
-     r1243840 is a cosmetic follow-up treak
-     r1243920 was merged for conflict resolution for r1244466
-     r1244466 eliminates an unneccesary RA round-trip from r1243694
-     r1244551 uses a better API to query the local repos root and uuid
-     r1295372 improves test coverage
-   Votes:
-     +1: stsp, neels
-
- * r1291797, r1291810
-   On Windows detect where perl is installed and add this information to the
-   include and lib directory settings of the swig-perl projects.
-   Justification:
-     Allows building swig-perl without copying perl libraries manually.
-     Somehow required on the Windows buildbot since the last library version
-     bump.
-   Votes:
-     +1: rhuijben
-
  * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
    r1294134, r1294147, r1294586
    Two interdependent changes:
@@ -64,39 +35,12 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * r1210913, r1211048
-   Fix issue 4073, assert on svn:externals path with drive letter on Windows.
-   Justification:
-     Avoid client asserting.
-   Notes:
-     Merge with '--accept mc' to resolve r1210913 conflict.
-   Votes:
-     +1: philip
-     +1: stsp (cannot test this, but the trunk windows buildsbots are
-               happy and the diff makes sense)
-
- * r1306111
-   Handle NULL dates in libsvn_ra_svn.
-   Justification:
-     Avoids segfault.
-   Branch:
-     ^/subversion/branches/1.7.x-r1306111
-   Votes:
-     +1: danielsh, stsp
-
  * r1307177
    Move mod_dontdothat to install-tools.
    Justification:
      Undo compatibility break of 'make install' in 1.7.3.
    Votes:
      +1: danielsh
-
- * r1190463
-   Issue 4046, "svn update --depth=empty" against 1.4 servers.
-   Justification:
-     Regression from 1.6.
-   Votes:
-     +1: philip, stsp
 
  * r1291594, r1328267, r1328268
    Support httpd-2.4 in davautocheck.
@@ -107,24 +51,15 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1329417
-   Fix issue #4166 'multiple merge editor drives which add then delete a
-   subtree fail'.
+ * r1335104
+   Avoid a sometimes very expensive operation in svn status' external
+   processing. (issue #4178)
    Justification:
-     Prevents merge failure in an edge case.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4166
+     See the "svn status <file> is slow under a large check-out" on
+     users{_AT_}subversion.apache.org
    Votes:
-     +1: pburba
-     -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared".
-               Backport branch added - pburba)
+     +1: rhuijben, stsp
 
- * r1330410, r1330424, r1330431
-   Fix an error leak in the hook script invocation code.
-   Justification:
-     This bug can cause a server process to hang.
-   Votes:
-     +1: stsp
 
 Veto-blocked changes:
 =====================
@@ -132,61 +67,12 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1327474, r1327490, r1327495, r1328353
-   Allow an optional value of the delta editor to be transfered via
-   mod_dav_svn, ra_serf and ra_neon.
+ * r1330444, 1330520
+   Fix issue #4169 'added subtrees with non-inheritable mergeinfo cause
+   spurious subtree mergeinfo'.
    Justification:
-     The ra layers should behave as similar as possible
+     Prevents spurious subtree mergeinfo in an edge case.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4169
    Votes:
-     +1: rhuijben, philip, stsp
-
- * r1328846, r1328847, r1328852
-   Reset some sqlite statements before returning.
-   Justification:
-     This avoids a bug in sqlite 3.7.11  and might fix problems for third
-     party api users that call this function multiple times.
-   Notes:
-     r1328846 and r1328852 are the actual fix.
-     r1328847 avoids fixes (and introduces) some whitepace inconsistencies.
-   Votes:
-     +1: rhuijben, danielsh, stsp
-
- * r1330258
-   Fix issue #4161 "Assertion failed with svn diff -r BASE:HEAD ^/trunk"
-   Justification:
-     Regression from 1.6. Users should not run into assertions.
-   Votes:
-     +1: stsp, danielsh, philip
-
- * r1329876
-   Properly report files that have just their lock removed as part of
-   an update.
-   Justification:
-     Allows api users to use notifications to update their status cache.
-     Unreported nodes are assumed to be unchanged.
-   Votes:
-     +1: rhuijben, stsp, philip
-
- * r1329388
-   Destroy neon request object so that request cleanups are not delayed.
-   Justification:
-     Undefined behaviour by using memory after free(); does not appear to
-     affect 1.7 but may affect 3rd party clients using the RA API.
-   Votes:
-     +1: philip, rhuijben, stsp
-
- * r1330382
-   Fix issue 4167, 'svn st -u --xml' on items deleted from repository
-   Justification:
-     Regression from 1.6
-   Votes:
-     +1: philip, rhuijben, stsp
-
- * r1200896, r1203977, r1205968, r1309992, r1310378, r1310428
-   Various updates to the Emacs client code (dsvn.el and vc-svn.el).
-   Justification:
-     Make the elisp code work better with svn 1.7 and modern Emacs
-     versions, and general improvements for the benefit of Emacs users.
-   Votes:
-     +1: mattiase
-     +0: philip
+     +1: pburba, rhuijben, stsp

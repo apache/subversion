@@ -17194,6 +17194,76 @@ def reverse_merge_with_rename(sbox):
                                      A_COPY_path, '-r9:1')
 
 #----------------------------------------------------------------------
+# Test for issue #4166 'multiple merge editor drives which add then
+# delete a subtree fail'.
+@SkipUnless(server_has_mergeinfo)
+@Issue(4166)
+def merge_adds_then_deletes_subtree(sbox):
+  "merge adds then deletes subtree"
+
+  # Some paths we'll care about.
+  A_path         = os.path.join(sbox.wc_dir, 'A')
+  nu_path        = os.path.join(sbox.wc_dir, 'A', 'C', 'nu')
+  C_branch_path  = os.path.join(sbox.wc_dir, 'branch', 'C')
+  nu_branch_path = os.path.join(sbox.wc_dir, 'branch', 'C', 'nu')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a branch.
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/branch',
+                                     '-m', 'Make a branch.')
+
+  # On the branch parent: Add a file in r3 and then delete it in r4.
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Add a file')
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Delete a file')
+
+  # Merge r3 and r4 from ^/A/C to branch/C as part of one merge
+  # command, but as separate editor drives, i.e. 'c3,4 vs. -r2:4.
+  # These should be equivalent but the former was failing with:
+  #
+  #   >svn merge ^/A/C branch\C -c3,4
+  #   --- Merging r3 into 'branch\C':
+  #   A    branch\C\nu
+  #   --- Recording mergeinfo for merge of r3 into 'branch\C':
+  #    U   branch\C
+  #   --- Merging r4 into 'branch\C':
+  #   D    branch\C\nu
+  #   --- Recording mergeinfo for merge of r4 into 'branch\C':
+  #    G   branch\C
+  #   ..\..\..\subversion\svn\util.c:913: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:10873: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:10837: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:8994: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\merge.c:7923: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\mergeinfo.c:257: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\mergeinfo.c:97: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\props.c:2003: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\props.c:2024: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:11473: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:7247: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:7232: (apr_err=155010)
+  #   svn: E155010: The node 'C:\SVN\src-trunk\Debug\subversion\tests
+  #   \cmdline\svn-test-work\working_copies\merge_tests-128\branch\C\nu'
+  #   was not found.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3],[4]],
+                          ['A    ' + nu_branch_path + '\n',
+                           'D    ' + nu_branch_path + '\n',
+                           ' U   ' + C_branch_path + '\n',
+                           ' G   ' + C_branch_path + '\n',]),
+    [], 'merge', '-c3,4', sbox.repo_url + '/A/C', C_branch_path)
+
+#----------------------------------------------------------------------
 # Test for issue #4169 'added subtrees with non-inheritable mergeinfo
 # cause spurious subtree mergeinfo'.
 @SkipUnless(server_has_mergeinfo)
@@ -17497,6 +17567,7 @@ test_list = [ None,
               merge_adds_subtree_with_mergeinfo,
               record_only_merge_adds_new_subtree_mergeinfo,
               reverse_merge_with_rename,
+              merge_adds_then_deletes_subtree,
               merge_with_added_subtrees_with_mergeinfo,
              ]
 
