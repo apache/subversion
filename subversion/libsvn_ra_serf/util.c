@@ -2076,20 +2076,17 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       if (! err)
         {
           *vcc_url =
-              svn_ra_serf__get_ver_prop(props, path,
-                                        SVN_INVALID_REVNUM,
-                                        "DAV:",
-                                        "version-controlled-configuration");
+              svn_ra_serf__get_prop(props, path,
+                                    "DAV:",
+                                    "version-controlled-configuration");
 
-          relative_path = svn_ra_serf__get_ver_prop(props, path,
-                                                    SVN_INVALID_REVNUM,
-                                                    SVN_DAV_PROP_NS_DAV,
-                                                    "baseline-relative-path");
+          relative_path = svn_ra_serf__get_prop(props, path,
+                                                SVN_DAV_PROP_NS_DAV,
+                                                "baseline-relative-path");
 
-          uuid = svn_ra_serf__get_ver_prop(props, path,
-                                           SVN_INVALID_REVNUM,
-                                           SVN_DAV_PROP_NS_DAV,
-                                           "repository-uuid");
+          uuid = svn_ra_serf__get_prop(props, path,
+                                       SVN_DAV_PROP_NS_DAV,
+                                       "repository-uuid");
           break;
         }
       else
