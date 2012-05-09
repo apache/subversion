@@ -113,15 +113,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1335555
-   Fix running the test suite with jsvn.
-   Justification:
-     Obvious fix. Tmate folks need this for SVNKit.
-   Votes:
-     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1335555
+   Fix running the test suite with jsvn.
+   Justification:
+     Obvious fix. Tmate folks need this for SVNKit.
+   Votes:
+     +1: stsp, danielsh, rhuijben
