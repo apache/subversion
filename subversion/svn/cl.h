@@ -234,6 +234,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t patch_compatible; /* Output compatible with GNU patch */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
+  svn_boolean_t properties_only;   /* Show properties only */
 } svn_cl__opt_state_t;
 
 

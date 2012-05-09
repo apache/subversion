@@ -886,7 +886,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                           revision2, relative_to_dir, depth,
                           ignore_ancestry, no_diff_deleted,
                           show_copies_as_adds, ignore_content_type, FALSE,
-                          use_git_diff_format, header_encoding,
+                          FALSE, use_git_diff_format, header_encoding,
                           outstream, errstream, changelists, ctx, pool);
 }
 
@@ -1013,6 +1013,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                               no_diff_deleted,
                               show_copies_as_adds,
                               ignore_content_type,
+                              FALSE,
                               FALSE,
                               use_git_diff_format,
                               header_encoding,
