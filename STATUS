@@ -70,18 +70,6 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1329417
-   Fix issue #4166 'multiple merge editor drives which add then delete a
-   subtree fail'.
-   Justification:
-     Prevents merge failure in an edge case.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4166
-   Votes:
-     +1: pburba, philip
-     -0: stsp (doesn't compile: "error: 'notify_abspath' undeclared".
-               Backport branch added - pburba)
-
  * r1330444, 1330520
    Fix issue #4169 'added subtrees with non-inheritable mergeinfo cause
    spurious subtree mergeinfo'.
@@ -91,6 +79,10 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4169
    Votes:
      +1: pburba, rhuijben
+     -0: stsp (--reintegrate merge of this branch fails for me, probably
+               due to a new and unrelated bug in trunk:
+               svn: E160013: '/repos/asf/!svn/rvr/1330520/subversion/trunk/subversion/libsvn_subr/svn_base64.c' path not found)
+
 
  * r1335104
    Avoid a sometimes very expensive operation in svn status' external
@@ -99,7 +91,7 @@ Candidate changes:
      See the "svn status <file> is slow under a large check-out" on
      users{_AT_}subversion.apache.org
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 
 Veto-blocked changes:
@@ -126,3 +118,13 @@ Approved changes:
      +1: rhuijben
      +0: pburba (I can't replicate the build problem, I can build with or
                  without the patch).
+
+ * r1329417
+   Fix issue #4166 'multiple merge editor drives which add then delete a
+   subtree fail'.
+   Justification:
+     Prevents merge failure in an edge case.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4166
+   Votes:
+     +1: pburba, philip, stsp
