@@ -126,16 +126,9 @@ typedef struct report_dir_t
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this dir. */
   svn_revnum_t base_rev;
 
-  /* The target revision we're retrieving. */
-  svn_revnum_t target_rev;
-
   /* controlling dir baton - this is only created in open_dir() */
   void *dir_baton;
   apr_pool_t *dir_baton_pool;
-
-  /* Our master update editor and baton. */
-  const svn_delta_editor_t *update_editor;
-  void *update_baton;
 
   /* How many references to this directory do we still have open? */
   apr_size_t ref_count;
@@ -199,9 +192,6 @@ typedef struct report_info_t
 
   /* Our base revision - SVN_INVALID_REVNUM if we're adding this file. */
   svn_revnum_t base_rev;
-
-  /* The target revision we're retrieving. */
-  svn_revnum_t target_rev;
 
   /* our delta base, if present (NULL if we're adding the file) */
   const char *delta_base;
@@ -414,9 +404,6 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       new_info->props = new_info->dir->props;
       new_info->dir->removed_props = apr_hash_make(new_info->pool);
 
-      /* Point to the update_editor */
-      new_info->dir->update_editor = ctx->update_editor;
-      new_info->dir->update_baton = ctx->update_baton;
       new_info->dir->report_context = ctx;
 
       if (info)
@@ -474,7 +461,7 @@ set_file_props(void *baton,
                apr_pool_t *scratch_pool)
 {
   report_info_t *info = baton;
-  const svn_delta_editor_t *editor = info->dir->update_editor;
+  const svn_delta_editor_t *editor = info->dir->report_context->update_editor;
   const char *prop_name;
 
   if (strcmp(name, "md5-checksum") == 0
@@ -499,7 +486,7 @@ set_dir_props(void *baton,
               apr_pool_t *scratch_pool)
 {
   report_dir_t *dir = baton;
-  const svn_delta_editor_t *editor = dir->update_editor;
+  const svn_delta_editor_t *editor = dir->report_context->update_editor;
   const char *prop_name;
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
@@ -520,7 +507,7 @@ remove_file_props(void *baton,
                   apr_pool_t *scratch_pool)
 {
   report_info_t *info = baton;
-  const svn_delta_editor_t *editor = info->dir->update_editor;
+  const svn_delta_editor_t *editor = info->dir->report_context->update_editor;
   const char *prop_name;
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
@@ -541,7 +528,7 @@ remove_dir_props(void *baton,
                  apr_pool_t *scratch_pool)
 {
   report_dir_t *dir = baton;
-  const svn_delta_editor_t *editor = dir->update_editor;
+  const svn_delta_editor_t *editor = dir->report_context->update_editor;
   const char *prop_name;
 
   prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
@@ -559,6 +546,8 @@ remove_dir_props(void *baton,
 static svn_error_t*
 open_dir(report_dir_t *dir)
 {
+  report_context_t *ctx = dir->report_context;
+
   /* if we're already open, return now */
   if (dir->dir_baton)
     {
@@ -569,16 +558,16 @@ open_dir(report_dir_t *dir)
     {
       dir->dir_baton_pool = svn_pool_create(dir->pool);
 
-      if (dir->report_context->destination &&
-          dir->report_context->sess->wc_callbacks->invalidate_wc_props)
+      if (ctx->destination
+          && ctx->sess->wc_callbacks->invalidate_wc_props)
         {
-          SVN_ERR(dir->report_context->sess->wc_callbacks->invalidate_wc_props(
-                      dir->report_context->sess->wc_callback_baton,
-                      dir->report_context->update_target,
+          SVN_ERR(ctx->sess->wc_callbacks->invalidate_wc_props(
+                      ctx->sess->wc_callback_baton,
+                      ctx->update_target,
                       SVN_RA_SERF__WC_CHECKED_IN_URL, dir->pool));
         }
 
-      SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
+      SVN_ERR(ctx->update_editor->open_root(ctx->update_baton, dir->base_rev,
                                             dir->dir_baton_pool,
                                             &dir->dir_baton));
     }
@@ -590,7 +579,7 @@ open_dir(report_dir_t *dir)
 
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
-          SVN_ERR(dir->update_editor->open_directory(dir->name,
+          SVN_ERR(ctx->update_editor->open_directory(dir->name,
                                                      dir->parent_dir->dir_baton,
                                                      dir->base_rev,
                                                      dir->dir_baton_pool,
@@ -598,7 +587,7 @@ open_dir(report_dir_t *dir)
         }
       else
         {
-          SVN_ERR(dir->update_editor->add_directory(dir->name,
+          SVN_ERR(ctx->update_editor->add_directory(dir->name,
                                                     dir->parent_dir->dir_baton,
                                                     NULL, SVN_INVALID_REVNUM,
                                                     dir->dir_baton_pool,
@@ -632,12 +621,13 @@ close_dir(report_dir_t *dir)
   if (dir->fetch_props)
     {
       SVN_ERR(svn_ra_serf__walk_all_props(dir->props, dir->url,
-                                          dir->target_rev,
+                                          dir->report_context->target_rev,
                                           set_dir_props, dir,
                                           scratch_pool));
     }
 
-  SVN_ERR(dir->update_editor->close_directory(dir->dir_baton, scratch_pool));
+  SVN_ERR(dir->report_context->update_editor->close_directory(
+            dir->dir_baton, scratch_pool));
 
   /* remove us from our parent's children list */
   if (dir->parent_dir)
@@ -701,7 +691,7 @@ check_lock(report_info_t *info)
   const char *lock_val;
 
   lock_val = svn_ra_serf__get_ver_prop(info->props, info->url,
-                                       info->target_rev,
+                                       info->dir->report_context->target_rev,
                                        "DAV:", "lockdiscovery");
 
   if (lock_val)
@@ -820,7 +810,8 @@ open_updated_file(report_info_t *info,
                   svn_boolean_t force_apply_textdelta,
                   apr_pool_t *scratch_pool)
 {
-  const svn_delta_editor_t *update_editor = info->dir->update_editor;
+  report_context_t *ctx = info->dir->report_context;
+  const svn_delta_editor_t *update_editor = ctx->update_editor;
 
   /* Ensure our parent is open. */
   SVN_ERR(open_dir(info->dir));
@@ -871,7 +862,7 @@ open_updated_file(report_info_t *info,
     {
       SVN_ERR(svn_ra_serf__walk_all_props(info->props,
                                           info->url,
-                                          info->target_rev,
+                                          ctx->target_rev,
                                           set_file_props, info,
                                           scratch_pool));
     }
@@ -897,9 +888,8 @@ close_updated_file(report_info_t *info,
                    apr_pool_t *scratch_pool)
 {
   /* Close the file via the editor. */
-  SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
-                                               info->final_checksum,
-                                               scratch_pool));
+  SVN_ERR(info->dir->report_context->update_editor->close_file(
+            info->file_baton, info->final_checksum, scratch_pool));
 
   /* We're done with our editor pool. */
   svn_pool_destroy(info->editor_pool);
@@ -1300,7 +1290,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     {
       SVN_ERR(svn_ra_serf__deliver_props(&info->propfind, info->props,
                                          ctx->sess, conn, info->url,
-                                         info->target_rev, "0", all_props,
+                                         ctx->target_rev, "0", all_props,
                                          &ctx->done_propfinds,
                                          info->dir->pool));
       SVN_ERR_ASSERT(info->propfind);
@@ -1487,7 +1477,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->base_rev = SVN_STR_TO_REV(rev);
       info->dir->base_rev = info->base_rev;
-      info->dir->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
 
       info->dir->base_name = "";
@@ -1540,7 +1529,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->base_rev = SVN_STR_TO_REV(rev);
       dir->base_rev = info->base_rev;
-      dir->target_rev = ctx->target_rev;
 
       info->fetch_props = FALSE;
 
@@ -1594,7 +1582,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
       dir->base_rev = info->base_rev;
-      dir->target_rev = ctx->target_rev;
       dir->fetch_props = TRUE;
 
       dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
@@ -1627,7 +1614,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, OPEN_FILE);
 
       info->base_rev = SVN_STR_TO_REV(rev);
-      info->target_rev = ctx->target_rev;
       info->fetch_props = FALSE;
 
       info->base_name = apr_pstrdup(info->pool, file_name);
@@ -1653,7 +1639,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, ADD_FILE);
 
       info->base_rev = SVN_INVALID_REVNUM;
-      info->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
       info->fetch_file = TRUE;
 
@@ -1700,10 +1685,10 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       full_path = svn_relpath_join(info->dir->name, file_name, tmppool);
 
-      SVN_ERR(info->dir->update_editor->delete_entry(full_path,
-                                                     delete_rev,
-                                                     info->dir->dir_baton,
-                                                     tmppool));
+      SVN_ERR(ctx->update_editor->delete_entry(full_path,
+                                               delete_rev,
+                                               info->dir->dir_baton,
+                                               tmppool));
 
       svn_pool_destroy(tmppool);
     }
@@ -1966,7 +1951,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                              info->dir->props, ctx->sess,
                                              ctx->sess->conns[ctx->sess->cur_conn],
                                              info->dir->url,
-                                             info->dir->target_rev, "0",
+                                             ctx->target_rev, "0",
                                              all_props,
                                              &ctx->done_propfinds,
                                              info->dir->pool));
@@ -2923,15 +2908,17 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       fetch_url = svn_path_url_add_component2(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }
+  /* REVISION is always SVN_INVALID_REVNUM  */
+  SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
 
   SVN_ERR(svn_ra_serf__retrieve_props(&fetch_props, session, conn, fetch_url,
-                                      revision, "0",
+                                      SVN_INVALID_REVNUM, "0",
                                       props ? all_props : check_path_props,
                                       pool, pool));
 
   /* Verify that resource type is not colelction. */
   SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props, fetch_url,
-                                         revision));
+                                         SVN_INVALID_REVNUM));
   if (res_kind != svn_kind_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
@@ -2942,7 +2929,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (props)
     {
       SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props, fetch_url,
-                                         revision, pool, pool));
+                                         SVN_INVALID_REVNUM, pool, pool));
     }
 
   if (stream)
