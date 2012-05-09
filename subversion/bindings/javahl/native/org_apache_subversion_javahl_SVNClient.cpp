@@ -1176,7 +1176,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
  jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
  jobject jstream, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
- jboolean jcopiesAsAdds, jboolean jignoreProps)
+ jboolean jcopiesAsAdds, jboolean jignoreProps, jboolean jpropsOnly)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1217,7 +1217,8 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
            EnumMapper::toDepth(jdepth), changelists,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false,
-           jcopiesAsAdds ? true:false, jignoreProps ? true:false);
+           jcopiesAsAdds ? true:false, jignoreProps ? true:false,
+           jpropsOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -1226,7 +1227,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
  jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
  jobject jstream, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
- jboolean jcopiesAsAdds, jboolean jignoreProps)
+ jboolean jcopiesAsAdds, jboolean jignoreProps, jboolean jpropsOnly)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1267,7 +1268,8 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
            dataOut, EnumMapper::toDepth(jdepth), changelists,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false,
-           jcopiesAsAdds ? true:false, jignoreProps ? true:false);
+           jcopiesAsAdds ? true:false, jignoreProps ? true:false,
+           jpropsOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL
