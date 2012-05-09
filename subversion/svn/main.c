@@ -353,7 +353,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "patch tools; currently the same as\n"
                        "                             "
-                       "--show-copies-as-adds --ignore-properties\n"
+                       "--show-copies-as-adds --ignore-properties"
                        )},
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow merge into mixed-revision working copy.\n"
