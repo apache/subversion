@@ -263,7 +263,8 @@ svn_error_t *
 svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                          const svn_wc_conflict_description2_t *desc,
                          void *baton,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   svn_cl__conflict_baton_t *b = baton;
   svn_error_t *err;
@@ -271,7 +272,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
   /* Start out assuming we're going to postpone the conflict. */
   *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                          NULL, pool);
+                                          NULL, result_pool);
 
   switch (b->accept_which)
     {
@@ -310,10 +311,11 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
 
           err = svn_cl__edit_file_externally(desc->merged_file,
-                                             b->editor_cmd, b->config, pool);
+                                             b->editor_cmd, b->config,
+                                             scratch_pool);
           if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           err->message ? err->message :
                                           _("No editor found;"
                                             " leaving all conflicts.")));
@@ -322,7 +324,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           err->message ? err->message :
                                           _("Error running editor;"
                                             " leaving all conflicts.")));
@@ -355,10 +357,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                               desc->local_abspath,
                                               b->config,
                                               &remains_in_conflict,
-                                              pool);
+                                              scratch_pool);
           if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           err->message ? err->message :
                                           _("No merge tool found;"
                                             " leaving all conflicts.")));
@@ -367,7 +369,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           err->message ? err->message :
                                           _("Error running merge tool;"
                                             " leaving all conflicts.")));
@@ -389,7 +391,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
   /* We're in interactive mode and either the user gave no --accept
      option or the option did not apply; let's prompt. */
-  subpool = svn_pool_create(pool);
+  subpool = svn_pool_create(scratch_pool);
 
   /* Handle the most common cases, which is either:
 
