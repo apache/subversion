@@ -2909,13 +2909,13 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* REVISION is always SVN_INVALID_REVNUM  */
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
 
-  SVN_ERR(svn_ra_serf__retrieve_props(&fetch_props, session, conn, fetch_url,
-                                      SVN_INVALID_REVNUM, "0",
-                                      props ? all_props : check_path_props,
-                                      pool, pool));
+  SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
+                                        SVN_INVALID_REVNUM,
+                                        props ? all_props : check_path_props,
+                                        pool, pool));
 
-  /* Verify that resource type is not colelction. */
-  SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props, fetch_url));
+  /* Verify that resource type is not collection. */
+  SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props));
   if (res_kind != svn_kind_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
@@ -2925,7 +2925,9 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* TODO Filter out all of our props into a usable format. */
   if (props)
     {
-      SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props, fetch_url,
+      /* ### flatten_props() does not copy PROPVALUE, but fetch_node_props()
+         ### put them into POOL, so we're okay.  */
+      SVN_ERR(svn_ra_serf__flatten_props(props, fetch_props,
                                          pool, pool));
     }
 

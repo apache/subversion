@@ -109,6 +109,7 @@ struct svn_ra_serf__propfind_context_t {
   svn_ra_serf__list_t done_item;
 };
 
+
 const svn_string_t *
 svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
                                  const char *path,
@@ -644,32 +645,50 @@ svn_ra_serf__retrieve_props(apr_hash_t **results,
 
 
 svn_error_t *
-svn_ra_serf__walk_all_props(apr_hash_t *props,
-                            const char *name,
-                            svn_revnum_t rev,
-                            svn_ra_serf__walker_visitor_t walker,
-                            void *baton,
-                            apr_pool_t *scratch_pool)
+svn_ra_serf__fetch_node_props(apr_hash_t **results,
+                              svn_ra_serf__connection_t *conn,
+                              const char *url,
+                              svn_revnum_t revision,
+                              const svn_ra_serf__dav_props_t *which_props,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  apr_hash_index_t *ns_hi;
+  apr_hash_t *multiprops;
   apr_hash_t *ver_props;
-  apr_hash_t *path_props;
+
+  /* Note: a couple extra hash tables and whatnot get into RESULT_POOL.
+     Not a big deal at this point. Theoretically, we could fetch all
+     props into SCRATCH_POOL, then copy just the REVISION/URL props
+     into RESULT_POOL. Too much work for too little gain...  */
+  SVN_ERR(svn_ra_serf__retrieve_props(&multiprops, conn->session, conn,
+                                      url, revision, "0", which_props,
+                                      result_pool, scratch_pool));
+
+  ver_props = apr_hash_get(multiprops, &revision, sizeof(revision));
+  if (ver_props != NULL)
+    {
+      *results = apr_hash_get(ver_props, url, APR_HASH_KEY_STRING);
+      if (*results != NULL)
+        return SVN_NO_ERROR;
+    }
+
+  return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                          _("The PROPFIND response did not include "
+                            "the requested properties"));
+}
+
+
+svn_error_t *
+svn_ra_serf__walk_node_props(apr_hash_t *props,
+                             svn_ra_serf__walker_visitor_t walker,
+                             void *baton,
+                             apr_pool_t *scratch_pool)
+{
   apr_pool_t *iterpool;
-
-  ver_props = apr_hash_get(props, &rev, sizeof(rev));
-  if (!ver_props)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  path_props = apr_hash_get(ver_props, name, APR_HASH_KEY_STRING);
-  if (!path_props)
-    {
-      return SVN_NO_ERROR;
-    }
+  apr_hash_index_t *ns_hi;
 
   iterpool = svn_pool_create(scratch_pool);
-  for (ns_hi = apr_hash_first(scratch_pool, path_props); ns_hi;
+  for (ns_hi = apr_hash_first(scratch_pool, props); ns_hi;
        ns_hi = apr_hash_next(ns_hi))
     {
       void *ns_val;
@@ -699,6 +718,31 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__walk_all_props(apr_hash_t *props,
+                            const char *name,
+                            svn_revnum_t rev,
+                            svn_ra_serf__walker_visitor_t walker,
+                            void *baton,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *ver_props;
+  apr_hash_t *path_props;
+
+  ver_props = apr_hash_get(props, &rev, sizeof(rev));
+  if (!ver_props)
+    return SVN_NO_ERROR;
+
+  path_props = apr_hash_get(ver_props, name, APR_HASH_KEY_STRING);
+  if (!path_props)
+    return SVN_NO_ERROR;
+
+  return svn_error_trace(svn_ra_serf__walk_node_props(path_props,
+                                                      walker, baton,
+                                                      scratch_pool));
 }
 
 
@@ -824,14 +868,13 @@ set_flat_props(void *baton,
 svn_error_t *
 svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_hash_t *props,
-                           const char *path,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   *flat_props = apr_hash_make(result_pool);
 
-  return svn_error_trace(svn_ra_serf__walk_all_props(
-                            props, path, SVN_INVALID_REVNUM,
+  return svn_error_trace(svn_ra_serf__walk_node_props(
+                            props,
                             set_flat_props,
                             *flat_props /* baton */,
                             scratch_pool));
@@ -890,7 +933,7 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
 
 
 /*
- * Contact the server (using SESSION and CONN) to calculate baseline
+ * Contact the server (using CONN) to calculate baseline
  * information for BASELINE_URL at REVISION (which may be
  * SVN_INVALID_REVNUM to query the HEAD revision).
  *
@@ -902,44 +945,42 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
 static svn_error_t *
 retrieve_baseline_info(svn_revnum_t *actual_revision,
                        const char **basecoll_url_p,
-                       svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *baseline_url,
                        svn_revnum_t revision,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
+  apr_hash_t *dav_props;
   const char *basecoll_url;
-  const char *version_name;
 
-  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, conn,
-                                      baseline_url, revision, "0",
-                                      baseline_props,
-                                      pool, pool));
+  SVN_ERR(svn_ra_serf__fetch_node_props(&props, conn,
+                                        baseline_url, revision,
+                                        baseline_props,
+                                        scratch_pool, scratch_pool));
+  dav_props = apr_hash_get(props, "DAV:", 4);
+  /* If DAV_PROPS is NULL, then svn_prop_get_value() will return NULL.  */
 
-  basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
-                                           "DAV:", "baseline-collection");
-
+  basecoll_url = svn_prop_get_value(dav_props, "baseline-collection");
   if (!basecoll_url)
     {
       return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                               _("The PROPFIND response did not include "
                                 "the requested baseline-collection value"));
     }
-
-  *basecoll_url_p = svn_urlpath__canonicalize(basecoll_url, pool);
-
-  version_name = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
-                                           "DAV:", SVN_DAV__VERSION_NAME);
-  if (!version_name)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                              _("The PROPFIND response did not include "
-                                "the requested version-name value"));
-    }
+  *basecoll_url_p = svn_urlpath__canonicalize(basecoll_url, result_pool);
 
   if (actual_revision)
     {
+      const char *version_name;
+
+      version_name = svn_prop_get_value(dav_props, SVN_DAV__VERSION_NAME);
+      if (!version_name)
+        return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                                _("The PROPFIND response did not include "
+                                  "the requested version-name value"));
+
       *actual_revision = SVN_STR_TO_REV(version_name);
     }
 
@@ -992,10 +1033,9 @@ v1_get_youngest_revnum(svn_revnum_t *youngest,
                                                   scratch_pool));
   if (!bc_url)
     {
-      SVN_ERR(retrieve_baseline_info(youngest, &bc_url,
-                                     conn->session, conn,
+      SVN_ERR(retrieve_baseline_info(youngest, &bc_url, conn,
                                      baseline_url, SVN_INVALID_REVNUM,
-                                     scratch_pool));
+                                     scratch_pool, scratch_pool));
       SVN_ERR(svn_ra_serf__blncache_set(conn->session->blncache,
                                         baseline_url, *youngest,
                                         bc_url, scratch_pool));
@@ -1083,8 +1123,8 @@ get_baseline_info(const char **bc_url,
                                                    revision, pool));
           if (!*bc_url)
             {
-              SVN_ERR(retrieve_baseline_info(NULL, bc_url, session,
-                                             conn, vcc_url, revision, pool));
+              SVN_ERR(retrieve_baseline_info(NULL, bc_url, conn,
+                                             vcc_url, revision, pool, pool));
               SVN_ERR(svn_ra_serf__blncache_set(session->blncache, NULL,
                                                 revision, *bc_url, pool));
             }
@@ -1142,18 +1182,19 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_kind_t *kind,
-                               apr_hash_t *props,
-                               const char *url)
+                               apr_hash_t *props)
 {
+  apr_hash_t *dav_props;
   const char *res_type;
 
-  res_type = svn_ra_serf__get_prop(props, url, "DAV:", "resourcetype");
+  dav_props = apr_hash_get(props, "DAV:", 4);
+  res_type = svn_prop_get_value(dav_props, "resourcetype");
   if (!res_type)
     {
       /* How did this happen? */
       return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                               _("The PROPFIND response did not include the "
-                              "requested resourcetype value"));
+                                "requested resourcetype value"));
     }
 
   if (strcmp(res_type, "collection") == 0)
@@ -1179,17 +1220,22 @@ svn_ra_serf__fetch_dav_prop(const char **value,
                             apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
+  apr_hash_t *dav_props;
 
-  SVN_ERR(svn_ra_serf__retrieve_props(&props, conn->session, conn, url,
-                                      revision, "0", checked_in_props,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra_serf__fetch_node_props(&props, conn, url, revision,
+                                        checked_in_props,
+                                        scratch_pool, scratch_pool));
+  dav_props = apr_hash_get(props, "DAV:", 4);
+  if (dav_props == NULL)
+    return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                            _("The PROPFIND response did not include "
+                              "the requested 'DAV:' properties"));
 
   /* We wouldn't get here if the resource was not found (404), so the
      property should be present.
 
      Note: it is okay to call apr_pstrdup() with NULL.  */
-  *value = apr_pstrdup(result_pool, svn_ra_serf__get_ver_prop(
-                         props, url, revision, "DAV:", propname));
+  *value = apr_pstrdup(result_pool, svn_prop_get_value(dav_props, propname));
 
   return SVN_NO_ERROR;
 }
