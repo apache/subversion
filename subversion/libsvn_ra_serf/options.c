@@ -62,7 +62,7 @@ typedef struct options_state_list_t {
   struct options_state_list_t *prev;
 } options_state_list_t;
 
-struct svn_ra_serf__options_context_t {
+typedef struct options_context_t {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 
@@ -85,14 +85,14 @@ struct svn_ra_serf__options_context_t {
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
 
-  const char *path;
-
   const char *activity_collection;
   svn_revnum_t youngest_rev;
-};
+
+} options_context_t;
+
 
 static void
-push_state(svn_ra_serf__options_context_t *options_ctx, options_state_e state)
+push_state(options_context_t *options_ctx, options_state_e state)
 {
   options_state_list_t *new_state;
 
@@ -112,7 +112,7 @@ push_state(svn_ra_serf__options_context_t *options_ctx, options_state_e state)
   options_ctx->state = new_state;
 }
 
-static void pop_state(svn_ra_serf__options_context_t *options_ctx)
+static void pop_state(options_context_t *options_ctx)
 {
   options_state_list_t *free_state;
   free_state = options_ctx->state;
@@ -128,7 +128,7 @@ start_options(svn_ra_serf__xml_parser_t *parser,
               const char **attrs,
               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__options_context_t *options_ctx = parser->user_data;
+  options_context_t *options_ctx = parser->user_data;
 
   if (!options_ctx->state && strcmp(name.name, "options-response") == 0)
     {
@@ -159,7 +159,7 @@ end_options(svn_ra_serf__xml_parser_t *parser,
             svn_ra_serf__dav_props_t name,
             apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__options_context_t *options_ctx = parser->user_data;
+  options_context_t *options_ctx = parser->user_data;
   options_state_list_t *cur_state;
 
   if (!options_ctx->state)
@@ -197,7 +197,7 @@ cdata_options(svn_ra_serf__xml_parser_t *parser,
               apr_size_t len,
               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__options_context_t *ctx = parser->user_data;
+  options_context_t *ctx = parser->user_data;
 
   if (ctx->collect_cdata)
     svn_stringbuf_appendbytes(ctx->acbuf, data, len);
@@ -224,24 +224,6 @@ create_options_body(serf_bucket_t **body_bkt,
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t*
-svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx)
-{
-  return &ctx->done;
-}
-
-const char *
-svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx)
-{
-  return ctx->activity_collection;
-}
-
-svn_revnum_t
-svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx)
-{
-  return ctx->youngest_rev;
-}
-
 
 /* We use these static pointers so we can employ pointer comparison
  * of our capabilities hash members instead of strcmp()ing all over
@@ -262,7 +244,7 @@ capabilities_headers_iterator_callback(void *baton,
                                        const char *key,
                                        const char *val)
 {
-  svn_ra_serf__options_context_t *opt_ctx = baton;
+  options_context_t *opt_ctx = baton;
   svn_ra_serf__session_t *session = opt_ctx->session;
 
   if (svn_cstring_casecmp(key, "dav") == 0)
@@ -367,10 +349,7 @@ capabilities_headers_iterator_callback(void *baton,
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_YOUNGEST_REV_HEADER) == 0)
         {
-          struct svn_ra_serf__options_context_t *user_data;
-
-          user_data = opt_ctx->parser_ctx->user_data;
-          user_data->youngest_rev = SVN_STR_TO_REV(val);
+          opt_ctx->youngest_rev = SVN_STR_TO_REV(val);
         }
     }
 
@@ -388,7 +367,7 @@ options_response_handler(serf_request_t *request,
                          void *baton,
                          apr_pool_t *pool)
 {
-  svn_ra_serf__options_context_t *opt_ctx = baton;
+  options_context_t *opt_ctx = baton;
 
   if (!opt_ctx->headers_processed)
     {
@@ -420,14 +399,13 @@ options_response_handler(serf_request_t *request,
 }
 
 
-svn_error_t *
-svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
-                                svn_ra_serf__session_t *session,
-                                svn_ra_serf__connection_t *conn,
-                                const char *path,
-                                apr_pool_t *pool)
+static svn_error_t *
+create_options_req(options_context_t **opt_ctx,
+                   svn_ra_serf__session_t *session,
+                   svn_ra_serf__connection_t *conn,
+                   apr_pool_t *pool)
 {
-  svn_ra_serf__options_context_t *new_ctx;
+  options_context_t *new_ctx;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
 
@@ -436,8 +414,6 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
   new_ctx->pool = pool;
 
   new_ctx->acbuf = svn_stringbuf_create_empty(pool);
-
-  new_ctx->path = path;
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   new_ctx->session = session;
@@ -447,7 +423,7 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
 
   handler->handler_pool = pool;
   handler->method = "OPTIONS";
-  handler->path = path;
+  handler->path = session->session_url.path;
   handler->body_delegate = create_options_body;
   handler->body_type = "text/xml";
   handler->conn = conn;
@@ -476,6 +452,48 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
 }
 
 
+svn_error_t *
+svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
+                                    svn_ra_serf__connection_t *conn,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__session_t *session = conn->session;
+  options_context_t *opt_ctx;
+
+  SVN_ERR_ASSERT(SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+
+  SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->done, session,
+                                        scratch_pool));
+
+  *youngest = opt_ctx->youngest_rev;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__v1_get_activity_collection(const char **activity_url,
+                                        svn_ra_serf__connection_t *conn,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__session_t *session = conn->session;
+  options_context_t *opt_ctx;
+
+  SVN_ERR_ASSERT(!SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+
+  SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->done, session,
+                                        scratch_pool));
+
+  *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
+
+  return SVN_NO_ERROR;
+
+}
+
+
 
 /** Capabilities exchange. */
 
@@ -484,16 +502,13 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    const char **corrected_url,
                                    apr_pool_t *pool)
 {
-  svn_ra_serf__options_context_t *opt_ctx;
+  options_context_t *opt_ctx;
   svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
-  SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, serf_sess,
-                                          serf_sess->conns[0],
-                                          serf_sess->session_url.path, pool));
+  SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
 
-  err = svn_ra_serf__context_run_wait(
-            svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
+  err = svn_ra_serf__context_run_wait(&opt_ctx->done, serf_sess, pool);
 
   /* If our caller cares about server redirections, and our response
      carries such a thing, report as much.  We'll disregard ERR --

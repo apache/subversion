@@ -1356,19 +1356,12 @@ open_root(void *edit_baton,
     }
   else
     {
-      svn_ra_serf__options_context_t *opt_ctx;
       const char *activity_str;
 
-      SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
-                                              ctx->session->conns[0],
-                                              ctx->session->session_url.path,
-                                              ctx->pool));
-
-      SVN_ERR(svn_ra_serf__context_run_wait(
-        svn_ra_serf__get_options_done_ptr(opt_ctx),
-        ctx->session, ctx->pool));
-
-      activity_str = svn_ra_serf__options_get_activity_collection(opt_ctx);
+      SVN_ERR(svn_ra_serf__v1_get_activity_collection(&activity_str,
+                                                      ctx->session->conns[0],
+                                                      ctx->pool,
+                                                      ctx->pool));
       if (!activity_str)
         return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                 _("The OPTIONS response did not include the "
