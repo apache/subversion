@@ -461,7 +461,8 @@ checkout_dir(dir_context_t *dir,
  * BASE_REVISION, and set *CHECKED_IN_URL to the concatenation of that
  * with RELPATH.
  *
- * Allocate the result in POOL, and use POOL for temporary allocation.
+ * Allocate the result in RESULT_POOL, and use SCRATCH_POOL for
+ * temporary allocation.
  */
 static svn_error_t *
 get_version_url(const char **checked_in_url,
@@ -469,7 +470,8 @@ get_version_url(const char **checked_in_url,
                 const char *relpath,
                 svn_revnum_t base_revision,
                 const char *parent_vsn_url,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   const char *root_checkout;
 
@@ -477,15 +479,16 @@ get_version_url(const char **checked_in_url,
     {
       const svn_string_t *current_version;
 
-      SVN_ERR(session->wc_callbacks->get_wc_prop(session->wc_callback_baton,
-                                                 relpath,
-                                                 SVN_RA_SERF__WC_CHECKED_IN_URL,
-                                                 &current_version, pool));
+      SVN_ERR(session->wc_callbacks->get_wc_prop(
+                session->wc_callback_baton,
+                relpath,
+                SVN_RA_SERF__WC_CHECKED_IN_URL,
+                &current_version, scratch_pool));
 
       if (current_version)
         {
           *checked_in_url =
-            svn_urlpath__canonicalize(current_version->data, pool);
+            svn_urlpath__canonicalize(current_version->data, result_pool);
           return SVN_NO_ERROR;
         }
     }
@@ -511,7 +514,7 @@ get_version_url(const char **checked_in_url,
                                               NULL /* latest_revnum */,
                                               session, NULL /* conn */,
                                               NULL /* url */, base_revision,
-                                              pool, pool));
+                                              scratch_pool, scratch_pool));
         }
       else
         {
@@ -521,16 +524,17 @@ get_version_url(const char **checked_in_url,
       SVN_ERR(svn_ra_serf__fetch_dav_prop(&root_checkout,
                                           conn, propfind_url, base_revision,
                                           "checked-in",
-                                          pool, pool));
+                                          scratch_pool, scratch_pool));
       if (!root_checkout)
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' not present"),
                                  session->session_url.path);
 
-      root_checkout = svn_urlpath__canonicalize(root_checkout, pool);
+      root_checkout = svn_urlpath__canonicalize(root_checkout, scratch_pool);
     }
 
-  *checked_in_url = svn_path_url_add_component2(root_checkout, relpath, pool);
+  *checked_in_url = svn_path_url_add_component2(root_checkout, relpath,
+                                                result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -564,7 +568,7 @@ checkout_file(file_context_t *file,
   SVN_ERR(get_version_url(&checkout_url,
                           file->commit->session,
                           file->relpath, file->base_revision,
-                          NULL, scratch_pool));
+                          NULL, scratch_pool, scratch_pool));
 
   /* Checkout our file into the activity URL now. */
   err = checkout_node(&file->working_url, file->commit, checkout_url,
@@ -1050,8 +1054,8 @@ setup_copy_file_headers(serf_bucket_t *headers,
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
 
-  serf_bucket_headers_set(headers, "Depth", "0");
-  serf_bucket_headers_set(headers, "Overwrite", "T");
+  serf_bucket_headers_setn(headers, "Depth", "0");
+  serf_bucket_headers_setn(headers, "Overwrite", "T");
 
   return SVN_NO_ERROR;
 }
@@ -1082,8 +1086,8 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
 
-  serf_bucket_headers_set(headers, "Depth", "infinity");
-  serf_bucket_headers_set(headers, "Overwrite", "T");
+  serf_bucket_headers_setn(headers, "Depth", "infinity");
+  serf_bucket_headers_setn(headers, "Overwrite", "T");
 
   /* Implicitly checkout this dir now. */
   dir->working_url = apr_pstrdup(dir->pool, uri.path);
@@ -1116,8 +1120,8 @@ setup_delete_headers(serf_bucket_t *headers,
           serf_bucket_headers_set(headers, "If", token_header);
 
           if (ctx->keep_locks)
-            serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
-                                    SVN_DAV_OPTION_KEEP_LOCKS);
+            serf_bucket_headers_setn(headers, SVN_DAV_OPTIONS_HEADER,
+                                     SVN_DAV_OPTION_KEEP_LOCKS);
         }
     }
 
@@ -1424,7 +1428,7 @@ open_root(void *edit_baton,
       SVN_ERR(get_version_url(&dir->url, dir->commit->session,
                               dir->relpath,
                               dir->base_revision, ctx->checked_in_url,
-                              dir->pool));
+                              dir->pool, dir->pool /* scratch_pool */));
       ctx->checked_in_url = dir->url;
 
       /* Checkout our root dir */
@@ -1711,7 +1715,8 @@ open_directory(const char *path,
       SVN_ERR(get_version_url(&dir->url,
                               dir->commit->session,
                               dir->relpath, dir->base_revision,
-                              dir->commit->checked_in_url, dir->pool));
+                              dir->commit->checked_in_url,
+                              dir->pool, dir->pool /* scratch_pool */));
     }
   *child_baton = dir;
 
@@ -2013,7 +2018,7 @@ change_file_prop(void *file_baton,
 static svn_error_t *
 close_file(void *file_baton,
            const char *text_checksum,
-           apr_pool_t *pool)
+           apr_pool_t *scratch_pool)
 {
   file_context_t *ctx = file_baton;
   svn_boolean_t put_empty_file = FALSE;
@@ -2027,7 +2032,7 @@ close_file(void *file_baton,
       apr_uri_t uri;
       const char *req_url;
 
-      status = apr_uri_parse(pool, ctx->copy_path, &uri);
+      status = apr_uri_parse(scratch_pool, ctx->copy_path, &uri);
       if (status)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -2040,10 +2045,10 @@ close_file(void *file_baton,
                                           ctx->commit->session,
                                           NULL /* conn */,
                                           uri.path, ctx->copy_revision,
-                                          pool, pool));
+                                          scratch_pool, scratch_pool));
 
-      handler = apr_pcalloc(pool, sizeof(*handler));
-      handler->handler_pool = pool;
+      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+      handler->handler_pool = scratch_pool;
       handler->method = "COPY";
       handler->path = req_url;
       handler->conn = ctx->commit->conn;
@@ -2055,7 +2060,7 @@ close_file(void *file_baton,
       handler->header_delegate = setup_copy_file_headers;
       handler->header_delegate_baton = ctx;
 
-      SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+      SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 201 && handler->sline.code != 204)
         {
@@ -2074,8 +2079,8 @@ close_file(void *file_baton,
     {
       svn_ra_serf__handler_t *handler;
 
-      handler = apr_pcalloc(pool, sizeof(*handler));
-      handler->handler_pool = pool;
+      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+      handler->handler_pool = scratch_pool;
       handler->method = "PUT";
       handler->path = ctx->url;
       handler->conn = ctx->commit->conn;
@@ -2100,7 +2105,7 @@ close_file(void *file_baton,
       handler->header_delegate = setup_put_headers;
       handler->header_delegate_baton = ctx;
 
-      SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+      SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 204 && handler->sline.code != 201)
         {
@@ -2109,7 +2114,7 @@ close_file(void *file_baton,
     }
 
   if (ctx->svndiff)
-    SVN_ERR(svn_io_file_close(ctx->svndiff, pool));
+    SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
 
   /* If we had any prop changes, push them via PROPPATCH. */
   if (apr_hash_count(ctx->changed_props) ||
