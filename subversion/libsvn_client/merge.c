@@ -1133,17 +1133,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
 /* Used for both file and directory property merges. */
 static svn_error_t *
-merge_props_changed(svn_wc_notify_state_t *state,
-                    svn_boolean_t *tree_conflicted,
-                    const char *local_abspath,
-                    const apr_array_header_t *propchanges,
-                    apr_hash_t *original_props,
-                    void *baton,
-                    apr_pool_t *scratch_pool)
+prepare_merge_props_changed(const apr_array_header_t **prop_updates,
+                            const char *local_abspath,
+                            const apr_array_header_t *propchanges,
+                            void *baton,
+                            apr_pool_t *scratch_pool)
 {
   apr_array_header_t *props;
   merge_cmd_baton_t *merge_b = baton;
-  svn_client_ctx_t *ctx = merge_b->ctx;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1175,8 +1172,6 @@ merge_props_changed(svn_wc_notify_state_t *state,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
-      svn_error_t *err;
-
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history, see
          http://svn.haxx.se/dev/archive-2008-09/0006.shtml.  If the
@@ -1192,7 +1187,29 @@ merge_props_changed(svn_wc_notify_state_t *state,
                                                   merge_b->ra_session2,
                                                   merge_b->ctx,
                                                   scratch_pool));
+    }
+  *prop_updates = props;
 
+  return SVN_NO_ERROR;
+}
+static svn_error_t *
+merge_props_changed(svn_wc_notify_state_t *state,
+                    svn_boolean_t *tree_conflicted,
+                    const apr_array_header_t *props,
+                    const char *local_abspath,
+                    const apr_array_header_t *propchanges,
+                    apr_hash_t *original_props,
+                    void *baton,
+                    apr_pool_t *scratch_pool)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  svn_client_ctx_t *ctx = merge_b->ctx;
+
+  /* We only want to merge "regular" version properties:  by
+     definition, 'svn merge' shouldn't touch any pristine data  */
+  if (props->nelts)
+    {
+      svn_error_t *err;
       err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
                                 original_props, props, merge_b->dry_run,
                                 ctx->conflict_func2, ctx->conflict_baton2,
@@ -1216,6 +1233,7 @@ merge_props_changed(svn_wc_notify_state_t *state,
                   svn_boolean_t has_pristine_mergeinfo = FALSE;
                   apr_hash_t *pristine_props;
 
+                  /* ### Erroring here will leak err */
                   SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
                                                     ctx->wc_ctx,
                                                     local_abspath,
@@ -1289,6 +1307,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                         apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = diff_baton;
+  apr_array_header_t *props;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               local_relpath, scratch_pool);
   svn_wc_notify_state_t obstr_state;
@@ -1312,8 +1331,11 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
     }
 
+  SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
+                                      diff_baton, scratch_pool));
   return svn_error_trace(merge_props_changed(state,
                                              tree_conflicted,
+                                             props,
                                              local_abspath,
                                              propchanges,
                                              original_props,
@@ -1602,8 +1624,12 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   if (prop_changes->nelts > 0)
     {
       svn_boolean_t tree_conflicted2 = FALSE;
+      const apr_array_header_t *props;
 
-      SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2,
+      SVN_ERR(prepare_merge_props_changed(&props, mine_abspath, prop_changes,
+                                          baton, scratch_pool));
+
+      SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2, props,
                                   mine_abspath, prop_changes, original_props,
                                   baton, scratch_pool));
 
