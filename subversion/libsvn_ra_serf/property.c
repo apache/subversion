@@ -1027,43 +1027,22 @@ svn_ra_serf__get_youngest_revnum(svn_revnum_t *youngest,
 }
 
 
-/* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
-   the path relative to that url for URL in REVISION using SESSION.
-   BC_RELATIVE will be URI decoded.
+/* Set *BC_URL to the baseline collection url for REVISION. If REVISION
+   is SVN_INVALID_REVNUM, then the youngest revnum ("HEAD") is used.
 
-   REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
-   revision").  If URL is NULL, use SESSION's session url.
+   *REVNUM_USED will be set to the revision used.
 
-   If LATEST_REVNUM is not NULL, set it to the baseline revision. If
-   REVISION was set to SVN_INVALID_REVNUM, this will return the current
-   HEAD revision.
+   Uses the specified CONN, which is part of SESSION.
 
-   If non-NULL, use CONN for communications with the server;
-   otherwise, use the default connection.
-
-   All temporary allocations are performed in SCRATCH_POOL.  */
+   All allocations (results and temporary) are performed in POOL.  */
 static svn_error_t *
 get_baseline_info(const char **bc_url,
-                  const char **bc_relative,
+                  svn_revnum_t *revnum_used,
                   svn_ra_serf__session_t *session,
                   svn_ra_serf__connection_t *conn,
-                  const char *url,
                   svn_revnum_t revision,
-                  svn_revnum_t *latest_revnum,
                   apr_pool_t *pool)
 {
-  const char *basecoll_url;
-  const char *relative_url;
-
-  /* No URL?  No sweat.  We'll use the session URL. */
-  if (! url)
-    url = session->session_url.path;
-
-  /* If the caller didn't provide a specific connection for us to use,
-     we'll use the default one.  */
-  if (! conn)
-    conn = session->conns[0];
-
   /* If we detected HTTP v2 support on the server, we can construct
      the baseline collection URL ourselves, and fetch the latest
      revision (if needed) with an OPTIONS request.  */
@@ -1073,22 +1052,20 @@ get_baseline_info(const char **bc_url,
 
       if (SVN_IS_VALID_REVNUM(revision))
         {
-          actual_revision = revision;
+          *revnum_used = revision;
         }
       else
         {
           SVN_ERR(svn_ra_serf__v2_get_youngest_revnum(
-                    &actual_revision, conn, pool));
+                    revnum_used, conn, pool));
           if (! SVN_IS_VALID_REVNUM(actual_revision))
             return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                     _("The OPTIONS response did not include "
                                       "the youngest revision"));
         }
 
-      basecoll_url = apr_psprintf(pool, "%s/%ld",
-                                  session->rev_root_stub, actual_revision);
-      if (latest_revnum)
-        *latest_revnum = actual_revision;
+      *bc_url = apr_psprintf(pool, "%s/%ld",
+                             session->rev_root_stub, *revnum_used);
     }
 
   /* Otherwise, we fall back to the old VCC_URL PROPFIND hunt.  */
@@ -1101,44 +1078,27 @@ get_baseline_info(const char **bc_url,
       if (SVN_IS_VALID_REVNUM(revision))
         {
           /* First check baseline information cache. */
-          SVN_ERR(svn_ra_serf__blncache_get_bc_url(&basecoll_url,
+          SVN_ERR(svn_ra_serf__blncache_get_bc_url(bc_url,
                                                    session->blncache,
                                                    revision, pool));
-
-          if (!basecoll_url)
+          if (!*bc_url)
             {
-              SVN_ERR(retrieve_baseline_info(NULL, &basecoll_url, session,
+              SVN_ERR(retrieve_baseline_info(NULL, bc_url, session,
                                              conn, vcc_url, revision, pool));
               SVN_ERR(svn_ra_serf__blncache_set(session->blncache, NULL,
-                                                revision, basecoll_url, pool));
+                                                revision, *bc_url, pool));
             }
 
-          if (latest_revnum)
-            {
-              *latest_revnum = revision;
-            }
+          *revnum_used = revision;
         }
       else
         {
-          svn_revnum_t actual_revision;
-
-          SVN_ERR(v1_get_youngest_revnum(&actual_revision, &basecoll_url,
+          SVN_ERR(v1_get_youngest_revnum(revnum_used, bc_url,
                                          conn, vcc_url,
                                          pool, pool));
-
-          if (latest_revnum)
-            {
-              *latest_revnum = actual_revision;
-            }
         }
     }
 
-  /* And let's not forget to calculate our relative path. */
-  SVN_ERR(svn_ra_serf__get_relative_path(&relative_url, url, session,
-                                         conn, pool));
-
-  *bc_url = basecoll_url;
-  *bc_relative = relative_url;
   return SVN_NO_ERROR;
 }
 
@@ -1154,14 +1114,27 @@ svn_ra_serf__get_stable_url(const char **stable_url,
                             apr_pool_t *scratch_pool)
 {
   const char *basecoll_url;
-  const char *relpath;
+  const char *repos_relpath;
+  svn_revnum_t revnum_used;
 
-  SVN_ERR(get_baseline_info(&basecoll_url, &relpath,
-                            session, conn,
-                            url, revision, latest_revnum,
-                            scratch_pool));
-  *stable_url = svn_path_url_add_component2(basecoll_url, relpath,
+  /* No URL? No sweat. We'll use the session URL.  */
+  if (! url)
+    url = session->session_url.path;
+
+  /* If the caller didn't provide a specific connection for us to use,
+     we'll use the default connection.  */
+  if (! conn)
+    conn = session->conns[0];
+
+  SVN_ERR(get_baseline_info(&basecoll_url, &revnum_used,
+                            session, conn, revision, scratch_pool));
+  SVN_ERR(svn_ra_serf__get_relative_path(&repos_relpath, url,
+                                         session, conn, scratch_pool));
+
+  *stable_url = svn_path_url_add_component2(basecoll_url, repos_relpath,
                                             result_pool);
+  if (latest_revnum)
+    *latest_revnum = revnum_used;
 
   return SVN_NO_ERROR;
 }
