@@ -1286,9 +1286,11 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               local_relpath, scratch_pool);
   svn_wc_notify_state_t obstr_state;
+  svn_boolean_t is_deleted;
+  svn_node_kind_t kind;
 
-  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
-                                    NULL,
+  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_deleted,
+                                    &kind,
                                     merge_b, local_abspath, svn_node_dir,
                                     scratch_pool));
 
@@ -1296,6 +1298,26 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
     {
       if (state)
         *state = obstr_state;
+      return SVN_NO_ERROR;
+    }
+
+  if (kind != svn_node_dir || is_deleted)
+    {
+      svn_wc_conflict_reason_t reason;
+
+      if (is_deleted)
+        reason = svn_wc_conflict_reason_deleted;
+      else
+        reason = svn_wc_conflict_reason_missing;
+
+      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_file,
+                            svn_wc_conflict_action_edit, reason));
+
+      if (tree_conflicted)
+        *tree_conflicted = TRUE;
+      if (state)
+        *state = svn_wc_notify_state_missing;
+
       return SVN_NO_ERROR;
     }
 
@@ -1313,28 +1335,14 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
      definition, 'svn merge' shouldn't touch any pristine data  */
   if (props->nelts)
     {
-      svn_error_t *err;
       svn_client_ctx_t *ctx = merge_b->ctx;
 
-      err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
-                                NULL, NULL, original_props, props,
-                                merge_b->dry_run,
-                                ctx->conflict_func2, ctx->conflict_baton2,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                scratch_pool);
-
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                  || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
-        {
-          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
-          if (state)
-            *state = svn_wc_notify_state_missing;
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
-          svn_error_clear(err);
-        }
-      else if (err)
-        return svn_error_trace(err);
+      SVN_ERR(svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
+                                  NULL, NULL, original_props, props,
+                                  merge_b->dry_run,
+                                  ctx->conflict_func2, ctx->conflict_baton2,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  scratch_pool));
 
       SVN_ERR(record_mergeinfo_prop_change(local_abspath, props,
                                            merge_b, scratch_pool));
