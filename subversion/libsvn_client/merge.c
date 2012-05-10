@@ -3760,11 +3760,11 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
    REVISION1 and REVISION2 describe the merge range requested from
    MERGEINFO_PATH.
 
-   TARGET_MERGEINFO is the portion of CHILD->ABSPATH's explicit or inherited
+   TARGET_RANGELIST is the portion of CHILD->ABSPATH's explicit or inherited
    mergeinfo that intersects with the merge history described by
-   MERGEINFO_PATH@REVISION1:MERGEINFO_PATH@REVISION2.  TARGET_MERGEINFO
+   MERGEINFO_PATH@REVISION1:MERGEINFO_PATH@REVISION2.  TARGET_RANGELIST
    should be NULL if there is no explicit or inherited mergeinfo on
-   CHILD->ABSPATH or an empty hash if CHILD->ABSPATH has empty mergeinfo or
+   CHILD->ABSPATH or an empty list if CHILD->ABSPATH has empty mergeinfo or
    explicit mergeinfo that exclusively describes non-intersecting history
    with MERGEINFO_PATH@REVISION1:MERGEINFO_PATH@REVISION2.
 
@@ -3779,7 +3779,7 @@ static svn_error_t *
 filter_merged_revisions(svn_client__merge_path_t *parent,
                         svn_client__merge_path_t *child,
                         const char *mergeinfo_path,
-                        svn_mergeinfo_t target_mergeinfo,
+                        apr_array_header_t *target_rangelist,
                         svn_revnum_t revision1,
                         svn_revnum_t revision2,
                         svn_boolean_t child_inherits_implicit,
@@ -3788,7 +3788,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *requested_rangelist, *target_rangelist,
+  apr_array_header_t *requested_rangelist,
     *target_implicit_rangelist, *explicit_rangelist;
 
   /* Convert REVISION1 and REVISION2 to a rangelist.
@@ -3813,12 +3813,8 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
          our svn_rangelist_* APIs to work properly. */
       SVN_ERR(svn_rangelist_reverse(requested_rangelist, scratch_pool));
 
-      if (target_mergeinfo)
-        target_rangelist = apr_hash_get(target_mergeinfo,
-                                        mergeinfo_path, APR_HASH_KEY_STRING);
-      else
-        target_rangelist = NULL;
-
+      /* Set EXPLICIT_RANGELIST to the list of source-range revs that are
+         already recorded as merged to target. */
       if (target_rangelist)
         {
           /* Return the intersection of the revs which are both already
@@ -3902,16 +3898,12 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
     }
   else /* This is a forward merge */
     {
-      if (target_mergeinfo)
-        target_rangelist = apr_hash_get(target_mergeinfo, mergeinfo_path,
-                                        APR_HASH_KEY_STRING);
-      else
-        target_rangelist = NULL;
-
-      /* See earlier comment preceding svn_rangelist_intersect() for
-         why we don't consider inheritance here. */
+      /* Set EXPLICIT_RANGELIST to the list of source-range revs that are
+         NOT already recorded as merged to target. */
       if (target_rangelist)
         {
+          /* See earlier comment preceding svn_rangelist_intersect() for
+             why we don't consider inheritance here. */
           SVN_ERR(svn_rangelist_remove(&explicit_rangelist,
                                        target_rangelist,
                                        requested_rangelist, FALSE,
@@ -4047,54 +4039,40 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                             ? source->loc2->url : source->loc1->url;
   /* Intersection of TARGET_MERGEINFO and the merge history
      described by SOURCE. */
-  svn_mergeinfo_t adjusted_target_mergeinfo = NULL;
+  apr_array_header_t *target_rangelist;
   svn_revnum_t child_base_revision;
 
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
                                               primary_url, result_pool));
 
-  /* Does SOURCE describe a single, unbroken line of history or is there a
-     copy as allowed by `MERGEINFO MERGE SOURCE NORMALIZATION'? */
-  if (implicit_src_gap && child->pre_merge_mergeinfo)
-    {
-      /* Handle issue #3242: The presence of IMPLICIT_SRC_GAP implies that
-         a single copy of SOURCE->LOC1->URL@SOURCE->LOC1->REV was made
-         between SOURCE->LOC1->REV + 1 and SOURCE->LOC2->REV and that
-         there exists a single range M:N, where
-         SOURCE->LOC1->REV < M < N < SOURCE->LOC2->REV, such that
-         SOURCE->LOC2->URL@M:SOURCE->LOC2->URL@N either doesn't exist
-         or describes a different line of history than SOURCE.  In either
-         case we don't want to consider this range as merged so remove it
-         from TARGET_MERGEINFO. */
-      apr_array_header_t *explicit_mergeinfo_gap_ranges =
-        apr_hash_get(child->pre_merge_mergeinfo, mergeinfo_path,
-                     APR_HASH_KEY_STRING);
+  /* Set TARGET_RANGELIST to the portion of TARGET_MERGEINFO that refers
+     to SOURCE (excluding any gap in SOURCE): first get all ranges from
+     TARGET_MERGEINFO that refer to the path of SOURCE, and then prune
+     any ranges that lie in the gap in SOURCE.
 
-      if (explicit_mergeinfo_gap_ranges)
-        {
-          svn_mergeinfo_t gap_mergeinfo = apr_hash_make(scratch_pool);
-
-          apr_hash_set(gap_mergeinfo, mergeinfo_path, APR_HASH_KEY_STRING,
-                       implicit_src_gap);
-          SVN_ERR(svn_mergeinfo_remove2(&adjusted_target_mergeinfo,
-                                        gap_mergeinfo, target_mergeinfo,
-                                        FALSE, result_pool, scratch_pool));
-        }
-    }
+     ### [JAF] In fact, that may still leave some ranges that lie entirely
+     outside the range of SOURCE; it seems we don't care about that.  */
+  if (target_mergeinfo)
+    target_rangelist = apr_hash_get(target_mergeinfo, mergeinfo_path,
+                                    APR_HASH_KEY_STRING);
   else
+    target_rangelist = NULL;
+  if (implicit_src_gap && target_rangelist)
     {
-      /* The simple case: SOURCE->LOC1->URL2@SOURCE->LOC1->REV:
-         SOURCE->LOC2->URL2@SOURCE->LOC2->REV describes two locations
-         along a single, unbroken line of history, there is nothing to
-         filter out. */
-      adjusted_target_mergeinfo = target_mergeinfo;
+      /* Remove any mergeinfo referring to the 'gap' in SOURCE, as that
+         mergeinfo doesn't really refer to SOURCE at all but instead
+         refers to locations that are non-existent or on a different
+         line of history.  (Issue #3242.) */
+      SVN_ERR(svn_rangelist_remove(&target_rangelist,
+                                   implicit_src_gap, target_rangelist,
+                                   FALSE, result_pool));
     }
 
   /* Initialize CHILD->REMAINING_RANGES and filter out revisions already
      merged (or, in the case of reverse merges, ranges not yet merged). */
   SVN_ERR(filter_merged_revisions(parent, child, mergeinfo_path,
-                                  adjusted_target_mergeinfo,
+                                  target_rangelist,
                                   source->loc1->rev, source->loc2->rev,
                                   child_inherits_implicit,
                                   ra_session, ctx, result_pool,
