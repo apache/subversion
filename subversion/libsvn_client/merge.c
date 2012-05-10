@@ -1131,8 +1131,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   return SVN_NO_ERROR;
 }
 
-/* Perpare a set of property changes PROPCHANGES to be used for a merge operation on
-   LOCAL_ABSPATH. Store the result in *PROP_UPDATES.
+/* Prepare a set of property changes PROPCHANGES to be used for a merge
+   operation on LOCAL_ABSPATH. Store the result in *PROP_UPDATES.
 
    Used for both file and directory property merges. */
 static svn_error_t *
@@ -1198,7 +1198,7 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
 /* Perform a property merge of the property changes PROPS on LOCAL_ABSPATH. The
    original properties are stored in ORIGINAL_PROPS.
 
-   Used for both file and directory property merges. */*/
+   Used for both file and directory property merges. */
 static svn_error_t *
 merge_props_changed(svn_wc_notify_state_t *state,
                     svn_boolean_t *tree_conflicted,
@@ -1233,7 +1233,26 @@ merge_props_changed(svn_wc_notify_state_t *state,
         }
       else if (err)
         return svn_error_trace(err);
+    }
+  else if (state)
+    *state = svn_wc_notify_state_unchanged;
 
+  return SVN_NO_ERROR;
+}
+
+/* If this is not a dry run then make a record in BATON if we find a
+   LOCAL_ABSPATH where mergeinfo is added where none existed previously or
+   LOCAL_ABSPATH is having its existing mergeinfo deleted.
+
+   Used for both file and directory property merges. */
+static svn_error_t *
+record_mergeinfo_prop_change(const char *local_abspath,
+                             const apr_array_header_t *props,
+                             merge_cmd_baton_t *merge_b,
+                             apr_pool_t *scratch_pool)
+{
+  if (props->nelts)
+    {
       /* If this is not a dry run then make a record in BATON if we find a
          PATH where mergeinfo is added where none existed previously or PATH
          is having its existing mergeinfo deleted. */
@@ -1252,7 +1271,7 @@ merge_props_changed(svn_wc_notify_state_t *state,
                   apr_hash_t *pristine_props;
 
                   SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
-                                                    ctx->wc_ctx,
+                                                    merge_b->ctx->wc_ctx,
                                                     local_abspath,
                                                     scratch_pool,
                                                     scratch_pool));
@@ -1292,8 +1311,6 @@ merge_props_changed(svn_wc_notify_state_t *state,
             }
         }
     }
-  else if (state)
-    *state = svn_wc_notify_state_unchanged;
 
   return SVN_NO_ERROR;
 }
@@ -1336,13 +1353,10 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
 
   SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
                                       merge_b, scratch_pool));
-  return svn_error_trace(merge_props_changed(state,
-                                             tree_conflicted,
-                                             local_abspath,
-                                             props,
-                                             original_props,
-                                             merge_b,
-                                             scratch_pool));
+  SVN_ERR(merge_props_changed(state, tree_conflicted, local_abspath, props,
+                              original_props, merge_b, scratch_pool));
+  return svn_error_trace(record_mergeinfo_prop_change(local_abspath, props,
+                                                      merge_b, scratch_pool));
 }
 
 /* Contains any state collected while resolving conflicts. */
@@ -1634,6 +1648,9 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2,
                                   mine_abspath, props, original_props,
                                   merge_b, scratch_pool));
+
+      SVN_ERR(record_mergeinfo_prop_change(mine_abspath, props, merge_b,
+                                           scratch_pool));
 
       /* If the prop change caused a tree-conflict, just bail. */
       if (tree_conflicted2)
