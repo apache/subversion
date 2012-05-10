@@ -1154,22 +1154,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   iterpool = svn_pool_create(pool);
 
-  /* Verify that all the source paths exist, are versioned, etc.
-     We'll do so by querying the base revisions of those things (which
-     we'll need to know later anyway).
-     ### Should we use the 'origin' revision instead of 'base'?
-    */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__node_get_base(&pair->src_revnum, NULL, NULL, NULL,
-                                    ctx->wc_ctx, pair->src_abspath_or_url,
-                                    iterpool, iterpool));
-    }
-
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
   /* ### But why start by getting the _parent_ of the first one? */
