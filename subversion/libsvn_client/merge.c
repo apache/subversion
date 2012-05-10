@@ -11174,7 +11174,7 @@ branch_history_get_endpoints(svn_client__pathrev_t **oldest_p,
  *              o-----------o-------------
  *
  * If no locations on SOURCE_BRANCH are recorded in TARGET_MERGEINFO, set
- * *BASE_P to NULL.
+ * *BASE_P to the YCA.
  */
 static svn_error_t *
 find_last_merged_location(svn_client__pathrev_t **base_p,
@@ -11195,7 +11195,7 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
            target branch or already in BRANCH_B's mergeinfo; or
        (c) inoperative on BRANCH_A.
 
-     Report the youngest such location, or YCA (or null?) if there are none.
+     Report the youngest such location, or the YCA if there are none.
 
      Part (b) can perhaps, initially, be simplified to something like:
      a merge onto BRANCH_A of (including? entirely?) revisions from
@@ -11246,7 +11246,7 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
        * have a gap there.) */
       SVN_ERR(branch_history_intersect_range(
                 &contiguous_source,
-                source_branch, yca->rev + 1, oldest_eligible->rev - 1,
+                source_branch, yca->rev, oldest_eligible->rev - 1,
                 scratch_pool, scratch_pool));
       SVN_ERR(branch_history_get_endpoints(
                 NULL, base_p,
@@ -11274,11 +11274,11 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
  *                                  S_T->target
  *
  * Set *BASE_P to BASE, the youngest location in the history of S_T->source
- * (after the YCA) at which all revisions up to BASE are recorded as merged
- * into S_T->target.
+ * (at or after the YCA) at which all revisions up to BASE are recorded as
+ * merged into S_T->target.
  *
  * If no locations on the history of S_T->source are recorded as merged to
- * S_T->target, set *BASE_P to NULL.
+ * S_T->target, set *BASE_P to the YCA.
  */
 static svn_error_t *
 find_base_on_source(svn_client__pathrev_t **base_p,
@@ -11307,14 +11307,15 @@ find_base_on_source(svn_client__pathrev_t **base_p,
  *                BASE              S_T->target
  *
  * Set *BASE_P to BASE, the youngest location in the history of S_T->target
- * (after the YCA) at which all revisions up to BASE are recorded as merged
- * into S_T->source.
+ * (at or after the YCA) at which all revisions up to BASE are recorded as
+ * merged into S_T->source.
  *
  * Set *MID_P to the first location on the history of S_T->source at which
  * all revisions up to BASE are recorded as merged.
+ * ### This is not implemented yet.
  *
  * If no locations on the history of S_T->target are recorded as merged to
- * S_T->source, set *BASE_P and *MID_P to NULL.
+ * S_T->source, set both *BASE_P and *MID_P to the YCA.
  */
 static svn_error_t *
 find_base_on_target(svn_client__pathrev_t **base_p,
@@ -11329,14 +11330,7 @@ find_base_on_target(svn_client__pathrev_t **base_p,
                                     &s_t->target_branch,
                                     s_t->source_mergeinfo,
                                     ctx, result_pool, scratch_pool));
-  if (*base_p)
-    {
-      *mid_p = *base_p;  /* ### Wrong! */
-    }
-  else
-    {
-      *mid_p = NULL;
-    }
+  *mid_p = *base_p;  /* ### Wrong! */
 
   return SVN_NO_ERROR;
 }
@@ -11397,31 +11391,19 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
   SVN_ERR(find_base_on_target(&base_on_target, &mid, s_t,
                               ctx, scratch_pool, scratch_pool));
 
-  if (base_on_source)
-    SVN_DBG(("base on source: %s@%ld\n", base_on_source->url, base_on_source->rev));
-  if (base_on_target)
-    SVN_DBG(("base on target: %s@%ld\n", base_on_target->url, base_on_target->rev));
+  SVN_DBG(("base on source: %s@%ld\n", base_on_source->url, base_on_source->rev));
+  SVN_DBG(("base on target: %s@%ld\n", base_on_target->url, base_on_target->rev));
 
   /* Choose a base. */
-  if (base_on_source
-      && (! base_on_target || (base_on_source->rev > base_on_target->rev)))
+  if (base_on_source->rev >= base_on_target->rev)
     {
       *base_p = base_on_source;
       *mid_p = NULL;
     }
-  else if (base_on_target)
+  else
     {
       *base_p = base_on_target;
       *mid_p = mid;
-    }
-  else
-    {
-      /* No previous merge was found, so this is the simple case where
-       * the base is the youngest common ancestor of the branches.  We'll
-       * set MID=NULL; in theory the end result should be the same if we
-       * set MID=YCA instead. */
-      *base_p = s_t->yca;
-      *mid_p = NULL;
     }
 
   return SVN_NO_ERROR;
