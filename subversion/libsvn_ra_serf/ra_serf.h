@@ -896,6 +896,27 @@ svn_ra_serf__retrieve_props(apr_hash_t **results,
                             apr_pool_t *scratch_pool);
 
 
+/* Using CONN, fetch the properties specified by WHICH_PROPS using CONN
+   for URL at REVISION. The resulting properties are placed into a 2-level
+   hash in RESULTS, mapping NAMESPACE -> hash<PROPNAME, PROPVALUE>, which
+   is allocated in RESULT_POOL.
+
+   If REVISION is SVN_INVALID_REVNUM, then the properties are fetched
+   from HEAD for URL.
+
+   This function performs the request synchronously.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__fetch_node_props(apr_hash_t **results,
+                              svn_ra_serf__connection_t *conn,
+                              const char *url,
+                              svn_revnum_t revision,
+                              const svn_ra_serf__dav_props_t *which_props,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
 /* Using CONN, fetch a DAV: property from the resource identified by URL
    within REVISION. The PROPNAME may be one of:
 
@@ -946,6 +967,15 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
                             void *baton,
                             apr_pool_t *pool);
 
+
+/* Like walk_all_props(), but a 2-level hash.  */
+svn_error_t *
+svn_ra_serf__walk_node_props(apr_hash_t *props,
+                             svn_ra_serf__walker_visitor_t walker,
+                             void *baton,
+                             apr_pool_t *scratch_pool);
+
+
 typedef svn_error_t *
 (*svn_ra_serf__path_rev_walker_t)(void *baton,
                                   const char *path, apr_ssize_t path_len,
@@ -984,14 +1014,11 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
                              apr_pool_t *scratch_pool);
 
 
-/* PROPS is nested hash tables mapping REV -> PATH -> NS -> NAME -> VALUE.
-   This function takes the tree of tables identified by PATH and REVISION
-   (resulting in NS:NAME:VALUE hashes) and flattens them into a set of
+/* PROPS is nested hash tables mapping NS -> NAME -> VALUE.
+   This function takes the NS:NAME:VALUE hashes and flattens them into a set of
    names to VALUE. The names are composed of NS:NAME, with specific
    rewrite from wire names (DAV) to SVN names. This mapping is managed
    by the svn_ra_serf__set_baton_props() function.
-
-   ### REV is constant: SVN_INVALID_REVNUM
 
    FLAT_PROPS is allocated in RESULT_POOL.
    ### right now, we do a shallow copy from PROPS to FLAT_PROPS. therefore,
@@ -1001,7 +1028,6 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
 svn_error_t *
 svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_hash_t *props,
-                           const char *path,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -1042,8 +1068,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
 
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_kind_t *kind,
-                               apr_hash_t *props,
-                               const char *url);
+                               apr_hash_t *props);
 
 
 /** MERGE-related functions **/

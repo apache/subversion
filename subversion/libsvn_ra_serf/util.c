@@ -38,6 +38,7 @@
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
@@ -2038,6 +2039,7 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
                                         setup_request_cb, handler);
 }
 
+
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__session_t *session,
@@ -2070,23 +2072,22 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       apr_hash_t *props;
       svn_error_t *err;
 
-      err = svn_ra_serf__retrieve_props(&props, session, conn,
-                                        path, SVN_INVALID_REVNUM,
-                                        "0", base_props, pool, pool);
+      err = svn_ra_serf__fetch_node_props(&props, conn,
+                                          path, SVN_INVALID_REVNUM,
+                                          base_props, pool, pool);
       if (! err)
         {
-          *vcc_url =
-              svn_ra_serf__get_prop(props, path,
-                                    "DAV:",
-                                    "version-controlled-configuration");
+          apr_hash_t *ns_props;
 
-          relative_path = svn_ra_serf__get_prop(props, path,
-                                                SVN_DAV_PROP_NS_DAV,
-                                                "baseline-relative-path");
+          ns_props = apr_hash_get(props, "DAV:", 4);
+          *vcc_url = svn_prop_get_value(ns_props,
+                                        "version-controlled-configuration");
 
-          uuid = svn_ra_serf__get_prop(props, path,
-                                       SVN_DAV_PROP_NS_DAV,
-                                       "repository-uuid");
+          ns_props = apr_hash_get(props,
+                                  SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+          relative_path = svn_prop_get_value(ns_props,
+                                             "baseline-relative-path");
+          uuid = svn_prop_get_value(ns_props, "repository-uuid");
           break;
         }
       else

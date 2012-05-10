@@ -558,48 +558,38 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-fetch_path_props(apr_hash_t **ret_props,
-                 const char **ret_path,
+fetch_path_props(apr_hash_t **props,
                  svn_ra_serf__session_t *session,
-                 const char *rel_path,
+                 const char *session_relpath,
                  svn_revnum_t revision,
                  const svn_ra_serf__dav_props_t *desired_props,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props;
-  const char *path;
+  const char *url;
 
-  path = session->session_url.path;
+  url = session->session_url.path;
 
   /* If we have a relative path, append it. */
-  if (rel_path)
-    {
-      path = svn_path_url_add_component2(path, rel_path, pool);
-    }
+  if (session_relpath)
+    url = svn_path_url_add_component2(url, session_relpath, scratch_pool);
 
-  /* If we were given a specific revision, we have to fetch the VCC and
-   * do a PROPFIND off of that.
-   */
+  /* If we were given a specific revision, get a URL that refers to that
+     specific revision (rather than floating with HEAD).  */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      SVN_ERR(svn_ra_serf__get_stable_url(&path, NULL /* latest_revnum */,
+      SVN_ERR(svn_ra_serf__get_stable_url(&url, NULL /* latest_revnum */,
                                           session, NULL /* conn */,
-                                          path, revision,
-                                          pool, pool));
-
-      /* We will try again with our new path; however, we're now
-       * technically an unversioned resource because we are accessing
-       * the revision's baseline-collection.
-       */
-      revision = SVN_INVALID_REVNUM;
+                                          url, revision,
+                                          scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
-                                      path, SVN_INVALID_REVNUM, "0",
-                                      desired_props, pool, pool));
-
-  *ret_path = path;
-  *ret_props = props;
+  /* URL is stable, so we use SVN_INVALID_REVNUM since it is now irrelevant.
+     Or we started with SVN_INVALID_REVNUM and URL may be floating.  */
+  SVN_ERR(svn_ra_serf__fetch_node_props(props, session->conns[0],
+                                        url, SVN_INVALID_REVNUM,
+                                        desired_props,
+                                        result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -613,11 +603,10 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *path;
 
-  svn_error_t *err = fetch_path_props(&props, &path,
-                                      session, rel_path,
-                                      revision, check_path_props, pool);
+  svn_error_t *err = fetch_path_props(&props, session, rel_path,
+                                      revision, check_path_props,
+                                      pool, pool);
 
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
@@ -630,9 +619,9 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
 
       /* Any other error, raise to caller. */
       if (err)
-        return err;
+        return svn_error_trace(err);
 
-      SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, props, path));
+      SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, props));
       *kind = svn__node_kind_from_kind(res_kind);
     }
 
@@ -852,15 +841,14 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *path;
   svn_error_t *err;
   struct dirent_walker_baton_t dwb;
   svn_tristate_t deadprop_count = svn_tristate_unknown;
 
-  err = fetch_path_props(&props, &path,
+  err = fetch_path_props(&props,
                          session, rel_path, revision,
                          get_dirent_props(SVN_DIRENT_ALL, session, pool),
-                         pool);
+                         pool, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -876,9 +864,7 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   dwb.entry = apr_pcalloc(pool, sizeof(*dwb.entry));
   dwb.supports_deadprop_count = &deadprop_count;
   dwb.result_pool = pool;
-  SVN_ERR(svn_ra_serf__walk_all_props(props, path, SVN_INVALID_REVNUM,
-                                      dirent_walker, &dwb,
-                                      pool));
+  SVN_ERR(svn_ra_serf__walk_node_props(props, dirent_walker, &dwb, pool));
 
   if (deadprop_count == svn_tristate_false
       && session->supports_deadprop_count == svn_tristate_unknown
@@ -888,14 +874,12 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
          information */
       session->supports_deadprop_count = svn_tristate_false;
 
-      SVN_ERR(fetch_path_props(&props, &path,
+      SVN_ERR(fetch_path_props(&props,
                                session, rel_path, SVN_INVALID_REVNUM,
                                get_dirent_props(SVN_DIRENT_ALL, session, pool),
-                               pool));
+                               pool, pool));
 
-      SVN_ERR(svn_ra_serf__walk_all_props(props, path, SVN_INVALID_REVNUM,
-                                          dirent_walker, &dwb,
-                                          pool));
+      SVN_ERR(svn_ra_serf__walk_node_props(props, dirent_walker, &dwb, pool));
     }
 
   if (deadprop_count != svn_tristate_unknown)
@@ -911,12 +895,11 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
  * SVN_ERR_FS_NOT_DIRECTORY if not.
  */
 static svn_error_t *
-resource_is_directory(apr_hash_t *props,
-                      const char *path)
+resource_is_directory(apr_hash_t *props)
 {
   svn_kind_t kind;
 
-  SVN_ERR(svn_ra_serf__get_resource_type(&kind, props, path));
+  SVN_ERR(svn_ra_serf__get_resource_type(&kind, props));
 
   if (kind != svn_kind_dir)
     {
@@ -967,6 +950,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
     {
       struct path_dirent_visitor_t dirent_walk;
       apr_hash_t *props;
+      const char *rtype;
 
       /* Always request node kind to check that path is really a
        * directory.
@@ -979,7 +963,10 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                           pool, pool));
 
       /* Check if the path is really a directory. */
-      SVN_ERR(resource_is_directory(props, path));
+      rtype = svn_ra_serf__get_prop(props, path, "DAV:", "resourcetype");
+      if (rtype == NULL || strcmp(rtype, "collection") != 0)
+        return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                                _("Can't get entries of non-directory"));
 
       /* We're going to create two hashes to help the walker along.
        * We're going to return the 2nd one back to the caller as it
@@ -1028,15 +1015,17 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
     {
       apr_hash_t *props;
 
-      SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
-                                          path, SVN_INVALID_REVNUM, "0",
-                                          all_props,
-                                          pool, pool));
+      SVN_ERR(svn_ra_serf__fetch_node_props(&props, session->conns[0],
+                                            path, SVN_INVALID_REVNUM,
+                                            all_props,
+                                            pool, pool));
 
       /* Check if the path is really a directory. */
-      SVN_ERR(resource_is_directory(props, path));
+      SVN_ERR(resource_is_directory(props));
 
-      SVN_ERR(svn_ra_serf__flatten_props(ret_props, props, path, pool, pool));
+      /* ### flatten_props() does not copy PROPVALUE, but fetch_node_props()
+         ### put them into POOL, so we're okay.  */
+      SVN_ERR(svn_ra_serf__flatten_props(ret_props, props, pool, pool));
     }
 
   return SVN_NO_ERROR;
