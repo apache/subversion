@@ -1652,6 +1652,76 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/**
+ * Assuming @a local_abspath itself or any of its children are under version
+ * control or a tree conflict victim and in a state of conflict, take these
+ * nodes out of this state. 
+ *
+ * If @a resolve_text is TRUE then any text conflict is resolved,
+ * if @a resolve_tree is TRUE then any tree conflicts are resolved.
+ * If @a resolve_prop is set to "" all property conflicts are resolved,
+ * if it is set to any other string value, conflicts on that specific
+ * property are resolved and when resolve_prop is NULL, no property
+ * conflicts are resolved.
+ *
+ * If @a depth is #svn_depth_empty, act only on @a local_abspath; if
+ * #svn_depth_files, resolve @a local_abspath and its conflicted file
+ * children (if any); if #svn_depth_immediates, resolve @a local_abspath
+ * and all its immediate conflicted children (both files and directories,
+ * if any); if #svn_depth_infinity, resolve @a local_abspath and every
+ * conflicted file or directory anywhere beneath it.
+ *
+ * If @a conflict_choice is #svn_wc_conflict_choose_base, resolve the
+ * conflict with the old file contents; if
+ * #svn_wc_conflict_choose_mine_full, use the original working contents;
+ * if #svn_wc_conflict_choose_theirs_full, the new contents; and if
+ * #svn_wc_conflict_choose_merged, don't change the contents at all,
+ * just remove the conflict status, which is the pre-1.5 behavior.
+ *
+ * If @a conflict_choice is #svn_wc_conflict_choose_unspecified, invoke the
+ * @a conflict_func with the @a conflict_baton argument to obtain a
+ * resolution decision for each conflict.
+ *
+ * #svn_wc_conflict_choose_theirs_conflict and
+ * #svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files or properties.
+ *
+ * @a wc_ctx is a working copy context, with a write lock, for @a
+ * local_abspath.
+ *
+ * The implementation details are opaque, as our "conflicted" criteria
+ * might change over time.  (At the moment, this routine removes the
+ * three fulltext 'backup' files and any .prej file created in a conflict,
+ * and modifies @a local_abspath's entry.)
+ *
+ * If @a local_abspath is not under version control and not a tree
+ * conflict, return #SVN_ERR_ENTRY_NOT_FOUND. If @a path isn't in a
+ * state of conflict to begin with, do nothing, and return #SVN_NO_ERROR.
+ *
+ * If @c local_abspath was successfully taken out of a state of conflict,
+ * report this information to @c notify_func (if non-@c NULL.)  If only
+ * text, only property, or only tree conflict resolution was requested,
+ * and it was successful, then success gets reported.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          svn_boolean_t resolve_text,
+                          const char *resolve_prop,
+                          svn_boolean_t resolve_tree,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

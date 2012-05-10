@@ -2015,7 +2015,10 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_mine_full,       /**< own version */
   svn_wc_conflict_choose_theirs_conflict, /**< incoming (for conflicted hunks) */
   svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged           /**< merged version */
+  svn_wc_conflict_choose_merged,          /**< merged version */
+
+  /* @since New in 1.8. */
+  svn_wc_conflict_choose_unspecified      /**< undecided */
 
 } svn_wc_conflict_choice_t;
 
