@@ -1169,6 +1169,45 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool);
 
+/* Generate a revision-stable URL.
+
+   The RA APIs all refer to user/public URLs that float along with the
+   youngest revision. In many cases, we do NOT want to work with that URL
+   since it can change from one moment to the next. Especially if we
+   attempt to operation against multiple floating URLs -- we could end up
+   referring to two separate revisions.
+
+   The DAV RA provider(s) solve this by generating a URL that is specific
+   to a revision by using a URL into a "baseline collection".
+
+   For a specified SESSION, with an optional CONN (if NULL, then the
+   session's default connection will be used; specifically SESSION->conns[0]),
+   generate a revision-stable URL for URL at REVISION. If REVISION is
+   SVN_INVALID_REVNUM, then the stable URL will refer to the youngest
+   revision at the time this function was called.
+
+   The stable URL will be placed into *STABLE_URL, allocated from RESULT_POOL.
+
+   If LATEST_REVNUM is not NULL, then the revision used will be placed into
+   *LATEST_REVNUM. That will be equal to youngest, or the given REVISION.
+
+   This function operates synchronously, if any communication to the server
+   is required. Communication is needed if REVISION is SVN_INVALID_REVNUM
+   (to get the current youngest revnum), or if the specified REVISION is not
+   (yet) in our cache of baseline collections.
+
+   All temporary allocations are performed in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__get_stable_url(const char **stable_url,
+                            svn_revnum_t *latest_revnum,
+                            svn_ra_serf__session_t *session,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /** RA functions **/
 
 svn_error_t *
