@@ -1535,7 +1535,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
 
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
-     way svn_wc_merge4() can do the merge. */
+     way svn_wc_merge5() can do the merge. */
   if (wc_kind != svn_node_file || is_deleted)
     {
       const char *moved_to_abspath;
@@ -1623,7 +1623,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   */
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge4().  Thank goodness that all the
+     svn_wc_merge5().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -1669,7 +1669,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   if (older_abspath)
     {
       svn_boolean_t has_local_mods;
-      enum svn_wc_merge_outcome_t merge_outcome;
+      enum svn_wc_merge_outcome_t content_outcome;
 
       /* xgettext: the '.working', '.merge-left.r%ld' and
          '.merge-right.r%ld' strings are used to tag onto a file
@@ -1691,26 +1691,15 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
       conflict_baton.pool = merge_b->pool;
 
-      /* Do property merge before text merge so that keyword expansion takes
-         into account the new property values. */
-      if (prop_changes)
-        {
-          SVN_ERR(svn_wc_merge_props3(prop_state, ctx->wc_ctx, local_abspath,
-                                      left, right,
-                                      original_props, prop_changes,
-                                      merge_b->dry_run,
-                                      ctx->conflict_func2,
-                                      ctx->conflict_baton2,
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      scratch_pool));
-        }
-
-      SVN_ERR(svn_wc_merge4(&merge_outcome, ctx->wc_ctx,
+      /* Do property merge and text merge in one step so that keyword expansion
+         takes into account the new property values. */
+      SVN_ERR(svn_wc_merge5(&content_outcome, prop_state, ctx->wc_ctx,
                             older_abspath, yours_abspath, local_abspath,
                             left_label, right_label, target_label,
                             left, right,
                             merge_b->dry_run, merge_b->diff3_cmd,
-                            merge_b->merge_options, prop_changes,
+                            merge_b->merge_options,
+                            original_props, prop_changes,
                             conflict_resolver, &conflict_baton,
                             ctx->cancel_func,
                             ctx->cancel_baton,
@@ -1718,14 +1707,14 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
 
       if (content_state)
         {
-          if (merge_outcome == svn_wc_merge_conflict)
+          if (content_outcome == svn_wc_merge_conflict)
             *content_state = svn_wc_notify_state_conflicted;
           else if (has_local_mods
-                   && merge_outcome != svn_wc_merge_unchanged)
+                   && content_outcome != svn_wc_merge_unchanged)
             *content_state = svn_wc_notify_state_merged;
-          else if (merge_outcome == svn_wc_merge_merged)
+          else if (content_outcome == svn_wc_merge_merged)
             *content_state = svn_wc_notify_state_changed;
-          else if (merge_outcome == svn_wc_merge_no_merge)
+          else if (content_outcome == svn_wc_merge_no_merge)
             *content_state = svn_wc_notify_state_missing;
           else /* merge_outcome == svn_wc_merge_unchanged */
             *content_state = svn_wc_notify_state_unchanged;
