@@ -5498,13 +5498,12 @@ op_revert_recursive_txn(void *baton,
                                         STMT_DELETE_ACTUAL_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
                                 local_relpath));
-      SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
       if (affected_rows)
         return SVN_NO_ERROR;  /* actual-only revert */
 
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
-                               svn_sqlite__reset(stmt),
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("The node '%s' was not found."),
                                path_for_error_message(wcroot,
                                                       local_relpath,
