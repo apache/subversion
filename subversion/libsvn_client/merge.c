@@ -1140,21 +1140,21 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
                             const char *local_abspath,
                             const apr_array_header_t *propchanges,
                             merge_cmd_baton_t *merge_b,
-                            apr_pool_t *scratch_pool)
+                            apr_pool_t *result_pool)
 {
   apr_array_header_t *props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
-                               scratch_pool));
+                               result_pool));
 
   /* If we are only applying mergeinfo changes then we need to do
      additional filtering of PROPS so it contains only mergeinfo changes. */
   if (merge_b->record_only && props->nelts)
     {
       apr_array_header_t *mergeinfo_props =
-        apr_array_make(scratch_pool, 1, sizeof(svn_prop_t));
+        apr_array_make(result_pool, 1, sizeof(svn_prop_t));
       int i;
 
       for (i = 0; i < props->nelts; i++)
@@ -1188,54 +1188,9 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
                                                   merge_b->reintegrate_merge,
                                                   merge_b->ra_session2,
                                                   merge_b->ctx,
-                                                  scratch_pool));
+                                                  result_pool));
     }
   *prop_updates = props;
-
-  return SVN_NO_ERROR;
-}
-
-/* Perform a property merge of the property changes PROPS on LOCAL_ABSPATH. The
-   original properties are stored in ORIGINAL_PROPS.
-
-   Used for both file and directory property merges. */
-static svn_error_t *
-merge_props_changed(svn_wc_notify_state_t *state,
-                    svn_boolean_t *tree_conflicted,
-                    const char *local_abspath,
-                    const apr_array_header_t *props,
-                    apr_hash_t *original_props,
-                    merge_cmd_baton_t *merge_b,
-                    apr_pool_t *scratch_pool)
-{
-  svn_client_ctx_t *ctx = merge_b->ctx;
-
-  /* We only want to merge "regular" version properties:  by
-     definition, 'svn merge' shouldn't touch any pristine data  */
-  if (props->nelts)
-    {
-      svn_error_t *err;
-      err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
-                                original_props, props, merge_b->dry_run,
-                                ctx->conflict_func2, ctx->conflict_baton2,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                scratch_pool);
-
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                  || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
-        {
-          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
-          if (state)
-            *state = svn_wc_notify_state_missing;
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
-          svn_error_clear(err);
-        }
-      else if (err)
-        return svn_error_trace(err);
-    }
-  else if (state)
-    *state = svn_wc_notify_state_unchanged;
 
   return SVN_NO_ERROR;
 }
@@ -1353,10 +1308,41 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
 
   SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
                                       merge_b, scratch_pool));
-  SVN_ERR(merge_props_changed(state, tree_conflicted, local_abspath, props,
-                              original_props, merge_b, scratch_pool));
-  return svn_error_trace(record_mergeinfo_prop_change(local_abspath, props,
-                                                      merge_b, scratch_pool));
+
+  /* We only want to merge "regular" version properties:  by
+     definition, 'svn merge' shouldn't touch any pristine data  */
+  if (props->nelts)
+    {
+      svn_error_t *err;
+      svn_client_ctx_t *ctx = merge_b->ctx;
+
+      err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
+                                NULL, NULL, original_props, props,
+                                merge_b->dry_run,
+                                ctx->conflict_func2, ctx->conflict_baton2,
+                                ctx->cancel_func, ctx->cancel_baton,
+                                scratch_pool);
+
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
+        {
+          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
+          if (state)
+            *state = svn_wc_notify_state_missing;
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
+          svn_error_clear(err);
+        }
+      else if (err)
+        return svn_error_trace(err);
+
+      SVN_ERR(record_mergeinfo_prop_change(local_abspath, props,
+                                           merge_b, scratch_pool));
+    }
+  else if (state)
+    *state = svn_wc_notify_state_unchanged;
+
+  return SVN_NO_ERROR;
 }
 
 /* Contains any state collected while resolving conflicts. */
@@ -1510,6 +1496,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                    apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
+  svn_client_ctx_t *ctx = merge_b->ctx;
   const char *mine_abspath = svn_dirent_join(merge_b->target->abspath,
                                              mine_relpath, scratch_pool);
   svn_node_kind_t wc_kind;
@@ -1639,27 +1626,48 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
      into account the new property values. */
   if (prop_changes->nelts > 0)
     {
-      svn_boolean_t tree_conflicted2 = FALSE;
       const apr_array_header_t *props;
+      svn_boolean_t tree_conflicted2 = FALSE;
 
       SVN_ERR(prepare_merge_props_changed(&props, mine_abspath, prop_changes,
                                           merge_b, scratch_pool));
 
-      SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2,
-                                  mine_abspath, props, original_props,
-                                  merge_b, scratch_pool));
+      /* We only want to merge "regular" version properties:  by
+         definition, 'svn merge' shouldn't touch any pristine data */
+      if (props->nelts)
+        {
+          svn_error_t *err;
 
-      SVN_ERR(record_mergeinfo_prop_change(mine_abspath, props, merge_b,
+          err = svn_wc_merge_props3(prop_state, ctx->wc_ctx, mine_abspath,
+                                    NULL, NULL,
+                                    original_props, props, merge_b->dry_run,
+                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    scratch_pool);
+
+          if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                      || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
+            {
+              /* If the entry doesn't exist in the wc, this is a tree-conflict. */
+              if (prop_state)
+                *prop_state = svn_wc_notify_state_missing;
+              if (tree_conflicted)
+                *tree_conflicted = tree_conflicted2 = TRUE;
+              svn_error_clear(err);
+            }
+          else if (err)
+            return svn_error_trace(err);
+
+          SVN_ERR(record_mergeinfo_prop_change(mine_abspath, props, merge_b,
                                            scratch_pool));
+        }
+      else if (prop_state)
+        *prop_state = svn_wc_notify_state_unchanged;
+
 
       /* If the prop change caused a tree-conflict, just bail. */
       if (tree_conflicted2)
-        {
-          if (tree_conflicted != NULL)
-            *tree_conflicted = TRUE;
-
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
     }
   else if (prop_state)
     *prop_state = svn_wc_notify_state_unchanged;
