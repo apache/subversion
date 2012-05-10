@@ -866,7 +866,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   apr_array_header_t *adjusted_props;
   int i;
   apr_pool_t *iterpool;
-  svn_boolean_t is_added;
+  svn_boolean_t is_copy;
+  const char *repos_relpath;
   svn_client__pathrev_t target_base;
 
   /* Issue #3383: We don't want mergeinfo from a foreign repos.
@@ -891,17 +892,17 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   /* If this is a merge from the same repository and PATH itself has been
      added there is no need to filter. */
-  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath, pool));
-  if (is_added)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__node_get_origin(&is_copy,  &target_base.rev, &repos_relpath,
+                                  &target_base.repos_root_url,
+                                  &target_base.repos_uuid, NULL,
+                                  ctx->wc_ctx, target_abspath, FALSE,
+                                  pool, pool));
 
-  SVN_ERR(svn_wc__node_get_url(&target_base.url, ctx->wc_ctx, target_abspath,
-                               pool, pool));
-  SVN_ERR(svn_wc__node_get_base(&target_base.rev, NULL, NULL, NULL,
-                                ctx->wc_ctx, target_abspath, pool, pool));
-  SVN_ERR(svn_wc__node_get_repos_info(&target_base.repos_root_url,
-                                      &target_base.repos_uuid,
-                                      ctx->wc_ctx, target_abspath, pool, pool));
+  if (is_copy || !repos_relpath)
+    return SVN_NO_ERROR; /* A copy or a local addition */
+
+  target_base.url = svn_path_url_add_component2(target_base.repos_root_url,
+                                                repos_relpath, pool);
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
   iterpool = svn_pool_create(pool);
