@@ -345,6 +345,8 @@ resolve_one_conflict(svn_wc__db_t *db,
                      const char *resolve_prop,
                      svn_boolean_t resolve_tree,
                      svn_wc_conflict_choice_t conflict_choice,
+                     svn_wc_conflict_resolver_func2_t conflict_func,
+                     void *conflict_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool)
@@ -361,10 +363,30 @@ resolve_one_conflict(svn_wc__db_t *db,
     {
       const svn_wc_conflict_description2_t *cd;
       svn_boolean_t did_resolve;
+      svn_wc_conflict_choice_t my_choice = conflict_choice;
 
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
       svn_pool_clear(iterpool);
+
+      if (my_choice == svn_wc_conflict_choose_unspecified)
+        {
+          svn_wc_conflict_result_t *result;
+
+          if (conflict_func == NULL)
+            return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                    _("No conflict-callback and no "
+                                      "pre-defined conflict-choice provided"));
+                                    
+          SVN_ERR(conflict_func(&result, cd, conflict_baton, iterpool,
+                                iterpool));
+
+          my_choice = result->choice;
+        }
+
+
+      if (my_choice == svn_wc_conflict_choose_postpone)
+        continue;
 
       switch (cd->kind)
         {
@@ -376,7 +398,7 @@ resolve_one_conflict(svn_wc__db_t *db,
              * to the working state. There is no way to pick theirs-full
              * or mine-full, etc. Throw an error if the user expects us
              * to be smarter than we really are. */
-            if (conflict_choice != svn_wc_conflict_choose_merged)
+            if (my_choice != svn_wc_conflict_choose_merged)
               {
                 return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                          NULL,
@@ -401,7 +423,7 @@ resolve_one_conflict(svn_wc__db_t *db,
                                              local_abspath,
                                              TRUE /* resolve_text */,
                                              FALSE /* resolve_props */,
-                                             conflict_choice,
+                                             my_choice,
                                              &did_resolve,
                                              iterpool));
 
@@ -427,7 +449,7 @@ resolve_one_conflict(svn_wc__db_t *db,
                                              local_abspath,
                                              FALSE /* resolve_text */,
                                              TRUE /* resolve_props */,
-                                             conflict_choice,
+                                             my_choice,
                                              &did_resolve,
                                              iterpool));
 
@@ -463,6 +485,8 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                            const char *resolve_prop,
                            svn_boolean_t resolve_tree,
                            svn_wc_conflict_choice_t conflict_choice,
+                           svn_wc_conflict_resolver_func2_t conflict_func,
+                           void *conflict_baton,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            svn_wc_notify_func2_t notify_func,
@@ -486,6 +510,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                    resolve_prop,
                                    resolve_tree,
                                    conflict_choice,
+                                   conflict_func, conflict_baton,
                                    notify_func, notify_baton,
                                    iterpool));
     }
@@ -538,6 +563,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                            resolve_prop,
                                            resolve_tree,
                                            conflict_choice,
+                                           conflict_func, conflict_baton,
                                            cancel_func, cancel_baton,
                                            notify_func, notify_baton,
                                            iterpool));
@@ -548,6 +574,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                      resolve_prop,
                                      resolve_tree,
                                      conflict_choice,
+                                     conflict_func, conflict_baton,
                                      notify_func, notify_baton,
                                      iterpool));
     }
@@ -578,6 +605,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                    FALSE /*resolve_prop*/,
                                    resolve_tree,
                                    conflict_choice,
+                                   conflict_func, conflict_baton,
                                    notify_func, notify_baton,
                                    iterpool));
     }
@@ -590,13 +618,15 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
+svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
                           svn_depth_t depth,
                           svn_boolean_t resolve_text,
                           const char *resolve_prop,
                           svn_boolean_t resolve_tree,
                           svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
+                          void *conflict_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -635,7 +665,33 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                            resolve_prop,
                            resolve_tree,
                            conflict_choice,
+                           conflict_func, conflict_baton,
                            cancel_func, cancel_baton,
                            notify_func, notify_baton,
                            scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          svn_boolean_t resolve_text,
+                          const char *resolve_prop,
+                          svn_boolean_t resolve_tree,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__resolve_conflicts(wc_ctx, local_abspath,
+                                                   depth, resolve_text,
+                                                   resolve_prop, resolve_tree,
+                                                   conflict_choice,
+                                                   NULL, NULL,
+                                                   cancel_func, cancel_baton,
+                                                   notify_func, notify_baton,
+                                                   scratch_pool));
 }

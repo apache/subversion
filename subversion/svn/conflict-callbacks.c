@@ -35,6 +35,7 @@
 #include "svn_pools.h"
 
 #include "cl.h"
+#include "tree-conflicts.h"
 
 #include "svn_private_config.h"
 
@@ -753,6 +754,49 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "tf") == 0 || strcmp(answer, ":-(") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_theirs_full;
+              break;
+            }
+        }
+    }
+
+  else if (desc->kind == svn_wc_conflict_kind_tree)
+    {
+      const char *answer;
+      const char *prompt;
+      const char *readable_desc;
+
+      SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
+               &readable_desc, desc, scratch_pool));
+      SVN_ERR(svn_cmdline_fprintf(
+                   stderr, subpool,
+                   _("Tree conflict on '%s'\n   > %s\n"),
+                   svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                     desc->local_abspath,
+                                                     scratch_pool),
+                   readable_desc));
+
+      prompt = _("Select: (p) postpone, (r) mark-resolved, (h) help: ");
+
+      while (1)
+        {
+          svn_pool_clear(subpool);
+
+          SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
+
+          if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+              _("  (p) postpone      - resolve the conflict later\n"
+                "  (r) resolved      - accept current working tree\n")));
+            }
+          if (strcmp(answer, "p") == 0 || strcmp(answer, ":-p") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_postpone;
+              break;
+            }
+          else if (strcmp(answer, "r") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_merged;
               break;
             }
         }
