@@ -1625,35 +1625,36 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
-  /* Do property merge before text merge so that keyword expansion takes
-     into account the new property values. */
+  if (prop_state)
+    *prop_state = svn_wc_notify_state_unchanged;
+
   if (prop_changes->nelts > 0)
     {
-      const apr_array_header_t *props;
+      /* Filter entry-props and unneeded properties in case of a record only
+         merge */
+      SVN_ERR(prepare_merge_props_changed(&prop_changes, local_abspath,
+                                          prop_changes, merge_b,
+                                          scratch_pool));
 
-      SVN_ERR(prepare_merge_props_changed(&props, local_abspath, prop_changes,
-                                          merge_b, scratch_pool));
-
-      /* We only want to merge "regular" version properties:  by
-         definition, 'svn merge' shouldn't touch any pristine data */
-      if (props->nelts)
-        {
-          SVN_ERR(svn_wc_merge_props3(prop_state, ctx->wc_ctx, local_abspath,
-                                      NULL, NULL,
-                                      original_props, props, merge_b->dry_run,
-                                      ctx->conflict_func2,
-                                      ctx->conflict_baton2,
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      scratch_pool));
-
-          SVN_ERR(record_mergeinfo_prop_change(local_abspath, props, merge_b,
-                                               scratch_pool));
-        }
-      else if (prop_state)
-        *prop_state = svn_wc_notify_state_unchanged;
+      SVN_ERR(record_mergeinfo_prop_change(local_abspath, prop_changes,
+                                           merge_b, scratch_pool));
     }
-  else if (prop_state)
-    *prop_state = svn_wc_notify_state_unchanged;
+
+  /* Do property merge before text merge so that keyword expansion takes
+     into account the new property values.
+     We only want to merge "regular" version properties:
+      - by definition, 'svn merge' shouldn't touch any pristine data */
+  if (prop_changes->nelts)
+    {
+      SVN_ERR(svn_wc_merge_props3(prop_state, ctx->wc_ctx, local_abspath,
+                                  NULL, NULL,
+                                  original_props, prop_changes,
+                                  merge_b->dry_run,
+                                  ctx->conflict_func2,
+                                  ctx->conflict_baton2,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  scratch_pool));
+    }
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
