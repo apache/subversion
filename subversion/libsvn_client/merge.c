@@ -8764,6 +8764,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
     {
       const char *mergeinfo_path;
 
+      /* ### Leaks merge_conflict_err */
       SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
                                                   primary_url, scratch_pool));
       err = record_mergeinfo_for_dir_merge(result_catalog,
