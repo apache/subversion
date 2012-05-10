@@ -1082,28 +1082,35 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
 
 /** OPTIONS-related functions **/
 
-typedef struct svn_ra_serf__options_context_t svn_ra_serf__options_context_t;
+/* On HTTPv2 connections, run an OPTIONS request over CONN to fetch the
+   current youngest revnum, returning it in *YOUNGEST.
 
-/* Is this OPTIONS-request done yet? */
-svn_boolean_t*
-svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx);
+   (the revnum is headers of the OPTIONS response)
 
-const char *
-svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx);
+   This function performs the request synchronously.
 
-svn_revnum_t
-svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
-
-/* Create an OPTIONS request.  When run, ask for an
-   activity-collection-set in the request body (retrievable via
-   accessor above) and also parse the server's capability headers into
-   the SESSION->capabilites hash. */
+   All temporary allocations will be made in SCRATCH_POOL.  */
 svn_error_t *
-svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
-                                svn_ra_serf__session_t *session,
-                                svn_ra_serf__connection_t *conn,
-                                const char *path,
-                                apr_pool_t *pool);
+svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
+                                    svn_ra_serf__connection_t *conn,
+                                    apr_pool_t *scratch_pool);
+
+
+/* On HTTPv1 connections, run an OPTIONS request over CONN to fetch the
+   activity collection set and return it in *ACTIVITY_URL, allocated
+   from RESULT_POOL.
+
+   (the activity-collection-set is in the body of the OPTIONS response)
+
+   This function performs the request synchronously.
+
+   All temporary allocations will be made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__v1_get_activity_collection(const char **activity_url,
+                                        svn_ra_serf__connection_t *conn,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
+
 
 /* Set @a VCC_URL to the default VCC for our repository based on @a
  * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
