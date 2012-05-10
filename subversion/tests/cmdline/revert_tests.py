@@ -1600,12 +1600,13 @@ def revert_with_unversioned_targets(sbox):
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
-@Wimp()
+@Wimp("aborts in maintainer mode")
 # leaks an unresetted svn_sqlite__stmt_t in maintainer builds
 def revert_nonexistent(sbox):
   'svn revert -R nonexistent'
   sbox.build(read_only=True)
-  svntest.main.run_svn(None, 'revert', '-R', sbox.ospath('nonexistent'))
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+                                     'revert', '-R', sbox.ospath('nonexistent'))
 
 ########################################################################
 # Run the tests
