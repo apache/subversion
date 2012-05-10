@@ -1364,7 +1364,7 @@ add_single_work_item(svn_sqlite__db_t *sdb,
 }
 
 
-/* Add work item(s) to the given SDB. Also see add_one_work_item(). This
+/* Add work item(s) to the given SDB. Also see add_single_work_item(). This
    SKEL is usually passed to the various wc_db operation functions. It may
    be NULL, indicating no additional work items are needed, it may be a
    single work item, or it may be a list of work items.  */
