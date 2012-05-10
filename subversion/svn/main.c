@@ -2680,6 +2680,7 @@ main(int argc, const char *argv[])
     }
   else
     {
+      svn_cl__conflict_baton_t * conflict_baton2;
       svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
       pb->cancel_func = ctx->cancel_func;
       pb->cancel_baton = ctx->cancel_baton;
@@ -2704,12 +2705,13 @@ main(int argc, const char *argv[])
       ctx->conflict_func = NULL;
       ctx->conflict_baton = NULL;
       ctx->conflict_func2 = svn_cl__conflict_handler;
-      SVN_ERR(svn_cl__conflict_baton_make(&ctx->conflict_baton2,
-                                          opt_state.accept_which,
-                                          ctx->config,
-                                          opt_state.editor_cmd,
-                                          pb,
-                                          pool));
+      SVN_INT_ERR(svn_cl__conflict_baton_make(&conflict_baton2,
+                                              opt_state.accept_which,
+                                              ctx->config,
+                                              opt_state.editor_cmd,
+                                              pb,
+                                              pool));
+      ctx->conflict_baton2 = conflict_baton2;
     }
 
   /* And now we finally run the subcommand. */
