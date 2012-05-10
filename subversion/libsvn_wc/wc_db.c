@@ -5503,7 +5503,8 @@ op_revert_recursive_txn(void *baton,
       if (affected_rows)
         return SVN_NO_ERROR;  /* actual-only revert */
 
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                               svn_sqlite__reset(stmt),
                                _("The node '%s' was not found."),
                                path_for_error_message(wcroot,
                                                       local_relpath,
