@@ -498,18 +498,10 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
 {
-  const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  /* ### HTTPv2: use OPTIONS to get youngest.  */
-
-  /* ### HTTPv1: extract the relevant bits from get_baseline_info() since
-     ### we don't care about anything beyond the revnum.  */
-  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                        session, NULL /* conn */,
-                                        NULL /* url */, SVN_INVALID_REVNUM,
-                                        latest_revnum,
-                                        pool);
+  return svn_error_trace(svn_ra_serf__get_youngest_revnum(
+                           latest_revnum, session, pool));
 }
 
 static svn_error_t *

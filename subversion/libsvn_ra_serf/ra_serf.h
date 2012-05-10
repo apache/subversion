@@ -1150,31 +1150,18 @@ svn_ra_serf__get_relative_path(const char **rel_path,
                                svn_ra_serf__connection_t *conn,
                                apr_pool_t *pool);
 
-/* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
- * the path relative to that url for URL in REVISION using SESSION.
- * BC_RELATIVE will be URI decoded.
- *
- * REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
- * revision").  If URL is NULL, use SESSION's session url.
- *
- * If LATEST_REVNUM is not NULL, set it to the baseline revision. If
- * REVISION was set to SVN_INVALID_REVNUM, this will return the current
- * HEAD revision.
- *
- * If non-NULL, use CONN for communications with the server;
- * otherwise, use the default connection.
- *
- * Use POOL for all allocations.
- */
+
+/* Using the default connection in SESSION (conns[0]), get the youngest
+   revnum from the server, returning it in *YOUNGEST.
+
+   This function operates synchronously.
+
+   All temporary allocations are performed in SCRATCH_POOL.  */
 svn_error_t *
-svn_ra_serf__get_baseline_info(const char **bc_url,
-                               const char **bc_relative,
-                               svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
-                               const char *url,
-                               svn_revnum_t revision,
-                               svn_revnum_t *latest_revnum,
-                               apr_pool_t *pool);
+svn_ra_serf__get_youngest_revnum(svn_revnum_t *youngest,
+                                 svn_ra_serf__session_t *session,
+                                 apr_pool_t *scratch_pool);
+
 
 /* Generate a revision-stable URL.
 
@@ -1192,6 +1179,8 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
    generate a revision-stable URL for URL at REVISION. If REVISION is
    SVN_INVALID_REVNUM, then the stable URL will refer to the youngest
    revision at the time this function was called.
+
+   If URL is NULL, then the session root will be used.
 
    The stable URL will be placed into *STABLE_URL, allocated from RESULT_POOL.
 
