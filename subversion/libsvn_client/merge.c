@@ -1327,7 +1327,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                         apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = diff_baton;
-  apr_array_header_t *props;
+  const apr_array_header_t *props;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               local_relpath, scratch_pool);
   svn_wc_notify_state_t obstr_state;
