@@ -1134,13 +1134,16 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 /* Prepare a set of property changes PROPCHANGES to be used for a merge
    operation on LOCAL_ABSPATH. Store the result in *PROP_UPDATES.
 
+   Store information on where mergeinfo is updated in MERGE_B.
+
    Used for both file and directory property merges. */
 static svn_error_t *
 prepare_merge_props_changed(const apr_array_header_t **prop_updates,
                             const char *local_abspath,
                             const apr_array_header_t *propchanges,
                             merge_cmd_baton_t *merge_b,
-                            apr_pool_t *result_pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   apr_array_header_t *props;
 
@@ -1192,76 +1195,59 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
     }
   *prop_updates = props;
 
-  return SVN_NO_ERROR;
-}
-
-/* If this is not a dry run then make a record in BATON if we find a
-   LOCAL_ABSPATH where mergeinfo is added where none existed previously or
-   LOCAL_ABSPATH is having its existing mergeinfo deleted.
-
-   Used for both file and directory property merges. */
-static svn_error_t *
-record_mergeinfo_prop_change(const char *local_abspath,
-                             const apr_array_header_t *props,
-                             merge_cmd_baton_t *merge_b,
-                             apr_pool_t *scratch_pool)
-{
-  if (props->nelts)
+  /* If this is not a dry run then make a record in BATON if we find a
+     PATH where mergeinfo is added where none existed previously or PATH
+     is having its existing mergeinfo deleted. */
+  if (!merge_b->dry_run && props->nelts)
     {
-      /* If this is not a dry run then make a record in BATON if we find a
-         PATH where mergeinfo is added where none existed previously or PATH
-         is having its existing mergeinfo deleted. */
-      if (!merge_b->dry_run)
+      int i;
+
+      for (i = 0; i < props->nelts; ++i)
         {
-          int i;
+          svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-          for (i = 0; i < props->nelts; ++i)
+          if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
             {
-              svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+              /* Does LOCAL_ABSPATH have any pristine mergeinfo? */
+              svn_boolean_t has_pristine_mergeinfo = FALSE;
+              apr_hash_t *pristine_props;
 
-              if (strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
+              SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
+                                                merge_b->ctx->wc_ctx,
+                                                local_abspath,
+                                                scratch_pool,
+                                                scratch_pool));
+
+              if (pristine_props
+                  && apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
+                                  APR_HASH_KEY_STRING))
+                has_pristine_mergeinfo = TRUE;
+
+              if (!has_pristine_mergeinfo && prop->value)
                 {
-                  /* Does LOCAL_ABSPATH have any pristine mergeinfo? */
-                  svn_boolean_t has_pristine_mergeinfo = FALSE;
-                  apr_hash_t *pristine_props;
+                  /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
+                     allocated do so in BATON->POOL so it has a
+                     sufficient lifetime. */
+                  if (!merge_b->paths_with_new_mergeinfo)
+                    merge_b->paths_with_new_mergeinfo =
+                      apr_hash_make(merge_b->pool);
 
-                  SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
-                                                    merge_b->ctx->wc_ctx,
-                                                    local_abspath,
-                                                    scratch_pool,
-                                                    scratch_pool));
+                  apr_hash_set(merge_b->paths_with_new_mergeinfo,
+                               apr_pstrdup(merge_b->pool, local_abspath),
+                               APR_HASH_KEY_STRING, local_abspath);
+                }
+              else if (has_pristine_mergeinfo && !prop->value)
+                {
+                  /* If BATON->PATHS_WITH_DELETED_MERGEINFO needs to be
+                     allocated do so in BATON->POOL so it has a
+                     sufficient lifetime. */
+                  if (!merge_b->paths_with_deleted_mergeinfo)
+                    merge_b->paths_with_deleted_mergeinfo =
+                      apr_hash_make(merge_b->pool);
 
-                  if (pristine_props
-                      && apr_hash_get(pristine_props, SVN_PROP_MERGEINFO,
-                                      APR_HASH_KEY_STRING))
-                    has_pristine_mergeinfo = TRUE;
-
-                  if (!has_pristine_mergeinfo && prop->value)
-                    {
-                      /* If BATON->PATHS_WITH_NEW_MERGEINFO needs to be
-                         allocated do so in BATON->POOL so it has a
-                         sufficient lifetime. */
-                      if (!merge_b->paths_with_new_mergeinfo)
-                        merge_b->paths_with_new_mergeinfo =
-                          apr_hash_make(merge_b->pool);
-
-                      apr_hash_set(merge_b->paths_with_new_mergeinfo,
-                                   apr_pstrdup(merge_b->pool, local_abspath),
-                                   APR_HASH_KEY_STRING, local_abspath);
-                    }
-                  else if (has_pristine_mergeinfo && !prop->value)
-                    {
-                      /* If BATON->PATHS_WITH_DELETED_MERGEINFO needs to be
-                         allocated do so in BATON->POOL so it has a
-                         sufficient lifetime. */
-                      if (!merge_b->paths_with_deleted_mergeinfo)
-                        merge_b->paths_with_deleted_mergeinfo =
-                          apr_hash_make(merge_b->pool);
-
-                      apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
-                                   apr_pstrdup(merge_b->pool, local_abspath),
-                                   APR_HASH_KEY_STRING, local_abspath);
-                    }
+                  apr_hash_set(merge_b->paths_with_deleted_mergeinfo,
+                               apr_pstrdup(merge_b->pool, local_abspath),
+                               APR_HASH_KEY_STRING, local_abspath);
                 }
             }
         }
@@ -1329,7 +1315,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
     }
 
   SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
-                                      merge_b, scratch_pool));
+                                      merge_b, scratch_pool, scratch_pool));
 
   /* We only want to merge "regular" version properties:  by
      definition, 'svn merge' shouldn't touch any pristine data  */
@@ -1343,9 +1329,6 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
                                   ctx->conflict_func2, ctx->conflict_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
-
-      SVN_ERR(record_mergeinfo_prop_change(local_abspath, props,
-                                           merge_b, scratch_pool));
     }
   else if (state)
     *state = svn_wc_notify_state_unchanged;
@@ -1644,10 +1627,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
          merge */
       SVN_ERR(prepare_merge_props_changed(&prop_changes, local_abspath,
                                           prop_changes, merge_b,
-                                          scratch_pool));
-
-      SVN_ERR(record_mergeinfo_prop_change(local_abspath, prop_changes,
-                                           merge_b, scratch_pool));
+                                          scratch_pool, scratch_pool));
     }
 
   SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
