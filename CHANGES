@@ -45,7 +45,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.5
-(?? ??? 2012, from /branches/1.7.x)
+(17 May 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.5
 
  User-visible changes:
@@ -73,6 +73,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.5
     * fix merges which first add a subtree and then delete it (issue #4166)
     * fix a regression with checkout of file externals (issue #4087)
     * don't add spurious mergeinfo to subtrees in edge-case merge (issue #4169)
+    * improve performance of status on large working copies (issue #4178)
 
   - Server-side bugfixes:
     * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
