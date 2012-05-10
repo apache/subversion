@@ -639,7 +639,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_boolean_t want_custom_revprops;
   svn_revnum_t peg_rev;
   svn_error_t *err;
-  const char *relative_url, *basecoll_url, *req_url;
+  const char *req_url;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
   log_ctx->pool = pool;
@@ -694,10 +694,10 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, peg_rev, NULL, pool));
-
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, peg_rev,
+                                      pool, pool));
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

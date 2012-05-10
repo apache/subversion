@@ -503,9 +503,12 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 
   /* ### HTTPv2: use OPTIONS to get youngest.  */
 
-  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                        NULL, session->session_url.path,
-                                        SVN_INVALID_REVNUM, latest_revnum,
+  /* ### HTTPv1: extract the relevant bits from get_baseline_info() since
+     ### we don't care about anything beyond the revnum.  */
+  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
+                                        session, NULL /* conn */,
+                                        NULL /* url */, SVN_INVALID_REVNUM,
+                                        latest_revnum,
                                         pool);
 }
 
@@ -587,17 +590,15 @@ fetch_path_props(apr_hash_t **ret_props,
    */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *relative_url, *basecoll_url;
-
-      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                             session, NULL, path,
-                                             revision, NULL, pool));
+      SVN_ERR(svn_ra_serf__get_stable_url(&path, NULL /* latest_revnum */,
+                                          session, NULL /* conn */,
+                                          NULL /* url */, revision,
+                                          pool, pool));
 
       /* We will try again with our new path; however, we're now
        * technically an unversioned resource because we are accessing
        * the revision's baseline-collection.
        */
-      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
     }
 
@@ -960,13 +961,10 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
      public url. */
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
-      const char *relative_url, *basecoll_url;
-
-      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                             session, NULL, path, revision,
-                                             fetched_rev, pool));
-
-      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+      SVN_ERR(svn_ra_serf__get_stable_url(&path, fetched_rev,
+                                          session, NULL /* conn */,
+                                          path, revision,
+                                          pool, pool));
       revision = SVN_INVALID_REVNUM;
     }
   /* REVISION is always SVN_INVALID_REVNUM  */

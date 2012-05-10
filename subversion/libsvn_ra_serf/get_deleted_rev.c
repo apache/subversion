@@ -187,7 +187,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   svn_ra_serf__session_t *ras = session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url, *req_url;
+  const char *req_url;
   svn_error_t *err;
 
   drev_ctx = apr_pcalloc(pool, sizeof(*drev_ctx));
@@ -198,11 +198,10 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   drev_ctx->revision_deleted = revision_deleted;
   drev_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         ras, NULL, NULL, peg_revision, NULL,
-                                         pool));
-
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      ras, NULL /* conn */,
+                                      NULL /* url */, peg_revision,
+                                      pool, pool));
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
   parser_ctx->pool = pool;

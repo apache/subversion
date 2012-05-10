@@ -466,7 +466,6 @@ checkout_dir(dir_context_t *dir,
 static svn_error_t *
 get_version_url(const char **checked_in_url,
                 svn_ra_serf__session_t *session,
-                svn_ra_serf__connection_t *conn,
                 const char *relpath,
                 svn_revnum_t base_revision,
                 const char *parent_vsn_url,
@@ -498,21 +497,21 @@ get_version_url(const char **checked_in_url,
   else
     {
       const char *propfind_url;
+      svn_ra_serf__connection_t *conn = session->conns[0];
 
       if (SVN_IS_VALID_REVNUM(base_revision))
         {
-          const char *bc_url, *bc_relpath;
-
           /* mod_dav_svn can't handle the "Label:" header that
              svn_ra_serf__deliver_props() is going to try to use for
              this lookup, so we'll do things the hard(er) way, by
              looking up the version URL from a resource in the
              baseline collection. */
-          SVN_ERR(svn_ra_serf__get_baseline_info(&bc_url, &bc_relpath,
-                                                 session, conn,
-                                                 session->session_url.path,
-                                                 base_revision, NULL, pool));
-          propfind_url = svn_path_url_add_component2(bc_url, bc_relpath, pool);
+          /* ### conn==NULL for session->conns[0]. same as CONN.  */
+          SVN_ERR(svn_ra_serf__get_stable_url(&propfind_url,
+                                              NULL /* latest_revnum */,
+                                              session, NULL /* conn */,
+                                              NULL /* url */, base_revision,
+                                              pool, pool));
         }
       else
         {
@@ -563,7 +562,7 @@ checkout_file(file_context_t *file,
     }
 
   SVN_ERR(get_version_url(&checkout_url,
-                          file->commit->session, file->commit->conn,
+                          file->commit->session,
                           file->relpath, file->base_revision,
                           NULL, scratch_pool));
 
@@ -1430,7 +1429,7 @@ open_root(void *edit_baton,
       dir->removed_props = apr_hash_make(dir->pool);
 
       SVN_ERR(get_version_url(&dir->url, dir->commit->session,
-                              dir->commit->conn, dir->relpath,
+                              dir->relpath,
                               dir->base_revision, ctx->checked_in_url,
                               dir->pool));
       ctx->checked_in_url = dir->url;
@@ -1632,7 +1631,7 @@ add_directory(const char *path,
   else
     {
       apr_uri_t uri;
-      const char *rel_copy_path, *basecoll_url, *req_url;
+      const char *req_url;
 
       status = apr_uri_parse(dir->pool, dir->copy_path, &uri);
       if (status)
@@ -1642,13 +1641,12 @@ add_directory(const char *path,
                                    dir->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &rel_copy_path,
-                                             dir->commit->session,
-                                             dir->commit->conn,
-                                             uri.path, dir->copy_revision,
-                                             NULL, dir_pool));
-      req_url = svn_path_url_add_component2(basecoll_url, rel_copy_path,
-                                            dir->pool);
+      /* ### conn==NULL for session->conns[0]. same as commit->conn.  */
+      SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                          dir->commit->session,
+                                          NULL /* conn */,
+                                          uri.path, dir->copy_revision,
+                                          dir_pool, dir_pool));
 
       handler->method = "COPY";
       handler->path = req_url;
@@ -1718,7 +1716,7 @@ open_directory(const char *path,
   else
     {
       SVN_ERR(get_version_url(&dir->url,
-                              dir->commit->session, dir->commit->conn,
+                              dir->commit->session,
                               dir->relpath, dir->base_revision,
                               dir->commit->checked_in_url, dir->pool));
     }
@@ -2034,7 +2032,7 @@ close_file(void *file_baton,
     {
       svn_ra_serf__handler_t *handler;
       apr_uri_t uri;
-      const char *rel_copy_path, *basecoll_url, *req_url;
+      const char *req_url;
 
       status = apr_uri_parse(pool, ctx->copy_path, &uri);
       if (status)
@@ -2044,12 +2042,12 @@ close_file(void *file_baton,
                                    ctx->copy_path);
         }
 
-      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &rel_copy_path,
-                                             ctx->commit->session,
-                                             ctx->commit->conn,
-                                             uri.path, ctx->copy_revision,
-                                             NULL, pool));
-      req_url = svn_path_url_add_component2(basecoll_url, rel_copy_path, pool);
+      /* ### conn==NULL for session->conns[0]. same as commit->conn.  */
+      SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                          ctx->commit->session,
+                                          NULL /* conn */,
+                                          uri.path, ctx->copy_revision,
+                                          pool, pool));
 
       handler = apr_pcalloc(pool, sizeof(*handler));
       handler->handler_pool = pool;

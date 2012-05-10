@@ -1078,6 +1078,30 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
 
 svn_error_t *
+svn_ra_serf__get_stable_url(const char **stable_url,
+                            svn_revnum_t *latest_revnum,
+                            svn_ra_serf__session_t *session,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  const char *basecoll_url;
+  const char *relpath;
+
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relpath,
+                                         session, conn,
+                                         url, revision, latest_revnum,
+                                         scratch_pool));
+  *stable_url = svn_path_url_add_component2(basecoll_url, relpath,
+                                            result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_ra_serf__get_resource_type(svn_kind_t *kind,
                                apr_hash_t *props,
                                const char *url)
