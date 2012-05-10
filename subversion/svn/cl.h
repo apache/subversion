@@ -333,13 +333,15 @@ typedef struct svn_cl__conflict_baton_t {
   const char *editor_cmd;
   svn_boolean_t external_failed;
   svn_cmdline_prompt_baton_t *pb;
+  const char *path_prefix;
 } svn_cl__conflict_baton_t;
 
-/* Create and return a conflict baton, allocated from POOL, with the values
-   ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named fields
-   of the baton, and its 'external_failed' field initialised to FALSE. */
-svn_cl__conflict_baton_t *
-svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
+/* Create and return a conflict baton in *B, allocated from POOL, with the
+ * values ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named
+ * fields of the baton, and its 'external_failed' field initialised to FALSE. */
+svn_error_t *
+svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
+                            svn_cl__accept_t accept_which,
                             apr_hash_t *config,
                             const char *editor_cmd,
                             svn_cmdline_prompt_baton_t *pb,

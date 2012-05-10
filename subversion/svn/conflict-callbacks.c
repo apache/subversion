@@ -41,20 +41,22 @@
 
 
 
-svn_cl__conflict_baton_t *
-svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
+svn_error_t *
+svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
+                            svn_cl__accept_t accept_which,
                             apr_hash_t *config,
                             const char *editor_cmd,
                             svn_cmdline_prompt_baton_t *pb,
                             apr_pool_t *pool)
 {
-  svn_cl__conflict_baton_t *b = apr_palloc(pool, sizeof(*b));
-  b->accept_which = accept_which;
-  b->config = config;
-  b->editor_cmd = editor_cmd;
-  b->external_failed = FALSE;
-  b->pb = pb;
-  return b;
+  *b = apr_palloc(pool, sizeof(**b));
+  (*b)->accept_which = accept_which;
+  (*b)->config = config;
+  (*b)->editor_cmd = editor_cmd;
+  (*b)->external_failed = FALSE;
+  (*b)->pb = pb;
+  SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", pool));
+  return SVN_NO_ERROR;
 }
 
 svn_cl__accept_t
