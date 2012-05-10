@@ -584,7 +584,7 @@ fetch_path_props(apr_hash_t **ret_props,
     {
       SVN_ERR(svn_ra_serf__get_stable_url(&path, NULL /* latest_revnum */,
                                           session, NULL /* conn */,
-                                          NULL /* url */, revision,
+                                          path, revision,
                                           pool, pool));
 
       /* We will try again with our new path; however, we're now
