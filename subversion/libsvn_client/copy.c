@@ -1477,9 +1477,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       svn_boolean_t sleep_needed = FALSE;
       const char *tmpdir_abspath, *tmp_abspath;
 
-      /* Find a temporary location in which to check out the copy source.
-       * (This function is deprecated, but we intend to replace this whole
-       * code path with something else.) */
+      /* Find a temporary location in which to check out the copy source. */
       SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
                                  pool, pool));
                                  

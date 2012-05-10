@@ -1036,11 +1036,11 @@ svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
 
 /* Set *TMPDIR_ABSPATH to a directory that is suitable for temporary
    files which may need to be moved (atomically and same-device) into
-   the working copy indicated by LOCAL_ABSPATH.  */
+   the working copy indicated by WRI_ABSPATH.  */
 svn_error_t *
 svn_wc__get_tmpdir(const char **tmpdir_abspath,
                    svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
+                   const char *wri_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
