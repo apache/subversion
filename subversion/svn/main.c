@@ -2675,6 +2675,8 @@ main(int argc, const char *argv[])
          the user said to postpone. */
       ctx->conflict_func = NULL;
       ctx->conflict_baton = NULL;
+      ctx->conflict_func2 = NULL;
+      ctx->conflict_baton2 = NULL;
     }
   else
     {
@@ -2699,8 +2701,10 @@ main(int argc, const char *argv[])
                pool, "svn: ");
         }
 
-      ctx->conflict_func = svn_cl__conflict_handler;
-      ctx->conflict_baton = svn_cl__conflict_baton_make(
+      ctx->conflict_func = NULL;
+      ctx->conflict_baton = NULL;
+      ctx->conflict_func2 = svn_cl__conflict_handler;
+      ctx->conflict_baton2 = svn_cl__conflict_baton_make(
           opt_state.accept_which,
           ctx->config,
           opt_state.editor_cmd,
