@@ -946,17 +946,114 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_ra_serf__get_baseline_info(const char **bc_url,
-                               const char **bc_relative,
-                               svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
-                               const char *url,
-                               svn_revnum_t revision,
-                               svn_revnum_t *latest_revnum,
-                               apr_pool_t *pool)
+
+/* For HTTPv1 servers, do a PROPFIND dance on the VCC to fetch the youngest
+   revnum. If BASECOLL_URL is non-NULL, then the corresponding baseline
+   collection URL is also returned.
+
+   Do the work over CONN.
+
+   *BASECOLL_URL (if requested) will be allocated in RESULT_POOL. All
+   temporary allocations will be made in SCRATCH_POOL.  */
+static svn_error_t *
+v1_get_youngest_revnum(svn_revnum_t *youngest,
+                       const char **basecoll_url,
+                       svn_ra_serf__connection_t *conn,
+                       const char *vcc_url,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  const char *vcc_url, *relative_url, *basecoll_url, *baseline_url;
+  const char *baseline_url;
+  const char *bc_url;
+
+  /* Fetching DAV:checked-in from the VCC (with no Label: to specify a
+     revision) will return the latest Baseline resource's URL.  */
+  SVN_ERR(svn_ra_serf__fetch_dav_prop(&baseline_url, conn, vcc_url,
+                                      SVN_INVALID_REVNUM,
+                                      "checked-in",
+                                      scratch_pool, scratch_pool));
+  if (!baseline_url)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include "
+                                "the requested checked-in value"));
+    }
+  baseline_url = svn_urlpath__canonicalize(baseline_url, scratch_pool);
+
+  /* From the Baseline resource, we can fetch the DAV:baseline-collection
+     and DAV:version-name properties. The latter is the revision number,
+     which is formally the name used in Label: headers.  */
+
+  /* First check baseline information cache. */
+  SVN_ERR(svn_ra_serf__blncache_get_baseline_info(&bc_url,
+                                                  youngest,
+                                                  conn->session->blncache,
+                                                  baseline_url,
+                                                  scratch_pool));
+  if (!bc_url)
+    {
+      SVN_ERR(retrieve_baseline_info(youngest, &bc_url,
+                                     conn->session, conn,
+                                     baseline_url, SVN_INVALID_REVNUM,
+                                     scratch_pool));
+      SVN_ERR(svn_ra_serf__blncache_set(conn->session->blncache,
+                                        baseline_url, *youngest,
+                                        bc_url, scratch_pool));
+    }
+
+  if (basecoll_url != NULL)
+    *basecoll_url = apr_pstrdup(result_pool, bc_url);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__get_youngest_revnum(svn_revnum_t *youngest,
+                                 svn_ra_serf__session_t *session,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *vcc_url;
+
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+    return svn_error_trace(svn_ra_serf__v2_get_youngest_revnum(
+                             youngest, session->conns[0], scratch_pool));
+
+  SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, scratch_pool));
+
+  return svn_error_trace(v1_get_youngest_revnum(youngest, NULL,
+                                                session->conns[0], vcc_url,
+                                                scratch_pool, scratch_pool));
+}
+
+
+/* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
+   the path relative to that url for URL in REVISION using SESSION.
+   BC_RELATIVE will be URI decoded.
+
+   REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
+   revision").  If URL is NULL, use SESSION's session url.
+
+   If LATEST_REVNUM is not NULL, set it to the baseline revision. If
+   REVISION was set to SVN_INVALID_REVNUM, this will return the current
+   HEAD revision.
+
+   If non-NULL, use CONN for communications with the server;
+   otherwise, use the default connection.
+
+   All temporary allocations are performed in SCRATCH_POOL.  */
+static svn_error_t *
+get_baseline_info(const char **bc_url,
+                  const char **bc_relative,
+                  svn_ra_serf__session_t *session,
+                  svn_ra_serf__connection_t *conn,
+                  const char *url,
+                  svn_revnum_t revision,
+                  svn_revnum_t *latest_revnum,
+                  apr_pool_t *pool)
+{
+  const char *basecoll_url;
+  const char *relative_url;
 
   /* No URL?  No sweat.  We'll use the session URL. */
   if (! url)
@@ -997,6 +1094,8 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   /* Otherwise, we fall back to the old VCC_URL PROPFIND hunt.  */
   else
     {
+      const char *vcc_url;
+
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, conn, pool));
 
       if (SVN_IS_VALID_REVNUM(revision))
@@ -1023,35 +1122,9 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
         {
           svn_revnum_t actual_revision;
 
-          SVN_ERR(svn_ra_serf__fetch_dav_prop(&baseline_url, conn, vcc_url,
-                                              SVN_INVALID_REVNUM,
-                                              "checked-in",
-                                              pool, pool));
-          if (!baseline_url)
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                      _("The OPTIONS response did not include "
-                                        "the requested checked-in value"));
-            }
-
-          baseline_url = svn_urlpath__canonicalize(baseline_url, pool);
-
-          /* First check baseline information cache. */
-          SVN_ERR(svn_ra_serf__blncache_get_baseline_info(&basecoll_url,
-                                                          &actual_revision,
-                                                          session->blncache,
-                                                          baseline_url,
-                                                          pool));
-          if (!basecoll_url)
-            {
-              SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
-                                             session, conn,
-                                             baseline_url, SVN_INVALID_REVNUM,
-                                             pool));
-              SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
-                                                baseline_url, actual_revision,
-                                                basecoll_url, pool));
-            }
+          SVN_ERR(v1_get_youngest_revnum(&actual_revision, &basecoll_url,
+                                         conn, vcc_url,
+                                         pool, pool));
 
           if (latest_revnum)
             {
@@ -1083,10 +1156,10 @@ svn_ra_serf__get_stable_url(const char **stable_url,
   const char *basecoll_url;
   const char *relpath;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relpath,
-                                         session, conn,
-                                         url, revision, latest_revnum,
-                                         scratch_pool));
+  SVN_ERR(get_baseline_info(&basecoll_url, &relpath,
+                            session, conn,
+                            url, revision, latest_revnum,
+                            scratch_pool));
   *stable_url = svn_path_url_add_component2(basecoll_url, relpath,
                                             result_pool);
 
