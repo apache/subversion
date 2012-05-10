@@ -353,7 +353,8 @@ svn_error_t *
 svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                          const svn_wc_conflict_description2_t *desc,
                          void *baton,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 
