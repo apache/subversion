@@ -1131,16 +1131,18 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   return SVN_NO_ERROR;
 }
 
-/* Used for both file and directory property merges. */
+/* Perpare a set of property changes PROPCHANGES to be used for a merge operation on
+   LOCAL_ABSPATH. Store the result in *PROP_UPDATES.
+
+   Used for both file and directory property merges. */
 static svn_error_t *
 prepare_merge_props_changed(const apr_array_header_t **prop_updates,
                             const char *local_abspath,
                             const apr_array_header_t *propchanges,
-                            void *baton,
+                            merge_cmd_baton_t *merge_b,
                             apr_pool_t *scratch_pool)
 {
   apr_array_header_t *props;
-  merge_cmd_baton_t *merge_b = baton;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1192,17 +1194,20 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
 
   return SVN_NO_ERROR;
 }
+
+/* Perform a property merge of the property changes PROPS on LOCAL_ABSPATH. The
+   original properties are stored in ORIGINAL_PROPS.
+
+   Used for both file and directory property merges. */*/
 static svn_error_t *
 merge_props_changed(svn_wc_notify_state_t *state,
                     svn_boolean_t *tree_conflicted,
-                    const apr_array_header_t *props,
                     const char *local_abspath,
-                    const apr_array_header_t *propchanges,
+                    const apr_array_header_t *props,
                     apr_hash_t *original_props,
-                    void *baton,
+                    merge_cmd_baton_t *merge_b,
                     apr_pool_t *scratch_pool)
 {
-  merge_cmd_baton_t *merge_b = baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
 
   /* We only want to merge "regular" version properties:  by
@@ -1215,6 +1220,19 @@ merge_props_changed(svn_wc_notify_state_t *state,
                                 ctx->conflict_func2, ctx->conflict_baton2,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 scratch_pool);
+
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
+        {
+          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
+          if (state)
+            *state = svn_wc_notify_state_missing;
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
+          svn_error_clear(err);
+        }
+      else if (err)
+        return svn_error_trace(err);
 
       /* If this is not a dry run then make a record in BATON if we find a
          PATH where mergeinfo is added where none existed previously or PATH
@@ -1233,7 +1251,6 @@ merge_props_changed(svn_wc_notify_state_t *state,
                   svn_boolean_t has_pristine_mergeinfo = FALSE;
                   apr_hash_t *pristine_props;
 
-                  /* ### Erroring here will leak err */
                   SVN_ERR(svn_wc_get_pristine_props(&pristine_props,
                                                     ctx->wc_ctx,
                                                     local_abspath,
@@ -1274,20 +1291,6 @@ merge_props_changed(svn_wc_notify_state_t *state,
                 }
             }
         }
-
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                  || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
-        {
-          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
-          if (state)
-            *state = svn_wc_notify_state_missing;
-          if (tree_conflicted)
-            *tree_conflicted = TRUE;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else if (err)
-        return svn_error_trace(err);
     }
   else if (state)
     *state = svn_wc_notify_state_unchanged;
@@ -1332,14 +1335,13 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
     }
 
   SVN_ERR(prepare_merge_props_changed(&props, local_abspath, propchanges,
-                                      diff_baton, scratch_pool));
+                                      merge_b, scratch_pool));
   return svn_error_trace(merge_props_changed(state,
                                              tree_conflicted,
-                                             props,
                                              local_abspath,
-                                             propchanges,
+                                             props,
                                              original_props,
-                                             diff_baton,
+                                             merge_b,
                                              scratch_pool));
 }
 
@@ -1627,11 +1629,11 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       const apr_array_header_t *props;
 
       SVN_ERR(prepare_merge_props_changed(&props, mine_abspath, prop_changes,
-                                          baton, scratch_pool));
+                                          merge_b, scratch_pool));
 
-      SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2, props,
-                                  mine_abspath, prop_changes, original_props,
-                                  baton, scratch_pool));
+      SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2,
+                                  mine_abspath, props, original_props,
+                                  merge_b, scratch_pool));
 
       /* If the prop change caused a tree-conflict, just bail. */
       if (tree_conflicted2)
