@@ -1501,6 +1501,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                                               mine_relpath, scratch_pool);
   svn_node_kind_t wc_kind;
   svn_boolean_t is_deleted;
+  const svn_wc_conflict_version_t *left;
+  const svn_wc_conflict_version_t *right;
 
   SVN_ERR_ASSERT(local_abspath && svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
@@ -1640,14 +1642,14 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                                            merge_b, scratch_pool));
     }
 
-  /* Do property merge before text merge so that keyword expansion takes
-     into account the new property values.
-     We only want to merge "regular" version properties:
-      - by definition, 'svn merge' shouldn't touch any pristine data */
-  if (prop_changes->nelts)
+  SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                 svn_node_file, merge_b));
+
+  /* Do property merge now, if we are not going to perform a text merge */
+  if ((merge_b->record_only || !older_abspath) && prop_changes->nelts)
     {
       SVN_ERR(svn_wc_merge_props3(prop_state, ctx->wc_ctx, local_abspath,
-                                  NULL, NULL,
+                                  left, right,
                                   original_props, prop_changes,
                                   merge_b->dry_run,
                                   ctx->conflict_func2,
@@ -1680,8 +1682,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                                              _(".merge-right.r%ld"),
                                              yours_rev);
       conflict_resolver_baton_t conflict_baton = { 0 };
-      const svn_wc_conflict_version_t *left;
-      const svn_wc_conflict_version_t *right;
 
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, ctx->wc_ctx,
                                       local_abspath, FALSE, scratch_pool));
@@ -1691,8 +1691,20 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
       conflict_baton.pool = merge_b->pool;
 
-      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                     svn_node_file, merge_b));
+      /* Do property merge before text merge so that keyword expansion takes
+         into account the new property values. */
+      if (prop_changes)
+        {
+          SVN_ERR(svn_wc_merge_props3(prop_state, ctx->wc_ctx, local_abspath,
+                                      left, right,
+                                      original_props, prop_changes,
+                                      merge_b->dry_run,
+                                      ctx->conflict_func2,
+                                      ctx->conflict_baton2,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      scratch_pool));
+        }
+
       SVN_ERR(svn_wc_merge4(&merge_outcome, ctx->wc_ctx,
                             older_abspath, yours_abspath, local_abspath,
                             left_label, right_label, target_label,
