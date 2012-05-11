@@ -159,19 +159,21 @@ def commit_file_unlock(sbox):
   wc_dir = sbox.wc_dir
 
   fname = 'A/mu'
-  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path = sbox.ospath(fname)
 
-  # lock fname as wc_author
+  # lock fname and iota as wc_author
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '-m', 'some lock comment', file_path)
+                                     '-m', 'some lock comment',
+                                     sbox.ospath(fname),
+                                     sbox.ospath('iota'))
 
   # make a change and commit it, allowing lock to be released
   svntest.main.file_append(file_path, "Tweak!\n")
-  svntest.main.run_svn(None, 'commit', '-m', '',
-                       file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '', wc_dir)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   # Make sure the file is unlocked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)

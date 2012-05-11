@@ -616,7 +616,8 @@ harvest_status_callback(void *status_baton,
       case svn_wc_status_none:
         return SVN_NO_ERROR;
       case svn_wc_status_normal:
-        if (!copy_mode && !status->conflicted)
+        if (!copy_mode && !status->conflicted
+            && !(just_locked && status->lock))
           return SVN_NO_ERROR;
         break;
       default:
