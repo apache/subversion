@@ -1088,8 +1088,6 @@ get_baseline_info(const char **bc_url,
      revision (if needed) with an OPTIONS request.  */
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      svn_revnum_t actual_revision;
-
       if (SVN_IS_VALID_REVNUM(revision))
         {
           *revnum_used = revision;
@@ -1098,7 +1096,7 @@ get_baseline_info(const char **bc_url,
         {
           SVN_ERR(svn_ra_serf__v2_get_youngest_revnum(
                     revnum_used, conn, pool));
-          if (! SVN_IS_VALID_REVNUM(actual_revision))
+          if (! SVN_IS_VALID_REVNUM(*revnum_used))
             return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                     _("The OPTIONS response did not include "
                                       "the youngest revision"));
