@@ -8431,18 +8431,18 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   return SVN_NO_ERROR;
 }
 
-/* Helper for do_merge() when the merge target is a directory.
-
-   Perform a merge of changes in SOURCE to the working copy path
+/* Perform a merge of changes in SOURCE to the working copy path
    TARGET_ABSPATH. Both URLs in SOURCE, and TARGET_ABSPATH all represent
    directories -- for the single file case, the caller should use
    do_file_merge().
 
-   MERGE_B is the merge_cmd_baton_t created by do_merge() that describes
-   the merge being performed.  If MERGE_B->sources_ancestral is set, then
+   MERGE_B describes the merge being performed.  As this function is for a
+   mergeinfo-aware merge, MERGE_B->sources_ancestral should be TRUE, and
    SOURCE->url1@rev1 must be a historical ancestor of SOURCE->url2@rev2, or
    vice-versa (see `MERGEINFO MERGE SOURCE NORMALIZATION' for more
-   requirements around SOURCE in this case).
+   requirements around SOURCE).
+
+   Mergeinfo changes will be recorded unless MERGE_B->dry_run is true.
 
    If mergeinfo is being recorded, SQUELCH_MERGEINFO_NOTIFICATIONS is FALSE,
    and MERGE_B->CTX->NOTIFY_FUNC2 is not NULL, then call
@@ -8469,15 +8469,15 @@ remove_noop_subtree_ranges(const merge_source_t *source,
    meet one or more of the criteria described in get_mergeinfo_paths()).
 */
 static svn_error_t *
-do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
-                   const merge_source_t *source,
-                   const char *target_abspath,
-                   svn_depth_t depth,
-                   svn_boolean_t squelch_mergeinfo_notifications,
-                   svn_boolean_t abort_on_conflicts,
-                   notification_receiver_baton_t *notify_b,
-                   merge_cmd_baton_t *merge_b,
-                   apr_pool_t *scratch_pool)
+do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
+                             const merge_source_t *source,
+                             const char *target_abspath,
+                             svn_depth_t depth,
+                             svn_boolean_t squelch_mergeinfo_notifications,
+                             svn_boolean_t abort_on_conflicts,
+                             notification_receiver_baton_t *notify_b,
+                             merge_cmd_baton_t *merge_b,
+                             apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *merge_conflict_err = SVN_NO_ERROR;
@@ -8497,22 +8497,6 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (source->loc1->rev > source->loc2->rev);
   const char *primary_url = is_rollback ? source->loc1->url : source->loc2->url;
-  svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
-
-  /* Note that this is not a single-file merge. */
-  notify_b->is_single_file_merge = FALSE;
-
-  /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment
-     'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
-  notify_b->children_with_mergeinfo =
-    apr_array_make(scratch_pool, 0, sizeof(svn_client__merge_path_t *));
-
-  /* If we are not honoring mergeinfo we can skip right to the
-     business of merging changes! */
-  if (!honor_mergeinfo)
-    return do_mergeinfo_unaware_dir_merge(source,
-                                          target_abspath, depth,
-                                          notify_b, merge_b, scratch_pool);
 
   /*** If we get here, we're dealing with related sources from the
        same repository as the target -- merge tracking might be
@@ -8783,6 +8767,44 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
     }
 
   return svn_error_compose_create(err, merge_conflict_err);
+}
+
+/* Helper for do_merge() when the merge target is a directory.
+
+*/
+static svn_error_t *
+do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
+                   const merge_source_t *source,
+                   const char *target_abspath,
+                   svn_depth_t depth,
+                   svn_boolean_t squelch_mergeinfo_notifications,
+                   svn_boolean_t abort_on_conflicts,
+                   notification_receiver_baton_t *notify_b,
+                   merge_cmd_baton_t *merge_b,
+                   apr_pool_t *scratch_pool)
+{
+  /* Note that this is not a single-file merge. */
+  notify_b->is_single_file_merge = FALSE;
+
+  /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment
+     'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
+  notify_b->children_with_mergeinfo =
+    apr_array_make(scratch_pool, 0, sizeof(svn_client__merge_path_t *));
+
+  /* If we are not honoring mergeinfo we can skip right to the
+     business of merging changes! */
+  if (HONOR_MERGEINFO(merge_b))
+    SVN_ERR(do_mergeinfo_aware_dir_merge(result_catalog,
+                                         source, target_abspath, depth,
+                                         squelch_mergeinfo_notifications,
+                                         abort_on_conflicts,
+                                         notify_b, merge_b, scratch_pool));
+  else
+    SVN_ERR(do_mergeinfo_unaware_dir_merge(source,
+                                           target_abspath, depth,
+                                           notify_b, merge_b, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 /** Ensure that *RA_SESSION is opened to URL, either by reusing
