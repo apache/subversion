@@ -9098,7 +9098,7 @@ do_merge(apr_hash_t **modified_subtrees,
    to represent the changed mergeinfo.
 
    The merge is between SOURCE->url1@rev1 (in URL1_RA_SESSION1) and
-   SOURCE->url2@rev2 (in URL2_RA_SESSION2); YC_REV is their youngest
+   SOURCE->url2@rev2 (in URL2_RA_SESSION2); YCA is their youngest
    common ancestor.
    SAME_REPOS must be true if and only if the source URLs are in the same
    repository as the target working copy.  Other arguments are as in
@@ -9114,7 +9114,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
                                        svn_ra_session_t *URL1_ra_session,
                                        svn_ra_session_t *URL2_ra_session,
                                        const merge_source_t *source,
-                                       svn_revnum_t yc_rev,
+                                       const svn_client__pathrev_t *yca,
                                        svn_boolean_t same_repos,
                                        svn_depth_t depth,
                                        svn_boolean_t ignore_ancestry,
@@ -9139,13 +9139,13 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
 
   SVN_ERR(normalize_merge_sources_internal(
             &remove_sources, source->loc1,
-            svn_rangelist__initialize(source->loc1->rev, yc_rev, TRUE,
+            svn_rangelist__initialize(source->loc1->rev, yca->rev, TRUE,
                                       scratch_pool),
             URL1_ra_session, ctx, scratch_pool, subpool));
 
   SVN_ERR(normalize_merge_sources_internal(
             &add_sources, source->loc2,
-            svn_rangelist__initialize(yc_rev, source->loc2->rev, TRUE,
+            svn_rangelist__initialize(yca->rev, source->loc2->rev, TRUE,
                                       scratch_pool),
             URL2_ra_session, ctx, scratch_pool, subpool));
 
@@ -9535,7 +9535,7 @@ merge_locked(const char *source1,
                                                        ra_session1,
                                                        ra_session2,
                                                        &source,
-                                                       yca->rev,
+                                                       yca,
                                                        same_repos,
                                                        depth,
                                                        ignore_ancestry, force,
@@ -10790,7 +10790,7 @@ merge_reintegrate_locked(const char *source_path_or_url,
   err = merge_cousins_and_supplement_mergeinfo(target,
                                                target_ra_session,
                                                source_ra_session,
-                                               source, yc_ancestor->rev,
+                                               source, yc_ancestor,
                                                TRUE /* same_repos */,
                                                svn_depth_infinity,
                                                FALSE /* ignore_ancestry */,
@@ -11517,7 +11517,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
 
       err = merge_cousins_and_supplement_mergeinfo(target,
                                                    ra_session, ra_session,
-                                                   &source, merge->yca->rev,
+                                                   &source, merge->yca,
                                                    TRUE /* same_repos */,
                                                    depth, ignore_ancestry,
                                                    force, record_only,
