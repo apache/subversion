@@ -356,16 +356,13 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 struct harvest_baton
 {
   /* Static data */
+  const char *root_abspath;
   svn_client__committables_t *committables;
   apr_hash_t *lock_tokens;
-  const char *commit_relpath;
-  const char *commit_relpath_abspath; /* Where commit_relpath applies to */
-  const char *copy_mode_root;
+  const char *commit_relpath; /* Valid for the harvest root */
   svn_depth_t depth;
   svn_boolean_t just_locked;
   apr_hash_t *changelists;
-  svn_boolean_t skip_files;
-  const char *explicit_target;
   apr_hash_t *danglers;
   svn_client__check_url_kind_t check_url_func;
   void *check_url_baton;
@@ -390,14 +387,10 @@ static svn_error_t *
 harvest_committables(const char *local_abspath,
                      svn_client__committables_t *committables,
                      apr_hash_t *lock_tokens,
-                     const char *repos_root_url,
-                     const char *commit_relpath,
-                     svn_boolean_t copy_mode_root,
+                     const char *copy_mode_relpath,
                      svn_depth_t depth,
                      svn_boolean_t just_locked,
                      apr_hash_t *changelists,
-                     svn_boolean_t skip_files,
-                     svn_boolean_t is_explicit_target,
                      apr_hash_t *danglers,
                      svn_client__check_url_kind_t check_url_func,
                      void *check_url_baton,
@@ -411,16 +404,13 @@ harvest_committables(const char *local_abspath,
 {
   struct harvest_baton baton;
 
+  baton.root_abspath = local_abspath;
   baton.committables = committables;
   baton.lock_tokens = lock_tokens;
-  baton.commit_relpath = commit_relpath;
-  baton.commit_relpath_abspath = local_abspath;
-  baton.copy_mode_root = copy_mode_root ? local_abspath : NULL;
+  baton.commit_relpath = copy_mode_relpath;
   baton.depth = depth;
   baton.just_locked = just_locked;
   baton.changelists = changelists;
-  baton.skip_files = skip_files;
-  baton.explicit_target = is_explicit_target ? local_abspath : NULL;
   baton.danglers = danglers;
   baton.check_url_func = check_url_func;
   baton.check_url_baton = check_url_baton;
@@ -436,7 +426,7 @@ harvest_committables(const char *local_abspath,
   SVN_ERR(svn_wc_walk_status(wc_ctx,
                              local_abspath,
                              depth,
-                             (commit_relpath != NULL) /* get_all */,
+                             (copy_mode_relpath != NULL) /* get_all */,
                              TRUE /* no_ignore */,
                              FALSE /* ignore_text_mods */,
                              NULL /* ignore_patterns */,
@@ -567,23 +557,17 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t copy_mode;
 
   struct harvest_baton *baton = status_baton;
+  svn_boolean_t is_harvest_root = 
+                (strcmp(baton->root_abspath, local_abspath) == 0);
   svn_client__committables_t *committables = baton->committables;
   apr_hash_t *lock_tokens = baton->lock_tokens;
   const char *repos_root_url = status->repos_root_url;
   const char *commit_relpath = NULL;
-  svn_boolean_t copy_mode_root = 
-                    (baton->copy_mode_root
-                     && strcmp(baton->copy_mode_root, local_abspath) == 0);
-  svn_depth_t depth = baton->depth;
+  svn_boolean_t copy_mode_root = (baton->commit_relpath && is_harvest_root);
   svn_boolean_t just_locked = baton->just_locked;
   apr_hash_t *changelists = baton->changelists;
-  svn_boolean_t skip_files = baton->skip_files;
-  svn_boolean_t is_explicit_target =
-                    (baton->explicit_target
-                     && strcmp(baton->explicit_target, local_abspath) == 0);
+  svn_boolean_t is_explicit_target = is_harvest_root;
   apr_hash_t *danglers = baton->danglers;
-  svn_client__check_url_kind_t check_url_func = baton->check_url_func;
-  void *check_url_baton = baton->check_url_baton;
   svn_cancel_func_t cancel_func = baton->cancel_func;
   void *cancel_baton = baton->cancel_baton;
   svn_wc_notify_func2_t notify_func = baton->notify_func;
@@ -594,7 +578,7 @@ harvest_status_callback(void *status_baton,
   if (baton->commit_relpath)
     commit_relpath = svn_relpath_join(
                         baton->commit_relpath,
-                        svn_dirent_skip_ancestor(baton->commit_relpath_abspath,
+                        svn_dirent_skip_ancestor(baton->root_abspath,
                                                  local_abspath),
                         scratch_pool);
 
@@ -614,6 +598,11 @@ harvest_status_callback(void *status_baton,
       case svn_wc_status_ignored:
       case svn_wc_status_external:
       case svn_wc_status_none:
+        if (is_harvest_root)
+          return svn_error_createf(
+                       SVN_ERR_ILLEGAL_TARGET, NULL,
+                       _("'%s' is not under version control"),
+                       svn_dirent_local_style(local_abspath, scratch_pool));
         return SVN_NO_ERROR;
       case svn_wc_status_normal:
         if (!copy_mode && !status->conflicted
@@ -653,7 +642,7 @@ harvest_status_callback(void *status_baton,
                                          wc_ctx, local_abspath,
                                          scratch_pool, scratch_pool));
 
-  if ((skip_files && db_kind == svn_node_file) || is_excluded)
+  if (is_excluded)
     return SVN_NO_ERROR;
 
   if (!node_relpath && commit_relpath)
@@ -967,22 +956,20 @@ harvest_status_callback(void *status_baton,
         }
     }
 
-  if (db_kind != svn_node_dir || depth <= svn_depth_empty)
-    return SVN_NO_ERROR;
-
   if ((state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
       && !(state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
     {
       /* Skip all descendants */
-      baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
-                                              local_abspath);
+      if (db_kind == svn_node_dir)
+        baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
+                                                local_abspath);
       return SVN_NO_ERROR;
     }
 
   /* Recursively handle each node according to depth, except when the
      node is only being deleted, or is in an added tree (as added trees
      use the normal commit handling). */
-  if (copy_mode && !is_added && !is_deleted)
+  if (copy_mode && !is_added && !is_deleted && db_kind == svn_node_dir)
     {
       SVN_ERR(harvest_not_present_for_copy(baton, local_abspath,
                                            repos_root_url, commit_relpath,
@@ -1134,7 +1121,6 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *changelist_hash = NULL;
-  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
   struct handle_descendants_baton hdb;
   apr_hash_index_t *hi;
 
@@ -1179,8 +1165,6 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
   for (i = 0; i < targets->nelts; ++i)
     {
       const char *target_abspath;
-      svn_node_kind_t kind;
-      const char *repos_root_url;
 
       svn_pool_clear(iterpool);
 
@@ -1188,34 +1172,6 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
       target_abspath = svn_dirent_join(base_dir_abspath,
                                        APR_ARRAY_IDX(targets, i, const char *),
                                        iterpool);
-
-      SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath,
-                               FALSE, /* show_hidden */
-                               iterpool));
-      if (kind == svn_node_none)
-        {
-          /* If a target of the commit is a tree-conflicted node that
-           * has no entry (e.g. locally deleted), issue a proper tree-
-           * conflicts error instead of a "not under version control". */
-          const svn_wc_conflict_description2_t *conflict;
-          SVN_ERR(svn_wc__get_tree_conflict(&conflict, wc_ctx, target_abspath,
-                                            iterpool, iterpool));
-          if (conflict != NULL)
-            return svn_error_createf(
-                       SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                       _("Aborting commit: '%s' remains in conflict"),
-                       svn_dirent_local_style(conflict->local_abspath,
-                                              iterpool));
-          else
-            return svn_error_createf(
-                       SVN_ERR_ILLEGAL_TARGET, NULL,
-                       _("'%s' is not under version control"),
-                       svn_dirent_local_style(target_abspath, iterpool));
-        }
-
-      SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, wc_ctx,
-                                          target_abspath,
-                                          result_pool, iterpool));
 
       /* Handle our TARGET. */
       /* Make sure this isn't inside a working copy subtree that is
@@ -1227,12 +1183,8 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
 
       SVN_ERR(harvest_committables(target_abspath,
                                    *committables, *lock_tokens,
-                                   repos_root_url,
-                                   NULL /* COMMIT_RELPATH */,
-                                   FALSE /* COPY_MODE_ROOT */,
+                                   NULL /* COPY_MODE_RELPATH */,
                                    depth, just_locked, changelist_hash,
-                                   FALSE /* SKIP_FILES */,
-                                   TRUE /* IS_EXPLICIT_TARGET */,
                                    danglers,
                                    check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
@@ -1319,14 +1271,10 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   /* Handle this SRC. */
   SVN_ERR(harvest_committables(pair->src_abspath_or_url,
                                btn->committables, NULL,
-                               repos_root_url,
                                commit_relpath,
-                               TRUE,  /* COPY_MODE_ROOT */
                                svn_depth_infinity,
                                FALSE,  /* JUST_LOCKED */
-                               NULL,
-                               FALSE, /* skip files */
-                               TRUE, /* IS_EXPLICIT_TARGET (don't care) */
+                               NULL /* changelists */,
                                NULL,
                                btn->check_url_func,
                                btn->check_url_baton,
