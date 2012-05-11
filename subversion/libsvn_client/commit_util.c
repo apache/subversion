@@ -590,7 +590,6 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t text_mod = FALSE;
   svn_boolean_t prop_mod = FALSE;
   apr_byte_t state_flags = 0;
-  svn_node_kind_t working_kind;
   svn_node_kind_t db_kind;
   const char *node_relpath;
   const char *node_lock_token;
@@ -598,7 +597,6 @@ harvest_status_callback(void *status_baton,
   const char *cf_relpath = NULL;
   svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
   svn_boolean_t matches_changelists;
-  svn_boolean_t is_special;
   svn_boolean_t is_added;
   svn_boolean_t is_deleted;
   svn_boolean_t is_replaced;
@@ -702,23 +700,6 @@ harvest_status_callback(void *status_baton,
   if (!node_relpath && commit_relpath)
     node_relpath = commit_relpath;
 
-  SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind, &is_special,
-                                    scratch_pool));
-
-  /* ### In 1.6 an obstructed dir would fail when locking before we
-         got here.  Locking now doesn't fail so perhaps we should do
-         some sort of checking here. */
-
-  if ((working_kind != svn_node_file)
-      && (working_kind != svn_node_dir)
-      && (working_kind != svn_node_none))
-    {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown entry kind for '%s'"),
-         svn_dirent_local_style(local_abspath, scratch_pool));
-    }
-
   /* Save the result for reuse. */
   matches_changelists = ((changelists == NULL)
                          || (node_changelist != NULL
@@ -726,26 +707,40 @@ harvest_status_callback(void *status_baton,
                                              APR_HASH_KEY_STRING) != NULL));
 
   /* Early exit. */
-  if (working_kind != svn_node_dir && working_kind != svn_node_none
-      && ! matches_changelists)
+  if (db_kind != svn_node_dir && ! matches_changelists)
     {
       return SVN_NO_ERROR;
     }
 
   /* Verify that the node's type has not changed before attempting to
      commit. */
-  if ((((!is_symlink) && (is_special))
-#ifdef HAVE_SYMLINK
-       || (is_symlink && (! is_special))
-#endif /* HAVE_SYMLINK */
-       ) && (working_kind != svn_node_none))
+  if (status->node_status == svn_wc_status_obstructed)
     {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-         _("Entry '%s' has unexpectedly changed special status"),
-         svn_dirent_local_style(local_abspath, scratch_pool));
-    }
+      svn_node_kind_t working_kind;
+      svn_boolean_t is_special;
 
+      SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind,
+                                        &is_special,
+                                        scratch_pool));
+
+      if ((((!is_symlink) && (is_special))
+#ifdef HAVE_SYMLINK
+          || (is_symlink && (! is_special))
+#endif /* HAVE_SYMLINK */
+          ) && (working_kind != svn_node_none))
+        {
+          return svn_error_createf(
+                    SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                    _("Entry '%s' has unexpectedly changed special status"),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
+        }
+
+      /* Legacy behavior: Obstruction skips tree */
+      baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
+                                              local_abspath);
+      return SVN_NO_ERROR;
+    }
+    
   /* Handle file externals.
    * (IS_UPDATE_ROOT is more generally defined, but at the moment this
    * condition matches only file externals.)
@@ -891,7 +886,7 @@ harvest_status_callback(void *status_baton,
     {
       /* First of all, the working file or directory must exist.
          See issue #3198. */
-      if (working_kind == svn_node_none)
+      if (status->node_status == svn_wc_status_missing)
         {
           if (notify_func != NULL)
             {
