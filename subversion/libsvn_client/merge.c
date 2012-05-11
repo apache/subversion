@@ -8496,7 +8496,6 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_ra_session_t *ra_session;
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (source->loc1->rev > source->loc2->rev);
-  const char *primary_url = is_rollback ? source->loc1->url : source->loc2->url;
 
   /*** If we get here, we're dealing with related sources from the
        same repository as the target -- merge tracking might be
@@ -8727,11 +8726,11 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   /* Record mergeinfo where appropriate.*/
   if (RECORD_MERGEINFO(merge_b))
     {
-      const char *mergeinfo_path;
+      const svn_client__pathrev_t *primary_loc
+        = is_rollback ? source->loc1 : source->loc2;
+      const char *mergeinfo_path
+        = svn_client__pathrev_fspath(primary_loc, scratch_pool);
 
-      /* ### Leaks merge_conflict_err */
-      SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
-                                                  primary_url, scratch_pool));
       err = record_mergeinfo_for_dir_merge(result_catalog,
                                            &range,
                                            mergeinfo_path,
