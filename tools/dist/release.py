@@ -715,6 +715,8 @@ def check_sigs(args):
                 good_sigs[verified.key_id[-8:]] = True
             else:
                 sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
+                if verified.key_id:
+                    sys.stderr.write("  key id: %s\n" % verified.key_id)
                 sys.exit(1)
 
     for id in good_sigs.keys():
