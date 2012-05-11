@@ -2015,7 +2015,10 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_mine_full,       /**< own version */
   svn_wc_conflict_choose_theirs_conflict, /**< incoming (for conflicted hunks) */
   svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged           /**< merged version */
+  svn_wc_conflict_choose_merged,          /**< merged version */
+
+  /* @since New in 1.8. */
+  svn_wc_conflict_choose_unspecified      /**< undecided */
 
 } svn_wc_conflict_choice_t;
 
@@ -6575,7 +6578,7 @@ typedef enum svn_wc_merge_outcome_t
  * receive the changes, then translated back again.
  *
  * If @a target_abspath is absent, or present but not under version
- * control, then set @a *merge_outcome to #svn_wc_merge_no_merge and
+ * control, then set @a *merge_content_outcome to #svn_wc_merge_no_merge and
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.
@@ -6593,8 +6596,16 @@ typedef enum svn_wc_merge_outcome_t
  * svn_diff_file_options_parse()).  @a merge_options must contain
  * <tt>const char *</tt> elements.
  *
- * The outcome of the merge is returned in @a *merge_outcome. If there
- * is a conflict and @a dry_run is @c FALSE, then attempt to call @a
+ * If @a merge_props_state is non-NULL @a propchanges is merged before
+ * merging the text. (If @a merge_props_outcome is NULL, no property changes
+*  are merged and @a prop_changes is only used to determine the merge result)
+ * The result of the property merge is stored in @a *merge_props_state. If
+ * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
+ * conflict_func with @a conflict_baton (if non-NULL).  If the conflict
+ * callback cannot resolve the conflict, then a property conflict is installed.
+ *
+ * The outcome of the text merge is returned in @a *merge_text_outcome. If
+ * there is a conflict and @a dry_run is @c FALSE, then attempt to call @a
  * conflict_func with @a conflict_baton (if non-NULL).  If the
  * conflict callback cannot resolve the conflict, then:
  *
@@ -6629,9 +6640,39 @@ typedef enum svn_wc_merge_outcome_t
  *
  * Use @a scratch_pool for any temporary allocation.
  *
- * @since New in 1.7.
- */
+ * @since New in 1.8.
+ */ /* ### BH: Two kinds of outcome is not how it should be */
 svn_error_t *
+svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_state,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_merge4() but doesn't allow property changes. Instead of
+ * handling this in a single operation, a separate call to svn_wc_merge_props3()
+ * before calling svn_wc_merge4() is needed
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED svn_error_t *
 svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
@@ -6651,6 +6692,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *scratch_pool);
+
 
 /** Similar to svn_wc_merge4() but takes relative paths and an access
  * baton. It doesn't support a cancel function or tracking origin version

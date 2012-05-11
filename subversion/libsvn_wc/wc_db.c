@@ -1364,7 +1364,7 @@ add_single_work_item(svn_sqlite__db_t *sdb,
 }
 
 
-/* Add work item(s) to the given SDB. Also see add_one_work_item(). This
+/* Add work item(s) to the given SDB. Also see add_single_work_item(). This
    SKEL is usually passed to the various wc_db operation functions. It may
    be NULL, indicating no additional work items are needed, it may be a
    single work item, or it may be a list of work items.  */
@@ -5498,7 +5498,7 @@ op_revert_recursive_txn(void *baton,
                                         STMT_DELETE_ACTUAL_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
                                 local_relpath));
-      SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
       if (affected_rows)
         return SVN_NO_ERROR;  /* actual-only revert */

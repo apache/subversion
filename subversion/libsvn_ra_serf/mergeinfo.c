@@ -245,15 +245,14 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url;
   const char *path;
 
   *catalog = NULL;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, revision, NULL, pool));
-
-  path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  SVN_ERR(svn_ra_serf__get_stable_url(&path, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, revision,
+                                      pool, pool));
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;

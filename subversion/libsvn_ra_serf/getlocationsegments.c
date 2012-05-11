@@ -181,7 +181,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url, *req_url;
+  const char *req_url;
   svn_error_t *err;
 
   gls_ctx = apr_pcalloc(pool, sizeof(*gls_ctx));
@@ -195,10 +195,10 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->inside_report = FALSE;
   gls_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, peg_revision, NULL, pool));
-
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, peg_revision,
+                                      pool, pool));
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

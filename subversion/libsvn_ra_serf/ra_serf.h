@@ -280,33 +280,9 @@ static const svn_ra_serf__dav_props_t all_props[] =
   { NULL }
 };
 
-static const svn_ra_serf__dav_props_t vcc_props[] =
-{
-  { "DAV:", "version-controlled-configuration" },
-  { NULL }
-};
-
 static const svn_ra_serf__dav_props_t check_path_props[] =
 {
   { "DAV:", "resourcetype" },
-  { NULL }
-};
-
-static const svn_ra_serf__dav_props_t uuid_props[] =
-{
-  { SVN_DAV_PROP_NS_DAV, "repository-uuid" },
-  { NULL }
-};
-
-static const svn_ra_serf__dav_props_t repos_root_props[] =
-{
-  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
-  { NULL }
-};
-
-static const svn_ra_serf__dav_props_t href_props[] =
-{
-  { "DAV:", "href" },
   { NULL }
 };
 
@@ -919,6 +895,50 @@ svn_ra_serf__retrieve_props(apr_hash_t **results,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+
+/* Using CONN, fetch the properties specified by WHICH_PROPS using CONN
+   for URL at REVISION. The resulting properties are placed into a 2-level
+   hash in RESULTS, mapping NAMESPACE -> hash<PROPNAME, PROPVALUE>, which
+   is allocated in RESULT_POOL.
+
+   If REVISION is SVN_INVALID_REVNUM, then the properties are fetched
+   from HEAD for URL.
+
+   This function performs the request synchronously.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__fetch_node_props(apr_hash_t **results,
+                              svn_ra_serf__connection_t *conn,
+                              const char *url,
+                              svn_revnum_t revision,
+                              const svn_ra_serf__dav_props_t *which_props,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/* Using CONN, fetch a DAV: property from the resource identified by URL
+   within REVISION. The PROPNAME may be one of:
+
+     "checked-in"
+     "href"
+
+   The resulting value will be allocated in RESULT_POOL, and may be NULL
+   if the property does not exist (note: "href" always exists).
+
+   This function performs the request synchronously.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__fetch_dav_prop(const char **value,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t revision,
+                            const char *propname,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
  *
  * The POOL governs allocation.
@@ -946,6 +966,15 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
                             svn_ra_serf__walker_visitor_t walker,
                             void *baton,
                             apr_pool_t *pool);
+
+
+/* Like walk_all_props(), but a 2-level hash.  */
+svn_error_t *
+svn_ra_serf__walk_node_props(apr_hash_t *props,
+                             svn_ra_serf__walker_visitor_t walker,
+                             void *baton,
+                             apr_pool_t *scratch_pool);
+
 
 typedef svn_error_t *
 (*svn_ra_serf__path_rev_walker_t)(void *baton,
@@ -985,9 +1014,8 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
                              apr_pool_t *scratch_pool);
 
 
-/* PROPS is nested hash tables mapping REV -> PATH -> NS -> NAME -> VALUE.
-   This function takes the tree of tables identified by PATH and REVISION
-   (resulting in NS:NAME:VALUE hashes) and flattens them into a set of
+/* PROPS is nested hash tables mapping NS -> NAME -> VALUE.
+   This function takes the NS:NAME:VALUE hashes and flattens them into a set of
    names to VALUE. The names are composed of NS:NAME, with specific
    rewrite from wire names (DAV) to SVN names. This mapping is managed
    by the svn_ra_serf__set_baton_props() function.
@@ -1000,8 +1028,6 @@ svn_ra_serf__select_revprops(apr_hash_t **revprops,
 svn_error_t *
 svn_ra_serf__flatten_props(apr_hash_t **flat_props,
                            apr_hash_t *props,
-                           const char *path,
-                           svn_revnum_t revision,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -1042,9 +1068,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
 
 svn_error_t *
 svn_ra_serf__get_resource_type(svn_kind_t *kind,
-                               apr_hash_t *props,
-                               const char *url,
-                               svn_revnum_t revision);
+                               apr_hash_t *props);
 
 
 /** MERGE-related functions **/
@@ -1083,28 +1107,35 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
 
 /** OPTIONS-related functions **/
 
-typedef struct svn_ra_serf__options_context_t svn_ra_serf__options_context_t;
+/* On HTTPv2 connections, run an OPTIONS request over CONN to fetch the
+   current youngest revnum, returning it in *YOUNGEST.
 
-/* Is this OPTIONS-request done yet? */
-svn_boolean_t*
-svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx);
+   (the revnum is headers of the OPTIONS response)
 
-const char *
-svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx);
+   This function performs the request synchronously.
 
-svn_revnum_t
-svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
-
-/* Create an OPTIONS request.  When run, ask for an
-   activity-collection-set in the request body (retrievable via
-   accessor above) and also parse the server's capability headers into
-   the SESSION->capabilites hash. */
+   All temporary allocations will be made in SCRATCH_POOL.  */
 svn_error_t *
-svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
-                                svn_ra_serf__session_t *session,
-                                svn_ra_serf__connection_t *conn,
-                                const char *path,
-                                apr_pool_t *pool);
+svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
+                                    svn_ra_serf__connection_t *conn,
+                                    apr_pool_t *scratch_pool);
+
+
+/* On HTTPv1 connections, run an OPTIONS request over CONN to fetch the
+   activity collection set and return it in *ACTIVITY_URL, allocated
+   from RESULT_POOL.
+
+   (the activity-collection-set is in the body of the OPTIONS response)
+
+   This function performs the request synchronously.
+
+   All temporary allocations will be made in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__v1_get_activity_collection(const char **activity_url,
+                                        svn_ra_serf__connection_t *conn,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
+
 
 /* Set @a VCC_URL to the default VCC for our repository based on @a
  * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
@@ -1144,31 +1175,59 @@ svn_ra_serf__get_relative_path(const char **rel_path,
                                svn_ra_serf__connection_t *conn,
                                apr_pool_t *pool);
 
-/* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
- * the path relative to that url for URL in REVISION using SESSION.
- * BC_RELATIVE will be URI decoded.
- *
- * REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
- * revision").  If URL is NULL, use SESSION's session url.
- *
- * If LATEST_REVNUM is not NULL, set it to the baseline revision. If
- * REVISION was set to SVN_INVALID_REVNUM, this will return the current
- * HEAD revision.
- *
- * If non-NULL, use CONN for communications with the server;
- * otherwise, use the default connection.
- *
- * Use POOL for all allocations.
- */
+
+/* Using the default connection in SESSION (conns[0]), get the youngest
+   revnum from the server, returning it in *YOUNGEST.
+
+   This function operates synchronously.
+
+   All temporary allocations are performed in SCRATCH_POOL.  */
 svn_error_t *
-svn_ra_serf__get_baseline_info(const char **bc_url,
-                               const char **bc_relative,
-                               svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
-                               const char *url,
-                               svn_revnum_t revision,
-                               svn_revnum_t *latest_revnum,
-                               apr_pool_t *pool);
+svn_ra_serf__get_youngest_revnum(svn_revnum_t *youngest,
+                                 svn_ra_serf__session_t *session,
+                                 apr_pool_t *scratch_pool);
+
+
+/* Generate a revision-stable URL.
+
+   The RA APIs all refer to user/public URLs that float along with the
+   youngest revision. In many cases, we do NOT want to work with that URL
+   since it can change from one moment to the next. Especially if we
+   attempt to operation against multiple floating URLs -- we could end up
+   referring to two separate revisions.
+
+   The DAV RA provider(s) solve this by generating a URL that is specific
+   to a revision by using a URL into a "baseline collection".
+
+   For a specified SESSION, with an optional CONN (if NULL, then the
+   session's default connection will be used; specifically SESSION->conns[0]),
+   generate a revision-stable URL for URL at REVISION. If REVISION is
+   SVN_INVALID_REVNUM, then the stable URL will refer to the youngest
+   revision at the time this function was called.
+
+   If URL is NULL, then the session root will be used.
+
+   The stable URL will be placed into *STABLE_URL, allocated from RESULT_POOL.
+
+   If LATEST_REVNUM is not NULL, then the revision used will be placed into
+   *LATEST_REVNUM. That will be equal to youngest, or the given REVISION.
+
+   This function operates synchronously, if any communication to the server
+   is required. Communication is needed if REVISION is SVN_INVALID_REVNUM
+   (to get the current youngest revnum), or if the specified REVISION is not
+   (yet) in our cache of baseline collections.
+
+   All temporary allocations are performed in SCRATCH_POOL.  */
+svn_error_t *
+svn_ra_serf__get_stable_url(const char **stable_url,
+                            svn_revnum_t *latest_revnum,
+                            svn_ra_serf__session_t *session,
+                            svn_ra_serf__connection_t *conn,
+                            const char *url,
+                            svn_revnum_t revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 
 /** RA functions **/
 
