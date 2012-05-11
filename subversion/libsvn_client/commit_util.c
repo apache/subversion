@@ -453,6 +453,7 @@ struct harvest_baton
 
   /* Harvester state */
   svn_boolean_t got_one;
+  const char *skip_below_abspath; /* If non-NULL, skip everything below */
 };
 
 static svn_error_t *
@@ -509,10 +510,12 @@ harvest_committables(const char *local_abspath,
   baton.result_pool = result_pool;
 
   baton.got_one = FALSE;
+  baton.skip_below_abspath = NULL;
 
   SVN_ERR(svn_wc_walk_status(ctx->wc_ctx,
                              local_abspath,
-                             svn_depth_empty,
+                             (commit_relpath != NULL)
+                                    ? svn_depth_empty : depth,
                              (commit_relpath != NULL) /* get_all */,
                              TRUE /* no_ignore */,
                              FALSE /* ignore_text_mods */,
@@ -529,7 +532,6 @@ harvest_committables(const char *local_abspath,
     {
       svn_boolean_t not_present;
       svn_node_kind_t kind;
-      svn_revnum_t rev;
 
       /* The status callback isn't called for not-present leaves, but we might
          have to commit them anyway */
@@ -642,7 +644,29 @@ harvest_status_callback(void *status_baton,
 
   baton->got_one = TRUE;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  if (baton->skip_below_abspath
+      && svn_dirent_is_ancestor(baton->skip_below_abspath, local_abspath))
+    {
+      return SVN_NO_ERROR;
+    }
+  else
+    baton->skip_below_abspath = NULL; /* We have left the skip tree */
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_unversioned:
+      case svn_wc_status_ignored:
+      case svn_wc_status_external:
+      case svn_wc_status_none:
+        return SVN_NO_ERROR;
+      case svn_wc_status_normal:
+        if (!copy_mode && !status->conflicted)
+          return SVN_NO_ERROR;
+        break;
+      default:
+        /* Fall through */
+        break;
+    }
 
   /* Early out if the item is already marked as committable. */
   if (look_up_committable(committables, local_abspath, scratch_pool))
@@ -769,6 +793,9 @@ harvest_status_callback(void *status_baton,
             svn_dirent_local_style(local_abspath, scratch_pool));
         }
     }
+
+  if (status->conflicted && status->kind == svn_node_unknown)
+    return SVN_NO_ERROR; /* Ignored delete-delete conflict */
 
   if (is_deleted && !is_op_root /* && !is_added */)
     return SVN_NO_ERROR; /* Not an operational delete and not an add. */
@@ -1026,6 +1053,18 @@ harvest_status_callback(void *status_baton,
                                            db_kind, depth, changelists,
                                            notify_func, notify_baton,
                                            scratch_pool));
+
+  if (!commit_relpath)
+    {
+      if (! ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+             || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
+        {
+          /* Skip all descendants, like what the loop below would do */
+          baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
+                                                  local_abspath);
+        } 
+      return SVN_NO_ERROR;
+    }
 
   /* Recursively handle each node according to depth, except when the
      node is only being deleted. */
