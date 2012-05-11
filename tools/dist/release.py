@@ -483,7 +483,7 @@ def post_candidates(args):
     svn_cmd = ['svn', 'import', '-m',
                'Add %s candidate release artifacts' % args.version.base,
                '--auto-props', '--config-option',
-               'config:auto-props:*.asc=svn:eol-style=native',
+               'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
                get_deploydir(args.base_dir), dist_dev_url]
     if (args.username):
         svn_cmd += ['--username', args.username]
