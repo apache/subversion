@@ -801,9 +801,8 @@ harvest_status_callback(void *status_baton,
     return SVN_NO_ERROR; /* Not an operational delete and not an add. */
 
   if (node_relpath == NULL)
-    SVN_ERR(svn_wc__node_get_repos_relpath(&node_relpath,
-                                           wc_ctx, local_abspath,
-                                           scratch_pool, scratch_pool));
+    node_relpath = status->repos_relpath;
+
   /* Check for the deletion case.
      * We delete explicitly deleted nodes (duh!)
      * We delete not-present children of copies
@@ -914,8 +913,7 @@ harvest_status_callback(void *status_baton,
         {
           /* Check for text mods.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p2(&text_mod, wc_ctx, local_abspath,
-                                            FALSE, scratch_pool));
+            text_mod = (status->text_status != svn_wc_status_normal);
           else
             text_mod = TRUE;
         }
@@ -933,8 +931,7 @@ harvest_status_callback(void *status_baton,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (db_kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p2(&text_mod, wc_ctx, local_abspath,
-                                        FALSE, scratch_pool));
+        text_mod = (status->text_status != svn_wc_status_normal);
     }
 
   /* Set text/prop modification flags accordingly. */
