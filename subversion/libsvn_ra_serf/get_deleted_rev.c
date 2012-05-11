@@ -126,6 +126,7 @@ cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
   switch (state)
     {
     case VERSION_NAME:
+        /* ### wrong. we might not have all the cdata!  */
         parser->state->private = svn_string_ncreate(data, len,
                                                     parser->state->pool);
         break;
