@@ -377,7 +377,6 @@ struct harvest_baton
   apr_pool_t *result_pool;
 
   /* Harvester state */
-  svn_boolean_t got_one;
   const char *skip_below_abspath; /* If non-NULL, skip everything below */
 };
 
@@ -432,13 +431,11 @@ harvest_committables(const char *local_abspath,
   baton.wc_ctx = wc_ctx;
   baton.result_pool = result_pool;
 
-  baton.got_one = FALSE;
   baton.skip_below_abspath = NULL;
 
   SVN_ERR(svn_wc_walk_status(wc_ctx,
                              local_abspath,
-                             (commit_relpath != NULL)
-                                    ? svn_depth_empty : depth,
+                             depth,
                              (commit_relpath != NULL) /* get_all */,
                              TRUE /* no_ignore */,
                              FALSE /* ignore_text_mods */,
@@ -448,24 +445,49 @@ harvest_committables(const char *local_abspath,
                              cancel_func, cancel_baton,
                              scratch_pool));
 
-  /* ### HACK: Make sure that not-present nodes in svn cp WC URL scenarios
-         are properly handled. This should/will be moved outside this walker
-         in a followup commit */
-  if (commit_relpath && !baton.got_one)
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+harvest_not_present_for_copy(struct harvest_baton *baton,
+                             const char *local_abspath,
+                             const char *repos_root_url,
+                             const char *commit_relpath,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc_context_t *wc_ctx = baton->wc_ctx;
+  const apr_array_header_t *children;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  SVN_ERR(svn_wc__node_get_children_of_working_node(
+                                    &children, wc_ctx, local_abspath, TRUE,
+                                    scratch_pool, iterpool));
+      
+  for (i = 0; i < children->nelts; i++)
     {
+      const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
+      const char *name = svn_dirent_basename(this_abspath, NULL);
+      const char *this_commit_relpath;
       svn_boolean_t not_present;
       svn_node_kind_t kind;
 
-      /* The status callback isn't called for not-present leaves, but we might
-         have to commit them anyway */
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_wc__node_is_status_not_present(&not_present, wc_ctx,
-                                                 local_abspath, scratch_pool));
+                                                  this_abspath, scratch_pool));
 
       if (!not_present)
-        return SVN_NO_ERROR;
+        continue;
+
+      if (commit_relpath == NULL)
+        this_commit_relpath = NULL;
+      else
+        this_commit_relpath = svn_relpath_join(commit_relpath, name,
+                                              iterpool);
 
       /* We should check if we should really add a delete operation */
-      if (check_url_func)
+      if (baton->check_url_func)
         {
           svn_revnum_t rev;
           const char *repos_relpath;
@@ -473,40 +495,43 @@ harvest_committables(const char *local_abspath,
           const char *node_url;
 
           /* Determine from what parent we would be the deleted child */
-          SVN_ERR(svn_wc__node_get_origin(NULL, &rev, &repos_relpath,
-                                          &repos_root_url, NULL, NULL,
-                                          wc_ctx,
-                                          svn_dirent_dirname(local_abspath,
-                                                             scratch_pool),
-                                          FALSE, scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__node_get_origin(
+                              NULL, &rev, &repos_relpath,
+                              &repos_root_url, NULL, NULL,
+                              wc_ctx,
+                              svn_dirent_dirname(this_abspath,
+                                                  scratch_pool),
+                              FALSE, scratch_pool, scratch_pool));
 
           node_url = svn_path_url_add_component2(
                         svn_path_url_add_component2(repos_root_url,
                                                     repos_relpath,
                                                     scratch_pool),
-                        svn_dirent_basename(local_abspath, NULL),
-                        scratch_pool);
+                        svn_dirent_basename(this_abspath, NULL),
+                        iterpool);
 
-          SVN_ERR(check_url_func(check_url_baton, &kind, node_url, rev,
-                                 scratch_pool));
+          SVN_ERR(baton->check_url_func(baton->check_url_baton, &kind,
+                                        node_url, rev,
+                                        iterpool));
 
           if (kind == svn_node_none)
-            return SVN_NO_ERROR; /* This node can't be deleted */
+            continue; /* This node can't be deleted */
         }
       else
-        SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, TRUE,
+        SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, this_abspath, TRUE,
                                  scratch_pool));
 
-      SVN_ERR(add_committable(committables, local_abspath, kind,
+      SVN_ERR(add_committable(baton->committables, this_abspath, kind,
                               repos_root_url,
-                              commit_relpath,
+                              this_commit_relpath,
                               SVN_INVALID_REVNUM,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
-                              result_pool, scratch_pool));
+                              baton->result_pool, scratch_pool));
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -565,8 +590,6 @@ harvest_status_callback(void *status_baton,
   void *notify_baton = baton->notify_baton;
   svn_wc_context_t *wc_ctx = baton->wc_ctx;
   apr_pool_t *result_pool = baton->result_pool;
-
-  baton->got_one = TRUE;
 
   if (baton->commit_relpath)
     commit_relpath = svn_relpath_join(
@@ -946,66 +969,23 @@ harvest_status_callback(void *status_baton,
   if (db_kind != svn_node_dir || depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
-  if (!commit_relpath)
+  if ((state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+      && !(state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
     {
-      if (! ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
-             || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
-        {
-          /* Skip all descendants, like what the loop below would do */
-          baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
-                                                  local_abspath);
-        } 
+      /* Skip all descendants */
+      baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
+                                              local_abspath);
       return SVN_NO_ERROR;
     }
 
   /* Recursively handle each node according to depth, except when the
-     node is only being deleted. */
-  if ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
-      || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+     node is only being deleted, or is in an added tree (as added trees
+     use the normal commit handling). */
+  if (copy_mode && !is_added && !is_deleted)
     {
-      const apr_array_header_t *children;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      int i;
-      svn_depth_t depth_below_here = depth;
-
-      if (depth < svn_depth_infinity)
-        depth_below_here = svn_depth_empty; /* Stop recursing */
-
-      SVN_ERR(svn_wc__node_get_children_of_working_node(
-                &children, wc_ctx, local_abspath, copy_mode,
-                scratch_pool, iterpool));
-      for (i = 0; i < children->nelts; i++)
-        {
-          const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
-          const char *name = svn_dirent_basename(this_abspath, NULL);
-          const char *this_commit_relpath;
-
-          svn_pool_clear(iterpool);
-
-          if (commit_relpath == NULL)
-            this_commit_relpath = NULL;
-          else
-            this_commit_relpath = svn_relpath_join(commit_relpath, name,
-                                                   iterpool);
-
-          SVN_ERR(harvest_committables(this_abspath,
-                                       committables, lock_tokens,
-                                       repos_root_url,
-                                       this_commit_relpath,
-                                       FALSE, /* COPY_MODE_ROOT */
-                                       depth_below_here,
-                                       just_locked,
-                                       changelists,
-                                       (depth < svn_depth_files),
-                                       FALSE, /* IS_EXPLICIT_TARGET */
-                                       danglers,
-                                       check_url_func, check_url_baton,
-                                       cancel_func, cancel_baton,
-                                       notify_func, notify_baton,
-                                       wc_ctx, result_pool, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
+      SVN_ERR(harvest_not_present_for_copy(baton, local_abspath,
+                                           repos_root_url, commit_relpath,
+                                           scratch_pool));
     }
 
   return SVN_NO_ERROR;
