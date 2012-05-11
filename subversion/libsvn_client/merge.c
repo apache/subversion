@@ -8550,7 +8550,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   range.end = source->loc2->rev;
   range.inheritable = TRUE;
 
-  if (honor_mergeinfo && !merge_b->reintegrate_merge)
+  if (!merge_b->reintegrate_merge)
     {
       svn_revnum_t new_range_start, start_rev;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
