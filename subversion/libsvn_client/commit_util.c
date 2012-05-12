@@ -366,8 +366,6 @@ struct harvest_baton
   apr_hash_t *danglers;
   svn_client__check_url_kind_t check_url_func;
   void *check_url_baton;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
   svn_wc_context_t *wc_ctx;
@@ -414,8 +412,6 @@ harvest_committables(const char *local_abspath,
   baton.danglers = danglers;
   baton.check_url_func = check_url_func;
   baton.check_url_baton = check_url_baton;
-  baton.cancel_func = cancel_func;
-  baton.cancel_baton = cancel_baton;
   baton.notify_func = notify_func;
   baton.notify_baton = notify_baton;
   baton.wc_ctx = wc_ctx;
@@ -535,12 +531,9 @@ harvest_status_callback(void *status_baton,
                         const svn_wc_status3_t *status,
                         apr_pool_t *scratch_pool)
 {
-  svn_boolean_t text_mod = FALSE;
-  svn_boolean_t prop_mod = FALSE;
   apr_byte_t state_flags = 0;
   svn_node_kind_t db_kind;
   const char *node_relpath;
-  const char *node_lock_token;
   svn_revnum_t node_rev;
   const char *cf_relpath = NULL;
   svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
@@ -550,8 +543,6 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t is_replaced;
   svn_boolean_t is_op_root;
   svn_boolean_t is_symlink;
-  svn_boolean_t conflicted;
-  const char *node_changelist;
   svn_boolean_t is_update_root;
   svn_revnum_t original_rev;
   const char *original_relpath;
@@ -567,10 +558,7 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t copy_mode_root = (baton->commit_relpath && is_harvest_root);
   svn_boolean_t just_locked = baton->just_locked;
   apr_hash_t *changelists = baton->changelists;
-  svn_boolean_t is_explicit_target = is_harvest_root;
   apr_hash_t *danglers = baton->danglers;
-  svn_cancel_func_t cancel_func = baton->cancel_func;
-  void *cancel_baton = baton->cancel_baton;
   svn_wc_notify_func2_t notify_func = baton->notify_func;
   void *notify_baton = baton->notify_baton;
   svn_wc_context_t *wc_ctx = baton->wc_ctx;
@@ -636,32 +624,32 @@ harvest_status_callback(void *status_baton,
   SVN_ERR_ASSERT((copy_mode_root && copy_mode) || ! copy_mode_root);
   SVN_ERR_ASSERT((just_locked && lock_tokens) || !just_locked);
 
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
   /* Return error on unknown path kinds.  We check both the entry and
      the node itself, since a path might have changed kind since its
      entry was written. */
-  SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
-                                         &is_replaced,
-                                         NULL, NULL, /* not_present, excluded */
-                                         &is_op_root, &is_symlink,
-                                         &node_rev, &node_relpath,
-                                         &original_rev, &original_relpath,
-                                         &conflicted,
-                                         &node_changelist,
-                                         &prop_mod, &is_update_root,
-                                         &node_lock_token,
-                                         wc_ctx, local_abspath,
-                                         scratch_pool, scratch_pool));
+  {
+    svn_boolean_t conflicted; /* Allow actual only nodes */
+    SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
+                                           &is_replaced,
+                                           NULL /* not_present */,
+                                           NULL /* excluded */,
+                                           &is_op_root, &is_symlink,
+                                           &node_rev, &node_relpath,
+                                           &original_rev, &original_relpath,
+                                           &conflicted, NULL, NULL,
+                                           &is_update_root,
+                                           NULL,
+                                           wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool));
+  }
 
   if (!node_relpath && commit_relpath)
     node_relpath = commit_relpath;
 
   /* Save the result for reuse. */
   matches_changelists = ((changelists == NULL)
-                         || (node_changelist != NULL
-                             && apr_hash_get(changelists, node_changelist,
+                         || (status->changelist != NULL
+                             && apr_hash_get(changelists, status->changelist,
                                              APR_HASH_KEY_STRING) != NULL));
 
   /* Early exit. */
@@ -716,7 +704,7 @@ harvest_status_callback(void *status_baton,
   if (is_update_root
       && db_kind == svn_node_file
       && (copy_mode
-          || ! is_explicit_target))
+          || ! is_harvest_root))
     {
       return SVN_NO_ERROR;
     }
@@ -724,7 +712,7 @@ harvest_status_callback(void *status_baton,
   /* If NODE is in our changelist, then examine it for conflicts. We
      need to bail out if any conflicts exist.
      The status walker checked for conflict marker removal. */
-  if (conflicted && matches_changelists)
+  if (status->conflicted && matches_changelists)
     {
       if (notify_func != NULL)
         {
@@ -828,47 +816,38 @@ harvest_status_callback(void *status_baton,
         }
     }
 
-  /* If an add is scheduled to occur, dig around for some more
-     information about it. */
-  if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+  if (!(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+      || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
     {
-      /* Regular adds of files have text mods, but for copies we have
-         to test for textual mods.  Directories simply don't have text! */
+      svn_boolean_t text_mod = FALSE;
+      svn_boolean_t prop_mod = FALSE;
+
       if (db_kind == svn_node_file)
         {
-          /* Check for text mods.  */
-          if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            text_mod = (status->text_status != svn_wc_status_normal);
+          /* Check for text modifications on files */
+          if ((state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+              && ! (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
+            {
+              text_mod = TRUE; /* Local added files are always modified */
+            }
           else
-            text_mod = TRUE;
+            text_mod = (status->text_status != svn_wc_status_normal);
         }
-    }
 
-  /* Else, if we aren't deleting this item, we'll have to look for
-     local text or property mods to determine if the path might be
-     committable. */
-  else if (! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
-    {
-      /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
-         then we need to force a translated byte-for-byte comparison
-         against the text-base so that a timestamp comparison won't
-         bail out early.  Depending on how the svn:eol-style prop was
-         changed, we might have to send new text to the server to
-         match the new newline style.  */
-      if (db_kind == svn_node_file)
-        text_mod = (status->text_status != svn_wc_status_normal);
-    }
+      prop_mod = (status->prop_status != svn_wc_status_normal
+                  && status->prop_status != svn_wc_status_none);
 
-  /* Set text/prop modification flags accordingly. */
-  if (text_mod)
-    state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
-  if (prop_mod)
-    state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+      /* Set text/prop modification flags accordingly. */
+      if (text_mod)
+        state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
+      if (prop_mod)
+        state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+    }
 
   /* If the entry has a lock token and it is already a commit candidate,
      or the caller wants unmodified locked items to be treated as
      such, note this fact. */
-  if (node_lock_token && lock_tokens && (state_flags || just_locked))
+  if (status->lock && lock_tokens && (state_flags || just_locked))
     {
       state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
     }
@@ -898,7 +877,7 @@ harvest_status_callback(void *status_baton,
                              apr_hash_pool_get(lock_tokens)),
                          APR_HASH_KEY_STRING,
                          apr_pstrdup(apr_hash_pool_get(lock_tokens),
-                                     node_lock_token));
+                                     status->lock->token));
         }
     }
 
@@ -930,7 +909,7 @@ harvest_status_callback(void *status_baton,
     }
 
   /* Make sure we check for dangling children on additions */
-  if (state_flags && is_added && is_explicit_target && danglers)
+  if (state_flags && is_added && is_harvest_root && danglers)
     {
       /* If a node is added, it's parent must exist in the repository at the
          time of committing */
