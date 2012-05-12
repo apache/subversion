@@ -284,8 +284,11 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   if (resolve_props)
     {
       if (prop_reject_file != NULL)
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, prop_reject_file,
-                                             pool, pool));
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, prop_reject_file,
+                                               pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+        }
       else
         resolve_props = FALSE;
     }
