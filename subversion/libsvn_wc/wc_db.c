@@ -5230,9 +5230,9 @@ db_op_mark_resolved(void *baton,
                                         STMT_DELETE_ACTUAL_EMPTY));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(add_work_items(wcroot->sdb, rb->work_items, scratch_pool));
     }
+
+  SVN_ERR(add_work_items(wcroot->sdb, rb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
