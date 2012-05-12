@@ -258,17 +258,26 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
   if (resolve_text)
     {
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_old,
-                                           pool, pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, pool);
+      if (conflict_old)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_old,
+                                               pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+        }
 
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_new,
-                                           pool, pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, pool);
+      if (conflict_new)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_new,
+                                               pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+        }
 
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_working,
-                                           pool, pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, pool);
+      if (conflict_working)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_working,
+                                               pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+        }
 
       resolve_text = conflict_old || conflict_new || conflict_working;
     }
