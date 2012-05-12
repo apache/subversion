@@ -722,29 +722,45 @@ harvest_status_callback(void *status_baton,
     }
 
   /* If NODE is in our changelist, then examine it for conflicts. We
-     need to bail out if any conflicts exist.  */
+     need to bail out if any conflicts exist.
+     The status walker checked for conflict marker removal. */
   if (conflicted && matches_changelists)
     {
-      svn_boolean_t tc, pc, treec;
+      if (notify_func != NULL)
+        {
+          notify_func(notify_baton,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_failed_conflict,
+                                           scratch_pool),
+                      scratch_pool);
+        }
 
-      SVN_ERR(svn_wc_conflicted_p3(&tc, &pc, &treec, wc_ctx,
-                                   local_abspath, scratch_pool));
-      if (tc || pc || treec)
+      return svn_error_createf(
+            SVN_ERR_WC_FOUND_CONFLICT, NULL,
+            _("Aborting commit: '%s' remains in conflict"),
+            svn_dirent_local_style(local_abspath, scratch_pool));
+    }
+
+  if (status->node_status == svn_wc_status_missing && matches_changelists)
+    {
+      /* Added files and directories must exist. See issue #3198. */
+      if (is_added && is_op_root)
         {
           if (notify_func != NULL)
             {
               notify_func(notify_baton,
                           svn_wc_create_notify(local_abspath,
-                                               svn_wc_notify_failed_conflict,
+                                               svn_wc_notify_failed_missing,
                                                scratch_pool),
                           scratch_pool);
             }
-
           return svn_error_createf(
-            SVN_ERR_WC_FOUND_CONFLICT, NULL,
-            _("Aborting commit: '%s' remains in conflict"),
-            svn_dirent_local_style(local_abspath, scratch_pool));
+             SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+             _("'%s' is scheduled for addition, but is missing"),
+             svn_dirent_local_style(local_abspath, scratch_pool));
         }
+
+      return SVN_NO_ERROR;
     }
 
   if (status->conflicted && status->kind == svn_node_unknown)
@@ -812,24 +828,6 @@ harvest_status_callback(void *status_baton,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
-      /* First of all, the working file or directory must exist.
-         See issue #3198. */
-      if (status->node_status == svn_wc_status_missing)
-        {
-          if (notify_func != NULL)
-            {
-              notify_func(notify_baton,
-                          svn_wc_create_notify(local_abspath,
-                                               svn_wc_notify_failed_missing,
-                                               scratch_pool),
-                          scratch_pool);
-            }
-          return svn_error_createf(
-             SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-             _("'%s' is scheduled for addition, but is missing"),
-             svn_dirent_local_style(local_abspath, scratch_pool));
-        }
-
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
       if (db_kind == svn_node_file)
