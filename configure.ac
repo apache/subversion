@@ -1184,12 +1184,12 @@ if test "$RUBY" != "none"; then
       AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
-    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
+    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
     ])
     RUBY_MAJOR="$svn_cv_ruby_major"
 
     AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
-    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MINOR))'`"
+    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MINOR))'`"
     ])
     RUBY_MINOR="$svn_cv_ruby_minor"
 
