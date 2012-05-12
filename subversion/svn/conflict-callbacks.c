@@ -419,16 +419,18 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
       if (desc->kind == svn_wc_conflict_kind_text)
         SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                     _("Conflict discovered in '%s'.\n"),
-                                    svn_dirent_local_style(
-                                      desc->local_abspath, subpool)));
+                                      svn_cl__local_style_skip_ancestor(
+                                        b->path_prefix, desc->local_abspath,
+                                        subpool)));
       else if (desc->kind == svn_wc_conflict_kind_property)
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                       _("Conflict for property '%s' discovered"
                                         " on '%s'.\n"),
                                       desc->property_name,
-                                      svn_dirent_local_style(
-                                        desc->local_abspath, subpool)));
+                                      svn_cl__local_style_skip_ancestor(
+                                        b->path_prefix, desc->local_abspath,
+                                        subpool)));
 
           if ((!desc->my_abspath && desc->their_abspath)
               || (desc->my_abspath && !desc->their_abspath))
@@ -721,7 +723,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                    stderr, subpool,
                    _("Conflict discovered when trying to add '%s'.\n"
                      "An object of the same name already exists.\n"),
-                   svn_dirent_local_style(desc->local_abspath, subpool)));
+                   svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                     desc->local_abspath,
+                                                     subpool)));
       prompt = _("Select: (p) postpone, (mf) mine-full, "
                  "(tf) theirs-full, (h) help:");
 
