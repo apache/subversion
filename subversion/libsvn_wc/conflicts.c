@@ -44,6 +44,7 @@
 #include "wc.h"
 #include "wc_db.h"
 #include "conflicts.h"
+#include "workqueue.h"
 
 #include "private/svn_wc_private.h"
 #include "private/svn_skel.h"
@@ -115,33 +116,6 @@ svn_wc__conflict_skel_add_prop_conflict(
 
 /*** Resolving a conflict automatically ***/
 
-
-/* Helper for resolve_conflict_on_entry.  Delete the file FILE_ABSPATH
-   in if it exists.  Set WAS_PRESENT to TRUE if the file existed, and
-   leave it UNTOUCHED otherwise. */
-static svn_error_t *
-attempt_deletion(const char *file_abspath,
-                 svn_boolean_t *was_present,
-                 apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  if (file_abspath == NULL)
-    return SVN_NO_ERROR;
-
-  err = svn_io_remove_file2(file_abspath, FALSE, scratch_pool);
-
-  if (err == NULL || !APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      *was_present = TRUE;
-      return svn_error_trace(err);
-    }
-
-  svn_error_clear(err);
-  return SVN_NO_ERROR;
-}
-
-
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
    be done whether or not the conflict files exist.
@@ -155,13 +129,6 @@ attempt_deletion(const char *file_abspath,
    else do not change *DID_RESOLVE.
 
    See svn_wc_resolved_conflict5() for how CONFLICT_CHOICE behaves.
-
-   ### FIXME: This function should be loggy, otherwise an interruption can
-   ### leave, for example, one of the conflict artifact files deleted but
-   ### the entry still referring to it and trying to use it for the next
-   ### attempt at resolving.
-
-   ### Does this still apply in the world of WC-NG?  -hkw
 */
 static svn_error_t *
 resolve_conflict_on_node(svn_wc__db_t *db,
@@ -172,7 +139,6 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                          svn_boolean_t *did_resolve,
                          apr_pool_t *pool)
 {
-  svn_boolean_t found_file;
   const char *conflict_old = NULL;
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
@@ -181,6 +147,8 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   int i;
   const apr_array_header_t *conflicts;
   const char *conflict_dir_abspath;
+  svn_skel_t *work_items = NULL;
+  svn_skel_t *work_item;
 
   *did_resolve = FALSE;
 
@@ -278,39 +246,51 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         }
 
       if (auto_resolve_src)
-        SVN_ERR(svn_io_copy_file(
-          svn_dirent_join(conflict_dir_abspath, auto_resolve_src, pool),
-          local_abspath, TRUE, pool));
+        {
+          SVN_ERR(svn_wc__wq_build_file_copy_translated(
+                    &work_item, db, local_abspath,
+                    svn_dirent_join(conflict_dir_abspath,
+                                    auto_resolve_src, pool),
+                    local_abspath, pool, pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+        }
     }
-
-  /* Records whether we found any of the conflict files.  */
-  found_file = FALSE;
 
   if (resolve_text)
     {
-      SVN_ERR(attempt_deletion(conflict_old, &found_file, pool));
-      SVN_ERR(attempt_deletion(conflict_new, &found_file, pool));
-      SVN_ERR(attempt_deletion(conflict_working, &found_file, pool));
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_old,
+                                           pool, pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, pool);
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_new,
+                                           pool, pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, pool);
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_working,
+                                           pool, pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, pool);
+
       resolve_text = conflict_old || conflict_new || conflict_working;
     }
   if (resolve_props)
     {
       if (prop_reject_file != NULL)
-        SVN_ERR(attempt_deletion(prop_reject_file, &found_file, pool));
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, prop_reject_file,
+                                             pool, pool));
       else
         resolve_props = FALSE;
     }
 
   if (resolve_text || resolve_props)
     {
+      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_items, pool));
       SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
                                           resolve_text, resolve_props,
                                           FALSE, pool));
-
-      /* No feedback if no files were deleted and all we did was change the
-         entry, such a file did not appear as a conflict */
-      if (found_file)
-        *did_resolve = TRUE;
+      SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                             NULL, NULL, /* cancellation */
+                             pool));
+      *did_resolve = TRUE;
     }
 
   return SVN_NO_ERROR;
