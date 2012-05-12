@@ -1502,68 +1502,40 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
 }
 
 svn_error_t *
-svn_wc__node_get_commit_status(svn_node_kind_t *kind,
-                               svn_boolean_t *added,
+svn_wc__node_get_commit_status(svn_boolean_t *added,
                                svn_boolean_t *deleted,
                                svn_boolean_t *is_replace_root,
-                               svn_boolean_t *not_present,
-                               svn_boolean_t *excluded,
                                svn_boolean_t *is_op_root,
-                               svn_boolean_t *symlink,
                                svn_revnum_t *revision,
-                               const char **repos_relpath,
                                svn_revnum_t *original_revision,
                                const char **original_repos_relpath,
-                               svn_boolean_t *conflicted,
-                               const char **changelist,
-                               svn_boolean_t *props_mod,
                                svn_boolean_t *update_root,
-                               const char **lock_token,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t db_kind;
-  svn_wc__db_lock_t *lock;
   svn_boolean_t had_props;
-  svn_boolean_t props_mod_tmp;
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
   svn_boolean_t op_root;
 
-  if (!props_mod)
-    props_mod = &props_mod_tmp;
-
   /* ### All of this should be handled inside a single read transaction */
-  SVN_ERR(svn_wc__db_read_info(&status, &db_kind, revision, repos_relpath,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                original_repos_relpath, NULL, NULL,
-                               original_revision, &lock, NULL, NULL,
-                               changelist, conflicted,
-                               &op_root, &had_props, props_mod,
+                               original_revision, NULL, NULL, NULL,
+                               NULL, NULL,
+                               &op_root, NULL, NULL,
                                &have_base, &have_more_work, NULL,
                                wc_ctx->db, local_abspath,
                                result_pool, scratch_pool));
 
-  if (kind)
-    {
-      if (db_kind == svn_kind_file)
-        *kind = svn_node_file;
-      else if (db_kind == svn_kind_dir)
-        *kind = svn_node_dir;
-      else
-        *kind = svn_node_unknown;
-    }
   if (added)
     *added = (status == svn_wc__db_status_added);
   if (deleted)
     *deleted = (status == svn_wc__db_status_deleted);
-  if (not_present)
-    *not_present = (status == svn_wc__db_status_not_present);
-  if (excluded)
-    *excluded = (status == svn_wc__db_status_excluded);
   if (is_op_root)
     *is_op_root = op_root;
 
@@ -1577,23 +1549,6 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                               scratch_pool));
       else
         *is_replace_root = FALSE;
-    }
-
-  if (symlink)
-    {
-      apr_hash_t *props;
-      *symlink = FALSE;
-
-      if (db_kind == svn_kind_file
-          && (had_props || *props_mod))
-        {
-          SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-          *symlink = ((props != NULL)
-                      && (apr_hash_get(props, SVN_PROP_SPECIAL,
-                                       APR_HASH_KEY_STRING) != NULL));
-        }
     }
 
   /* Retrieve some information from BASE which is needed for replacing
@@ -1610,9 +1565,6 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
     }
   else if (update_root)
     *update_root = FALSE;
-
-  if (lock_token)
-    *lock_token = lock ? lock->token : NULL;
 
   return SVN_NO_ERROR;
 }
