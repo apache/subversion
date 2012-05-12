@@ -146,9 +146,6 @@ attempt_deletion(const char *file_abspath,
    and clearing the conflict filenames from the entry.  The latter needs to
    be done whether or not the conflict files exist.
 
-   Tree conflicts are not resolved here, because the data stored in one
-   entry does not refer to that entry but to children of it.
-
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
    the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
