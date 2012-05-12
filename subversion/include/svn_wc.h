@@ -2623,16 +2623,14 @@ svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * with regard to the base revision, else set @a *modified_p to zero.
  * @a local_abspath is the absolute path to the file.
  *
- * If @a force_comparison is @c TRUE, this function will not allow
- * early return mechanisms that avoid actual content comparison.
- * Instead, if there is a text base, a full byte-by-byte comparison
- * will be done, and the entry checksum verified as well.  (This means
- * that if the text base is much longer than the working file, every
- * byte of the text base will still be examined.)
+ * This function uses some heuristics to avoid byte-by-byte comparisons
+ * against the base text (eg. file size and its modification time).
  *
  * If @a local_abspath does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error #SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * @a unused is ignored.
  *
  * @since New in 1.7.
  */
@@ -2640,7 +2638,7 @@ svn_error_t *
 svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
-                        svn_boolean_t force_comparison,
+                        svn_boolean_t unused,
                         apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_text_modified_p2(), but with a relative path and

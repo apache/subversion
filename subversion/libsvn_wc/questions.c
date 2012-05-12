@@ -374,11 +374,9 @@ svn_error_t *
 svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
-                        svn_boolean_t force_comparison,
+                        svn_boolean_t unused,
                         apr_pool_t *scratch_pool)
 {
-  /* ### We ignore FORCE_COMPARISON, but we also fixed its only
-         remaining use-case */
   return svn_wc__internal_file_modified_p(modified_p, wc_ctx->db,
                                           local_abspath, FALSE, scratch_pool);
 }
