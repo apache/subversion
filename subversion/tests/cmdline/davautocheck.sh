@@ -90,6 +90,7 @@ export LC_ALL
 
 stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
+  echo "HTTPD stopped."
   exit 1
 }
 
