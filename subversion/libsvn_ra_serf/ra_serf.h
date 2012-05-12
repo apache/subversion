@@ -696,6 +696,16 @@ svn_ra_serf__xml_context_create(
   apr_pool_t *result_pool);
 
 
+/* Construct a handler with the response function/baton set up to parse
+   a response body using the given XML context. The handler and its
+   internal structures are allocated in RESULT_POOL.
+
+   This also initializes HANDLER_POOL to the given RESULT_POOL.  */
+svn_ra_serf__handler_t *
+svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  apr_pool_t *result_pool);
+
+
 /* Allocated within XES->STATE_POOL. Changes are not allowd. Make a deep
    copy, as appropriate.
 
