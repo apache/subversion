@@ -557,8 +557,14 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   cswb.notify_func = notify_func;
   cswb.notify_baton = notify_baton;
 
-  SVN_ERR(svn_wc_walk_status(wc_ctx, local_abspath, depth, FALSE, FALSE, TRUE,
-                             NULL, conflict_status_walker, &cswb,
+  SVN_ERR(svn_wc_walk_status(wc_ctx,
+                             local_abspath,
+                             depth,
+                             FALSE /* get_all */,
+                             FALSE /* no_ignore */,
+                             TRUE /* ignore_text_mods */,
+                             NULL /* ignore_patterns */,
+                             conflict_status_walker, &cswb,
                              cancel_func, cancel_baton,
                              scratch_pool));
 
