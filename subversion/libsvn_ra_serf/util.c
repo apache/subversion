@@ -58,7 +58,15 @@
 #define XML_STATUS_ERROR 0
 #endif
 
-#if XML_MAJOR_VERSION >= 2 || XML_MINOR_VERSION >= 95 || XML_MICRO_VERSION >= 8
+#ifndef XML_VERSION_AT_LEAST
+#define XML_VERSION_AT_LEAST(major,minor,patch)                  \
+(((major) < XML_MAJOR_VERSION)                                       \
+ || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
+ || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
+     (patch) <= XML_PATCH_VERSION))
+#endif /* APR_VERSION_AT_LEAST */
+
+#if XML_VERSION_AT_LEAST(2, 95, 8)
 #define EXPAT_HAS_STOPPARSER
 #endif
 
