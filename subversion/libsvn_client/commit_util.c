@@ -542,7 +542,6 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t is_deleted;
   svn_boolean_t is_replaced;
   svn_boolean_t is_op_root;
-  svn_boolean_t is_symlink;
   svn_boolean_t is_update_root;
   svn_revnum_t original_rev;
   const char *original_relpath;
@@ -655,6 +654,28 @@ harvest_status_callback(void *status_baton,
             _("Aborting commit: '%s' remains in conflict"),
             svn_dirent_local_style(local_abspath, scratch_pool));
     }
+  else if (status->node_status == svn_wc_status_obstructed)
+    {
+      /* A node's type has changed before attempting to commit. */
+      svn_node_kind_t working_kind;
+      svn_boolean_t is_special;
+
+      SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind,
+                                        &is_special, scratch_pool));
+
+      if (status->kind == svn_node_file
+          && (working_kind == svn_node_file || is_special))
+        {
+          /* A file was turned into a symlink or a symlink into a file */
+          return svn_error_createf(
+                    SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                    _("Entry '%s' has unexpectedly changed special status"),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
+        }
+
+      /* The status walker will skip descendants */
+      return SVN_NO_ERROR;
+    }
 
   if (status->conflicted && status->kind == svn_node_unknown)
     return SVN_NO_ERROR; /* Ignore delete-delete conflict */
@@ -666,7 +687,7 @@ harvest_status_callback(void *status_baton,
                                          &is_replaced,
                                          NULL /* not_present */,
                                          NULL /* excluded */,
-                                         &is_op_root, &is_symlink,
+                                         &is_op_root, NULL,
                                          &node_rev, &node_relpath,
                                          &original_rev, &original_relpath,
                                          NULL, NULL, NULL,
@@ -678,35 +699,6 @@ harvest_status_callback(void *status_baton,
   if (!node_relpath && commit_relpath)
     node_relpath = commit_relpath;
 
-  /* Verify that the node's type has not changed before attempting to
-     commit. */
-  if (status->node_status == svn_wc_status_obstructed)
-    {
-      svn_node_kind_t working_kind;
-      svn_boolean_t is_special;
-
-      SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind,
-                                        &is_special,
-                                        scratch_pool));
-
-      if ((((!is_symlink) && (is_special))
-#ifdef HAVE_SYMLINK
-          || (is_symlink && (! is_special))
-#endif /* HAVE_SYMLINK */
-          ) && (working_kind != svn_node_none))
-        {
-          return svn_error_createf(
-                    SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                    _("Entry '%s' has unexpectedly changed special status"),
-                    svn_dirent_local_style(local_abspath, scratch_pool));
-        }
-
-      /* Legacy behavior: Obstruction skips tree */
-      baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
-                                              local_abspath);
-      return SVN_NO_ERROR;
-    }
-    
   /* Handle file externals.
    * (IS_UPDATE_ROOT is more generally defined, but at the moment this
    * condition matches only file externals.)
@@ -714,17 +706,13 @@ harvest_status_callback(void *status_baton,
    * Don't copy files that svn:externals brought into the WC. So in copy_mode,
    * even explicit targets are skipped.
    *
-   * Exclude file externals from recursion. Hande file externals only when
-   * passed as explicit target. Note that svn_client_commit6() passes all
-   * committable externals in as explicit targets iff they count.
-   *
-   * Also note that dir externals will never be reached recursively by this
-   * function, since svn_wc__node_get_children_of_working_node() (used below
-   * to recurse) does not return switched subdirs. */
+   * Hande file externals only when passed as explicit target. Note that
+   * svn_client_commit6() passes all committable externals in as explicit
+   * targets iff they count.
+   */
   if (is_update_root
       && db_kind == svn_node_file
-      && (copy_mode
-          || ! is_harvest_root))
+      && (copy_mode || ! is_harvest_root))
     {
       return SVN_NO_ERROR;
     }
