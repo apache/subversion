@@ -449,7 +449,6 @@ svn_ra_serf__xml_context_create(
 
   xes = apr_pcalloc(result_pool, sizeof(*xes));
   /* XES->STATE == 0  */
-  xes->ns_list = xmlctx->current->ns_list;
 
   /* Child states may use this pool to allocate themselves. If a child
      needs to collect information, then it will construct a subpool and
