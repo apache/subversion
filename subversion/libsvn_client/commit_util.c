@@ -439,17 +439,21 @@ harvest_committables(const char *local_abspath,
 }
 
 static svn_error_t *
-harvest_not_present_for_copy(struct harvest_baton *baton,
+harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
+                             svn_client__committables_t *committables,
                              const char *repos_root_url,
                              const char *commit_relpath,
+                             svn_client__check_url_kind_t check_url_func,
+                             void *check_url_baton,
+                             apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_wc_context_t *wc_ctx = baton->wc_ctx;
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
+  /* A function to retrieve not present children would be nice to have */
   SVN_ERR(svn_wc__node_get_children_of_working_node(
                                     &children, wc_ctx, local_abspath, TRUE,
                                     scratch_pool, iterpool));
@@ -477,7 +481,7 @@ harvest_not_present_for_copy(struct harvest_baton *baton,
                                               iterpool);
 
       /* We should check if we should really add a delete operation */
-      if (baton->check_url_func)
+      if (check_url_func)
         {
           svn_revnum_t rev;
           const char *repos_relpath;
@@ -500,9 +504,8 @@ harvest_not_present_for_copy(struct harvest_baton *baton,
                         svn_dirent_basename(this_abspath, NULL),
                         iterpool);
 
-          SVN_ERR(baton->check_url_func(baton->check_url_baton, &kind,
-                                        node_url, rev,
-                                        iterpool));
+          SVN_ERR(check_url_func(check_url_baton, &kind,
+                                 node_url, rev, iterpool));
 
           if (kind == svn_node_none)
             continue; /* This node can't be deleted */
@@ -511,14 +514,14 @@ harvest_not_present_for_copy(struct harvest_baton *baton,
         SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, this_abspath, TRUE,
                                  scratch_pool));
 
-      SVN_ERR(add_committable(baton->committables, this_abspath, kind,
+      SVN_ERR(add_committable(committables, this_abspath, kind,
                               repos_root_url,
                               this_commit_relpath,
                               SVN_INVALID_REVNUM,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
-                              baton->result_pool, scratch_pool));
+                              result_pool, scratch_pool));
     }
 
   svn_pool_destroy(iterpool);
@@ -545,8 +548,6 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t is_added;
   svn_boolean_t is_deleted;
   svn_boolean_t is_replaced;
-  svn_boolean_t is_not_present;
-  svn_boolean_t is_excluded;
   svn_boolean_t is_op_root;
   svn_boolean_t is_symlink;
   svn_boolean_t conflicted;
@@ -592,12 +593,17 @@ harvest_status_callback(void *status_baton,
   else
     baton->skip_below_abspath = NULL; /* We have left the skip tree */
 
+  /* Return early for nodes that don't have a committable status */
   switch (status->node_status)
     {
       case svn_wc_status_unversioned:
       case svn_wc_status_ignored:
       case svn_wc_status_external:
       case svn_wc_status_none:
+        /* Unversioned nodes aren't committable, but are reported by the status
+           walker.
+           But if the unversioned node is the root of the walk, we have a user
+           error */
         if (is_harvest_root)
           return svn_error_createf(
                        SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -605,6 +611,13 @@ harvest_status_callback(void *status_baton,
                        svn_dirent_local_style(local_abspath, scratch_pool));
         return SVN_NO_ERROR;
       case svn_wc_status_normal:
+        /* Status normal nodes aren't modified, so we don't have to commit them
+           when we perform a normal commit. But if a node is conflicted we want
+           to stop the commit and if we are collecting lock tokens we want to
+           look further anyway.
+
+           When in copy mode we need to compare the revision of the node against
+           the parent node to copy mixed-revision base nodes properly */
         if (!copy_mode && !status->conflicted
             && !(just_locked && status->lock))
           return SVN_NO_ERROR;
@@ -631,7 +644,7 @@ harvest_status_callback(void *status_baton,
      entry was written. */
   SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
                                          &is_replaced,
-                                         &is_not_present, &is_excluded,
+                                         NULL, NULL, /* not_present, excluded */
                                          &is_op_root, &is_symlink,
                                          &node_rev, &node_relpath,
                                          &original_rev, &original_relpath,
@@ -641,9 +654,6 @@ harvest_status_callback(void *status_baton,
                                          &node_lock_token,
                                          wc_ctx, local_abspath,
                                          scratch_pool, scratch_pool));
-
-  if (is_excluded)
-    return SVN_NO_ERROR;
 
   if (!node_relpath && commit_relpath)
     node_relpath = commit_relpath;
@@ -971,9 +981,11 @@ harvest_status_callback(void *status_baton,
      use the normal commit handling). */
   if (copy_mode && !is_added && !is_deleted && db_kind == svn_node_dir)
     {
-      SVN_ERR(harvest_not_present_for_copy(baton, local_abspath,
+      SVN_ERR(harvest_not_present_for_copy(wc_ctx, local_abspath, committables,
                                            repos_root_url, commit_relpath,
-                                           scratch_pool));
+                                           baton->check_url_func,
+                                           baton->check_url_baton,
+                                           result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
