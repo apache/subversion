@@ -796,10 +796,9 @@ harvest_status_callback(void *status_baton,
         }
     }
 
-  /* Further additions occur in copy mode. */
-  if (copy_mode
-      && (!is_added || copy_mode_root)
-      && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+  /* Further copies may occur in copy mode. */
+  else if (copy_mode
+           && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       svn_revnum_t dir_rev;
 
@@ -811,16 +810,21 @@ harvest_status_callback(void *status_baton,
 
       if (copy_mode_root || node_rev != dir_rev)
         {
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+          state_flags |= (SVN_CLIENT_COMMIT_ITEM_ADD
+                          | SVN_CLIENT_COMMIT_ITEM_IS_COPY);
 
-          SVN_ERR(svn_wc__node_get_origin(NULL, &cf_rev,
-                                      &cf_relpath, NULL,
-                                      NULL, NULL,
-                                      wc_ctx, local_abspath, FALSE,
-                                      scratch_pool, scratch_pool));
-
-          if (cf_relpath)
-            state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+          if (status->copied)
+            {
+              /* Copy from original location */
+              cf_rev = original_rev;
+              cf_relpath = original_relpath;
+            }
+          else
+            {
+              /* Copy BASE location, to represent a mixed-rev or switch copy */
+              cf_rev = status->revision;
+              cf_relpath = status->repos_relpath;
+            }
         }
     }
 
