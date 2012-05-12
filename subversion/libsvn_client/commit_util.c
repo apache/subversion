@@ -802,13 +802,13 @@ harvest_status_callback(void *status_baton,
     {
       svn_revnum_t dir_rev;
 
-      if (!copy_mode_root)
+      if (!copy_mode_root && !status->switched)
         SVN_ERR(svn_wc__node_get_base(&dir_rev, NULL, NULL, NULL, wc_ctx,
                                       svn_dirent_dirname(local_abspath,
                                                          scratch_pool),
                                       scratch_pool, scratch_pool));
 
-      if (copy_mode_root || node_rev != dir_rev)
+      if (copy_mode_root || status->switched || node_rev != dir_rev)
         {
           state_flags |= (SVN_CLIENT_COMMIT_ITEM_ADD
                           | SVN_CLIENT_COMMIT_ITEM_IS_COPY);
