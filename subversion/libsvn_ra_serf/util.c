@@ -63,7 +63,7 @@
 (((major) < XML_MAJOR_VERSION)                                       \
  || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
  || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
-     (patch) <= XML_PATCH_VERSION))
+     (patch) <= XML_MICRO_VERSION))
 #endif /* APR_VERSION_AT_LEAST */
 
 #if XML_VERSION_AT_LEAST(2, 95, 8)
