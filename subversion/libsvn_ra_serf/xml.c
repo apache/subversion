@@ -660,13 +660,19 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
     {
       const svn_string_t *cdata;
 
-      cdata = svn_stringbuf__morph_into_string(xes->cdata);
+      if (xes->cdata)
+        {
+          cdata = svn_stringbuf__morph_into_string(xes->cdata);
 #ifdef SVN_DEBUG
-      /* We might toss the pool holding this structure, but it could also
-         be within a parent pool. In any case, for safety's sake, disable
-         the stringbuf against future Badness.  */
-      xes->cdata->pool = NULL;
+          /* We might toss the pool holding this structure, but it could also
+             be within a parent pool. In any case, for safety's sake, disable
+             the stringbuf against future Badness.  */
+          xes->cdata->pool = NULL;
 #endif
+        }
+      else
+        cdata = NULL;
+
       SVN_ERR(xmlctx->closed_cb(xes, xmlctx->baton, xes->state,
                                 cdata, xes->attrs,
                                 xmlctx->scratch_pool));
