@@ -33,6 +33,8 @@
 #include <serf.h>
 #include <serf_bucket_types.h>
 
+#include <expat.h>
+
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
@@ -56,6 +58,9 @@
 #define XML_STATUS_ERROR 0
 #endif
 
+#if XML_MAJOR_VERSION >= 2 || XML_MINOR_VERSION >= 95 || XML_MICRO_VERSION >= 8
+#define EXPAT_HAS_STOPPARSER
+#endif
 
 /* Read/write chunks of this size into the spillbuf.  */
 #define PARSE_CHUNK_SIZE 8000
@@ -2274,8 +2279,11 @@ expat_start(void *userData, const char *raw_name, const char **attrs)
   ectx->inner_error = svn_error_trace(
                         svn_ra_serf__xml_cb_start(ectx->xmlctx,
                                                   raw_name, attrs));
+
+#ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
     (void) XML_StopParser(ectx->parser, 0 /* resumable */);
+#endif
 }
 
 
@@ -2290,8 +2298,11 @@ expat_end(void *userData, const char *raw_name)
 
   ectx->inner_error = svn_error_trace(
                         svn_ra_serf__xml_cb_end(ectx->xmlctx, raw_name));
+
+#ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
     (void) XML_StopParser(ectx->parser, 0 /* resumable */);
+#endif
 }
 
 
@@ -2306,8 +2317,11 @@ expat_cdata(void *userData, const char *data, int len)
 
   ectx->inner_error = svn_error_trace(
                         svn_ra_serf__xml_cb_cdata(ectx->xmlctx, data, len));
+
+#ifdef EXPAT_HAS_STOPPARSER
   if (ectx->inner_error)
     (void) XML_StopParser(ectx->parser, 0 /* resumable */);
+#endif
 }
 
 
