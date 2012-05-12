@@ -66,7 +66,7 @@
      (patch) <= XML_MICRO_VERSION))
 #endif /* APR_VERSION_AT_LEAST */
 
-#if XML_VERSION_AT_LEAST(2, 95, 8)
+#if XML_VERSION_AT_LEAST(1, 95, 8)
 #define EXPAT_HAS_STOPPARSER
 #endif
 
