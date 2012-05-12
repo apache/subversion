@@ -624,28 +624,6 @@ harvest_status_callback(void *status_baton,
   SVN_ERR_ASSERT((copy_mode_root && copy_mode) || ! copy_mode_root);
   SVN_ERR_ASSERT((just_locked && lock_tokens) || !just_locked);
 
-  /* Return error on unknown path kinds.  We check both the entry and
-     the node itself, since a path might have changed kind since its
-     entry was written. */
-  {
-    svn_boolean_t conflicted; /* Allow actual only nodes */
-    SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
-                                           &is_replaced,
-                                           NULL /* not_present */,
-                                           NULL /* excluded */,
-                                           &is_op_root, &is_symlink,
-                                           &node_rev, &node_relpath,
-                                           &original_rev, &original_relpath,
-                                           &conflicted, NULL, NULL,
-                                           &is_update_root,
-                                           NULL,
-                                           wc_ctx, local_abspath,
-                                           scratch_pool, scratch_pool));
-  }
-
-  if (!node_relpath && commit_relpath)
-    node_relpath = commit_relpath;
-
   /* Save the result for reuse. */
   matches_changelists = ((changelists == NULL)
                          || (status->changelist != NULL
@@ -653,10 +631,52 @@ harvest_status_callback(void *status_baton,
                                              APR_HASH_KEY_STRING) != NULL));
 
   /* Early exit. */
-  if (db_kind != svn_node_dir && ! matches_changelists)
+  if (status->kind != svn_node_dir && ! matches_changelists)
     {
       return SVN_NO_ERROR;
     }
+
+  /* If NODE is in our changelist, then examine it for conflicts. We
+     need to bail out if any conflicts exist.
+     The status walker checked for conflict marker removal. */
+  if (status->conflicted && matches_changelists)
+    {
+      if (notify_func != NULL)
+        {
+          notify_func(notify_baton,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_failed_conflict,
+                                           scratch_pool),
+                      scratch_pool);
+        }
+
+      return svn_error_createf(
+            SVN_ERR_WC_FOUND_CONFLICT, NULL,
+            _("Aborting commit: '%s' remains in conflict"),
+            svn_dirent_local_style(local_abspath, scratch_pool));
+    }
+
+  if (status->conflicted && status->kind == svn_node_unknown)
+    return SVN_NO_ERROR; /* Ignore delete-delete conflict */
+
+  /* Return error on unknown path kinds.  We check both the entry and
+     the node itself, since a path might have changed kind since its
+     entry was written. */
+  SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
+                                         &is_replaced,
+                                         NULL /* not_present */,
+                                         NULL /* excluded */,
+                                         &is_op_root, &is_symlink,
+                                         &node_rev, &node_relpath,
+                                         &original_rev, &original_relpath,
+                                         NULL, NULL, NULL,
+                                         &is_update_root,
+                                         NULL,
+                                         wc_ctx, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+  if (!node_relpath && commit_relpath)
+    node_relpath = commit_relpath;
 
   /* Verify that the node's type has not changed before attempting to
      commit. */
@@ -709,26 +729,6 @@ harvest_status_callback(void *status_baton,
       return SVN_NO_ERROR;
     }
 
-  /* If NODE is in our changelist, then examine it for conflicts. We
-     need to bail out if any conflicts exist.
-     The status walker checked for conflict marker removal. */
-  if (status->conflicted && matches_changelists)
-    {
-      if (notify_func != NULL)
-        {
-          notify_func(notify_baton,
-                      svn_wc_create_notify(local_abspath,
-                                           svn_wc_notify_failed_conflict,
-                                           scratch_pool),
-                      scratch_pool);
-        }
-
-      return svn_error_createf(
-            SVN_ERR_WC_FOUND_CONFLICT, NULL,
-            _("Aborting commit: '%s' remains in conflict"),
-            svn_dirent_local_style(local_abspath, scratch_pool));
-    }
-
   if (status->node_status == svn_wc_status_missing && matches_changelists)
     {
       /* Added files and directories must exist. See issue #3198. */
@@ -750,9 +750,6 @@ harvest_status_callback(void *status_baton,
 
       return SVN_NO_ERROR;
     }
-
-  if (status->conflicted && status->kind == svn_node_unknown)
-    return SVN_NO_ERROR; /* Ignored delete-delete conflict */
 
   if (is_deleted && !is_op_root /* && !is_added */)
     return SVN_NO_ERROR; /* Not an operational delete and not an add. */
