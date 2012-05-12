@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.7.5:
+Status of 1.7.6:
 
 Candidate changes:
 ==================
@@ -40,7 +40,22 @@ Candidate changes:
    Justification:
      Undo compatibility break of 'make install' in 1.7.3.
    Votes:
-     +1: danielsh
+     +1: danielsh, gstein
+
+ * r1337441
+   Fix XML namespace expansion in ra_serf
+   Justification:
+     Avoids segfaults caused by a malicious server sending unknown prefixes
+     to ra_serf. (and corrects the semantics for a bonus win)
+   Votes:
+     +1: gstein
+
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1291594, r1328267, r1328268
    Support httpd-2.4 in davautocheck.
@@ -49,11 +64,4 @@ Candidate changes:
    Notes:
      Depends on the r1327979 group.
    Votes:
-     +1: philip, danielsh
-
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: philip, danielsh, gstein
