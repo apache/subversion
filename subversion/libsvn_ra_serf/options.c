@@ -48,12 +48,12 @@
 /*
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
-typedef enum options_state_e {
+enum options_state_e {
   INITIAL = 0,
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF
-} options_state_e;
+};
 
 typedef struct options_context_t {
   /* pool to allocate memory from */
