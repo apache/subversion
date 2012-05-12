@@ -295,10 +295,9 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
   if (resolve_text || resolve_props)
     {
-      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_items, pool));
       SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
                                           resolve_text, resolve_props,
-                                          FALSE, pool));
+                                          FALSE, work_items, pool));
       SVN_ERR(svn_wc__wq_run(db, local_abspath,
                              NULL, NULL, /* cancellation */
                              pool));
