@@ -63,6 +63,23 @@ struct svn_ra_serf__xml_context_t {
   /* Linked list of free states.  */
   svn_ra_serf__xml_estate_t *free_states;
 
+#ifdef SVN_DEBUG
+  /* Used to verify we are not re-entering a callback, specifically to
+     ensure SCRATCH_POOL is not cleared while an outer callback is
+     trying to use it.  */
+  svn_boolean_t within_callback;
+#define START_CALLBACK(xmlctx) \
+  do {                                                    \
+    svn_ra_serf__xml_context_t *xmlctx__tmp = (xmlctx);   \
+    SVN_ERR_ASSERT(!xmlctx__tmp->within_callback);        \
+    xmlctx__tmp->within_callback = TRUE;                  \
+  } while (0)
+#define END_CALLBACK(xmlctx) ((xmlctx)->within_callback = FALSE)
+#else
+#define START_CALLBACK(xmlctx)  /* empty */
+#define END_CALLBACK(xmlctx)  /* empty */
+#endif /* SVN_DEBUG  */
+
   apr_pool_t *scratch_pool;
 
 };
@@ -616,8 +633,13 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
   xmlctx->current = new_xes;
 
   if (scan->custom_open)
-    SVN_ERR(xmlctx->opened_cb(new_xes, xmlctx->baton,
-                              new_xes->state, xmlctx->scratch_pool));
+    {
+      START_CALLBACK(xmlctx);
+      SVN_ERR(xmlctx->opened_cb(new_xes, xmlctx->baton,
+                                new_xes->state, xmlctx->scratch_pool));
+      END_CALLBACK(xmlctx);
+      svn_pool_clear(xmlctx->scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -673,9 +695,12 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
       else
         cdata = NULL;
 
+      START_CALLBACK(xmlctx);
       SVN_ERR(xmlctx->closed_cb(xes, xmlctx->baton, xes->state,
                                 cdata, xes->attrs,
                                 xmlctx->scratch_pool));
+      END_CALLBACK(xmlctx);
+      svn_pool_clear(xmlctx->scratch_pool);
     }
 
   /* Pop the state.  */
