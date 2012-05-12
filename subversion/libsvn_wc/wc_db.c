@@ -11439,7 +11439,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
           if (conflict_working)
             desc->my_abspath = svn_dirent_join(wcroot->abspath,
                                                conflict_working, result_pool);
-          desc->merged_file = svn_dirent_basename(local_abspath, result_pool);
+          desc->merged_file = apr_pstrdup(result_pool, local_abspath);
 
           APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
         }
