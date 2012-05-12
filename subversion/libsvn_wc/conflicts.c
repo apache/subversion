@@ -357,13 +357,14 @@ conflict_status_walker(void *baton,
   svn_wc__db_t *db = cswb->db;
 
   const apr_array_header_t *conflicts;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
   int i;
   svn_boolean_t resolved = FALSE;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
 
+  iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                     scratch_pool, iterpool));
