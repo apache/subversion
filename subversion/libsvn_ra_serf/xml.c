@@ -99,10 +99,11 @@ struct svn_ra_serf__xml_estate_t {
 };
 
 
-void
-svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
-                       const char *const *attrs,
-                       apr_pool_t *result_pool)
+static void
+define_namespaces(svn_ra_serf__ns_t **ns_list,
+                  const char *const *attrs,
+                  apr_pool_t *(*get_pool)(void *baton),
+                  void *baton)
 {
   const char *const *tmp_attrs = attrs;
 
@@ -132,11 +133,16 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
 
           if (!found)
             {
+              apr_pool_t *pool;
               svn_ra_serf__ns_t *new_ns;
 
-              new_ns = apr_palloc(result_pool, sizeof(*new_ns));
-              new_ns->namespace = apr_pstrdup(result_pool, prefix);
-              new_ns->url = apr_pstrdup(result_pool, tmp_attrs[1]);
+              if (get_pool)
+                pool = get_pool(baton);
+              else
+                pool = baton;
+              new_ns = apr_palloc(pool, sizeof(*new_ns));
+              new_ns->namespace = apr_pstrdup(pool, prefix);
+              new_ns->url = apr_pstrdup(pool, tmp_attrs[1]);
 
               /* Push into the front of NS_LIST. Parent states will point
                  to later in the chain, so will be unaffected by
@@ -147,6 +153,16 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
         }
     }
 }
+
+
+void
+svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
+                       const char *const *attrs,
+                       apr_pool_t *result_pool)
+{
+  define_namespaces(ns_list, attrs, NULL /* get_pool */, result_pool);
+}
+
 
 /*
  * Look up NAME in the NS_LIST list for previously declared namespace
@@ -401,6 +417,18 @@ ensure_pool(svn_ra_serf__xml_estate_t *xes)
 }
 
 
+/* This callback is used by define_namespaces() to wait until a pool is
+   required before constructing it.  */
+static apr_pool_t *
+lazy_create_pool(void *baton)
+{
+  svn_ra_serf__xml_estate_t *xes = baton;
+
+  ensure_pool(xes);
+  return xes->state_pool;
+}
+
+
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
@@ -477,7 +505,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                           const char *const *attrs)
 {
   svn_ra_serf__xml_estate_t *current = xmlctx->current;
-  svn_ra_serf__dav_props_t name;
+  svn_ra_serf__dav_props_t elemname;
   const svn_ra_serf__xml_transition_t *scan;
   apr_pool_t *new_pool;
   svn_ra_serf__xml_estate_t *new_xes;
@@ -487,25 +515,24 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
   if (xmlctx->waiting.namespace != NULL)
     return SVN_NO_ERROR;
 
-#if 0
-  /* ### we need a lazy pool construction  */
-  svn_ra_serf__define_ns(&current->ns_list, attrs, ... );
-#endif
+  /* Look for xmlns: attributes. Lazily create the state pool if any
+     were found.  */
+  define_namespaces(&current->ns_list, attrs, lazy_create_pool, current);
 
-  svn_ra_serf__expand_ns(&name, current->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&elemname, current->ns_list, raw_name);
 
   for (scan = xmlctx->ttable; scan->ns != NULL; ++scan)
     {
       if (scan->from_state != current->state)
         continue;
 
-      if (strcmp(name.name, scan->name) == 0
-          && strcmp(name.namespace, scan->ns) == 0)
+      if (strcmp(elemname.name, scan->name) == 0
+          && strcmp(elemname.namespace, scan->ns) == 0)
         break;
     }
   if (scan->ns == NULL)
     {
-      xmlctx->waiting = name;
+      xmlctx->waiting = elemname;
       /* ### return?  */
       return SVN_NO_ERROR;
     }
@@ -520,7 +547,10 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
 
   /* ### how to use free states?  */
   /* This state should be allocated in the extent pool. If we will be
-     collecting information for this state, then construct a subpool.  */
+     collecting information for this state, then construct a subpool.
+
+     ### potentially optimize away the subpool if none of the
+     ### attributes are present. subpools are cheap, tho...  */
   new_pool = xes_pool(current);
   if (scan->collect_cdata || scan->collect_attrs[0])
     {
@@ -536,18 +566,35 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
       if (scan->collect_cdata)
         new_xes->cdata = svn_stringbuf_create_empty(new_pool);
 
-      if (scan->collect_attrs)
+      if (scan->collect_attrs[0] != NULL)
         {
+          const char *const *saveattr = &scan->collect_attrs[0];
+
           new_xes->attrs = apr_hash_make(new_pool);
-          /* ### fill the hash  */
+          for (; *saveattr != NULL; ++saveattr)
+            {
+              const char *name;
+              const char *value;
 
-          /* ### svn_error_createf(SVN_ERR_XML_ATTRIB_NOT_FOUND,
-                                   NULL, "Missing XML attribute: %s"
-                                   name);
-          */
+              if (**saveattr == '?')
+                {
+                  name = *saveattr + 1;
+                  value = svn_xml_get_attr_value(name, attrs);
+                }
+              else
+                {
+                  name = *saveattr;
+                  value = svn_xml_get_attr_value(name, attrs);
+                  if (value == NULL)
+                    return svn_error_createf(SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                                             NULL,
+                                             _("Missing XML attribute: '%s'"),
+                                             name);
+                }
 
-          /* ### potentially optimize away the subpool if none of the
-             ### attributes are present. subpools are cheap, tho...  */
+              if (value)
+                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING, value);
+            }
         }
     }
   else
@@ -559,7 +606,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
 
   /* Some basic copies to set up the new estate.  */
   new_xes->state = scan->to_state;
-  new_xes->tag = name;
+  new_xes->tag = elemname;
   new_xes->custom_close = scan->custom_close;
 
   /* Start with the parent's namespace set.  */
@@ -582,15 +629,15 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
                         const char *raw_name)
 {
   svn_ra_serf__xml_estate_t *xes = xmlctx->current;
-  svn_ra_serf__dav_props_t name;
+  svn_ra_serf__dav_props_t elemname;
 
-  svn_ra_serf__expand_ns(&name, xes->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&elemname, xes->ns_list, raw_name);
 
   if (xmlctx->waiting.namespace != NULL)
     {
       /* If this element is not the closer, then keep waiting... */
-      if (strcmp(name.name, xmlctx->waiting.name) != 0
-          || strcmp(name.namespace, xmlctx->waiting.namespace) != 0)
+      if (strcmp(elemname.name, xmlctx->waiting.name) != 0
+          || strcmp(elemname.namespace, xmlctx->waiting.namespace) != 0)
         return SVN_NO_ERROR;
 
       /* Found it. Stop waiting, and go back for more.  */
@@ -598,17 +645,17 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
       return SVN_NO_ERROR;
     }
 
-  /* ### more work needed here.  */
-  if (strcmp(name.name, xes->tag.name) != 0
-      || strcmp(name.namespace, xes->tag.namespace) != 0)
-    {
-      /* ### how the heck do we have a closure for a tag that we were
-         ### not expecting? if we saw an unknown (open) tag, then we should
-         ### be waiting for it.  */
-      /* ### raise a parse error?  */
-      /* ###   SVN_ERR_RA_DAV_MALFORMED_DATA  */
-      return SVN_NO_ERROR;
-    }
+  /* We should be looking at the same tag that opened the current state.
+
+     Unknown elements are simply skipped, so we wouldn't reach this check.
+
+     Known elements push a new state for a given tag. Some other elemname
+     would imply closing an ancestor tag (where did ours go?) or a spurious
+     tag closure.  */
+  if (strcmp(elemname.name, xes->tag.name) != 0
+      || strcmp(elemname.namespace, xes->tag.namespace) != 0)
+    return svn_error_create(SVN_ERR_XML_MALFORMED, NULL,
+                            _("The response contains invalid XML"));
 
   if (xes->custom_close)
     {
@@ -617,8 +664,8 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
       cdata = svn_stringbuf__morph_into_string(xes->cdata);
 #ifdef SVN_DEBUG
       /* We might toss the pool holding this structure, but it could also
-         be a parent pool. In any case, for safety's sake, disable the
-         stringbuf against future Badness.  */
+         be within a parent pool. In any case, for safety's sake, disable
+         the stringbuf against future Badness.  */
       xes->cdata->pool = NULL;
 #endif
       SVN_ERR(xmlctx->closed_cb(xes, xmlctx->baton, xes->state,
@@ -627,9 +674,10 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
     }
 
   /* Pop the state.  */
+  xmlctx->current = xes->prev;
+
   /* ### not everything should go on the free state list. XES may go
      ### away with the state pool.  */
-  xmlctx->current = xes->prev;
   xes->prev = xmlctx->free_states;
   xmlctx->free_states = xes;
 

@@ -634,6 +634,7 @@ typedef svn_error_t *
    If attribute collection was enabled for this state, then ATTRS will
    contain the attributes collected for this element only. Use
    svn_ra_serf__xml_gather_since() to gather up data from outer states.
+   ATTRS is char* -> char*.
 
    Temporary allocations may be made in SCRATCH_POOL.  */
 typedef svn_error_t *
@@ -674,7 +675,7 @@ typedef struct svn_ra_serf__xml_transition_t {
      namespaces are ignored at this time.
 
      Attribute names beginning with "?" are optional. Other names must
-     exist on the element, or a parse error will be raised.  */
+     exist on the element, or SVN_ERR_XML_ATTRIB_NOT_FOUND will be raised.  */
   const char *collect_attrs[11];
 
   /* When NAME is opened, should the callback be invoked?  */
@@ -696,13 +697,14 @@ svn_ra_serf__xml_context_create(
 
 
 /* Allocated within XES->STATE_POOL. Changes are not allowd. Make a deep
-   copy, as appropriate.  */
+   copy, as appropriate.
+
+   The resulting hash maps char* names to char* values.  */
 apr_hash_t *
 svn_ra_serf__xml_gather_since(svn_ra_serf__xml_estate_t *xes,
                               int stop_state);
 
 
-/* ### maybe make value an svn_string_t * ?  */
 void
 svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
                       const char *name,
