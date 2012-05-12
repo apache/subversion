@@ -418,7 +418,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
       if (desc->kind == svn_wc_conflict_kind_text)
         SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                    _("Conflict discovered in '%s'.\n"),
+                                    _("Conflict discovered in file '%s'.\n"),
                                     svn_cl__local_style_skip_ancestor(
                                       b->path_prefix, desc->local_abspath,
                                       subpool)));
