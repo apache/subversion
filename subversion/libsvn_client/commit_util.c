@@ -532,8 +532,6 @@ harvest_status_callback(void *status_baton,
                         apr_pool_t *scratch_pool)
 {
   apr_byte_t state_flags = 0;
-  svn_node_kind_t db_kind;
-  const char *node_relpath;
   svn_revnum_t node_rev;
   const char *cf_relpath = NULL;
   svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
@@ -656,25 +654,22 @@ harvest_status_callback(void *status_baton,
     }
   else if (status->node_status == svn_wc_status_obstructed)
     {
-      /* A node's type has changed before attempting to commit. */
-      svn_node_kind_t working_kind;
-      svn_boolean_t is_special;
+      /* A node's type has changed before attempting to commit.
+         This also catches symlink vs non symlink changes */
 
-      SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind,
-                                        &is_special, scratch_pool));
-
-      if (status->kind == svn_node_file
-          && (working_kind == svn_node_file || is_special))
+      if (notify_func != NULL)
         {
-          /* A file was turned into a symlink or a symlink into a file */
-          return svn_error_createf(
-                    SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                    _("Entry '%s' has unexpectedly changed special status"),
-                    svn_dirent_local_style(local_abspath, scratch_pool));
+          notify_func(notify_baton,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_failed_obstruction,
+                                           scratch_pool),
+                      scratch_pool);
         }
 
-      /* The status walker will skip descendants */
-      return SVN_NO_ERROR;
+      return svn_error_createf(
+                    SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                    _("Node '%s' has unexpectedly changed kind"),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
   if (status->conflicted && status->kind == svn_node_unknown)
@@ -683,21 +678,14 @@ harvest_status_callback(void *status_baton,
   /* Return error on unknown path kinds.  We check both the entry and
      the node itself, since a path might have changed kind since its
      entry was written. */
-  SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
+  SVN_ERR(svn_wc__node_get_commit_status(&is_added, &is_deleted,
                                          &is_replaced,
-                                         NULL /* not_present */,
-                                         NULL /* excluded */,
-                                         &is_op_root, NULL,
-                                         &node_rev, &node_relpath,
+                                         &is_op_root,
+                                         &node_rev,
                                          &original_rev, &original_relpath,
-                                         NULL, NULL, NULL,
                                          &is_update_root,
-                                         NULL,
                                          wc_ctx, local_abspath,
                                          scratch_pool, scratch_pool));
-
-  if (!node_relpath && commit_relpath)
-    node_relpath = commit_relpath;
 
   /* Handle file externals.
    * (IS_UPDATE_ROOT is more generally defined, but at the moment this
@@ -711,7 +699,7 @@ harvest_status_callback(void *status_baton,
    * targets iff they count.
    */
   if (is_update_root
-      && db_kind == svn_node_file
+      && status->kind == svn_node_file
       && (copy_mode || ! is_harvest_root))
     {
       return SVN_NO_ERROR;
@@ -741,9 +729,6 @@ harvest_status_callback(void *status_baton,
 
   if (is_deleted && !is_op_root /* && !is_added */)
     return SVN_NO_ERROR; /* Not an operational delete and not an add. */
-
-  if (node_relpath == NULL)
-    node_relpath = status->repos_relpath;
 
   /* Check for the deletion case.
      * We delete explicitly deleted nodes (duh!)
@@ -807,7 +792,7 @@ harvest_status_callback(void *status_baton,
       svn_boolean_t text_mod = FALSE;
       svn_boolean_t prop_mod = FALSE;
 
-      if (db_kind == svn_node_file)
+      if (status->kind == svn_node_file)
         {
           /* Check for text modifications on files */
           if ((state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
@@ -843,11 +828,12 @@ harvest_status_callback(void *status_baton,
       if (matches_changelists)
         {
           /* Finally, add the committable item. */
-          SVN_ERR(add_committable(committables, local_abspath, db_kind,
+          SVN_ERR(add_committable(committables, local_abspath,
+                                  status->kind,
                                   repos_root_url,
                                   copy_mode
                                       ? commit_relpath
-                                      : node_relpath,
+                                      : status->repos_relpath,
                                   copy_mode
                                       ? SVN_INVALID_REVNUM
                                       : node_rev,
@@ -858,10 +844,10 @@ harvest_status_callback(void *status_baton,
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
             apr_hash_set(lock_tokens,
                          svn_path_url_add_component2(
-                             repos_root_url, node_relpath,
-                             apr_hash_pool_get(lock_tokens)),
+                             repos_root_url, status->repos_relpath,
+                             result_pool),
                          APR_HASH_KEY_STRING,
-                         apr_pstrdup(apr_hash_pool_get(lock_tokens),
+                         apr_pstrdup(result_pool,
                                      status->lock->token));
         }
     }
@@ -936,7 +922,7 @@ harvest_status_callback(void *status_baton,
       && !(state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
     {
       /* Skip all descendants */
-      if (db_kind == svn_node_dir)
+      if (status->kind == svn_node_dir)
         baton->skip_below_abspath = apr_pstrdup(baton->result_pool,
                                                 local_abspath);
       return SVN_NO_ERROR;
@@ -945,7 +931,7 @@ harvest_status_callback(void *status_baton,
   /* Recursively handle each node according to depth, except when the
      node is only being deleted, or is in an added tree (as added trees
      use the normal commit handling). */
-  if (copy_mode && !is_added && !is_deleted && db_kind == svn_node_dir)
+  if (copy_mode && !is_added && !is_deleted && status->kind == svn_node_dir)
     {
       SVN_ERR(harvest_not_present_for_copy(wc_ctx, local_abspath, committables,
                                            repos_root_url, commit_relpath,

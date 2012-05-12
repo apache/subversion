@@ -1223,7 +1223,11 @@ typedef enum svn_wc_notify_action_t
 
   /** Just the lock on a file was removed during update.
    * @since New in 1.8. */
-  svn_wc_notify_update_broken_lock
+  svn_wc_notify_update_broken_lock,
+
+  /** Operation failed because a node is obstructed.
+   * @since New in 1.8. */
+  svn_wc_notify_failed_obstruction
 
 } svn_wc_notify_action_t;
 
