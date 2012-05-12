@@ -711,7 +711,7 @@ def revert_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   mode = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
 
@@ -830,8 +830,8 @@ def lock_switched_files(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  gamma_path = sbox.ospath('A/D/gamma')
+  lambda_path = sbox.ospath('A/B/lambda')
   iota_URL = sbox.repo_url + '/iota'
   alpha_URL = sbox.repo_url + '/A/B/E/alpha'
 
@@ -877,7 +877,7 @@ def lock_uri_encoded(sbox):
 
   # lock a file as wc_author
   fname = 'amazing space'
-  file_path = os.path.join(wc_dir, fname)
+  file_path = sbox.ospath(fname)
 
   svntest.main.file_append(file_path, "This represents a binary file\n")
   svntest.actions.run_and_verify_svn(None, None, [], "add", file_path)
@@ -941,7 +941,7 @@ def lock_and_exebit1(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
@@ -1018,7 +1018,7 @@ def lock_and_exebit2(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
@@ -1147,10 +1147,10 @@ def unlock_already_unlocked_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Deliberately have no direct child of A as a target
-  iota_path = os.path.join(wc_dir, 'iota')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  iota_path = sbox.ospath('iota')
+  lambda_path = sbox.ospath('A/B/lambda')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  gamma_path = sbox.ospath('A/D/gamma')
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
@@ -1195,8 +1195,8 @@ def info_moved_path(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  fname = os.path.join(wc_dir, "iota")
-  fname2 = os.path.join(wc_dir, "iota2")
+  fname = sbox.ospath("iota")
+  fname2 = sbox.ospath("iota2")
 
   # Move iota, creating r2.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1251,7 +1251,7 @@ def ls_url_encoded(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  dirname = os.path.join(wc_dir, "space dir")
+  dirname = sbox.ospath("space dir")
   fname = os.path.join(dirname, "f")
 
   # Create a dir with a space in its name and a file therein.
@@ -1357,7 +1357,7 @@ def unlocked_lock_of_other_user(sbox):
   wc_dir = sbox.wc_dir
 
   # lock a file with user jrandom
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  pi_path = sbox.ospath('A/D/G/pi')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', writelocked='K')
 
@@ -1405,8 +1405,8 @@ def lock_twice_in_one_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu2_path = os.path.join(wc_dir, 'A', 'B', 'mu')
+  mu_path = sbox.ospath('A/mu')
+  mu2_path = sbox.ospath('A/B/mu')
 
   # Create a needs-lock file
   svntest.actions.set_prop('svn:needs-lock', '*', mu_path)
@@ -1420,7 +1420,7 @@ def lock_twice_in_one_wc(sbox):
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', sbox.repo_url + '/A',
-                                     os.path.join(wc_dir, 'A', 'B'),
+                                     sbox.ospath('A/B'),
                                      '--ignore-ancestry')
 
   # Lock location 1
@@ -1456,8 +1456,8 @@ def lock_path_not_in_head(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  D_path      = os.path.join(wc_dir, 'A', 'D')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  D_path      = sbox.ospath('A/D')
+  lambda_path = sbox.ospath('A/B/lambda')
 
   # Commit deletion of A/D and A/B/lambda as r2, then update the WC
   # back to r1.  Then attempt to lock some paths that no longer exist
@@ -1495,9 +1495,9 @@ def verify_path_escaping(sbox):
 
   # Add test paths using two characters that need escaping in a url, but
   # are within the normal ascii range
-  file1 = os.path.join(wc_dir, 'file #1')
-  file2 = os.path.join(wc_dir, 'file #2')
-  file3 = os.path.join(wc_dir, 'file #3')
+  file1 = sbox.ospath('file #1')
+  file2 = sbox.ospath('file #2')
+  file3 = sbox.ospath('file #3')
 
   svntest.main.file_write(file1, 'File 1')
   svntest.main.file_write(file2, 'File 2')
@@ -1534,9 +1534,9 @@ def replace_and_propset_locked_path(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  rho_path = os.path.join(G_path, 'rho')
+  mu_path = sbox.ospath('A/mu')
+  G_path = sbox.ospath('A/D/G')
+  rho_path = sbox.ospath('A/D/G/rho')
 
   # Lock mu and A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1583,10 +1583,10 @@ def cp_isnt_ro(sbox):
   wc_dir = sbox.wc_dir
 
   mu_URL = sbox.repo_url + '/A/mu'
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu2_path = os.path.join(wc_dir, 'A', 'mu2')
-  mu3_path = os.path.join(wc_dir, 'A', 'mu3')
-  kappa_path = os.path.join(wc_dir, 'kappa')
+  mu_path = sbox.ospath('A/mu')
+  mu2_path = sbox.ospath('A/mu2')
+  mu3_path = sbox.ospath('A/mu3')
+  kappa_path = sbox.ospath('kappa')
   open(kappa_path, 'w').write("This is the file 'kappa'.\n")
 
   ## added file
@@ -1680,7 +1680,7 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.create_failing_hook(repo_dir, "pre-unlock", "error text")
 
   # lock a file.
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  pi_path = sbox.ospath('A/D/G/pi')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', writelocked='K')
 
