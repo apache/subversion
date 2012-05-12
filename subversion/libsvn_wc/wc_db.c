@@ -5252,9 +5252,6 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* ### we're not ready to handy RESOLVED_TREE just yet.  */
-  SVN_ERR_ASSERT(!resolved_tree);
-
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);

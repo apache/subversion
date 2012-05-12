@@ -131,12 +131,15 @@ svn_wc__conflict_skel_add_prop_conflict(
    See svn_wc_resolved_conflict5() for how CONFLICT_CHOICE behaves.
 */
 static svn_error_t *
-resolve_conflict_on_node(svn_wc__db_t *db,
+resolve_conflict_on_node(svn_boolean_t *did_resolve,
+                         svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_boolean_t resolve_text,
                          svn_boolean_t resolve_props,
+                         svn_boolean_t resolve_tree,
                          svn_wc_conflict_choice_t conflict_choice,
-                         svn_boolean_t *did_resolve,
+                         svn_cancel_func_t cancel_func_t,
+                         void *cancel_baton,
                          apr_pool_t *pool)
 {
   const char *conflict_old = NULL;
@@ -293,13 +296,13 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         resolve_props = FALSE;
     }
 
-  if (resolve_text || resolve_props)
+  if (resolve_text || resolve_props || resolve_tree)
     {
       SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
                                           resolve_text, resolve_props,
-                                          FALSE, work_items, pool));
+                                          resolve_tree, work_items, pool));
       SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                             NULL, NULL, /* cancellation */
+                             cancel_func_t, cancel_baton,
                              pool));
       *did_resolve = TRUE;
     }
@@ -316,11 +319,13 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
   svn_boolean_t ignored_result;
 
   return svn_error_trace(resolve_conflict_on_node(
+                           &ignored_result,
                            db, local_abspath,
                            TRUE /* resolve_text */,
                            FALSE /* resolve_props */,
+                           FALSE /* resolve_tree */,
                            svn_wc_conflict_choose_merged,
-                           &ignored_result,
+                           NULL, NULL, /* cancel_func */
                            scratch_pool));
 }
 
@@ -335,6 +340,8 @@ resolve_one_conflict(svn_wc__db_t *db,
                      svn_wc_conflict_choice_t conflict_choice,
                      svn_wc_conflict_resolver_func2_t conflict_func,
                      void *conflict_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool)
@@ -397,8 +404,15 @@ resolve_one_conflict(svn_wc__db_t *db,
                                                                 iterpool));
               }
 
-            SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL,
-                                                    iterpool));
+            SVN_ERR(resolve_conflict_on_node(&did_resolve,
+                                             db,
+                                             local_abspath,
+                                             FALSE /* resolve_text */,
+                                             FALSE /* resolve_props */,
+                                             TRUE /* resolve_tree */,
+                                             my_choice,
+                                             cancel_func, cancel_baton,
+                                             iterpool));
 
             resolved = TRUE;
             break;
@@ -407,12 +421,14 @@ resolve_one_conflict(svn_wc__db_t *db,
             if (!resolve_text)
               break;
 
-            SVN_ERR(resolve_conflict_on_node(db,
+            SVN_ERR(resolve_conflict_on_node(&did_resolve,
+                                             db,
                                              local_abspath,
                                              TRUE /* resolve_text */,
                                              FALSE /* resolve_props */,
+                                             FALSE /* resolve_tree */,
                                              my_choice,
-                                             &did_resolve,
+                                             cancel_func, cancel_baton,
                                              iterpool));
 
             if (did_resolve)
@@ -433,12 +449,14 @@ resolve_one_conflict(svn_wc__db_t *db,
 
 
             /* We don't have property name handling here yet :( */
-            SVN_ERR(resolve_conflict_on_node(db,
+            SVN_ERR(resolve_conflict_on_node(&did_resolve,
+                                             db,
                                              local_abspath,
                                              FALSE /* resolve_text */,
                                              TRUE /* resolve_props */,
+                                             FALSE /* resolve_tree */,
                                              my_choice,
-                                             &did_resolve,
+                                             cancel_func, cancel_baton,
                                              iterpool));
 
             if (did_resolve)
@@ -499,6 +517,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                    resolve_tree,
                                    conflict_choice,
                                    conflict_func, conflict_baton,
+                                   cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    iterpool));
     }
@@ -563,6 +582,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                      resolve_tree,
                                      conflict_choice,
                                      conflict_func, conflict_baton,
+                                     cancel_func, cancel_baton,
                                      notify_func, notify_baton,
                                      iterpool));
     }
@@ -594,6 +614,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                    resolve_tree,
                                    conflict_choice,
                                    conflict_func, conflict_baton,
+                                   cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    iterpool));
     }
