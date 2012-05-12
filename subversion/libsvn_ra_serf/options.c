@@ -49,161 +49,67 @@
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
 typedef enum options_state_e {
+  INITIAL = 0,
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF
 } options_state_e;
 
-typedef struct options_state_list_t {
-  /* The current state that we are in now. */
-  options_state_e state;
-
-  /* The previous state we were in. */
-  struct options_state_list_t *prev;
-} options_state_list_t;
-
 typedef struct options_context_t {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 
-  /* Buffer for the activity-collection  */
-  svn_stringbuf_t *acbuf;
-  svn_boolean_t collect_cdata;
-
-  /* Current state we're in */
-  options_state_list_t *state;
-  options_state_list_t *free_state;
-
   /* Have we extracted options values from the headers already?  */
   svn_boolean_t headers_processed;
-
-  /* are we done? */
-  svn_boolean_t done;
 
   svn_ra_serf__session_t *session;
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
+
+  svn_ra_serf__response_handler_t inner_handler;
+  void *inner_baton;
 
   const char *activity_collection;
   svn_revnum_t youngest_rev;
 
 } options_context_t;
 
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t options_ttable[] = {
+  { INITIAL, D_, "options-response", OPTIONS,
+    FALSE, { NULL }, FALSE, FALSE },
 
-static void
-push_state(options_context_t *options_ctx, options_state_e state)
-{
-  options_state_list_t *new_state;
+  { OPTIONS, D_, "activity-collection-set", ACTIVITY_COLLECTION,
+    FALSE, { NULL }, FALSE, FALSE },
 
-  if (!options_ctx->free_state)
-    {
-      new_state = apr_palloc(options_ctx->pool, sizeof(*options_ctx->state));
-    }
-  else
-    {
-      new_state = options_ctx->free_state;
-      options_ctx->free_state = options_ctx->free_state->prev;
-    }
-  new_state->state = state;
+  { ACTIVITY_COLLECTION, D_, "href", HREF,
+    TRUE, { NULL }, FALSE, TRUE },
 
-  /* Add it to the state chain. */
-  new_state->prev = options_ctx->state;
-  options_ctx->state = new_state;
-}
+  { 0 }
+};
 
-static void pop_state(options_context_t *options_ctx)
-{
-  options_state_list_t *free_state;
-  free_state = options_ctx->state;
-  /* advance the current state */
-  options_ctx->state = options_ctx->state->prev;
-  free_state->prev = options_ctx->free_state;
-  options_ctx->free_state = free_state;
-}
 
+/* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
-start_options(svn_ra_serf__xml_parser_t *parser,
-              svn_ra_serf__dav_props_t name,
-              const char **attrs,
-              apr_pool_t *scratch_pool)
+options_closed(svn_ra_serf__xml_estate_t *xes,
+               void *baton,
+               int leaving_state,
+               const svn_string_t *cdata,
+               apr_hash_t *attrs,
+               apr_pool_t *scratch_pool)
 {
-  options_context_t *options_ctx = parser->user_data;
+  options_context_t *opt_ctx = baton;
 
-  if (!options_ctx->state && strcmp(name.name, "options-response") == 0)
-    {
-      push_state(options_ctx, OPTIONS);
-    }
-  else if (!options_ctx->state)
-    {
-      /* Nothing to do. */
-      return SVN_NO_ERROR;
-    }
-  else if (options_ctx->state->state == OPTIONS &&
-           strcmp(name.name, "activity-collection-set") == 0)
-    {
-      push_state(options_ctx, ACTIVITY_COLLECTION);
-    }
-  else if (options_ctx->state->state == ACTIVITY_COLLECTION &&
-           strcmp(name.name, "href") == 0)
-    {
-      options_ctx->collect_cdata = TRUE;
-      push_state(options_ctx, HREF);
-    }
+  SVN_ERR_ASSERT(leaving_state == HREF);
+  SVN_ERR_ASSERT(cdata != NULL);
+
+  opt_ctx->activity_collection = svn_urlpath__canonicalize(cdata->data,
+                                                           opt_ctx->pool);
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-end_options(svn_ra_serf__xml_parser_t *parser,
-            svn_ra_serf__dav_props_t name,
-            apr_pool_t *scratch_pool)
-{
-  options_context_t *options_ctx = parser->user_data;
-  options_state_list_t *cur_state;
-
-  if (!options_ctx->state)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  cur_state = options_ctx->state;
-
-  if (cur_state->state == OPTIONS &&
-      strcmp(name.name, "options-response") == 0)
-    {
-      pop_state(options_ctx);
-    }
-  else if (cur_state->state == ACTIVITY_COLLECTION &&
-           strcmp(name.name, "activity-collection-set") == 0)
-    {
-      pop_state(options_ctx);
-    }
-  else if (cur_state->state == HREF &&
-           strcmp(name.name, "href") == 0)
-    {
-      options_ctx->collect_cdata = FALSE;
-      options_ctx->activity_collection =
-        svn_urlpath__canonicalize(options_ctx->acbuf->data, options_ctx->pool);
-      pop_state(options_ctx);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cdata_options(svn_ra_serf__xml_parser_t *parser,
-              const char *data,
-              apr_size_t len,
-              apr_pool_t *scratch_pool)
-{
-  options_context_t *ctx = parser->user_data;
-
-  if (ctx->collect_cdata)
-    svn_stringbuf_appendbytes(ctx->acbuf, data, len);
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 create_options_body(serf_bucket_t **body_bkt,
@@ -394,8 +300,7 @@ options_response_handler(serf_request_t *request,
     }
 
   /* Execute the 'real' response handler to XML-parse the repsonse body. */
-  return svn_ra_serf__handle_xml_parser(request, response,
-                                        opt_ctx->parser_ctx, pool);
+  return opt_ctx->inner_handler(request, response, opt_ctx->inner_baton, pool);
 }
 
 
@@ -406,22 +311,21 @@ create_options_req(options_context_t **opt_ctx,
                    apr_pool_t *pool)
 {
   options_context_t *new_ctx;
+  svn_ra_serf__xml_context_t *xmlctx;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
 
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
-
   new_ctx->pool = pool;
-
-  new_ctx->acbuf = svn_stringbuf_create_empty(pool);
-  new_ctx->youngest_rev = SVN_INVALID_REVNUM;
-
   new_ctx->session = session;
   new_ctx->conn = conn;
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
-  handler->handler_pool = pool;
+  xmlctx = svn_ra_serf__xml_context_create(options_ttable,
+                                           NULL, options_closed, new_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+
   handler->method = "OPTIONS";
   handler->path = session->session_url.path;
   handler->body_delegate = create_options_body;
@@ -429,18 +333,10 @@ create_options_req(options_context_t **opt_ctx,
   handler->conn = conn;
   handler->session = session;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = new_ctx;
-  parser_ctx->start = start_options;
-  parser_ctx->end = end_options;
-  parser_ctx->cdata = cdata_options;
-  parser_ctx->done = &new_ctx->done;
-
   new_ctx->handler = handler;
-  new_ctx->parser_ctx = parser_ctx;
 
+  new_ctx->inner_handler = handler->response_handler;
+  new_ctx->inner_baton = handler->response_baton;
   handler->response_handler = options_response_handler;
   handler->response_baton = new_ctx;
 
@@ -463,7 +359,7 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
   SVN_ERR_ASSERT(SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
-  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->done, session,
+  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->handler->done, session,
                                         scratch_pool));
 
   *youngest = opt_ctx->youngest_rev;
@@ -484,7 +380,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
   SVN_ERR_ASSERT(!SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
-  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->done, session,
+  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->handler->done, session,
                                         scratch_pool));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
@@ -508,7 +404,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
 
-  err = svn_ra_serf__context_run_wait(&opt_ctx->done, serf_sess, pool);
+  err = svn_ra_serf__context_run_wait(&opt_ctx->handler->done, serf_sess,
+                                      pool);
 
   /* If our caller cares about server redirections, and our response
      carries such a thing, report as much.  We'll disregard ERR --
