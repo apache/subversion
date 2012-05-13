@@ -56,12 +56,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1291594, r1328267, r1328268
-   Support httpd-2.4 in davautocheck.
-   Justification:
-     Allow testing against current stable httpd.
-   Notes:
-     Depends on the r1327979 group.
-   Votes:
-     +1: philip, danielsh, gstein
