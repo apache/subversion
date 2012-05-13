@@ -48,7 +48,7 @@ Candidate changes:
      Avoids segfaults caused by a malicious server sending unknown prefixes
      to ra_serf. (and corrects the semantics for a bonus win)
    Votes:
-     +1: gstein
+     +1: gstein, rhuijben
 
 
 Veto-blocked changes:
