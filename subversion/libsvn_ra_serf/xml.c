@@ -493,12 +493,30 @@ svn_ra_serf__xml_gather_since(svn_ra_serf__xml_estate_t *xes,
 
 void
 svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
+                      int state,
                       const char *name,
                       const char *value)
 {
-  ensure_pool(xes);
+  svn_ra_serf__xml_estate_t *scan;
 
-  /* ### copy into attrs  */
+  for (scan = xes; scan != NULL && scan->state != state; scan = scan->prev)
+    /* pass */ ;
+
+  SVN_ERR_ASSERT_NO_RETURN(scan != NULL);
+
+  /* Make sure the target state has a pool.  */
+  ensure_pool(scan);
+
+  /* ... and attribute storage.  */
+  if (scan->attrs == NULL)
+    scan->attrs = apr_hash_make(scan->state_pool);
+
+  /* In all likelihood, NAME is a string constant. But we can't really
+     be sure. And it isn't like we're storing a billion of these into
+     the state pool.  */
+  apr_hash_set(scan->attrs,
+               apr_pstrdup(scan->state_pool, name), APR_HASH_KEY_STRING,
+               apr_pstrdup(scan->state_pool, value));
 }
 
 
