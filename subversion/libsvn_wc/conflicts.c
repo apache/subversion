@@ -301,9 +301,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
       SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
                                           resolve_text, resolve_props,
                                           resolve_tree, work_items, pool));
-      SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                             cancel_func_t, cancel_baton,
-                             pool));
 
       /* Text conflicts may be marked resolved by removing the conflict
        * marker files. If they're already deleted, don't provide feedback. */
@@ -328,6 +325,11 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
           /* Always provide feedback for property and tree conflicts. */
           *did_resolve = TRUE;
         }
+
+      /* Run the work queue to remove conflict marker files. */
+      SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                             cancel_func_t, cancel_baton,
+                             pool));
     }
 
   return SVN_NO_ERROR;
