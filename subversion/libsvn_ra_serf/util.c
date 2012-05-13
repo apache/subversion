@@ -2338,11 +2338,23 @@ static svn_error_t *
 expat_response_handler(serf_request_t *request,
                        serf_bucket_t *response,
                        void *baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   struct expat_ctx_t *ectx = baton;
 
   SVN_ERR_ASSERT(ectx->parser != NULL);
+
+  /* ### should we bail on anything < 200 or >= 300 ??
+     ### actually: < 200 should really be handled by the core.  */
+  if (ectx->handler->sline.code == 404)
+    {
+      /* By deferring to expect_empty_body(), it will make a choice on
+         how to handle the body. Whatever the decision, the core handler
+         will take over, and we will not be called again.  */
+      return svn_error_trace(svn_ra_serf__expect_empty_body(
+                               request, response, ectx->handler,
+                               scratch_pool));
+    }
 
   while (1)
     {
