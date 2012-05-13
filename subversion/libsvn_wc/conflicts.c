@@ -261,70 +261,84 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
 
   if (resolve_text)
     {
+      svn_node_kind_t node_kind;
+
+      /* Legacy behavior: Only report text conflicts as resolved when at least
+         one conflict marker file exists.
+
+         If not the UI shows the conflict as already resolved
+         (and in this case we just remove the in-db conflict) */
+
       if (conflict_old)
         {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_old,
-                                               pool, pool));
-          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+          SVN_ERR(svn_io_check_path(conflict_old, &node_kind, pool));
+          if (node_kind == svn_node_file)
+            {
+              SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   conflict_old,
+                                                   pool, pool));
+              work_items = svn_wc__wq_merge(work_items, work_item, pool);
+              *did_resolve = TRUE;
+            }
         }
 
       if (conflict_new)
         {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_new,
-                                               pool, pool));
-          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+          SVN_ERR(svn_io_check_path(conflict_new, &node_kind, pool));
+          if (node_kind == svn_node_file)
+            {
+              SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   conflict_new,
+                                                   pool, pool));
+              work_items = svn_wc__wq_merge(work_items, work_item, pool);
+              *did_resolve = TRUE;
+            }
         }
 
       if (conflict_working)
         {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, conflict_working,
-                                               pool, pool));
-          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+          SVN_ERR(svn_io_check_path(conflict_working, &node_kind, pool));
+          if (node_kind == svn_node_file)
+            {
+              SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   conflict_working,
+                                                   pool, pool));
+              work_items = svn_wc__wq_merge(work_items, work_item, pool);
+              *did_resolve = TRUE;
+            }
         }
-
-      resolve_text = conflict_old || conflict_new || conflict_working;
     }
   if (resolve_props)
     {
-      if (prop_reject_file != NULL)
+      svn_node_kind_t node_kind;
+
+      /* Legacy behavior: Only report property conflicts as resolved when the
+         property reject file exists
+
+         If not the UI shows the conflict as already resolved
+         (and in this case we just remove the in-db conflict) */
+
+      if (prop_reject_file)
         {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, prop_reject_file,
-                                               pool, pool));
-          work_items = svn_wc__wq_merge(work_items, work_item, pool);
+          SVN_ERR(svn_io_check_path(prop_reject_file, &node_kind, pool));
+          if (node_kind == svn_node_file)
+            {
+              SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db,
+                                                   prop_reject_file,
+                                                   pool, pool));
+              work_items = svn_wc__wq_merge(work_items, work_item, pool);
+              *did_resolve = TRUE;
+            }
         }
-      else
-        resolve_props = FALSE;
     }
+  if (resolve_tree)
+    *did_resolve = TRUE;
 
   if (resolve_text || resolve_props || resolve_tree)
     {
       SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
                                           resolve_text, resolve_props,
                                           resolve_tree, work_items, pool));
-
-      /* Text conflicts may be marked resolved by removing the conflict
-       * marker files. If they're already deleted, don't provide feedback. */
-      if (resolve_text && !resolve_props && !resolve_tree)
-        {
-          svn_node_kind_t node_kind = svn_node_unknown;
-
-          if (conflict_old)
-            SVN_ERR(svn_io_check_path(conflict_old, &node_kind, pool));
-          *did_resolve = (node_kind == svn_node_file);
-
-          if (!*did_resolve && conflict_new)
-            SVN_ERR(svn_io_check_path(conflict_new, &node_kind, pool));
-          *did_resolve = (node_kind == svn_node_file);
-
-          if (!*did_resolve && conflict_working)
-            SVN_ERR(svn_io_check_path(conflict_working, &node_kind, pool));
-          *did_resolve = (node_kind == svn_node_file);
-        }
-      else
-        {
-          /* Always provide feedback for property and tree conflicts. */
-          *did_resolve = TRUE;
-        }
 
       /* Run the work queue to remove conflict marker files. */
       SVN_ERR(svn_wc__wq_run(db, local_abspath,
