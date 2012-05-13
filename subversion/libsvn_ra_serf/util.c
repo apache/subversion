@@ -2395,6 +2395,10 @@ expat_response_handler(serf_request_t *request,
 
           apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
                                xml_parser_cleanup);
+
+          /* ### should check XMLCTX to see if it has returned to the
+             ### INITIAL state. we may have ended early...  */
+
           return svn_error_wrap_apr(status, NULL);
         }
     }
