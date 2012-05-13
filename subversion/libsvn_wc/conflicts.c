@@ -304,7 +304,30 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
       SVN_ERR(svn_wc__wq_run(db, local_abspath,
                              cancel_func_t, cancel_baton,
                              pool));
-      *did_resolve = TRUE;
+
+      /* Text conflicts may be marked resolved by removing the conflict
+       * marker files. If they're already deleted, don't provide feedback. */
+      if (resolve_text && !resolve_props && !resolve_tree)
+        {
+          svn_node_kind_t node_kind = svn_node_unknown;
+
+          if (conflict_old)
+            SVN_ERR(svn_io_check_path(conflict_old, &node_kind, pool));
+          *did_resolve = (node_kind == svn_node_file);
+
+          if (!*did_resolve && conflict_new)
+            SVN_ERR(svn_io_check_path(conflict_new, &node_kind, pool));
+          *did_resolve = (node_kind == svn_node_file);
+
+          if (!*did_resolve && conflict_working)
+            SVN_ERR(svn_io_check_path(conflict_working, &node_kind, pool));
+          *did_resolve = (node_kind == svn_node_file);
+        }
+      else
+        {
+          /* Always provide feedback for property and tree conflicts. */
+          *did_resolve = TRUE;
+        }
     }
 
   return SVN_NO_ERROR;
