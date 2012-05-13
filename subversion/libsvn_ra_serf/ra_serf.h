@@ -715,8 +715,20 @@ svn_ra_serf__xml_gather_since(svn_ra_serf__xml_estate_t *xes,
                               int stop_state);
 
 
+/* Attach the NAME/VALUE pair onto this/parent state identified by STATE.
+   The name and value will be copied into the target state's pool.
+
+   These values will be available to the CLOSED_CB for the target state,
+   or part of the gathered state via xml_gather_since().
+
+   Typically, this function is used by a child state's close callback,
+   or within an opening callback to store additional data.
+
+   Note: if the state is not found, then a programmer error has occurred,
+   so the function will invoke SVN_ERR_MALFUNCTION().  */
 void
 svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
+                      int state,
                       const char *name,
                       const char *value);
 
