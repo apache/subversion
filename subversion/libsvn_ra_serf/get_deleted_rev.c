@@ -35,14 +35,13 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum drev_state_e {
-  NONE = 0,
+enum drev_state_e {
+  INITIAL = 0,
+  REPORT,
   VERSION_NAME
-} drev_state_e;
+};
 
 typedef struct drev_context_t {
-  apr_pool_t *pool;
-
   const char *path;
   svn_revnum_t peg_revision;
   svn_revnum_t end_revision;
@@ -51,91 +50,40 @@ typedef struct drev_context_t {
      the range PEG_REVISION-END-END_REVISION? */
   svn_revnum_t *revision_deleted;
 
-  /* are we done? */
-  svn_boolean_t done;
-
 } drev_context_t;
 
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t getdrev_ttable[] = {
+  { INITIAL, S_, "get-deleted-rev-report", REPORT,
+    FALSE, { NULL }, FALSE, FALSE },
+
+  { REPORT, D_, SVN_DAV__VERSION_NAME, VERSION_NAME,
+    TRUE, { NULL }, FALSE, TRUE },
+
+  { 0 }
+};
+
 
-static void
-push_state(svn_ra_serf__xml_parser_t *parser,
-           drev_context_t *drev_ctx,
-           drev_state_e state)
-{
-  svn_ra_serf__xml_push_state(parser, state);
-
-  if (state == VERSION_NAME)
-    parser->state->private = NULL;
-}
-
+/* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
-start_getdrev(svn_ra_serf__xml_parser_t *parser,
-              svn_ra_serf__dav_props_t name,
-              const char **attrs,
-              apr_pool_t *scratch_pool)
+getdrev_closed(svn_ra_serf__xml_estate_t *xes,
+               void *baton,
+               int leaving_state,
+               const svn_string_t *cdata,
+               apr_hash_t *attrs,
+               apr_pool_t *scratch_pool)
 {
-  drev_context_t *drev_ctx = parser->user_data;
-  drev_state_e state;
+  drev_context_t *drev_ctx = baton;
 
-  state = parser->state->current_state;
+  SVN_ERR_ASSERT(leaving_state == VERSION_NAME);
+  SVN_ERR_ASSERT(cdata != NULL);
 
-  if (state == NONE &&
-      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
-    {
-      push_state(parser, drev_ctx, VERSION_NAME);
-    }
+  *drev_ctx->revision_deleted = SVN_STR_TO_REV(cdata->data);
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-end_getdrev(svn_ra_serf__xml_parser_t *parser,
-            svn_ra_serf__dav_props_t name,
-            apr_pool_t *scratch_pool)
-{
-  drev_context_t *drev_ctx = parser->user_data;
-  drev_state_e state;
-  svn_string_t *info;
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == VERSION_NAME &&
-      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0 &&
-      info)
-    {
-      *drev_ctx->revision_deleted = SVN_STR_TO_REV(info->data);
-      svn_ra_serf__xml_pop_state(parser);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
-              const char *data,
-              apr_size_t len,
-              apr_pool_t *scratch_pool)
-{
-  drev_context_t *drev_ctx = parser->user_data;
-  drev_state_e state;
-
-  UNUSED_CTX(drev_ctx);
-
-  state = parser->state->current_state;
-  switch (state)
-    {
-    case VERSION_NAME:
-        /* ### wrong. we might not have all the cdata!  */
-        parser->state->private = svn_string_ncreate(data, len,
-                                                    parser->state->pool);
-        break;
-    default:
-        break;
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
@@ -187,7 +135,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   drev_context_t *drev_ctx;
   svn_ra_serf__session_t *ras = session->priv;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url;
   svn_error_t *err;
 
@@ -195,38 +143,27 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
   drev_ctx->path = path;
   drev_ctx->peg_revision = peg_revision;
   drev_ctx->end_revision = end_revision;
-  drev_ctx->pool = pool;
   drev_ctx->revision_deleted = revision_deleted;
-  drev_ctx->done = FALSE;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                       ras, NULL /* conn */,
                                       NULL /* url */, peg_revision,
                                       pool, pool));
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = drev_ctx;
-  parser_ctx->start = start_getdrev;
-  parser_ctx->end = end_getdrev;
-  parser_ctx->cdata = cdata_getdrev;
-  parser_ctx->done = &drev_ctx->done;
+  xmlctx = svn_ra_serf__xml_context_create(getdrev_ttable,
+                                           NULL, getdrev_closed, drev_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->body_delegate = create_getdrev_body;
   handler->body_delegate_baton = drev_ctx;
   handler->conn = ras->conns[0];
   handler->session = ras;
-  handler->response_baton = parser_ctx;
 
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&drev_ctx->done, ras, pool);
+  err = svn_ra_serf__context_run_one(handler, pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.5.x servers and older don't support this report. */
@@ -235,5 +172,6 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                              _("'%s' REPORT not implemented"),
                              "get-deleted-rev");
   SVN_ERR(err);
+
   return SVN_NO_ERROR;
 }
