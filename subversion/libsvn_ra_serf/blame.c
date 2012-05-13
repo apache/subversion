@@ -47,6 +47,7 @@
  */
 typedef enum blame_state_e {
   NONE = 0,
+  INITIAL = 0,
   FILE_REVS_REPORT,
   FILE_REV,
   REV_PROP,
@@ -108,6 +109,42 @@ typedef struct blame_context_t {
   svn_file_rev_handler_t file_rev;
   void *file_rev_baton;
 } blame_context_t;
+
+
+#if 0
+/* ### we cannot use this yet since the CDATA is unbounded and cannot be
+   ### collected by the parsing context. we need a streamy mechanism for
+   ### this report.  */
+
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t blame_ttable[] = {
+  { INITIAL, S_, "file-revs-report", FILE_REVS_REPORT,
+    FALSE, { NULL }, FALSE, FALSE },
+
+  { FILE_REVS_REPORT, S_, "file-rev", FILE_REV,
+    FALSE, { "path", "rev", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "rev-prop", REV_PROP,
+    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "remove-prop", REMOVE_PROP,
+    FALSE, { "name", "?encoding", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "merged-revision", MERGED_REVISION,
+    FALSE, { NULL }, FALSE, FALSE },
+
+  { FILE_REV, D_, "txdelta", TXDELTA,
+    TRUE, { NULL }, FALSE, TRUE },
+
+  { 0 }
+};
+
+#endif
+
 
 
 static blame_info_t *
