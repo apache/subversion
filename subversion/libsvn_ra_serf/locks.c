@@ -298,11 +298,6 @@ cdata_lock(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static const svn_ra_serf__dav_props_t lock_props[] =
-{
-  { "DAV:", "lockdiscovery" },
-  { NULL }
-};
 
 static svn_error_t *
 set_lock_headers(serf_bucket_t *headers,
@@ -440,7 +435,7 @@ setup_getlock_headers(serf_bucket_t *headers,
                       void *baton,
                       apr_pool_t *pool)
 {
-  serf_bucket_headers_set(headers, "Depth", "0");
+  serf_bucket_headers_setn(headers, "Depth", "0");
 
   return SVN_NO_ERROR;
 }
