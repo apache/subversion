@@ -177,7 +177,15 @@ fixup_commit_error(const char *local_abspath,
                                                     scratch_pool));
     }
   else
-    return err;
+    return svn_error_createf(err->apr_err, err,
+                             _("Error while committing '%s':"),
+                             local_abspath
+                                ? svn_dirent_local_style(local_abspath,
+                                                         scratch_pool)
+                                : svn_path_url_add_component2(repos_root,
+                                                              repos_relpath,
+                                                              scratch_pool));
+
 }
 
 
