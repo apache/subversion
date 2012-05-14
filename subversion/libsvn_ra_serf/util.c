@@ -763,14 +763,21 @@ svn_error_t *
 svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
                              apr_pool_t *scratch_pool)
 {
+  svn_error_t *err;
+
   /* Create a serf request based on HANDLER.  */
   svn_ra_serf__request_create(handler);
 
   /* Wait until the response logic marks its DONE status.  */
-  return svn_error_trace(svn_ra_serf__context_run_wait(
-                           &handler->done,
-                           handler->session,
-                           scratch_pool));
+  err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
+                                      scratch_pool);
+  if (handler->server_error)
+    {
+      err = svn_error_compose_create(err, handler->server_error->error);
+      handler->server_error = NULL;
+    }
+
+  return svn_error_trace(err);
 }
 
 

@@ -340,8 +340,6 @@ create_options_req(options_context_t **opt_ctx,
   handler->response_handler = options_response_handler;
   handler->response_baton = new_ctx;
 
-  svn_ra_serf__request_create(handler);
-
   *opt_ctx = new_ctx;
 
   return SVN_NO_ERROR;
@@ -359,8 +357,7 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
   SVN_ERR_ASSERT(SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
-  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->handler->done, session,
-                                        scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   *youngest = opt_ctx->youngest_rev;
 
@@ -380,8 +377,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
   SVN_ERR_ASSERT(!SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
-  SVN_ERR(svn_ra_serf__context_run_wait(&opt_ctx->handler->done, session,
-                                        scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -404,8 +400,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
 
-  err = svn_ra_serf__context_run_wait(&opt_ctx->handler->done, serf_sess,
-                                      pool);
+  err = svn_ra_serf__context_run_one(opt_ctx->handler, pool);
 
   /* If our caller cares about server redirections, and our response
      carries such a thing, report as much.  We'll disregard ERR --
