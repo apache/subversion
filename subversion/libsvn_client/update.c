@@ -258,10 +258,8 @@ update_internal(svn_revnum_t *result_rev,
         }
       return SVN_NO_ERROR;
     }
-  else if (! repos_relpath)
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                               _("'%s' has no URL"),
-                               svn_dirent_local_style(anchor_abspath, pool));
+  else
+    SVN_ERR_ASSERT(repos_relpath);
 
   anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                            pool);
