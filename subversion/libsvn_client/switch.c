@@ -197,33 +197,21 @@ switch_internal(svn_revnum_t *result_rev,
      ### okay? */
   if (! ignore_ancestry)
     {
-      const char *repos_root_url;
-      const char *repos_relpath;
-      svn_revnum_t target_rev;
-      svn_client__pathrev_t *switch_loc, *target_loc, *yca;
+      svn_client__pathrev_t *switch_loc, *target_base_loc, *yca;
 
       SVN_ERR(svn_client__pathrev_create_with_session(
                 &switch_loc, ra_session, revnum, switch_rev_url, pool));
-      SVN_ERR(svn_wc__node_get_base(&target_rev, &repos_relpath,
-                                    &repos_root_url, NULL, ctx->wc_ctx,
-                                    local_abspath, pool, pool));
+      SVN_ERR(svn_client__wc_node_get_base(&target_base_loc, local_abspath,
+                                           ctx, pool, pool));
 
-      if (!repos_relpath)
+      if (!target_base_loc)
         yca = NULL; /* Not versioned */
       else
         {
-          const char *url = svn_path_url_add_component2(repos_root_url,
-                                                        repos_relpath, pool);
-
-          SVN_ERR(svn_client__pathrev_create_with_session(&target_loc,
-                                                          ra_session,
-                                                          target_rev, url,
-                                                          pool));
-
           /* ### It would be nice if this function could reuse the existing
              ra session instead of opening two for its own use. */
           SVN_ERR(svn_client__get_youngest_common_ancestor(
-                  &yca, switch_loc, target_loc, ctx, pool, pool));
+                  &yca, switch_loc, target_base_loc, ctx, pool, pool));
         }
       if (! yca)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,

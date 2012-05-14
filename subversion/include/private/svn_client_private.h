@@ -144,9 +144,33 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Set *ORIGIN_P to the origin of the WC node at WC_ABSPATH.  If the node
+/* Get the repository location of the base node at LOCAL_ABSPATH.
+ *
+ * A pathrev_t wrapper around svn_wc__node_get_base().
+ *
+ * Set *BASE_P to the location that this node was checked out at or last
+ * updated/switched to, regardless of any uncommitted changes (delete,
+ * replace and/or copy-here/move-here).
+ *
+ * If there is no base node at LOCAL_ABSPATH (such as when there is a
+ * locally added/copied/moved-here node that is not part of a replace),
+ * set *BASE_P to NULL.
+ */
+svn_error_t *
+svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
+                             const char *wc_abspath,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/* Get the original location of the WC node at LOCAL_ABSPATH.
+ *
+ * A pathrev_t wrapper around svn_wc__node_get_origin().
+ *
+ * Set *ORIGIN_P to the origin of the WC node at WC_ABSPATH.  If the node
  * is a local copy, give the copy-from location.  If the node is locally
- * added or deleted, set *ORIGIN_P to NULL. */
+ * added or deleted, set *ORIGIN_P to NULL.
+ */
 svn_error_t *
 svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                const char *wc_abspath,
