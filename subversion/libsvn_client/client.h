@@ -227,28 +227,14 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
    for a URL or 'working' for a WC path.  If REVISION->kind is
    'unspecified', the operative revision is the peg revision.
 
-   Store the resulting ra_session in *RA_SESSION_P.  Store the actual
-   revision number of the object in *REV_P, and the final resulting
-   URL in *URL_P. REV_P and/or URL_P may be NULL if not wanted.
+   Store the resulting ra_session in *RA_SESSION_P.  Store the final
+   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
+   may be NULL if not wanted.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
    Use POOL for all allocations. */
-svn_error_t *
-svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
-                                 svn_revnum_t *rev_p,
-                                 const char **url_p,
-                                 const char *path_or_url,
-                                 const char *base_dir_abspath,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
-
-/* Like svn_client__ra_session_from_path() but returning a path-rev
- * instead of separate URL and rev outputs.  RESOLVED_LOC_P may be NULL
- * if not wanted. */
 svn_error_t *
 svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                  svn_client__pathrev_t **resolved_loc_p,
