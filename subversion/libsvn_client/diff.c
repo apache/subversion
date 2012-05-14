@@ -2468,7 +2468,7 @@ diff_repos_repos_added_or_deleted_dir(const char *target,
                                                        callbacks,
                                                        callback_baton,
                                                        ra_session,
-                                                       scratch_pool));
+                                                       iterpool));
     }
   svn_pool_destroy(iterpool);
 
