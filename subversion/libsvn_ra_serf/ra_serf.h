@@ -26,7 +26,7 @@
 
 
 #include <serf.h>
-#include <expat.h>
+#include <expat.h>  /* for XML_Parser  */
 #include <apr_uri.h>
 
 #include "svn_types.h"
@@ -608,6 +608,160 @@ struct svn_ra_serf__xml_parser_t {
   apr_off_t read_size; /* Number of bytes read from response */
 };
 
+
+/* v2 of the XML parsing functions  */
+
+/* The XML parsing context.  */
+typedef struct svn_ra_serf__xml_context_t svn_ra_serf__xml_context_t;
+
+
+/* An opaque structure for the XML parse element/state.  */
+typedef struct svn_ra_serf__xml_estate_t svn_ra_serf__xml_estate_t;
+
+/* Called just after the parser moves into ENTERED_STATE.  */
+typedef svn_error_t *
+(*svn_ra_serf__xml_opened_t)(svn_ra_serf__xml_estate_t *xes,
+                             void *baton,
+                             int entered_state,
+                             apr_pool_t *scratch_pool);
+
+
+/* Called just before the parser leaves LEAVING_STATE.
+
+   If cdata collection was enabled for this state, then CDATA will be
+   non-NULL and contain the collected cdata.
+
+   If attribute collection was enabled for this state, then ATTRS will
+   contain the attributes collected for this element only. Use
+   svn_ra_serf__xml_gather_since() to gather up data from outer states.
+   ATTRS is char* -> char*.
+
+   Temporary allocations may be made in SCRATCH_POOL.  */
+typedef svn_error_t *
+(*svn_ra_serf__xml_closed_t)(svn_ra_serf__xml_estate_t *xes,
+                             void *baton,
+                             int leaving_state,
+                             const svn_string_t *cdata,
+                             apr_hash_t *attrs,
+                             apr_pool_t *scratch_pool);
+
+
+/* State transition table.
+
+   When the XML Context is constructed, it is in state 0. User states are
+   positive integers.
+
+   In a list of transitions, use { 0 } to indicate the end. Specifically,
+   the code looks for NS == NULL.
+
+   ### more docco
+*/
+typedef struct svn_ra_serf__xml_transition_t {
+  /* This transition applies when in this state  */
+  int from_state;
+
+  /* And when this tag is observed  */
+  const char *ns;
+  const char *name;
+
+  /* Moving to this state  */
+  int to_state;
+
+  /* Should the cdata of NAME be collected?  */
+  svn_boolean_t collect_cdata;
+
+  /* Which attributes of NAME should be collected? Terminate with NULL.
+     Maximum of 10 attributes may be collected. Note that attribute
+     namespaces are ignored at this time.
+
+     Attribute names beginning with "?" are optional. Other names must
+     exist on the element, or SVN_ERR_XML_ATTRIB_NOT_FOUND will be raised.  */
+  const char *collect_attrs[11];
+
+  /* When NAME is opened, should the callback be invoked?  */
+  svn_boolean_t custom_open;
+
+  /* When NAME is closed, should the callback be invoked?  */
+  svn_boolean_t custom_close;
+
+} svn_ra_serf__xml_transition_t;
+
+
+svn_ra_serf__xml_context_t *
+svn_ra_serf__xml_context_create(
+  const svn_ra_serf__xml_transition_t *ttable,
+  svn_ra_serf__xml_opened_t opened_cb,
+  svn_ra_serf__xml_closed_t closed_cb,
+  void *baton,
+  apr_pool_t *result_pool);
+
+
+/* Construct a handler with the response function/baton set up to parse
+   a response body using the given XML context. The handler and its
+   internal structures are allocated in RESULT_POOL.
+
+   This also initializes HANDLER_POOL to the given RESULT_POOL.  */
+svn_ra_serf__handler_t *
+svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  apr_pool_t *result_pool);
+
+
+/* Allocated within XES->STATE_POOL. Changes are not allowd. Make a deep
+   copy, as appropriate.
+
+   The resulting hash maps char* names to char* values.  */
+apr_hash_t *
+svn_ra_serf__xml_gather_since(svn_ra_serf__xml_estate_t *xes,
+                              int stop_state);
+
+
+/* Attach the NAME/VALUE pair onto this/parent state identified by STATE.
+   The name and value will be copied into the target state's pool.
+
+   These values will be available to the CLOSED_CB for the target state,
+   or part of the gathered state via xml_gather_since().
+
+   Typically, this function is used by a child state's close callback,
+   or within an opening callback to store additional data.
+
+   Note: if the state is not found, then a programmer error has occurred,
+   so the function will invoke SVN_ERR_MALFUNCTION().  */
+void
+svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
+                      int state,
+                      const char *name,
+                      const char *value);
+
+
+/* Returns XES->STATE_POOL for allocating structures that should live
+   as long as the state identified by XES.  */
+apr_pool_t *
+svn_ra_serf__xml_state_pool(svn_ra_serf__xml_estate_t *xes);
+
+
+/* Any XML parser may be used. When an opening tag is seen, call this
+   function to feed the information into XMLCTX.  */
+svn_error_t *
+svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
+                          const char *raw_name,
+                          const char *const *attrs);
+
+
+/* When a close tag is seen, call this function to feed the information
+   into XMLCTX.  */
+svn_error_t *
+svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
+                        const char *raw_name);
+
+
+/* When cdata is parsed by the wrapping XML parser, call this function to
+   feed the cdata into the XMLCTX.  */
+svn_error_t *
+svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
+                          const char *data,
+                          apr_size_t len);
+
+
 /*
  * Parses a server-side error message into a local Subversion error.
  */
@@ -814,12 +968,12 @@ svn_ra_serf__add_cdata_len_buckets(serf_bucket_t *agg_bucket,
  * Look up the @a attrs array for namespace definitions and add each one
  * to the @a ns_list of namespaces.
  *
- * New namespaces will be allocated in @a pool.
+ * New namespaces will be allocated in RESULT_POOL.
  */
 void
 svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
-                       const char **attrs,
-                       apr_pool_t *pool);
+                       const char *const *attrs,
+                       apr_pool_t *result_pool);
 
 /*
  * Look up @a name in the @a ns_list list for previously declared namespace
@@ -830,7 +984,7 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
  */
 void
 svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
-                       svn_ra_serf__ns_t *ns_list,
+                       const svn_ra_serf__ns_t *ns_list,
                        const char *name);
 
 

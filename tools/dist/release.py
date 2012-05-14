@@ -483,7 +483,7 @@ def post_candidates(args):
     svn_cmd = ['svn', 'import', '-m',
                'Add %s candidate release artifacts' % args.version.base,
                '--auto-props', '--config-option',
-               'config:auto-props:*.asc=svn:eol-style=native',
+               'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
                get_deploydir(args.base_dir), dist_dev_url]
     if (args.username):
         svn_cmd += ['--username', args.username]
@@ -715,6 +715,8 @@ def check_sigs(args):
                 good_sigs[verified.key_id[-8:]] = True
             else:
                 sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
+                if verified.key_id:
+                    sys.stderr.write("  key id: %s\n" % verified.key_id)
                 sys.exit(1)
 
     for id in good_sigs.keys():

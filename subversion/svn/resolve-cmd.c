@@ -96,7 +96,7 @@ svn_cl__resolve(apr_getopt_t *os,
 
   if (opt_state->depth == svn_depth_unknown)
     {
-      if (opt_state->accept_which == svn_wc_conflict_choose_unspecified)
+      if (opt_state->accept_which == svn_cl__accept_unspecified)
         opt_state->depth = svn_depth_infinity;
       else
         opt_state->depth = svn_depth_empty;

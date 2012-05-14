@@ -22,9 +22,6 @@
  */
 
 #include <apr_uri.h>
-
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -1661,14 +1658,10 @@ add_directory(const char *path,
         break;
 
       case 403:
-        if (handler->server_error)
-          SVN_ERR(handler->server_error->error);
         return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
                                 _("Access to '%s' forbidden"),
                                  handler->path);
       default:
-        if (handler->server_error)
-          SVN_ERR(handler->server_error->error);
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Adding directory failed: %s on %s "
                                    "(%d %s)"),

@@ -5176,6 +5176,66 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 }
 
+/* Baton for db_op_mark_resolved */
+struct op_mark_resolved_baton
+{
+  svn_boolean_t resolved_text;
+  svn_boolean_t resolved_props;
+  svn_boolean_t resolved_tree;
+  const svn_skel_t *work_items;
+};
+
+/* Helper for svn_wc__db_op_mark_resolved */
+static svn_error_t *
+db_op_mark_resolved(void *baton,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool)
+{
+  struct op_mark_resolved_baton *rb = baton;
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+  int total_affected_rows = 0;
+
+  if (rb->resolved_text)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_CLEAR_TEXT_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+      total_affected_rows += affected_rows;
+    }
+  if (rb->resolved_props)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_CLEAR_PROPS_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+      total_affected_rows += affected_rows;
+    }
+  if (rb->resolved_tree)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+      total_affected_rows += affected_rows;
+    }
+
+  /* Now, remove the actual node if it doesn't have any more useful
+     information.  We only need to do this if we've remove data ourselves. */
+  if (total_affected_rows > 0)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_EMPTY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  SVN_ERR(add_work_items(wcroot->sdb, rb->work_items, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
@@ -5183,47 +5243,30 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             svn_boolean_t resolved_text,
                             svn_boolean_t resolved_props,
                             svn_boolean_t resolved_tree,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
+  struct op_mark_resolved_baton rb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* ### we're not ready to handy RESOLVED_TREE just yet.  */
-  SVN_ERR_ASSERT(!resolved_tree);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* ### these two statements are not transacted together. is this a
-     ### problem? I suspect a failure simply leaves the other in a
-     ### continued, unresolved state. However, that still retains
-     ### "integrity", so another re-run by the user will fix it.  */
+  rb.resolved_props = resolved_props;
+  rb.resolved_text = resolved_text;
+  rb.resolved_tree = resolved_tree;
+  rb.work_items = work_items;
 
-  if (resolved_text)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_CLEAR_TEXT_CONFLICT));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-  if (resolved_props)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_CLEAR_PROPS_CONFLICT));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_op_mark_resolved,
+                              &rb, scratch_pool));
 
-  /* Some entries have cached the above values. Kapow!!  */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
-
   return SVN_NO_ERROR;
 }
-
 
 /* */
 static svn_error_t *
@@ -11439,7 +11482,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
           if (conflict_working)
             desc->my_abspath = svn_dirent_join(wcroot->abspath,
                                                conflict_working, result_pool);
-          desc->merged_file = svn_dirent_basename(local_abspath, result_pool);
+          desc->merged_file = apr_pstrdup(result_pool, local_abspath);
 
           APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
         }

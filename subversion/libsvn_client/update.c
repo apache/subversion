@@ -191,11 +191,9 @@ update_internal(svn_revnum_t *result_rev,
   void *update_edit_baton;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *anchor_url;
   const char *corrected_url;
   const char *target;
-  const char *repos_root_url;
-  const char *repos_relpath;
+  svn_client__pathrev_t *anchor_loc;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
@@ -223,8 +221,8 @@ update_internal(svn_revnum_t *result_rev,
     target = "";
 
   /* Check if our anchor exists in BASE. If it doesn't we can't update. */
-  SVN_ERR(svn_wc__node_get_base(&revnum, &repos_relpath, &repos_root_url, NULL,
-                                ctx->wc_ctx, anchor_abspath, pool, pool));
+  SVN_ERR(svn_client__wc_node_get_base(&anchor_loc, anchor_abspath,
+                                       ctx, pool, pool));
 
   /* It does not make sense to update conflict victims. */
   err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
@@ -240,7 +238,7 @@ update_internal(svn_revnum_t *result_rev,
   else
     SVN_ERR(err);
 
-  if (!SVN_IS_VALID_REVNUM(revnum)
+  if (! anchor_loc
       || text_conflicted || prop_conflicted || tree_conflicted)
     {
       if (ctx->notify_func2)
@@ -258,13 +256,6 @@ update_internal(svn_revnum_t *result_rev,
         }
       return SVN_NO_ERROR;
     }
-  else if (! repos_relpath)
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                               _("'%s' has no URL"),
-                               svn_dirent_local_style(anchor_abspath, pool));
-
-  anchor_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                           pool);
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -333,7 +324,7 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               anchor_url,
+                                               anchor_loc->url,
                                                anchor_abspath, NULL, TRUE,
                                                TRUE, ctx, pool));
 
@@ -348,13 +339,15 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url, pool));
 
       /* svn_client_relocate2() will check the uuid */
-      SVN_ERR(svn_client_relocate2(anchor_abspath, repos_root_url,
+      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_loc->url,
                                    new_repos_root_url, ignore_externals,
                                    ctx, pool));
 
       /* Store updated repository root for externals */
-      repos_root_url = new_repos_root_url;
-      anchor_url = corrected_url;
+      anchor_loc->repos_root_url = new_repos_root_url;
+      /* ### We should update anchor_loc->repos_uuid too, although currently
+       * we don't use it. */
+      anchor_loc->url = corrected_url;
     }
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
@@ -368,7 +361,7 @@ update_internal(svn_revnum_t *result_rev,
 
   dfb.ra_session = ra_session;
   dfb.target_revision = revnum;
-  dfb.anchor_url = anchor_url;
+  dfb.anchor_url = anchor_loc->url;
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
@@ -430,7 +423,7 @@ update_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           repos_root_url, local_abspath,
+                                           anchor_loc->repos_root_url, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }

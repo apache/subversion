@@ -228,7 +228,7 @@ svn_xml_signal_bailout(svn_error_t *error,
  */
 const char *
 svn_xml_get_attr_value(const char *name,
-                       const char **atts);
+                       const char *const *atts);
 
 
 
