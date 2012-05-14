@@ -73,7 +73,7 @@ switch_internal(svn_revnum_t *result_rev,
 {
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *url, *target, *source_root;
+  const char *anchor_url, *target;
   svn_client__pathrev_t *switch_loc;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
@@ -142,8 +142,9 @@ switch_internal(svn_revnum_t *result_rev,
   else
     target = "";
 
-  SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, anchor_abspath, pool, pool));
-  if (! url)
+  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
+                               pool, pool));
+  if (! anchor_url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor_abspath, pool));
@@ -181,14 +182,12 @@ switch_internal(svn_revnum_t *result_rev,
                                             peg_revision, revision,
                                             ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root, pool));
-
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_uri__is_ancestor(source_root, url))
+  if (! svn_uri__is_ancestor(switch_loc->repos_root_url, anchor_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
                              _("'%s'\nis not the same repository as\n'%s'"),
-                             url, source_root);
+                             anchor_url, switch_loc->repos_root_url);
 
   /* If we're not ignoring ancestry, then error out if the switch
      source and target don't have a common ancestory.
@@ -219,7 +218,7 @@ switch_internal(svn_revnum_t *result_rev,
     }
 
 
-  SVN_ERR(svn_ra_reparent(ra_session, url, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
@@ -291,7 +290,8 @@ switch_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           source_root, local_abspath,
+                                           switch_loc->repos_root_url,
+                                           local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }
