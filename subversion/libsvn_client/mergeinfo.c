@@ -1051,13 +1051,12 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
               apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
   const char *local_abspath;
-  const char *url;
   svn_boolean_t use_url = svn_path_is_url(path_or_url);
+  const char *peg_url;
   svn_revnum_t peg_rev;
 
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &peg_rev, &url,
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &peg_rev, &peg_url,
                                            path_or_url, NULL, peg_revision,
                                            peg_revision, ctx, scratch_pool));
 
@@ -1071,10 +1070,9 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
       SVN_ERR(svn_client__wc_node_get_origin(&origin, local_abspath, ctx,
                                              scratch_pool, scratch_pool));
-      rev = origin ? origin->rev : SVN_INVALID_REVNUM;
       if (!origin
-          || strcmp(origin->url, url) != 0
-          || peg_rev != rev)
+          || strcmp(origin->url, peg_url) != 0
+          || peg_rev != origin->rev)
       {
         use_url = TRUE; /* Don't rely on local mergeinfo */
       }
@@ -1088,9 +1086,8 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
   if (use_url)
     {
-      rev = peg_rev;
       SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
-        mergeinfo_catalog, ra_session, url, rev, svn_mergeinfo_inherited,
+        mergeinfo_catalog, ra_session, peg_url, peg_rev, svn_mergeinfo_inherited,
         FALSE, include_descendants,
         result_pool, scratch_pool));
     }
