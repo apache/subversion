@@ -1120,6 +1120,7 @@ svn_client__get_detranslated_stream(svn_stream_t **fstream,
                                     svn_checksum_t **md5_checksum,
                                     const char *local_abspath,
                                     apr_hash_t *properties,
+                                    svn_boolean_t repair_eols,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 

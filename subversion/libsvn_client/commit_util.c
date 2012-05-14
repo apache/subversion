@@ -1588,7 +1588,7 @@ do_item_commit(svn_client_commit_item3_t *item,
          appropriate checksum. */
       SVN_ERR(svn_client__get_detranslated_stream(&contents, &sha1_checksum,
                                                   &md5_checksum,
-                                                  item->path, props,
+                                                  item->path, props, FALSE,
                                                   scratch_pool,
                                                   scratch_pool));
 
@@ -1941,6 +1941,7 @@ svn_client__get_detranslated_stream(svn_stream_t **fstream,
                                     svn_checksum_t **md5_checksum,
                                     const char *local_abspath,
                                     apr_hash_t *properties,
+                                    svn_boolean_t repair_eols,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
@@ -2010,7 +2011,7 @@ svn_client__get_detranslated_stream(svn_stream_t **fstream,
           /* Wrap the working copy stream with a filter to detranslate it. */
           contents = svn_subst_stream_translated(contents,
                                                  eol,
-                                                 FALSE /* repair */,
+                                                 repair_eols,
                                                  keywords,
                                                  FALSE /* expand */,
                                                  scratch_pool);

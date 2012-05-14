@@ -142,8 +142,8 @@ import_file(svn_editor_t *editor,
 
   /* Now, transmit the file contents. */
   SVN_ERR(svn_client__get_detranslated_stream(&contents, &checksum, NULL,
-                                              local_abspath,
-                                              properties, pool, pool));
+                                              local_abspath, properties, TRUE,
+                                              pool, pool));
 
   SVN_ERR(svn_editor_add_file(editor, relpath, checksum, contents, properties,
                               SVN_INVALID_REVNUM));
