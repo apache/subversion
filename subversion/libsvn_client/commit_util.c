@@ -182,7 +182,11 @@ fixup_commit_error(const char *local_abspath,
 
 /* Add a new commit candidate (described by all parameters except
    `COMMITTABLES') to the COMMITTABLES hash.  All of the commit item's
-   members are allocated out of RESULT_POOL. */
+   members are allocated out of RESULT_POOL.
+
+   If the state flag specifies that a lock must be used, store the token in LOCK
+   in lock_tokens.
+ */
 static svn_error_t *
 add_committable(svn_client__committables_t *committables,
                 const char *local_abspath,
@@ -193,6 +197,8 @@ add_committable(svn_client__committables_t *committables,
                 const char *copyfrom_relpath,
                 svn_revnum_t copyfrom_rev,
                 apr_byte_t state_flags,
+                apr_hash_t *lock_tokens,
+                const svn_lock_t *lock,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -247,6 +253,16 @@ add_committable(svn_client__committables_t *committables,
                new_item->path,
                APR_HASH_KEY_STRING,
                new_item);
+
+  if (lock
+      && lock_tokens
+      && (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN))
+    {
+      apr_hash_set(lock_tokens,
+                   new_item->url,
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(result_pool, lock->token));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -402,6 +418,8 @@ harvest_committables(const char *local_abspath,
 {
   struct harvest_baton baton;
 
+  SVN_ERR_ASSERT((just_locked && lock_tokens) || !just_locked);
+
   baton.root_abspath = local_abspath;
   baton.committables = committables;
   baton.lock_tokens = lock_tokens;
@@ -517,6 +535,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                               NULL /* copyfrom_relpath */,
                               SVN_INVALID_REVNUM /* copyfrom_rev */,
                               SVN_CLIENT_COMMIT_ITEM_DELETE,
+                              NULL, NULL,
                               result_pool, scratch_pool));
     }
 
@@ -549,13 +568,11 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t is_harvest_root = 
                 (strcmp(baton->root_abspath, local_abspath) == 0);
   svn_client__committables_t *committables = baton->committables;
-  apr_hash_t *lock_tokens = baton->lock_tokens;
   const char *repos_root_url = status->repos_root_url;
   const char *commit_relpath = NULL;
   svn_boolean_t copy_mode_root = (baton->commit_relpath && is_harvest_root);
   svn_boolean_t just_locked = baton->just_locked;
   apr_hash_t *changelists = baton->changelists;
-  apr_hash_t *danglers = baton->danglers;
   svn_wc_notify_func2_t notify_func = baton->notify_func;
   void *notify_baton = baton->notify_baton;
   svn_wc_context_t *wc_ctx = baton->wc_ctx;
@@ -619,7 +636,6 @@ harvest_status_callback(void *status_baton,
   SVN_ERR_ASSERT((copy_mode && commit_relpath)
                  || (! copy_mode && ! commit_relpath));
   SVN_ERR_ASSERT((copy_mode_root && copy_mode) || ! copy_mode_root);
-  SVN_ERR_ASSERT((just_locked && lock_tokens) || !just_locked);
 
   /* Save the result for reuse. */
   matches_changelists = ((changelists == NULL)
@@ -817,52 +833,43 @@ harvest_status_callback(void *status_baton,
   /* If the entry has a lock token and it is already a commit candidate,
      or the caller wants unmodified locked items to be treated as
      such, note this fact. */
-  if (status->lock && lock_tokens && (state_flags || just_locked))
+  if (status->lock && baton->lock_tokens && (state_flags || just_locked))
     {
       state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
     }
 
   /* Now, if this is something to commit, add it to our list. */
-  if (state_flags)
+  if (matches_changelists
+      && state_flags)
     {
-      if (matches_changelists)
-        {
-          /* Finally, add the committable item. */
-          SVN_ERR(add_committable(committables, local_abspath,
-                                  status->kind,
-                                  repos_root_url,
-                                  copy_mode
+      /* Finally, add the committable item. */
+      SVN_ERR(add_committable(committables, local_abspath,
+                              status->kind,
+                              repos_root_url,
+                              copy_mode
                                       ? commit_relpath
                                       : status->repos_relpath,
-                                  copy_mode
+                              copy_mode
                                       ? SVN_INVALID_REVNUM
                                       : node_rev,
-                                  cf_relpath,
-                                  cf_rev,
-                                  state_flags,
-                                  result_pool, scratch_pool));
-          if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-            apr_hash_set(lock_tokens,
-                         svn_path_url_add_component2(
-                             repos_root_url, status->repos_relpath,
-                             result_pool),
-                         APR_HASH_KEY_STRING,
-                         apr_pstrdup(result_pool,
-                                     status->lock->token));
-        }
+                              cf_relpath,
+                              cf_rev,
+                              state_flags,
+                              baton->lock_tokens, status->lock,
+                              result_pool, scratch_pool));
     }
 
     /* Fetch lock tokens for descendants of deleted nodes. */
-  if (lock_tokens
-      && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+  if (matches_changelists
+      && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+      && baton->lock_tokens)
     {
       apr_hash_t *local_relpath_tokens;
       apr_hash_index_t *hi;
-      apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
 
       SVN_ERR(svn_wc__node_get_lock_tokens_recursive(
                   &local_relpath_tokens, wc_ctx, local_abspath,
-                  token_pool, scratch_pool));
+                  result_pool, scratch_pool));
 
       /* Add tokens to existing hash. */
       for (hi = apr_hash_first(scratch_pool, local_relpath_tokens);
@@ -875,22 +882,35 @@ harvest_status_callback(void *status_baton,
 
           apr_hash_this(hi, &key, &klen, &val);
 
-          apr_hash_set(lock_tokens, key, klen, val);
+          apr_hash_set(baton->lock_tokens, key, klen, val);
         }
     }
 
-  /* Make sure we check for dangling children on additions */
-  if (state_flags && is_added && is_harvest_root && danglers)
-    {
-      /* If a node is added, it's parent must exist in the repository at the
-         time of committing */
+  /* Make sure we check for dangling children on additions 
 
+     We perform this operation on the harvest root, and on roots caused by
+     changelist filtering.
+  */
+  if (matches_changelists
+      && (is_harvest_root || baton->changelists)
+      && state_flags
+      && is_added
+      && baton->danglers)
+    {
+      /* If a node is added, its parent must exist in the repository at the
+         time of committing */
+      apr_hash_t *danglers = baton->danglers;
       svn_boolean_t parent_added;
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
 
-      SVN_ERR(svn_wc__node_is_added(&parent_added, wc_ctx, parent_abspath,
-                                    scratch_pool));
+      /* First check if parent is already in the list of commits
+         (Common case for GUI clients that provide a list of commit targets) */
+      if (look_up_committable(committables, parent_abspath, scratch_pool))
+        parent_added = FALSE; /* Skip all expensive checks */
+      else
+        SVN_ERR(svn_wc__node_is_added(&parent_added, wc_ctx, parent_abspath,
+                                      scratch_pool));
 
       if (parent_added)
         {
@@ -918,8 +938,7 @@ harvest_status_callback(void *status_baton,
         }
     }
 
-  if ((state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-      && !(state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+  if (is_deleted && !is_added)
     {
       /* Skip all descendants */
       if (status->kind == svn_node_dir)
