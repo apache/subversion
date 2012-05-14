@@ -8370,16 +8370,10 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   /* Set up the log baton. */
   log_gap_baton.merge_b = merge_b;
   log_gap_baton.children_with_mergeinfo = children_with_mergeinfo;
-  SVN_ERR(svn_client__path_relative_to_root(
-                    &(log_gap_baton.target_fspath), merge_b->ctx->wc_ctx,
-                    merge_b->target->abspath,
-                    merge_b->target->loc.repos_root_url, TRUE, NULL,
-                    result_pool, scratch_pool));
-  SVN_ERR(svn_client__path_relative_to_root(
-                    &(log_gap_baton.source_fspath), merge_b->ctx->wc_ctx,
-                    source->loc2->url,
-                    merge_b->target->loc.repos_root_url, TRUE, NULL,
-                    result_pool, scratch_pool));
+  log_gap_baton.target_fspath
+    = svn_client__pathrev_fspath(&merge_b->target->loc, result_pool);
+  log_gap_baton.source_fspath
+    = svn_client__pathrev_fspath(source->loc2, result_pool);
   log_gap_baton.merged_ranges = apr_array_make(scratch_pool, 0,
                                                sizeof(svn_revnum_t *));
   log_gap_baton.operative_ranges = apr_array_make(scratch_pool, 0,
@@ -10119,16 +10113,12 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  const char *target_repos_rel_path;
+  const char *target_repos_rel_path
+    = svn_client__pathrev_relpath(&target->loc, scratch_pool);
   const char *source_session_url;
   apr_hash_index_t *hi;
   svn_mergeinfo_catalog_t new_catalog = apr_hash_make(result_pool);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
-                                            ctx->wc_ctx, target->abspath,
-                                            NULL, FALSE, NULL,
-                                            scratch_pool, scratch_pool));
 
   *youngest_merged_rev = SVN_INVALID_REVNUM;
 
