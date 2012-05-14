@@ -65,6 +65,7 @@
 
 #include "private/svn_atomic.h"
 #include "private/svn_io_private.h"
+#include "private/svn_subr_private.h"
 
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
@@ -2389,7 +2390,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
   if (!only_check_type)
     flags |= APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  *dirents = apr_hash_make(result_pool);
+  *dirents = svn_hash__make(result_pool);
 
   SVN_ERR(svn_io_dir_open(&this_dir, path, scratch_pool));
 
