@@ -2002,7 +2002,7 @@ svn_client__get_detranslated_stream(svn_stream_t **fstream,
           /* Wrap the working copy stream with a filter to detranslate it. */
           contents = svn_subst_stream_translated(contents,
                                                  eol,
-                                                 TRUE /* repair */,
+                                                 FALSE /* repair */,
                                                  keywords,
                                                  FALSE /* expand */,
                                                  scratch_pool);
