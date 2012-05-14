@@ -479,29 +479,29 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
       /* We should check if we should really add a delete operation */
       if (check_url_func)
         {
-          svn_revnum_t rev;
-          const char *repos_relpath;
-          const char *repos_root_url;
+          svn_revnum_t parent_rev;
+          const char *parent_repos_relpath;
+          const char *parent_repos_root_url;
           const char *node_url;
 
           /* Determine from what parent we would be the deleted child */
           SVN_ERR(svn_wc__node_get_origin(
-                              NULL, &rev, &repos_relpath,
-                              &repos_root_url, NULL, NULL,
+                              NULL, &parent_rev, &parent_repos_relpath,
+                              &parent_repos_root_url, NULL, NULL,
                               wc_ctx,
                               svn_dirent_dirname(this_abspath,
                                                   scratch_pool),
                               FALSE, scratch_pool, scratch_pool));
 
           node_url = svn_path_url_add_component2(
-                        svn_path_url_add_component2(repos_root_url,
-                                                    repos_relpath,
+                        svn_path_url_add_component2(parent_repos_root_url,
+                                                    parent_repos_relpath,
                                                     scratch_pool),
                         svn_dirent_basename(this_abspath, NULL),
                         iterpool);
 
           SVN_ERR(check_url_func(check_url_baton, &kind,
-                                 node_url, rev, iterpool));
+                                 node_url, parent_rev, iterpool));
 
           if (kind == svn_node_none)
             continue; /* This node can't be deleted */
