@@ -1398,6 +1398,7 @@ def upgrade_absent(sbox):
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, None)
 
+@Issue(4183)
 @XFail()
 @Skip(svntest.main.is_ra_type_file)
 def remove_subdir_with_authz_and_tc(sbox):
