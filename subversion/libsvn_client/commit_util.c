@@ -1645,6 +1645,11 @@ do_item_commit(svn_client_commit_item3_t *item,
           SVN_ERR(svn_editor_add_file(editor, repos_relpath,
                                       sha1_checksum, contents, props,
                                       replaces_rev));
+
+          if (checksums)
+            apr_hash_set(checksums, item->path, APR_HASH_KEY_STRING,
+                         svn_checksum_dup(sha1_checksum,
+                                          apr_hash_pool_get(checksums)));
         }
       else /* May be svn_node_none when adding parent dirs for a copy. */
         {
@@ -1661,6 +1666,8 @@ do_item_commit(svn_client_commit_item3_t *item,
                                            children, props,
                                            replaces_rev));
         }
+
+      return SVN_NO_ERROR;
     }
 
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
@@ -1672,8 +1679,7 @@ do_item_commit(svn_client_commit_item3_t *item,
                               repos_relpath, replaces_rev));
     }
 
-  if ((props || contents)
-        && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+  if (props || contents)
     {
       if (item->kind == svn_node_file)
         {
