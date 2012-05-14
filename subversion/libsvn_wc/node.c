@@ -909,6 +909,10 @@ svn_wc__node_get_base(svn_revnum_t *revision,
     }
   SVN_ERR(err);
 
+  SVN_ERR_ASSERT(!revision || SVN_IS_VALID_REVNUM(*revision));
+  SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
+  SVN_ERR_ASSERT(!repos_root_url || *repos_root_url);
+  SVN_ERR_ASSERT(!repos_uuid || *repos_uuid);
   return SVN_NO_ERROR;
 }
 
