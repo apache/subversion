@@ -73,7 +73,8 @@ switch_internal(svn_revnum_t *result_rev,
 {
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *url, *target, *source_root, *switch_rev_url;
+  const char *url, *target, *source_root;
+  svn_client__pathrev_t *switch_loc;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
@@ -175,11 +176,10 @@ switch_internal(svn_revnum_t *result_rev,
     }
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                           &switch_rev_url,
-                                           switch_url, anchor_abspath,
-                                           peg_revision, revision,
-                                           ctx, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
+                                            switch_url, anchor_abspath,
+                                            peg_revision, revision,
+                                            ctx, pool));
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root, pool));
 
@@ -197,10 +197,8 @@ switch_internal(svn_revnum_t *result_rev,
      ### okay? */
   if (! ignore_ancestry)
     {
-      svn_client__pathrev_t *switch_loc, *target_base_loc, *yca;
+      svn_client__pathrev_t *target_base_loc, *yca;
 
-      SVN_ERR(svn_client__pathrev_create_with_session(
-                &switch_loc, ra_session, revnum, switch_rev_url, pool));
       SVN_ERR(svn_client__wc_node_get_base(&target_base_loc, local_abspath,
                                            ctx, pool, pool));
 
@@ -230,11 +228,11 @@ switch_internal(svn_revnum_t *result_rev,
 
   dfb.ra_session = ra_session;
   SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
-  dfb.target_revision = revnum;
+  dfb.target_revision = switch_loc->rev;
 
   SVN_ERR(svn_wc__get_switch_editor(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, switch_rev_url, use_commit_times,
+                                    target, switch_loc->url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
@@ -248,10 +246,11 @@ switch_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
+  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton,
+                            switch_loc->rev,
                             target,
                             depth_is_sticky ? depth : svn_depth_unknown,
-                            switch_rev_url,
+                            switch_loc->url,
                             switch_editor, switch_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
