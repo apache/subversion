@@ -298,6 +298,7 @@ def import_avoid_empty_revision(sbox):
 #----------------------------------------------------------------------
 
 # test for issue 2433: "import" does not handle eol-style correctly
+# and for normalising files with mixed line-endings upon import (r1205193)
 @Issue(2433)
 def import_eol_style(sbox):
   "import should honor the eol-style property"
@@ -315,6 +316,7 @@ enable-auto-props = yes
 
 [auto-props]
 *.dsp = svn:eol-style=CRLF
+*.txt = svn:eol-style=native
 '''
   tmp_dir = os.path.abspath(svntest.main.temp_dir)
   config_dir = os.path.join(tmp_dir, 'autoprops_config')
@@ -368,6 +370,26 @@ enable-auto-props = yes
                                      'diff',
                                      file_path,
                                      '--config-dir', config_dir)
+
+  # create a file with inconsistent EOLs and eol-style=native, and import it
+  file_name = "test.txt"
+  file_path = file_name
+  imp_dir_path = 'dir2'
+  imp_file_path = os.path.join(imp_dir_path, file_name)
+
+  os.mkdir(imp_dir_path, 0755)
+  svntest.main.file_append_binary(imp_file_path,
+                                  "This is file test.txt.\n" + \
+                                  "The second line.\r\n" + \
+                                  "The third line.\r")
+
+  # The import should succeed and not error out
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     imp_dir_path,
+                                     sbox.repo_url,
+                                     '--config-dir', config_dir)
+
 
 #----------------------------------------------------------------------
 @Issue(3983)
