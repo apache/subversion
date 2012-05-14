@@ -477,16 +477,16 @@ switch_file_external(const char *local_abspath,
 
     /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
-                            target, svn_depth_unknown, url,
-                            switch_editor, switch_baton, subpool));
+    SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
+                              target, svn_depth_unknown, url,
+                              switch_editor, switch_baton, subpool));
 
-  SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
-                                      reporter, report_baton,
-                                      TRUE,  use_commit_times,
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      ctx->notify_func2, ctx->notify_baton2,
-                                      subpool));
+    SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
+                                        reporter, report_baton,
+                                        TRUE,  use_commit_times,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        ctx->notify_func2, ctx->notify_baton2,
+                                        subpool));
 
     if (ctx->notify_func2)
       {
