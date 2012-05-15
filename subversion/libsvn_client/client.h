@@ -609,6 +609,24 @@ svn_client__get_diff_summarize_editor(const char *target,
                                       void **edit_baton,
                                       apr_pool_t *pool);
 
+/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
+   report a diff summary, i.e. only providing information about the changed
+   items without the text deltas.
+
+   TARGET is the target path, relative to the anchor, of the diff.
+
+   SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
+   created callbacks for each changed item.
+*/
+svn_error_t *
+svn_client__get_diff_summarize_callbacks(
+                        svn_wc_diff_callbacks4_t **callbacks,
+                        void **callback_baton,
+                        const char *target,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Copy Stuff ***/

@@ -2488,6 +2488,27 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                                    revision1, revision2,
                                    peg_revision, pool));
 
+  if (kind1 == svn_node_none || kind2 == svn_node_none)
+    {
+      svn_wc_diff_callbacks4_t *callbacks;
+      void *callback_baton;
+
+      /* One side of the diff does not exist.
+       * Walk the tree that does exist, showing a series of additions
+       * or deletions. */
+      SVN_ERR(svn_client__get_diff_summarize_callbacks(
+                &callbacks, &callback_baton, target1,
+                summarize_func, summarize_baton, pool));
+      SVN_ERR(diff_repos_repos_added_or_deleted_target(target1, target2,
+                                                       rev1, rev2,
+                                                       kind1, kind2,
+                                                       callbacks,
+                                                       callback_baton,
+                                                       ra_session,
+                                                       pool));
+      return SVN_NO_ERROR;
+    }
+
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
   SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
