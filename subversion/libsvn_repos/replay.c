@@ -698,10 +698,15 @@ path_driver_cb_func(void **dir_baton,
         }
     }
 
-  /* Handle property modifications. */
   if (! do_delete || do_add)
     {
-      if (change->prop_mod)
+      /* Handle property modifications.
+
+         Note that this needs to happen in the "copy from a file or
+         directory we aren't allowed to see" case since otherwise the
+         caller will have no way to actually get those properties
+         which they are apparently allowed to see. */
+      if (change->prop_mod || (change->copyfrom_path && ! copyfrom_path))
         {
           apr_array_header_t *prop_diffs;
           apr_hash_t *old_props;
