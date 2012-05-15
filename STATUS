@@ -50,6 +50,14 @@ Candidate changes:
    Votes:
      +1: gstein, rhuijben
 
+ * r1338810
+   Fix issue #4184 ("partial svnsync drops properties when converting
+   copies to adds").
+   Justification:
+     Syncs that don't aren't synced at all.
+   Votes:
+     +1: cmpilato
+
 
 Veto-blocked changes:
 =====================
