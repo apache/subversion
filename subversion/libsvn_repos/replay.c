@@ -415,12 +415,7 @@ was_readable(svn_boolean_t *readable,
    revision root, fspath, and revnum of the copyfrom of CHANGE, which
    corresponds to PATH under ROOT.  If the copyfrom info is valid
    (i.e., is not (NULL, SVN_INVALID_REVNUM)), then initialize SRC_READABLE
-   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided.
-
-   NOTE: If the copyfrom information in CHANGE is marked as unknown
-   (meaning, its ->copyfrom_rev and ->copyfrom_path cannot be
-   trusted), this function will also update those members of the
-   CHANGE structure to carry accurate copyfrom information.  */
+   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided. */
 static svn_error_t *
 fill_copyfrom(svn_fs_root_t **copyfrom_root,
               const char **copyfrom_path,
@@ -480,7 +475,6 @@ path_driver_cb_func(void **dir_baton,
   svn_fs_root_t *root = cb->root;
   svn_fs_path_change2_t *change;
   svn_boolean_t do_add = FALSE, do_delete = FALSE;
-  svn_boolean_t do_prop_mod, do_text_mod;
   void *file_baton = NULL;
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
@@ -511,7 +505,6 @@ path_driver_cb_func(void **dir_baton,
          handled and we should simply ignore it. */
       return SVN_NO_ERROR;
     }
-  
   switch (change->change_kind)
     {
     case svn_fs_path_change_add:
@@ -532,9 +525,6 @@ path_driver_cb_func(void **dir_baton,
       /* do nothing */
       break;
     }
-
-  do_prop_mod = change->prop_mod;
-  do_text_mod = change->text_mod;
 
   /* Handle any deletions. */
   if (do_delete)
@@ -578,8 +568,7 @@ path_driver_cb_func(void **dir_baton,
       /* If we have a copyfrom path, and we can't read it or we're just
          ignoring it, or the copyfrom rev is prior to the low water mark
          then we just null them out and do a raw add with no history at
-         all.  Note that an add implies forced tranmission of file
-         contents and properties in full.  */
+         all. */
       if (copyfrom_path
           && ((! src_readable)
               || (! is_within_base_path(copyfrom_path + 1, base_path,
@@ -588,9 +577,6 @@ path_driver_cb_func(void **dir_baton,
         {
           copyfrom_path = NULL;
           copyfrom_rev = SVN_INVALID_REVNUM;
-          do_prop_mod = TRUE;
-          if (change->node_kind == svn_node_file)
-            do_text_mod = TRUE;
         }
 
       /* Do the right thing based on the path KIND. */
@@ -715,7 +701,7 @@ path_driver_cb_func(void **dir_baton,
   /* Handle property modifications. */
   if (! do_delete || do_add)
     {
-      if (do_prop_mod)
+      if (change->prop_mod)
         {
           apr_array_header_t *prop_diffs;
           apr_hash_t *old_props;
@@ -751,7 +737,8 @@ path_driver_cb_func(void **dir_baton,
          aren't allowed to see" case since otherwise the caller will
          have no way to actually get the new file's contents, which
          they are apparently allowed to see. */
-      if (change->node_kind == svn_node_file && do_text_mod)
+      if (change->node_kind == svn_node_file
+          && (change->text_mod || (change->copyfrom_path && ! copyfrom_path)))
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
