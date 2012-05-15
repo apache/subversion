@@ -2154,7 +2154,7 @@ def log_diff_moved(sbox):
   mu_at_1 = sbox.repo_url + '/A/mu@1'
   mu3_at_3 = sbox.repo_url + '/A/mu3@3'
 
-  r1diff = [make_diff_header('A/mu', 'revision 0', 'revision 1')
+  r1diff = [make_diff_header('mu', 'revision 0', 'revision 1')
             + ["@@ -0,0 +1 @@\n",
                "+This is the file 'mu'.\n"]]
 
