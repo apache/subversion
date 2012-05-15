@@ -3032,7 +3032,7 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
        * Walk the tree that does exist, showing a series of additions
        * or deletions. */
       SVN_ERR(svn_client__get_diff_summarize_callbacks(
-                &callbacks, &callback_baton, "",
+                &callbacks, &callback_baton, target1,
                 summarize_func, summarize_baton, pool));
       SVN_ERR(diff_repos_repos_added_or_deleted_target(target1, target2,
                                                        rev1, rev2,
