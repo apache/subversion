@@ -3756,6 +3756,9 @@ def diff_deleted_url(sbox):
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'psi'.\n",
                     ]
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-c2',
                                      sbox.repo_url + '/A/D/H')
