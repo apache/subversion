@@ -3878,6 +3878,32 @@ def diff_two_working_copies(sbox):
                                      'diff', '--old', wc_dir_old,
                                      '--new', wc_dir)
 
+def diff_deleted_url(sbox):
+  "diff -cN of URL deleted in rN"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # remove A/D/H in r2
+  sbox.simple_rm("A/D/H")
+  sbox.simple_commit()
+
+  # A diff of r2 with target A/D/H should show the removed children
+  expected_output = make_diff_header("chi", "revision 1", "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'chi'.\n",
+                    ] + make_diff_header("omega", "revision 1",
+                                         "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'omega'.\n",
+                    ] + make_diff_header("psi", "revision 1",
+                                         "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'psi'.\n",
+                    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-c2',
+                                     sbox.repo_url + '/A/D/H')
+
 ########################################################################
 #Run the tests
 
@@ -3946,6 +3972,7 @@ test_list = [ None,
               no_spurious_conflict,
               diff_correct_wc_base_revnum,
               diff_two_working_copies,
+              diff_deleted_url,
               ]
 
 if __name__ == '__main__':
