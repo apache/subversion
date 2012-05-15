@@ -1297,7 +1297,6 @@ svn_client_commit6(const apr_array_header_t *targets,
   svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
-  svn_boolean_t commit_in_progress = FALSE;
   svn_commit_info_t *commit_info = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *current_abspath;
@@ -1638,9 +1637,6 @@ svn_client_commit6(const apr_array_header_t *targets,
   if (cmt_err)
     goto cleanup;
 
-  /* Make a note that we have a commit-in-progress. */
-  commit_in_progress = TRUE;
-
   /* Perform the commit. */
   cmt_err = svn_error_trace(
               svn_client__do_commit(repos_root, commit_items, editor,
@@ -1652,9 +1648,6 @@ svn_client_commit6(const apr_array_header_t *targets,
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
-
-      /* Make a note that our commit is finished. */
-      commit_in_progress = FALSE;
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -1688,8 +1681,6 @@ svn_client_commit6(const apr_array_header_t *targets,
  cleanup:
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */
-  if (commit_in_progress)
-    cmt_err = svn_error_compose_create(cmt_err, svn_editor_abort(editor));
 
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in

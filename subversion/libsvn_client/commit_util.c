@@ -1722,10 +1722,11 @@ do_item_commit_wrap_error(svn_client_commit_item3_t *item,
     {
       const char *repos_relpath = svn_uri_skip_ancestor(repos_root, item->url,
                                                         scratch_pool);
-
-      return svn_error_trace(fixup_commit_error(item->path, repos_root,
+      return svn_error_compose_create(
+                             fixup_commit_error(item->path, repos_root,
                                                 repos_relpath, item->kind,
-                                                err, ctx, scratch_pool));
+                                                err, ctx, scratch_pool),
+                             svn_editor_abort(editor));
     }
   else
     return SVN_NO_ERROR;
