@@ -5279,8 +5279,8 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
    and set *PROPS to a new hash of its properties.
 
    RA_SESSION is a session open to the correct repository, which will be
-   temporarily reparented to URL which is the URL of the file itself,
-   and REV is the revision to get.
+   temporarily reparented to the URL of the file itself.  LOCATION is the
+   repository location of the file.
 
    The new temporary file will be created as a sibling of WC_TARGET.
    WC_TARGET should be the local path to the working copy of the file, but
@@ -5296,8 +5296,7 @@ static svn_error_t *
 single_file_merge_get_file(const char **filename,
                            apr_hash_t **props,
                            svn_ra_session_t *ra_session,
-                           const char *url,
-                           svn_revnum_t rev,
+                           const svn_client__pathrev_t *location,
                            const char *wc_target,
                            apr_pool_t *pool)
 {
@@ -5308,9 +5307,9 @@ single_file_merge_get_file(const char **filename,
                                  svn_dirent_dirname(wc_target, pool),
                                  svn_io_file_del_none, pool, pool));
 
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, ra_session, url,
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, ra_session, location->url,
                                             pool));
-  SVN_ERR(svn_ra_get_file(ra_session, "", rev,
+  SVN_ERR(svn_ra_get_file(ra_session, "", location->rev,
                           stream, NULL, props, pool));
   SVN_ERR(svn_ra_reparent(ra_session, old_sess_url, pool));
 
@@ -6868,13 +6867,11 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           real_source = subrange_source(source, r->start, r->end, iterpool);
           SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1,
                                              merge_b->ra_session1,
-                                             real_source->loc1->url,
-                                             real_source->loc1->rev,
+                                             real_source->loc1,
                                              target_abspath, iterpool));
           SVN_ERR(single_file_merge_get_file(&tmpfile2, &props2,
                                              merge_b->ra_session2,
-                                             real_source->loc2->url,
-                                             real_source->loc2->rev,
+                                             real_source->loc2,
                                              target_abspath, iterpool));
 
           /* Discover any svn:mime-type values in the proplists */
