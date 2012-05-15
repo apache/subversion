@@ -278,8 +278,11 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
       /* Pick up the paths from the context. These have the same lifetime
          as this state. That is long enough for us to pass the paths to
          the receiver callback.  */
-      log_entry->changed_paths = log_ctx->collect_paths;
-      log_entry->changed_paths2 = log_ctx->collect_paths;
+      if (apr_hash_count(log_ctx->collect_paths) > 0)
+        {
+          log_entry->changed_paths = log_ctx->collect_paths;
+          log_entry->changed_paths2 = log_ctx->collect_paths;
+        }
 
       /* ... and same story for the collected revprops.  */
       log_entry->revprops = log_ctx->collect_revprops;
