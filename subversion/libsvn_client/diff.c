@@ -1520,7 +1520,8 @@ resolve_pegged_diff_target_url(const char **resolved_url,
                                     ctx, scratch_pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+      if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES ||
+          err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           svn_error_clear(err);
           *resolved_url = NULL;
