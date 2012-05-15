@@ -4425,12 +4425,11 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
-      const char *child_repos_path;
-      svn_client__pathrev_t loc1 = *source->loc1;
-      svn_client__pathrev_t loc2 = *source->loc2;
-      merge_source_t child_source = { &loc1, &loc2 };
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
+      const char *child_repos_path
+        = svn_dirent_skip_ancestor(merge_b->target->abspath, child->abspath);
+      merge_source_t child_source;
       svn_client__merge_path_t *parent = NULL;
       svn_boolean_t child_inherits_implicit;
 
@@ -4441,15 +4440,11 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       if (child->absent)
         continue;
 
-      svn_pool_clear(iterpool);
-
-      child_repos_path = svn_dirent_skip_ancestor(merge_b->target->abspath,
-                                                  child->abspath);
       SVN_ERR_ASSERT(child_repos_path != NULL);
-      loc1.url = svn_path_url_add_component2(
-                                source->loc1->url, child_repos_path, iterpool);
-      loc2.url = svn_path_url_add_component2(
-                                source->loc2->url, child_repos_path, iterpool);
+      child_source.loc1 = svn_client__pathrev_join_relpath(
+                            source->loc1, child_repos_path, iterpool);
+      child_source.loc2 = svn_client__pathrev_join_relpath(
+                            source->loc2, child_repos_path, iterpool);
 
       /* Get the explicit/inherited mergeinfo for CHILD.  If CHILD is the
          merge target then also get its implicit mergeinfo.  Otherwise defer
