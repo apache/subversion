@@ -739,6 +739,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
          transaction (and, optionally, a corresponding activity). */
       svn_ra_neon__request_t *req;
       const char *header_val;
+      svn_error_t *err;
 
       SVN_ERR(svn_ra_neon__request_create(&req, cc->ras, "POST",
                                           cc->ras->me_resource, dir_pool));
@@ -751,33 +752,39 @@ static svn_error_t * commit_open_root(void *edit_baton,
                             svn_uuid_generate(dir_pool));
 #endif
 
-      SVN_ERR(svn_ra_neon__request_dispatch(NULL, req, NULL, "( create-txn )",
-                                            201, 0, dir_pool));
-
-      /* Check the response headers for either the virtual transaction
-         details, or the real transaction details.  We need to have
-         one or the other of those!  */
-      if ((header_val = ne_get_response_header(req->ne_req,
-                                               SVN_DAV_VTXN_NAME_HEADER)))
+      err = svn_ra_neon__request_dispatch(NULL, req, NULL, "( create-txn )",
+                                          201, 0, dir_pool);
+      if (!err)
         {
-          cc->txn_url = svn_path_url_add_component2(cc->ras->vtxn_stub,
-                                                    header_val, cc->pool);
-          cc->txn_root_url
-            = svn_path_url_add_component2(cc->ras->vtxn_root_stub,
-                                          header_val, cc->pool);
+          /* Check the response headers for either the virtual transaction
+             details, or the real transaction details.  We need to have
+             one or the other of those!  */
+          if ((header_val = ne_get_response_header(req->ne_req,
+                                                   SVN_DAV_VTXN_NAME_HEADER)))
+            {
+              cc->txn_url = svn_path_url_add_component2(cc->ras->vtxn_stub,
+                                                        header_val, cc->pool);
+              cc->txn_root_url
+                = svn_path_url_add_component2(cc->ras->vtxn_root_stub,
+                                              header_val, cc->pool);
+            }
+          else if ((header_val
+                    = ne_get_response_header(req->ne_req,
+                                             SVN_DAV_TXN_NAME_HEADER)))
+            {
+              cc->txn_url = svn_path_url_add_component2(cc->ras->txn_stub,
+                                                        header_val, cc->pool);
+              cc->txn_root_url
+                = svn_path_url_add_component2(cc->ras->txn_root_stub,
+                                              header_val, cc->pool);
+            }
+          else
+            err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    _("POST request did not return transaction "
+                                      "information"));
         }
-      else if ((header_val = ne_get_response_header(req->ne_req,
-                                                    SVN_DAV_TXN_NAME_HEADER)))
-        {
-          cc->txn_url = svn_path_url_add_component2(cc->ras->txn_stub,
-                                                    header_val, cc->pool);
-          cc->txn_root_url = svn_path_url_add_component2(cc->ras->txn_root_stub,
-                                                         header_val, cc->pool);
-        }
-      else
-        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                 _("POST request did not return transaction "
-                                   "information"));
+      svn_ra_neon__request_destroy(req);
+      SVN_ERR(err);
 
       root->rsrc = NULL;
       root->txn_root_url = svn_path_url_add_component2(cc->txn_root_url,

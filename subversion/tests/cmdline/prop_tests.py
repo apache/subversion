@@ -893,8 +893,7 @@ def prop_value_conversions(sbox):
   svntest.actions.set_prop('svn:executable', '*', lambda_path)
   for pval in ('      ', '', 'no', 'off', 'false'):
     svntest.actions.set_prop('svn:executable', pval, mu_path,
-                             ["svn: warning: To turn off the svn:executable property, use 'svn propdel';\n",
-                              "setting the property to '" + pval + "' will not turn it off.\n"])
+                             "svn: warning: W125005.*use 'svn propdel'")
 
   # Anything else should be untouched
   svntest.actions.set_prop('svn:some-prop', 'bar', lambda_path)

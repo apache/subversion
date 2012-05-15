@@ -2341,7 +2341,9 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_changelists_get_without_block
     assert_changelists do |ctx, changelist_name|
-      ctx.changelists(changelist_name, @wc_path)
+      changelists = ctx.changelists(changelist_name, @wc_path)
+      changelists.each_value { |v| v.sort! }
+      changelists
     end
   end
 
@@ -2351,6 +2353,7 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.changelists(changelist_name, @wc_path) do |path,cl_name|
         changelists[cl_name] << path
       end
+      changelists.each_value { |v| v.sort! }
       changelists
     end
   end

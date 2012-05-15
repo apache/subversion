@@ -10,39 +10,10 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.7.5:
+Status of 1.7.6:
 
 Candidate changes:
 ==================
-
- * r1164929, r1200277, r1243694, r1243840, r1243920, r1244466, r1244551, r1295372
-   Workaround for issue #4087, "bogus repos_id in wc.db for file externals"
-   Justification:
-     Regression from 1.6. Some repositories with file externals cannot be
-     checked out with 1.7. Users complained.
-     See http://svn.haxx.se/users/archive-2011-12/0299.shtml
-   Branch:
-     ^/subversion/branches/1.7.x-issue4087
-   Notes:
-     r1164929 and r1200277 were merged to simplify conflict resolution
-     r1243694 implements the workaround
-     r1243840 is a cosmetic follow-up treak
-     r1243920 was merged for conflict resolution for r1244466
-     r1244466 eliminates an unneccesary RA round-trip from r1243694
-     r1244551 uses a better API to query the local repos root and uuid
-     r1295372 improves test coverage
-   Votes:
-     +1: stsp, neels
-
- * r1291797, r1291810
-   On Windows detect where perl is installed and add this information to the
-   include and lib directory settings of the swig-perl projects.
-   Justification:
-     Allows building swig-perl without copying perl libraries manually.
-     Somehow required on the Windows buildbot since the last library version
-     bump.
-   Votes:
-     +1: rhuijben
 
  * r1293945, r1293972, r1293976, r1293998, r1294136, r1294236;
    r1294134, r1294147, r1294586
@@ -64,91 +35,24 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * r1295007
-   Include svnrdump in the Windows build.
-   Justification:
-     I do not know for sure, but I assume that either make-dist.py or
-     vc6-build.bat.in is actually used by some people --- and if I'm wrong,
-     this would be harmless.
-   Votes:
-     +1: danielsh
-
- * r1210913, r1211048
-   Fix issue 4073, assert on svn:externals path with drive letter on Windows.
-   Justification:
-     Avoid client asserting.
-   Notes:
-     Merge with '--accept mc' to resolve r1210913 conflict.
-   Votes:
-     +1: philip
-     +1: stsp (cannot test this, but the trunk windows buildsbots are
-               happy and the diff makes sense)
-
- * r1296251, r1296303, r1297522
-   Resolve issue 4136, "Deep commit followed by --depth immediates update
-   triggers checksum failure"
-   Justification:
-     User reported regression since 1.7.0
-   Votes:
-     +1: stsp, rhuijben
-
- * r1298343
-   Return an error when attempting to MERGE a resource that does not exist.
-   Justification:
-     Avoid asserting.
-   Votes:
-     +1: philip, stsp
-
- * r1306111
-   Handle NULL dates in libsvn_ra_svn.
-   Justification:
-     Avoids segfault.
-   Branch:
-     1.7.x-r1306111
-   Votes:
-     +1: danielsh
-
- * r1306334
-   Optimize failure of opening wc.db files.
-   Justification:
-     Takes far too much CPU when performing status on not-working copies.
-     Reported as raw performance data on AnkhSVN. Probably noticable on the
-     buildbot total time too.
-   Votes:
-     +1: rhuijben
-
  * r1307177
    Move mod_dontdothat to install-tools.
    Justification:
      Undo compatibility break of 'make install' in 1.7.3.
    Votes:
-     +1: danielsh
+     +1: danielsh, gstein
 
- * r1307184
-   Change mod_dontdothat install target to a subdir of $(APACHE_LIBEXECDIR).
+ * r1337441
+   Fix XML namespace expansion in ra_serf
    Justification:
-     Consistency with $(bindir)/svn-tools/.
-   Notes:
-     Depends on r1307177.
+     Avoids segfaults caused by a malicious server sending unknown prefixes
+     to ra_serf. (and corrects the semantics for a bonus win)
    Votes:
-     +1: danielsh
+     +1: gstein, rhuijben
+
 
 Veto-blocked changes:
 =====================
-
- * r1291594
-   Support httpd-2.4 in davautocheck.
-   Justification:
-     Allow testing against current stable httpd.
-   Votes:
-     -1: danielsh (hangs with bdb)
-
- * r1232267
-   Allow building mod_dav_svn against httpd-2.4.
-   Justification:
-     Support current stable httpd.
-   Votes:
-     -1: danielsh (davautocheck hangs with bdb)
 
 Approved changes:
 =================

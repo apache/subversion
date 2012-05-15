@@ -624,19 +624,20 @@ void dav_svn__log_err(request_rec *r,
     /* Log the errors */
     /* ### should have a directive to log the first or all */
     for (errscan = err; errscan != NULL; errscan = errscan->prev) {
+        apr_status_t status;
+
         if (errscan->desc == NULL)
             continue;
 
-        if (errscan->save_errno != 0) {
-            errno = errscan->save_errno;
-            ap_log_rerror(APLOG_MARK, level, errno, r, "%s  [%d, #%d]",
-                          errscan->desc, errscan->status, errscan->error_id);
-        }
-        else {
-            ap_log_rerror(APLOG_MARK, level, 0, r,
-                          "%s  [%d, #%d]",
-                          errscan->desc, errscan->status, errscan->error_id);
-        }
+#if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
+        status = errscan->aprerr;
+#else
+        status = errscan->save_errno;
+#endif
+
+        ap_log_rerror(APLOG_MARK, level, status, r,
+                      "%s  [%d, #%d]",
+                      errscan->desc, errscan->status, errscan->error_id);
     }
 }
 

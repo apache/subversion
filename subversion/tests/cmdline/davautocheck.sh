@@ -71,6 +71,9 @@
 # To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
 # appropriate value in the environment.
 #
+# To load an MPM module for Apache 2.4 use APACHE_MPM=event in the
+# environment.
+#
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.
 
@@ -255,6 +258,10 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
+if [ ${APACHE_MPM:+set} ]; then
+    LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
+      || fail "MPM module not found"
+fi
 
 HTTPD_PORT=$(($RANDOM+1024))
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
@@ -278,6 +285,7 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
+$LOAD_MOD_MPM
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
@@ -292,9 +300,22 @@ $LOAD_MOD_AUTHZ_USER
 $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 
+__EOF__
+
+if "$HTTPD" -v | grep '/2\.[012]' >/dev/null; then
+  cat >> "$HTTPD_CFG" <<__EOF__
 LockFile            lock
 User                $(id -un)
 Group               $(id -gn)
+__EOF__
+else
+  cat >> "$HTTPD_CFG" <<__EOF__
+# TODO: maybe uncomment this for prefork,worker MPMs only?
+# Mutex file:lock mpm-accept
+__EOF__
+fi
+
+cat >> "$HTTPD_CFG" <<__EOF__
 Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
