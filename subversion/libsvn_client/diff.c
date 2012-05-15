@@ -1859,21 +1859,16 @@ diff_repos_repos_added_or_deleted_file(const char *target,
                                        svn_ra_session_t *ra_session,
                                        apr_pool_t *scratch_pool)
 {
-  apr_file_t *file;
   const char *file_abspath;
   svn_stream_t *content;
   apr_hash_t *prop_hash;
 
-  /* ### There is no way to flush content to disk without access to the bare
-   * ### file handle so we re-implement svn_stream_open_unique() here.
-   * ### Do we need something like svn_stream_flush()? */
-  SVN_ERR(svn_io_open_unique_file3(&file, &file_abspath, NULL,
-                                   svn_io_file_del_on_close,
-                                   scratch_pool, scratch_pool));
-  content = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&content, &file_abspath, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_get_file(ra_session, target, peg_revision, content, NULL,
                           &prop_hash, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+  SVN_ERR(svn_stream_close(content));
 
   if (show_deletion)
     {
@@ -1899,8 +1894,6 @@ diff_repos_repos_added_or_deleted_file(const char *target,
                                     NULL, callback_baton, scratch_pool));
     }
     
-  SVN_ERR(svn_stream_close(content));
-
   return SVN_NO_ERROR;
 }
 
@@ -1986,7 +1979,7 @@ diff_repos_repos_added_or_deleted_dir(const char *target,
                                                        callbacks,
                                                        callback_baton,
                                                        ra_session,
-                                                       scratch_pool));
+                                                       iterpool));
     }
   svn_pool_destroy(iterpool);
 
