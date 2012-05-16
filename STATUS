@@ -58,7 +58,24 @@ Candidate changes:
    Votes:
      +1: cmpilato, rhuijben
 
-
+ * r1306275, and too many other revisions to list here
+   New diff support code for added/deleted files and directories.
+   Fixes issue #4153, "svn log --diff" on moved file gives "not found",
+   and other problems.
+   Justification:
+     The current code (introduced in 1.7.x in the r1207351 backport commit)
+     produces inconsistent paths in diff output (see
+     http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
+     with the paradigm that the target of an editor drive my never have more
+     than one path component (which according to cmpilato is an API violation).
+   Notes:
+     Please read the branch and related trunk log messages for detailed notes
+     about these changes.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4153  
+   Votes:
+     +1: stsp
+   
 Veto-blocked changes:
 =====================
 
