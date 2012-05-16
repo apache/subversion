@@ -4014,6 +4014,50 @@ def diff_arbitrary_files_and_dirs(sbox):
                                      'diff', '--old', sbox.ospath('A/B/E'),
                                      '--new', sbox.ospath('A/D'))
 
+def diff_properties_only(sbox):
+  "diff --properties-only"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = \
+    make_diff_header("iota", "revision 1", "revision 2") + \
+    make_diff_prop_header("iota") + \
+    make_diff_prop_added("svn:eol-style", "native")
+
+  expected_reverse_output = \
+    make_diff_header("iota", "revision 2", "revision 1") + \
+    make_diff_prop_header("iota") + \
+    make_diff_prop_deleted("svn:eol-style", "native")
+
+  expected_rev1_output = \
+    make_diff_header("iota", "revision 1", "working copy") + \
+    make_diff_prop_header("iota") + \
+    make_diff_prop_added("svn:eol-style", "native")
+
+  # Make a property change and a content chang to 'iota'
+  # Only the property change should be displayed by diff --properties-only
+  sbox.simple_propset('svn:eol-style', 'native', 'iota')
+  svntest.main.file_append(sbox.ospath('iota'), 'new text\n')
+
+  sbox.simple_commit() # r2
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--properties-only', '-r', '1:2',
+                                     sbox.repo_url + '/iota')
+
+  svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
+                                     'diff', '--properties-only', '-r', '2:1',
+                                     sbox.repo_url + '/iota')
+
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, expected_rev1_output, [],
+                                     'diff', '--properties-only', '-r', '1',
+                                     'iota')
+
+  svntest.actions.run_and_verify_svn(None, expected_rev1_output, [],
+                                     'diff', '--properties-only',
+                                     '-r', 'PREV', 'iota')
 
 ########################################################################
 #Run the tests
@@ -4085,6 +4129,7 @@ test_list = [ None,
               diff_two_working_copies,
               diff_deleted_url,
               diff_arbitrary_files_and_dirs,
+              diff_properties_only,
               ]
 
 if __name__ == '__main__':
