@@ -1173,9 +1173,8 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
                    svn_revnum_t revision,
                    svn_revnum_t low_water_mark,
                    svn_boolean_t send_deltas,
-                   const svn_delta_editor_t *editor,
-                   void *edit_baton,
-                   apr_pool_t *pool)
+                   svn_editor_t *editor,
+                   apr_pool_t *scratch_pool)
 {
   SVN__NOT_IMPLEMENTED();
 }
@@ -1242,7 +1241,7 @@ svn_ra__replay_range_ev2(svn_ra_session_t *session,
                          svn_ra__replay_revstart_ev2_callback_t revstart_func,
                          svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
                          void *replay_baton,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   SVN__NOT_IMPLEMENTED();
 }
