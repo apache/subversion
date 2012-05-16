@@ -242,6 +242,46 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
                        apr_pool_t *scratch_pool);
 
 
+/* Similar to #svn_ra_replay_revstart_callback_t, but with an Ev2 editor. */
+typedef svn_error_t *(*svn_ra__replay_revstart_ev2_callback_t)(
+  svn_revnum_t revision,
+  void *replay_baton,
+  svn_editor_t **editor,
+  apr_hash_t *rev_props,
+  apr_pool_t *pool);
+
+/* Similar to #svn_ra_replay_revfinish_callback_t, but with an Ev2 editor. */
+typedef svn_error_t *(*svn_ra__replay_revfinish_ev2_callback_t)(
+  svn_revnum_t revision,
+  void *replay_baton,
+  svn_editor_t *editor,
+  apr_hash_t *rev_props,
+  apr_pool_t *pool);
+
+/* Similar to svn_ra_replay_range(), but uses Ev2 versions of the callback
+   functions. */
+svn_error_t *
+svn_ra__replay_range_ev2(svn_ra_session_t *session,
+                         svn_revnum_t start_revision,
+                         svn_revnum_t end_revision,
+                         svn_revnum_t low_water_mark,
+                         svn_boolean_t send_deltas,
+                         svn_ra__replay_revstart_ev2_callback_t revstart_func,
+                         svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
+                         void *replay_baton,
+                         apr_pool_t *pool);
+
+/* Similar to svn_ra_replay(), but with an Ev2 editor. */
+svn_error_t *
+svn_ra__replay_ev2(svn_ra_session_t *session,
+                   svn_revnum_t revision,
+                   svn_revnum_t low_water_mark,
+                   svn_boolean_t send_deltas,
+                   const svn_delta_editor_t *editor,
+                   void *edit_baton,
+                   apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
