@@ -3953,6 +3953,68 @@ def diff_deleted_url(sbox):
                                      'diff', '-c2',
                                      sbox.repo_url + '/A/D/H')
 
+def diff_arbitrary_files_and_dirs(sbox):
+  "diff arbitrary files and dirs"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # diff iota with A/mu
+  expected_output = make_diff_header("mu", "working copy", "working copy",
+                                     "iota", "A/mu") + [
+                      "@@ -1 +1 @@\n",
+                      "-This is the file 'iota'.\n",
+                      "+This is the file 'mu'.\n"
+                    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', sbox.ospath('iota'),
+                                     '--new', sbox.ospath('A/mu'))
+
+  # diff A/B/E with A/D
+  expected_output = make_diff_header("G/pi", "working copy", "working copy",
+                                     "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'pi'.\n"
+                    ] + make_diff_header("G/rho", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'rho'.\n"
+                    ] + make_diff_header("G/tau", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'tau'.\n"
+                    ] + make_diff_header("H/chi", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'chi'.\n"
+                    ] + make_diff_header("H/omega", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'omega'.\n"
+                    ] + make_diff_header("H/psi", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'psi'.\n"
+                    ] + make_diff_header("alpha", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'alpha'.\n"
+                    ] + make_diff_header("beta", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'beta'.\n"
+                    ] + make_diff_header("gamma", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'gamma'.\n"
+                    ]
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', sbox.ospath('A/B/E'),
+                                     '--new', sbox.ospath('A/D'))
+
+
 ########################################################################
 #Run the tests
 
@@ -4022,6 +4084,7 @@ test_list = [ None,
               diff_correct_wc_base_revnum,
               diff_two_working_copies,
               diff_deleted_url,
+              diff_arbitrary_files_and_dirs,
               ]
 
 if __name__ == '__main__':
