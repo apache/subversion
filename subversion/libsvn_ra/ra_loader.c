@@ -1169,6 +1169,18 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
 }
 
 svn_error_t *
+svn_ra__replay_ev2(svn_ra_session_t *session,
+                   svn_revnum_t revision,
+                   svn_revnum_t low_water_mark,
+                   svn_boolean_t send_deltas,
+                   const svn_delta_editor_t *editor,
+                   void *edit_baton,
+                   apr_pool_t *pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
+svn_error_t *
 svn_ra_replay_range(svn_ra_session_t *session,
                     svn_revnum_t start_revision,
                     svn_revnum_t end_revision,
@@ -1219,6 +1231,20 @@ svn_ra_replay_range(svn_ra_session_t *session,
     }
 
   return err;
+}
+
+svn_error_t *
+svn_ra__replay_range_ev2(svn_ra_session_t *session,
+                         svn_revnum_t start_revision,
+                         svn_revnum_t end_revision,
+                         svn_revnum_t low_water_mark,
+                         svn_boolean_t send_deltas,
+                         svn_ra__replay_revstart_ev2_callback_t revstart_func,
+                         svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
+                         void *replay_baton,
+                         apr_pool_t *pool)
+{
+  SVN__NOT_IMPLEMENTED();
 }
 
 svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
