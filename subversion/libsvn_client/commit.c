@@ -810,14 +810,12 @@ svn_client_import5(const char *path,
                                            log_msg, ctx, scratch_pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       NULL, scratch_pool)));
-  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
-                                    commit_revprops, commit_callback,
-                                    commit_baton, NULL, TRUE,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra__get_commit_ev2(&editor, ra_session,
+                                 commit_revprops, commit_callback,
+                                 commit_baton, NULL, TRUE,
+                                 NULL, NULL, NULL, NULL,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 scratch_pool, scratch_pool));
 
   /* Do the import. */
   SVN_ERR(import(local_abspath, new_entries, editor, depth, excludes,
