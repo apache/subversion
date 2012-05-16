@@ -203,9 +203,6 @@ typedef struct merge_cmd_baton_t {
   svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
                                          extension, mergeinfo)?  FALSE if
                                          SOURCES_ANCESTRAL is FALSE. */
-  svn_boolean_t target_missing_child; /* Whether working copy target of the
-                                         merge is missing any immediate
-                                         children. */
   svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
                                          merge or not. */
   const char *added_path;             /* Set to the dir path whenever the
@@ -8543,8 +8540,6 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
      the target thanks to depth-first ordering. */
   target_merge_path = APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                                     svn_client__merge_path_t *);
-  merge_b->target_missing_child = (target_merge_path->missing_child
-                                   || target_merge_path->switched_child);
 
   /* If we are honoring mergeinfo, then for each item in
      NOTIFY_B->CHILDREN_WITH_MERGEINFO, we need to calculate what needs to be
@@ -9014,7 +9009,6 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.same_repos = same_repos;
   merge_cmd_baton.mergeinfo_capable = FALSE;
   merge_cmd_baton.ctx = ctx;
-  merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.reintegrate_merge = reintegrate_merge;
   merge_cmd_baton.target = target;
   merge_cmd_baton.pool = iterpool;
