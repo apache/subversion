@@ -11258,9 +11258,9 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
 
   /* Remove any locations that match (a), (b) or (c). */
   /* For (a), remove any locations that are in TARGET's mergeinfo. */
-  SVN_ERR(svn_mergeinfo_remove(&eligible_locations->history,
-                               target_mergeinfo, eligible_locations->history,
-                               scratch_pool));
+  SVN_ERR(svn_mergeinfo_remove2(&eligible_locations->history,
+                                target_mergeinfo, eligible_locations->history,
+                                TRUE, scratch_pool, scratch_pool));
   /* For (b) ... */
 
   /* For (c) ... */
