@@ -2395,7 +2395,8 @@ expat_response_handler(serf_request_t *request,
 
       expat_status = XML_Parse(ectx->parser, data, (int)len, 0 /* isFinal */);
       if (expat_status == XML_STATUS_ERROR)
-        return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+        return svn_error_createf(SVN_ERR_XML_MALFORMED,
+                                 ectx->inner_error,
                                  _("The %s response contains invalid XML"
                                    " (%d %s)"),
                                  ectx->handler->method,
