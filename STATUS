@@ -70,7 +70,7 @@ Candidate changes:
      The current code (introduced in 1.7.x in the r1207351 backport commit)
      produces inconsistent paths in diff output (see
      http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
-     with the paradigm that the target of an editor drive my never have more
+     with the paradigm that the target of an editor drive may never have more
      than one path component (which according to cmpilato is an API violation).
    Notes:
      Please read the branch and related trunk log messages for detailed notes
