@@ -685,13 +685,14 @@ drive_editor(svn_editor_t *editor,
 
 static svn_error_t *
 fetch_props_func(apr_hash_t **props,
+                 svn_revnum_t *revision,
                  void *baton,
-                 const char *path,
-                 svn_revnum_t base_revision,
+                 const char *repos_relpath,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  *props = apr_hash_make(result_pool);
+  *props = NULL;
+  *revision = SVN_INVALID_REVNUM;
   return SVN_NO_ERROR;
 }
 
@@ -725,14 +726,15 @@ fetch_kind_func(svn_kind_t *kind,
 }
 
 static svn_error_t *
-fetch_base_func(const char **filename,
+fetch_base_func(svn_stream_t **contents,
+                svn_revnum_t *revision,
                 void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
+                const char *repos_relpath,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  *filename = NULL;
+  *contents = NULL;
+  *revision = SVN_INVALID_REVNUM;
   return SVN_NO_ERROR;
 }
 
@@ -753,7 +755,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
   int i;
-  svn_delta_shim_callbacks_t *shim_callbacks;
   svn_client__copy_pair_t *first_pair =
     APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *);
 
@@ -956,20 +957,17 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
-  shim_callbacks = svn_delta_shim_callbacks_default(pool);
-  shim_callbacks->fetch_props_func = fetch_props_func;
-  shim_callbacks->fetch_base_func = fetch_base_func;
-  shim_callbacks->fetch_kind_func = fetch_kind_func;
-  shim_callbacks->fetch_baton = path_infos;
-
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session, shim_callbacks));
-  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
-                                    commit_revprops,
-                                    commit_callback,
-                                    commit_baton,
-                                    NULL, TRUE, /* No lock tokens */
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
+  SVN_ERR(svn_ra__get_commit_ev2(&editor, ra_session,
+                                 commit_revprops,
+                                 commit_callback,
+                                 commit_baton,
+                                 NULL, TRUE, /* No lock tokens */
+                                 fetch_base_func,
+                                 fetch_props_func,
+                                 fetch_kind_func,
+                                 path_infos,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool, pool));
 
   return svn_error_trace(drive_editor(editor, new_dirs, path_infos, is_move,
                                       repos_root, pool));
