@@ -1281,16 +1281,19 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx, relpath_map,
-                                                       pool)));
-  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
-                                    commit_revprops,
-                                    commit_callback,
-                                    commit_baton, NULL,
-                                    TRUE, /* No lock tokens */
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
+  SVN_ERR(svn_ra__get_commit_ev2(&editor, ra_session,
+                                 commit_revprops,
+                                 commit_callback,
+                                 commit_baton, NULL,
+                                 TRUE, /* No lock tokens */
+                                 svn_client__ra_provide_base,
+                                 svn_client__ra_provide_props,
+                                 svn_client__ra_get_copysrc_kind,
+                                 svn_client__ra_make_cb_baton(ctx->wc_ctx,
+                                                              relpath_map,
+                                                              pool),
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool, pool));
 
   /* Perform the commit. */
   SVN_ERR_W(svn_client__do_commit(repos_root, commit_items, editor,
