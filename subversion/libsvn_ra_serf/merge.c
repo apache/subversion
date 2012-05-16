@@ -80,8 +80,8 @@ typedef struct merge_info_t {
 
   const char *prop_ns;
   const char *prop_name;
-  const char *prop_val;
-  apr_size_t prop_val_len;
+  svn_stringbuf_t *prop_value;
+
 } merge_info_t;
 
 /* Structure associated with a MERGE request. */
@@ -90,14 +90,13 @@ struct svn_ra_serf__merge_context_t
   apr_pool_t *pool;
 
   svn_ra_serf__session_t *session;
+  svn_ra_serf__handler_t *handler;
 
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
 
   const char *merge_resource_url; /* URL of resource to be merged. */
   const char *merge_url; /* URL at which the MERGE request is aimed. */
-
-  int status;
 
   svn_boolean_t done;
 
@@ -119,6 +118,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       info = apr_palloc(parser->state->pool, sizeof(*info));
       info->pool = parser->state->pool;
       info->props = apr_hash_make(info->pool);
+      info->prop_value = svn_stringbuf_create_empty(info->pool);
 
       parser->state->private = info;
     }
@@ -128,11 +128,11 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 start_merge(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             svn_ra_serf__dav_props_t name,
-            const char **attrs)
+            const char **attrs,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = parser->user_data;
   merge_state_e state;
   merge_info_t *info;
 
@@ -163,9 +163,8 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, PROP_VAL);
 
       info->prop_ns = name.namespace;
-      info->prop_name = apr_pstrdup(info->pool, name.name);
-      info->prop_val = NULL;
-      info->prop_val_len = 0;
+      info->prop_name = "href";
+      svn_stringbuf_setempty(info->prop_value);
     }
   else if (state == RESPONSE &&
            strcmp(name.name, "propstat") == 0)
@@ -206,11 +205,9 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "checked-in") == 0)
     {
       info = push_state(parser, ctx, IGNORE_PROP_NAME);
-
       info->prop_ns = name.namespace;
-      info->prop_name = apr_pstrdup(info->pool, name.name);
-      info->prop_val = NULL;
-      info->prop_val_len = 0;
+      info->prop_name = "checked-in";
+      svn_stringbuf_setempty(info->prop_value);
     }
   else if (state == PROP)
     {
@@ -225,8 +222,7 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, PROP_VAL);
       info->prop_ns = name.namespace;
       info->prop_name = apr_pstrdup(info->pool, name.name);
-      info->prop_val = NULL;
-      info->prop_val_len = 0;
+      svn_stringbuf_setempty(info->prop_value);
     }
   else
     {
@@ -238,10 +234,10 @@ start_merge(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_merge(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name)
+          svn_ra_serf__dav_props_t name,
+          apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = parser->user_data;
   merge_state_e state;
   merge_info_t *info;
 
@@ -349,24 +345,27 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
     }
   else if (state == PROP_VAL)
     {
+      const char *value;
+
       if (!info->prop_name)
         {
+          /* ### gstein sez: dunno what this is about.  */
           info->prop_name = apr_pstrdup(info->pool, name.name);
         }
-      info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
-                                      info->prop_val_len);
+
       if (strcmp(info->prop_name, "href") == 0)
-        info->prop_val = svn_urlpath__canonicalize(info->prop_val,
-                                                       info->pool);
+        value = svn_urlpath__canonicalize(info->prop_value->data, info->pool);
+      else
+        value = apr_pstrmemdup(info->pool,
+                               info->prop_value->data, info->prop_value->len);
 
       /* Set our property. */
       apr_hash_set(info->props, info->prop_name, APR_HASH_KEY_STRING,
-                   info->prop_val);
+                   value);
 
       info->prop_ns = NULL;
       info->prop_name = NULL;
-      info->prop_val = NULL;
-      info->prop_val_len = 0;
+      svn_stringbuf_setempty(info->prop_value);
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -376,11 +375,11 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_merge(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
             const char *data,
-            apr_size_t len)
+            apr_size_t len,
+            apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *ctx = userData;
+  svn_ra_serf__merge_context_t *ctx = parser->user_data;
   merge_state_e state;
   merge_info_t *info;
 
@@ -390,10 +389,7 @@ cdata_merge(svn_ra_serf__xml_parser_t *parser,
   info = parser->state->private;
 
   if (state == PROP_VAL)
-    {
-      svn_ra_serf__expand_string(&info->prop_val, &info->prop_val_len,
-                                 data, len, parser->state->pool);
-    }
+    svn_stringbuf_appendbytes(info->prop_value, data, len);
 
   return SVN_NO_ERROR;
 }
@@ -538,6 +534,7 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "MERGE";
   handler->path = merge_ctx->merge_url;
   handler->body_delegate = create_merge_body;
@@ -553,13 +550,14 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   parser_ctx->end = end_merge;
   parser_ctx->cdata = cdata_merge;
   parser_ctx->done = &merge_ctx->done;
-  parser_ctx->status_code = &merge_ctx->status;
 
   handler->header_delegate = setup_merge_headers;
   handler->header_delegate_baton = merge_ctx;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
+
+  merge_ctx->handler = handler;
 
   svn_ra_serf__request_create(handler);
 
@@ -583,5 +581,5 @@ svn_ra_serf__merge_get_commit_info(svn_ra_serf__merge_context_t *ctx)
 int
 svn_ra_serf__merge_get_status(svn_ra_serf__merge_context_t *ctx)
 {
-  return ctx->status;
+  return ctx->handler->sline.code;
 }

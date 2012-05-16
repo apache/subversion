@@ -682,6 +682,39 @@ svn_io_file_lock2(const char *lock_file,
                   svn_boolean_t exclusive,
                   svn_boolean_t nonblocking,
                   apr_pool_t *pool);
+
+/**
+ * Lock the file @a lockfile_handle. If @a exclusive is TRUE,
+ * obtain exclusive lock, otherwise obtain shared lock.
+ *
+ * If @a nonblocking is TRUE, do not wait for the lock if it
+ * is not available: throw an error instead.
+ *
+ * Lock will be automatically released when @a pool is cleared or destroyed.
+ * You may also explicitly call @ref svn_io_unlock_open_file.
+ * Use @a pool for memory allocations. @a pool must be the pool that
+ * @a lockfile_handle has been created in or one of its sub-pools.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_lock_open_file(apr_file_t *lockfile_handle,
+                      svn_boolean_t exclusive,
+                      svn_boolean_t nonblocking,
+                      apr_pool_t *pool);
+
+/**
+ * Unlock the file @a lockfile_handle.
+ *
+ * Use @a pool for memory allocations. @a pool must be the pool that
+ * @a lockfile_handle has been created in or one of its sub-pools.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_io_unlock_open_file(apr_file_t *lockfile_handle,
+                        apr_pool_t *pool);
+
 /**
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  * memory allocations.
@@ -1146,6 +1179,14 @@ svn_stream_tee(svn_stream_t *out1,
                svn_stream_t *out2,
                apr_pool_t *pool);
 
+/** Write NULL-terminated string @a str to @a stream.
+ *
+ * @since New in 1.8.
+ *
+ */
+svn_error_t *
+svn_stream_puts(svn_stream_t *stream,
+                const char *str);
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.
@@ -1287,6 +1328,36 @@ svn_string_from_stream(svn_string_t **result,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
+
+/** A function type provided for use as a callback from
+ * @c svn_stream_lazyopen_create().
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_stream_lazyopen_func_t)(svn_stream_t **stream,
+                              void *baton,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/** Return a generic stream which wraps another primary stream,
+ * delaying the "opening" of that stream until the first time the
+ * stream is accessed.
+ *
+ * @a open_func and @a open_baton are a callback function/baton pair
+ * invoked upon the first read of @a *stream which are used to open the
+ * "real" source stream.
+ *
+ * @note If the only "access" the returned stream gets is to close it,
+ * @a open_func will not be called.
+ *
+ * @since New in 1.8.
+ */
+svn_stream_t *
+svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
+                           void *open_baton,
+                           apr_pool_t *result_pool);
 
 /** @} */
 

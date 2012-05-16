@@ -1170,6 +1170,8 @@ svn_editor__insert_shims(const svn_delta_editor_t **deditor_out,
                          void **dedit_baton_out,
                          const svn_delta_editor_t *deditor_in,
                          void *dedit_baton_in,
+                         const char *repos_root,
+                         const char *base_dir,
                          svn_delta_shim_callbacks_t *shim_callbacks,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
@@ -1283,17 +1285,40 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
   apr_pool_t *pool);
 
 
-/** Drive @a editor (with its @a edit_baton) in such a way that
- * each path in @a paths is traversed in a depth-first fashion.  As
- * each path is hit as part of the editor drive, use @a
- * callback_func and @a callback_baton to allow the caller to handle
+/** Drive @a editor (with its @a edit_baton) to visit each path in @a paths.
+ * As each path is hit as part of the editor drive, use
+ * @a callback_func and @a callback_baton to allow the caller to handle
  * the portion of the editor drive related to that path.
  *
- * Use @a revision as the revision number passed to intermediate
- * directory openings.
+ * Each path in @a paths is a const char *. The editor drive will be
+ * performed in the same order as @a paths. The paths should be sorted
+ * using something like svn_sort_compare_paths to ensure that a depth-first
+ * pattern is observed for directory/file baton creation. Some callers may
+ * need further customization of the order (ie. libsvn_delta/compat.c).
  *
- * Use @a pool for all necessary allocations.
+ * Use @a scratch_pool for all necessary allocations.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_delta_path_driver2(const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       const apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_delta_path_driver2, but takes an (unused) revision,
+ * and will sort the provided @a paths using svn_sort_compare_paths.
+ *
+ * @note In versions prior to 1.8, this function would modify the order
+ * of elements in @a paths, despite the 'const' marker on the parameter.
+ * This has been fixed in 1.8.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_delta_path_driver(const svn_delta_editor_t *editor,
                       void *edit_baton,
@@ -1301,7 +1326,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
                       const apr_array_header_t *paths,
                       svn_delta_path_driver_cb_func_t callback_func,
                       void *callback_baton,
-                      apr_pool_t *pool);
+                      apr_pool_t *scratch_pool);
 
 /** @} */
 

@@ -50,6 +50,7 @@
 #include "translate.h"
 #include "workqueue.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
@@ -961,8 +962,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* Tell the file baton about the new text base's checksums. */
       fb->new_text_base_md5_checksum =
-        svn_checksum__from_digest(hb->new_text_base_md5_digest,
-                                  svn_checksum_md5, fb->pool);
+        svn_checksum__from_digest_md5(hb->new_text_base_md5_digest, fb->pool);
       fb->new_text_base_sha1_checksum =
         svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
 
@@ -2541,7 +2541,7 @@ change_dir_prop(void *dir_baton,
   propchange->name = apr_pstrdup(db->pool, name);
   propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
 
-  if (!db->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
+  if (!db->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_directory_edited(db, pool));
 
   return SVN_NO_ERROR;
@@ -3724,7 +3724,7 @@ change_file_prop(void *file_baton,
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
 
-  if (!fb->edited && svn_property_kind(NULL, name) == svn_prop_regular_kind)
+  if (!fb->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -4470,8 +4470,8 @@ close_file(void *file_baton,
                                   NULL /* left_version */,
                                   NULL /* right_version */,
                                   NULL /* server_baseprops (not merging) */,
-                                  current_base_props /* base_props */,
-                                  fake_actual_props /* working_props */,
+                                  current_base_props /* pristine_props */,
+                                  fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
@@ -4560,23 +4560,32 @@ close_file(void *file_baton,
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
-  if (eb->notify_func && !fb->already_notified && fb->edited)
+  if (eb->notify_func && !fb->already_notified
+      && (fb->edited || lock_state == svn_wc_notify_lock_state_unlocked))
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->shadowed)
-        action = fb->adding_file
-                        ? svn_wc_notify_update_shadowed_add
-                        : svn_wc_notify_update_shadowed_update;
-      else if (fb->obstruction_found || fb->add_existed)
+      if (fb->edited)
         {
-          if (content_state != svn_wc_notify_state_conflicted)
-            action = svn_wc_notify_exists;
+          if (fb->shadowed)
+            action = fb->adding_file
+                            ? svn_wc_notify_update_shadowed_add
+                            : svn_wc_notify_update_shadowed_update;
+          else if (fb->obstruction_found || fb->add_existed)
+            {
+              if (content_state != svn_wc_notify_state_conflicted)
+                action = svn_wc_notify_exists;
+            }
+          else if (fb->adding_file)
+            {
+              action = svn_wc_notify_update_add;
+            }
         }
-      else if (fb->adding_file)
+      else
         {
-          action = svn_wc_notify_update_add;
+          SVN_ERR_ASSERT(lock_state == svn_wc_notify_lock_state_unlocked);
+          action = svn_wc_notify_update_broken_lock;
         }
 
       /* If the file was moved-away, notify for the moved-away node.
@@ -4996,7 +5005,8 @@ make_editor(svn_revnum_t *target_revision,
   shim_callbacks->fetch_baton = sfb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks, result_pool, scratch_pool));
+                                   NULL, NULL, shim_callbacks,
+                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

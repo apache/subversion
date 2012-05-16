@@ -52,7 +52,9 @@
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_version.h"
+
 #include "private/svn_cmdline_private.h"
+#include "private/svn_ra_private.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -67,8 +69,6 @@ static void handle_error(svn_error_t *err, apr_pool_t *pool)
 static apr_pool_t *
 init(const char *application)
 {
-  apr_allocator_t *allocator;
-  apr_pool_t *pool;
   svn_error_t *err;
   const svn_version_checklist_t checklist[] = {
     {"svn_client", svn_client_version},
@@ -79,19 +79,14 @@ init(const char *application)
 
   SVN_VERSION_DEFINE(my_version);
 
-  if (svn_cmdline_init(application, stderr)
-      || apr_allocator_create(&allocator))
+  if (svn_cmdline_init(application, stderr))
     exit(EXIT_FAILURE);
 
   err = svn_ver_check_list(&my_version, checklist);
   if (err)
     handle_error(err, NULL);
 
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
-
-  return pool;
+  return apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 }
 
 static svn_error_t *
@@ -610,6 +605,132 @@ struct action {
   const svn_string_t *prop_value;
 };
 
+struct fetch_baton
+{
+  svn_ra_session_t *session;
+  svn_revnum_t head;
+};
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct fetch_baton *fb = baton;
+  svn_stream_t *fstream;
+  svn_error_t *err;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = fb->head;
+
+  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  err = svn_ra_get_file(fb->session, path, base_revision, fstream, NULL, NULL,
+                         scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_stream_close(fstream));
+
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_stream_close(fstream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct fetch_baton *fb = baton;
+  svn_node_kind_t node_kind;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = fb->head;
+
+  SVN_ERR(svn_ra_check_path(fb->session, path, base_revision, &node_kind,
+                            scratch_pool));
+
+  if (node_kind == svn_node_file)
+    {
+      SVN_ERR(svn_ra_get_file(fb->session, path, base_revision, NULL, NULL,
+                              props, result_pool));
+    }
+  else if (node_kind == svn_node_dir)
+    {
+      apr_array_header_t *tmp_props;
+
+      SVN_ERR(svn_ra_get_dir2(fb->session, NULL, NULL, props, path,
+                              base_revision, 0 /* Dirent fields */,
+                              result_pool));
+      tmp_props = svn_prop_hash_to_array(*props, result_pool);
+      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
+                                   result_pool));
+      *props = svn_prop_array_to_hash(tmp_props, result_pool);
+    }
+  else
+    {
+      *props = apr_hash_make(result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct fetch_baton *fb = baton;
+  svn_node_kind_t node_kind;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = fb->head;
+
+  SVN_ERR(svn_ra_check_path(fb->session, path, base_revision, &node_kind,
+                             scratch_pool));
+
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_delta_shim_callbacks_t *
+get_shim_callbacks(svn_ra_session_t *session,
+                   svn_revnum_t head,
+                   apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                            svn_delta_shim_callbacks_default(result_pool);
+  struct fetch_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
+
+  fb->session = session;
+  fb->head = head;
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_baton = fb;
+
+  return callbacks;
+}
+
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor,
@@ -624,6 +745,8 @@ execute(const apr_array_header_t *actions,
         apr_pool_t *pool)
 {
   svn_ra_session_t *session;
+  svn_ra_session_t *aux_session;
+  const char *repos_root;
   svn_revnum_t head;
   const svn_delta_editor_t *editor;
   svn_ra_callbacks2_t *ra_callbacks;
@@ -644,6 +767,10 @@ execute(const apr_array_header_t *actions,
                               pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
+  SVN_ERR(svn_ra_open4(&aux_session, NULL, anchor, NULL, ra_callbacks,
+                       NULL, config, pool));
+  SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
+  SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
   if (SVN_IS_VALID_REVNUM(base_revision))
@@ -713,6 +840,8 @@ execute(const apr_array_header_t *actions,
         }
     }
 
+  SVN_ERR(svn_ra__register_editor_shim_callbacks(session,
+                            get_shim_callbacks(aux_session, head, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &editor_baton, revprops,
                                     commit_callback, NULL, NULL, FALSE, pool));
 

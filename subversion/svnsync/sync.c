@@ -225,9 +225,7 @@ add_directory(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *b = apr_palloc(pool, sizeof(*b));
 
-  /* if copyfrom_path starts with '/' join rest of copyfrom_path leaving
-   * leading '/' with canonicalized url eb->to_url.
-   */
+  /* if copyfrom_path is an fspath create a proper uri */
   if (copyfrom_path && copyfrom_path[0] == '/')
     copyfrom_path = svn_path_url_add_component2(eb->to_url,
                                                 copyfrom_path + 1, pool);
@@ -276,9 +274,10 @@ add_file(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
 
-  if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                 svn_path_uri_encode(copyfrom_path, pool));
+  /* if copyfrom_path is an fspath create a proper uri */
+  if (copyfrom_path && copyfrom_path[0] == '/')
+    copyfrom_path = svn_path_url_add_component2(eb->to_url,
+                                                copyfrom_path + 1, pool);
 
   SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_node_baton,
                                        copyfrom_path, copyfrom_rev,
@@ -386,7 +385,7 @@ change_file_prop(void *file_baton,
   edit_baton_t *eb = fb->edit_baton;
 
   /* only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   /* Maybe drop svn:mergeinfo.  */
@@ -434,7 +433,7 @@ change_dir_prop(void *dir_baton,
   edit_baton_t *eb = db->edit_baton;
 
   /* Only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   /* Maybe drop svn:mergeinfo.  */

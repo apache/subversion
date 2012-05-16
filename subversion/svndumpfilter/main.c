@@ -79,7 +79,7 @@ create_stdio_stream(svn_stream_t **stream,
 
 /* Writes a property in dumpfile format to given stringbuf. */
 static void
-write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
+write_prop_to_stringbuf(svn_stringbuf_t *strbuf,
                         const char *name,
                         const svn_string_t *value)
 {
@@ -89,24 +89,24 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 
   /* Output name length, then name. */
   namelen = strlen(name);
-  svn_stringbuf_appendbytes(*strbuf, "K ", 2);
+  svn_stringbuf_appendbytes(strbuf, "K ", 2);
 
   bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, namelen);
-  svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbyte(*strbuf, '\n');
+  svn_stringbuf_appendbytes(strbuf, buf, bytes_used);
+  svn_stringbuf_appendbyte(strbuf, '\n');
 
-  svn_stringbuf_appendbytes(*strbuf, name, namelen);
-  svn_stringbuf_appendbyte(*strbuf, '\n');
+  svn_stringbuf_appendbytes(strbuf, name, namelen);
+  svn_stringbuf_appendbyte(strbuf, '\n');
 
   /* Output value length, then value. */
-  svn_stringbuf_appendbytes(*strbuf, "V ", 2);
+  svn_stringbuf_appendbytes(strbuf, "V ", 2);
 
   bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, value->len);
-  svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbyte(*strbuf, '\n');
+  svn_stringbuf_appendbytes(strbuf, buf, bytes_used);
+  svn_stringbuf_appendbyte(strbuf, '\n');
 
-  svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-  svn_stringbuf_appendbyte(*strbuf, '\n');
+  svn_stringbuf_appendbytes(strbuf, value->data, value->len);
+  svn_stringbuf_appendbyte(strbuf, '\n');
 }
 
 
@@ -364,7 +364,7 @@ output_revision(struct revision_baton_t *rb)
           const char *pname = svn__apr_hash_index_key(hi);
           const svn_string_t *pval = svn__apr_hash_index_val(hi);
 
-          write_prop_to_stringbuf(&props, pname, pval);
+          write_prop_to_stringbuf(props, pname, pval);
         }
       svn_stringbuf_appendcstr(props, "PROPS-END\n");
       svn_stringbuf_appendcstr(rb->header,
@@ -804,7 +804,7 @@ set_node_property(void *node_baton,
       value = filtered_mergeinfo;
     }
 
-  write_prop_to_stringbuf(&(nb->props), name, value);
+  write_prop_to_stringbuf(nb->props, name, value);
 
   return SVN_NO_ERROR;
 }
@@ -1262,7 +1262,6 @@ main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
@@ -1280,13 +1279,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-   return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();

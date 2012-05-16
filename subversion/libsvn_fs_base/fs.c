@@ -473,15 +473,6 @@ bdb_write_config(svn_fs_t *fs)
 
 
 
-static svn_error_t *
-base_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
-{
-  /* Nothing to do here. */
-  return SVN_NO_ERROR;
-}
-
-
-
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
@@ -489,7 +480,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
   svn_fs_base__change_rev_prop,
-  svn_fs_base__get_uuid,
   svn_fs_base__set_uuid,
   svn_fs_base__revision_root,
   svn_fs_base__begin_txn,
@@ -656,6 +646,15 @@ open_databases(svn_fs_t *fs,
 }
 
 
+/* Called by functions that initialize an svn_fs_t struct, after that 
+   initialization is done, to populate svn_fs_t->uuid. */
+static svn_error_t *
+populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_fs_base__populate_uuid(fs, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
             apr_pool_t *common_pool)
@@ -691,7 +690,9 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
-  return base_serialized_init(fs, common_pool, pool);
+
+  SVN_ERR(populate_opened_fs(fs, pool));
+  return SVN_NO_ERROR;;
 
 error:
   svn_error_clear(cleanup_fs(fs));
@@ -775,7 +776,8 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       if (svn_err) goto error;
     }
 
-  return base_serialized_init(fs, common_pool, pool);
+  SVN_ERR(populate_opened_fs(fs, pool));
+  return SVN_NO_ERROR;
 
  error:
   svn_error_clear(cleanup_fs(fs));

@@ -59,7 +59,9 @@
 #include "rep-cache.h"
 #include "temp_serializer.h"
 
+#include "private/svn_string_private.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -71,7 +73,7 @@
 
 /* The default maximum number of files per directory to store in the
    rev and revprops directory.  The number below is somewhat arbitrary,
-   and can be overriden by defining the macro while compiling; the
+   and can be overridden by defining the macro while compiling; the
    figure of 1000 is reasonable for VFAT filesystems, which are by far
    the worst performers in this area. */
 #ifndef SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
@@ -80,7 +82,7 @@
 
 /* Begin deltification after a node history exceeded this this limit.
    Useful values are 4 to 64 with 16 being a good compromise between
-   computational overhead and pository size savings.
+   computational overhead and repository size savings.
    Should be a power of 2.
    Values < 2 will result in standard skip-delta behavior. */
 #define SVN_FS_FS_MAX_LINEAR_DELTIFICATION 16
@@ -91,6 +93,17 @@
    Should be a power of 2 minus one.
    Values < 1 disable deltification. */
 #define SVN_FS_FS_MAX_DELTIFICATION_WALK 1023
+
+/* Give writing processes 10 seconds to replace an existing revprop
+   file with a new one. After that time, we assume that the writing
+   process got aborted and that we have re-read revprops. */
+#define REVPROP_CHANGE_TIMEOUT 10 * 1000000
+
+/* The following are names of atomics that will be used to communicate
+ * revprop updates across all processes on this machine. */
+#define ATOMIC_REVPROP_GENERATION "rev-prop-generation"
+#define ATOMIC_REVPROP_TIMEOUT    "rev-prop-timeout"
+#define ATOMIC_REVPROP_NAMESPACE  "rev-prop-atomics"
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -222,6 +235,12 @@ static APR_INLINE const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
+}
+
+static const char *
+path_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_REVPROP_GENERATION, pool);
 }
 
 static const char *
@@ -432,7 +451,7 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 }
 
 
-
+
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
@@ -870,6 +889,28 @@ get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
 }
 
 
+/* Check that BUF, a nul-terminated buffer of text from file PATH,
+   contains only digits at OFFSET and beyond, raising an error if not.
+   TITLE contains a user-visible description of the file, usually the
+   short file name.
+
+   Uses POOL for temporary allocation. */
+static svn_error_t *
+check_file_buffer_numeric(const char *buf, apr_off_t offset,
+                          const char *path, const char *title,
+                          apr_pool_t *pool)
+{
+  const char *p;
+
+  for (p = buf + offset; *p; p++)
+    if (!svn_ctype_isdigit(*p))
+      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
+        _("%s file '%s' contains unexpected non-digit '%c' within '%s'"),
+        title, svn_dirent_local_style(path, pool), *p, buf);
+
+  return SVN_NO_ERROR;
+}
+
 /* Check that BUF, a nul-terminated buffer of text from format file PATH,
    contains only digits at OFFSET and beyond, raising an error if not.
 
@@ -878,15 +919,7 @@ static svn_error_t *
 check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
                                  const char *path, apr_pool_t *pool)
 {
-  const char *p;
-
-  for (p = buf + offset; *p; p++)
-    if (!svn_ctype_isdigit(*p))
-      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-        _("Format file '%s' contains unexpected non-digit '%c' within '%s'"),
-        svn_dirent_local_style(path, pool), *p, buf);
-
-  return SVN_NO_ERROR;
+  return check_file_buffer_numeric(buf, offset, path, "Format", pool);
 }
 
 /* Read the format number and maximum number of files per directory
@@ -1082,6 +1115,34 @@ read_config(svn_fs_t *fs,
   else
     ffd->rep_sharing_allowed = FALSE;
 
+  /* Initialize ffd->deltify_directories. */
+  if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
+    {
+      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
+                                  CONFIG_SECTION_DELTIFICATION,
+                                  CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
+                                  FALSE));
+      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
+                                  CONFIG_SECTION_DELTIFICATION,
+                                  CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
+                                  FALSE));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
+                                   CONFIG_SECTION_DELTIFICATION,
+                                   CONFIG_OPTION_MAX_DELTIFICATION_WALK,
+                                   SVN_FS_FS_MAX_DELTIFICATION_WALK));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_linear_deltification,
+                                   CONFIG_SECTION_DELTIFICATION,
+                                   CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
+                                   SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
+    }
+  else
+    {
+      ffd->deltify_directories = FALSE;
+      ffd->deltify_properties = FALSE;
+      ffd->max_deltification_walk = SVN_FS_FS_MAX_DELTIFICATION_WALK;
+      ffd->max_linear_deltification = SVN_FS_FS_MAX_LINEAR_DELTIFICATION;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1130,7 +1191,67 @@ write_config(svn_fs_t *fs,
 "### 'svnadmin verify' will check the rep-cache regardless of this setting." NL
 "### rep-sharing is enabled by default."                                     NL
 "# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
-
+""                                                                           NL
+"[" CONFIG_SECTION_DELTIFICATION "]"                                         NL
+"### To conserve space, the filesystem stores data as differences against"   NL
+"### existing representations.  This comes at a slight cost in performance," NL
+"### as calculating differences can increase commit times.  Reading data"    NL
+"### will also create higher CPU load and the data will be fragmented."      NL
+"### Since deltification tends to save significant amounts of disk space,"   NL
+"### the overall I/O load can actually be lower."                            NL
+"###"                                                                        NL
+"### The options in this section allow for tuning the deltification"         NL
+"### strategy.  Their effects on data size and server performance may vary"  NL
+"### from one repository to another.  Versions prior to 1.8 will ignore"     NL
+"### this section."                                                          NL
+"###"                                                                        NL
+"### The following parameter enables deltification for directories. It can"  NL
+"### be switched on and off at will, but for best space-saving results"      NL
+"### should be enabled consistently over the life of the repository."        NL
+"### Repositories containing large directories will benefit greatly."        NL
+"### In rarely read repositories, the I/O overhead may be significant as"    NL
+"### cache hit rates will most likely be low"                                NL
+"### directory deltification is disabled by default."                        NL
+"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
+"###"                                                                        NL
+"### The following parameter enables deltification for properties on files"  NL
+"### and directories.  Overall, this is a minor tuning option but can save"  NL
+"### some disk space if frequently merge or if you frequently change node"   NL
+"### properties.  You should not activate this if rep-sharing has been"      NL
+"### disabled."                                                              NL
+"### property deltification is disabled by default."                         NL
+"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
+"###"                                                                        NL
+"### During commit, the server may need to walk the whole change history of" NL
+"### of a given node to find a suitable deltification base.  This linear"    NL
+"### process can impact commit times, svnadmin load and similar operations." NL
+"### This setting limits the depth of the deltification history.  If the"    NL
+"### threshold has been reached, the node will be stored as fulltext and a"  NL
+"### new deltification history begins."                                      NL
+"### Note, this is unrelated to svn log."                                    NL
+"### Very large values rarely provide significant additional savings but"    NL
+"### can impact performance greatly - in particular if directory"            NL
+"### deltification has been activated.  Very small values may be useful in"  NL
+"### repositories that are dominated by large, changing binaries."           NL
+"### Should be a power of two minus 1.  A value of 0 will effectively"       NL
+"### disable deltification."                                                 NL
+"### For 1.8, the default value is 1023; earlier versions have no limit."    NL
+"# " CONFIG_OPTION_MAX_DELTIFICATION_WALK " = 1023"                          NL
+"###"                                                                        NL
+"### The skip-delta scheme used by FSFS tends to repeatably store redundant" NL
+"### delta information where a simple delta against the latest version is"   NL
+"### often smaller.  By default, 1.8+ will therefore use skip deltas only"   NL
+"### after the linear chain of deltas has grown beyond the threshold"        NL
+"### specified by this setting."                                             NL
+"### Values up to 64 can result in some reduction in repository size for"    NL
+"### the cost of quickly increasing I/O and CPU costs. Similarly, smaller"   NL
+"### numbers can reduce those costs at the cost of more disk space.  For"    NL
+"### rarely read repositories or those containing larger binaries, this may" NL
+"### present a better trade-off."                                            NL
+"### Should be a power of two.  A value of 1 or smaller will cause the"      NL
+"### exclusive use of skip-deltas (as in pre-1.8)."                          NL
+"### For 1.8, the default value is 16; earlier versions use 1."              NL
+"# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -1194,7 +1315,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   limit = sizeof(buf);
   SVN_ERR(svn_io_read_length_line(uuid_file, buf, &limit, pool));
-  ffd->uuid = apr_pstrdup(fs->pool, buf);
+  fs->uuid = apr_pstrdup(fs->pool, buf);
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
@@ -2271,7 +2392,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                               noderev->copyroot_path));
 
   if (noderev->is_fresh_txn_root)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
+    SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
 
   if (include_mergeinfo)
     {
@@ -2281,10 +2402,10 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                                   noderev->mergeinfo_count));
 
       if (noderev->has_mergeinfo)
-        SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
+        SVN_ERR(svn_stream_puts(outfile, HEADER_MINFO_HERE ": y\n"));
     }
 
-  return svn_stream_printf(outfile, pool, "\n");
+  return svn_stream_puts(outfile, "\n");
 }
 
 svn_error_t *
@@ -2687,6 +2808,301 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
+/* Revprop caching management.
+ *
+ * Revprop caching needs to be activated and will be deactivated for the
+ * respective FS instance if the necessary infrastructure could not be
+ * initialized.  In deactivated mode, there is almost no runtime overhead
+ * associated with revprop caching.  As long as no revprops are being read
+ * or changed, revprop caching imposes no overhead.
+ *
+ * When activated, we cache revprops using (revision, generation) pairs
+ * as keys with the generation being incremented upon every revprop change.
+ * Since the cache is process-local, the generation needs to be tracked
+ * for at least as long as the process lives but may be reset afterwards.
+ *
+ * To track the revprop generation, we use two-layer approach. On the lower
+ * level, we use named atomics to have a system-wide consistent value for
+ * the current revprop generation.  However, those named atomics will only
+ * remain valid for as long as at least one process / thread in the system
+ * accesses revprops in the respective repository.  The underlying shared
+ * memory gets cleaned up afterwards.
+ *
+ * On the second level, we will use a persistent file to track the latest
+ * revprop generation.  It will be written upon each revprop change but
+ * only be read if we are the first process to initialize the named atomics
+ * with that value.
+ *
+ * The overhead for the second and following accesses to revprops is
+ * almost zero on most systems.
+ */
+
+/* Read revprop generation as stored on disk for repository FS. The result
+ * is returned in *CURRENT. Default to 2 if no such file is available.
+ */
+static svn_error_t *
+read_revprop_generation_file(apr_int64_t *current,
+                             svn_fs_t *fs,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_file_t *file;
+  char buf[80];
+  apr_size_t len;
+  const char *path = path_revprop_generation(fs, pool);
+
+  err = svn_io_file_open(&file, path,
+                         APR_READ | APR_BUFFERED,
+                         APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      *current = 2;
+
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  len = sizeof(buf);
+  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
+
+  /* Check that the first line contains only digits. */
+  SVN_ERR(check_file_buffer_numeric(buf, 0, path,
+                                    "Revprop Generation", pool));
+  SVN_ERR(svn_cstring_atoi64(current, buf));
+
+  return svn_io_file_close(file, pool);
+}
+
+/* Write the CURRENT revprop generation to disk for repository FS.
+ */
+static svn_error_t *
+write_revprop_generation_file(svn_fs_t *fs,
+                              apr_int64_t current,
+                              apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *tmp_path;
+
+  char buf[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__i64toa(buf, current);
+  buf[len] = '\n';
+
+  SVN_ERR(svn_io_open_unique_file3(&file, &tmp_path, fs->path,
+                                   svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_io_file_write_full(file, buf, len + 1, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return move_into_place(tmp_path, path_revprop_generation(fs, pool),
+                         tmp_path, pool);
+}
+
+/* Make sure the revprop_namespace member in FS is set. */
+static svn_error_t *
+ensure_revprop_namespace(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return ffd->revprop_namespace == NULL
+    ? svn_atomic_namespace__create(&ffd->revprop_namespace,
+                                   svn_dirent_join(fs->path,
+                                                   ATOMIC_REVPROP_NAMESPACE,
+                                                   fs->pool),
+                                   fs->pool)
+    : SVN_NO_ERROR;
+}
+
+/* Make sure the revprop_generation member in FS is set and, if necessary,
+ * initialized with the latest value stored on disk.
+ */
+static svn_error_t *
+ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  SVN_ERR(ensure_revprop_namespace(fs));
+  if (ffd->revprop_generation == NULL)
+    {
+      apr_int64_t current = 0;
+      
+      SVN_ERR(svn_named_atomic__get(&ffd->revprop_generation,
+                                    ffd->revprop_namespace,
+                                    ATOMIC_REVPROP_GENERATION,
+                                    TRUE));
+
+      /* If the generation is at 0, we just created a new namespace
+       * (it would be at least 2 otherwise). Read the lastest generation
+       * from disk and if we are the first one to initialize the atomic
+       * (i.e. is still 0), set it to the value just gotten.
+       */
+      SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
+      if (current == 0)
+        {
+          SVN_ERR(read_revprop_generation_file(&current, fs, pool));
+          SVN_ERR(svn_named_atomic__cmpxchg(NULL, current, 0,
+                                            ffd->revprop_generation));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Make sure the revprop_timeout member in FS is set. */
+static svn_error_t *
+ensure_revprop_timeout(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  SVN_ERR(ensure_revprop_namespace(fs));
+  return ffd->revprop_timeout == NULL
+    ? svn_named_atomic__get(&ffd->revprop_timeout,
+                            ffd->revprop_namespace,
+                            ATOMIC_REVPROP_TIMEOUT,
+                            TRUE)
+    : SVN_NO_ERROR;
+}
+
+/* Test whether revprop cache and necessary infrastructure are
+   available in FS. */
+static svn_boolean_t
+has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_error_t *error;
+
+  /* is the cache (still) enabled? */
+  if (ffd->revprop_cache == NULL)
+    return FALSE;
+
+  /* is it efficient? */
+  if (!svn_named_atomic__is_efficient())
+    {
+      /* access to it would be quite slow
+       * -> disable the revprop cache for good
+       */
+      ffd->revprop_cache = NULL;
+      return FALSE;
+    }
+
+  /* try to access our SHM-backed infrastructure */
+  error = ensure_revprop_generation(fs, pool);
+  if (error)
+    {
+      /* failure -> disable revprop cache for good */
+
+      svn_error_clear(error);
+      ffd->revprop_cache = NULL;
+
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+/* Read the current revprop generation and return it in *GENERATION.
+   Also, detect aborted / crashed writers and recover from that.
+   Use the access object in FS to set the shared mem values. */
+static svn_error_t *
+read_revprop_generation(apr_int64_t *generation,
+                        svn_fs_t *fs,
+                        apr_pool_t *pool)
+{
+  apr_int64_t current = 0;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* read the current revprop generation number */
+  SVN_ERR(ensure_revprop_generation(fs, pool));
+  SVN_ERR(svn_named_atomic__read(&current, ffd->revprop_generation));
+
+  /* is an unfinished revprop write under the way? */
+  if (current % 2)
+    {
+      apr_int64_t timeout = 0;
+
+      /* read timeout for the write operation */
+      SVN_ERR(ensure_revprop_timeout(fs));
+      SVN_ERR(svn_named_atomic__read(&timeout, ffd->revprop_timeout));
+
+      /* has the writer process been aborted,
+       * i.e. has the timeout been reached?
+       */
+      if (apr_time_now() > timeout)
+        {
+          /* Cause everyone to re-read revprops upon their next access.
+           * Keep in mind that we may not be the only one trying to do it.
+           */
+          while (current % 2)
+            SVN_ERR(svn_named_atomic__add(&current,
+                                          1,
+                                          ffd->revprop_generation));
+        }
+    }
+
+  /* return the value we just got */
+  *generation = current;
+  return SVN_NO_ERROR;
+}
+
+/* Set the revprop generation to the next odd number to indicate that
+   there is a revprop write process under way. If that times out,
+   readers shall recover from that state & re-read revprops.
+   Use the access object in FS to set the shared mem value. */
+static svn_error_t *
+begin_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
+{
+  apr_int64_t current;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* set the timeout for the write operation */
+  SVN_ERR(ensure_revprop_timeout(fs));
+  SVN_ERR(svn_named_atomic__write(NULL,
+                                  apr_time_now() + REVPROP_CHANGE_TIMEOUT,
+                                  ffd->revprop_timeout));
+
+  /* set the revprop generation to an odd value to indicate
+   * that a write is in progress
+   */
+  SVN_ERR(ensure_revprop_generation(fs, pool));
+  do
+    {
+      SVN_ERR(svn_named_atomic__add(&current,
+                                    1,
+                                    ffd->revprop_generation));
+    }
+  while (current % 2 == 0);
+
+  return SVN_NO_ERROR;
+}
+
+/* Set the revprop generation to the next even number to indicate that
+   a) readers shall re-read revprops, and
+   b) the write process has been completed (no recovery required)
+   Use the access object in FS to set the shared mem value. */
+static svn_error_t *
+end_revprop_change(svn_fs_t *fs, apr_pool_t *pool)
+{
+  apr_int64_t current = 1;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* set the revprop generation to an even value to indicate
+   * that a write has been completed
+   */
+  SVN_ERR(ensure_revprop_generation(fs, pool));
+  do
+    {
+      SVN_ERR(svn_named_atomic__add(&current,
+                                    1,
+                                    ffd->revprop_generation));
+    }
+  while (current % 2);
+
+  /* Save the latest generation to disk. FS is currently in a "locked"
+   * state such that we can be sure the be the only ones to write that
+   * file.
+   */
+  return write_revprop_generation_file(fs, current, pool);
+}
+
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
 static svn_error_t *
@@ -2703,6 +3119,11 @@ set_revision_proplist(svn_fs_t *fs,
       const char *tmp_path;
       const char *perms_reference;
       svn_stream_t *stream;
+      svn_node_kind_t kind = svn_node_none;
+
+      /* test whether revprops already exist for this revision */
+      if (has_revprop_cache(fs, pool))
+        SVN_ERR(svn_io_check_path(final_path, &kind, pool));
 
       /* ### do we have a directory sitting around already? we really shouldn't
          ### have to get the dirname here. */
@@ -2717,9 +3138,17 @@ set_revision_proplist(svn_fs_t *fs,
          file won't exist and therefore can't serve as its own reference.
          (Whereas the rev file should already exist at this point.) */
       SVN_ERR(svn_fs_fs__path_rev_absolute(&perms_reference, fs, rev, pool));
+
+      /* Now, we may actually be replacing revprops. Make sure that all other
+         threads and processes will know about this. */
+      if (kind != svn_node_none)
+        SVN_ERR(begin_revprop_change(fs, pool));
+
       SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
 
-      return SVN_NO_ERROR;
+      /* Indicate that the update (if relevant) has been completed. */
+      if (kind != svn_node_none)
+        SVN_ERR(end_revprop_change(fs, pool));
     }
 
   return SVN_NO_ERROR;
@@ -2732,8 +3161,25 @@ revision_proplist(apr_hash_t **proplist_p,
                   apr_pool_t *pool)
 {
   apr_hash_t *proplist;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *key;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
+  /* Try cache lookup first. */
+  if (has_revprop_cache(fs, pool))
+    {
+      apr_int64_t generation;
+      svn_boolean_t is_cached;
+
+      SVN_ERR(read_revprop_generation(&generation, fs, pool));
+
+      key = svn_fs_fs__combine_two_numbers(rev, generation, pool);
+      SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
+                             ffd->revprop_cache, key, pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
 
   /* if (1); null condition for easier merging to revprop-packing */
     {
@@ -2788,6 +3234,10 @@ revision_proplist(apr_hash_t **proplist_p,
         return svn_error_trace(err);
       svn_pool_destroy(iterpool);
     }
+
+  /* Cache the result, if caching has been activated. */
+  if (has_revprop_cache(fs, pool))
+    SVN_ERR(svn_cache__set(ffd->revprop_cache, key, proplist, pool));
 
   *proplist_p = proplist;
 
@@ -3538,8 +3988,9 @@ read_representation(svn_stream_t **contents_p,
         {
           svn_stringbuf_t *fulltext;
           svn_boolean_t is_cached;
-          fulltext_cache_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
-                                      rep->revision, rep->offset);
+          fulltext_cache_key = svn_fs_fs__combine_two_numbers(rep->revision,
+                                                              rep->offset,
+                                                              pool);
           SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
                                  ffd->fulltext_cache, fulltext_cache_key,
                                  pool));
@@ -4361,7 +4812,7 @@ read_change(change_t **change_p,
 
 /* Fetch all the changed path entries from FILE and store then in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data.  Store a hash of paths to copyfrom revisions/paths in
+   *data.  Store a hash of paths to copyfrom "REV PATH" strings in
    COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
    the changed-path entries have already been folded (by
    write_final_changed_path_info) and may be out of order, so we shouldn't
@@ -4369,7 +4820,7 @@ read_change(change_t **change_p,
    allocations in POOL. */
 static svn_error_t *
 fetch_all_changes(apr_hash_t *changed_paths,
-                  apr_hash_t *copyfrom_hash,
+                  apr_hash_t *copyfrom_cache,
                   apr_file_t *file,
                   svn_boolean_t prefolded,
                   apr_pool_t *pool)
@@ -4384,7 +4835,7 @@ fetch_all_changes(apr_hash_t *changed_paths,
 
   while (change)
     {
-      SVN_ERR(fold_change(changed_paths, change, copyfrom_hash));
+      SVN_ERR(fold_change(changed_paths, change, copyfrom_cache));
 
       /* Now, if our change was a deletion or replacement, we have to
          blow away any changes thus far on paths that are (or, were)
@@ -5004,6 +5455,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   apr_file_t *file;
   svn_stream_t *out;
   fs_fs_data_t *ffd = fs->fsap_data;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (!rep || !rep->txn_id)
     {
@@ -5011,7 +5463,8 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
       {
         apr_hash_t *entries;
-        apr_pool_t *subpool = svn_pool_create(pool);
+
+        svn_pool_clear(subpool);
 
         /* Before we can modify the directory, we need to dump its old
            contents into a mutable representation file. */
@@ -5024,7 +5477,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
         out = svn_stream_from_aprfile2(file, TRUE, pool);
         SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
 
-        svn_pool_destroy(subpool);
+        svn_pool_clear(subpool);
       }
 
       /* Mark the node-rev's data rep as mutable. */
@@ -5046,10 +5499,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* if we have a directory cache for this transaction, update it */
+  svn_pool_clear(subpool);
   if (ffd->txn_dir_cache)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
-
       /* build parameters: (name, new entry) pair */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
@@ -5064,28 +5516,31 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
         }
 
       /* actually update the cached directory (if cached) */
-      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key, svn_fs_fs__replace_dir_entry, &baton, subpool));
-
-      svn_pool_destroy(subpool);
+      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key,
+                                     svn_fs_fs__replace_dir_entry, &baton,
+                                     subpool));
     }
+  svn_pool_clear(subpool);
 
   /* Append an incremental hash entry for the entry change. */
   if (id)
     {
-      const char *val = unparse_dir_entry(kind, id, pool);
+      const char *val = unparse_dir_entry(kind, id, subpool);
 
-      SVN_ERR(svn_stream_printf(out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
+      SVN_ERR(svn_stream_printf(out, subpool, "K %" APR_SIZE_T_FMT "\n%s\n"
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name,
                                 strlen(val), val));
     }
   else
     {
-      SVN_ERR(svn_stream_printf(out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
+      SVN_ERR(svn_stream_printf(out, subpool, "D %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name));
     }
 
-  return svn_io_file_close(file, pool);
+  SVN_ERR(svn_io_file_close(file, subpool));
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
@@ -5263,6 +5718,7 @@ choose_delta_base(representation_t **rep,
   int count;
   int walk;
   node_revision_t *base;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   /* If we have no predecessors, then use the empty stream as a
      base. */
@@ -5283,14 +5739,14 @@ choose_delta_base(representation_t **rep,
      along very long node histories.  Close to HEAD however, we create
      a linear history to minimize delta size.  */
   walk = noderev->predecessor_count - count;
-  if (walk < SVN_FS_FS_MAX_LINEAR_DELTIFICATION)
+  if (walk < (int)ffd->max_linear_deltification)
     count = noderev->predecessor_count - 1;
 
   /* Finding the delta base over a very long distance can become extremely
      expensive for very deep histories, possibly causing client timeouts etc.
      OTOH, this is a rare operation and its gains are minimal. Lets simply
      start deltification anew close every other 1000 changes or so.  */
-  if (walk > SVN_FS_FS_MAX_DELTIFICATION_WALK)
+  if (walk > (int)ffd->max_deltification_walk)
     {
       *rep = NULL;
       return SVN_NO_ERROR;
@@ -5515,7 +5971,7 @@ rep_write_contents_close(void *baton)
   else
     {
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
+      SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
 
       b->noderev->data_rep = rep;
     }
@@ -5730,7 +6186,7 @@ write_hash_rep(representation_t *rep,
   stream = svn_stream_create(whb, pool);
   svn_stream_set_write(stream, write_hash_handler);
 
-  SVN_ERR(svn_stream_printf(whb->stream, pool, "PLAIN\n"));
+  SVN_ERR(svn_stream_puts(whb->stream, "PLAIN\n"));
 
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
@@ -5753,7 +6209,7 @@ write_hash_rep(representation_t *rep,
   else
     {
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_printf(whb->stream, pool, "ENDREP\n"));
+      SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
       /* update the representation */
       rep->size = whb->size;
@@ -5770,7 +6226,6 @@ write_hash_rep(representation_t *rep,
    earlier reps with the same content.  When such existing reps can be found,
    we will truncate the one just written from the file and return the existing
    rep.  Perform temporary allocations in POOL. */
-#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
                      apr_file_t *file,
@@ -5862,7 +6317,7 @@ write_hash_delta_rep(representation_t *rep,
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(get_file_offset(&rep_end, file, pool));
-      SVN_ERR(svn_stream_printf(file_stream, pool, "ENDREP\n"));
+      SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       /* update the representation */
       rep->expanded_size = whb->size;
@@ -5871,7 +6326,6 @@ write_hash_delta_rep(representation_t *rep,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* Sanity check ROOT_NODEREV, a candidate for being the root node-revision
    of (not yet committed) revision REV in FS.  Use POOL for temporary
@@ -5909,7 +6363,7 @@ validate_root_noderev(svn_fs_t *fs,
 
      This kind of corruption was seen on svn.apache.org (both on
      the root noderev and on other fspaths' noderevs); see
-       http://mid.gmane.org/20111002202833.GA12373@daniel3.local
+     issue #4129.
 
      Normally (rev == root_noderev->predecessor_count), but here we
      use a more roundabout check that should only trigger on new instances
@@ -6024,14 +6478,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           noderev->data_rep->txn_id = NULL;
           noderev->data_rep->revision = rev;
 
-#ifdef SVN_FS_FS_DELTIFY_DIRECTORIES
-          SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
-                                       str_entries, fs, noderev, NULL,
-                                       pool));
-#else
-          SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
-                                 fs, NULL, pool));
-#endif
+          if (ffd->deltify_directories)
+            SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
+                                         str_entries, fs, noderev, NULL,
+                                         pool));
+          else
+            SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
+                                   fs, NULL, pool));
         }
     }
   else
@@ -6064,14 +6517,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
 
-#ifdef SVN_FS_FS_DELTIFY_PROPS
-      SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
-                                   proplist, fs, noderev, reps_hash,
-                                   pool));
-#else
-      SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
-                             fs, reps_hash, pool));
-#endif
+      if (ffd->deltify_properties)
+        SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
+                                     proplist, fs, noderev, reps_hash,
+                                     pool));
+      else
+        SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
+                               fs, reps_hash, pool));
     }
 
 
@@ -7170,17 +7622,6 @@ svn_fs_fs__recover(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__get_uuid(svn_fs_t *fs,
-                    const char **uuid_p,
-                    apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  *uuid_p = apr_pstrdup(pool, ffd->uuid);
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_fs__set_uuid(svn_fs_t *fs,
                     const char *uuid,
                     apr_pool_t *pool)
@@ -7189,7 +7630,6 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
   apr_size_t my_uuid_len;
   const char *tmp_path;
   const char *uuid_path = path_uuid(fs, pool);
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   if (! uuid)
     uuid = svn_uuid_generate(pool);
@@ -7210,7 +7650,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 
   /* Remove the newline we added, and stash the UUID. */
   my_uuid[my_uuid_len - 1] = '\0';
-  ffd->uuid = my_uuid;
+  fs->uuid = my_uuid;
 
   return SVN_NO_ERROR;
 }
@@ -7946,58 +8386,24 @@ svn_fs_fs__verify(svn_fs_t *fs,
                                           start, end,
                                           pool));
 
-  /* Issue #4129: bogus pred-counts on the root node-rev. */
+  /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
+     (and elsewhere).  This code makes more thorough checks that the
+     commit-time checks in validate_root_noderev(). */
   {
     svn_revnum_t i;
-    int predecessor_predecessor_count;
-
-    /* Compute PREDECESSOR_PREDECESSOR_COUNT. */
-    if (start == 0)
-      /* The value that passes the if() at the end of the loop. */
-      predecessor_predecessor_count = -1;
-    else
-      {
-        svn_fs_id_t *root_id;
-        node_revision_t *root_noderev;
-        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, start-1, iterpool));
-        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
-                                             iterpool));
-        predecessor_predecessor_count = root_noderev->predecessor_count;
-      }
-
     for (i = start; i <= end; i++)
       {
-        /* ### Caching.
+      	svn_fs_root_t *root;
 
-           svn_fs_fs__rev_get_root() consults caches, which in verify we
-           don't want.  But we can't easily bypass that, as
-           svn_fs_revision_root()+svn_fs_node_id()'s implementation uses
-           svn_fs_fs__rev_get_root() too.
+        svn_pool_clear(iterpool);
 
-           ### A future revision will make fs_verify() disable caches when it
-           ### opens ffd.
-         */
-        svn_fs_id_t *root_id;
-        node_revision_t *root_noderev;
+      	/* ### TODO: Make sure caches are disabled.
 
-        if ((i % 128) == 0) /* uneducated guess */
-          svn_pool_clear(iterpool);
-
-        /* Fetch ROOT_NODEREV. */
-        SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, i, iterpool));
-        SVN_ERR(svn_fs_fs__get_node_revision(&root_noderev, fs, root_id,
-                                             iterpool));
-
-        /* Check correctness. (Compare validate_root_noderev().) */
-        if (1+predecessor_predecessor_count != root_noderev->predecessor_count)
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                   _("predecessor count for "
-                                     "the root node-revision is wrong: "
-                                     "r%ld has %d, but r%ld has %d"),
-                                   i, root_noderev->predecessor_count,
-                                   i-1, predecessor_predecessor_count);
-
-        predecessor_predecessor_count = root_noderev->predecessor_count;
+      	   When this code is called in the library, we want to ensure we
+      	   use the on-disk data --- rather than some data that was read
+      	   in the possibly-distance past and cached since. */
+      	SVN_ERR(svn_fs_fs__revision_root(&root, fs, i, iterpool));
+      	SVN_ERR(svn_fs_fs__verify_root(root, iterpool));
       }
   }
 
@@ -8413,7 +8819,7 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
 
   /* Make sure the UUID of source and destination match up.
    * We don't want to copy over a different repository. */
-  if (strcmp(src_ffd->uuid, dst_ffd->uuid) != 0)
+  if (strcmp(src_fs->uuid, dst_fs->uuid) != 0)
     return svn_error_create(SVN_ERR_RA_UUID_MISMATCH, NULL,
                             _("The UUID of the hotcopy source does "
                               "not match the UUID of the hotcopy "
@@ -8793,6 +9199,15 @@ hotcopy_body(void *baton, apr_pool_t *pool)
     SVN_ERR(svn_io_dir_file_copy(src_fs->path, dst_fs->path,
                                  PATH_TXN_CURRENT, pool));
 
+  /* If a revprop generation file exists in the source filesystem,
+   * force a fresh revprop caching namespace for the destination by
+   * setting the generation to zero. We have no idea if the revprops
+   * we copied above really belong to the currently cached generation. */
+  SVN_ERR(svn_io_check_path(path_revprop_generation(src_fs, pool),
+                            &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),
                        dst_ffd->format, max_files_per_dir, TRUE, pool));
@@ -8800,6 +9215,20 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+/* Set up shared data between SRC_FS and DST_FS. */
+static void
+hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
+{
+  fs_fs_data_t *src_ffd = src_fs->fsap_data;
+  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
+
+  /* The common pool and mutexes are shared between src and dst filesystems.
+   * During hotcopy we only grab the mutexes for the destination, so there
+   * is no risk of dead-lock. We don't write to the src filesystem. Shared
+   * data for the src_fs has already been initialised in fs_hotcopy(). */
+  dst_ffd->shared = src_ffd->shared;
+}
 
 /* Create an empty filesystem at DST_FS at DST_PATH with the same
  * configuration as SRC_FS (uuid, format, and other parameters).
@@ -8859,7 +9288,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create lock file and UUID. */
   SVN_ERR(svn_io_file_create(path_lock(dst_fs, pool), "", pool));
-  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_ffd->uuid, pool));
+  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -8876,6 +9305,10 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
     }
 
   dst_ffd->youngest_rev_cache = 0;
+
+  hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+  SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -8917,6 +9350,8 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
           SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
           SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
                                                           pool));
+          hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+          SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
         }
     }
   else

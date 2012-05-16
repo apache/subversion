@@ -224,6 +224,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 14,
              "Invalid changelist name")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_BAD_ATOMIC,
+             SVN_ERR_BAD_CATEGORY_START + 15,
+             "Invalid atomic")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -761,6 +766,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 49,
              "Property value in filesystem differs from the provided "
              "base value")
+
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION,
+             SVN_ERR_FS_CATEGORY_START + 50,
+             "The filesystem editor completion process was not followed")
 
   /* repos errors */
 

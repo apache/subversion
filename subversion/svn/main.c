@@ -89,7 +89,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_auth_cache,
   opt_no_autoprops,
   opt_no_diff_deleted,
-  opt_ignore_props,
+  opt_ignore_properties,
   opt_no_ignore,
   opt_no_unlock,
   opt_non_interactive,
@@ -124,9 +124,11 @@ typedef enum svn_cl__longopt_t {
   opt_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
-  opt_use_patch_diff_format,
+  opt_patch_compatible,
   opt_allow_mixed_revisions,
   opt_include_externals,
+  opt_symmetric,
+  opt_properties_only,
 } svn_cl__longopt_t;
 
 
@@ -241,7 +243,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("try operation but make no changes")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files")},
-  {"ignore-properties", opt_ignore_props, 0,
+  {"ignore-properties", opt_ignore_properties, 0,
                     N_("ignore properties during the operation")},
   {"notice-ancestry", opt_notice_ancestry, 0,
                     N_("notice ancestry when calculating differences")},
@@ -347,12 +349,12 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
-  {"patch-compatible", opt_use_patch_diff_format, 0,
+  {"patch-compatible", opt_patch_compatible, 0,
                        N_("generate diff suitable for generic third-party\n"
                        "                             "
                        "patch tools; currently the same as\n"
                        "                             "
-                       "--show-copies-as-adds --ignore-properties\n"
+                       "--show-copies-as-adds --ignore-properties"
                        )},
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow merge into mixed-revision working copy.\n"
@@ -366,6 +368,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        "recursion. This does not include externals with a\n"
                        "                             "
                        "fixed revision. (See the svn:externals property)")},
+  {"symmetric", opt_symmetric, 0,
+                       N_("Symmetric merge")},
+  {"properties-only", opt_properties_only, 0,
+                       N_("show only properties during the operation")},
 
   /* Long-opt Aliases
    *
@@ -549,9 +555,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
-     opt_internal_diff, 'x', opt_no_diff_deleted, opt_ignore_props,
+     opt_internal_diff, 'x', opt_no_diff_deleted, opt_ignore_properties,
+     opt_properties_only,
      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml, opt_use_git_diff_format, opt_use_patch_diff_format} },
+     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -671,15 +678,29 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
      "\n"
      "  Examples:\n"
-     "    svn log\n"
-     "    svn log foo.c\n"
-     "    svn log bar.c@42\n"
-     "    svn log http://www.example.com/repo/project/foo.c\n"
-     "    svn log http://www.example.com/repo/project foo.c bar.c\n"
-     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"
      "\n"
-     "    This command shows the log entry for the revision the branch\n"
-     "    ^/branches/foo was created in:\n"
+     "    Show the latest 5 log messages for the current working copy\n"
+     "    directory and display paths changed in each commit:\n"
+     "      svn log -l 5 -v\n"
+     "\n"
+     "    Show the log for bar.c as of revision 42:\n"
+     "      svn log bar.c@42\n"
+     "\n"
+     "    Show log messages and diffs for each commit to foo.c:\n"
+     "      svn log --diff http://www.example.com/repo/project/foo.c\n"
+     "    (Because the above command uses a full URL it does not require\n"
+     "     a working copy.)\n"
+     "\n"
+     "    Show log messages for the children foo.c and bar.c of the directory\n"
+     "    '/trunk' as it appeared in revision 50, using the ^/ URL shortcut:\n"
+     "      svn log ^/trunk@50 foo.c bar.c\n"
+     "\n"
+     "    Show the log messages for any incoming changes to foo.c during the\n"
+     "    next 'svn update':\n"
+     "      svn log -r BASE:HEAD foo.c\n"
+     "\n"
+     "    Show the log message for the revision in which /branches/foo\n"
+     "    was created:\n"
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
@@ -1014,7 +1035,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions} },
+     opt_allow_mixed_revisions, opt_symmetric} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1257,9 +1278,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "resolve", svn_cl__resolve, {0}, N_
     ("Resolve conflicts on working copy files or directories.\n"
-     "usage: resolve --accept=ARG [PATH...]\n"
+     "usage: resolve [PATH...]\n"
      "\n"
-     "  Note:  the --accept option is currently required.\n"),
+     "  If no arguments are given, perform interactive conflict resolution for\n"
+     "  all conflicted paths in the working copy, with default depth 'infinity'.\n"
+     "  The --accept=ARG option prevents prompting and forces conflicts on PATH\n"
+     "  to resolved in the manner specified by ARG, with default depth 'empty'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                      "                             "
@@ -1539,7 +1563,6 @@ int
 main(int argc, const char *argv[])
 {
   svn_error_t *err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   int opt_id;
   apr_getopt_t *os;
@@ -1564,14 +1587,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
-
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
@@ -1919,8 +1935,8 @@ main(int argc, const char *argv[])
       case opt_no_diff_deleted:
         opt_state.no_diff_deleted = TRUE;
         break;
-      case opt_ignore_props:
-        opt_state.ignore_props = TRUE;
+      case opt_ignore_properties:
+        opt_state.ignore_properties = TRUE;
         break;
       case opt_show_copies_as_adds:
         opt_state.show_copies_as_adds = TRUE;
@@ -1950,6 +1966,9 @@ main(int argc, const char *argv[])
         break;
       case opt_record_only:
         opt_state.record_only = TRUE;
+        break;
+      case opt_symmetric:
+        opt_state.symmetric_merge = TRUE;
         break;
       case opt_editor_cmd:
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
@@ -2102,8 +2121,8 @@ main(int argc, const char *argv[])
       case opt_internal_diff:
         opt_state.internal_diff = TRUE;
         break;
-      case opt_use_patch_diff_format:
-        opt_state.use_patch_diff_format = TRUE;
+      case opt_patch_compatible:
+        opt_state.patch_compatible = TRUE;
         break;
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
@@ -2113,6 +2132,9 @@ main(int argc, const char *argv[])
         break;
       case opt_include_externals:
         opt_state.include_externals = TRUE;
+        break;
+      case opt_properties_only:
+        opt_state.properties_only = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -2656,9 +2678,12 @@ main(int argc, const char *argv[])
          the user said to postpone. */
       ctx->conflict_func = NULL;
       ctx->conflict_baton = NULL;
+      ctx->conflict_func2 = NULL;
+      ctx->conflict_baton2 = NULL;
     }
   else
     {
+      svn_cl__conflict_baton_t * conflict_baton2;
       svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
       pb->cancel_func = ctx->cancel_func;
       pb->cancel_baton = ctx->cancel_baton;
@@ -2680,13 +2705,16 @@ main(int argc, const char *argv[])
                pool, "svn: ");
         }
 
-      ctx->conflict_func = svn_cl__conflict_handler;
-      ctx->conflict_baton = svn_cl__conflict_baton_make(
-          opt_state.accept_which,
-          ctx->config,
-          opt_state.editor_cmd,
-          pb,
-          pool);
+      ctx->conflict_func = NULL;
+      ctx->conflict_baton = NULL;
+      ctx->conflict_func2 = svn_cl__conflict_handler;
+      SVN_INT_ERR(svn_cl__conflict_baton_make(&conflict_baton2,
+                                              opt_state.accept_which,
+                                              ctx->config,
+                                              opt_state.editor_cmd,
+                                              pb,
+                                              pool));
+      ctx->conflict_baton2 = conflict_baton2;
     }
 
   /* And now we finally run the subcommand. */
@@ -2698,8 +2726,10 @@ main(int argc, const char *argv[])
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          err = svn_error_quick_wrap(err,
-                                     _("Try 'svn help' for more info"));
+          err = svn_error_quick_wrap(
+                  err, apr_psprintf(pool,
+                                    _("Try 'svn help %s' for more information"),
+                                    subcommand->name));
         }
       if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
         {

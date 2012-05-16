@@ -32,6 +32,8 @@
 
 #include "svn_private_config.h"
 
+#include "repos.h"
+
 
 
 
@@ -570,8 +572,7 @@ repos_notify_handler(void *baton,
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      len = strlen(notify->warning_str);
-      svn_error_clear(svn_stream_write(feedback_stream, notify->warning_str, &len));
+      svn_error_clear(svn_stream_puts(feedback_stream, notify->warning_str));
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -876,5 +877,34 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser_callbacks,
                                          parent_dir, pool));
 
   *parser_callbacks = fns_from_fns2(fns2, pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
+                                  svn_repos_t *repos,
+                                  svn_revnum_t rev,
+                                  const char *author,
+                                  apr_pool_t *pool)
+{
+  /* ### someday, we might run a read-hook here. */
+
+  /* Begin the transaction. */
+  SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev, 0, pool));
+
+  /* We pass the author to the filesystem by adding it as a property
+     on the txn. */
+
+  /* User (author). */
+  if (author)
+    {
+      svn_string_t val;
+      val.data = author;
+      val.len = strlen(author);
+      SVN_ERR(svn_fs_change_txn_prop(*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                     &val, pool));
+    }
+
   return SVN_NO_ERROR;
 }

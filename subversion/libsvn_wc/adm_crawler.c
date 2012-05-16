@@ -692,11 +692,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       return SVN_NO_ERROR;
     }
 
-  if (! repos_relpath)
-    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
   if (target_depth == svn_depth_unknown)
     target_depth = svn_depth_infinity;
 

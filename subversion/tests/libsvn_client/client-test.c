@@ -656,14 +656,14 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
   const char *repos_url;
+  const char *repos_uuid = "fake-uuid";  /* the functions we call don't care */
   svn_client_ctx_t *ctx;
   svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
   svn_opt_revision_t zero_rev = { svn_opt_revision_number, { 0 } };
   svn_client_copy_source_t source;
   apr_array_header_t *sources;
   const char *dest;
-  const char *yc_ancestor_relpath;
-  svn_revnum_t yc_ancestor_rev;
+  svn_client__pathrev_t *yc_ancestor;
 
   /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-youngest-common-ancestor", opts, pool));
@@ -684,12 +684,15 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
 
   /* Test: YCA(iota@2, A/iota@2) is iota@1. */
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor_relpath, NULL, &yc_ancestor_rev,
-            svn_path_url_add_component2(repos_url, "iota", pool), 2,
-            svn_path_url_add_component2(repos_url, "A/iota", pool), 2,
-            ctx, pool));
-  SVN_TEST_STRING_ASSERT(yc_ancestor_relpath, "iota");
-  SVN_TEST_ASSERT(yc_ancestor_rev == 1);
+            &yc_ancestor,
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 2, "iota", pool),
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 2, "A/iota", pool),
+            ctx, pool, pool));
+  SVN_TEST_STRING_ASSERT(svn_client__pathrev_relpath(yc_ancestor, pool),
+                         "iota");
+  SVN_TEST_ASSERT(yc_ancestor->rev == 1);
 
   /* Copy the root directory (at revision 0) into A as 'ROOT'. */
   sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
@@ -705,12 +708,14 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
 
   /* Test: YCA(''@0, A/ROOT@3) is ''@0 (handled as a special case). */
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor_relpath, NULL, &yc_ancestor_rev,
-            svn_path_url_add_component2(repos_url, "", pool), 0,
-            svn_path_url_add_component2(repos_url, "A/ROOT", pool), 3,
-            ctx, pool));
-  SVN_TEST_STRING_ASSERT(yc_ancestor_relpath, "");
-  SVN_TEST_ASSERT(yc_ancestor_rev == 0);
+            &yc_ancestor,
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 0, "", pool),
+            svn_client__pathrev_create_with_relpath(
+              repos_url, repos_uuid, 3, "A/ROOT", pool),
+            ctx, pool, pool));
+  SVN_TEST_STRING_ASSERT(svn_client__pathrev_relpath(yc_ancestor, pool), "");
+  SVN_TEST_ASSERT(yc_ancestor->rev == 0);
 
   return SVN_NO_ERROR;
 }

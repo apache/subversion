@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -71,40 +71,57 @@
 # To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
 # appropriate value in the environment.
 #
+# To load an MPM module for Apache 2.4 use APACHE_MPM=event in the
+# environment.
+#
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.
+
+PYTHON=${PYTHON:-python}
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
-trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
+trap stop_httpd_and_die HUP TERM INT
 
 # Ensure the server uses a known locale.
 LC_ALL=C
 export LC_ALL
 
-function stop_httpd_and_die() {
+stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
+  echo "HTTPD stopped."
   exit 1
 }
 
-function say() {
+say() {
   echo "$SCRIPT: $*"
 }
 
-function fail() {
+fail() {
   say $*
   stop_httpd_and_die
 }
 
-function query() {
-  echo -n "$SCRIPT: $1 (y/n)? [$2] "
-  read -n 1 -t 32
+query() {
+  printf "%s" "$SCRIPT: $1 (y/n)? [$2] "
+  if [ -n "$BASH_VERSION" ]; then
+    read -n 1 -t 32
+  else
+    # 
+    prog=$(cat) <<'EOF'
+import select as s
+import sys
+if s.select([sys.stdin.fileno()], [], [], 32)[0]:
+  sys.stdout.write(sys.stdin.read(1))
+EOF
+    REPLY=`stty cbreak; $PYTHON -c "$prog" "$@"; stty -cbreak`
+  fi
   echo
   [ "${REPLY:-$2}" = 'y' ]
 }
 
-function get_loadmodule_config() {
+get_loadmodule_config() {
   local SO="$($APXS -q LIBEXECDIR)/$1.so"
 
   # shared object module?
@@ -121,7 +138,7 @@ function get_loadmodule_config() {
 }
 
 # Check apxs's SBINDIR and BINDIR for given program names
-function get_prog_name() {
+get_prog_name() {
   for prog in $*
   do
     for dir in $($APXS -q SBINDIR) $($APXS -q BINDIR)
@@ -171,9 +188,7 @@ fi
 
 # Find the source and build directories. The build dir can be found if it is
 # the current working dir or the source dir.
-pushd ${SCRIPTDIR}/../../../ > /dev/null
-ABS_SRCDIR=$(pwd)
-popd > /dev/null
+ABS_SRCDIR=$(cd ${SCRIPTDIR}/../../../; pwd)
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
 elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
@@ -195,7 +210,8 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
+LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH
 
 case "`uname`" in
   Darwin*) LDD='otool -L'
@@ -255,8 +271,23 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
+if [ ${APACHE_MPM:+set} ]; then
+    LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
+      || fail "MPM module not found"
+fi
 
-HTTPD_PORT=$(($RANDOM+1024))
+random_port() {
+  if [ -n "$BASH_VERSION" ]; then
+    echo $(($RANDOM+1024))
+  else
+    $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
+  fi
+}
+
+HTTPD_PORT=$(random_port)
+while netstat -an | grep $HTTPD_PORT | grep 'LISTEN'; do
+  HTTPD_PORT=$(random_port)
+done
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
@@ -278,6 +309,7 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
+$LOAD_MOD_MPM
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
@@ -375,6 +407,7 @@ $START &
 sleep 2
 
 say "HTTPD started and listening on '$BASE_URL'..."
+#query "Ready" "y"
 
 # Perform a trivial validation of our httpd configuration by
 # downloading a file and comparing it to the original copy.
@@ -401,6 +434,7 @@ rm "$HTTPD_CFG-copy"
 say "HTTPD is good"
 
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
+  echo "http://localhost:$HTTPD_PORT"
   exit
 fi
 
@@ -424,12 +458,11 @@ if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else
-  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
+  (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@"
+  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@")
   r=$?
-  popd >/dev/null
 fi
 
 say "Finished testing..."

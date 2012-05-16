@@ -147,7 +147,8 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_LOG_FILE        264
 #define SVNSERVE_OPT_CACHE_TXDELTAS  265
 #define SVNSERVE_OPT_CACHE_FULLTEXTS 266
-#define SVNSERVE_OPT_SINGLE_CONN     267
+#define SVNSERVE_OPT_CACHE_REVPROPS  267
+#define SVNSERVE_OPT_SINGLE_CONN     268
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -166,11 +167,11 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
 #ifdef WIN32
-     N_("listen port\n"
+     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
         "                             "
         "[mode: daemon, service, listen-once]")},
 #else
-     N_("listen port\n"
+     N_("listen port. The default port is " APR_STRINGIFY(SVN_RA_SVN_PORT) ".\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -178,9 +179,13 @@ static const apr_getopt_option_t svnserve__options[] =
 #ifdef WIN32
      N_("listen hostname or IP address\n"
         "                             "
+        "By default svnserve listens on all addresses.\n"
+        "                             "
         "[mode: daemon, service, listen-once]")},
 #else
      N_("listen hostname or IP address\n"
+        "                             "
+        "By default svnserve listens on all addresses.\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -220,6 +225,14 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("enable or disable caching of file contents\n"
         "                             "
         "Default is yes.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+    {"cache-revprops", SVNSERVE_OPT_CACHE_REVPROPS, 1,
+     N_("enable or disable caching of revision properties.\n"
+        "                             "
+        "Consult the documentation before activating this.\n"
+        "                             "
+        "Default is no.\n"
         "                             "
         "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
@@ -413,7 +426,6 @@ int main(int argc, const char *argv[])
   apr_sockaddr_t *sa;
   apr_pool_t *pool;
   apr_pool_t *connection_pool;
-  apr_allocator_t *allocator;
   svn_error_t *err;
   apr_getopt_t *os;
   int opt;
@@ -483,6 +495,7 @@ int main(int argc, const char *argv[])
   params.memory_cache_size = (apr_uint64_t)-1;
   params.cache_fulltexts = TRUE;
   params.cache_txdeltas = FALSE;
+  params.cache_revprops = FALSE;
 
   while (1)
     {
@@ -623,6 +636,11 @@ int main(int argc, const char *argv[])
 
         case SVNSERVE_OPT_CACHE_FULLTEXTS:
           params.cache_fulltexts
+             = svn_tristate__from_word(arg) == svn_tristate_true;
+          break;
+
+        case SVNSERVE_OPT_CACHE_REVPROPS:
+          params.cache_revprops
              = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
@@ -928,22 +946,12 @@ int main(int argc, const char *argv[])
         return ERROR_SUCCESS;
 #endif
 
-      /* If we are using fulltext caches etc. we will allocate many large
-         chunks of memory of various sizes outside the cache for those
-         fulltexts. Make sure we use the memory wisely: use an allocator
-         that causes memory fragments to be given back to the OS early. */
-
-      if (apr_allocator_create(&allocator))
-        return EXIT_FAILURE;
-
-      apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
       /* Non-standard pool handling.  The main thread never blocks to join
          the connection threads so it cannot clean up after each one.  So
          separate pools that can be cleared at thread exit are used. */
 
-      connection_pool = svn_pool_create_ex(NULL, allocator);
-      apr_allocator_owner_set(allocator, connection_pool);
+      connection_pool
+          = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
       status = apr_socket_accept(&usock, sock, connection_pool);
       if (handling_mode == connection_mode_fork)

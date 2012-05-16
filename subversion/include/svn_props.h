@@ -111,7 +111,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
 
 /**
  * Creates a deep copy of @a hash (keys <tt>const char *</tt> and
- * values <tt>const svn_string_t</tt>) in @a pool.
+ * values <tt>const svn_string_t *</tt>) in @a pool.
  *
  * @since New in 1.6.
  */
@@ -150,10 +150,20 @@ typedef enum svn_prop_kind
   svn_prop_regular_kind
 } svn_prop_kind_t;
 
+/** Return the property kind of a property named @a prop_name.
+ *
+ * @since New in 1.8
+ */
+svn_prop_kind_t
+svn_property_kind2(const char *prop_name);
+
 /** Return the prop kind of a property named @a prop_name, and
  * (if @a prefix_len is non-@c NULL) set @a *prefix_len to the length of
  * the prefix of @a prop_name that was sufficient to distinguish its kind.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 svn_prop_kind_t
 svn_property_kind(int *prefix_len,
                   const char *prop_name);

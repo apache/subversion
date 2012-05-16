@@ -78,13 +78,8 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
-# Set up logging
-logger = logging.getLogger()
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
-                              '%Y-%m-%d %H:%M:%S')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+# Don't try to use this before calling execute_tests()
+logger = None
 
 
 class SVNProcessTerminatedBySignal(Failure):
@@ -153,13 +148,12 @@ svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
+svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
-svnmucc_binary=os.path.abspath('../../../tools/client-side/svnmucc/svnmucc' + \
-                               _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -504,16 +498,34 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
+  def _line_contains_repos_diskpath(line):
+    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### or the diskpath isn't realpath()'d somewhere on the way from
+    # ### the server's configuration and the client's stderr.  We could
+    # ### check for both the symlinked path and the realpath.
+    return \
+         os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
+      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+
+  for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
+    if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
+      break
+    # Does the server leak the repository on-disk path?
+    # (prop_tests-12 installs a hook script that does that intentionally)
+    if any(map(_line_contains_repos_diskpath, lines)) \
+       and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
+      raise Failure("Repository diskpath in %s: %r" % (name, lines))
+
   stop = time.time()
   logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
-    logger.info(x[:-1])
+    logger.info(x.rstrip())
   for x in stderr_lines:
-    logger.info(x)
+    logger.info(x.rstrip())
 
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
-      logger.warning(x[:-1])
+      logger.warning(x.rstrip())
     raise Failure
 
   return exit_code, \
@@ -867,9 +879,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     [svnadmin_binary] + load_args,
     stdin=dump_out) # Attached to dump_kid
 
-  stop = time.time()
-  logger.info('<TIME = %.6f>' % (stop - start))
-
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
   dump_stdout, dump_stderr, dump_exit_code = wait_on_pipe(dump_kid, True)
 
@@ -879,6 +888,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   #load_in is dump_out so it's already closed.
   load_out.close()
   load_err.close()
+
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
 
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
@@ -1124,6 +1136,9 @@ def is_os_darwin():
 
 def is_fs_case_insensitive():
   return (is_os_darwin() or is_os_windows())
+
+def is_threaded_python():
+  return True
 
 def server_has_mergeinfo():
   return options.server_minor_version >= 5
@@ -1469,9 +1484,11 @@ def _create_parser():
   """Return a parser for our test suite."""
   def set_log_level(option, opt, value, parser, level=None):
     if level:
+      # called from --verbose
       logger.setLevel(level)
     else:
-      logger.setLevel(value)
+      # called from --set-log-level
+      logger.setLevel(getattr(logging, value, None) or int(value))
 
   # set up the parser
   _default_http_library = 'serf'
@@ -1522,8 +1539,13 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
-  parser.add_option('--set-log-level', action='callback', type='int',
-                    callback=set_log_level)
+  parser.add_option('--set-log-level', action='callback', type='str',
+                    callback=set_log_level,
+                    help="Set log level (numerically or symbolically). " +
+                         "Symbolic levels are: CRITICAL, ERROR, WARNING, " +
+                         "INFO, DEBUG")
+  parser.add_option('--log-with-timestamps', action='store_true',
+                    help="Show timestamps in test log.")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
@@ -1624,6 +1646,28 @@ def get_target_milestones_for_issues(issue_numbers):
 
   return issue_dict
 
+
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
+
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
+
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
+
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -1634,6 +1678,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
+  global logger
   global pristine_url
   global pristine_greek_repos_url
   global svn_binary
@@ -1650,12 +1695,41 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = _parse_options()
     test_selection = args
   else:
     parser = _create_parser()
+
+  # If there are no handlers registered yet, then install our own with
+  # our custom formatter. (anything currently installed *is* our handler
+  # as tested above)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
@@ -1719,7 +1793,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
-    svnversion_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
+    svnmucc_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)

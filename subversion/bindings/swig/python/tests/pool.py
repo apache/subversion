@@ -195,10 +195,10 @@ class PoolTestCase(unittest.TestCase):
     self.assertNone(anonymous_pool_ref())
 
     # Try to cause a segfault using apr_terminate
-    apr_terminate()
-    apr_initialize()
-    apr_terminate()
-    apr_terminate()
+    svn.core.apr_terminate()
+    svn.core.apr_initialize()
+    svn.core.apr_terminate()
+    svn.core.apr_terminate()
 
     # Destroy the application pool
     svn_pool_destroy(libsvn.core.application_pool)

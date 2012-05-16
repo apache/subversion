@@ -324,7 +324,7 @@ I.    INTRODUCTION
       default.  Add "http-library = neon" to the [global] section of
       your ~/.subversion/servers file to use ra_neon instead.)
 
-        a. Serf library 0.7.1 or newer (http://code.google.com/p/serf/)
+        a. Serf library 1.1.0 or newer (http://code.google.com/p/serf/)
 
            In order to use ra_serf, you must install serf, and run
            Subversion's ./configure with the argument --with-serf.  If

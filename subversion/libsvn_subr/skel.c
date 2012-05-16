@@ -24,6 +24,8 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "private/svn_skel.h"
+#include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 
 /* Parsing skeletons.  */
@@ -582,9 +584,10 @@ void svn_skel__prepend_int(apr_int64_t value,
                            svn_skel_t *skel,
                            apr_pool_t *result_pool)
 {
-  const char *str = apr_psprintf(result_pool, "%" APR_INT64_T_FMT, value);
+  char *val_string = apr_palloc(result_pool, SVN_INT64_BUFFER_SIZE);
+  svn__i64toa(val_string, value);
 
-  svn_skel__prepend_str(str, skel, result_pool);
+  svn_skel__prepend_str(val_string, skel, result_pool);
 }
 
 
@@ -678,7 +681,7 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
     return skel_err("proplist");
 
   /* Create the returned structure */
-  proplist = apr_hash_make(pool);
+  proplist = svn_hash__make(pool);
   for (elt = skel->children; elt; elt = elt->next->next)
     {
       svn_string_t *value = svn_string_ncreate(elt->next->data,

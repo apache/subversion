@@ -217,7 +217,7 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
                            &(propstring->len)));
 
-  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
   SVN_ERR(svn_stream_close(stdout_stream));
 
   SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
@@ -332,7 +332,7 @@ dump_revision_header(svn_ra_session_t *session,
   /* The properties */
   SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
                            &(propstring->len)));
-  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
 
   return SVN_NO_ERROR;
 }
@@ -694,7 +694,6 @@ main(int argc, const char **argv)
   apr_getopt_t *os;
   const char *first_arg;
   apr_array_header_t *received_opts;
-  apr_allocator_t *allocator;
   int i;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
@@ -703,13 +702,7 @@ main(int argc, const char **argv)
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   opt_baton = apr_pcalloc(pool, sizeof(*opt_baton));
   opt_baton->start_revision.kind = svn_opt_revision_unspecified;

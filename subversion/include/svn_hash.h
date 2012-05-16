@@ -240,48 +240,6 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
-/**
- * Clear any key/value pairs in the hash table.  A wrapper for a
- * apr_hash_clear(), which isn't available until APR 1.3.0.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
-
-/** @} */
-
-
-/**
- * @defgroup svn_hash_getters Specialized getter APIs for hashes
- * @{
- */
-
-/** Find the value of a @a key in @a hash, return the value.
- *
- * If @a hash is @c NULL or if the @a key cannot be found, the
- * @a default_value will be returned.
- *
- * @since New in 1.7.
- */
-const char *
-svn_hash__get_cstring(apr_hash_t *hash,
-                      const char *key,
-                      const char *default_value);
-
-/** Like svn_hash_get_cstring(), but for boolean values.
- *
- * Parses the value as a boolean value. The recognized representations
- * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
- * matter.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_hash__get_bool(apr_hash_t *hash,
-                   const char *key,
-                   svn_boolean_t default_value);
-
 /** @} */
 
 /** @} */

@@ -523,6 +523,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
   bdb_env_t *bdb = bdb_baton->bdb;
 
   SVN_ERR_ASSERT(bdb_baton->env == bdb_baton->bdb->env);
+  SVN_ERR_ASSERT(bdb_baton->error_info->refcount > 0);
 
   /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
      cleanup_env_baton(). */

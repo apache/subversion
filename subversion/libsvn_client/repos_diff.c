@@ -47,6 +47,7 @@
 
 #include "client.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 /* Overall crawler editor baton.  */
@@ -418,17 +419,6 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
     }
 }
 
-/* Get the props attached to a directory in the repository at BASE_REVISION. */
-static svn_error_t *
-get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
-{
-  return svn_ra_get_dir2(b->edit_baton->ra_session,
-                         NULL, NULL, &(b->pristine_props),
-                         b->path,
-                         base_revision,
-                         0,
-                         b->pool);
-}
 
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
@@ -472,7 +462,8 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
 
-  SVN_ERR(get_dirprops_from_ra(b, base_revision));
+  SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &b->pristine_props,
+                          b->path, base_revision, 0, pool));
 
   *root_baton = b;
   return SVN_NO_ERROR;
@@ -766,7 +757,8 @@ open_directory(const char *path,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_dirprops_from_ra(b, base_revision));
+  SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &b->pristine_props,
+                          b->path, base_revision, 0, pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened(
                 &b->tree_conflicted, &b->skip,
@@ -849,9 +841,8 @@ window_handler(svn_txdelta_window_t *window,
 
   if (!window)
     {
-      b->result_md5_checksum = svn_checksum__from_digest(b->result_digest,
-                                                         svn_checksum_md5,
-                                                         b->pool);
+      b->result_md5_checksum = svn_checksum__from_digest_md5(b->result_digest,
+                                                             b->pool);
     }
 
   return SVN_NO_ERROR;
@@ -1473,7 +1464,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   shim_callbacks,
+                                   NULL, NULL, shim_callbacks,
                                    result_pool, result_pool));
 
   return SVN_NO_ERROR;

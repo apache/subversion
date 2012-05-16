@@ -1768,6 +1768,30 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * @{
  */
 
+/**
+ * The callback invoked by svn_client_import5() before adding a node to the
+ * list of nodes to be imported.
+ *
+ * @a baton is the value passed to @a svn_client_import5 as filter_baton.
+ *
+ * The callback receives the @a local_abspath for each node and the @a dirent
+ * for it when walking the directory tree. Only the kind of node, including
+ * special status is available in @a dirent.
+ *
+ * Implementations can set @a *filtered to TRUE, to make the import filter the
+ * node and (if the node is a directory) all its descendants.
+ *
+ * @a scratch_pool can be used for temporary allocations.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *(*svn_client_import_filter_func_t)(
+  void *baton,
+  svn_boolean_t *filtered,
+  const char *local_abspath,
+  const svn_io_dirent2_t *dirent,
+  apr_pool_t *scratch_pool);
+
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx,
  * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
@@ -1823,12 +1847,38 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
+ * If @a filter_callback is non-NULL, call it for each node that isn't ignored
+ * for other reasons with @a filter_baton, to allow third party to ignore
+ * specific nodes during importing.
+ *
  * If @a commit_callback is non-NULL, then for each successful commit, call
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
- * @since New in 1.7.
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_client_import5(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_client_import_filter_func_t filter_callback,
+                   void *filter_baton,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_import5(), but without support for an optional
+ * @a filter_callback.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import4(const char *path,
                    const char *url,
@@ -2833,6 +2883,11 @@ svn_client_blame(const char *path_or_url,
  * will be used.
  * ### Do we need to say more about the format? A reference perhaps?
  *
+ * If @a ignore_properties is TRUE, do not show property differences.
+ * If @a properties_only is TRUE, show only property changes.
+ * The above two options are mutually exclusive. It is an error to set
+ * both to TRUE.
+ *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
@@ -2877,7 +2932,8 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
-                 svn_boolean_t ignore_prop_diff,
+                 svn_boolean_t ignore_properties,
+                 svn_boolean_t properties_only,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -3037,7 +3093,8 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
-                     svn_boolean_t ignore_prop_diff,
+                     svn_boolean_t ignore_properties,
+                     svn_boolean_t properties_only,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,

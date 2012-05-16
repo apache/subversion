@@ -1742,7 +1742,7 @@ reduce_search(apr_array_header_t *paths,
       if (!ranges)
         continue;
 
-      /* ranges is ordered, could we use some sort of binay search
+      /* ranges is ordered, could we use some sort of binary search
          rather than iterating? */
       for (j = 0; j < ranges->nelts; ++j)
         {

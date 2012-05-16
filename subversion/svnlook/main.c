@@ -445,7 +445,6 @@ generate_delta_tree(svn_repos_node_t **tree,
                     svn_repos_t *repos,
                     svn_fs_root_t *root,
                     svn_revnum_t base_rev,
-                    svn_boolean_t use_copy_history,
                     apr_pool_t *pool)
 {
   svn_fs_root_t *base_root;
@@ -462,7 +461,7 @@ generate_delta_tree(svn_repos_node_t **tree,
                                 base_root, root, pool, edit_pool));
 
   /* Drive our editor. */
-  SVN_ERR(svn_repos_replay2(root, "", SVN_INVALID_REVNUM, FALSE,
+  SVN_ERR(svn_repos_replay2(root, "", SVN_INVALID_REVNUM, TRUE,
                             editor, edit_baton, NULL, NULL, edit_pool));
 
   /* Return the tree we just built. */
@@ -901,8 +900,7 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         if (!val_has_eol)
           {
             const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            apr_size_t len = strlen(s);
-            SVN_ERR(svn_stream_write(out, s, &len));
+            SVN_ERR(svn_stream_puts(out, s));
           }
       }
     }
@@ -1401,8 +1399,7 @@ do_dirs_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
        _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
 
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     SVN_ERR(print_dirs_changed_tree(tree, "", pool));
 
@@ -1507,8 +1504,7 @@ do_changed(svnlook_ctxt_t *c, apr_pool_t *pool)
        _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
 
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     SVN_ERR(print_changed_tree(tree, "", c->copy_info, pool));
 
@@ -1536,8 +1532,7 @@ do_diff(svnlook_ctxt_t *c, apr_pool_t *pool)
        _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
 
-  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id,
-                              TRUE, pool));
+  SVN_ERR(generate_delta_tree(&tree, c->repos, root, base_rev_id, pool));
   if (tree)
     {
       const char *tmpdir;
@@ -2255,7 +2250,6 @@ main(int argc, const char *argv[])
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
@@ -2272,13 +2266,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 

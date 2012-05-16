@@ -66,11 +66,11 @@ typedef struct mergeinfo_context_t {
 
 static svn_error_t *
 start_element(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
               svn_ra_serf__dav_props_t name,
-              const char **attrs)
+              const char **attrs,
+              apr_pool_t *scratch_pool)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
+  mergeinfo_context_t *mergeinfo_ctx = parser->user_data;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
@@ -99,10 +99,11 @@ start_element(svn_ra_serf__xml_parser_t *parser,
 }
 
 static svn_error_t *
-end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
-            svn_ra_serf__dav_props_t name)
+end_element(svn_ra_serf__xml_parser_t *parser,
+            svn_ra_serf__dav_props_t name,
+            apr_pool_t *scratch_pool)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
+  mergeinfo_context_t *mergeinfo_ctx = parser->user_data;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
@@ -149,10 +150,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
 
 
 static svn_error_t *
-cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
-              const char *data, apr_size_t len)
+cdata_handler(svn_ra_serf__xml_parser_t *parser,
+              const char *data,
+              apr_size_t len,
+              apr_pool_t *scratch_pool)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
+  mergeinfo_context_t *mergeinfo_ctx = parser->user_data;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
@@ -238,21 +241,18 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
-  int status_code;
-
   mergeinfo_context_t *mergeinfo_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url;
   const char *path;
 
   *catalog = NULL;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, revision, NULL, pool));
-
-  path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  SVN_ERR(svn_ra_serf__get_stable_url(&path, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, revision,
+                                      pool, pool));
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
@@ -267,6 +267,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = path;
   handler->conn = session->conns[0];
@@ -283,7 +284,6 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   parser_ctx->end = end_element;
   parser_ctx->cdata = cdata_handler;
   parser_ctx->done = &mergeinfo_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -292,8 +292,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
 
-  err2 = svn_ra_serf__error_on_status(status_code, handler->path,
-                                      parser_ctx->location);
+  err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
+                                      handler->location);
   if (err2)
     {
       svn_error_clear(err);

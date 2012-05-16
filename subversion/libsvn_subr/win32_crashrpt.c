@@ -257,10 +257,10 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
   switch(length)
     {
       case 1:
-        sprintf(buf, "%x", *(unsigned char *)address);
+        sprintf(buf, "0x%02x", (int)*(unsigned char *)address);
         break;
       case 2:
-        sprintf(buf, "%x", *(unsigned short *)address);
+        sprintf(buf, "0x%04x", (int)*(unsigned short *)address);
         break;
       case 4:
         switch(basic_type)
@@ -270,7 +270,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
                 if (!IsBadStringPtr(*(PSTR*)address, 32))
                   sprintf(buf, "\"%.31s\"", *(unsigned long *)address);
                 else
-                  sprintf(buf, "%x", *(unsigned long *)address);
+                  sprintf(buf, "0x%08x", (int)*(unsigned long *)address);
               }
             case 6:  /* btInt */
               sprintf(buf, "%d", *(int *)address);
@@ -279,7 +279,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
               sprintf(buf, "%f", *(float *)address);
               break;
             default:
-              sprintf(buf, "%x", *(unsigned long *)address);
+              sprintf(buf, "0x%08x", *(unsigned long *)address);
               break;
           }
         break;
@@ -287,7 +287,10 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
         if (basic_type == 8) /* btFloat */
           sprintf(buf, "%lf", *(double *)address);
         else
-          sprintf(buf, "%I64X", *(unsigned __int64 *)address);
+          sprintf(buf, "0x%016I64X", *(unsigned __int64 *)address);
+        break;
+      default:
+        sprintf(buf, "[unhandled type 0x%08x of length 0x%08x]", basic_type, length);
         break;
     }
 }
@@ -336,6 +339,8 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
 
               free(type_name);
             }
+          else
+            sprintf(value_str, "[no symbol tag]");
         }
         break;
       case 16: /* SymTagBaseType */
@@ -369,7 +374,9 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
       case 13: /* SymTagFunctionType */
           sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
           break;
-      default: break;
+      default:
+          sprintf(value_str, "[unhandled tag: 0x%08x]", tag);
+          break;
     }
 }
 

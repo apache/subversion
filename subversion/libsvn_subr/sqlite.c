@@ -300,7 +300,13 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
                                           va_arg(ap, const char *)));
             break;
 
+          case 'd':
+            SVN_ERR(svn_sqlite__bind_int(stmt, count,
+                                         va_arg(ap, int)));
+            break;
+
           case 'i':
+          case 'L':
             SVN_ERR(svn_sqlite__bind_int64(stmt, count,
                                            va_arg(ap, apr_int64_t)));
             break;
@@ -718,8 +724,23 @@ close_apr(void *data)
   for (i = 0; i < db->nbr_statements; i++)
     {
       if (db->prepared_stmts[i])
-        err = svn_error_compose_create(
+        {
+          if (db->prepared_stmts[i]->needs_reset)
+            {
+#ifdef SVN_DEBUG
+              const char *stmt_text = db->statement_strings[i];
+              stmt_text = stmt_text; /* Provide value for debugger */
+
+              SVN_ERR_MALFUNCTION_NO_RETURN();
+#else
+              err = svn_error_compose_create(
+                            err,
+                            svn_sqlite__reset(db->prepared_stmts[i]));
+#endif
+            }
+          err = svn_error_compose_create(
                         svn_sqlite__finalize(db->prepared_stmts[i]), err);
+        }
     }
 
   result = sqlite3_close(db->db3);

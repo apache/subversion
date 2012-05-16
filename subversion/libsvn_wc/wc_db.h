@@ -687,9 +687,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
      UPDATE_ROOT        FALSE
 
-   If the STATUS is normal, and the REPOS_* values are NULL, then the
-   caller should use svn_wc__db_scan_base_repos() to scan up the BASE
-   tree for the repository information.
+   If the STATUS is normal, the REPOS_* values will be non-NULL.
 
    If DEPTH is requested, and the node is NOT a directory, then the
    value will be set to svn_depth_unknown. If LOCAL_ABSPATH is a link,
@@ -1509,6 +1507,7 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             svn_boolean_t resolved_text,
                             svn_boolean_t resolved_props,
                             svn_boolean_t resolved_tree,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
@@ -2439,6 +2438,10 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
+
+   ### Either delete this function and use _base_get_info instead, or
+   ### add a 'revision' output to make a complete repository node location
+   ### and rename to not say 'scan', because it doesn't.
 */
 svn_error_t *
 svn_wc__db_scan_base_repos(const char **repos_relpath,
@@ -2600,10 +2603,10 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    MOVED_TO_ABSPATH will specify the path where this node was moved to
    if the node has moved-away.
 
-   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the root
-   of the copy operation that created the move destination.
-   If LOCAL_ABSPATH itself is the root of the copy, MOVED_TO_OP_ROOT_ABSPATH
-   equals MOVED_TO_ABSPATH.
+   If the node was moved-away, MOVED_TO_OP_ROOT_ABSPATH will specify the
+   target path of the root of the move operation.  If LOCAL_ABSPATH itself
+   is the source path of the root of the move operation, then
+   MOVED_TO_OP_ROOT_ABSPATH equals MOVED_TO_ABSPATH.
 
    All OUT parameters may be set to NULL to indicate a lack of interest in
    that piece of information.
@@ -2955,7 +2958,8 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
-apr_int64_t svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+int
+svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
 /* Set *HAVE_WORK TRUE if there is a working layer below the top layer and
    *HAVE_BASE if there is a base layer. Set *STATUS to the status of the
@@ -3095,6 +3099,23 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   const char *wri_abspath,
                   apr_pool_t *scratch_pool);
 
+
+/* Possibly need two structures, one with relpaths and with abspaths?
+ * Only exposed for testing at present. */
+struct svn_wc__db_moved_to_t {
+  const char *local_relpath;  /* moved-to destination */
+  int op_depth;       /* op-root of source */
+};
+
+/* Set *FINAL_ABSPATH to an array of svn_wc__db_moved_to_t for
+ * LOCAL_ABSPATH after following any and all nested moves.
+ * Only exposed for testing at present. */
+svn_error_t *
+svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* @} */
 

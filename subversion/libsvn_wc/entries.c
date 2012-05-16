@@ -55,7 +55,7 @@
 typedef struct db_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
-  apr_int64_t op_depth;
+  int op_depth;
   apr_int64_t repos_id;
   const char *repos_relpath;
   const char *parent_relpath;
@@ -236,15 +236,6 @@ get_info_for_deleted(svn_wc_entry_t *entry,
                                        entry_abspath,
                                        result_pool,
                                        scratch_pool));
-
-      if (*repos_relpath == NULL)
-        SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath,
-                                           &entry->repos,
-                                           &entry->uuid,
-                                           db,
-                                           entry_abspath,
-                                           result_pool,
-                                           scratch_pool));
     }
   else
     {
@@ -1435,7 +1426,7 @@ insert_node(svn_sqlite__db_t *sdb,
   SVN_ERR_ASSERT(node->op_depth > 0 || node->repos_relpath);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isisnnnnsnrisnnni",
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnnnsnrisnnni",
                             node->wc_id,
                             node->local_relpath,
                             node->op_depth,
@@ -1453,7 +1444,7 @@ insert_node(svn_sqlite__db_t *sdb,
                                      node->repos_id));
       SVN_ERR(svn_sqlite__bind_text(stmt, 6,
                                     node->repos_relpath));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 7, node->revision));
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 7, node->revision));
     }
 
   if (node->presence == svn_wc__db_status_normal)

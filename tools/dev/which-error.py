@@ -29,6 +29,7 @@
 # $LastChangedRevision$
 #
 
+import errno
 import sys
 import os.path
 import re
@@ -68,6 +69,13 @@ codes.  This can be done in variety of ways:
 
 def get_errors():
   errs = {}
+  ## errno values.
+  errs.update(errno.errorcode)
+  ## APR-defined errors, from apr_errno.h.
+  for line in open(os.path.join(os.path.dirname(sys.argv[0]), 'aprerr.txt')):
+    key, _, val = line.split()
+    errs[int(val)] = key
+  ## Subversion errors, from svn_error_codes.h.
   for key in vars(core):
     if key.find('SVN_ERR_') == 0:
       try:

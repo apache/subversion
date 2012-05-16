@@ -138,7 +138,7 @@ if test "$svn_lib_neon" = "yes"; then
 fi
 
 dnl Search for serf as an alternative to neon
-SVN_LIB_SERF(0,7,1)
+SVN_LIB_SERF(1,0,0)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
@@ -182,6 +182,12 @@ if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
                           [sqlite_compat_ver_num])
   CFLAGS="-DSVN_SQLITE_MIN_VERSION='\"$sqlite_compat_ver\"' $CFLAGS"
   CFLAGS="-DSVN_SQLITE_MIN_VERSION_NUMBER=$sqlite_compat_ver_num $CFLAGS"
+fi
+
+SVN_CHECK_FOR_ATOMIC_BUILTINS
+
+if test "$svn_cv_atomic_builtins" = "yes"; then
+    AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi
 
 dnl Set up a number of directories ---------------------
@@ -654,6 +660,19 @@ AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 
+dnl Ev2 experimental feature ----------------------
+dnl Note: The Ev2 compat code will be built unconditionally, but by providing
+dnl this flag, users can enforce Ev2 compliance for testing purposes
+AC_ARG_ENABLE(ev2-shims,
+  AS_HELP_STRING([--enable-ev2-shims],
+                 [Compile with Ev2 translation [EXPERIMENTAL]]),
+  [enable_ev2_shims=$enableval],[enable_ev2_shims=no])
+if test "$enable_ev2_shims" = "yes"; then
+  AC_DEFINE(ENABLE_EV2_SHIMS, 1,
+            [Define to 1 if Ev2 should be interjected into editor stacks.])
+fi
+
+
 dnl I18n -------------------
 
 AC_ARG_ENABLE(nls,
@@ -812,7 +831,7 @@ dnl Build and install rules -------------------
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
-BUILD_RULES="fsmod-lib ramod-lib lib bin test $BUILD_APACHE_RULE tools"
+BUILD_RULES="fsmod-lib ramod-lib lib bin test sub-test $BUILD_APACHE_RULE tools"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
@@ -1165,12 +1184,12 @@ if test "$RUBY" != "none"; then
       AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
-    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
+    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
     ])
     RUBY_MAJOR="$svn_cv_ruby_major"
 
     AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
-    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MINOR))'`"
+    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MINOR))'`"
     ])
     RUBY_MINOR="$svn_cv_ruby_minor"
 

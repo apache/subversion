@@ -415,7 +415,12 @@ was_readable(svn_boolean_t *readable,
    revision root, fspath, and revnum of the copyfrom of CHANGE, which
    corresponds to PATH under ROOT.  If the copyfrom info is valid
    (i.e., is not (NULL, SVN_INVALID_REVNUM)), then initialize SRC_READABLE
-   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided. */
+   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided.
+
+   NOTE: If the copyfrom information in CHANGE is marked as unknown
+   (meaning, its ->copyfrom_rev and ->copyfrom_path cannot be
+   trusted), this function will also update those members of the
+   CHANGE structure to carry accurate copyfrom information.  */
 static svn_error_t *
 fill_copyfrom(svn_fs_root_t **copyfrom_root,
               const char **copyfrom_path,
@@ -698,10 +703,18 @@ path_driver_cb_func(void **dir_baton,
         }
     }
 
-  /* Handle property modifications. */
   if (! do_delete || do_add)
     {
-      if (change->prop_mod)
+      /* Is this a copy that was downgraded to a raw add?  (If so,
+         we'll need to transmit properties and file contents and such
+         for it regardless of what the CHANGE structure's text_mod
+         and prop_mod flags say.)  */
+      svn_boolean_t downgraded_copy = (change->copyfrom_known
+                                       && change->copyfrom_path
+                                       && (! copyfrom_path));
+
+      /* Handle property modifications. */
+      if (change->prop_mod || downgraded_copy)
         {
           apr_array_header_t *prop_diffs;
           apr_hash_t *old_props;
@@ -731,14 +744,9 @@ path_driver_cb_func(void **dir_baton,
             }
         }
 
-      /* Handle textual modifications.
-
-         Note that this needs to happen in the "copy from a file we
-         aren't allowed to see" case since otherwise the caller will
-         have no way to actually get the new file's contents, which
-         they are apparently allowed to see. */
+      /* Handle textual modifications. */
       if (change->node_kind == svn_node_file
-          && (change->text_mod || (change->copyfrom_path && ! copyfrom_path)))
+          && (change->text_mod || downgraded_copy))
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;

@@ -65,6 +65,7 @@
 
 #include "private/svn_atomic.h"
 #include "private/svn_io_private.h"
+#include "private/svn_subr_private.h"
 
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
@@ -166,6 +167,41 @@ cstring_from_utf8(const char **path_apr,
 #else
   return svn_path_cstring_from_utf8(path_apr, path_utf8, pool);
 #endif
+}
+
+/* Helper function that allows to convert an APR-level PATH to something
+ * that we can pass the svn_error_wrap_apr. Since we use it in context
+ * of error reporting, having *some* path info may be more useful than
+ * having none.  Therefore, we use a best effort approach here.
+ *
+ * This is different from svn_io_file_name_get in that it uses a different
+ * signature style and will never fail.
+ */
+static const char *
+try_utf8_from_internal_style(const char *path, apr_pool_t *pool)
+{
+  svn_error_t *error;
+  const char *path_utf8;
+
+  /* Special case. */
+  if (path == NULL)
+    return "(NULL)";
+  
+  /* (try to) convert PATH to UTF-8. If that fails, continue with the plain
+   * PATH because it is the best we have. It may actually be UTF-8 already.
+   */
+  error = cstring_to_utf8(&path_utf8, path, pool);
+  if (error)
+    {
+      /* fallback to best representation we have */
+
+      svn_error_clear(error);
+      path_utf8 = path;
+    }
+
+  /* Toggle (back-)slashes etc. as necessary.
+   */
+  return svn_dirent_local_style(path_utf8, pool);
 }
 
 
@@ -851,10 +887,10 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
 
 /* Set permissions PERMS on the FILE. This is a cheaper variant of the
  * file_perms_set wrapper() function because no locale-dependent string
- * conversion is required.
+ * conversion is required. POOL will be used for allocations.
  */
 static svn_error_t *
-file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms, apr_pool_t *pool)
 {
   const char *fname_apr;
   apr_status_t status;
@@ -866,7 +902,7 @@ file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
   status = apr_file_perms_set(fname_apr, perms);
   if (status)
     return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
-                              fname_apr);
+                              try_utf8_from_internal_style(fname_apr, pool));
   else
     return SVN_NO_ERROR;
 }
@@ -1866,29 +1902,25 @@ file_clear_locks(void *arg)
 #endif
 
 svn_error_t *
-svn_io_file_lock2(const char *lock_file,
-                  svn_boolean_t exclusive,
-                  svn_boolean_t nonblocking,
-                  apr_pool_t *pool)
+svn_io_lock_open_file(apr_file_t *lockfile_handle,
+                      svn_boolean_t exclusive,
+                      svn_boolean_t nonblocking,
+                      apr_pool_t *pool)
 {
   int locktype = APR_FLOCK_SHARED;
-  apr_file_t *lockfile_handle;
-  apr_int32_t flags;
   apr_status_t apr_err;
+  const char *fname;
 
   if (exclusive)
     locktype = APR_FLOCK_EXCLUSIVE;
-
-  flags = APR_READ;
-  if (locktype == APR_FLOCK_EXCLUSIVE)
-    flags |= APR_WRITE;
-
   if (nonblocking)
     locktype |= APR_FLOCK_NONBLOCK;
 
-  SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,
-                           APR_OS_DEFAULT,
-                           pool));
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
   /* Get lock on the filehandle. */
   apr_err = apr_file_lock(lockfile_handle, locktype);
@@ -1915,11 +1947,11 @@ svn_io_file_lock2(const char *lock_file,
         case APR_FLOCK_SHARED:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get shared lock on file '%s'"),
-                                    svn_dirent_local_style(lock_file, pool));
+                                    try_utf8_from_internal_style(fname, pool));
         case APR_FLOCK_EXCLUSIVE:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get exclusive lock on file '%s'"),
-                                    svn_dirent_local_style(lock_file, pool));
+                                    try_utf8_from_internal_style(fname, pool));
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1934,6 +1966,62 @@ svn_io_file_lock2(const char *lock_file,
 #endif
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_unlock_open_file(apr_file_t *lockfile_handle,
+                        apr_pool_t *pool)
+{
+  const char *fname;
+  apr_status_t apr_err;
+
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
+
+  /* The actual unlock attempt. */
+  apr_err = apr_file_unlock(lockfile_handle);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
+                              try_utf8_from_internal_style(fname, pool));
+  
+/* On Windows and OS/2 file locks are automatically released when
+   the file handle closes */
+#if !defined(WIN32) && !defined(__OS2__)
+  apr_pool_cleanup_kill(pool, lockfile_handle, file_clear_locks);
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_file_lock2(const char *lock_file,
+                  svn_boolean_t exclusive,
+                  svn_boolean_t nonblocking,
+                  apr_pool_t *pool)
+{
+  int locktype = APR_FLOCK_SHARED;
+  apr_file_t *lockfile_handle;
+  apr_int32_t flags;
+
+  if (exclusive)
+    locktype = APR_FLOCK_EXCLUSIVE;
+
+  flags = APR_READ;
+  if (locktype == APR_FLOCK_EXCLUSIVE)
+    flags |= APR_WRITE;
+
+  if (nonblocking)
+    locktype |= APR_FLOCK_NONBLOCK;
+
+  SVN_ERR(svn_io_file_open(&lockfile_handle, lock_file, flags,
+                           APR_OS_DEFAULT,
+                           pool));
+
+  /* Get lock on the filehandle. */
+  return svn_io_lock_open_file(lockfile_handle, exclusive, nonblocking, pool);
 }
 
 
@@ -2302,7 +2390,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
   if (!only_check_type)
     flags |= APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  *dirents = apr_hash_make(result_pool);
+  *dirents = svn_hash__make(result_pool);
 
   SVN_ERR(svn_io_dir_open(&this_dir, path, scratch_pool));
 
@@ -3080,7 +3168,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
 
   if (name)
     return svn_error_wrap_apr(status, _(msg),
-                              svn_dirent_local_style(name, pool));
+                              try_utf8_from_internal_style(name, pool));
   else
     return svn_error_wrap_apr(status, "%s", _(msg_no_name));
 }
@@ -4245,7 +4333,7 @@ svn_io_open_unique_file3(apr_file_t **file,
   if (!using_system_temp_dir)
     {
       SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-      SVN_ERR(file_perms_set2(tempfile, perms));
+      SVN_ERR(file_perms_set2(tempfile, perms, scratch_pool));
     }
 #endif
 

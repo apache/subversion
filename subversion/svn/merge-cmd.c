@@ -33,6 +33,7 @@
 #include "svn_error.h"
 #include "svn_types.h"
 #include "cl.h"
+#include "private/svn_client_private.h"
 
 #include "svn_private_config.h"
 
@@ -96,6 +97,43 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
       svn_dirent_local_style(path_or_url, scratch_pool));
   return SVN_NO_ERROR;
 }
+
+#ifdef SVN_WITH_SYMMETRIC_MERGE
+/* Symmetric, merge-tracking merge, used for sync or reintegrate purposes. */
+static svn_error_t *
+symmetric_merge(const char *source_path_or_url,
+                const svn_opt_revision_t *source_revision,
+                const char *target_wcpath,
+                svn_depth_t depth,
+                svn_boolean_t ignore_ancestry,
+                svn_boolean_t force,
+                svn_boolean_t record_only,
+                svn_boolean_t dry_run,
+                svn_boolean_t allow_mixed_rev,
+                svn_boolean_t allow_local_mods,
+                svn_boolean_t allow_switched_subtrees,
+                const apr_array_header_t *merge_options,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool)
+{
+  svn_client__symmetric_merge_t *merge;
+
+  /* Find the 3-way merges needed (and check suitability of the WC). */
+  SVN_ERR(svn_client__find_symmetric_merge(&merge,
+                                           source_path_or_url, source_revision,
+                                           target_wcpath, allow_mixed_rev,
+                                           allow_local_mods, allow_switched_subtrees,
+                                           ctx, scratch_pool, scratch_pool));
+
+  /* Perform the 3-way merges */
+  SVN_ERR(svn_client__do_symmetric_merge(merge, target_wcpath, depth,
+                                         ignore_ancestry, force, record_only,
+                                         dry_run, merge_options,
+                                         ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -346,6 +384,34 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
+#ifdef SVN_WITH_SYMMETRIC_MERGE
+  if (opt_state->symmetric_merge)
+    {
+      svn_boolean_t allow_local_mods = ! opt_state->reintegrate;
+      svn_boolean_t allow_switched_subtrees = ! opt_state->reintegrate;
+
+      if (two_sources_specified)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("SOURCE2 can't be used with --symmetric"));
+
+      SVN_ERR_W(svn_cl__check_related_source_and_target(
+                  sourcepath1, &peg_revision1, targetpath, &unspecified,
+                  ctx, pool),
+                _("Source and target must be different but related branches"));
+
+      err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
+                            opt_state->depth,
+                            opt_state->ignore_ancestry,
+                            opt_state->force,
+                            opt_state->record_only,
+                            opt_state->dry_run,
+                            opt_state->allow_mixed_rev,
+                            allow_local_mods,
+                            allow_switched_subtrees,
+                            options, ctx, pool);
+    }
+  else
+#endif
   if (opt_state->reintegrate)
     {
       SVN_ERR_W(svn_cl__check_related_source_and_target(

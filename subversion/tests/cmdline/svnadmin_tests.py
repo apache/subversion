@@ -29,6 +29,10 @@ import os
 import re
 import shutil
 import sys
+import threading
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -97,6 +101,16 @@ def check_hotcopy_fsfs(src, dst):
             if rows1[i] != rows2[i]:
               raise svntest.Failure("rep-cache row %i differs: '%s' vs. '%s'"
                                     % (row, rows1[i]))
+          continue
+
+        # Special case for revprop-generation: It will always be zero in
+        # the hotcopy destination (i.e. a fresh cache generation)
+        if src_file == 'revprop-generation':
+          f2 = open(dst_path, 'r')
+          revprop_gen = int(f2.read().strip())
+          if revprop_gen != 0:
+              raise svntest.Failure("Hotcopy destination has non-zero " +
+                                    "revprop generation")
           continue
 
         f1 = open(src_path, 'r')
@@ -457,7 +471,7 @@ def hotcopy_format(sbox):
                                                         sbox.repo_dir,
                                                         backup_dir)
   if errput:
-    print("Error: hotcopy failed")
+    logger.warn("Error: hotcopy failed")
     raise svntest.Failure
 
   # verify that the db/format files are the same
@@ -470,7 +484,7 @@ def hotcopy_format(sbox):
   fp2.close()
 
   if contents1 != contents2:
-    print("Error: db/format file contents do not match after hotcopy")
+    logger.warn("Error: db/format file contents do not match after hotcopy")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -487,7 +501,7 @@ def setrevprop(sbox):
                                                         "--bypass-hooks",
                                                         iota_path)
   if errput:
-    print("Error: 'setlog' failed")
+    logger.warn("Error: 'setlog' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -506,7 +520,7 @@ def setrevprop(sbox):
                                                         "-r0", "svn:author",
                                                         foo_path)
   if errput:
-    print("Error: 'setrevprop' failed")
+    logger.warn("Error: 'setrevprop' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -693,7 +707,8 @@ _0.0.t1-1 add false false /A/B/E/bravo
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
-    expected_stderr=".*Found malformed header '[^']*' in revision file")
+    expected_stderr=".*Found malformed header '[^']*' in revision file"
+                    "|.*Missing id field in node-rev.*")
 
 #----------------------------------------------------------------------
 
@@ -858,7 +873,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
-    print("Error: new UUID matches the original one")
+    logger.warn("Error: new UUID matches the original one")
     raise svntest.Failure
 
   # Now, try setting the UUID back to the original value.
@@ -869,7 +884,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
-    print("Error: new UUID doesn't match the original one")
+    logger.warn("Error: new UUID doesn't match the original one")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1780,6 +1795,47 @@ def locking(sbox):
                                           iota_token)
 
 
+@SkipUnless(svntest.main.is_threaded_python)
+@Issue(4129)
+def mergeinfo_race(sbox):
+  "concurrent mergeinfo commits invalidate pred-count"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  ## Create wc2.
+  svntest.main.run_svn(None, 'checkout', '-q', sbox.repo_url, wc2_dir)
+
+  ## Some random edits.
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d1', wc_dir))
+  svntest.main.run_svn(None, 'mkdir', sbox.ospath('d2', wc2_dir))
+
+  ## Set random mergeinfo properties.
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/P:42', sbox.ospath('A', wc_dir))
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '/Q:42', sbox.ospath('iota', wc2_dir))
+
+  def makethread(some_wc_dir):
+    def worker():
+      svntest.main.run_svn(None, 'commit', '-mm', some_wc_dir)
+    return worker
+
+  t1 = threading.Thread(None, makethread(wc_dir))
+  t2 = threading.Thread(None, makethread(wc2_dir))
+
+  # t2 will trigger the issue #4129 sanity check in fs_fs.c
+  t1.start(); t2.start();
+
+  t1.join(); t2.join();
+
+  # Crude attempt to make sure everything worked.
+  # TODO: better way to catch exceptions in the thread
+  if svntest.actions.run_and_parse_info(sbox.repo_url)[0]['Revision'] != '3':
+    raise svntest.Failure("one or both commits failed")
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1814,6 +1870,7 @@ test_list = [ None,
               hotcopy_incremental,
               hotcopy_incremental_packed,
               locking,
+              mergeinfo_race,
              ]
 
 if __name__ == '__main__':

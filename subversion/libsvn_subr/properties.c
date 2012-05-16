@@ -62,31 +62,42 @@ svn_prop_has_svn_prop(const apr_hash_t *props, apr_pool_t *pool)
 }
 
 
+#define SIZEOF_WC_PREFIX (sizeof(SVN_PROP_WC_PREFIX) - 1)
+#define SIZEOF_ENTRY_PREFIX (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
+
+svn_prop_kind_t
+svn_property_kind2(const char *prop_name)
+{
+
+  if (strncmp(prop_name, SVN_PROP_WC_PREFIX, SIZEOF_WC_PREFIX) == 0)
+    return svn_prop_wc_kind;
+
+  if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, SIZEOF_ENTRY_PREFIX) == 0)
+    return svn_prop_entry_kind;
+
+  return svn_prop_regular_kind;
+}
+
+
+/* NOTE: this function is deprecated, but we cannot move it to deprecated.c
+   because we need the SIZEOF_*_PREFIX constant symbols defined above.  */
 svn_prop_kind_t
 svn_property_kind(int *prefix_len,
                   const char *prop_name)
 {
-  apr_size_t wc_prefix_len = sizeof(SVN_PROP_WC_PREFIX) - 1;
-  apr_size_t entry_prefix_len = sizeof(SVN_PROP_ENTRY_PREFIX) - 1;
+  svn_prop_kind_t kind = svn_property_kind2(prop_name);
 
-  if (strncmp(prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
-    {
-      if (prefix_len)
-        *prefix_len = (int) wc_prefix_len;
-      return svn_prop_wc_kind;
-    }
-
-  if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
-    {
-      if (prefix_len)
-        *prefix_len = (int) entry_prefix_len;
-      return svn_prop_entry_kind;
-    }
-
-  /* else... */
   if (prefix_len)
-    *prefix_len = 0;
-  return svn_prop_regular_kind;
+    {
+      if (kind == svn_prop_wc_kind)
+        *prefix_len = SIZEOF_WC_PREFIX;
+      else if (kind == svn_prop_entry_kind)
+        *prefix_len = SIZEOF_ENTRY_PREFIX;
+      else
+        *prefix_len = 0;
+    }
+
+  return kind;
 }
 
 
@@ -111,7 +122,7 @@ svn_categorize_props(const apr_array_header_t *proplist,
       enum svn_prop_kind kind;
 
       prop = &APR_ARRAY_IDX(proplist, i, svn_prop_t);
-      kind = svn_property_kind(NULL, prop->name);
+      kind = svn_property_kind2(prop->name);
       newprop = NULL;
 
       if (kind == svn_prop_regular_kind)
@@ -294,7 +305,7 @@ svn_prop_hash_dup(apr_hash_t *hash,
       void *prop;
 
       apr_hash_this(hi, &key, &klen, &prop);
-      apr_hash_set(new_hash, apr_pstrdup(pool, key), klen,
+      apr_hash_set(new_hash, apr_pstrmemdup(pool, key, klen), klen,
                    svn_string_dup(prop, pool));
     }
   return new_hash;

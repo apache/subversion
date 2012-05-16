@@ -42,6 +42,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -957,8 +958,7 @@ close_file(void *file_baton,
 
   SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5, text_digest,
                                  pool));
-  actual_checksum = svn_checksum__from_digest(fb->text_digest,
-                                              svn_checksum_md5, pool);
+  actual_checksum = svn_checksum__from_digest_md5(fb->text_digest, pool);
 
   /* Note that text_digest can be NULL when talking to certain repositories.
      In that case text_checksum will be NULL and the following match code
@@ -1103,20 +1103,19 @@ svn_client_export5(svn_revnum_t *result_rev,
 
   if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
-      svn_revnum_t revnum;
-      const char *url;
+      svn_client__pathrev_t *loc;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
 
       /* Get the RA connection. */
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, from_path_or_url, NULL,
-                                               peg_revision,
-                                               revision, ctx, pool));
+      SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                                from_path_or_url, NULL,
+                                                peg_revision,
+                                                revision, ctx, pool));
 
       eb->root_path = to_path;
-      eb->root_url = url;
+      eb->root_url = loc->url;
       eb->force = overwrite;
       eb->target_revision = &edit_revision;
       eb->externals = apr_hash_make(pool);
@@ -1127,7 +1126,7 @@ svn_client_export5(svn_revnum_t *result_rev,
       eb->notify_func = ctx->notify_func2;
       eb->notify_baton = ctx->notify_baton2;
 
-      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind, pool));
 
       if (kind == svn_node_file)
         {
@@ -1183,7 +1182,7 @@ svn_client_export5(svn_revnum_t *result_rev,
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
           /* ### note: the stream will not be closed */
-          SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
+          SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev,
                                   fb->tmp_stream,
                                   NULL, &props, pool));
 
@@ -1236,18 +1235,19 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           SVN_ERR(svn_editor__insert_shims(&export_editor, &edit_baton,
                                            export_editor, edit_baton,
-                                           shim_callbacks, pool, pool));
+                                           NULL, NULL, shim_callbacks,
+                                           pool, pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
           SVN_ERR(svn_ra_do_update2(ra_session,
                                     &reporter, &report_baton,
-                                    revnum,
+                                    loc->rev,
                                     "", /* no sub-target */
                                     depth,
                                     FALSE, /* don't want copyfrom-args */
                                     export_editor, edit_baton, pool));
 
-          SVN_ERR(reporter->set_path(report_baton, "", revnum,
+          SVN_ERR(reporter->set_path(report_baton, "", loc->rev,
                                      /* Depth is irrelevant, as we're
                                         passing start_empty=TRUE anyway. */
                                      svn_depth_infinity,

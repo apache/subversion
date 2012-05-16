@@ -30,7 +30,7 @@
 #ifndef SVN_POOLS_H
 #define SVN_POOLS_H
 
-#include <apr_pools.h>
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,6 +86,23 @@ svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
  */
 #define svn_pool_destroy apr_pool_destroy
 
+/** Return a new allocator.  This function limits the unused memory in the
+ * new allocator to @ref SVN_ALLOCATOR_RECOMMENDED_MAX_FREE and ensures
+ * proper synchronization if the allocator is used by multiple threads.
+ *
+ * If your application uses multiple threads, creating a separate allocator
+ * for each of these threads may not be feasible. Set the @a thread_safe
+ * parameter to @c TRUE in that case.  Pools will still not thread-safe, i.e.
+ * access to them may require explicit serialization.  Set the parameter to
+ * @c FALSE, otherwise, to maximize performance.
+ *
+ * To access the owner pool, which can also serve as the root pool for your
+ * sub-pools, call @c apr_allocator_get_owner().
+ *
+ * @since: New in 1.8
+ */
+apr_allocator_t *
+svn_pool_create_allocator(svn_boolean_t thread_safe);
 
 #ifdef __cplusplus
 }
