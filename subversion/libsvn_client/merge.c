@@ -169,6 +169,8 @@ typedef struct merge_source_t
   /* "right" side URL and revision (inclusive iff youngest) */
   const svn_client__pathrev_t *loc2;
 
+  /* True iff LOC1 is an ancestor of LOC2 or vice-versa (history-wise). */
+  svn_boolean_t ancestral;
 } merge_source_t;
 
 /* Description of the merge target root node (a WC working node) */
@@ -192,9 +194,6 @@ typedef struct merge_cmd_baton_t {
   svn_boolean_t dry_run;
   svn_boolean_t record_only;          /* Whether to merge only mergeinfo
                                          differences. */
-  svn_boolean_t sources_ancestral;    /* Whether the left-side merge source is
-                                         an ancestor of the right-side, or
-                                         vice-versa (history-wise). */
   svn_boolean_t same_repos;           /* Whether the merge source repository
                                          is the same repository as the
                                          target.  Defaults to FALSE if DRY_RUN
@@ -297,7 +296,7 @@ typedef struct merge_cmd_baton_t {
    source is in the same repository as the merge target, and ancestry is
    being considered. */
 #define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
-                                  && (merge_b)->sources_ancestral   \
+                                  && (merge_b)->merge_source.ancestral  \
                                   && (merge_b)->same_repos          \
                                   && (! (merge_b)->ignore_ancestry))
 
@@ -314,10 +313,11 @@ typedef struct merge_cmd_baton_t {
 /*** Utilities ***/
 
 /* Return a new merge_source_t structure, allocated in RESULT_POOL,
- * initialized with deep copies of LOC1 and LOC2. */
+ * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
 static merge_source_t *
 merge_source_create(const svn_client__pathrev_t *loc1,
                     const svn_client__pathrev_t *loc2,
+                    svn_boolean_t ancestral,
                     apr_pool_t *result_pool)
 {
   merge_source_t *s
@@ -325,6 +325,7 @@ merge_source_create(const svn_client__pathrev_t *loc1,
 
   s->loc1 = svn_client__pathrev_dup(loc1, result_pool);
   s->loc2 = svn_client__pathrev_dup(loc2, result_pool);
+  s->ancestral = ancestral;
   return s;
 }
 
@@ -337,6 +338,7 @@ merge_source_dup(const merge_source_t *source,
 
   s->loc1 = svn_client__pathrev_dup(source->loc1, result_pool);
   s->loc2 = svn_client__pathrev_dup(source->loc2, result_pool);
+  s->ancestral = source->ancestral;
   return s;
 }
 
@@ -1192,7 +1194,7 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
          merge sources are not ancestral then there is no concept of a
          'forward' or 'reverse' merge and we filter unconditionally. */
       if (merge_b->merge_source.loc1->rev < merge_b->merge_source.loc2->rev
-          || !merge_b->sources_ancestral)
+          || !merge_b->merge_source.ancestral)
         SVN_ERR(filter_self_referential_mergeinfo(&props,
                                                   local_abspath,
                                                   HONOR_MERGEINFO(merge_b),
@@ -2991,7 +2993,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
     }
 
   /* Update the lists of merged, skipped, tree-conflicted and added paths. */
-  if (notify_b->merge_b->sources_ancestral
+  if (notify_b->merge_b->merge_source.ancestral
       || notify_b->merge_b->reintegrate_merge)
     {
       if (notify->content_state == svn_wc_notify_state_merged
@@ -3058,7 +3060,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   /* Notify that a merge is beginning, if we haven't already done so.
    * (A single-file merge is notified separately: see single_file_merge_notify().) */
   /* If our merge sources are ancestors of one another... */
-  if (notify_b->merge_b->sources_ancestral)
+  if (notify_b->merge_b->merge_source.ancestral)
     {
       /* See if this is an operative directory merge. */
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
@@ -4079,6 +4081,11 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   apr_array_header_t *target_rangelist;
   svn_revnum_t child_base_revision;
 
+  /* Since this function should only be called when honoring mergeinfo and
+   * SOURCE adheres to the requirements noted in 'MERGEINFO MERGE SOURCE
+   * NORMALIZATION', SOURCE must be 'ancestral'. */
+  SVN_ERR_ASSERT(source->ancestral);
+
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
                                               primary_url, result_pool));
@@ -4455,6 +4462,15 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                             source->loc1, child_repos_path, iterpool);
       child_source.loc2 = svn_client__pathrev_join_relpath(
                             source->loc2, child_repos_path, iterpool);
+      /* ### Is the child 'ancestral' over the same revision range?  It's
+       * not necessarily true that a child is 'ancestral' if the parent is,
+       * nor that it's not if the parent is not.  However, here we claim
+       * that it is.  Before we had this 'ancestral' field that we need to
+       * set explicitly, the claim was implicit.  Either way, the impact is
+       * that we might pass calculate_remaining_ranges() a source that is
+       * not in fact 'ancestral' (despite its 'ancestral' field being true),
+       * contrary to its doc-string. */
+      child_source.ancestral = source->ancestral;
 
       /* Get the explicit/inherited mergeinfo for CHILD.  If CHILD is the
          merge target then also get its implicit mergeinfo.  Otherwise defer
@@ -4941,7 +4957,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    URL in the repository of SOURCE; they may be temporarily reparented within
    this function.
 
-   If MERGE_B->sources_ancestral is set, then SOURCE->url1@rev1 must be a
+   If SOURCE->ancestral is set, then SOURCE->url1@rev1 must be a
    historical ancestor of SOURCE->url2@rev2, or vice-versa (see
    `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements around
    SOURCE in this case).
@@ -5352,7 +5368,7 @@ single_file_merge_notify(notification_receiver_baton_t *notify_baton,
   if (IS_OPERATIVE_NOTIFICATION(notify) && (! *header_sent))
     {
       notify_merge_begin(notify_baton->merge_b->target->abspath,
-                         (notify_baton->merge_b->sources_ancestral ? r : NULL),
+                         (notify_baton->merge_b->merge_source.ancestral ? r : NULL),
                          notify_baton->merge_b->same_repos,
                          notify_baton->merge_b->ctx, pool);
       *header_sent = TRUE;
@@ -6371,9 +6387,11 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
                MIN(segment->range_end, maxrev), segment->path, pool);
       /* If this is subtractive, reverse the whole calculation. */
       if (subtractive)
-        merge_source = merge_source_create(loc2, loc1, pool);
+        merge_source = merge_source_create(loc2, loc1, TRUE /* ancestral */,
+                                           pool);
       else
-        merge_source = merge_source_create(loc1, loc2, pool);
+        merge_source = merge_source_create(loc1, loc2, TRUE /* ancestral */,
+                                           pool);
 
       APR_ARRAY_PUSH(merge_source_ts, merge_source_t *) = merge_source;
     }
@@ -6719,6 +6737,9 @@ subrange_source(const merge_source_t *source,
   svn_client__pathrev_t loc1 = *source->loc1;
   svn_client__pathrev_t loc2 = *source->loc2;
 
+  /* For this function we require that the input source is 'ancestral'. */
+  SVN_ERR_ASSERT_NO_RETURN(source->ancestral);
+
   loc1.rev = start_rev;
   loc2.rev = end_rev;
   if (! same_urls)
@@ -6732,7 +6753,7 @@ subrange_source(const merge_source_t *source,
           loc1.url = source->loc2->url;
         }
     }
-  return merge_source_create(&loc1, &loc2, pool);
+  return merge_source_create(&loc1, &loc2, source->ancestral, pool);
 }
 
 /* The single-file, simplified version of do_directory_merge(), which see for
@@ -6848,7 +6869,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
          range to merge, eliminate no-op ranges before going through
          the effort of downloading the many copies of the file
          required to do these merges (two copies per range). */
-      if (merge_b->sources_ancestral && (remaining_ranges->nelts > 1))
+      if (source->ancestral && (remaining_ranges->nelts > 1))
         {
           const char *old_sess_url;
           SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url,
@@ -6866,7 +6887,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
         {
           svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
                                                svn_merge_range_t *);
-          merge_source_t *real_source;
+          const merge_source_t *real_source;
           svn_boolean_t header_sent = FALSE;
           const char *tmpfile1, *tmpfile2;
           apr_hash_t *props1, *props2;
@@ -6880,7 +6901,10 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
 
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
-          real_source = subrange_source(source, r->start, r->end, iterpool);
+          if (source->ancestral)
+            real_source = subrange_source(source, r->start, r->end, iterpool);
+          else
+            real_source = source;
           SVN_ERR(single_file_merge_get_file(&tmpfile1, &props1,
                                              merge_b->ra_session1,
                                              real_source->loc1,
@@ -8436,7 +8460,7 @@ remove_noop_subtree_ranges(const merge_source_t *source,
    do_file_merge().
 
    MERGE_B describes the merge being performed.  As this function is for a
-   mergeinfo-aware merge, MERGE_B->sources_ancestral should be TRUE, and
+   mergeinfo-aware merge, SOURCE->ancestral should be TRUE, and
    SOURCE->url1@rev1 must be a historical ancestor of SOURCE->url2@rev2, or
    vice-versa (see `MERGEINFO MERGE SOURCE NORMALIZATION' for more
    requirements around SOURCE).
@@ -8495,6 +8519,8 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_ra_session_t *ra_session;
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (source->loc1->rev > source->loc2->rev);
+
+  SVN_ERR_ASSERT(source->ancestral);
 
   /*** If we get here, we're dealing with related sources from the
        same repository as the target -- merge tracking might be
@@ -8851,8 +8877,8 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    by the merge.  Keys and values of the hash are both (const char *)
    absolute paths.  The contents of the hash are allocated in RESULT_POOL.
 
-   If SOURCES_ANCESTRAL is set, then for every (const merge_source_t *)
-   merge source in MERGE_SOURCES, the "left" and "right" side are
+   For every (const merge_source_t *) merge source in MERGE_SOURCES, if
+   SOURCE->ANCESTRAL is set, then the "left" and "right" side are
    ancestrally related.  (See 'MERGEINFO MERGE SOURCE NORMALIZATION'
    for more on what that means and how it matters.)
 
@@ -8900,7 +8926,6 @@ do_merge(apr_hash_t **modified_subtrees,
          svn_mergeinfo_catalog_t result_catalog,
          const apr_array_header_t *merge_sources,
          const merge_target_t *target,
-         svn_boolean_t sources_ancestral,
          svn_boolean_t sources_related,
          svn_boolean_t same_repos,
          svn_boolean_t ignore_ancestry,
@@ -8932,6 +8957,17 @@ do_merge(apr_hash_t **modified_subtrees,
      (which is a merge-tracking thing). */
   if (record_only)
     {
+      svn_boolean_t sources_ancestral = TRUE;
+      int j;
+
+      /* Find out whether all of the sources are 'ancestral'. */
+      for (j = 0; j < merge_sources->nelts; j++)
+        if (! APR_ARRAY_IDX(merge_sources, j, merge_source_t *)->ancestral)
+          {
+            sources_ancestral = FALSE;
+            break;
+          }
+
       /* We can't do a record-only merge if the sources aren't related. */
       if (! sources_ancestral)
         return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -8977,7 +9013,6 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.ignore_ancestry = ignore_ancestry;
   merge_cmd_baton.same_repos = same_repos;
   merge_cmd_baton.mergeinfo_capable = FALSE;
-  merge_cmd_baton.sources_ancestral = sources_ancestral;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.reintegrate_merge = reintegrate_merge;
@@ -9158,6 +9193,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
+  SVN_ERR_ASSERT(! source->ancestral);
 
   SVN_ERR(normalize_merge_sources_internal(
             &remove_sources, source->loc1,
@@ -9180,7 +9216,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
       modified_subtrees = apr_hash_make(scratch_pool);
       APR_ARRAY_PUSH(faux_sources, const merge_source_t *) = source;
       SVN_ERR(do_merge(&modified_subtrees, NULL, faux_sources, target,
-                       FALSE, TRUE, same_repos,
+                       TRUE, same_repos,
                        ignore_ancestry, force, dry_run, FALSE, NULL, TRUE,
                        FALSE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
@@ -9194,9 +9230,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
 
   /* ... and now, if we're doing the mergeinfo thang, we execute a
      pair of record-only merges using the real sources we've
-     calculated.  (We know that each tong in our fork of our merge
-     source history tree has an ancestral relationship with the common
-     ancestral, so we force ancestral=TRUE here.)
+     calculated.
 
      Issue #3648: We don't actually perform these two record-only merges
      on the WC at first, but rather see what each would do and store that
@@ -9214,14 +9248,14 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
       notify_mergeinfo_recording(target->abspath, NULL, ctx, scratch_pool);
       svn_pool_clear(subpool);
       SVN_ERR(do_merge(NULL, add_result_catalog, add_sources, target,
-                       TRUE, TRUE, same_repos,
+                       TRUE, same_repos,
                        ignore_ancestry, force, dry_run, TRUE,
                        modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
       svn_pool_clear(subpool);
       SVN_ERR(do_merge(NULL, remove_result_catalog, remove_sources, target,
-                       TRUE, TRUE, same_repos,
+                       TRUE, same_repos,
                        ignore_ancestry, force, dry_run, TRUE,
                        modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx,
@@ -9458,7 +9492,7 @@ merge_locked(const char *source1,
 {
   merge_target_t *target;
   svn_client__pathrev_t *source1_loc, *source2_loc;
-  svn_boolean_t related = FALSE, ancestral = FALSE;
+  svn_boolean_t related = FALSE;
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
   svn_error_t *err;
@@ -9528,7 +9562,6 @@ merge_locked(const char *source1,
       if ((strcmp(yca->url, source2_loc->url) == 0)
           && (yca->rev == source2_loc->rev))
         {
-          ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
                     &merge_sources, source1_loc,
                     svn_rangelist__initialize(source1_loc->rev, yca->rev, TRUE,
@@ -9540,7 +9573,6 @@ merge_locked(const char *source1,
       else if ((strcmp(yca->url, source1_loc->url) == 0)
                && (yca->rev == source1_loc->rev))
         {
-          ancestral = TRUE;
           SVN_ERR(normalize_merge_sources_internal(
                     &merge_sources, source2_loc,
                     svn_rangelist__initialize(yca->rev, source2_loc->rev, TRUE,
@@ -9551,7 +9583,7 @@ merge_locked(const char *source1,
          side, and merge the right. */
       else
         {
-          merge_source_t source = { source1_loc, source2_loc };
+          merge_source_t source = { source1_loc, source2_loc, FALSE };
 
           err = merge_cousins_and_supplement_mergeinfo(target,
                                                        ra_session1,
@@ -9583,7 +9615,7 @@ merge_locked(const char *source1,
     }
   else
     {
-      merge_source_t source = { source1_loc, source2_loc };
+      merge_source_t source = { source1_loc, source2_loc, FALSE };
 
       /* Build a single-item merge_source_t array. */
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
@@ -9591,7 +9623,7 @@ merge_locked(const char *source1,
     }
 
   err = do_merge(NULL, NULL, merge_sources, target,
-                 ancestral, related, same_repos,
+                 related, same_repos,
                  ignore_ancestry, force, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
@@ -10587,6 +10619,10 @@ find_reintegrate_merge(merge_source_t **source_p,
             &yc_ancestor, source.loc2, source.loc1,
             ctx, scratch_pool, scratch_pool));
 
+  /* The source side of a reintegrate merge is not 'ancestral', except in
+   * the degenerate case where source == YCA. */
+  source.ancestral = (loc1->rev == yc_ancestor->rev);
+
   if (! yc_ancestor)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
@@ -10790,8 +10826,10 @@ merge_reintegrate_locked(const char *source_path_or_url,
   /* Do the real merge! */
   /* ### TODO(reint): Make sure that one isn't the same line ancestor
      ### of the other (what's erroneously referred to as "ancestrally
-     ### related" in this source file).  We can merge to trunk without
-     ### implementing this. */
+     ### related" in this source file).  For now, we just say the source
+     ### isn't "ancestral" even if it is (in the degenerate case where
+     ### source-left equals YCA). */
+  source->ancestral = FALSE;
   err = merge_cousins_and_supplement_mergeinfo(target,
                                                target_ra_session,
                                                source_ra_session,
@@ -10894,7 +10932,7 @@ merge_peg_locked(const char *source_path_or_url,
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
   err = do_merge(NULL, NULL, merge_sources, target,
-                 TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
+                 TRUE, same_repos, ignore_ancestry, force, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
 
@@ -11507,6 +11545,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
 
   source.loc1 = merge->base;
   source.loc2 = merge->right;
+  source.ancestral = (merge->mid == NULL);
   SVN_DBG(("yca   %s@%ld\n", merge->yca->url, merge->yca->rev));
   SVN_DBG(("base  %s@%ld\n", merge->base->url, merge->base->rev));
   if (merge->mid)
@@ -11539,7 +11578,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
       APR_ARRAY_PUSH(merge_sources, const merge_source_t *) = &source;
 
       err = do_merge(NULL, NULL, merge_sources, target,
-                     TRUE /*sources_ancestral*/, TRUE /*related*/,
+                     TRUE /*related*/,
                      TRUE /*same_repos*/, ignore_ancestry, force, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,
                      &use_sleep, ctx, scratch_pool, scratch_pool);
