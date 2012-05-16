@@ -1124,42 +1124,6 @@ svn_client__get_detranslated_stream(svn_stream_t **fstream,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-
-struct svn_client__shim_callbacks_baton
-{
-  svn_wc_context_t *wc_ctx;
-  apr_hash_t *relpath_map;
-};
-
-svn_error_t *
-svn_client__shim_fetch_props_func(apr_hash_t **props,
-                                  void *baton,
-                                  const char *path,
-                                  svn_revnum_t base_revision,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-svn_error_t *
-svn_client__shim_fetch_kind_func(svn_kind_t *kind,
-                                 void *baton,
-                                 const char *path,
-                                 svn_revnum_t base_revision,
-                                 apr_pool_t *scratch_pool);
-
-svn_error_t *
-svn_client__shim_fetch_base_func(const char **filename,
-                                 void *baton,
-                                 const char *path,
-                                 svn_revnum_t base_revision,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-/* Return a set of callbacks to use with the Ev2 shims. */
-svn_delta_shim_callbacks_t *
-svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
-                               apr_hash_t *relpath_map,
-                               apr_pool_t *result_pool);
-
 /* Return true if KIND is a revision kind that is dependent on the working
  * copy. Otherwise, return false. */
 #define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
