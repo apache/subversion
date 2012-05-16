@@ -51,6 +51,7 @@
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_token.h"
+#include "private/svn_subr_private.h"
 
 
 #define NOT_IMPLEMENTED() SVN__NOT_IMPLEMENTED()
@@ -1186,7 +1187,7 @@ gather_children2(const apr_array_header_t **children,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *names_hash = apr_hash_make(scratch_pool);
+  apr_hash_t *names_hash = svn_hash__make(scratch_pool);
   apr_array_header_t *names_array;
 
   /* All of the names get allocated in RESULT_POOL.  It
@@ -1210,7 +1211,7 @@ gather_children(const apr_array_header_t **children,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  apr_hash_t *names_hash = apr_hash_make(scratch_pool);
+  apr_hash_t *names_hash = svn_hash__make(scratch_pool);
   apr_array_header_t *names_array;
 
   /* All of the names get allocated in RESULT_POOL.  It
@@ -2210,7 +2211,7 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
                               dir_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  *nodes = apr_hash_make(result_pool);
+  *nodes = svn_hash__make(result_pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_BASE_CHILDREN_INFO));
@@ -7687,8 +7688,8 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
   svn_wc__db_wcroot_t *wcroot;
   const char *dir_relpath;
 
-  *conflicts = apr_hash_make(result_pool);
-  *nodes = apr_hash_make(result_pool);
+  *conflicts = svn_hash__make(result_pool);
+  *nodes = svn_hash__make(result_pool);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &dir_relpath, db,
@@ -7881,7 +7882,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, dir_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  *nodes = apr_hash_make(result_pool);
+  *nodes = svn_hash__make(result_pool);
   while (have_row)
     {
       struct svn_wc__db_walker_info_t *child;

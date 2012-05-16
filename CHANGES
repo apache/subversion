@@ -19,6 +19,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
     * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
     * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --properties-only option for 'svn diff' (r1336110)
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)

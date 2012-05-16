@@ -903,6 +903,8 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
+                 || svn_path_is_single_path_component(diff_target));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,

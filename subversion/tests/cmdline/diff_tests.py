@@ -2584,6 +2584,52 @@ def basic_diff_summarize(sbox):
   wc_dir = sbox.wc_dir
   p = sbox.ospath
 
+  # Diff summarize of a newly added file
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c1')
+
+  # Reverse summarize diff of a newly added file
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c-1')
+
+  # Diff summarize of a newly added directory
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/D':          Item(status='A '),
+    'A/D/gamma':    Item(status='A '),
+    'A/D/H':        Item(status='A '),
+    'A/D/H/chi':    Item(status='A '),
+    'A/D/H/psi':    Item(status='A '),
+    'A/D/H/omega':  Item(status='A '),
+    'A/D/G':        Item(status='A '),
+    'A/D/G/pi':     Item(status='A '),
+    'A/D/G/rho':    Item(status='A '),
+    'A/D/G/tau':    Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('A/D'), '-c1')
+
+  # Reverse summarize diff of a newly added directory
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/D':          Item(status='D '),
+    'A/D/gamma':    Item(status='D '),
+    'A/D/H':        Item(status='D '),
+    'A/D/H/chi':    Item(status='D '),
+    'A/D/H/psi':    Item(status='D '),
+    'A/D/H/omega':  Item(status='D '),
+    'A/D/G':        Item(status='D '),
+    'A/D/G/pi':     Item(status='D '),
+    'A/D/G/rho':    Item(status='D '),
+    'A/D/G/tau':    Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('A/D'), '-c-1')
+
   # Add props to some items that will be deleted, and commit.
   sbox.simple_propset('prop', 'val',
                       'A/C',
@@ -3878,6 +3924,141 @@ def diff_two_working_copies(sbox):
                                      'diff', '--old', wc_dir_old,
                                      '--new', wc_dir)
 
+def diff_deleted_url(sbox):
+  "diff -cN of URL deleted in rN"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # remove A/D/H in r2
+  sbox.simple_rm("A/D/H")
+  sbox.simple_commit()
+
+  # A diff of r2 with target A/D/H should show the removed children
+  expected_output = make_diff_header("chi", "revision 1", "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'chi'.\n",
+                    ] + make_diff_header("omega", "revision 1",
+                                         "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'omega'.\n",
+                    ] + make_diff_header("psi", "revision 1",
+                                         "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'psi'.\n",
+                    ]
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-c2',
+                                     sbox.repo_url + '/A/D/H')
+
+def diff_arbitrary_files_and_dirs(sbox):
+  "diff arbitrary files and dirs"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # diff iota with A/mu
+  expected_output = make_diff_header("mu", "working copy", "working copy",
+                                     "iota", "A/mu") + [
+                      "@@ -1 +1 @@\n",
+                      "-This is the file 'iota'.\n",
+                      "+This is the file 'mu'.\n"
+                    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', sbox.ospath('iota'),
+                                     '--new', sbox.ospath('A/mu'))
+
+  # diff A/B/E with A/D
+  expected_output = make_diff_header("G/pi", "working copy", "working copy",
+                                     "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'pi'.\n"
+                    ] + make_diff_header("G/rho", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'rho'.\n"
+                    ] + make_diff_header("G/tau", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'tau'.\n"
+                    ] + make_diff_header("H/chi", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'chi'.\n"
+                    ] + make_diff_header("H/omega", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'omega'.\n"
+                    ] + make_diff_header("H/psi", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'psi'.\n"
+                    ] + make_diff_header("alpha", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'alpha'.\n"
+                    ] + make_diff_header("beta", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'beta'.\n"
+                    ] + make_diff_header("gamma", "working copy",
+                                         "working copy", "B/E", "D") + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is the file 'gamma'.\n"
+                    ]
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', sbox.ospath('A/B/E'),
+                                     '--new', sbox.ospath('A/D'))
+
+def diff_properties_only(sbox):
+  "diff --properties-only"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = \
+    make_diff_header("iota", "revision 1", "revision 2") + \
+    make_diff_prop_header("iota") + \
+    make_diff_prop_added("svn:eol-style", "native")
+
+  expected_reverse_output = \
+    make_diff_header("iota", "revision 2", "revision 1") + \
+    make_diff_prop_header("iota") + \
+    make_diff_prop_deleted("svn:eol-style", "native")
+
+  expected_rev1_output = \
+    make_diff_header("iota", "revision 1", "working copy") + \
+    make_diff_prop_header("iota") + \
+    make_diff_prop_added("svn:eol-style", "native")
+
+  # Make a property change and a content change to 'iota'
+  # Only the property change should be displayed by diff --properties-only
+  sbox.simple_propset('svn:eol-style', 'native', 'iota')
+  svntest.main.file_append(sbox.ospath('iota'), 'new text\n')
+
+  sbox.simple_commit() # r2
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--properties-only', '-r', '1:2',
+                                     sbox.repo_url + '/iota')
+
+  svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
+                                     'diff', '--properties-only', '-r', '2:1',
+                                     sbox.repo_url + '/iota')
+
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, expected_rev1_output, [],
+                                     'diff', '--properties-only', '-r', '1',
+                                     'iota')
+
+  svntest.actions.run_and_verify_svn(None, expected_rev1_output, [],
+                                     'diff', '--properties-only',
+                                     '-r', 'PREV', 'iota')
+
 ########################################################################
 #Run the tests
 
@@ -3946,6 +4127,9 @@ test_list = [ None,
               no_spurious_conflict,
               diff_correct_wc_base_revnum,
               diff_two_working_copies,
+              diff_deleted_url,
+              diff_arbitrary_files_and_dirs,
+              diff_properties_only,
               ]
 
 if __name__ == '__main__':
