@@ -2584,6 +2584,52 @@ def basic_diff_summarize(sbox):
   wc_dir = sbox.wc_dir
   p = sbox.ospath
 
+  # Diff summarize of a newly added file
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c1')
+
+  # Reverse summarize diff of a newly added file
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c-1')
+
+  # Diff summarize of a newly added directory
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/D':          Item(status='A '),
+    'A/D/gamma':    Item(status='A '),
+    'A/D/H':        Item(status='A '),
+    'A/D/H/chi':    Item(status='A '),
+    'A/D/H/psi':    Item(status='A '),
+    'A/D/H/omega':  Item(status='A '),
+    'A/D/G':        Item(status='A '),
+    'A/D/G/pi':     Item(status='A '),
+    'A/D/G/rho':    Item(status='A '),
+    'A/D/G/tau':    Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('A/D'), '-c1')
+
+  # Reverse summarize diff of a newly added directory
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/D':          Item(status='D '),
+    'A/D/gamma':    Item(status='D '),
+    'A/D/H':        Item(status='D '),
+    'A/D/H/chi':    Item(status='D '),
+    'A/D/H/psi':    Item(status='D '),
+    'A/D/H/omega':  Item(status='D '),
+    'A/D/G':        Item(status='D '),
+    'A/D/G/pi':     Item(status='D '),
+    'A/D/G/rho':    Item(status='D '),
+    'A/D/G/tau':    Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('A/D'), '-c-1')
+
   # Add props to some items that will be deleted, and commit.
   sbox.simple_propset('prop', 'val',
                       'A/C',
