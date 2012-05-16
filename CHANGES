@@ -32,7 +32,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     *
 
   - Other tool improvements and bugfixes:
-    *
+    * 'svnmucc' promoted to first-class supported binary (issue #3308)
   
  Developer-visible changes:
   - General:
