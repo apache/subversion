@@ -175,16 +175,14 @@ single_repos_delete(svn_ra_session_t *ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor */
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
-                        svn_client__get_shim_callbacks(ctx->wc_ctx,
-                                                       NULL, pool)));
-  SVN_ERR(svn_ra_get_commit_editor4(ra_session, &editor,
-                                    commit_revprops,
-                                    commit_callback,
-                                    commit_baton,
-                                    NULL, TRUE, /* No lock tokens */
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    pool, pool));
+  SVN_ERR(svn_ra__get_commit_ev2(&editor, ra_session,
+                                 commit_revprops,
+                                 commit_callback,
+                                 commit_baton,
+                                 NULL, TRUE, /* No lock tokens */
+                                 NULL, NULL, NULL, NULL,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool, pool));
 
   for (i = 0; i < relpaths->nelts; i++)
     {
