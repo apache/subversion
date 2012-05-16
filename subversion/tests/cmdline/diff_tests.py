@@ -4035,7 +4035,7 @@ def diff_properties_only(sbox):
     make_diff_prop_header("iota") + \
     make_diff_prop_added("svn:eol-style", "native")
 
-  # Make a property change and a content chang to 'iota'
+  # Make a property change and a content change to 'iota'
   # Only the property change should be displayed by diff --properties-only
   sbox.simple_propset('svn:eol-style', 'native', 'iota')
   svntest.main.file_append(sbox.ospath('iota'), 'new text\n')
