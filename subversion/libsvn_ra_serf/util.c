@@ -1148,9 +1148,18 @@ end_207(svn_ra_serf__xml_parser_t *parser,
     }
   if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
     {
+      apr_size_t len = ctx->cdata->len;
+      const char *data = ctx->cdata->data;
+
+      /* Remove leading newline added by DEBUG_CR on server */
+      if (*data == '\n')
+        {
+          ++data;
+          --len;
+        }
+
       ctx->collect_cdata = FALSE;
-      ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
-                                           ctx->cdata->len);
+      ctx->error->message = apr_pstrmemdup(ctx->error->pool, data, len);
       if (ctx->contains_precondition_error)
         ctx->error->apr_err = SVN_ERR_FS_PROP_BASEVALUE_MISMATCH;
       else
