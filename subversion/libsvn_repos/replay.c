@@ -415,7 +415,12 @@ was_readable(svn_boolean_t *readable,
    revision root, fspath, and revnum of the copyfrom of CHANGE, which
    corresponds to PATH under ROOT.  If the copyfrom info is valid
    (i.e., is not (NULL, SVN_INVALID_REVNUM)), then initialize SRC_READABLE
-   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided. */
+   too, consulting AUTHZ_READ_FUNC and AUTHZ_READ_BATON if provided.
+
+   NOTE: If the copyfrom information in CHANGE is marked as unknown
+   (meaning, its ->copyfrom_rev and ->copyfrom_path cannot be
+   trusted), this function will also update those members of the
+   CHANGE structure to carry accurate copyfrom information.  */
 static svn_error_t *
 fill_copyfrom(svn_fs_root_t **copyfrom_root,
               const char **copyfrom_path,
