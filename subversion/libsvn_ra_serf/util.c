@@ -844,15 +844,10 @@ end_error(svn_ra_serf__xml_parser_t *parser,
       /* On the server dav_error_response_tag() will add a leading
          and trailing newline if DEBUG_CR is defined in mod_dav.h,
          so remove any such characters here. */
-      apr_size_t len;
-      const char *cd = ctx->cdata->data;
-      if (*cd == '\n')
-        ++cd;
-      len = strlen(cd);
-      if (len > 0 && cd[len-1] == '\n')
-        --len;
+      svn_stringbuf_strip_whitespace(ctx->cdata);
 
-      ctx->error->message = apr_pstrmemdup(ctx->error->pool, cd, len);
+      ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
+                                           ctx->cdata->len);
       ctx->collect_cdata = FALSE;
     }
 
@@ -1148,18 +1143,12 @@ end_207(svn_ra_serf__xml_parser_t *parser,
     }
   if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
     {
-      apr_size_t len = ctx->cdata->len;
-      const char *data = ctx->cdata->data;
-
       /* Remove leading newline added by DEBUG_CR on server */
-      if (*data == '\n')
-        {
-          ++data;
-          --len;
-        }
+      svn_stringbuf_strip_whitespace(ctx->cdata);
 
       ctx->collect_cdata = FALSE;
-      ctx->error->message = apr_pstrmemdup(ctx->error->pool, data, len);
+      ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
+                                           ctx->cdata->len);
       if (ctx->contains_precondition_error)
         ctx->error->apr_err = SVN_ERR_FS_PROP_BASEVALUE_MISMATCH;
       else
