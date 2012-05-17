@@ -229,8 +229,6 @@ create_mergeinfo_body(serf_bucket_t **bkt,
   return SVN_NO_ERROR;
 }
 
-/* Request a mergeinfo-report from the URL attached to SESSION,
-   and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            svn_mergeinfo_catalog_t *catalog,
