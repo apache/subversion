@@ -4070,9 +4070,10 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const char *mergeinfo_path;
-  const char *primary_url = (source->loc1->rev < source->loc2->rev)
-                            ? source->loc2->url : source->loc1->url;
+  const svn_client__pathrev_t *primary_src
+    = (source->loc1->rev < source->loc2->rev) ? source->loc2 : source->loc1;
+  const char *mergeinfo_path = svn_client__pathrev_fspath(primary_src,
+                                                          scratch_pool);
   /* Intersection of TARGET_MERGEINFO and the merge history
      described by SOURCE. */
   apr_array_header_t *target_rangelist;
@@ -4084,8 +4085,6 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   SVN_ERR_ASSERT(source->ancestral);
 
   /* Determine which of the requested ranges to consider merging... */
-  SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &mergeinfo_path,
-                                              primary_url, result_pool));
 
   /* Set TARGET_RANGELIST to the portion of TARGET_MERGEINFO that refers
      to SOURCE (excluding any gap in SOURCE): first get all ranges from
@@ -4228,7 +4227,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   svn_revnum_t old_rev = MIN(source->loc1->rev, source->loc2->rev);
   const svn_client__pathrev_t *primary_src
     = (source->loc1->rev < source->loc2->rev) ? source->loc2 : source->loc1;
-  const char *merge_src_fspath;
+  const char *merge_src_fspath = svn_client__pathrev_fspath(primary_src,
+                                                            scratch_pool);
   apr_array_header_t *rangelist;
 
   /* Start by assuming there is no gap. */
@@ -4241,8 +4241,6 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
                                                ra_session,
                                                ctx, scratch_pool));
 
-  SVN_ERR(svn_ra__get_fspath_relative_to_root(
-            ra_session, &merge_src_fspath, primary_src->url, scratch_pool));
   rangelist = apr_hash_get(implicit_src_mergeinfo,
                            merge_src_fspath,
                            APR_HASH_KEY_STRING);
@@ -6789,7 +6787,8 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_merge_range_t *conflicted_range = NULL;
   svn_boolean_t inherited = FALSE;
   svn_boolean_t is_rollback = (source->loc1->rev > source->loc2->rev);
-  const char *primary_url = is_rollback ? source->loc1->url : source->loc2->url;
+  const svn_client__pathrev_t *primary_src
+    = is_rollback ? source->loc1 : source->loc2;
   svn_boolean_t honor_mergeinfo = HONOR_MERGEINFO(merge_b);
   svn_client__merge_path_t *merge_target = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -6871,7 +6870,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
           const char *old_sess_url;
           SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url,
                                                     merge_b->ra_session1,
-                                                    primary_url,
+                                                    primary_src->url,
                                                     iterpool));
           SVN_ERR(remove_noop_merge_ranges(&ranges_to_merge,
                                            merge_b->ra_session1,
@@ -7003,12 +7002,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
      merge ranges, include the noop ones.  */
   if (RECORD_MERGEINFO(merge_b) && remaining_ranges->nelts)
     {
-      const char *mergeinfo_path;
+      const char *mergeinfo_path = svn_client__pathrev_fspath(primary_src,
+                                                              scratch_pool);
       apr_array_header_t *filtered_rangelist;
-
-      SVN_ERR(svn_ra__get_fspath_relative_to_root(
-                merge_b->ra_session1, &mergeinfo_path, primary_url,
-                scratch_pool));
 
       /* Filter any ranges from TARGET_WCPATH's own history, there is no
          need to record this explicitly in mergeinfo, it is already part
@@ -8748,10 +8744,10 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   /* Record mergeinfo where appropriate.*/
   if (RECORD_MERGEINFO(merge_b))
     {
-      const svn_client__pathrev_t *primary_loc
+      const svn_client__pathrev_t *primary_src
         = is_rollback ? source->loc1 : source->loc2;
       const char *mergeinfo_path
-        = svn_client__pathrev_fspath(primary_loc, scratch_pool);
+        = svn_client__pathrev_fspath(primary_src, scratch_pool);
 
       err = record_mergeinfo_for_dir_merge(result_catalog,
                                            &range,
