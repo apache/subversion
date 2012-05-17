@@ -1385,6 +1385,7 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 /** RA functions **/
 
+/* Implements svn_ra__vtable_t.get_log(). */
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *session,
                      const apr_array_header_t *paths,
@@ -1399,6 +1400,7 @@ svn_ra_serf__get_log(svn_ra_session_t *session,
                      void *receiver_baton,
                      apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_locations(). */
 svn_error_t *
 svn_ra_serf__get_locations(svn_ra_session_t *session,
                            apr_hash_t **locations,
@@ -1407,6 +1409,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *session,
                            const apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_location_segments(). */
 svn_error_t *
 svn_ra_serf__get_location_segments(svn_ra_session_t *session,
                                    const char *path,
@@ -1417,6 +1420,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *session,
                                    void *receiver_baton,
                                    apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.do_diff(). */
 svn_error_t *
 svn_ra_serf__do_diff(svn_ra_session_t *session,
                      const svn_ra_reporter3_t **reporter,
@@ -1431,6 +1435,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *session,
                      void *diff_baton,
                      apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.do_status(). */
 svn_error_t *
 svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        const svn_ra_reporter3_t **reporter,
@@ -1442,6 +1447,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        void *status_baton,
                        apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.do_update(). */
 svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const svn_ra_reporter3_t **reporter,
@@ -1454,6 +1460,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        void *update_baton,
                        apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.do_switch(). */
 svn_error_t *
 svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        const svn_ra_reporter3_t **reporter,
@@ -1466,6 +1473,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                        void *switch_baton,
                        apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_file_revs(). */
 svn_error_t *
 svn_ra_serf__get_file_revs(svn_ra_session_t *session,
                            const char *path,
@@ -1476,12 +1484,14 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *session,
                            void *handler_baton,
                            apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_dated_revision(). */
 svn_error_t *
 svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
                                 svn_revnum_t *revision,
                                 apr_time_t tm,
                                 apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_commit_editor(). */
 svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                const svn_delta_editor_t **editor,
@@ -1493,6 +1503,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                svn_boolean_t keep_locks,
                                apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_file(). */
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *session,
                       const char *path,
@@ -1502,6 +1513,7 @@ svn_ra_serf__get_file(svn_ra_session_t *session,
                       apr_hash_t **props,
                       apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.change_rev_prop(). */
 svn_error_t *
 svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
                              svn_revnum_t rev,
@@ -1510,6 +1522,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
                              const svn_string_t *value,
                              apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.replay(). */
 svn_error_t *
 svn_ra_serf__replay(svn_ra_session_t *ra_session,
                     svn_revnum_t revision,
@@ -1519,6 +1532,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                     void *edit_baton,
                     apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.replay_range(). */
 svn_error_t *
 svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                           svn_revnum_t start_revision,
@@ -1530,6 +1544,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                           void *replay_baton,
                           apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.lock(). */
 svn_error_t *
 svn_ra_serf__lock(svn_ra_session_t *ra_session,
                   apr_hash_t *path_revs,
@@ -1539,6 +1554,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                   void *lock_baton,
                   apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.unlock(). */
 svn_error_t *
 svn_ra_serf__unlock(svn_ra_session_t *ra_session,
                     apr_hash_t *path_tokens,
@@ -1547,12 +1563,14 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
                     void *lock_baton,
                     apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_lock(). */
 svn_error_t *
 svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
                       svn_lock_t **lock,
                       const char *path,
                       apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.get_locks(). */
 svn_error_t *
 svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        apr_hash_t **locks,
@@ -1560,13 +1578,19 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        svn_depth_t depth,
                        apr_pool_t *pool);
 
-svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool);
+/* Request a mergeinfo-report from the URL attached to SESSION,
+   and fill in the MERGEINFO hash with the results.
+
+   Implements svn_ra__vtable_t.get_mergeinfo().
+ */
+svn_error_t *
+svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
+                           apr_hash_t **mergeinfo,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t revision,
+                           svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendants,
+                           apr_pool_t *pool);
 
 /* Exchange capabilities with the server, by sending an OPTIONS
  * request announcing the client's capabilities, and by filling
@@ -1585,14 +1609,14 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    const char **corrected_url,
                                    apr_pool_t *pool);
 
-/* Implements the has_capability RA layer function. */
+/* Implements svn_ra__vtable_t.has_capability(). */
 svn_error_t *
 svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             svn_boolean_t *has,
                             const char *capability,
                             apr_pool_t *pool);
 
-/* Implements the get_deleted_rev RA layer function. */
+/* Implements svn_ra__vtable_t.get_deleted_rev(). */
 svn_error_t *
 svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                              const char *path,
@@ -1600,6 +1624,18 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                              svn_revnum_t end_revision,
                              svn_revnum_t *revision_deleted,
                              apr_pool_t *pool);
+
+/* Implements svn_ra__vtable_t.get_repos_root(). */
+svn_error_t *
+svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
+                            const char **url,
+                            apr_pool_t *pool);
+
+/* Implements svn_ra__vtable_t.register_editor_shim_callbacks(). */
+svn_error_t *
+svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
+                                    svn_delta_shim_callbacks_t *callbacks);
+
 
 /*** Authentication handler declarations ***/
 
@@ -1627,27 +1663,19 @@ svn_ra_serf__error_on_status(int status_code,
                              const char *path,
                              const char *location);
 
-svn_error_t *
-svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
-                                    svn_delta_shim_callbacks_t *callbacks);
-
-
+/* ###? */
 svn_error_t *
 svn_ra_serf__copy_into_spillbuf(svn_spillbuf_t **spillbuf,
                                 serf_bucket_t *bkt,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
+
+/* ###? */
 serf_bucket_t *
 svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
                               serf_bucket_alloc_t *allocator,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
-                            const char **url,
-                            apr_pool_t *pool);
 
 
 #ifdef __cplusplus

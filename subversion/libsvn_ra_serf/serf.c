@@ -51,6 +51,7 @@
 #include "ra_serf.h"
 
 
+/* Implements svn_ra__vtable_t.get_version(). */
 static const svn_version_t *
 ra_serf_version(void)
 {
@@ -60,12 +61,14 @@ ra_serf_version(void)
 #define RA_SERF_DESCRIPTION \
     N_("Module for accessing a repository via WebDAV protocol using serf.")
 
+/* Implements svn_ra__vtable_t.get_description(). */
 static const char *
 ra_serf_get_description(void)
 {
   return _(RA_SERF_DESCRIPTION);
 }
 
+/* Implements svn_ra__vtable_t.get_schemes(). */
 static const char * const *
 ra_serf_get_schemes(apr_pool_t *pool)
 {
@@ -332,6 +335,7 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
     }
 }
 
+/* Implements svn_ra__vtable_t.open_session(). */
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char **corrected_url,
@@ -438,6 +442,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   return svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
 }
 
+/* Implements svn_ra__vtable_t.reparent(). */
 static svn_error_t *
 svn_ra_serf__reparent(svn_ra_session_t *ra_session,
                       const char *url,
@@ -480,6 +485,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.get_session_url(). */
 static svn_error_t *
 svn_ra_serf__get_session_url(svn_ra_session_t *ra_session,
                              const char **url,
@@ -490,6 +496,7 @@ svn_ra_serf__get_session_url(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.get_latest_revnum(). */
 static svn_error_t *
 svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                svn_revnum_t *latest_revnum,
@@ -501,6 +508,7 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                            latest_revnum, session, pool));
 }
 
+/* Implements svn_ra__vtable_t.rev_proplist(). */
 static svn_error_t *
 svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                           svn_revnum_t rev,
@@ -538,6 +546,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.rev_prop(). */
 static svn_error_t *
 svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       svn_revnum_t rev,
@@ -591,6 +600,7 @@ fetch_path_props(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.check_path(). */
 static svn_error_t *
 svn_ra_serf__check_path(svn_ra_session_t *ra_session,
                         const char *rel_path,
@@ -829,6 +839,7 @@ get_dirent_props(apr_uint32_t dirent_fields,
   return (svn_ra_serf__dav_props_t *) props->elts;
 }
 
+/* Implements svn_ra__vtable_t.stat(). */
 static svn_error_t *
 svn_ra_serf__stat(svn_ra_session_t *ra_session,
                   const char *rel_path,
@@ -907,6 +918,7 @@ resource_is_directory(apr_hash_t *props)
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.get_dir(). */
 static svn_error_t *
 svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                      apr_hash_t **dirents,
@@ -1053,6 +1065,8 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
    case where the root of the repository is not readable.
    However, it does not handle the case where we're fetching path not existing
    in HEAD of a repository with unreadable root directory.
+
+   Implements svn_ra__vtable_t.get_uuid().
  */
 static svn_error_t *
 svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
