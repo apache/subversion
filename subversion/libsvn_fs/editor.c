@@ -268,6 +268,25 @@ can_modify(svn_fs_root_t *txn_root,
 }
 
 
+/* Can we create a node at FSPATH in TXN_ROOT? If something already exists
+   at that path, then the client is out of date.  */
+static svn_error_t *
+can_create(svn_fs_root_t *txn_root,
+           const char *fspath,
+           apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_fs_check_path(&kind, txn_root, fspath, scratch_pool));
+  if (kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                             _("'%s' already exists, so may be out"
+                               " of date; try updating"),
+                             fspath);
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements svn_editor_cb_add_directory_t */
 static svn_error_t *
 add_directory_cb(void *baton,
@@ -291,7 +310,10 @@ add_directory_cb(void *baton,
       SVN_ERR(can_modify(root, fspath, replaces_rev, scratch_pool));
       SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
     }
-  /* else better not be there!  */
+  else
+    {
+      SVN_ERR(can_create(root, fspath, scratch_pool));
+    }
 
   SVN_ERR(svn_fs_make_dir(root, fspath, scratch_pool));
   SVN_ERR(add_new_props(root, fspath, props, scratch_pool));
@@ -321,7 +343,10 @@ add_file_cb(void *baton,
       SVN_ERR(can_modify(root, fspath, replaces_rev, scratch_pool));
       SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
     }
-  /* else better not be there!  */
+  else
+    {
+      SVN_ERR(can_create(root, fspath, scratch_pool));
+    }
 
   SVN_ERR(svn_fs_make_file(root, fspath, scratch_pool));
 
@@ -353,7 +378,10 @@ add_symlink_cb(void *baton,
       SVN_ERR(can_modify(root, fspath, replaces_rev, scratch_pool));
       SVN_ERR(svn_fs_delete(root, fspath, scratch_pool));
     }
-  /* else better not be there!  */
+  else
+    {
+      SVN_ERR(can_create(root, fspath, scratch_pool));
+    }
 
   /* ### we probably need to construct a file with specific contents
      ### (until the FS grows some symlink APIs)  */
@@ -506,6 +534,10 @@ copy_cb(void *baton,
       SVN_ERR(can_modify(root, dst_fspath, replaces_rev, scratch_pool));
       SVN_ERR(svn_fs_delete(root, dst_fspath, scratch_pool));
     }
+  else
+    {
+      SVN_ERR(can_create(root, dst_fspath, scratch_pool));
+    }
 
   SVN_ERR(svn_fs_revision_root(&src_root, svn_fs_root_fs(root), src_revision,
                                scratch_pool));
@@ -540,6 +572,10 @@ move_cb(void *baton,
     {
       SVN_ERR(can_modify(root, dst_fspath, replaces_rev, scratch_pool));
       SVN_ERR(svn_fs_delete(root, dst_fspath, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(can_create(root, dst_fspath, scratch_pool));
     }
 
   /* ### would be nice to have svn_fs_move()  */
