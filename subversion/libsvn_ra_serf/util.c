@@ -844,15 +844,10 @@ end_error(svn_ra_serf__xml_parser_t *parser,
       /* On the server dav_error_response_tag() will add a leading
          and trailing newline if DEBUG_CR is defined in mod_dav.h,
          so remove any such characters here. */
-      apr_size_t len;
-      const char *cd = ctx->cdata->data;
-      if (*cd == '\n')
-        ++cd;
-      len = strlen(cd);
-      if (len > 0 && cd[len-1] == '\n')
-        --len;
+      svn_stringbuf_strip_whitespace(ctx->cdata);
 
-      ctx->error->message = apr_pstrmemdup(ctx->error->pool, cd, len);
+      ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
+                                           ctx->cdata->len);
       ctx->collect_cdata = FALSE;
     }
 
@@ -1148,6 +1143,9 @@ end_207(svn_ra_serf__xml_parser_t *parser,
     }
   if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
     {
+      /* Remove leading newline added by DEBUG_CR on server */
+      svn_stringbuf_strip_whitespace(ctx->cdata);
+
       ctx->collect_cdata = FALSE;
       ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
                                            ctx->cdata->len);
@@ -2386,7 +2384,8 @@ expat_response_handler(serf_request_t *request,
 
       expat_status = XML_Parse(ectx->parser, data, (int)len, 0 /* isFinal */);
       if (expat_status == XML_STATUS_ERROR)
-        return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+        return svn_error_createf(SVN_ERR_XML_MALFORMED,
+                                 ectx->inner_error,
                                  _("The %s response contains invalid XML"
                                    " (%d %s)"),
                                  ectx->handler->method,

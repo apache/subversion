@@ -922,3 +922,16 @@ svn_repos_replay2(svn_fs_root_t *root,
                                SVN_INVALID_REVNUM, paths,
                                path_driver_cb_func, &cb_baton, pool);
 }
+
+svn_error_t *
+svn_repos__replay_ev2(svn_fs_root_t *root,
+                      const char *base_dir,
+                      svn_revnum_t low_water_mark,
+                      svn_boolean_t send_deltas,
+                      svn_editor_t *editor,
+                      svn_repos_authz_func_t authz_read_func,
+                      void *authz_read_baton,
+                      apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}

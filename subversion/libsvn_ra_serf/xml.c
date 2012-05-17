@@ -637,7 +637,8 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
 
   /* Some basic copies to set up the new estate.  */
   new_xes->state = scan->to_state;
-  new_xes->tag = elemname;
+  new_xes->tag.name = apr_pstrdup(new_pool, elemname.name);
+  new_xes->tag.namespace = apr_pstrdup(new_pool, elemname.namespace);
   new_xes->custom_close = scan->custom_close;
 
   /* Start with the parent's namespace set.  */

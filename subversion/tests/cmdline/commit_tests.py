@@ -2877,6 +2877,44 @@ def commit_add_subadd(sbox):
   svntest.main.run_svn(None, 'merge', '-c', '-2', './')
   svntest.main.run_svn(None, 'commit', '--targets', targets_file, '-mm')
 
+def commit_danglers(sbox):
+  "verify committing some dangling children fails"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_copy('A','A_copied')
+
+  A_copied = sbox.ospath('A_copied')
+  mu_copied = sbox.ospath('A_copied/mu')
+
+  svntest.main.file_write(mu_copied, "xxxx")  
+
+  # We already test for this problem for some time
+  expected_error = "svn: E200009: '.*A_copied' .*exist.*yet.* '.*mu'.*part"
+  svntest.actions.run_and_verify_commit(mu_copied,
+                                        None,
+                                        None,
+                                        expected_error,
+                                        mu_copied)
+
+  # But now do the same thing via changelist filtering
+  svntest.main.run_svn(None, 'changelist', 'L', mu_copied, sbox.ospath('A/mu'))
+
+  # And try to commit A_copied itself with changelist filtering
+  svntest.actions.run_and_verify_commit(A_copied,
+                                        None,
+                                        None,
+                                        expected_error,
+                                        A_copied, '--cl', 'L')
+
+  # And on the wcroot
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        expected_error,
+                                        wc_dir, '--cl', 'L')
+
 
 ########################################################################
 # Run the tests
@@ -2947,6 +2985,7 @@ test_list = [ None,
               commit_multiple_nested_deletes,
               commit_incomplete,
               commit_add_subadd,
+              commit_danglers,
              ]
 
 if __name__ == '__main__':
