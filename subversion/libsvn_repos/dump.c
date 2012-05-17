@@ -741,10 +741,7 @@ close_directory(void *dir_baton,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *path;
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = key;
+      const char *path = svn__apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
