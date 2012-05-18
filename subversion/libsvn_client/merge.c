@@ -83,24 +83,78 @@
  *
  * We use svn_ra_get_location_segments() to split a given range of
  * revisions across an object's history into several which obey these
- * rules.  For example, a merge between r19500 and r27567 of
- * Subversion's own /tags/1.4.5 directory gets split into sequential
- * merges of the following location pairs:
+ * rules.  For example, an extract from the log of Subversion's own
+ * /subversion/tags/1.4.5 directory shows the following copies between
+ * r859500 and r866500 (omitting the '/subversion' prefix for clarity):
  *
- *    [/trunk:19549, /trunk:19523]
- *    (recorded in svn:mergeinfo as /trunk:19500-19523)
+ *    r859598:
+ *      A /branches/1.4.x  (from /trunk:859597)
  *
- *    [/trunk:19523, /branches/1.4.x:25188]
- *    (recorded in svn:mergeinfo as /branches/1.4.x:19524-25188)
+ *    r865417:
+ *      A /tags/1.4.4      (from /branches/1.4.x:865262)
+ *    # Notice that this copy leaves a gap between 865262 and 865417.
  *
- *    [/branches/1.4.x:25188, /tags/1.4.4@26345]
- *    (recorded in svn:mergeinfo as /tags/1.4.4:25189-26345)
+ *    r866420:
+ *      A /branches/1.4.5  (from /tags/1.4.4:866419)
  *
- *    [/tags/1.4.4@26345, /branches/1.4.5@26350]
- *    (recorded in svn:mergeinfo as /branches/1.4.5:26346-26350)
+ *    r866425:
+ *      D /branches/1.4.5
+ *      A /tags/1.4.5      (from /branches/1.4.5:866424)
  *
- *    [/branches/1.4.5@26350, /tags/1.4.5@27567]
- *    (recorded in svn:mergeinfo as /tags/1.4.5:26351-27567)
+ * In graphical form:
+ *
+ *                859500 859597 865262        866419 866424 866500
+ *                  .      .      .             .      .      .
+ *    trunk       ------------------------------------------------
+ *                         \      .             .      .
+ *    branches/1.4.x        A-------------------------------------
+ *                          .     \______       .      .
+ *                          .            \      .      .
+ *    tags/1.4.4            .             A-----------------------
+ *                          .             .     \      .
+ *    branches/1.4.5        .             .      A------D
+ *                          .             .      .     \.
+ *    tags/1.4.5            .             .      .      A---------
+ *                          .             .      .      .
+ *                       859598        865417 866420 866425
+ *
+ * A merge of the difference between r859500 and r866500 of this directory
+ * gets split into sequential merges of the following location pairs.
+ *
+ *                859500 859597 865262 865416 866419 866424 866500
+ *                  .      .      .      .      .      .      .
+ *    trunk         (======]      .      .      .      .      .
+ *                                .      .      .      .      .
+ *    trunk                (      .      .      .      .      .
+ *    branches/1.4.x        ======]      .      .      .      .
+ *                                       .      .      .      .
+ *    branches/1.4.x              (      .      .      .      .
+ *    tags/1.4.4                   =============]      .      .
+ *    implicit_src_gap            (======]      .      .      .
+ *                                              .      .      .
+ *    tags/1.4.4                                (      .      .
+ *    branches/1.4.5                             ======]      .
+ *                                                     .      .
+ *    branches/1.4.5                                   (      .
+ *    tags/1.4.5                                        ======]
+ *
+ * which are represented in merge_source_t as:
+ *
+ *    [/trunk:859500, /trunk:859597]
+ *    (recorded in svn:mergeinfo as /trunk:859501-859597)
+ *
+ *    [/trunk:859597, /branches/1.4.x:865262]
+ *    (recorded in svn:mergeinfo as /branches/1.4.x:859598-865262)
+ *
+ *    [/branches/1.4.x:865262, /tags/1.4.4@866419]
+ *    (recorded in svn:mergeinfo as /tags/1.4.4:865263-866419)
+ *    (and there is a gap, the revision range [865262, 865416])
+ *
+ *    [/tags/1.4.4@866419, /branches/1.4.5@866424]
+ *    (recorded in svn:mergeinfo as /branches/1.4.5:866420-866424)
+ *
+ *    [/branches/1.4.5@866424, /tags/1.4.5@866500]
+ *    (recorded in svn:mergeinfo as /tags/1.4.5:866425-866500)
  *
  * Our helper functions would then operate on one of these location
  * pairs at a time.
