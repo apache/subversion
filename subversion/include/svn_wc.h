@@ -6674,7 +6674,8 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
  * @since New in 1.7.
  * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
-SVN_DEPRECATED svn_error_t *
+SVN_DEPRECATED
+svn_error_t *
 svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
