@@ -1639,13 +1639,15 @@ svn_fs_copied_from(svn_revnum_t *rev_p,
 /** Set @a *root_p and @a *path_p to the revision root and path of the
  * destination of the most recent copy event that caused @a path to
  * exist where it does in @a root, or to NULL if no such copy exists.
- * When non-NULL, allocate @a *root_p and @a *path_p in @a pool.
  *
  * @a *path_p might be a parent of @a path, rather than @a path
  * itself.  However, it will always be the deepest relevant path.
  * That is, if a copy occurs underneath another copy in the same txn,
  * this function makes sure to set @a *path_p to the longest copy
  * destination path that is still a parent of or equal to @a path.
+ *
+ * Values returned in @a *root_p and @a *path_p will be allocated
+ * from @a pool.
  *
  * @since New in 1.3.
  */
