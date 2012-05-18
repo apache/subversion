@@ -4194,24 +4194,27 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
    SOURCE is cascaded from the arguments of the same name in
    populate_remaining_ranges().
 
-   Note: The following comments assume a forward merge, i.e. SOURCE->rev1
-   < SOURCE->rev2.  If this is a reverse merge then all the following
-   comments still apply, but with SOURCE->url1 switched with SOURCE->url2
-   and SOURCE->rev1 switched with SOURCE->rev2.
+   Note: The following comments assume a forward merge, i.e.
+   SOURCE->loc1->rev < SOURCE->loc2->rev.  If this is a reverse merge then
+   all the following comments still apply, but with SOURCE->loc1 switched
+   with SOURCE->loc2.
 
    Like populate_remaining_ranges(), SOURCE must adhere to the restrictions
    documented in 'MERGEINFO MERGE SOURCE NORMALIZATION'.  These restrictions
-   allow for a *single* gap, URL@GAP_REV1:URL2@GAP_REV2, (where SOURCE->rev1
-   < GAP_REV1 <= GAP_REV2 < SOURCE->rev2) in SOURCE if SOURCE->url2@rev2 was
-   copied from SOURCE->url1@rev1.  If such a gap exists, set *GAP_START and
-   *GAP_END to the starting and ending revisions of the gap.  Otherwise set
-   both to SVN_INVALID_REVNUM.
+   allow for a *single* gap in SOURCE, GAP_REV1:GAP_REV2 exclusive:inclusive
+   (where SOURCE->loc1->rev == GAP_REV1 <= GAP_REV2 < SOURCE->loc2->rev),
+   if SOURCE->loc2->url@(GAP_REV2+1) was copied from SOURCE->loc1.  If such
+   a gap exists, set *GAP_START and *GAP_END to the starting and ending
+   revisions of the gap.  Otherwise set both to SVN_INVALID_REVNUM.
 
    For example, if the natural history of URL@2:URL@9 is 'trunk/:2,7-9' this
    would indicate that trunk@7 was copied from trunk@2.  This function would
    return GAP_START:GAP_END of 2:6 in this case.  Note that a path 'trunk'
    might exist at r3-6, but it would not be on the same line of history as
    trunk@9.
+
+   ### GAP_START is basically redundant, as (if there is a gap at all) it is
+   necessarily the older revision of SOURCE.
 
    RA_SESSION is an open RA session to the repository in which SOURCE lives.
 */
@@ -4230,6 +4233,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   const char *merge_src_fspath = svn_client__pathrev_fspath(primary_src,
                                                             scratch_pool);
   apr_array_header_t *rangelist;
+
+  SVN_ERR_ASSERT(source->ancestral);
 
   /* Start by assuming there is no gap. */
   *gap_start = *gap_end = SVN_INVALID_REVNUM;
@@ -4308,6 +4313,9 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
         }
     }
 
+  SVN_ERR_ASSERT(*gap_start == MIN(source->loc1->rev, source->loc2->rev)
+                 || (*gap_start == SVN_INVALID_REVNUM
+                     && *gap_end == SVN_INVALID_REVNUM));
   return SVN_NO_ERROR;
 }
 
