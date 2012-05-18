@@ -34,6 +34,8 @@
 
 #include "fs-loader.h"
 
+#include "private/svn_fspath.h"
+
 
 struct edit_baton {
   /* The transaction associated with this editor.  */
@@ -269,21 +271,56 @@ can_modify(svn_fs_root_t *txn_root,
 
 
 /* Can we create a node at FSPATH in TXN_ROOT? If something already exists
-   at that path, then the client is out of date.  */
+   at that path, then the client MAY be out of date. We then have to see if
+   the path was created/modified in this transaction. IOW, it is new and
+   can be replaced without problem.
+
+   Note: the editor protocol disallows double-modifications. This is to
+   ensure somebody does not accidentally overwrite another file due to
+   being out-of-date.  */
 static svn_error_t *
 can_create(svn_fs_root_t *txn_root,
            const char *fspath,
            apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
+  const char *cur_fspath;
 
   SVN_ERR(svn_fs_check_path(&kind, txn_root, fspath, scratch_pool));
-  if (kind != svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                             _("'%s' already exists, so may be out"
-                               " of date; try updating"),
-                             fspath);
-  return SVN_NO_ERROR;
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+
+  /* ### I'm not sure if this works perfectly. We might have an ancestor
+     ### that was modified as a result of a change on a cousin. We might
+     ### misinterpret that as a *-here node which brought along this
+     ### child. Need to write a test to verify. We may also be able to
+     ### test the ancestor to determine if it has been *-here in this
+     ### txn, or just a simple modification.  */
+
+  /* Are any of the parents copied/moved/rotated-here?  */
+  for (cur_fspath = fspath;
+       strlen(cur_fspath) > 1;  /* not the root  */
+       cur_fspath = svn_fspath__dirname(cur_fspath, scratch_pool))
+    {
+      svn_revnum_t created_rev;
+
+      SVN_ERR(svn_fs_node_created_rev(&created_rev, txn_root, cur_fspath,
+                                      scratch_pool));
+      if (!SVN_IS_VALID_REVNUM(created_rev))
+        {
+          /* The node has no created revision, meaning it is uncommitted.
+             Thus, it was created in this transaction, or it has already
+             been modified in some way (implying it has already passed a
+             modification check.  */
+          /* ### verify the node has been *-here ??  */
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                           _("'%s' already exists, so may be out"
+                             " of date; try updating"),
+                           fspath);
 }
 
 
