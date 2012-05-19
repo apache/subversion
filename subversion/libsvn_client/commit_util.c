@@ -261,80 +261,6 @@ look_up_committable(svn_client__committables_t *committables,
       apr_hash_get(committables->by_path, path, APR_HASH_KEY_STRING);
 }
 
-/* Helper for harvest_committables().
- * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
- * encountering a tree-conflicted immediate child node. However, do
- * not consider immediate children that are outside the bounds of DEPTH.
- *
- * TODO ### WC_CTX and LOCAL_ABSPATH ...
- * ENTRY, DEPTH, CHANGELISTS and POOL are the same ones
- * originally received by harvest_committables().
- *
- * Tree-conflicts information is stored in the victim's immediate parent.
- * In some cases of an absent tree-conflicted victim, the tree-conflict
- * information in its parent dir is the only indication that the node
- * is under version control. This function is necessary for this
- * particular case. In all other cases, this simply bails out a little
- * bit earlier. */
-static svn_error_t *
-bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
-                                 const char *local_abspath,
-                                 svn_node_kind_t kind,
-                                 svn_depth_t depth,
-                                 apr_hash_t *changelists,
-                                 svn_wc_notify_func2_t notify_func,
-                                 void *notify_baton,
-                                 apr_pool_t *pool)
-{
-  apr_hash_t *conflicts;
-  apr_hash_index_t *hi;
-
-  if ((depth == svn_depth_empty)
-      || (kind != svn_node_dir))
-    /* There can't possibly be tree-conflicts information here. */
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__get_all_tree_conflicts(&conflicts, wc_ctx, local_abspath,
-                                         pool, pool));
-  if (!conflicts)
-    return SVN_NO_ERROR;
-
-  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
-    {
-      const svn_wc_conflict_description2_t *conflict =
-          svn__apr_hash_index_val(hi);
-
-      if ((conflict->node_kind == svn_node_dir) &&
-          (depth == svn_depth_files))
-        continue;
-
-      /* So we've encountered a conflict that is included in DEPTH.
-         Bail out. But if there are CHANGELISTS, avoid bailing out
-         on an item that doesn't match the CHANGELISTS. */
-      if (!svn_wc__changelist_match(wc_ctx, local_abspath, changelists, pool))
-        continue;
-
-      /* At this point, a conflict was found, and either there were no
-         changelists, or the changelists matched. Bail out already! */
-
-      if (notify_func != NULL)
-        {
-          notify_func(notify_baton,
-                      svn_wc_create_notify(local_abspath,
-                                           svn_wc_notify_failed_conflict,
-                                           pool),
-                      pool);
-        }
-
-      return svn_error_createf(
-               SVN_ERR_WC_FOUND_CONFLICT, NULL,
-               _("Aborting commit: '%s' remains in conflict"),
-               svn_dirent_local_style(conflict->local_abspath, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Helper function for svn_client__harvest_committables().
  * Determine whether we are within a tree-conflicted subtree of the
  * working copy and return an SVN_ERR_WC_FOUND_CONFLICT error if so. */
@@ -1008,11 +934,6 @@ harvest_status_callback(void *status_baton,
 
   if (db_kind != svn_node_dir || depth <= svn_depth_empty)
     return SVN_NO_ERROR;
-
-  SVN_ERR(bail_on_tree_conflicted_children(wc_ctx, local_abspath,
-                                           db_kind, depth, changelists,
-                                           notify_func, notify_baton,
-                                           scratch_pool));
 
   if (!commit_relpath)
     {
