@@ -13223,7 +13223,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 
   *lock_tokens = apr_hash_make(result_pool);
 
-  /* Fetch all the lock tokens in and under LOCAL_RELPATH. */
+  /* Fetch all the lock tokens under LOCAL_RELPATH. */
   SVN_ERR(svn_sqlite__get_statement(
               &stmt, wcroot->sdb,
               STMT_SELECT_BASE_NODE_LOCK_TOKENS_RECURSIVE));

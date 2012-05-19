@@ -859,9 +859,11 @@ harvest_status_callback(void *status_baton,
                               result_pool, scratch_pool));
     }
 
-    /* Fetch lock tokens for descendants of deleted nodes. */
+    /* Fetch lock tokens for descendants of deleted BASE nodes. */
   if (matches_changelists
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+      && !copy_mode
+      && SVN_IS_VALID_REVNUM(node_rev) /* && BASE-kind = dir */
       && baton->lock_tokens)
     {
       apr_hash_t *local_relpath_tokens;

@@ -105,7 +105,7 @@ class Processor(object):
 
       # '/'+1 == '0'
       line = re.sub(r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
-                    r"((\1) > (\2) || '/' AND (\1) < (\2) || '0') ",
+                    r"((\2) != '' AND ((\1) > (\2) || '/') AND ((\1) < (\2) || '0')) ",
                     line)
 
       if line.strip():
