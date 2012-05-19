@@ -181,8 +181,8 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
 -- STMT_DELETE_SHADOWED_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND (parent_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND (op_depth < ?3
        OR (op_depth = ?3 AND presence = 'base-deleted'))
 
@@ -265,9 +265,8 @@ FROM nodes
 LEFT JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND op_depth = 0
-  AND (?2 = ''
-       OR local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND (parent_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
 
 -- STMT_INSERT_WCROOT
 INSERT INTO wcroot (local_abspath)
