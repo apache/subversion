@@ -5621,36 +5621,20 @@ struct pre_merge_status_baton_t
   apr_pool_t *pool;
 };
 
-/* A svn_client_status_func_t callback used by get_mergeinfo_paths to gather
-   all switched, absent, and missing subtrees under a merge target. */
+/* A svn_wc_status_func4_t callback used by get_mergeinfo_paths to gather
+   all switched, depth filtered and missing subtrees under a merge target.
+
+   Note that this doesn't see server and user excluded trees. */
 static svn_error_t *
 pre_merge_status_cb(void *baton,
                     const char *local_abspath,
                     const svn_wc_status3_t *status,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   struct pre_merge_status_baton_t *pmsb = baton;
   const char *dup_abspath = NULL;
 
-  /* ### Probably needed: Calculate file external status */
-  svn_boolean_t is_file_external = FALSE;
-
-  /* ### This block can go once we bumped to the EXTERNALS store */
-  if (status->versioned
-      && status->switched
-      && status->kind == svn_node_file)
-    {
-      svn_node_kind_t external_kind;
-
-      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
-                                         NULL,
-                                         pmsb->wc_ctx, local_abspath,
-                                         local_abspath, TRUE, pool, pool));
-
-      is_file_external = (external_kind == svn_node_file);
-    }
-
-  if (status->switched && !is_file_external)
+  if (status->switched && !status->file_external)
     {
       if (!dup_abspath)
         dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
@@ -5684,7 +5668,7 @@ pre_merge_status_cb(void *baton,
       if (!dup_abspath)
         dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
 
-      for (hi = apr_hash_first(pool, pmsb->missing_subtrees);
+      for (hi = apr_hash_first(scratch_pool, pmsb->missing_subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -5891,11 +5875,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   pre_merge_status_baton.pool = scratch_pool;
   SVN_ERR(svn_wc_walk_status(ctx->wc_ctx,
                              target->abspath,
-                             depth, TRUE, TRUE, TRUE, NULL,
-                             pre_merge_status_cb,
-                             &pre_merge_status_baton,
-                             ctx->cancel_func,
-                             ctx->cancel_baton,
+                             depth,
+                             TRUE /* get_all */,
+                             FALSE /* no_ignore */,
+                             TRUE /* ignore_text_mods */,
+                             NULL /* ingore_patterns */,
+                             pre_merge_status_cb, &pre_merge_status_baton,
+                             ctx->cancel_func, ctx->cancel_baton,
                              scratch_pool));
 
   /* Issue #2915: Raise an error describing the roots of any missing
