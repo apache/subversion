@@ -884,9 +884,8 @@ LIMIT 1
 -- STMT_HAS_SERVER_EXCLUDED_NODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND (parent_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND op_depth = 0 AND presence = 'absent'
 LIMIT 1
 
