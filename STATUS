@@ -79,7 +79,27 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4153  
    Votes:
      +1: stsp
+
+ * r1340556
+   Avoid a stat per working copy find operation by statting .svn instead of two
+   nodes inside .svn, per wc-directory that doesn't have a .svn directory.
+   Justification:
+     Very simple fix that gives the working copy find code a huge performance
+     boost.
+   Votes:
+     +1: rhuijben
    
+ * ^/subversion/branches/1.7.x-performance
+   Use the working copy status walker as a first filter to find committable
+   nodes.
+   Justification:
+     Huge performance boost. Especially on NFS.
+   Notes:
+     Backports the status walker framework. Many other parts are backportable
+     too, but this branch delivers the plumbing.
+   Votes:
+     +0: rhuijben (I would like to see some test results before backporting)
+
 Veto-blocked changes:
 =====================
 
