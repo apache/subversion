@@ -532,7 +532,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 
 try_symlink_as_dir:
                   kind = svn_kind_dir;
-                  moved_upwards = FALSE;
                   local_dir_abspath = local_abspath;
                   build_relpath = "";
 
