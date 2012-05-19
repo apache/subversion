@@ -229,6 +229,10 @@ entry_name_to_utf8(const char **name_p,
                    const char *parent,
                    apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(DARWIN)
+  *name_p = apr_pstrdup(pool, name);
+  return SVN_NO_ERROR;
+#else
   svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, pool);
   if (err && err->apr_err == APR_EINVAL)
     {
@@ -238,6 +242,7 @@ entry_name_to_utf8(const char **name_p,
                                svn_dirent_local_style(parent, pool));
     }
   return err;
+#endif
 }
 
 
