@@ -425,14 +425,13 @@ struct harvest_baton
   /* Static data */
   svn_client__committables_t *committables;
   apr_hash_t *lock_tokens;
-  const char *repos_root_url;
   const char *commit_relpath;
+  const char *commit_relpath_abspath; /* Where commit_relpath applies to */
   const char *copy_mode_root;
   svn_depth_t depth;
   svn_boolean_t just_locked;
   apr_hash_t *changelists;
   svn_boolean_t skip_files;
-  svn_boolean_t skip_dirs;
   const char *explicit_target;
   apr_hash_t *danglers;
   svn_client__check_url_kind_t check_url_func;
@@ -482,14 +481,13 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
   baton.committables = committables;
   baton.lock_tokens = lock_tokens;
-  baton.repos_root_url = repos_root_url;
   baton.commit_relpath = commit_relpath;
+  baton.commit_relpath_abspath = local_abspath;
   baton.copy_mode_root = copy_mode_root ? local_abspath : NULL;
   baton.depth = depth;
   baton.just_locked = just_locked;
   baton.changelists = changelists;
   baton.skip_files = skip_files;
-  baton.skip_dirs = skip_dirs;
   baton.explicit_target = local_abspath;
   baton.danglers = danglers;
   baton.check_url_func = check_url_func;
@@ -536,19 +534,27 @@ harvest_committables(svn_wc_context_t *wc_ctx,
       /* We should check if we should really add a delete operation */
       if (check_url_func)
         {
-          svn_client__pathrev_t *origin;
-          const char *repos_url;
+          svn_revnum_t rev;
+          const char *repos_relpath;
+          const char *repos_root_url;
+          const char *node_url;
 
           /* Determine from what parent we would be the deleted child */
-          SVN_ERR(svn_client__wc_node_get_origin(
-                    &origin, svn_dirent_dirname(local_abspath, scratch_pool),
-                    ctx, scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__node_get_origin(NULL, &rev, &repos_relpath,
+                                          &repos_root_url, NULL, NULL,
+                                          wc_ctx,
+                                          svn_dirent_dirname(local_abspath,
+                                                             scratch_pool),
+                                          FALSE, scratch_pool, scratch_pool));
 
-          repos_url = svn_path_url_add_component2(
-                        origin->url, svn_dirent_basename(local_abspath, NULL),
+          node_url = svn_path_url_add_component2(
+                        svn_path_url_add_component2(repos_root_url,
+                                                    repos_relpath,
+                                                    scratch_pool),
+                        svn_dirent_basename(local_abspath, NULL),
                         scratch_pool);
 
-          SVN_ERR(check_url_func(check_url_baton, &kind, repos_url, origin->rev,
+          SVN_ERR(check_url_func(check_url_baton, &kind, node_url, rev,
                                  scratch_pool));
 
           if (kind == svn_node_none)
@@ -578,7 +584,6 @@ harvest_status_callback(void *status_baton,
                         const svn_wc_status3_t *status,
                         apr_pool_t *scratch_pool)
 {
-  svn_wc_context_t *wc_ctx;
   svn_boolean_t text_mod = FALSE;
   svn_boolean_t prop_mod = FALSE;
   apr_byte_t state_flags = 0;
@@ -608,8 +613,8 @@ harvest_status_callback(void *status_baton,
   struct harvest_baton *baton = status_baton;
   svn_client__committables_t *committables = baton->committables;
   apr_hash_t *lock_tokens = baton->lock_tokens;
-  const char *repos_root_url = baton->repos_root_url;
-  const char *commit_relpath = baton->commit_relpath;
+  const char *repos_root_url = status->repos_root_url;
+  const char *commit_relpath = NULL;
   svn_boolean_t copy_mode_root = 
                     (baton->copy_mode_root
                      && strcmp(baton->copy_mode_root, local_abspath) == 0);
@@ -617,7 +622,6 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t just_locked = baton->just_locked;
   apr_hash_t *changelists = baton->changelists;
   svn_boolean_t skip_files = baton->skip_files;
-  svn_boolean_t skip_dirs = baton->skip_dirs;
   svn_boolean_t is_explicit_target =
                     (baton->explicit_target
                      && strcmp(baton->explicit_target, local_abspath) == 0);
@@ -628,12 +632,21 @@ harvest_status_callback(void *status_baton,
   void *cancel_baton = baton->cancel_baton;
   svn_wc_notify_func2_t notify_func = baton->notify_func;
   void *notify_baton = baton->notify_baton;
+  svn_wc_context_t *wc_ctx = baton->wc_ctx;
   apr_pool_t *result_pool = baton->result_pool;
 
-  wc_ctx = baton->wc_ctx;
   copy_mode = (commit_relpath != NULL);
 
   baton->got_one = TRUE;
+
+  if (baton->commit_relpath)
+    commit_relpath = svn_relpath_join(
+                        baton->commit_relpath,
+                        svn_dirent_skip_ancestor(baton->commit_relpath_abspath,
+                                                 local_abspath),
+                        scratch_pool);
+
+  copy_mode = (commit_relpath != NULL);
 
   if (baton->skip_below_abspath
       && svn_dirent_is_ancestor(baton->skip_below_abspath, local_abspath))
@@ -789,42 +802,6 @@ harvest_status_callback(void *status_baton,
 
   if (is_deleted || is_replaced)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
-  else if (is_not_present)
-    {
-      if (! copy_mode)
-        return SVN_NO_ERROR;
-
-      /* We should check if we should really add a delete operation */
-      if (check_url_func)
-        {
-          svn_revnum_t revision;
-          const char *repos_relpath;
-          svn_node_kind_t kind;
-
-          /* Determine from what parent we would be the deleted child */
-          SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
-                                          NULL, NULL, NULL, wc_ctx,
-                                          svn_dirent_dirname(local_abspath,
-                                                             scratch_pool),
-                                          FALSE, scratch_pool, scratch_pool));
-
-          repos_relpath = svn_relpath_join(repos_relpath,
-                                           svn_dirent_basename(local_abspath,
-                                                               NULL),
-                                           scratch_pool);
-
-          SVN_ERR(check_url_func(check_url_baton, &kind,
-                                 svn_path_url_add_component2(repos_root_url,
-                                                             repos_relpath,
-                                                             scratch_pool),
-                                 revision, scratch_pool));
-
-          if (kind == svn_node_none)
-            return SVN_NO_ERROR; /* This node can't be deleted */
-        }
-
-      state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
-    }
 
   /* Check for adds and copies */
   if (is_added && is_op_root)
