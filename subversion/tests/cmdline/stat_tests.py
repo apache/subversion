@@ -814,12 +814,9 @@ def status_on_unversioned_dotdot(sbox):
   os.mkdir(new_subsub)
 
   os.chdir(new_subsub)
-  exit_code, out, err = svntest.main.run_svn(1, 'st', '..')
-  for line in err:
-    if line.find('svn: warning: W155007: \'..\' is not a working copy') != -1:
-      break
-  else:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn2(None, None,
+                                     "svn: warning: W155(010|007):.*'.*'.*not",
+                                      0, 'st', '..')
 
 #----------------------------------------------------------------------
 
