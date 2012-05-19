@@ -384,21 +384,6 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
                              apr_hash_t *relpath_map,
                              apr_pool_t *result_pool);
 
-
-/* ---------------------------------------------------------------- */
-
-/*** Status ***/
-
-/* Verify that the path can be deleted without losing stuff,
-   i.e. ensure that there are no modified or unversioned resources
-   under PATH.  This is similar to checking the output of the status
-   command.  CTX is used for the client's config options.  POOL is
-   used for all temporary allocations. */
-svn_error_t * svn_client__can_delete(const char *path,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
-
-
 /* ---------------------------------------------------------------- */
 
 /*** Add/delete ***/

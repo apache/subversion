@@ -479,7 +479,7 @@ _svn()
 
 	    [[ $previous = '--extensions' || $previous = '-x' ]] && \
 		values="--unified --ignore-space-change \
-   		        --ignore-all-space --ignore-eol-style"
+		   --ignore-all-space --ignore-eol-style --show-c-functions"
 
 	    [[ $previous = '--depth' ]] && \
 		values='empty files immediates infinity'
@@ -494,8 +494,8 @@ _svn()
 		    # from svn help resolve
 		    values='base working mine-full theirs-full'
 		else # checkout merge switch update
-		    # not implemented yet: mine-conflict theirs-conflict
-		    values='postpone base mine-full theirs-full edit launch'
+		    values="postpone base mine-full theirs-full edit launch \
+			mine-conflict theirs-conflict"
 		fi
 	    }
 
@@ -889,7 +889,8 @@ _svn()
                          --parents"
 		;;
 	patch)
-		cmdOpts="$qOpts $pOpts --dry-run --ignore-whitespace --reverse-diff --strip"
+		cmdOpts="$qOpts $pOpts --dry-run --ignore-whitespace \
+			--reverse-diff --strip"
 		;;
 	propdel|pdel|pd)
 		cmdOpts="$qOpts -R --recursive $rOpts $pOpts $cOpts \

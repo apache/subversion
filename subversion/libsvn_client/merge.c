@@ -83,24 +83,78 @@
  *
  * We use svn_ra_get_location_segments() to split a given range of
  * revisions across an object's history into several which obey these
- * rules.  For example, a merge between r19500 and r27567 of
- * Subversion's own /tags/1.4.5 directory gets split into sequential
- * merges of the following location pairs:
+ * rules.  For example, an extract from the log of Subversion's own
+ * /subversion/tags/1.4.5 directory shows the following copies between
+ * r859500 and r866500 (omitting the '/subversion' prefix for clarity):
  *
- *    [/trunk:19549, /trunk:19523]
- *    (recorded in svn:mergeinfo as /trunk:19500-19523)
+ *    r859598:
+ *      A /branches/1.4.x  (from /trunk:859597)
  *
- *    [/trunk:19523, /branches/1.4.x:25188]
- *    (recorded in svn:mergeinfo as /branches/1.4.x:19524-25188)
+ *    r865417:
+ *      A /tags/1.4.4      (from /branches/1.4.x:865262)
+ *    # Notice that this copy leaves a gap between 865262 and 865417.
  *
- *    [/branches/1.4.x:25188, /tags/1.4.4@26345]
- *    (recorded in svn:mergeinfo as /tags/1.4.4:25189-26345)
+ *    r866420:
+ *      A /branches/1.4.5  (from /tags/1.4.4:866419)
  *
- *    [/tags/1.4.4@26345, /branches/1.4.5@26350]
- *    (recorded in svn:mergeinfo as /branches/1.4.5:26346-26350)
+ *    r866425:
+ *      D /branches/1.4.5
+ *      A /tags/1.4.5      (from /branches/1.4.5:866424)
  *
- *    [/branches/1.4.5@26350, /tags/1.4.5@27567]
- *    (recorded in svn:mergeinfo as /tags/1.4.5:26351-27567)
+ * In graphical form:
+ *
+ *                859500 859597 865262        866419 866424 866500
+ *                  .      .      .             .      .      .
+ *    trunk       ------------------------------------------------
+ *                         \      .             .      .
+ *    branches/1.4.x        A-------------------------------------
+ *                          .     \______       .      .
+ *                          .            \      .      .
+ *    tags/1.4.4            .             A-----------------------
+ *                          .             .     \      .
+ *    branches/1.4.5        .             .      A------D
+ *                          .             .      .     \.
+ *    tags/1.4.5            .             .      .      A---------
+ *                          .             .      .      .
+ *                       859598        865417 866420 866425
+ *
+ * A merge of the difference between r859500 and r866500 of this directory
+ * gets split into sequential merges of the following location pairs.
+ *
+ *                859500 859597 865262 865416 866419 866424 866500
+ *                  .      .      .      .      .      .      .
+ *    trunk         (======]      .      .      .      .      .
+ *                                .      .      .      .      .
+ *    trunk                (      .      .      .      .      .
+ *    branches/1.4.x        ======]      .      .      .      .
+ *                                       .      .      .      .
+ *    branches/1.4.x              (      .      .      .      .
+ *    tags/1.4.4                   =============]      .      .
+ *    implicit_src_gap            (======]      .      .      .
+ *                                              .      .      .
+ *    tags/1.4.4                                (      .      .
+ *    branches/1.4.5                             ======]      .
+ *                                                     .      .
+ *    branches/1.4.5                                   (      .
+ *    tags/1.4.5                                        ======]
+ *
+ * which are represented in merge_source_t as:
+ *
+ *    [/trunk:859500, /trunk:859597]
+ *    (recorded in svn:mergeinfo as /trunk:859501-859597)
+ *
+ *    [/trunk:859597, /branches/1.4.x:865262]
+ *    (recorded in svn:mergeinfo as /branches/1.4.x:859598-865262)
+ *
+ *    [/branches/1.4.x:865262, /tags/1.4.4@866419]
+ *    (recorded in svn:mergeinfo as /tags/1.4.4:865263-866419)
+ *    (and there is a gap, the revision range [865262, 865416])
+ *
+ *    [/tags/1.4.4@866419, /branches/1.4.5@866424]
+ *    (recorded in svn:mergeinfo as /branches/1.4.5:866420-866424)
+ *
+ *    [/branches/1.4.5@866424, /tags/1.4.5@866500]
+ *    (recorded in svn:mergeinfo as /tags/1.4.5:866425-866500)
  *
  * Our helper functions would then operate on one of these location
  * pairs at a time.
@@ -4194,24 +4248,27 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
    SOURCE is cascaded from the arguments of the same name in
    populate_remaining_ranges().
 
-   Note: The following comments assume a forward merge, i.e. SOURCE->rev1
-   < SOURCE->rev2.  If this is a reverse merge then all the following
-   comments still apply, but with SOURCE->url1 switched with SOURCE->url2
-   and SOURCE->rev1 switched with SOURCE->rev2.
+   Note: The following comments assume a forward merge, i.e.
+   SOURCE->loc1->rev < SOURCE->loc2->rev.  If this is a reverse merge then
+   all the following comments still apply, but with SOURCE->loc1 switched
+   with SOURCE->loc2.
 
    Like populate_remaining_ranges(), SOURCE must adhere to the restrictions
    documented in 'MERGEINFO MERGE SOURCE NORMALIZATION'.  These restrictions
-   allow for a *single* gap, URL@GAP_REV1:URL2@GAP_REV2, (where SOURCE->rev1
-   < GAP_REV1 <= GAP_REV2 < SOURCE->rev2) in SOURCE if SOURCE->url2@rev2 was
-   copied from SOURCE->url1@rev1.  If such a gap exists, set *GAP_START and
-   *GAP_END to the starting and ending revisions of the gap.  Otherwise set
-   both to SVN_INVALID_REVNUM.
+   allow for a *single* gap in SOURCE, GAP_REV1:GAP_REV2 exclusive:inclusive
+   (where SOURCE->loc1->rev == GAP_REV1 <= GAP_REV2 < SOURCE->loc2->rev),
+   if SOURCE->loc2->url@(GAP_REV2+1) was copied from SOURCE->loc1.  If such
+   a gap exists, set *GAP_START and *GAP_END to the starting and ending
+   revisions of the gap.  Otherwise set both to SVN_INVALID_REVNUM.
 
    For example, if the natural history of URL@2:URL@9 is 'trunk/:2,7-9' this
    would indicate that trunk@7 was copied from trunk@2.  This function would
    return GAP_START:GAP_END of 2:6 in this case.  Note that a path 'trunk'
    might exist at r3-6, but it would not be on the same line of history as
    trunk@9.
+
+   ### GAP_START is basically redundant, as (if there is a gap at all) it is
+   necessarily the older revision of SOURCE.
 
    RA_SESSION is an open RA session to the repository in which SOURCE lives.
 */
@@ -4230,6 +4287,8 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   const char *merge_src_fspath = svn_client__pathrev_fspath(primary_src,
                                                             scratch_pool);
   apr_array_header_t *rangelist;
+
+  SVN_ERR_ASSERT(source->ancestral);
 
   /* Start by assuming there is no gap. */
   *gap_start = *gap_end = SVN_INVALID_REVNUM;
@@ -4308,6 +4367,9 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
         }
     }
 
+  SVN_ERR_ASSERT(*gap_start == MIN(source->loc1->rev, source->loc2->rev)
+                 || (*gap_start == SVN_INVALID_REVNUM
+                     && *gap_end == SVN_INVALID_REVNUM));
   return SVN_NO_ERROR;
 }
 
