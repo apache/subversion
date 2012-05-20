@@ -6465,24 +6465,30 @@ delete_node(void *baton,
       || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_HAS_SERVER_EXCLUDED_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
+  /* Don't copy BASE directories with server excluded nodes */
+  if (status == svn_wc__db_status_normal && kind == svn_kind_dir)
     {
-      const char *absent_path = svn_sqlite__column_text(stmt, 0, scratch_pool);
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_HAS_SERVER_EXCLUDED_NODES));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        {
+          const char *absent_path = svn_sqlite__column_text(stmt, 0,
+                                                            scratch_pool);
 
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+          return svn_error_createf(
+                               SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                svn_sqlite__reset(stmt),
                           _("Cannot delete '%s' as '%s' is excluded by server"),
                                path_for_error_message(wcroot, local_relpath,
                                                       scratch_pool),
                                path_for_error_message(wcroot, absent_path,
                                                       scratch_pool));
+        }
+      SVN_ERR(svn_sqlite__reset(stmt));
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
 
   if (b->moved_to_relpath)
     {
