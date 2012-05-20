@@ -5571,13 +5571,13 @@ op_revert_recursive_txn(void *baton,
       SVN_ERR(svn_sqlite__get_statement(
                             &stmt, wcroot->sdb,
                             STMT_DELETE_ALL_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bind_int(stmt, 1, wcroot->wc_id));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       SVN_ERR(svn_sqlite__get_statement(
                             &stmt, wcroot->sdb,
                             STMT_CLEAR_ALL_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bind_int(stmt, 1, wcroot->wc_id));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
   }
   else
