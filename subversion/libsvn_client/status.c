@@ -636,7 +636,6 @@ svn_client__create_status(svn_client_status_t **cst,
   if (status->file_external)
     {
       (*cst)->switched = FALSE;
-      (*cst)->node_status = (*cst)->text_status;
     }
 
   (*cst)->lock = status->lock;
