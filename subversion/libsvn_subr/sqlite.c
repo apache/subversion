@@ -208,7 +208,7 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 
    All internal statements that use this api are executed with step_done(),
    so we don't need the fallback reset handling here or in the pool cleanup */
-svn_error_t *
+static svn_error_t *
 get_internal_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                        int stmt_idx)
 {
