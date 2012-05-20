@@ -601,23 +601,29 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 
--- STMT_DELETE_NODES_RECURSIVE
+/* Will not delete recursive when run on the wcroot */
+-- STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND op_depth >= ?3
+
+/* WC-Root query for STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE */
+-- STMT_DELETE_ALL_NODES_ABOVE_DEPTH
+DELETE FROM nodes
+WHERE wc_id = ?1
   AND op_depth >= ?3
 
 -- STMT_DELETE_ACTUAL_NODE
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
 
+/* Will not delete recursive when run on the wcroot */
 -- STMT_DELETE_ACTUAL_NODE_RECURSIVE
 DELETE FROM actual_node
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
