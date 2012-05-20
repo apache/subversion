@@ -937,6 +937,7 @@ with_transaction(svn_sqlite__db_t *db,
                  void *cb_baton,
                  apr_pool_t *scratch_pool /* NULL allowed */)
 {
+  svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
 
   err = cb_func(cb_baton, db, scratch_pool);
@@ -944,7 +945,12 @@ with_transaction(svn_sqlite__db_t *db,
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
-      svn_error_t *err2 = exec_sql(db, "ROLLBACK TRANSACTION;");
+      svn_error_t *err2;
+
+      err2 = get_internal_statement(&stmt, db,
+                                    STMT_INTERNAL_ROLLBACK_TRANSACTION);
+      if (!err2)
+        err2 = svn_sqlite__step_done(stmt);
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -969,7 +975,7 @@ with_transaction(svn_sqlite__db_t *db,
 
           err2 = reset_all_statements(db, err2);
           err2 = svn_error_compose_create(
-                      exec_sql(db, "ROLLBACK TRANSACTION;"),
+                      svn_sqlite__step_done(stmt),
                       err2);
         }
 
@@ -977,7 +983,8 @@ with_transaction(svn_sqlite__db_t *db,
                                       err2);
     }
 
-  return svn_error_trace(exec_sql(db, "COMMIT TRANSACTION;"));
+  SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_COMMIT_TRANSACTION));
+  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 svn_error_t *
@@ -986,7 +993,10 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              void *cb_baton,
                              apr_pool_t *scratch_pool /* NULL allowed */)
 {
-  SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
+  svn_sqlite__stmt_t *stmt;
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_BEGIN_TRANSACTION));
+  SVN_ERR(svn_sqlite__step_done(stmt));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
                                           scratch_pool));
 }
@@ -998,7 +1008,10 @@ svn_sqlite__with_immediate_transaction(
   void *cb_baton,
   apr_pool_t *scratch_pool /* NULL allowed */)
 {
-  SVN_ERR(exec_sql(db, "BEGIN IMMEDIATE TRANSACTION;"));
+  svn_sqlite__stmt_t *stmt;
+  SVN_ERR(get_internal_statement(&stmt, db,
+                                 STMT_INTERNAL_BEGIN_IMMEDIATE_TRANSACTION));
+  SVN_ERR(svn_sqlite__step_done(stmt));
   return svn_error_trace(with_transaction(db, cb_func, cb_baton,
                                           scratch_pool));
 }
