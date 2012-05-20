@@ -1284,14 +1284,18 @@ CREATE TEMPORARY TABLE delete_list (
    local_relpath TEXT PRIMARY KEY NOT NULL UNIQUE
    )
 
-/* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE */
+/* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE.
+   A subquery is used instead of nodes_current to avoid a table scan */
 -- STMT_INSERT_DELETE_LIST
 INSERT INTO delete_list(local_relpath)
-SELECT local_relpath FROM nodes_current
+SELECT local_relpath FROM nodes AS n
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3
+  AND op_depth = (SELECT MAX(s.op_depth) FROM nodes AS s
+                  WHERE s.wc_id = ?1
+                    AND s.local_relpath = n.local_relpath)
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
 -- STMT_SELECT_DELETE_LIST
