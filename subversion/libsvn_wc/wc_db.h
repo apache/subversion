@@ -814,7 +814,7 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
                                           apr_pool_t *scratch_pool);
 
 /* Set LOCK_TOKENS to a hash mapping const char * full URLs to const char *
- * lock tokens for every base node below LOCAL_ABSPATH in DB which has
+ * lock tokens for every base node at or under LOCAL_ABSPATH in DB which has
  * such a lock token set on it.
  * Allocate the hash and all items therein from RESULT_POOL.  */
 svn_error_t *
