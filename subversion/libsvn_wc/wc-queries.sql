@@ -887,14 +887,22 @@ WHERE wc_id = ?1
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
--- STMT_HAS_SERVER_EXCLUDED_NODES
+/* Not valid for the wc-root */
+-- STMT_HAS_SERVER_EXCLUDED_DESCENDANTS
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0 AND presence = 'absent'
 LIMIT 1
+
+/* Applies to all nodes in a wc */
+-- STMT_WC_HAS_SERVER_EXCLUDED
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND op_depth = 0 AND presence = 'absent'
+LIMIT 1
+
+
 
 /* ### Select all server-excluded nodes. */
 -- STMT_SELECT_ALL_SERVER_EXCLUDED_NODES
