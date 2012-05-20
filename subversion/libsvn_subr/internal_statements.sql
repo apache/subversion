@@ -21,5 +21,15 @@
  * ====================================================================
  */
 
--- STMT_DUMMY_SELECT_FOR_BACKUP
-SELECT * FROM SQLITE_MASTER;
+-- STMT_INTERNAL_SAVEPOINT_SVN
+SAVEPOINT svn;
+
+-- STMT_INTERNAL_RELEASE_SAVEPOINT_SVN
+RELEASE SAVEPOINT svn;
+
+-- STMT_INTERNAL_ROLLBACK_TO_SAVEPOINT_SVN
+ROLLBACK TO SAVEPOINT svn;
+
+/* Dummmy statement to determine the number of internal statements */
+-- STMT_INTERNAL_LAST
+;
