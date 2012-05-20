@@ -876,11 +876,11 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
+/* Not valid on the wc-root */
 -- STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE
 UPDATE nodes SET op_depth = ?3 + 1
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+ AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
  AND op_depth = ?3
 
 -- STMT_DOES_NODE_EXIST
