@@ -3409,7 +3409,6 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                   svn_wc__db_status_t *status,
                   svn_kind_t *kind,
                   svn_boolean_t *op_root,
-                  svn_boolean_t *have_work,
                   svn_wc__db_wcroot_t *wcroot,
                   const char *local_relpath,
                   apr_pool_t *result_pool,
@@ -3424,7 +3423,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     NULL, NULL, NULL, NULL, NULL, op_root, NULL, NULL,
                     NULL /* have_base */,
                     NULL /* have_more_work */,
-                    have_work,
+                    NULL /* have_work */,
                     wcroot, local_relpath, result_pool, scratch_pool));
 
   if (node_status == svn_wc__db_status_excluded)
@@ -3436,7 +3435,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       svn_dirent_split(&parent_relpath, &base_name, local_relpath,
                        scratch_pool);
       SVN_ERR(get_info_for_copy(copyfrom_id, copyfrom_relpath, copyfrom_rev,
-                                NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL,
                                 wcroot, parent_relpath,
                                 scratch_pool, scratch_pool));
       if (*copyfrom_relpath)
@@ -3548,7 +3547,6 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   svn_wc__db_status_t status;
   svn_wc__db_status_t dst_presence;
   svn_boolean_t op_root;
-  svn_boolean_t have_work;
   apr_int64_t copyfrom_id;
   int dst_op_depth;
   int dst_np_op_depth;
@@ -3556,7 +3554,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   const apr_array_header_t *children;
 
   SVN_ERR(get_info_for_copy(&copyfrom_id, &copyfrom_relpath, &copyfrom_rev,
-                            &status, &kind, &op_root, &have_work, src_wcroot,
+                            &status, &kind, &op_root, src_wcroot,
                             src_relpath, scratch_pool, scratch_pool));
 
   SVN_ERR(op_depth_for_copy(&dst_op_depth, &dst_np_op_depth, copyfrom_id,
@@ -3651,12 +3649,8 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
       const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
                                                            scratch_pool);
 
-      if (have_work)
-        SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                          STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
-      else
-        SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                          STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
+                                        STMT_INSERT_WORKING_NODE_COPY_FROM));
 
       SVN_ERR(svn_sqlite__bindf(stmt, "issdst",
                     src_wcroot->wc_id, src_relpath,
@@ -3960,25 +3954,19 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
   if (dst_presence == svn_wc__db_status_normal
       && src_wcroot == dst_wcroot) /* ### Remove limitation */
     {
-      if (src_op_depth > 0)
-        SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                              STMT_INSERT_WORKING_NODE_COPY_FROM_DEPTH));
-      else
-        SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                             STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
       /* Perhaps we should avoid setting moved_here to 0 and leave it
          null instead? */
-      SVN_ERR(svn_sqlite__bindf(stmt, "issdstd",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issdstdd",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_dirname(dst_relpath, iterpool),
                         presence_map, dst_presence,
-                        (is_move ? 1 : 0)));
-
-      if (src_op_depth > 0)
-        SVN_ERR(svn_sqlite__bind_int(stmt, 8, src_op_depth));
+                        (is_move ? 1 : 0),
+                        src_op_depth));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
