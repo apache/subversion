@@ -5539,7 +5539,7 @@ op_revert_recursive_txn(void *baton,
       SVN_ERR(svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ACTUAL_NODE_RECURSIVE));
+                                        STMT_DELETE_ACTUAL_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
                                 local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
@@ -5569,8 +5569,11 @@ op_revert_recursive_txn(void *baton,
   /* Don't delete BASE nodes */
   select_op_depth = op_depth ? op_depth : 1;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_NODES_RECURSIVE));
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb,
+                    (local_relpath[0] == '\0')
+                            ? STMT_DELETE_ALL_NODES_ABOVE_DEPTH
+                            : STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
                             local_relpath, select_op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -6111,7 +6114,7 @@ remove_node_txn(void *baton,
                           scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_NODES_RECURSIVE));
+                                    STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
 
   /* Remove all nodes at or below local_relpath where op_depth >= 0 */
   SVN_ERR(svn_sqlite__bindf(stmt, "isd",
@@ -6676,7 +6679,7 @@ delete_node(void *baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_NODES_RECURSIVE));
+                                    STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd",
                             wcroot->wc_id, local_relpath, b->delete_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
