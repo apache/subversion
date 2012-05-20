@@ -6492,6 +6492,20 @@ delete_node(void *baton,
         }
       SVN_ERR(svn_sqlite__reset(stmt));
     }
+  else if (status == svn_wc__db_status_server_excluded)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                          _("Cannot delete '%s' as it is excluded by server"),
+                               path_for_error_message(wcroot, local_relpath,
+                                                      scratch_pool));
+    }
+  else if (status == svn_wc__db_status_excluded)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                          _("Cannot delete '%s' as it is excluded"),
+                               path_for_error_message(wcroot, local_relpath,
+                                                      scratch_pool));
+    }
 
   if (b->moved_to_relpath)
     {
