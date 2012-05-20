@@ -1513,7 +1513,6 @@ svn_wc__node_get_commit_status(svn_boolean_t *added,
                                svn_revnum_t *revision,
                                svn_revnum_t *original_revision,
                                const char **original_repos_relpath,
-                               svn_boolean_t *update_root,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
@@ -1556,19 +1555,18 @@ svn_wc__node_get_commit_status(svn_boolean_t *added,
     }
 
   /* Retrieve some information from BASE which is needed for replacing
-     and/or deleting BASE nodes. (We don't need lock here) */
+     and/or deleting BASE nodes. */
   if (have_base
-      && ((revision && !SVN_IS_VALID_REVNUM(*revision))
-          || (update_root && status == svn_wc__db_status_normal)))
+      && !have_more_work
+      && op_root
+      && (revision && !SVN_IS_VALID_REVNUM(*revision)))
     {
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, update_root,
+                                       NULL, NULL, NULL,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
-  else if (update_root)
-    *update_root = FALSE;
 
   return SVN_NO_ERROR;
 }
