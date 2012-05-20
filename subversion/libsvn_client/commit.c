@@ -1329,7 +1329,10 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
 {
   int rel_targets_nelts_fixed;
   int i;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
+
+  if (! (include_file_externals || include_dir_externals))
+    return SVN_NO_ERROR;
 
   /* Easy part of applying DEPTH to externals. */
   if (depth == svn_depth_empty)
@@ -1357,11 +1360,10 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
        * ### not at all. No other effect. So not doing that for now. */
      }
 
-  if (! (include_file_externals || include_dir_externals))
-    return SVN_NO_ERROR;
-
   /* Iterate *and* grow REL_TARGETS at the same time. */
   rel_targets_nelts_fixed = rel_targets->nelts;
+
+  iterpool = svn_pool_create(scratch_pool);
 
   for (i = 0; i < rel_targets_nelts_fixed; i++)
     {
