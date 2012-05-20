@@ -605,7 +605,8 @@ DELETE FROM nodes
 WHERE wc_id = ?1
   AND (?2 = ''
        OR local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+       OR parent_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND op_depth >= ?3
 
 -- STMT_DELETE_ACTUAL_NODE
@@ -845,7 +846,8 @@ SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
 FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+       OR parent_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND op_depth = ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
@@ -1260,7 +1262,8 @@ INSERT INTO delete_list(local_relpath)
 SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1
   AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+       OR parent_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(parent_relpath, ?2))
   AND op_depth >= ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
