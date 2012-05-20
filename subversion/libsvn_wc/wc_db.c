@@ -6668,7 +6668,10 @@ delete_node(void *baton,
   else
     {
       add_work = TRUE;
-      SVN_ERR(op_depth_of(&select_depth, wcroot, local_relpath));
+      if (status != svn_wc__db_status_normal)
+        SVN_ERR(op_depth_of(&select_depth, wcroot, local_relpath));
+      else
+        select_depth = 0; /* Deleting BASE node */
     }
 
   /* ### Put actual-only nodes into the list? */
