@@ -100,6 +100,16 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
+ * r1341012
+   Sort 'svn status' output to avoid randomness in output with APR-1.4.6.
+   Justification:
+     Sorted output is nicer for users. Some users even perceive random output
+     order with APR-1.4.6 as a regression.
+   Branch:
+     ^/subversion/branches/1.7.x-r1341012
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
