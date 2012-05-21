@@ -1511,6 +1511,7 @@ create_db(svn_sqlite__db_t **sdb,
   idb.repos_uuid = repos_uuid;
   idb.root_node_repos_relpath = root_node_repos_relpath;
   idb.root_node_revision = root_node_revision;
+  idb.root_node_depth = root_node_depth;
 
   SVN_ERR(svn_sqlite__with_lock(*sdb, init_db, &idb, scratch_pool));
 
