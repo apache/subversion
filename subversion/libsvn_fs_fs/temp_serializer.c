@@ -932,7 +932,7 @@ svn_fs_fs__extract_dir_entry(void **out,
           svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
 
       /* Entries have been serialized one-by-one, each time including all
-       * nestes structures and strings. Therefore, they occupy a single
+       * nested structures and strings. Therefore, they occupy a single
        * block of memory whose end-offset is either the beginning of the
        * next entry or the end of the buffer
        */
