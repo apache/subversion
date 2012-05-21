@@ -888,19 +888,13 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
    *PROPS is an array of svn_prop_t structures representing regular properties
    to be added to the working copy TARGET_ABSPATH.
 
-   HONOR_MERGEINFO determines whether mergeinfo will be honored by this
-   function (when applicable).
-
    The merge source and target are assumed to be in the same repository.
 
-   If mergeinfo is not being honored and REINTEGRATE_MERGE is FALSE do
-   nothing.  Otherwise,
-   filter out mergeinfo property additions to TARGET_ABSPATH when
+   Filter out mergeinfo property additions to TARGET_ABSPATH when
    those additions refer to the same line of history as TARGET_ABSPATH as
    described below.
 
-   If mergeinfo is being honored
-   then examine the added mergeinfo, looking at each range (or single rev)
+   Examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
    history as TARGET_ABSPATH (pegged at its base revision), then filter out
    that range.  If the entire rangelist for a given path is filtered then
@@ -917,8 +911,6 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 static svn_error_t *
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *target_abspath,
-                                  svn_boolean_t honor_mergeinfo,
-                                  svn_boolean_t reintegrate_merge,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
@@ -929,13 +921,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   svn_boolean_t is_copy;
   const char *repos_relpath;
   svn_client__pathrev_t target_base;
-
-  /* If we aren't honoring mergeinfo, then get outta here.  If this is a
-     reintegrate merge or a merge from a foreign repository we still need to
-     filter regardless of whether we are honoring mergeinfo or not. */
-  if (! honor_mergeinfo
-      && ! reintegrate_merge)
-    return SVN_NO_ERROR;
 
   /* If PATH itself has been added there is no need to filter. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,  &target_base.rev, &repos_relpath,
@@ -1243,11 +1228,9 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
              entirely.  */
           if (! merge_b->same_repos)
             SVN_ERR(omit_mergeinfo_changes(&props, props, result_pool));
-          else
+          else if (HONOR_MERGEINFO(merge_b) || merge_b->reintegrate_merge)
             SVN_ERR(filter_self_referential_mergeinfo(&props,
                                                       local_abspath,
-                                                      HONOR_MERGEINFO(merge_b),
-                                                      merge_b->reintegrate_merge,
                                                       merge_b->ra_session2,
                                                       merge_b->ctx,
                                                       result_pool));
