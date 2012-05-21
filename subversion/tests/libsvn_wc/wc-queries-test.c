@@ -24,6 +24,8 @@
 #include "svn_pools.h"
 #include "svn_ctype.h"
 
+#include "svn_private_config.h"
+
 #include "../svn_test.h"
 
 #ifdef SVN_SQLITE_INLINE
@@ -111,12 +113,12 @@ create_memory_db(sqlite3 **db,
 
 /* Parse all normal queries */
 static svn_error_t *
-test_parsable(apr_pool_t *pool)
+test_parsable(apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
 
-  SVN_ERR(create_memory_db(&sdb, pool));
+  SVN_ERR(create_memory_db(&sdb, scratch_pool));
 
   for (i=0; i < STMT_SCHEMA_FIRST; i++)
     {
