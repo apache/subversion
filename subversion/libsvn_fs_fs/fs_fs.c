@@ -4865,9 +4865,9 @@ fetch_all_changes(apr_hash_t *changed_paths,
                hi = apr_hash_next(hi))
             {
               /* KEY is the path. */
-              const char *path;
+              const void *path;
               apr_ssize_t klen;
-              apr_hash_this(hi, (const void **)&path, &klen, NULL);
+              apr_hash_this(hi, &path, &klen, NULL);
 
               /* If we come across a child of our path, remove it.
                  Call svn_dirent_is_child only if there is a chance that
