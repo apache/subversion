@@ -28,10 +28,10 @@
 
 #include "../svn_test.h"
 
-#ifdef SVN_SQLITE_INLINE
+#ifndef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
-  #include <sqlite3.c>
+  #include "sqlite3.c"
 #else
   #include <sqlite3.h>
 #endif
@@ -537,6 +537,9 @@ test_query_expectations(apr_pool_t *scratch_pool)
           iOrder = sqlite3_column_int(stmt, 1);
           iFrom = sqlite3_column_int(stmt, 2);*/
           zDetail = sqlite3_column_text(stmt, 3);
+
+          if (! zDetail)
+            continue;
 
           detail = apr_pstrdup(iterpool, (const char*)zDetail);
 
