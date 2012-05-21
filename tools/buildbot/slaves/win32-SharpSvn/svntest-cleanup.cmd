@@ -31,6 +31,7 @@ IF NOT EXIST "imports\" (
   svn co --username guest --password "" http://sharpsvn.open.collab.net/svn/sharpsvn/trunk/imports imports
 )
 IF NOT EXIST build\imports.done (
+  svn up imports
   copy /y imports\dev-default.build default.build
   nant prep-dev %NANTARGS%
   IF ERRORLEVEL 1 (
