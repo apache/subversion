@@ -4852,9 +4852,16 @@ fetch_all_changes(apr_hash_t *changed_paths,
           apr_hash_index_t *hi;
 
           /* a potential child path must contain at least 2 more chars
-             (the path separator plus at least one char for the name)
+             (the path separator plus at least one char for the name).
+             Also, we should not assume that all paths have been normalized
+             i.e. some might have trailing path separators.
           */
-          apr_ssize_t min_child_len = strlen(change->path) + 2;
+          apr_ssize_t change_path_len = strlen(change->path);
+          apr_ssize_t min_child_len = change_path_len == 0
+                                    ? 1
+                                    : change->path[change_path_len-1] == '/'
+                                        ? change_path_len + 1
+                                        : change_path_len + 2;
 
           /* CAUTION: This is the inner loop of an O(n^2) algorithm.
              The number of changes to process may be >> 1000.
