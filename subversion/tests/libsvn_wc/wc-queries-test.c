@@ -28,10 +28,10 @@
 
 #include "../svn_test.h"
 
-#ifndef SVN_SQLITE_INLINE
+#ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
-  #include "sqlite3.c"
+  #include <sqlite3.c>
 #else
   #include <sqlite3.h>
 #endif
