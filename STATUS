@@ -110,6 +110,22 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * 1341031
+   Sort output of 'svn proplist' to avoid randomness with APR-1.4.6
+   Justification:
+     Sorted output is nicer for users. Some users even perceive random output
+     order with APR-1.4.6 as a regression.
+   Votes:
+     +1: stsp
+
+ * r1341034
+   Sort output of 'svn propget -R' to avoid randomness with APR-1.4.6
+   Justification:
+     Sorted output is nicer for users. Some users even perceive random output
+     order with APR-1.4.6 as a regression.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
