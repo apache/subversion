@@ -1416,11 +1416,77 @@ does_node_exist(svn_boolean_t *exists,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+/* baton for init_db */
+struct init_db_baton
+{
+  /* output values */
+  apr_int64_t wc_id;
+  apr_int64_t repos_id;
+  /* input values */
+  const char *repos_root_url;
+  const char *repos_uuid;
+  const char *root_node_repos_relpath;
+  svn_revnum_t root_node_revision;
+  svn_depth_t root_node_depth;
+};
+
+/* Helper for create_db(). Initializes our wc.db schema */
+static svn_error_t *
+init_db( void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+{
+  struct init_db_baton *idb = baton;
+  svn_sqlite__stmt_t *stmt;
+
+  /* Create the database's schema.  */
+  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_SCHEMA));
+  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES));
+  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES_TRIGGERS));
+  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
+
+  /* Insert the repository. */
+  SVN_ERR(create_repos_id(&idb->repos_id, idb->repos_root_url, idb->repos_uuid,
+                          db, scratch_pool));
+
+  /* Insert the wcroot. */
+  /* ### Right now, this just assumes wc metadata is being stored locally. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_WCROOT));
+  SVN_ERR(svn_sqlite__insert(&idb->wc_id, stmt));
+
+  if (idb->root_node_repos_relpath)
+    {
+      svn_wc__db_status_t status = svn_wc__db_status_normal;
+
+      if (idb->root_node_revision > 0)
+        status = svn_wc__db_status_incomplete; /* Will be filled by update */
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isdsisrtst",
+                                idb->wc_id,          /* 1 */
+                                "",                  /* 2 */
+                                0,                   /* op_depth is 0 for base */
+                                NULL,                /* 4 */
+                                idb->repos_id,
+                                idb->root_node_repos_relpath,
+                                idb->root_node_revision,
+                                presence_map, status, /* 8 */
+                                svn_depth_to_word(idb->root_node_depth),
+                                kind_map, svn_kind_dir /* 10 */));
+
+      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* Create an sqlite database at DIR_ABSPATH/SDB_FNAME and insert
    records for REPOS_ID (using REPOS_ROOT_URL and REPOS_UUID) into
    REPOSITORY and for WC_ID into WCROOT.  Return the DB connection
-   in *SDB. */
+   in *SDB.
+
+   If ROOT_NODE_REPOS_RELPATH is not NULL, insert a BASE node at
+   the working copy root with repository relpath ROOT_NODE_REPOS_RELPATH,
+   revision ROOT_NODE_REVISION and depth ROOT_NODE_DEPTH.
+   */
 static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
           apr_int64_t *repos_id,
@@ -1429,30 +1495,28 @@ create_db(svn_sqlite__db_t **sdb,
           const char *repos_root_url,
           const char *repos_uuid,
           const char *sdb_fname,
+          const char *root_node_repos_relpath,
+          svn_revnum_t root_node_revision,
+          svn_depth_t root_node_depth,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
+  struct init_db_baton idb;
 
   SVN_ERR(svn_wc__db_util_open_db(sdb, dir_abspath, sdb_fname,
                                   svn_sqlite__mode_rwcreate,
                                   NULL /* my_statements */,
                                   result_pool, scratch_pool));
 
-  /* Create the database's schema.  */
-  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
-  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES));
-  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES_TRIGGERS));
-  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_EXTERNALS));
+  idb.repos_root_url = repos_root_url;
+  idb.repos_uuid = repos_uuid;
+  idb.root_node_repos_relpath = root_node_repos_relpath;
+  idb.root_node_revision = root_node_revision;
 
-  /* Insert the repository. */
-  SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,
-                          scratch_pool));
+  SVN_ERR(svn_sqlite__with_lock(*sdb, init_db, &idb, scratch_pool));
 
-  /* Insert the wcroot. */
-  /* ### Right now, this just assumes wc metadata is being stored locally. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, *sdb, STMT_INSERT_WCROOT));
-  SVN_ERR(svn_sqlite__insert(wc_id, stmt));
+  *repos_id = idb.repos_id;
+  *wc_id = idb.wc_id;
 
   return SVN_NO_ERROR;
 }
@@ -1472,7 +1536,6 @@ svn_wc__db_init(svn_wc__db_t *db,
   apr_int64_t repos_id;
   apr_int64_t wc_id;
   svn_wc__db_wcroot_t *wcroot;
-  insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
@@ -1485,7 +1548,9 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* Create the SDB and insert the basic rows.  */
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
-                    repos_uuid, SDB_FILE, db->state_pool, scratch_pool));
+                    repos_uuid, SDB_FILE, 
+                    repos_relpath, initial_rev, depth,
+                    db->state_pool, scratch_pool));
 
   /* Create the WCROOT for this directory.  */
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
@@ -1498,24 +1563,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   /* The WCROOT is complete. Stash it into DB.  */
   apr_hash_set(db->dir_data, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
 
-  blank_ibb(&ibb);
-
-  if (initial_rev > 0)
-    ibb.status = svn_wc__db_status_incomplete;
-  else
-    ibb.status = svn_wc__db_status_normal;
-  ibb.kind = svn_kind_dir;
-  ibb.repos_id = repos_id;
-  ibb.repos_relpath = repos_relpath;
-  ibb.revision = initial_rev;
-
-  /* ### what about the children?  */
-  ibb.children = NULL;
-  ibb.depth = depth;
-
-  /* ### no children, conflicts, or work items to install in a txn... */
-
-  return svn_error_trace(insert_base_node(&ibb, wcroot, "", scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -10743,6 +10791,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
   SVN_ERR(create_db(sdb, repos_id, wc_id, dir_abspath,
                     repos_root_url, repos_uuid,
                     SDB_FILE,
+                    NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
                     wc_db->state_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
