@@ -1128,7 +1128,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
   /* Walk all the children of this directory. */
   sorted_children = svn_sort__hash(all_children,
-                                   svn_sort_compare_items_as_paths,
+                                   svn_sort_compare_items_lexically,
                                    subpool);
   for (i = 0; i < sorted_children->nelts; i++)
     {
