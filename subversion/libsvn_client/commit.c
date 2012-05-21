@@ -407,7 +407,7 @@ import_children(const char *dir_abspath,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   sorted_dirents = svn_sort__hash(dirents, svn_sort_compare_items_as_paths,
-                                   scratch_pool);
+                                  scratch_pool);
   for (i = 0; i < sorted_dirents->nelts; i++)
     {
       const char *this_abspath, *this_edit_path;
