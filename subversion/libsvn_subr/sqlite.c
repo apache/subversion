@@ -84,7 +84,6 @@ struct svn_sqlite__db_t
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
-  unsigned savepoint_nr;
 };
 
 struct svn_sqlite__stmt_t
