@@ -4851,20 +4851,30 @@ fetch_all_changes(apr_hash_t *changed_paths,
         {
           apr_hash_index_t *hi;
 
+          /* a potential child path must contain at least 2 more chars
+             (the path separator plus at least one char for the name)
+          */
+          apr_ssize_t min_child_len = strlen(change->path) + 2;
+
+          /* CAUTION: This is the inner loop of an O(n^2) algorithm.
+             The number of changes to process may be >> 1000.
+             Therefore, keep the inner loop as tight as possible.
+          */
           for (hi = apr_hash_first(iterpool, changed_paths);
                hi;
                hi = apr_hash_next(hi))
             {
               /* KEY is the path. */
-              const char *path = svn__apr_hash_index_key(hi);
-              apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+              const char *path;
+              apr_ssize_t klen;
+              apr_hash_this(hi, (const void **)&path, &klen, NULL);
 
-              /* If we come across our own path, ignore it. */
-              if (strcmp(change->path, path) == 0)
-                continue;
-
-              /* If we come across a child of our path, remove it. */
-              if (svn_dirent_is_child(change->path, path, iterpool))
+              /* If we come across a child of our path, remove it.
+                 Call svn_dirent_is_child only if there is a chance that
+                 this is actually a sub-path.
+               */
+              if (   klen >= min_child_len
+                  && svn_dirent_is_child(change->path, path, iterpool))
                 apr_hash_set(changed_paths, path, klen, NULL);
             }
         }
