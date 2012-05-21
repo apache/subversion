@@ -77,8 +77,71 @@ static const int schema_statements[] =
    we could annotate these in wc-queries.sql */
 static const int slow_statements[] =
 {
+  /* Operate on the entire WC */
   STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE,
   STMT_RECURSIVE_UPDATE_NODE_REPO,
+  STMT_DELETE_ALL_NODES_ABOVE_DEPTH,
+  STMT_WC_HAS_SERVER_EXCLUDED,
+  STMT_HAS_SWITCHED_WCROOT,
+  STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT,
+  STMT_SELECT_ALL_NODES,
+
+  /* Is there a record? */
+  STMT_LOOK_FOR_WORK,
+  STMT_HAS_WORKING_NODES,
+
+  /* Lists an entire in-memory table */
+  STMT_SELECT_CHANGELIST_LIST,
+
+  /* Need review: */
+  STMT_INSERT_TARGET_DEPTH_FILES,
+  STMT_INSERT_TARGET_DEPTH_IMMEDIATES,
+  STMT_INSERT_TARGET_DEPTH_INFINITY,
+  STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_FILES,
+  STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_IMMEDIATES,
+  STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_INFINITY,
+  STMT_DELETE_PRISTINE_IF_UNREFERENCED,
+  STMT_SELECT_ALL_SERVER_EXCLUDED_NODES,
+  STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW,
+  STMT_SELECT_EXTERNALS_DEFINED,
+  STMT_DELETE_EXTERNAL,
+  STMT_SELECT_EXTERNAL_PROPERTIES,
+  STMT_SELECT_REVERT_LIST_COPIED_CHILDREN,
+  STMT_SELECT_REVERT_LIST_RECURSIVE,
+  STMT_DELETE_REVERT_LIST_RECURSIVE,
+  STMT_SELECT_MIN_MAX_REVISIONS,
+  STMT_HAS_SPARSE_NODES,
+  STMT_SUBTREE_HAS_TREE_MODIFICATIONS,
+  STMT_SELECT_BASE_FILES_RECURSIVE,
+
+  /* Upgrade statements? */
+  STMT_SELECT_OLD_TREE_CONFLICT,
+  STMT_ERASE_OLD_CONFLICTS,
+  STMT_SELECT_ALL_FILES,
+  STMT_HAS_ACTUAL_NODES_CONFLICTS,
+
+  /* Join on targets table */
+  STMT_CACHE_NODE_PROPS,
+  STMT_CACHE_ACTUAL_PROPS,
+  STMT_CACHE_NODE_BASE_PROPS,
+  STMT_CACHE_NODE_PRISTINE_PROPS,
+  STMT_SELECT_RELEVANT_PROPS_FROM_CACHE,
+
+  /* Moved to/from index? */
+  STMT_SELECT_MOVED_FROM_RELPATH,
+  STMT_UPDATE_MOVED_TO_RELPATH,
+  STMT_SELECT_MOVED_HERE_CHILDREN,
+  STMT_SELECT_MOVED_PAIR,
+
+  /* Need index? */
+  STMT_SELECT_TARGETS,
+  STMT_INSERT_ACTUAL_EMPTIES,
+  STMT_SELECT_PRISTINE_BY_MD5, /* Only used by deprecated api */
+  STMT_SELECT_DELETE_LIST,
+
+  /* Designed as slow */
+  STMT_SELECT_UNREFERENCED_PRISTINES,
+
   -1 /* final marker */
 };
 
@@ -340,6 +403,12 @@ parse_explanation_item(struct explanation_item **parsed_item,
       /* Handling temporary table (E.g. UNION) */
       return SVN_NO_ERROR;
     }
+  else if (MATCH_TOKEN(item->operation, "USE"))
+    {
+      /* Using a temporary table for ordering results */
+      /* ### Need parsing */
+      return SVN_NO_ERROR;
+    }
   else
     {
       printf("DBG: Unhandled sqlite operation '%s' in explanation\n", item->operation);
@@ -432,11 +501,11 @@ test_query_expectations(apr_pool_t *scratch_pool)
       r = sqlite3_prepare_v2(sdb, wc_queries[i], -1, &stmt, &tail);
 
       if (r != SQLITE_OK)
-        break; /* Parse failure is already reported by 'test_parable' */
+        continue; /* Parse failure is already reported by 'test_parable' */
 
       SQLITE_ERR(sqlite3_finalize(stmt));
       if (tail[0] != '\0')
-        break; /* Multi-queries are currently not testable */
+        continue; /* Multi-queries are currently not testable */
 
       svn_pool_clear(iterpool);
 
@@ -491,8 +560,11 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 i, wc_queries[i]);
               break;
             }
+
+          if (item->primarary_key)
+            continue; /* Nice */
           else if (((item->expression_vars < 2 && is_node_table(item->table))
-                   || (item->expression_vars < 1)) && !is_slow_statement(i))
+                       || (item->expression_vars < 1)) && !is_slow_statement(i))
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "WC-Query %d: "
@@ -501,7 +573,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 item->expressions, wc_queries[i]);
               break;
             }
-          else if (!item->primarary_key && !item->index)
+          else if (!item->index && !is_slow_statement(i))
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "WC-Query %d: "
@@ -509,7 +581,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 i, item->table, wc_queries[i]);
               break;
             }
-          else if (item->scan)
+          else if (item->scan && !is_slow_statement(i))
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "WC-Query %d: "
