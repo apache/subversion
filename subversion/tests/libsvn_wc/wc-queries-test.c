@@ -381,10 +381,43 @@ test_query_expectations(apr_pool_t *scratch_pool)
   sqlite3 *sdb;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_boolean_t skipped_all = TRUE;
   svn_error_t *warnings = NULL;
 
   SVN_ERR(create_memory_db(&sdb, scratch_pool));
+
+  /* Sqlite has an SQLITE_OMIT_EXPLAIN compilation flag. In this case the
+     'EXPLAIN QUERY PLAN' option is currently just ignored and the query
+     evaluated (status at Sqlite 3.7.12).
+     
+     Detect this case, and skip this test */
+  {
+    sqlite3_stmt *stmt;
+    int r;
+    r = sqlite3_prepare(sdb, "EXPLAIN QUERY PLAN SELECT 101010101",
+                        -1, &stmt, NULL);
+
+    if (r != SQLITE_OK)
+      {
+        SQLITE_ERR(sqlite3_close(sdb));
+        return svn_error_create(SVN_ERR_TEST_SKIPPED, warnings,
+                                "Sqlite doesn't support EXPLAIN QUERY PLAN");
+      }
+
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+      {
+        if (sqlite3_column_count(stmt) == 1
+            && sqlite3_column_int(stmt, 0) == 101010101)
+          {
+            SQLITE_ERR(sqlite3_reset(stmt));
+            SQLITE_ERR(sqlite3_finalize(stmt));
+            SQLITE_ERR(sqlite3_close(sdb));
+            return svn_error_create(SVN_ERR_TEST_SKIPPED, warnings,
+                                "Sqlite doesn't support EXPLAIN QUERY PLAN");
+          }
+      }
+    SQLITE_ERR(sqlite3_reset(stmt));
+    SQLITE_ERR(sqlite3_finalize(stmt));
+  }
 
   for (i=0; i < STMT_SCHEMA_FIRST; i++)
     {
@@ -416,8 +449,6 @@ test_query_expectations(apr_pool_t *scratch_pool)
 
       if (r != SQLITE_OK)
         continue; /* EXPLAIN not enabled or doesn't support this query */
-
-      skipped_all = FALSE;
 
       while (SQLITE_ROW == (r = sqlite3_step(stmt)))
         {
@@ -491,9 +522,6 @@ test_query_expectations(apr_pool_t *scratch_pool)
       SQLITE_ERR(sqlite3_finalize(stmt));
     }
   SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
-
-  if (skipped_all)
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, warnings, "Sqlite doesn't support EXPLAIN QUERY PLAN");
 
   return warnings;
 }
