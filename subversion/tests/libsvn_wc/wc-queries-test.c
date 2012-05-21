@@ -105,7 +105,6 @@ static const int slow_statements[] =
   STMT_SELECT_ALL_SERVER_EXCLUDED_NODES,
   STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW,
   STMT_SELECT_EXTERNALS_DEFINED,
-  STMT_DELETE_EXTERNAL,
   STMT_SELECT_EXTERNAL_PROPERTIES,
   STMT_SELECT_REVERT_LIST_COPIED_CHILDREN,
   STMT_SELECT_REVERT_LIST_RECURSIVE,
@@ -130,7 +129,6 @@ static const int slow_statements[] =
 
   /* Moved to/from index? */
   STMT_SELECT_MOVED_FROM_RELPATH,
-  STMT_UPDATE_MOVED_TO_RELPATH,
   STMT_SELECT_MOVED_HERE_CHILDREN,
   STMT_SELECT_MOVED_PAIR,
 
@@ -494,6 +492,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
       sqlite3_stmt *stmt;
       const char *tail;
       int r;
+      svn_boolean_t warned = FALSE;
 
       if (is_schema_statement(i))
         continue;
@@ -548,45 +547,56 @@ test_query_expectations(apr_pool_t *scratch_pool)
 
           if (item->automatic_index)
             {
-              warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+              warned = TRUE;
+              if (!is_slow_statement(i))
+                {
+                  warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Creates a temporary index: %s\n",
                                 wc_query_info[i][0], wc_queries[i]);
-              break;
+                }
             }
-
-          if (item->primarary_key)
-            continue; /* Nice */
-          else if (((item->expression_vars < 2 && is_node_table(item->table))
-                       || (item->expression_vars < 1)) && !is_slow_statement(i))
+          else if (item->primarary_key)
             {
-              warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+              /* Nice */
+            }
+          else if ((item->expression_vars < 2 && is_node_table(item->table))
+                       || (item->expression_vars < 1))
+            {
+              warned = TRUE;
+              if (!is_slow_statement(i))
+                warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Uses %s with only %d index component: (%s)\n%s",
                                 wc_query_info[i][0], item->table,
                                 item->expression_vars, item->expressions,
                                 wc_queries[i]);
-              break;
             }
-          else if (!item->index && !is_slow_statement(i))
+          else if (!item->index)
             {
-              warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+              warned = TRUE;
+              if (!is_slow_statement(i))
+                warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Query on %s doesn't use an index:\n%s",
                                 wc_query_info[i][0], item->table, wc_queries[i]);
-              break;
             }
-          else if (item->scan && !is_slow_statement(i))
+          else if (item->scan)
             {
-              warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+              warned = TRUE;
+              if (!is_slow_statement(i))
+                warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: "
                                 "Performs scan on %s:\n%s",
                                 wc_query_info[i][0], item->table, wc_queries[i]);
-              break;
             }
         }
       SQLITE_ERR(sqlite3_reset(stmt));
       SQLITE_ERR(sqlite3_finalize(stmt));
+
+      if (!warned && is_slow_statement(i))
+        printf("DBG: Expected %s to be reported as slow, but it wasn't\n",
+               wc_query_info[i][0]);
     }
   SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
 
