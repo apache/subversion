@@ -25,7 +25,6 @@
 #include "svn_error.h"
 #include "private/svn_skel.h"
 #include "private/svn_string_private.h"
-#include "private/svn_subr_private.h"
 
 
 /* Parsing skeletons.  */
@@ -681,7 +680,7 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
     return skel_err("proplist");
 
   /* Create the returned structure */
-  proplist = svn_hash__make(pool);
+  proplist = apr_hash_make(pool);
   for (elt = skel->children; elt; elt = elt->next->next)
     {
       svn_string_t *value = svn_string_ncreate(elt->next->data,
