@@ -300,7 +300,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
 static void
 format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
 {
-  DWORD tag;
+  DWORD tag = 0;
   int ptr = 0;
   HANDLE proc = GetCurrentProcess();
 
@@ -335,7 +335,7 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
                         type_name, *(DWORD *)value_addr);
               else
                 sprintf(value_str, "(%s **) 0x%08x",
-                        type_name, (DWORD *)value_addr);
+                        type_name, *(DWORD *)value_addr);
 
               free(type_name);
             }
@@ -354,17 +354,14 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
             {
               sprintf(value_str, "0x%08x \"%s\"",
                       *(DWORD *)value_addr, (char *)*(DWORD*)value_addr);
-              break;
             }
-          if (ptr >= 1)
+          else if (ptr >= 1)
             {
               sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
-              break;
             }
-          if (SymGetTypeInfo_(proc, mod_base, type, TI_GET_BASETYPE, &bt))
+          else if (SymGetTypeInfo_(proc, mod_base, type, TI_GET_BASETYPE, &bt))
             {
               format_basic_type(value_str, bt, length, value_addr);
-              break;
             }
         }
         break;
@@ -375,7 +372,7 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
           sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
           break;
       default:
-          sprintf(value_str, "[unhandled tag: 0x%08x]", tag);
+          sprintf(value_str, "[unhandled tag: %d]", tag);
           break;
     }
 }

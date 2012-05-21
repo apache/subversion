@@ -457,16 +457,19 @@ svn_client_delete4(const apr_array_header_t *paths,
       /* Delete the targets from each working copy in turn. */
       for (hi = apr_hash_first(pool, wcroots); hi; hi = apr_hash_next(hi))
         {
-          const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+          const char *root_abspath;
           const apr_array_header_t *targets = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_dirent_condense_targets(&root_abspath, NULL, targets,
+                                              FALSE, iterpool, iterpool));
 
           SVN_WC__CALL_WITH_WRITE_LOCK(
             svn_client__wc_delete_many(targets, force, FALSE, keep_local,
                                        ctx->notify_func2, ctx->notify_baton2,
                                        ctx, iterpool),
-            ctx->wc_ctx, wcroot_abspath, TRUE /* lock_anchor */,
+            ctx->wc_ctx, root_abspath, TRUE /* lock_anchor */,
             iterpool);
         }
       svn_pool_destroy(iterpool);

@@ -563,12 +563,22 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 
 
-/*** Optimized hash functions ***/
+/*** Optimized hash function ***/
 
 /* Optimized version of apr_hashfunc_default. It assumes that the CPU has
  * 32-bit multiplications with high throughput of at least 1 operation
  * every 3 cycles. Latency is not an issue. Another optimization is a
- * mildly unrolled main loop.
+ * mildly unrolled main loop and breaking the dependency chain within the
+ * loop.
+ *
+ * Note that most CPUs including Intel Atom, VIA Nano, ARM feature the
+ * assumed pipelined multiplication circuitry. They can do one MUL every
+ * or every other cycle.
+ *
+ * The performance is ultimately limited by the fact that most CPUs can
+ * do only one LOAD and only one BRANCH operation per cycle. The best we
+ * can do is to process one character per cycle - provided the processor
+ * is wide enough to do 1 LOAD, COMPARE, BRANCH, MUL and ADD per cycle.
  */
 static unsigned int
 hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
@@ -614,77 +624,8 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
     return hash;
 }
 
-/* Used to detect NUL chars 
- */
-#define LOWER_7BITS_SET 0x7f7f7f7f
-#define BIT_7_SET       0x80808080
-
-/* Read 4 bytes at P. LE / BE interpretation is platform-dependent
- */
-#if SVN_UNALIGNED_ACCESS_IS_OK
-#  define READ_CHUNK(p) *(const apr_uint32_t *)(p)
-#else
-#  define READ_CHUNK(p) \
-     (   (apr_uint32_t)p[0]        \
-      + ((apr_uint32_t)p[1] << 8)  \
-      + ((apr_uint32_t)p[2] << 16) \
-      + ((apr_uint32_t)p[3] << 24))
-#endif
-
-/* Similar to the previous but operates on 4 bytes at once instead of the
- * classic unroll. This is particularly fast when unaligned access is
- * supported.
- */
-static unsigned int
-hashfunc_fast(const char *char_key, apr_ssize_t *klen)
-{
-    unsigned int hash = 0;
-    const unsigned char *key = (const unsigned char *)char_key;
-    const unsigned char *p;
-    apr_ssize_t i;
-    apr_uint32_t chunk, test;
-
-    if (*klen == APR_HASH_KEY_STRING)
-      {
-        for (p = key; ; p += sizeof(chunk))
-          {
-            /* This is a variant of the well-known strlen test: */
-            chunk = READ_CHUNK(p);
-            test = chunk | ((chunk & LOWER_7BITS_SET) + LOWER_7BITS_SET);
-            if ((test & BIT_7_SET) != BIT_7_SET)
-              break;
-
-            hash = (hash + chunk) * 0xd1f3da69;
-          }
-        for (; *p; p++)
-            hash = hash * 33 + *p;
-
-        *klen = p - key;
-      }
-    else
-      {
-        for ( p = key, i = *klen
-            ; i >= sizeof(chunk)
-            ; i -= sizeof(chunk), p += sizeof(chunk))
-          {
-            chunk = READ_CHUNK(p);
-            hash = (hash + chunk) * 0xd1f3da69;
-          }
-        for (; i; i--, p++)
-            hash = hash * 33 + *p;
-      }
-
-    return hash;
-}
-
 apr_hash_t *
 svn_hash__make(apr_pool_t *pool)
 {
   return apr_hash_make_custom(pool, hashfunc_compatible);
-}
-
-apr_hash_t *
-svn_hash__make_fast(apr_pool_t *pool)
-{
-  return apr_hash_make_custom(pool, hashfunc_fast);
 }

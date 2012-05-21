@@ -571,7 +571,6 @@ harvest_status_callback(void *status_baton,
   svn_boolean_t is_deleted;
   svn_boolean_t is_replaced;
   svn_boolean_t is_op_root;
-  svn_boolean_t is_update_root;
   svn_revnum_t original_rev;
   const char *original_relpath;
   svn_boolean_t copy_mode;
@@ -711,24 +710,13 @@ harvest_status_callback(void *status_baton,
                                          &is_op_root,
                                          &node_rev,
                                          &original_rev, &original_relpath,
-                                         &is_update_root,
                                          wc_ctx, local_abspath,
                                          scratch_pool, scratch_pool));
 
-  /* Handle file externals.
-   * (IS_UPDATE_ROOT is more generally defined, but at the moment this
-   * condition matches only file externals.)
-   *
-   * Don't copy files that svn:externals brought into the WC. So in copy_mode,
-   * even explicit targets are skipped.
-   *
-   * Hande file externals only when passed as explicit target. Note that
+  /* Hande file externals only when passed as explicit target. Note that
    * svn_client_commit6() passes all committable externals in as explicit
-   * targets iff they count.
-   */
-  if (is_update_root
-      && status->kind == svn_node_file
-      && (copy_mode || ! is_harvest_root))
+   * targets iff they count. */
+  if (status->file_external && !is_harvest_root)
     {
       return SVN_NO_ERROR;
     }
@@ -871,9 +859,11 @@ harvest_status_callback(void *status_baton,
                               result_pool, scratch_pool));
     }
 
-    /* Fetch lock tokens for descendants of deleted nodes. */
+    /* Fetch lock tokens for descendants of deleted BASE nodes. */
   if (matches_changelists
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+      && !copy_mode
+      && SVN_IS_VALID_REVNUM(node_rev) /* && BASE-kind = dir */
       && baton->lock_tokens)
     {
       apr_hash_t *local_relpath_tokens;

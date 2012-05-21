@@ -993,8 +993,8 @@ def status_unversioned_dir(sbox):
   dir = sbox.wc_dir
   svntest.main.safe_rmtree(sbox.wc_dir)
   os.mkdir(dir)
-  expected_err = "svn: warning: W155007: '.*(/|\\\\)" + os.path.basename(dir) + \
-                 "' is not a working copy"
+  expected_err = "svn: warning: (W155007|W155010): '.*(/|\\\\)" \
+                                        + os.path.basename(dir) + "'"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       "status", dir, dir)
 

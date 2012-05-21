@@ -65,7 +65,6 @@
 
 #include "private/svn_atomic.h"
 #include "private/svn_io_private.h"
-#include "private/svn_subr_private.h"
 
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
@@ -229,6 +228,10 @@ entry_name_to_utf8(const char **name_p,
                    const char *parent,
                    apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(DARWIN)
+  *name_p = apr_pstrdup(pool, name);
+  return SVN_NO_ERROR;
+#else
   svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, pool);
   if (err && err->apr_err == APR_EINVAL)
     {
@@ -238,6 +241,7 @@ entry_name_to_utf8(const char **name_p,
                                svn_dirent_local_style(parent, pool));
     }
   return err;
+#endif
 }
 
 
@@ -2390,7 +2394,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
   if (!only_check_type)
     flags |= APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  *dirents = svn_hash__make(result_pool);
+  *dirents = apr_hash_make(result_pool);
 
   SVN_ERR(svn_io_dir_open(&this_dir, path, scratch_pool));
 
