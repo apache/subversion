@@ -100,7 +100,7 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1341012
+ * r1341012, r1341076
    Sort 'svn status' output to avoid randomness in output with APR-1.4.6.
    Justification:
      Sorted output is nicer for users. Some users even perceive random output
