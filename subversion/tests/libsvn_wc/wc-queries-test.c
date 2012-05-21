@@ -195,6 +195,8 @@ test_parsable(apr_pool_t *scratch_pool)
   sqlite3 *sdb;
   int i;
 
+  printf("DBG: Testing on Sqlite %s\n", sqlite3_version);
+
   SVN_ERR(create_memory_db(&sdb, scratch_pool));
 
   for (i=0; i < STMT_SCHEMA_FIRST; i++)
