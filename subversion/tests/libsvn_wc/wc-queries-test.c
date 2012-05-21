@@ -39,6 +39,7 @@
 #include "../../libsvn_wc/wc-queries.h"
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(wc_queries);
+WC_QUERIES_SQL_DECLARE_STATEMENT_INFO(wc_query_info);
 
 /* The first query after the normal wc queries */
 #define STMT_SCHEMA_FIRST STMT_CREATE_SCHEMA
@@ -215,8 +216,9 @@ test_parsable(apr_pool_t *scratch_pool)
 
           if (r != SQLITE_OK)
             return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
-                                     "Preparing statement %d failed: %s\n%s",
-                                     i, sqlite3_errmsg(sdb),
+                                     "Preparing %s failed: %s\n%s",
+                                     wc_query_info[i][0],
+                                     sqlite3_errmsg(sdb),
                                      text);
 
           SQLITE_ERR(sqlite3_finalize(stmt));
@@ -555,9 +557,9 @@ test_query_expectations(apr_pool_t *scratch_pool)
           if (item->automatic_index)
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
-                                "WC-Query %d: "
+                                "%s: "
                                 "Creates a temporary index: %s\n",
-                                i, wc_queries[i]);
+                                wc_query_info[i][0], wc_queries[i]);
               break;
             }
 
@@ -567,26 +569,27 @@ test_query_expectations(apr_pool_t *scratch_pool)
                        || (item->expression_vars < 1)) && !is_slow_statement(i))
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
-                                "WC-Query %d: "
+                                "%s: "
                                 "Uses %s with only %d index component: (%s)\n%s",
-                                i, item->table, item->expression_vars,
-                                item->expressions, wc_queries[i]);
+                                wc_query_info[i][0], item->table,
+                                item->expression_vars, item->expressions,
+                                wc_queries[i]);
               break;
             }
           else if (!item->index && !is_slow_statement(i))
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
-                                "WC-Query %d: "
+                                "%s: "
                                 "Query on %s doesn't use an index:\n%s",
-                                i, item->table, wc_queries[i]);
+                                wc_query_info[i][0], item->table, wc_queries[i]);
               break;
             }
           else if (item->scan && !is_slow_statement(i))
             {
               warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
-                                "WC-Query %d: "
+                                "Query %s: "
                                 "Performs scan on %s:\n%s",
-                                i, item->table, wc_queries[i]);
+                                wc_query_info[i][0], item->table, wc_queries[i]);
               break;
             }
         }
