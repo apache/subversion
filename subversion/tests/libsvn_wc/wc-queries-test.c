@@ -464,7 +464,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
   {
     sqlite3_stmt *stmt;
     int r;
-    r = sqlite3_prepare(sdb, "EXPLAIN QUERY PLAN SELECT 101010101",
+    r = sqlite3_prepare(sdb, "EXPLAIN QUERY PLAN SELECT 1",
                         -1, &stmt, NULL);
 
     if (r != SQLITE_OK)
@@ -476,8 +476,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
 
     if (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        if (sqlite3_column_count(stmt) == 1
-            && sqlite3_column_int(stmt, 0) == 101010101)
+        if (sqlite3_column_count(stmt) < 4)
           {
             SQLITE_ERR(sqlite3_reset(stmt));
             SQLITE_ERR(sqlite3_finalize(stmt));
@@ -531,15 +530,8 @@ test_query_expectations(apr_pool_t *scratch_pool)
           struct explanation_item *item;
 
           /* ### The following code is correct for current Sqlite versions
-             ### (tested with 3.6.x, 3.7.x), but the EXPLAIN QUERY PLAN output
+             ### (tested with 3.7.x), but the EXPLAIN QUERY PLAN output
              ### is not guaranteed to be stable for future versions. */
-
-          if (sqlite3_column_count(stmt) < 4)
-            {
-              return svn_error_create(
-                                SVN_ERR_TEST_SKIPPED, NULL,
-                                "EXPLAIN QUERY PLAN doesn't return 4 columns");
-            }
 
           /* Names as in Sqlite documentation */
           /*iSelectid = sqlite3_column_int(stmt, 0);
