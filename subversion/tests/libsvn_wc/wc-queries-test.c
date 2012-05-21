@@ -290,7 +290,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
       if (token && token[0] == '(' && token[1] != '~')
         {
           /* Undo the tokenization to switch parser rules */
-          int token_len = strlen(token);
+          size_t token_len = strlen(token);
 
           if (token + token_len < tmp_end)
             token[token_len] = ' ';
@@ -307,7 +307,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
       if (token && *token == '(' && token[1] == '~')
         {
           /* Undo the tokenization to switch parser rules */
-          int token_len = strlen(token);
+          size_t token_len = strlen(token);
 
           if (token + token_len < tmp_end)
             token[token_len] = ' ';
