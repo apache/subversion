@@ -565,11 +565,11 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 /*** Optimized hash function ***/
 
-/* Optimized version of apr_hashfunc_default. It assumes that the CPU has
- * 32-bit multiplications with high throughput of at least 1 operation
- * every 3 cycles. Latency is not an issue. Another optimization is a
- * mildly unrolled main loop and breaking the dependency chain within the
- * loop.
+/* Optimized version of apr_hashfunc_default in APR 1.4.5 and earlier.
+ * It assumes that the CPU has 32-bit multiplications with high throughput
+ * of at least 1 operation every 3 cycles. Latency is not an issue. Another
+ * optimization is a mildly unrolled main loop and breaking the dependency
+ * chain within the loop.
  *
  * Note that most CPUs including Intel Atom, VIA Nano, ARM feature the
  * assumed pipelined multiplication circuitry. They can do one MUL every
