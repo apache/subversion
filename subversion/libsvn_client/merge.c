@@ -891,22 +891,22 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
    HONOR_MERGEINFO determines whether mergeinfo will be honored by this
    function (when applicable).
 
-   If mergeinfo is not being honored, SAME_REPOS is true, and
-   REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
-   SAME_REPOS is false, then filter out all mergeinfo
-   property additions (Issue #3383) from *PROPS.  If SAME_REPOS is
-   true then filter out mergeinfo property additions to TARGET_ABSPATH when
+   The merge source and target are assumed to be in the same repository.
+
+   If mergeinfo is not being honored and REINTEGRATE_MERGE is FALSE do
+   nothing.  Otherwise,
+   filter out mergeinfo property additions to TARGET_ABSPATH when
    those additions refer to the same line of history as TARGET_ABSPATH as
    described below.
 
-   If mergeinfo is being honored and SAME_REPOS is true
+   If mergeinfo is being honored
    then examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
    history as TARGET_ABSPATH (pegged at its base revision), then filter out
    that range.  If the entire rangelist for a given path is filtered then
    filter out the path as well.
 
-   If SAME_REPOS is true, RA_SESSION is an open RA session to the repository
+   RA_SESSION is an open RA session to the repository
    in which both the source and target live, else RA_SESSION is not used. It
    may be temporarily reparented as needed by this function.
 
@@ -918,7 +918,6 @@ static svn_error_t *
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *target_abspath,
                                   svn_boolean_t honor_mergeinfo,
-                                  svn_boolean_t same_repos,
                                   svn_boolean_t reintegrate_merge,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
@@ -931,28 +930,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   const char *repos_relpath;
   svn_client__pathrev_t target_base;
 
-  /* Issue #3383: We don't want mergeinfo from a foreign repos.
-
-     If this is a merge from a foreign repository we must strip all
-     incoming mergeinfo (including mergeinfo deletions).  Otherwise if
-     this property isn't mergeinfo or is NULL valued (i.e. prop removal)
-     or empty mergeinfo it does not require any special handling.  There
-     is nothing to filter out of empty mergeinfo and the concept of
-     filtering doesn't apply if we are trying to remove mergeinfo
-     entirely.  */
-  if (! same_repos)
-    return svn_error_trace(omit_mergeinfo_changes(props, *props, pool));
-
-  /* If we aren't honoring mergeinfo and this is a merge from the
-     same repository, then get outta here.  If this is a reintegrate
-     merge or a merge from a foreign repository we still need to
+  /* If we aren't honoring mergeinfo, then get outta here.  If this is a
+     reintegrate merge or a merge from a foreign repository we still need to
      filter regardless of whether we are honoring mergeinfo or not. */
   if (! honor_mergeinfo
       && ! reintegrate_merge)
     return SVN_NO_ERROR;
 
-  /* If this is a merge from the same repository and PATH itself has been
-     added there is no need to filter. */
+  /* If PATH itself has been added there is no need to filter. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,  &target_base.rev, &repos_relpath,
                                   &target_base.repos_root_url,
                                   &target_base.repos_uuid, NULL,
@@ -1246,14 +1231,27 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
          'forward' or 'reverse' merge and we filter unconditionally. */
       if (merge_b->merge_source.loc1->rev < merge_b->merge_source.loc2->rev
           || !merge_b->merge_source.ancestral)
-        SVN_ERR(filter_self_referential_mergeinfo(&props,
-                                                  local_abspath,
-                                                  HONOR_MERGEINFO(merge_b),
-                                                  merge_b->same_repos,
-                                                  merge_b->reintegrate_merge,
-                                                  merge_b->ra_session2,
-                                                  merge_b->ctx,
-                                                  result_pool));
+        {
+          /* Issue #3383: We don't want mergeinfo from a foreign repos.
+
+             If this is a merge from a foreign repository we must strip all
+             incoming mergeinfo (including mergeinfo deletions).  Otherwise if
+             this property isn't mergeinfo or is NULL valued (i.e. prop removal)
+             or empty mergeinfo it does not require any special handling.  There
+             is nothing to filter out of empty mergeinfo and the concept of
+             filtering doesn't apply if we are trying to remove mergeinfo
+             entirely.  */
+          if (! merge_b->same_repos)
+            SVN_ERR(omit_mergeinfo_changes(&props, props, result_pool));
+          else
+            SVN_ERR(filter_self_referential_mergeinfo(&props,
+                                                      local_abspath,
+                                                      HONOR_MERGEINFO(merge_b),
+                                                      merge_b->reintegrate_merge,
+                                                      merge_b->ra_session2,
+                                                      merge_b->ctx,
+                                                      result_pool));
+        }
     }
   *prop_updates = props;
 
