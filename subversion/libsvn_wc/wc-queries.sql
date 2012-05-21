@@ -1052,10 +1052,6 @@ WHERE wc_id = ?1
        OR def_local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2))
 
--- STMT_UPDATE_EXTERNAL_FILEINFO
-UPDATE externals SET recorded_size = ?3, recorded_mod_time = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2
-
 -- STMT_DELETE_EXTERNAL
 DELETE FROM externals
 WHERE wc_id = ?1 AND local_relpath = ?2
