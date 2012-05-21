@@ -49,7 +49,7 @@ class Processor(object):
 
   # a few SQL comments that act as directives for this transform system
   re_format = re.compile('-- *format: *([0-9]+)')
-  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)')
+  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)( +\(([^\)]*)\))?')
   re_include = re.compile('-- *include: *([-a-z]+)')
   re_define = re.compile('-- *define: *([A-Z_0-9]+)')
 
@@ -66,6 +66,13 @@ class Processor(object):
     self.close_define()
     self.output.write('#define STMT_%s %d\n' % (match.group(1),
                                                 self.stmt_count))
+
+    if match.group(3) == None:
+      info = 'NULL'
+    else:
+      info = '"' + match.group(3) + '"'
+    self.output.write('#define STMT_%d_INFO {"STMT_%s", %s}\n' %
+                      (self.stmt_count, match.group(1), info))
     self.output.write('#define STMT_%d \\\n' % (self.stmt_count,))
     self.var_printed = True
 
@@ -167,6 +174,13 @@ def main(input_filepath, output):
       + ', \\\n'.join('    STMT_%d' % (i,) for i in range(proc.stmt_count))
       + ', \\\n    NULL \\\n  }\n')
 
+    output.write('\n')
+
+    output.write(
+      '#define %s_DECLARE_STATEMENT_INFO(varname) \\\n' % (var_name,)
+      + '  static const char * const varname[][2] = { \\\n'
+      + ', \\\n'.join('    STMT_%d_INFO' % (i) for i in range(proc.stmt_count))
+      + ', \\\n    {NULL, NULL} \\\n  }\n')
 
 if __name__ == '__main__':
   if len(sys.argv) < 2 or len(sys.argv) > 3:
