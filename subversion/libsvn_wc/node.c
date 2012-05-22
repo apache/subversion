@@ -1519,7 +1519,6 @@ svn_wc__node_get_commit_status(svn_boolean_t *added,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t had_props;
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
   svn_boolean_t op_root;
