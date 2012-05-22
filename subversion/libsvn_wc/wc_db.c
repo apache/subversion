@@ -12979,11 +12979,11 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
 }
 
 svn_error_t *
-svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool)
+svn_wc__db_get_excluded_subtrees(apr_hash_t **excluded_subtrees,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
@@ -12995,25 +12995,35 @@ svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
                                                 db, local_abspath,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ALL_SERVER_EXCLUDED_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            wcroot->wc_id,
-                            local_relpath));
+
+  if (local_relpath[0] == '\0')
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_ALL_EXCLUDED_WCROOT));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_ALL_EXCLUDED_NODES));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                wcroot->wc_id,
+                                local_relpath));
+    }
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row)
-    *server_excluded_subtrees = apr_hash_make(result_pool);
+    *excluded_subtrees = apr_hash_make(result_pool);
   else
-    *server_excluded_subtrees = NULL;
+    *excluded_subtrees = NULL;
 
   while (have_row)
     {
       const char *abs_path =
         svn_dirent_join(wcroot->abspath,
-                        svn_sqlite__column_text(stmt, 0, scratch_pool),
+                        svn_sqlite__column_text(stmt, 0, NULL),
                         result_pool);
-      apr_hash_set(*server_excluded_subtrees, abs_path, APR_HASH_KEY_STRING,
+      apr_hash_set(*excluded_subtrees, abs_path, APR_HASH_KEY_STRING,
                    abs_path);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }

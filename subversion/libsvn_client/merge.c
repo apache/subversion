@@ -5795,7 +5795,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *subtrees_with_mergeinfo;
-  apr_hash_t *server_excluded_subtrees;
+  apr_hash_t *excluded_subtrees;
   apr_hash_t *switched_subtrees;
   apr_hash_t *shallow_subtrees;
   apr_hash_t *missing_subtrees;
@@ -5970,16 +5970,15 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
        }
     }
 
-  /* Case 6: Paths absent from disk due to server-side exclusion. */
-  SVN_ERR(svn_wc__get_server_excluded_subtrees(&server_excluded_subtrees,
-                                               ctx->wc_ctx,
-                                               target->abspath,
-                                               result_pool, scratch_pool));
-  if (server_excluded_subtrees)
+  /* Case 6: Paths absent from disk due to server or user exclusion. */
+  SVN_ERR(svn_wc__get_excluded_subtrees(&excluded_subtrees,
+                                        ctx->wc_ctx, target->abspath,
+                                        result_pool, scratch_pool));
+  if (excluded_subtrees)
     {
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(scratch_pool, server_excluded_subtrees);
+      for (hi = apr_hash_first(scratch_pool, excluded_subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
