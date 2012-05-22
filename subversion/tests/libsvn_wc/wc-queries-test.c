@@ -111,7 +111,12 @@ static const int slow_statements[] =
   STMT_SELECT_MIN_MAX_REVISIONS,
   STMT_HAS_SPARSE_NODES,
   STMT_SUBTREE_HAS_TREE_MODIFICATIONS,
+  STMT_SUBTREE_HAS_PROP_MODIFICATIONS,
   STMT_SELECT_BASE_FILES_RECURSIVE,
+  STMT_SELECT_CONFLICT_MARKER_FILES,
+  STMT_CLEAR_ALL_ACTUAL_NODE_LEAVING_CHANGELIST,
+  STMT_DELETE_ACTUAL_EMPTIES,
+  STMT_DELETE_ALL_ACTUAL_NODE_LEAVING_CHANGELIST,
 
   /* Upgrade statements? */
   STMT_SELECT_OLD_TREE_CONFLICT,
@@ -125,6 +130,7 @@ static const int slow_statements[] =
   STMT_CACHE_NODE_BASE_PROPS,
   STMT_CACHE_NODE_PRISTINE_PROPS,
   STMT_SELECT_RELEVANT_PROPS_FROM_CACHE,
+  STMT_UPDATE_ACTUAL_CHANGELISTS,
 
   /* Moved to/from index? */
   STMT_SELECT_MOVED_FROM_RELPATH,
@@ -445,7 +451,7 @@ static svn_boolean_t
 is_node_table(const char *table_name)
 {
   return (apr_strnatcasecmp(table_name, "nodes") == 0
-          || apr_strnatcasecmp(table_name, "actual") == 0
+          || apr_strnatcasecmp(table_name, "actual_node") == 0
           || apr_strnatcasecmp(table_name, "externals") == 0);
 }
 
