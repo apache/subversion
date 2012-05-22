@@ -925,17 +925,19 @@ WHERE wc_id = ?1
   AND op_depth = 0 AND presence = 'absent'
 LIMIT 1
 
-
-
-/* ### Select all server-excluded nodes. */
--- STMT_SELECT_ALL_SERVER_EXCLUDED_NODES
+/* Select all excluded nodes. Not valid on the WC-root */
+-- STMT_SELECT_ALL_EXCLUDED_NODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = 0
-  AND presence = 'absent'
+  AND (presence = 'absent' OR presence = 'excluded')
+
+-- STMT_SELECT_ALL_EXCLUDED_WCROOT
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND op_depth = 0
+  AND (presence = 'absent' OR presence = 'excluded')
 
 /* Creates a copy from one top level NODE to a different location */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM
