@@ -98,17 +98,23 @@ proplist_receiver_xml(void *baton,
 
   sb = NULL;
 
-  /* "<target ...>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
-                        "path", name_local, NULL);
 
-  SVN_ERR(svn_cl__print_xml_prop_hash(&sb, prop_hash, (! opt_state->verbose),
-                                      FALSE, pool));
+  if (prop_hash)
+    {
+      /* "<target ...>" */
+        svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
+                              "path", name_local, NULL);
 
-  /* "</target>" */
-  svn_xml_make_close_tag(&sb, pool, "target");
+        SVN_ERR(svn_cl__print_xml_prop_hash(&sb, prop_hash,
+                                            (! opt_state->verbose),
+                                            FALSE, pool));
 
-  return svn_cl__error_checked_fputs(sb->data, stdout);
+        /* "</target>" */
+        svn_xml_make_close_tag(&sb, pool, "target");
+        SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -138,9 +144,17 @@ proplist_receiver(void *baton,
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
           if (!opt_state->quiet)
-            SVN_ERR(svn_cmdline_printf(pool,
-                                       _("Properties inherited from '%s':\n"),
-                                       iprop->path_or_url));
+            {
+              if (svn_path_is_url(iprop->path_or_url))
+                SVN_ERR(svn_cmdline_printf(
+                  pool, _("Properties inherited from '%s':\n"),
+                  iprop->path_or_url));
+              else
+                SVN_ERR(svn_cmdline_printf(
+                  pool, _("Properties inherited from '%s':\n"),
+                  svn_dirent_local_style(iprop->path_or_url, pool)));
+            }
+
           SVN_ERR(svn_cl__print_prop_hash(NULL, iprop->prop_hash,
                                           (! opt_state->verbose), pool));
         }
