@@ -83,6 +83,7 @@ print_properties_xml(const char *pname,
 
       for (i = 0; i < inherited_props->nelts; i++)
         {
+          const char *name_local;
           svn_prop_inherited_item_t *iprop =
            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
           svn_string_t *propval = svn__apr_hash_index_val(
@@ -90,8 +91,14 @@ print_properties_xml(const char *pname,
 
           sb = NULL;
           svn_pool_clear(iterpool);
+
+          if (svn_path_is_url(iprop->path_or_url))
+            name_local = iprop->path_or_url;
+          else
+            name_local = svn_dirent_local_style(iprop->path_or_url, iterpool);
+
           svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
-                            "path", iprop->path_or_url, NULL);
+                            "path", name_local, NULL);
 
           svn_cmdline__print_xml_prop(&sb, pname, propval, TRUE, iterpool);
           svn_xml_make_close_tag(&sb, iterpool, "target");
