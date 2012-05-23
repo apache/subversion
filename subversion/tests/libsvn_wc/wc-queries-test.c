@@ -79,7 +79,6 @@ static const int schema_statements[] =
 static const int slow_statements[] =
 {
   /* Operate on the entire WC */
-  STMT_RECURSIVE_UPDATE_NODE_REPO,
   STMT_HAS_SWITCHED_WCROOT,
   STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT,
   STMT_SELECT_ALL_NODES,
@@ -93,7 +92,6 @@ static const int slow_statements[] =
 
   /* Need review: */
   STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW,
-  STMT_SELECT_EXTERNALS_DEFINED,
   STMT_SELECT_EXTERNAL_PROPERTIES,
   STMT_DELETE_ACTUAL_EMPTIES,
 
