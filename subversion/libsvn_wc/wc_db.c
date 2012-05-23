@@ -8232,23 +8232,11 @@ cache_props_recursive(void *cb_baton,
                                       STMT_CREATE_NODE_PROPS_CACHE));
 
   if (baton->pristine)
-    stmt_idx = STMT_CACHE_NODE_PRISTINE_PROPS;
+    stmt_idx = STMT_CACHE_TARGET_PRISTINE_PROPS;
   else
-    stmt_idx = STMT_CACHE_NODE_PROPS;
+    stmt_idx = STMT_CACHE_TARGET_PROPS;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* ACTUAL props aren't relevant in the pristine case. */
-  if (baton->pristine)
-    return SVN_NO_ERROR;
-
-  if (baton->cancel_func)
-    SVN_ERR(baton->cancel_func(baton->cancel_baton));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CACHE_ACTUAL_PROPS));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
