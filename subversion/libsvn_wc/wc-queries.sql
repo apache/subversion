@@ -596,19 +596,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 
-/* Will not delete recursive when run on the wcroot */
 -- STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3
-
-/* WC-Root query for STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE */
--- STMT_DELETE_ALL_NODES_ABOVE_DEPTH
-DELETE FROM nodes
-WHERE wc_id = ?1
-  AND op_depth >= ?2
 
 -- STMT_DELETE_ACTUAL_NODE
 DELETE FROM actual_node
@@ -635,21 +628,11 @@ WHERE wc_id = ?1
                       WHERE c.wc_id = ?1 AND c.local_relpath = ?2
                         AND c.kind = 'file'))
 
-/* Not valid for the wc-root */
 -- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
 DELETE FROM actual_node
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND (changelist IS NULL
-       OR NOT EXISTS (SELECT 1 FROM nodes_current c
-                      WHERE c.wc_id = ?1 
-                        AND c.local_relpath = actual_node.local_relpath
-                        AND c.kind = 'file'))
-
--- STMT_DELETE_ALL_ACTUAL_NODE_LEAVING_CHANGELIST
-DELETE FROM actual_node
-WHERE wc_id = ?1
   AND (changelist IS NULL
        OR NOT EXISTS (SELECT 1 FROM nodes_current c
                       WHERE c.wc_id = ?1 
@@ -670,7 +653,6 @@ SET properties = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2
 
-/* Not valid for the wc-root */
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
 UPDATE actual_node
 SET properties = NULL,
@@ -686,20 +668,6 @@ SET properties = NULL,
 WHERE wc_id = ?1
   AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-
--- STMT_CLEAR_ALL_ACTUAL_NODE_LEAVING_CHANGELIST
-UPDATE actual_node
-SET properties = NULL,
-    text_mod = NULL,
-    tree_conflict_data = NULL,
-    conflict_old = NULL,
-    conflict_new = NULL,
-    conflict_working = NULL,
-    prop_reject = NULL,
-    older_checksum = NULL,
-    left_checksum = NULL,
-    right_checksum = NULL
-WHERE wc_id = ?1
 
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
@@ -905,7 +873,6 @@ WHERE wc_id = ?1
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
-/* Not valid for the wc-root */
 -- STMT_HAS_SERVER_EXCLUDED_DESCENDANTS
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
@@ -913,24 +880,11 @@ WHERE wc_id = ?1
   AND op_depth = 0 AND presence = 'absent'
 LIMIT 1
 
-/* Applies to all nodes in a wc */
--- STMT_WC_HAS_SERVER_EXCLUDED
-SELECT local_relpath FROM nodes
-WHERE wc_id = ?1
-  AND op_depth = 0 AND presence = 'absent'
-LIMIT 1
-
 /* Select all excluded nodes. Not valid on the WC-root */
--- STMT_SELECT_ALL_EXCLUDED_NODES
+-- STMT_SELECT_ALL_EXCLUDED_DESCENDANTS
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = 0
-  AND (presence = 'absent' OR presence = 'excluded')
-
--- STMT_SELECT_ALL_EXCLUDED_WCROOT
-SELECT local_relpath FROM nodes
-WHERE wc_id = ?1
   AND op_depth = 0
   AND (presence = 'absent' OR presence = 'excluded')
 
