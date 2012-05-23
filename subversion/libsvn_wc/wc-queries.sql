@@ -404,11 +404,13 @@ CREATE TEMPORARY TABLE changelist_list (
   notify INTEGER NOT NULL,
   changelist TEXT NOT NULL,
   PRIMARY KEY (wc_id, local_relpath, notify)
-);
+)
+
 /* Create notify items for when a node is removed from a changelist and
    when a node is added to a changelist. Make sure nothing is notified
    if there were no changes.
 */
+-- STMT_CREATE_CHANGELIST_TRIGGER
 DROP TRIGGER IF EXISTS   trigger_changelist_list_change;
 CREATE TEMPORARY TRIGGER trigger_changelist_list_change
 BEFORE UPDATE ON actual_node

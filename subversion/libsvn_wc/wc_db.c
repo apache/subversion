@@ -5085,6 +5085,8 @@ set_changelist_txn(void *baton,
   /* Now create our notification table. */
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_CHANGELIST_LIST));
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CREATE_CHANGELIST_TRIGGER));
 
   /* Update our changelists. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
