@@ -800,6 +800,9 @@ struct diff_cmd_baton {
   /* The anchor to prefix before wc paths */
   const char *anchor;
 
+  /* Whether the local diff target of a repos->wc diff is a copy. */
+  svn_boolean_t repos_wc_diff_target_is_copy;
+
   /* A hashtable using the visited paths as keys.
    * ### This is needed for us to know if we need to print a diff header for
    * ### a path that has property changes. */
@@ -1132,6 +1135,19 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
+  /* During repos->wc diff of a copy revision numbers obtained
+   * from the working copy are always SVN_INVALID_REVNUM. */
+  if (diff_cmd_baton->repos_wc_diff_target_is_copy)
+    {
+      if (rev1 == SVN_INVALID_REVNUM &&
+          diff_cmd_baton->revnum1 != SVN_INVALID_REVNUM)
+        rev1 = diff_cmd_baton->revnum1;
+
+      if (rev2 == SVN_INVALID_REVNUM &&
+          diff_cmd_baton->revnum2 != SVN_INVALID_REVNUM)
+        rev2 = diff_cmd_baton->revnum2;
+    }
+
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (tmpfile1)
@@ -1177,6 +1193,19 @@ diff_file_added(svn_wc_notify_state_t *content_state,
                 apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
+  /* During repos->wc diff of a copy revision numbers obtained
+   * from the working copy are always SVN_INVALID_REVNUM. */
+  if (diff_cmd_baton->repos_wc_diff_target_is_copy)
+    {
+      if (rev1 == SVN_INVALID_REVNUM &&
+          diff_cmd_baton->revnum1 != SVN_INVALID_REVNUM)
+        rev1 = diff_cmd_baton->revnum1;
+
+      if (rev2 == SVN_INVALID_REVNUM &&
+          diff_cmd_baton->revnum2 != SVN_INVALID_REVNUM)
+        rev2 = diff_cmd_baton->revnum2;
+    }
 
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
@@ -2926,6 +2955,10 @@ diff_repos_wc(const char *path_or_url1,
   const char *anchor_abspath;
   svn_node_kind_t kind1;
   svn_node_kind_t kind2;
+  svn_boolean_t is_copy;
+  svn_revnum_t copyfrom_rev;
+  const char *copy_source_repos_relpath;
+  const char *copy_source_repos_root_url;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
@@ -3020,9 +3053,6 @@ diff_repos_wc(const char *path_or_url1,
     }
 
   /* Else, use the diff editor to generate the diff. */
-  SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
-  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
   SVN_ERR(svn_wc__get_diff_editor(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
@@ -3038,32 +3068,88 @@ diff_repos_wc(const char *path_or_url1,
                                   callbacks, callback_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   pool, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
 
   if (depth != svn_depth_infinity)
     diff_depth = depth;
   else
     diff_depth = svn_depth_unknown;
 
-  /* Tell the RA layer we want a delta to change our txn to URL1 */ 
-  SVN_ERR(svn_ra_do_diff3(ra_session,
-                          &reporter, &reporter_baton,
-                          rev,
-                          target,
-                          diff_depth,
-                          ignore_ancestry,
-                          TRUE,  /* text_deltas */
-                          url1,
-                          diff_editor, diff_edit_baton, pool));
+  /* Check if our diff target is a copied node. */
+  SVN_ERR(svn_wc__node_get_origin(&is_copy, 
+                                  &copyfrom_rev,
+                                  &copy_source_repos_relpath,
+                                  &copy_source_repos_root_url,
+                                  NULL, NULL,
+                                  ctx->wc_ctx, abspath2,
+                                  FALSE, pool, pool));
+  if (is_copy)
+    {
+      const char *copyfrom_url;
+      const char *copyfrom_parent_url;
+      const char *copyfrom_basename;
+      svn_depth_t copy_depth;
 
-  /* Create a txn mirror of path2;  the diff editor will print
-     diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
-                                  reporter, reporter_baton,
-                                  FALSE, depth, TRUE, (! server_supports_depth),
-                                  FALSE,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  NULL, NULL, /* notification is N/A */
-                                  pool));
+      callback_baton->repos_wc_diff_target_is_copy = TRUE;
+      
+      /* We're diffing a locally copied/moved directory.
+       * Describe the copy source to the reporter instead of the copy itself.
+       * Doing the latter would generate a single add_directory() call to the
+       * diff editor which results in an unexpected diff (the copy would
+       * be shown as deleted). */
+
+      copyfrom_url = apr_pstrcat(pool, copy_source_repos_root_url, "/",
+                                 copy_source_repos_relpath, (char *)NULL);
+      svn_uri_split(&copyfrom_parent_url, &copyfrom_basename,
+                    copyfrom_url, pool);
+      SVN_ERR(svn_ra_reparent(ra_session, copyfrom_parent_url, pool));
+
+      /* Tell the RA layer we want a delta to change our txn to URL1 */ 
+      SVN_ERR(svn_ra_do_diff3(ra_session,
+                              &reporter, &reporter_baton,
+                              rev,
+                              copyfrom_basename,
+                              diff_depth,
+                              ignore_ancestry,
+                              TRUE,  /* text_deltas */
+                              url1,
+                              diff_editor, diff_edit_baton, pool));
+
+      /* Report the copy source. */
+      SVN_ERR(svn_wc__node_get_depth(&copy_depth, ctx->wc_ctx, abspath2,
+                                     pool));
+      SVN_ERR(reporter->set_path(reporter_baton, "", copyfrom_rev,
+                                 copy_depth, FALSE, NULL, pool));
+      
+      /* Finish the report to generate the diff. */
+      SVN_ERR(reporter->finish_report(reporter_baton, pool));
+    }
+  else
+    {
+      /* Tell the RA layer we want a delta to change our txn to URL1 */ 
+      SVN_ERR(svn_ra_do_diff3(ra_session,
+                              &reporter, &reporter_baton,
+                              rev,
+                              target,
+                              diff_depth,
+                              ignore_ancestry,
+                              TRUE,  /* text_deltas */
+                              url1,
+                              diff_editor, diff_edit_baton, pool));
+
+      /* Create a txn mirror of path2;  the diff editor will print
+         diffs in reverse.  :-)  */
+      SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
+                                      reporter, reporter_baton,
+                                      FALSE, depth, TRUE,
+                                      (! server_supports_depth),
+                                      FALSE,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      NULL, NULL, /* notification is N/A */
+                                      pool));
+    }
 
   return SVN_NO_ERROR;
 }
