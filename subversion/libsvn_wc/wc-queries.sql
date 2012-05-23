@@ -1109,13 +1109,6 @@ UPDATE temp__node_props_cache
                    AND a.local_relpath = temp__node_props_cache.local_relpath),
                properties)
 
--- STMT_CACHE_NODE_BASE_PROPS
-INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
-  SELECT local_relpath, kind, properties FROM nodes_base
-  WHERE wc_id = ?1
-    AND local_relpath IN (SELECT local_relpath FROM targets_list)
-    AND presence IN ('normal', 'incomplete')
-
 -- STMT_CACHE_NODE_PRISTINE_PROPS
 INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
  SELECT local_relpath, kind, 

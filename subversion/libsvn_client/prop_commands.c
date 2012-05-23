@@ -769,7 +769,7 @@ get_prop_from_wc(apr_hash_t *props,
   rb.wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
-                                      propname, depth, FALSE, pristine,
+                                      propname, depth, pristine,
                                       changelists,
                                       recursive_propget_receiver, &rb,
                                       ctx->cancel_func, ctx->cancel_baton,
@@ -1148,8 +1148,7 @@ svn_client_proplist3(const char *path_or_url,
             }
 
           SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
-                                              depth,
-                                              FALSE, pristine, changelists,
+                                              depth, pristine, changelists,
                                               recursive_proplist_receiver, &rb,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, pool));

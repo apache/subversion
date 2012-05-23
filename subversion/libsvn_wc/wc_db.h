@@ -2022,9 +2022,6 @@ svn_wc__db_read_props(apr_hash_t **props,
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  *
- * If BASE_PROPS is TRUE, read the properties from the BASE layer (op_depth=0),
- * without local modifications.
- *
  * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
  * op_depth).
  *
@@ -2035,7 +2032,6 @@ svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 svn_depth_t depth,
-                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 const apr_array_header_t *changelists,
                                 svn_wc__proplist_receiver_t receiver_func,
