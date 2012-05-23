@@ -87,9 +87,6 @@ static const int slow_statements[] =
   STMT_LOOK_FOR_WORK,
   STMT_HAS_WORKING_NODES,
 
-  /* Lists an entire in-memory table */
-  STMT_SELECT_CHANGELIST_LIST,
-
   /* Need review: */
   STMT_SELECT_EXTERNAL_PROPERTIES,
   STMT_DELETE_ACTUAL_EMPTIES,
@@ -113,6 +110,11 @@ static const int slow_statements[] =
   STMT_INSERT_ACTUAL_EMPTIES,
   STMT_SELECT_PRISTINE_BY_MD5, /* Only used by deprecated api */
   STMT_SELECT_DELETE_LIST,
+
+  /* Create temporary table */
+  STMT_SELECT_REVERT_LIST_RECURSIVE,
+  STMT_SELECT_ANCESTOR_WCLOCKS,
+  STMT_SELECT_GE_OP_DEPTH_CHILDREN,
 
   /* Designed as slow */
   STMT_SELECT_UNREFERENCED_PRISTINES,
@@ -220,12 +222,18 @@ struct explanation_item
   const char *table;
   const char *alias;
   svn_boolean_t scan;
+  svn_boolean_t search;
   svn_boolean_t covered_by_index;
-  svn_boolean_t primarary_key;
+  svn_boolean_t primary_key;
   svn_boolean_t automatic_index;
   const char *index;
   const char *expressions;
   const char *expected;
+
+  const char *compound_left;
+  const char *compound_right;
+  svn_boolean_t create_btree;
+
   int expression_vars;
   int expected_rows;
 };
@@ -260,6 +268,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
 
   if (item->scan || MATCH_TOKEN(item->operation, "SEARCH"))
     {
+      item->search = TRUE; /* Search or scan */
       token = apr_strtok(NULL, " ", &last);
 
       if (!MATCH_TOKEN(token, "TABLE"))
@@ -320,7 +329,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
                   return SVN_NO_ERROR;
                 }
 
-              item->primarary_key = TRUE;
+              item->primary_key = TRUE;
             }
           else
             {
@@ -383,13 +392,48 @@ parse_explanation_item(struct explanation_item **parsed_item,
   else if (MATCH_TOKEN(item->operation, "COMPOUND"))
     {
       /* Handling temporary table (E.g. UNION) */
-      return SVN_NO_ERROR;
+
+      token = apr_strtok(NULL, " ", &last);
+      if (!MATCH_TOKEN(token, "SUBQUERIES"))
+        {
+          printf("DBG: Expected 'SUBQUERIES', got '%s' in '%s'\n", token,
+                 text);
+          return SVN_NO_ERROR;
+        }
+
+      item->compound_left = apr_strtok(NULL, " ", &last);
+      token = apr_strtok(NULL, " ", &last);
+
+      if (!MATCH_TOKEN(token, "AND"))
+        {
+          printf("DBG: Expected 'AND', got '%s' in '%s'\n", token, text);
+          return SVN_NO_ERROR;
+        }
+
+      item->compound_right = apr_strtok(NULL, " ", &last);
+
+      token = apr_strtok(NULL, " ", &last);
+      if (MATCH_TOKEN(token, "USING"))
+        {
+          token = apr_strtok(NULL, " ", &last);
+          if (!MATCH_TOKEN(token, "TEMP"))
+            {
+              printf("DBG: Expected 'TEMP', got '%s' in '%s'\n", token, text);
+            }
+          token = apr_strtok(NULL, " ", &last);
+          if (!MATCH_TOKEN(token, "B-TREE"))
+            {
+              printf("DBG: Expected 'B-TREE', got '%s' in '%s'\n", token,
+                     text);
+            }
+          item->create_btree = TRUE;
+        }
     }
   else if (MATCH_TOKEN(item->operation, "USE"))
     {
       /* Using a temporary table for ordering results */
       /* ### Need parsing */
-      return SVN_NO_ERROR;
+      item->create_btree = TRUE;
     }
   else
     {
@@ -434,6 +478,7 @@ static svn_boolean_t
 is_result_table(const char *table_name)
 {
   return (apr_strnatcasecmp(table_name, "target_prop_cache") == 0
+          || apr_strnatcasecmp(table_name, "changelist_list") == 0
           || FALSE);
 }
 
@@ -541,7 +586,8 @@ test_query_expectations(apr_pool_t *scratch_pool)
           if (!item)
             continue; /* Not parsable or not interesting */
 
-          if (item->automatic_index)
+          if (item->search
+              && item->automatic_index)
             {
               warned = TRUE;
               if (!is_slow_statement(i))
@@ -552,11 +598,12 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 wc_query_info[i][0], wc_queries[i]);
                 }
             }
-          else if (item->primarary_key)
+          else if (item->search && item->primary_key)
             {
               /* Nice */
             }
-          else if (((item->expression_vars < 2 && is_node_table(item->table))
+          else if (item->search
+                   && ((item->expression_vars < 2 && is_node_table(item->table))
                        || (item->expression_vars < 1))
                    && !is_result_table(item->table))
             {
@@ -569,7 +616,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 item->expression_vars, item->expressions,
                                 wc_queries[i]);
             }
-          else if (!item->index)
+          else if (item->search && !item->index)
             {
               warned = TRUE;
               if (!is_slow_statement(i))
@@ -586,6 +633,14 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 "Query %s: "
                                 "Performs scan on %s:\n%s",
                                 wc_query_info[i][0], item->table, wc_queries[i]);
+            }
+          else if (item->create_btree)
+            {
+              warned = TRUE;
+              if (!is_slow_statement(i))
+                warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+                                "Query %s: Creates a temporary B-TREE:\n",
+                                wc_query_info[i][0], wc_queries[i]);
             }
         }
       SQLITE_ERR(sqlite3_reset(stmt));
