@@ -328,10 +328,15 @@ WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
 
 -- STMT_RECURSIVE_UPDATE_NODE_REPO
 UPDATE nodes SET repos_id = ?4, dav_cache = NULL
-WHERE wc_id = ?1
-  AND repos_id = ?3
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+/* ### The Sqlite optimizer needs help here ###
+ * WHERE wc_id = ?1
+ *   AND repos_id = ?3
+ *   AND (local_relpath = ?2
+ *        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))*/
+WHERE (wc_id = ?1 AND local_relpath = ?2 AND repos_id = ?3)
+   OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+       AND repos_id = ?3)
+ 
 
 -- STMT_UPDATE_LOCK_REPOS_ID
 UPDATE lock SET repos_id = ?2
@@ -995,6 +1000,7 @@ SELECT local_relpath, kind, repos_id, def_repos_relpath, repository.root
 FROM externals
 LEFT OUTER JOIN repository ON repository.id = externals.repos_id
 WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND def_revision IS NULL
   AND repos_id = (SELECT repos_id FROM nodes
                   WHERE nodes.local_relpath = ?2)
@@ -1014,9 +1020,12 @@ WHERE wc_id = ?1
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath, def_local_relpath
 FROM externals
-WHERE wc_id = ?1 
-  AND (def_local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2))
+/* ### The Sqlite optimizer needs help here ###
+ * WHERE wc_id = ?1
+ *   AND (def_local_relpath = ?2
+ *        OR IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2)) */
+WHERE (wc_id = ?1 AND def_local_relpath = ?2)
+   OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2))
 
 -- STMT_DELETE_EXTERNAL
 DELETE FROM externals
