@@ -8208,7 +8208,6 @@ svn_wc__db_read_url(const char **url,
 typedef struct cache_props_baton_t
 {
   svn_depth_t depth;
-  svn_boolean_t base_props;
   svn_boolean_t pristine;
   const apr_array_header_t *changelists;
   svn_cancel_func_t cancel_func;
@@ -8232,9 +8231,7 @@ cache_props_recursive(void *cb_baton,
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_NODE_PROPS_CACHE));
 
-  if (baton->base_props)
-    stmt_idx = STMT_CACHE_NODE_BASE_PROPS;
-  else if (baton->pristine)
+  if (baton->pristine)
     stmt_idx = STMT_CACHE_NODE_PRISTINE_PROPS;
   else
     stmt_idx = STMT_CACHE_NODE_PROPS;
@@ -8244,7 +8241,7 @@ cache_props_recursive(void *cb_baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* ACTUAL props aren't relevant in the pristine case. */
-  if (baton->base_props || baton->pristine)
+  if (baton->pristine)
     return SVN_NO_ERROR;
 
   if (baton->cancel_func)
@@ -8263,7 +8260,6 @@ svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 svn_depth_t depth,
-                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 const apr_array_header_t *changelists,
                                 svn_wc__proplist_receiver_t receiver_func,
@@ -8292,7 +8288,6 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   baton.depth = depth;
-  baton.base_props = base_props;
   baton.pristine = pristine;
   baton.changelists = changelists;
   baton.cancel_func = cancel_func;
