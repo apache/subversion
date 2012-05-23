@@ -110,10 +110,35 @@ class Processor(object):
     for line in input.split('\n'):
       line = line.replace('"', '\\"')
 
+      # IS_STRICT_DESCENDANT_OF()
+
+      # A common operation in the working copy is determining descendants of
+      # a node. To allow Sqlite to use its indexes to provide the answer we
+      # must provide simple less than and greater than operations.
+      #
+      # For relative paths that consist of one or more components like 'subdir'
+      # we can accomplish this by comparing local_relpath with 'subdir/' and
+      # 'subdir0' ('/'+1 = '0')
+      #
+      # For the working copy root this case is less simple and not strictly
+      # valid utf-8/16 (but luckily Sqlite doesn't validate utf-8 nor utf-16).
+      # The binary blob x'FFFF' is higher than any valid utf-8 and utf-16
+      # sequence.
+      #
+      # So for the root we can compare with > '' and < x'FFFF'. (This skips the
+      # root itself and selects all descendants)
+      #
+      ### RH: I implemented this first with a user defined Sqlite function. But
+      ### when I wrote the documentation for it, I found out I could just
+      ### define it this way, without losing the option of just dropping the
+      ### query in a plain sqlite3.
+
       # '/'+1 == '0'
-      line = re.sub(r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
-                    r"((\2) != '' AND ((\1) > (\2) || '/') AND ((\1) < (\2) || '0')) ",
-                    line)
+      line = re.sub(
+            r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
+            r"(((\1) > (CASE (\2) WHEN '' THEN '' ELSE (\2) || '/' END))" +
+            r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
+            line)
 
       if line.strip():
         handled = False

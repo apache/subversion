@@ -323,16 +323,14 @@ WHERE repos_id = ?1 AND repos_relpath = ?2
 -- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
 UPDATE nodes SET dav_cache = NULL
 WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_RECURSIVE_UPDATE_NODE_REPO
 UPDATE nodes SET repos_id = ?4, dav_cache = NULL
 WHERE wc_id = ?1
   AND repos_id = ?3
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_UPDATE_LOCK_REPOS_ID
@@ -501,8 +499,7 @@ INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
 SELECT wc_id, local_relpath, parent_relpath, kind
 FROM nodes_current
 WHERE wc_id = ?1
-       AND (?2 = ''
-            OR local_relpath = ?2 
+       AND (local_relpath = ?2 
             OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST
@@ -534,8 +531,7 @@ SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
   FROM actual_node AS A JOIN nodes_current AS N
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
  WHERE N.wc_id = ?1
-       AND (?2 = ''
-            OR N.local_relpath = ?2 
+       AND (N.local_relpath = ?2 
             OR IS_STRICT_DESCENDANT_OF(N.local_relpath, ?2))
        AND A.changelist = ?3
 
@@ -833,8 +829,7 @@ AND NOT EXISTS (SELECT 1 FROM nodes
 -- STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE
 DELETE FROM wc_lock
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_dir_relpath = ?2
+  AND (local_dir_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_dir_relpath, ?2))
   AND NOT EXISTS (SELECT 1 FROM nodes
                    WHERE nodes.wc_id = ?1
@@ -1034,10 +1029,10 @@ WHERE wc_id = ?1
   AND repos_id = (SELECT repos_id FROM nodes
                   WHERE nodes.local_relpath = ?2)
   AND ( ((NOT ?3)
-         AND (?2 = ''
+         AND (
               /* Want only the cildren of e.local_relpath;
                * externals can't have a local_relpath = ''. */
-              OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2)))
+              IS_STRICT_DESCENDANT_OF(local_relpath, ?2)))
         OR
         ((?3)
          AND parent_relpath = ?2) )
@@ -1050,8 +1045,7 @@ WHERE wc_id = ?1
 SELECT local_relpath, def_local_relpath
 FROM externals
 WHERE wc_id = ?1 
-  AND (?2 = ''
-       OR def_local_relpath = ?2
+  AND (def_local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(def_local_relpath, ?2))
 
 -- STMT_DELETE_EXTERNAL
@@ -1065,8 +1059,7 @@ SELECT IFNULL((SELECT properties FROM actual_node a
        local_relpath, depth
 FROM nodes n
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND kind = 'dir' AND presence='normal'
   AND op_depth=(SELECT MAX(op_depth) FROM nodes o
@@ -1312,9 +1305,8 @@ DROP TABLE IF EXISTS delete_list
 SELECT MIN(revision), MAX(revision),
        MIN(changed_revision), MAX(changed_revision) FROM nodes
   WHERE wc_id = ?1
-    AND (?2 = ''
-       OR local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+    AND (local_relpath = ?2
+         OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
     AND presence IN ('normal', 'incomplete')
     AND file_external IS NULL
     AND op_depth = 0
@@ -1322,8 +1314,7 @@ SELECT MIN(revision), MAX(revision),
 -- STMT_HAS_SPARSE_NODES
 SELECT 1 FROM nodes
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND (presence IN ('absent', 'excluded')
@@ -1334,8 +1325,7 @@ LIMIT 1
 -- STMT_SUBTREE_HAS_TREE_MODIFICATIONS
 SELECT 1 FROM nodes
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth > 0
 LIMIT 1
@@ -1343,8 +1333,7 @@ LIMIT 1
 -- STMT_SUBTREE_HAS_PROP_MODIFICATIONS
 SELECT 1 FROM actual_node
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND properties IS NOT NULL
 LIMIT 1
@@ -1421,8 +1410,7 @@ LIMIT 1
 -- STMT_SELECT_BASE_FILES_RECURSIVE
 SELECT local_relpath, translated_size, last_mod_time FROM nodes AS n
 WHERE wc_id = ?1
-  AND (?2 = ''
-       OR local_relpath = ?2
+  AND (local_relpath = ?2
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
   AND kind='file'
