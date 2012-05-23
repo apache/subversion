@@ -2118,7 +2118,6 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
    Allocate *MARKER_FILES in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL */
-/* ### This function will probably be removed. */
 svn_error_t *
 svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
                                      svn_wc__db_t *db,

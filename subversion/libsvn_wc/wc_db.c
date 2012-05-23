@@ -11409,6 +11409,80 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   return SVN_NO_ERROR;
 }
 
+/* Locked implementation for svn_wc__db_get_conflict_marker_files */
+static svn_error_t *
+get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath, apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_hash_t *marker_files = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(marker_files);
+
+  /* Look for property conflicts on the directory in ACTUAL.
+     (A directory can't have text conflicts) */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_CONFLICT_MARKER_FILES1));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      const char *marker_relpath;
+      const char *base_name;
+
+      marker_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+
+      base_name = svn_relpath_skip_ancestor(local_relpath, marker_relpath);
+
+      /* Verify if the marker file is directly within LOCAL_ABSPATH */
+      if (base_name && svn_path_is_single_path_component(base_name))
+        {
+          base_name = apr_pstrdup(result_pool, base_name);
+          apr_hash_set(marker_files, base_name, APR_HASH_KEY_STRING,
+                       base_name);
+        }
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Look for property and text conflicts on the direct children of
+     LOCAL_RELPATH, as both directories and files can have conflict
+     files in their parent directory */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_CONFLICT_MARKER_FILES2));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      int i;
+
+      for (i = 0; i < 4; i++)
+        {
+          const char *marker_relpath;
+          const char *base_name;
+
+          marker_relpath = svn_sqlite__column_text(stmt, i, NULL);
+
+          if (!marker_relpath)
+            continue;
+
+          base_name = svn_relpath_skip_ancestor(local_relpath, marker_relpath);
+
+          /* Verify if the marker file is directly within LOCAL_ABSPATH */
+          if (base_name && svn_path_is_single_path_component(base_name))
+            {
+              base_name = apr_pstrdup(result_pool, base_name);
+              apr_hash_set(marker_files, base_name, APR_HASH_KEY_STRING,
+                           base_name);
+            }
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return svn_error_trace(svn_sqlite__reset(stmt));
+}
 
 svn_error_t *
 svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
@@ -11419,47 +11493,24 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  apr_hash_t *markers;
 
   /* The parent should be a working copy directory. */
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* Look for text and property conflicts in ACTUAL */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_CONFLICT_MARKER_FILES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  markers = apr_hash_make(result_pool);
 
-  if (have_row)
-    *marker_files = apr_hash_make(result_pool);
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, get_conflict_marker_files,
+                              markers, scratch_pool));
+
+  if (apr_hash_count(markers))
+    *marker_files = markers;
   else
     *marker_files = NULL;
 
-  while (have_row)
-    {
-      /* Collect the basenames of any conflict marker files. */
-      const char *marker_relpath;
-      const char *base_name;
-      int i;
-
-      for (i = 0; i < 4; i++)
-        {
-          marker_relpath = svn_sqlite__column_text(stmt, i, scratch_pool);
-          if (marker_relpath)
-            {
-              base_name = svn_relpath_basename(marker_relpath, result_pool);
-              apr_hash_set(*marker_files, base_name, APR_HASH_KEY_STRING,
-                           base_name);
-            }
-        }
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  return svn_sqlite__reset(stmt);
+  return SVN_NO_ERROR;
 }
 
 
