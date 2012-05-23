@@ -401,10 +401,10 @@ DROP TABLE IF EXISTS changelist_list;
 CREATE TEMPORARY TABLE changelist_list (
   wc_id  INTEGER NOT NULL,
   local_relpath TEXT NOT NULL,
-  notify INTEGER,
-  changelist TEXT NOT NULL
-  );
-CREATE INDEX changelist_list_index ON changelist_list(wc_id, local_relpath);
+  notify INTEGER NOT NULL,
+  changelist TEXT NOT NULL,
+  PRIMARY KEY (wc_id, local_relpath, notify)
+);
 /* We have four cases upon which we wish to notify.  The first is easy:
 
         Action                                  Notification
@@ -417,37 +417,21 @@ CREATE INDEX changelist_list_index ON changelist_list(wc_id, local_relpath);
         UPDATE ACTUAL   NULL        NOT NULL    cl-set
         UPDATE ACTUAL   NOT NULL    NOT NULL    cl-set
         UPDATE ACTUAL   NOT NULL    NULL        cl-clear
-
-Of the following triggers, the first address the first case, and the second
-two address the last three cases.
 */
-DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_insert;
-CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_insert
-BEFORE INSERT ON actual_node
-BEGIN
-    /* 26 corresponds to svn_wc_notify_changelist_set */
-    INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
-    VALUES (NEW.wc_id, NEW.local_relpath, 26, NEW.changelist);
-END;
-DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_clear;
-CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_clear
+DROP TRIGGER IF EXISTS   trigger_changelist_list_change;
+CREATE TEMPORARY TRIGGER trigger_changelist_list_change
 BEFORE UPDATE ON actual_node
-WHEN OLD.changelist IS NOT NULL AND
-        (OLD.changelist != NEW.changelist OR NEW.changelist IS NULL)
+WHEN old.changelist IS NOT new.changelist
 BEGIN
-    /* 27 corresponds to svn_wc_notify_changelist_clear */
-    INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
-    VALUES (OLD.wc_id, OLD.local_relpath, 27, OLD.changelist);
-END;
-DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_set;
-CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_set
-BEFORE UPDATE ON actual_node
-WHEN NEW.CHANGELIST IS NOT NULL AND
-        (OLD.changelist != NEW.changelist OR OLD.changelist IS NULL)
-BEGIN
-    /* 26 corresponds to svn_wc_notify_changelist_set */
-    INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
-    VALUES (NEW.wc_id, NEW.local_relpath, 26, NEW.changelist);
+  /* 27 corresponds to svn_wc_notify_changelist_clear */
+  INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
+  SELECT old.wc_id, old.local_relpath, 27, old.changelist
+   WHERE old.changelist is NOT NULL;
+
+  /* 26 corresponds to svn_wc_notify_changelist_set */
+  INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
+  SELECT new.wc_id, new.local_relpath, 26, new.changelist
+   WHERE new.changelist IS NOT NULL;
 END
 
 -- STMT_INSERT_CHANGELIST_LIST

@@ -5075,8 +5075,12 @@ set_changelist_txn(void *baton,
                                 scb->changelist_filter, scratch_pool));
 
   /* Ensure we have actual nodes for our targets. */
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
-                                      STMT_INSERT_ACTUAL_EMPTIES));
+  if (scb->new_changelist)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_ACTUAL_EMPTIES));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* Now create our notification table. */
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
