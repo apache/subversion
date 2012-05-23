@@ -467,7 +467,8 @@ CREATE TEMPORARY TABLE targets_list (
   wc_id  INTEGER NOT NULL,
   local_relpath TEXT NOT NULL,
   parent_relpath TEXT,
-  kind TEXT NOT NULL
+  kind TEXT NOT NULL,
+  PRIMARY KEY (wc_id, local_relpath)
   );
 CREATE INDEX targets_list_kind
   ON targets_list (kind)
@@ -1101,35 +1102,37 @@ CREATE TEMPORARY TABLE temp__node_props_cache (
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
 
--- STMT_CACHE_NODE_PROPS
+-- STMT_CACHE_TARGET_PROPS
 INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
- SELECT local_relpath, kind, properties FROM nodes_current
-  WHERE wc_id = ?1
-    AND local_relpath IN (SELECT local_relpath FROM targets_list)
-    AND presence IN ('normal', 'incomplete')
+ SELECT n.local_relpath, n.kind,
+        IFNULL((SELECT properties FROM actual_node AS a
+                 WHERE a.wc_id = n.wc_id
+                   AND a.local_relpath = n.local_relpath),
+               n.properties)
+   FROM targets_list AS t
+   JOIN nodes_current AS n ON t.wc_id= n.wc_id
+                          AND t.local_relpath = n.local_relpath
+  WHERE t.wc_id = ?1
+    AND (presence='normal' OR presence='incomplete')
 
--- STMT_CACHE_ACTUAL_PROPS
-UPDATE temp__node_props_cache 
-   SET properties=
-        IFNULL((SELECT properties FROM actual_node a
-                 WHERE a.wc_id = ?1
-                   AND a.local_relpath = temp__node_props_cache.local_relpath),
-               properties)
-
--- STMT_CACHE_NODE_PRISTINE_PROPS
+-- STMT_CACHE_TARGET_PRISTINE_PROPS
 INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
- SELECT local_relpath, kind, 
-        IFNULL((SELECT properties FROM nodes nn
-                 WHERE n.presence = 'base-deleted'
-                   AND nn.wc_id = n.wc_id
-                   AND nn.local_relpath = n.local_relpath
-                   AND nn.op_depth < n.op_depth
-                 ORDER BY op_depth DESC),
-               properties)
-  FROM nodes_current n
-  WHERE wc_id = ?1
-    AND local_relpath IN (SELECT local_relpath FROM targets_list)
-    AND presence IN ('normal', 'incomplete', 'base-deleted')
+ SELECT n.local_relpath, n.kind,
+        CASE n.presence
+          WHEN 'base-deleted'
+          THEN (SELECT properties FROM nodes AS p
+                 WHERE p.wc_id = n.wc_id
+                   AND p.local_relpath = n.local_relpath
+                   AND p.op_depth < n.op_depth
+                 ORDER BY p.op_depth DESC /* LIMIT 1 */)
+          ELSE properties END
+  FROM targets_list AS t
+  JOIN nodes_current AS n ON t.wc_id= n.wc_id
+                          AND t.local_relpath = n.local_relpath
+  WHERE t.wc_id = ?1
+    AND (presence = 'normal'
+         OR presence = 'incomplete'
+         OR presence = 'base-deleted')
 
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
 SELECT local_relpath, properties FROM temp__node_props_cache
