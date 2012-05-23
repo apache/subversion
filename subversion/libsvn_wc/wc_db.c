@@ -4223,9 +4223,7 @@ catch_copy_of_server_excluded(svn_wc__db_wcroot_t *wcroot,
   const char *server_excluded_relpath;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    (local_relpath[0] == '\0')
-                                      ? STMT_WC_HAS_SERVER_EXCLUDED
-                                      : STMT_HAS_SERVER_EXCLUDED_DESCENDANTS));
+                                    STMT_HAS_SERVER_EXCLUDED_DESCENDANTS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is",
                             wcroot->wc_id,
                             local_relpath));
@@ -5606,49 +5604,25 @@ op_revert_recursive_txn(void *baton,
   /* Don't delete BASE nodes */
   select_op_depth = op_depth ? op_depth : 1;
 
-  if (local_relpath[0] == '\0')
-    {
-      /* Reverting the wc-root. Use the table-scan queries */
-      SVN_ERR(svn_sqlite__get_statement(
-                            &stmt, wcroot->sdb,
-                            STMT_DELETE_ALL_NODES_ABOVE_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "id", wcroot->wc_id, select_op_depth));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+  /* Reverting any non wc-root node */
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb,
+                    STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            local_relpath, select_op_depth));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-      SVN_ERR(svn_sqlite__get_statement(
-                            &stmt, wcroot->sdb,
-                            STMT_DELETE_ALL_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb,
+                    STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-      SVN_ERR(svn_sqlite__get_statement(
-                            &stmt, wcroot->sdb,
-                            STMT_CLEAR_ALL_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-  }
-  else
-    {
-      /* Reverting any non wc-root node */
-      SVN_ERR(svn_sqlite__get_statement(
-                        &stmt, wcroot->sdb,
-                        STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                        local_relpath, select_op_depth));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(
-                        &stmt, wcroot->sdb,
-                        STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(
-                        &stmt, wcroot->sdb,
-                        STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb,
+                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* ### This removes the locks, but what about the access batons? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -11802,7 +11776,7 @@ wclock_obtain_cb(void *baton,
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, filter));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   lock_depth = relpath_depth(local_relpath);
   max_depth = lock_depth + bt->levels_to_lock;
@@ -12996,20 +12970,11 @@ svn_wc__db_get_excluded_subtrees(apr_hash_t **excluded_subtrees,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  if (local_relpath[0] == '\0')
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_ALL_EXCLUDED_WCROOT));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
-    }
-  else
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_ALL_EXCLUDED_NODES));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                wcroot->wc_id,
-                                local_relpath));
-    }
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ALL_EXCLUDED_DESCENDANTS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            wcroot->wc_id,
+                            local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row)
