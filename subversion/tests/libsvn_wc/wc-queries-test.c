@@ -101,9 +101,6 @@ static const int slow_statements[] =
   STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW,
   STMT_SELECT_EXTERNALS_DEFINED,
   STMT_SELECT_EXTERNAL_PROPERTIES,
-  STMT_SELECT_REVERT_LIST_COPIED_CHILDREN,
-  STMT_SELECT_REVERT_LIST_RECURSIVE,
-  STMT_DELETE_REVERT_LIST_RECURSIVE,
   STMT_SELECT_CONFLICT_MARKER_FILES,
   STMT_DELETE_ACTUAL_EMPTIES,
 
@@ -441,7 +438,8 @@ is_node_table(const char *table_name)
 {
   return (apr_strnatcasecmp(table_name, "nodes") == 0
           || apr_strnatcasecmp(table_name, "actual_node") == 0
-          || apr_strnatcasecmp(table_name, "externals") == 0);
+          || apr_strnatcasecmp(table_name, "externals") == 0
+          || apr_strnatcasecmp(table_name, "wc_lock") == 0);
 }
 
 static svn_error_t *
