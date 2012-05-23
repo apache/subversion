@@ -3173,8 +3173,8 @@ svn_wc__db_committable_externals_below(apr_array_header_t **externals,
       SVN_ERR_ASSERT(db_kind == svn_kind_file || db_kind == svn_kind_dir);
       info->kind = db_kind;
 
-      info->repos_relpath = svn_sqlite__column_text(stmt, 3, result_pool);
-      info->repos_root_url = svn_sqlite__column_text(stmt, 4, result_pool);
+      info->repos_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
+      info->repos_root_url = svn_sqlite__column_text(stmt, 3, result_pool);
 
       APR_ARRAY_PUSH(result, svn_wc__committable_external_info_t *) = info;
 
