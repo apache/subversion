@@ -490,26 +490,6 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
   return result;
 }
 
-
-/* Return a string that can be used as the argument to a SQLite 'LIKE'
-   operator, in order to match any path that is a child of LOCAL_RELPATH
-   (at any depth below LOCAL_RELPATH), *excluding* LOCAL_RELPATH itself.
-   LOCAL_RELPATH may be the empty string, in which case the result will
-   match any path except the empty path.
-
-   Allocate the result either statically or in RESULT_POOL.  */
-static const char *construct_like_arg(const char *local_relpath,
-                                      apr_pool_t *result_pool)
-{
-  if (local_relpath[0] == '\0')
-    return "_%";
-
-  return apr_pstrcat(result_pool,
-                     escape_sqlite_like(local_relpath, result_pool),
-                     "/%", (char *)NULL);
-}
-
-
 /* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
    its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
    use NULL for both URL and UUID.  Either or both output parameters may be
@@ -5852,8 +5832,7 @@ revert_list_read_copied_children(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REVERT_LIST_COPIED_CHILDREN));
   SVN_ERR(svn_sqlite__bindf(stmt, "sd",
-                            construct_like_arg(local_relpath, scratch_pool),
-                            relpath_depth(local_relpath)));
+                            local_relpath, relpath_depth(local_relpath)));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
@@ -5910,7 +5889,7 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath, *like_arg;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -5919,11 +5898,9 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
                               db, local_abspath, scratch_pool, iterpool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  like_arg = construct_like_arg(local_relpath, scratch_pool);
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REVERT_LIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_trace(svn_sqlite__reset(stmt)); /* optimise for no row */
@@ -5947,7 +5924,7 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_REVERT_LIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   svn_pool_destroy(iterpool);
@@ -11750,7 +11727,6 @@ wclock_obtain_cb(void *baton,
   int max_depth;
   int lock_depth;
   svn_boolean_t got_row;
-  const char *filter;
 
   svn_wc__db_wclock_t lock;
 
@@ -11771,8 +11747,6 @@ wclock_obtain_cb(void *baton,
                                                         local_relpath,
                                                         scratch_pool));
     }
-
-  filter = construct_like_arg(local_relpath, scratch_pool);
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));

@@ -785,7 +785,8 @@ WHERE wc_id = ?1 AND local_dir_relpath = ?2
 
 -- STMT_FIND_WC_LOCK
 SELECT local_dir_relpath FROM wc_lock
-WHERE wc_id = ?1 AND local_dir_relpath LIKE ?2 ESCAPE '#'
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_dir_relpath, ?2)
 
 -- STMT_DELETE_WC_LOCK_ORPHAN
 DELETE FROM wc_lock
@@ -1199,7 +1200,7 @@ ORDER BY actual DESC
 -- STMT_SELECT_REVERT_LIST_COPIED_CHILDREN
 SELECT local_relpath, kind
 FROM revert_list
-WHERE local_relpath LIKE ?1 ESCAPE '#'
+WHERE IS_STRICT_DESCENDANT_OF(local_relpath, ?1)
   AND op_depth >= ?2
   AND repos_id IS NOT NULL
 ORDER BY local_relpath
@@ -1210,13 +1211,15 @@ DELETE FROM revert_list WHERE local_relpath = ?1
 -- STMT_SELECT_REVERT_LIST_RECURSIVE
 SELECT DISTINCT local_relpath
 FROM revert_list
-WHERE (local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#')
+WHERE (local_relpath = ?1
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?1))
   AND (notify OR actual = 0)
 ORDER BY local_relpath
 
 -- STMT_DELETE_REVERT_LIST_RECURSIVE
 DELETE FROM revert_list
-WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
+WHERE (local_relpath = ?1
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?1))
 
 -- STMT_DROP_REVERT_LIST
 DROP TABLE IF EXISTS revert_list
