@@ -4947,10 +4947,21 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
           const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
                                                  const char *);
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_TARGET_WITH_CHANGELIST));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                     local_relpath, changelist));
           SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+
+          /* If the root is matched by the changelist, we don't have to match
+             the children. As that tells us the root is a file */
+          if (!sub_affected && depth > svn_depth_empty)
+            {
+              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+              SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                        local_relpath, changelist));
+              SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+            }
 
           affected_rows += sub_affected;
         }
@@ -4958,6 +4969,7 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
   else /* No changelist filtering */
     {
       int stmt_idx;
+      int sub_affected;
 
       switch (depth)
         {
@@ -4983,9 +4995,19 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
             break;
         }
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_TARGET));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+      SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+      affected_rows += sub_affected;
+
+      if (depth > svn_depth_empty)
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__update(&sub_affected, stmt));
+          affected_rows += sub_affected;
+        }
     }
 
   /* Does the target exist? */
