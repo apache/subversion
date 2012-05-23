@@ -405,18 +405,9 @@ CREATE TEMPORARY TABLE changelist_list (
   changelist TEXT NOT NULL,
   PRIMARY KEY (wc_id, local_relpath, notify)
 );
-/* We have four cases upon which we wish to notify.  The first is easy:
-
-        Action                                  Notification
-        ------                                  ------------
-        INSERT ACTUAL                           cl-set
-
-   The others are a bit more complex:
-        Action          Old CL      New CL      Notification
-        ------          ------      ------      ------------
-        UPDATE ACTUAL   NULL        NOT NULL    cl-set
-        UPDATE ACTUAL   NOT NULL    NOT NULL    cl-set
-        UPDATE ACTUAL   NOT NULL    NULL        cl-clear
+/* Create notify items for when a node is removed from a changelist and
+   when a node is added to a changelist. Make sure nothing is notified
+   if there were no changes.
 */
 DROP TRIGGER IF EXISTS   trigger_changelist_list_change;
 CREATE TEMPORARY TRIGGER trigger_changelist_list_change
