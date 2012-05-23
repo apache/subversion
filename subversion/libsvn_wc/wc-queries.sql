@@ -996,26 +996,23 @@ LIMIT 1
  * inside an unversioned dir, because commit still breaks on those.
  * Once that's been fixed, the conditions below "--->8---" become obsolete. */
 -- STMT_SELECT_COMMITTABLE_EXTERNALS_BELOW
-SELECT local_relpath, kind, repos_id, def_repos_relpath, repository.root
-FROM externals
-LEFT OUTER JOIN repository ON repository.id = externals.repos_id
-WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND def_revision IS NULL
-  AND repos_id = (SELECT repos_id FROM nodes
-                  WHERE nodes.local_relpath = ?2)
-  AND ( ((NOT ?3)
-         AND (
-              /* Want only the cildren of e.local_relpath;
-               * externals can't have a local_relpath = ''. */
-              IS_STRICT_DESCENDANT_OF(local_relpath, ?2)))
-        OR
-        ((?3)
-         AND parent_relpath = ?2) )
+SELECT local_relpath, kind, def_repos_relpath,
+       (SELECT root FROM repository AS r
+         WHERE r.id = e.repos_id)
+FROM externals AS e
+WHERE e.wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(e.local_relpath, ?2)
+  AND e.def_revision IS NULL
+  AND e.repos_id = (SELECT repos_id
+                    FROM nodes AS n
+                    WHERE n.wc_id = ?1
+                      AND n.local_relpath = ''
+                      AND n.op_depth = 0)
+  AND ( (NOT ?3) OR (parent_relpath = ?2) )
   /* ------>8----- */
   AND (EXISTS (SELECT 1 FROM nodes
-               WHERE nodes.wc_id = externals.wc_id
-               AND nodes.local_relpath = externals.parent_relpath))
+               WHERE nodes.wc_id = e.wc_id
+               AND nodes.local_relpath = e.parent_relpath))
 
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath, def_local_relpath
