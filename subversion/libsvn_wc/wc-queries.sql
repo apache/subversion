@@ -1087,23 +1087,25 @@ WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
            AND (tree_conflict_data IS NULL))
 LIMIT 1
 
-/* ------------------------------------------------------------------------- */
-/* PROOF OF CONCEPT: Complex queries for callback walks, caching results
-                     in a temporary table. */
+/* --------------------------------------------------------------------------
+ * Complex queries for callback walks, caching results in a temporary table.
+ *
+ * These target table are then used for joins against NODES, or for reporting
+ */
 
--- STMT_CREATE_NODE_PROPS_CACHE
-DROP TABLE IF EXISTS temp__node_props_cache;
-CREATE TEMPORARY TABLE temp__node_props_cache (
-  local_Relpath TEXT NOT NULL,
+-- STMT_CREATE_TARGET_PROP_CACHE
+DROP TABLE IF EXISTS target_prop_cache;
+CREATE TEMPORARY TABLE target_prop_cache (
+  local_relpath TEXT NOT NULL PRIMARY KEY,
   kind TEXT NOT NULL,
   properties BLOB
-  );
+);
 /* ###  Need index?
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
 
 -- STMT_CACHE_TARGET_PROPS
-INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
+INSERT INTO target_prop_cache(local_relpath, kind, properties)
  SELECT n.local_relpath, n.kind,
         IFNULL((SELECT properties FROM actual_node AS a
                  WHERE a.wc_id = n.wc_id
@@ -1116,7 +1118,7 @@ INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
     AND (presence='normal' OR presence='incomplete')
 
 -- STMT_CACHE_TARGET_PRISTINE_PROPS
-INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
+INSERT INTO target_prop_cache(local_relpath, kind, properties)
  SELECT n.local_relpath, n.kind,
         CASE n.presence
           WHEN 'base-deleted'
@@ -1134,12 +1136,12 @@ INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
          OR presence = 'incomplete'
          OR presence = 'base-deleted')
 
--- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
-SELECT local_relpath, properties FROM temp__node_props_cache
+-- STMT_SELECT_ALL_TARGET_PROP_CACHE
+SELECT local_relpath, properties FROM target_prop_cache
 ORDER BY local_relpath
 
--- STMT_DROP_NODE_PROPS_CACHE
-DROP TABLE IF EXISTS temp__node_props_cache;
+-- STMT_DROP_TARGET_PROP_CACHE
+DROP TABLE IF EXISTS target_prop_cache;
 
 
 -- STMT_CREATE_REVERT_LIST

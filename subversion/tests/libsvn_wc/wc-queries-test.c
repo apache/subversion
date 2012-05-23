@@ -68,7 +68,7 @@ static const int schema_statements[] =
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
   STMT_CREATE_CHANGELIST_LIST,
-  STMT_CREATE_NODE_PROPS_CACHE,
+  STMT_CREATE_TARGET_PROP_CACHE,
   STMT_CREATE_REVERT_LIST,
   STMT_CREATE_DELETE_LIST,
   -1 /* final marker */
@@ -104,7 +104,6 @@ static const int slow_statements[] =
   STMT_HAS_ACTUAL_NODES_CONFLICTS,
 
   /* Join on targets table */
-  STMT_SELECT_RELEVANT_PROPS_FROM_CACHE,
   STMT_UPDATE_ACTUAL_CHANGELISTS,
 
   /* Moved to/from index? */
@@ -428,7 +427,17 @@ is_node_table(const char *table_name)
   return (apr_strnatcasecmp(table_name, "nodes") == 0
           || apr_strnatcasecmp(table_name, "actual_node") == 0
           || apr_strnatcasecmp(table_name, "externals") == 0
-          || apr_strnatcasecmp(table_name, "wc_lock") == 0);
+          || apr_strnatcasecmp(table_name, "wc_lock") == 0
+          || FALSE);
+}
+
+/* Returns TRUE if TABLE specifies an intermediate result table, which is
+   allowed to have table scans, etc. */
+static svn_boolean_t
+is_result_table(const char *table_name)
+{
+  return (apr_strnatcasecmp(table_name, "target_prop_cache") == 0
+          || FALSE);
 }
 
 static svn_error_t *
@@ -550,8 +559,9 @@ test_query_expectations(apr_pool_t *scratch_pool)
             {
               /* Nice */
             }
-          else if ((item->expression_vars < 2 && is_node_table(item->table))
+          else if (((item->expression_vars < 2 && is_node_table(item->table))
                        || (item->expression_vars < 1))
+                   && !is_result_table(item->table))
             {
               warned = TRUE;
               if (!is_slow_statement(i))
@@ -571,7 +581,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
                                 "Query on %s doesn't use an index:\n%s",
                                 wc_query_info[i][0], item->table, wc_queries[i]);
             }
-          else if (item->scan)
+          else if (item->scan && !is_result_table(item->table))
             {
               warned = TRUE;
               if (!is_slow_statement(i))

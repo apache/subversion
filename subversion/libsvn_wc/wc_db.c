@@ -8229,7 +8229,7 @@ cache_props_recursive(void *cb_baton,
                                 baton->changelists, scratch_pool));
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
-                                      STMT_CREATE_NODE_PROPS_CACHE));
+                                      STMT_CREATE_TARGET_PROP_CACHE));
 
   if (baton->pristine)
     stmt_idx = STMT_CACHE_TARGET_PRISTINE_PROPS;
@@ -8292,7 +8292,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_RELEVANT_PROPS_FROM_CACHE));
+                                    STMT_SELECT_ALL_TARGET_PROP_CACHE));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (!err && have_row)
     {
@@ -8329,7 +8329,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   SVN_ERR(svn_error_compose_create(
                     err,
                     svn_sqlite__exec_statements(wcroot->sdb,
-                                                STMT_DROP_NODE_PROPS_CACHE)));
+                                                STMT_DROP_TARGET_PROP_CACHE)));
   return SVN_NO_ERROR;
 }
 
