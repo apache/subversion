@@ -42,7 +42,7 @@ Accessible API::
 [ ] dirs-changed
 [ ] ids
 [ ] info
-[ ] log
+[x] log
 [ ] tree
 ---
 """
@@ -116,16 +116,15 @@ class SVNLook(object):
     self._print_tree(Editor, base_rev=0, pass_root=1)
 
   def cmd_info(self):
+    """print the author, data, log_size, and log message"""
     self.cmd_author()
     self.cmd_date()
-    self.cmd_log(1)
-
-  def cmd_log(self, print_size=0):
-    # get the log property, or empty string if the property is not present
-    log = self._get_property(core.SVN_PROP_REVISION_LOG) or ''
-    if print_size:
-      print(len(log))
+    log = self.get_log() or ''
+    print(len(log))
     print(log)
+
+  def cmd_log(self):
+    print(self.get_log() or '')
 
   def cmd_tree(self):
     self._print_tree(Editor, base_rev=0)
@@ -135,6 +134,10 @@ class SVNLook(object):
   def get_author(self):
     """return string with the author name or None"""
     return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
+
+  def get_log(self):
+    """return log message string or None if not present"""
+    return self._get_property(core.SVN_PROP_REVISION_LOG)
 
 
   # --- Internal helpers
