@@ -22,13 +22,15 @@
 ######################################################################
 #
 
+__version__ = '2012.05.24'
+
 import sys
 import time
 import os
 
 from svn import core, fs, delta, repos
 
-class SVNLook:
+class SVNLook(object):
   def __init__(self, path, cmd, rev, txn):
     path = core.svn_path_canonicalize(path)
     repos_ptr = repos.open(path)
