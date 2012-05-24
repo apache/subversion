@@ -30,7 +30,7 @@ svnlook.py can also be used as a Python module::
   >>> import svnlook
   >>> svnlook = svnlook.SVNLook("/testrepo")
   >>> svnlook.get_author()
-  randomjoe
+  'randomjoe'
 
 
 Accessible API::
@@ -74,7 +74,7 @@ class SVNLook(object):
       self.txn_ptr = None
       if rev is None:
         rev = fs.youngest_rev(self.fs_ptr)
-    self.rev = rev
+    self.rev = int(rev)
 
     if cmd != None:
       getattr(self, 'cmd_' + cmd)()
@@ -136,12 +136,13 @@ class SVNLook(object):
     """return string with the author name or None"""
     return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
 
+
+  # --- Internal helpers
   def _get_property(self, name):
     if self.txn_ptr:
       return fs.txn_prop(self.txn_ptr, name)
     return fs.revision_prop(self.fs_ptr, self.rev, name)
 
-  # --- Internal helpers
   def _print_tree(self, e_factory, base_rev=None, pass_root=0):
     if base_rev is None:
       # a specific base rev was not provided. use the transaction base,
