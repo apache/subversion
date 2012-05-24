@@ -524,8 +524,7 @@ supported_explain_query_plan(svn_boolean_t *supported,
           /* Fall through */
         }
     }
-  else
-    *supported = FALSE;
+
   SQLITE_ERR(sqlite3_reset(stmt));
   SQLITE_ERR(sqlite3_finalize(stmt));
   return SVN_NO_ERROR;
