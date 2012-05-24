@@ -12035,15 +12035,16 @@ is_wclocked(void *baton,
 
       if (svn_relpath_skip_ancestor(relpath, dir_relpath))
         {
-          /* Any row here means there can be no locks closer to root
-             that extend past here. */
           int locked_levels = svn_sqlite__column_int(stmt, 1);
           int row_depth = relpath_depth(relpath);
 
-          *locked = (locked_levels == -1
-                     || locked_levels + row_depth >= dir_depth);
-          SVN_ERR(svn_sqlite__reset(stmt));
-          return SVN_NO_ERROR;
+          if (locked_levels == -1
+              || locked_levels + row_depth >= dir_depth)
+            {
+              *locked = TRUE;
+              SVN_ERR(svn_sqlite__reset(stmt));
+              return SVN_NO_ERROR;
+            }
         }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
