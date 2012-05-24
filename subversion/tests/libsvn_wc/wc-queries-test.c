@@ -183,8 +183,8 @@ test_sqlite_version(apr_pool_t *scratch_pool)
             "Compiled against Sqlite %s (at runtime we have Sqlite %s)",
             SQLITE_VERSION, sqlite3_version);
 
-  if (! SQLITE_VERSION_AT_LEAST(3, 7, 9))
-    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+#if !SQLITE_VERSION_AT_LEAST(3, 7, 9)
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
         "Sqlite upgrade recommended:\n"
         "****************************************************************\n"
         "*   Subversion needs at least SQLite 3.7.9 to work optimally   *\n"
@@ -199,8 +199,9 @@ test_sqlite_version(apr_pool_t *scratch_pool)
         "*                                                              *\n"
         "*                SQLITE UPGRADE RECOMMENDED                    *\n"
         "****************************************************************\n");
-
+#else
   return SVN_NO_ERROR;
+#endif
 }
 
 /* Parse all normal queries */
