@@ -563,6 +563,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
       const char *tail;
       int r;
       svn_boolean_t warned = FALSE;
+      apr_array_header_t *rows = NULL;
 
       if (is_schema_statement(i))
         continue;
@@ -611,7 +612,12 @@ test_query_expectations(apr_pool_t *scratch_pool)
           if (! zDetail)
             continue;
 
+		  if (!rows)
+			rows = apr_array_make(iterpool, 10, sizeof(const char*));
+
           detail = apr_pstrdup(iterpool, (const char*)zDetail);
+
+		  APR_ARRAY_PUSH(rows, const char *) = detail;
 
           SVN_ERR(parse_explanation_item(&item, detail, iterpool));
 
@@ -671,7 +677,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
               warned = TRUE;
               if (!is_slow_statement(i))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
-                                "Query %s: Creates a temporary B-TREE:\n",
+                                "Query %s: Creates a temporary B-TREE:\n%s",
                                 wc_query_info[i][0], wc_queries[i]);
             }
         }
@@ -679,8 +685,23 @@ test_query_expectations(apr_pool_t *scratch_pool)
       SQLITE_ERR(sqlite3_finalize(stmt));
 
       if (!warned && is_slow_statement(i))
-        printf("DBG: Expected %s to be reported as slow, but it wasn't\n",
-               wc_query_info[i][0]);
+        {
+          printf("DBG: Expected %s to be reported as slow, but it wasn't\n",
+                 wc_query_info[i][0]);
+        }
+
+      if (rows && warned != is_slow_statement(i))
+        {
+          int w;
+          svn_error_t *info = NULL;
+          for (w = rows->nelts-1; w >= 0; w--)
+            {
+              info = svn_error_createf(SVN_ERR_SQLITE_CONSTRAINT, info,
+                                       "|%s", APR_ARRAY_IDX(rows, w, const char*));
+            }
+
+          warnings = svn_error_compose_create(warnings, info);
+        }
     }
   SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
 
