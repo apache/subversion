@@ -2601,6 +2601,46 @@ def no_op_reintegrate(sbox):
   svntest.main.run_svn(None, 'merge', '--reintegrate',
                        sbox.repo_url + '/A_COPY', A_path)
 
+#----------------------------------------------------------------------
+def renamed_branch_reintegrate(sbox):
+  """reintegrate a branch that has been renamed"""
+
+  # The idea of this test is to ensure that the reintegrate merge is able to
+  # cope when one or both of the branches have been renamed.
+  #
+  # A       -1-----3-4-5-6----------------------9--------
+  #            \              \                / reintegrate
+  # A_COPY      2--------------7--------      /
+  #                        sync        \     /
+  # RENAMED                      rename 8----------------
+
+  # TODO: Make some changes between the sync/rename/reintegrate steps so
+  #   the reintegrate merge actually has to do something.
+  # TODO: Rename the other branch as well.
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Sync merge from trunk to branch
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Rename the branch
+  sbox.simple_move('A_COPY', 'RENAMED')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate; there are no relevant changes on the branch.
+  # ### TODO: Check the result more carefully than merely that it completed.
+  svntest.main.run_svn(None, 'merge', '--reintegrate',
+                       sbox.repo_url + '/RENAMED@8', A_path)
+
 ########################################################################
 # Run the tests
 
@@ -2626,6 +2666,7 @@ test_list = [ None,
               reintegrate_replaced_source,
               reintegrate_symlink_deletion,
               no_op_reintegrate,
+              renamed_branch_reintegrate,
              ]
 
 if __name__ == '__main__':
