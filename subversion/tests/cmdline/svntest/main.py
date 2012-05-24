@@ -221,7 +221,7 @@ greek_state = svntest.wc.State('', {
 
 ######################################################################
 # Utilities shared by the tests
-def wrap_ex(func):
+def wrap_ex(func, output):
   "Wrap a function, catch, print and ignore exceptions"
   def w(*args, **kwds):
     try:
@@ -230,9 +230,9 @@ def wrap_ex(func):
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
+          logger.warn('EXCEPTION: %s: %s', ex.__class__.__name__, ex_args)
         else:
-          print('EXCEPTION: %s' % ex.__class__.__name__)
+          logger.warn('EXCEPTION: %s', ex.__class__.__name__)
   return w
 
 def setup_development_mode():
@@ -902,11 +902,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      print('ERROR:  dump failed: %s' % dump_line.strip())
+      logger.warn('ERROR:  dump failed: %s', dump_line.strip())
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
-    print('ERROR:  dump failed; did not see revision %s' % head_revision)
+    logger.warn('ERROR:  dump failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
@@ -915,11 +915,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        print('ERROR:  load failed: %s' % load_line.strip())
+        logger.warn('ERROR:  load failed: %s', load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
-    print('ERROR:  load failed; did not see revision %s' % head_revision)
+    logger.warn('ERROR:  load failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
 
