@@ -36,7 +36,7 @@ svnlook.py can also be used as a Python module::
 Accessible API::
 
 [x] author
-[ ] changed
+[x] changed
 [x] date
 [ ] diff
 [x] dirs-changed
@@ -89,7 +89,8 @@ class SVNLook(object):
     print(self.get_author() or '')
 
   def cmd_changed(self):
-    self._print_tree(ChangedEditor, pass_root=1)
+    for status, path in self.get_changed():
+      print("%-3s %s" % (status, path))
 
   def cmd_date(self):
     # duplicate original svnlook format, which is
@@ -110,7 +111,7 @@ class SVNLook(object):
 
   def cmd_dirs_changed(self):
     for dir in self.get_changed_dirs():
-       print(dir)
+      print(dir)
 
   def cmd_ids(self):
     self._print_tree(Editor, base_rev=0, pass_root=1)
@@ -134,6 +135,14 @@ class SVNLook(object):
   def get_author(self):
     """return string with the author name or None"""
     return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
+
+  def get_changed(self):
+    """return list of tuples (status, path)"""
+    ret = []
+    def list_callback(status, path):
+      ret.append( (status, path) )
+    self._walk_tree(ChangedEditor, pass_root=1, callback=list_callback)
+    return ret
 
   def get_date(self, unixtime=False):
     """return commit timestamp in RFC 3339 format (2010-02-08T20:37:25.195000Z)
@@ -303,10 +312,11 @@ class DirsChangedEditor(delta.Editor):
       baton[0] = 0
 
 class ChangedEditor(delta.Editor):
-  def __init__(self, root, base_root, callback=None):
-    """callback argument is unused for this editor"""
+  def __init__(self, root, base_root, callback):
+    """callback(status, path) is a printer function"""
     self.root = root
     self.base_root = base_root
+    self.callback = callback
 
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
@@ -314,13 +324,13 @@ class ChangedEditor(delta.Editor):
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if fs.is_dir(self.base_root, '/' + path):
-      print('D   ' + path + '/')
+      self.callback('D', path + '/')
     else:
-      print('D   ' + path)
+      self.callback('D', path)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    print('A   ' + path + '/')
+    self.callback('A', path + '/')
     return [ 0, path ]
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
@@ -329,12 +339,12 @@ class ChangedEditor(delta.Editor):
   def change_dir_prop(self, dir_baton, name, value, pool):
     if dir_baton[0]:
       # the directory hasn't been printed yet. do it.
-      print('_U  ' + dir_baton[1] + '/')
+      self.callback('_U', dir_baton[1] + '/')
       dir_baton[0] = 0
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    print('A   ' + path)
+    self.callback('A', path)
     return [ '_', ' ', None ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
@@ -356,7 +366,7 @@ class ChangedEditor(delta.Editor):
       status = text_mod + prop_mod
       # was there some kind of change?
       if status != '_ ':
-        print(status + '  ' + path)
+        self.callback(status.rstrip(), path)
 
 
 class DiffEditor(delta.Editor):
