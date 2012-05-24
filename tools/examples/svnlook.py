@@ -24,6 +24,30 @@
 
 __version__ = '2012.05.24'
 
+"""
+svnlook.py can also be used as a Python module::
+
+  >>> import svnlook
+  >>> svnlook = svnlook.SVNLook("/testrepo")
+  >>> svnlook.get_author()
+  randomjoe
+
+
+Accessible API::
+
+[x] author
+[ ] changed
+[ ] date
+[ ] diff
+[ ] dirs-changed
+[ ] ids
+[ ] info
+[ ] log
+[ ] tree
+---
+"""
+
+
 import sys
 import time
 import os
@@ -60,9 +84,7 @@ class SVNLook(object):
     self.cmd_tree()
 
   def cmd_author(self):
-    # get the author property, or empty string if the property is not present
-    author = self._get_property(core.SVN_PROP_REVISION_AUTHOR) or ''
-    print(author)
+    print(self.get_author() or '')
 
   def cmd_changed(self):
     self._print_tree(ChangedEditor, pass_root=1)
@@ -108,11 +130,18 @@ class SVNLook(object):
   def cmd_tree(self):
     self._print_tree(Editor, base_rev=0)
 
+
+  # --- API getters
+  def get_author(self):
+    """return string with the author name or None"""
+    return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
+
   def _get_property(self, name):
     if self.txn_ptr:
       return fs.txn_prop(self.txn_ptr, name)
     return fs.revision_prop(self.fs_ptr, self.rev, name)
 
+  # --- Internal helpers
   def _print_tree(self, e_factory, base_rev=None, pass_root=0):
     if base_rev is None:
       # a specific base rev was not provided. use the transaction base,
