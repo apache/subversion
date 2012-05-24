@@ -189,7 +189,7 @@ test_sqlite_version(apr_pool_t *scratch_pool)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
         "Sqlite upgrade recommended:\n"
         "****************************************************************\n"
-        "*    Subversion needs at least Sqlite 3.7.9 to work optimal    *\n"
+        "*   Subversion needs at least SQLite 3.7.9 to work optimally   *\n"
         "*                                                              *\n"
         "* With older versions, at least some queries that are expected *\n"
         "* to be using an index are not. This makes some operations use *\n"
