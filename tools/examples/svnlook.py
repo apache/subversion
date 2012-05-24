@@ -37,7 +37,7 @@ Accessible API::
 
 [x] author
 [ ] changed
-[ ] date
+[x] date
 [ ] diff
 [x] dirs-changed
 [ ] ids
@@ -91,21 +91,18 @@ class SVNLook(object):
     self._print_tree(ChangedEditor, pass_root=1)
 
   def cmd_date(self):
-    if self.txn_ptr:
-      print("")
-    else:
-      date = self._get_property(core.SVN_PROP_REVISION_DATE)
-      if date:
-        aprtime = core.svn_time_from_cstring(date)
-        # ### convert to a time_t; this requires intimate knowledge of
-        # ### the apr_time_t type
-        secs = aprtime / 1000000  # aprtime is microseconds; make seconds
+    # duplicate original svnlook format, which is
+    # 2010-02-08 21:53:15 +0200 (Mon, 08 Feb 2010)
+    secs = self.get_date(unixtime=True)
+    # convert to tuple, detect time zone and format
+    stamp = time.localtime(secs)
+    isdst = stamp.tm_isdst
+    utcoffset = -(time.altzone if (time.daylight and isdst) else time.timezone) // 60
 
-        # assume secs in local TZ, convert to tuple, and format
-        ### we don't really know the TZ, do we?
-        print(time.strftime('%Y-%m-%d %H:%M', time.localtime(secs)))
-      else:
-        print("")
+    suffix = "%+03d%02d" % (utcoffset // 60, abs(utcoffset) % 60)
+    outstr = time.strftime('%Y-%m-%d %H:%M:%S ', stamp) + suffix
+    outstr += time.strftime(' (%a, %d %b %Y)', stamp)
+    print(outstr)
 
   def cmd_diff(self):
     self._print_tree(DiffEditor, pass_root=1)
@@ -135,6 +132,25 @@ class SVNLook(object):
   def get_author(self):
     """return string with the author name or None"""
     return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
+
+  def get_date(self, unixtime=False):
+    """return commit timestamp in RFC 3339 format (2010-02-08T20:37:25.195000Z)
+       if unixtime is True, return unix timestamp
+       return None if date is not set (txn properties)
+    """
+    if self.txn_ptr:
+      return None
+   
+    date = self._get_property(core.SVN_PROP_REVISION_DATE)
+    if not unixtime or date == None:
+      return date
+
+    # convert to unix time
+    aprtime = core.svn_time_from_cstring(date)
+    # ### convert to a time_t; this requires intimate knowledge of
+    # ### the apr_time_t type
+    secs = aprtime / 1000000  # aprtime is microseconds; make seconds
+    return secs
 
   def get_changed_dirs(self):
     """return list of changed dirs
