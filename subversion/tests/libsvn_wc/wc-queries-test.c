@@ -114,7 +114,6 @@ static const int slow_statements[] =
 
   /* Create temporary table */
   STMT_SELECT_REVERT_LIST_RECURSIVE,
-  STMT_SELECT_ANCESTOR_WCLOCKS,
 
   /* Designed as slow */
   STMT_SELECT_UNREFERENCED_PRISTINES,
