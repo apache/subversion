@@ -147,6 +147,12 @@ class SVNLook(object):
     return fs.revision_prop(self.fs_ptr, self.rev, name)
 
   def _print_tree(self, e_factory, base_rev=None, pass_root=0):
+    def print_callback(msg):
+       print(msg)
+    self._walk_tree(e_factory, base_rev, pass_root, callback=print_callback)
+
+  # svn fs, delta, repos calls needs review according to DeltaEditor documentation
+  def _walk_tree(self, e_factory, base_rev=None, pass_root=0, callback=None):
     if base_rev is None:
       # a specific base rev was not provided. use the transaction base,
       # or the previous revision
@@ -164,10 +170,13 @@ class SVNLook(object):
     # the base of the comparison
     base_root = fs.revision_root(self.fs_ptr, base_rev)
 
+    if callback == None:
+      callback = lambda msg: None
+
     if pass_root:
-      editor = e_factory(root, base_root)
+      editor = e_factory(root, base_root, callback)
     else:
-      editor = e_factory()
+      editor = e_factory(callback=callback)
 
     # construct the editor for printing these things out
     e_ptr, e_baton = delta.make_editor(editor)
@@ -183,8 +192,13 @@ class SVNLook(object):
 # Delta Editors. For documentation see:
 # http://subversion.apache.org/docs/community-guide/#docs
 
+# this one doesn't process delete_entry, change_dir_prop, apply_text_delta,
+# change_file_prop, close_file, close_edit, abort_edit
+# ?set_target_revision
+# need review
 class Editor(delta.Editor):
-  def __init__(self, root=None, base_root=None):
+  def __init__(self, root=None, base_root=None, callback=None):
+    """callback argument is unused for this editor"""
     self.root = root
     # base_root ignored
 
@@ -220,7 +234,14 @@ class Editor(delta.Editor):
       return ' <%s>' % fs.unparse_id(id)
     return ''
 
+# doesn't process close_directory, apply_text_delta,
+# change_file_prop, close_file, close_edit, abort_edit
+# ?set_target_revision
 class DirsChangedEditor(delta.Editor):
+  """print names of changed dirs, callback is a printer function"""
+  def __init__(self, callback):
+    self.callback = callback
+
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
 
@@ -249,11 +270,12 @@ class DirsChangedEditor(delta.Editor):
   def _dir_changed(self, baton):
     if baton[0]:
       # the directory hasn't been printed yet. do it.
-      print(baton[1] + '/')
+      self.callback(baton[1] + '/')
       baton[0] = 0
 
 class ChangedEditor(delta.Editor):
-  def __init__(self, root, base_root):
+  def __init__(self, root, base_root, callback=None):
+    """callback argument is unused for this editor"""
     self.root = root
     self.base_root = base_root
 
@@ -309,7 +331,8 @@ class ChangedEditor(delta.Editor):
 
 
 class DiffEditor(delta.Editor):
-  def __init__(self, root, base_root):
+  def __init__(self, root, base_root, callback=None):
+    """callback argument is unused for this editor"""
     self.root = root
     self.base_root = base_root
     self.target_revision = 0
