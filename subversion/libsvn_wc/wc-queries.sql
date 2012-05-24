@@ -174,7 +174,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
   AND (op_depth > ?3 OR (op_depth = ?3 AND presence != 'base-deleted'))
-UNION
+UNION ALL
 SELECT 1 FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
