@@ -41,7 +41,7 @@ Accessible API::
 [ ] diff
 [x] dirs-changed
 [ ] ids
-[ ] info
+[x] info
 [x] log
 [ ] tree
 ---
@@ -69,12 +69,13 @@ class SVNLook(object):
     repos_ptr = repos.open(path)
     self.fs_ptr = repos.fs(repos_ptr)
 
+    # if set, txn takes precendence
     if txn:
       self.txn_ptr = fs.open_txn(self.fs_ptr, txn)
     else:
       self.txn_ptr = None
-      if rev is None:
-        rev = fs.youngest_rev(self.fs_ptr)
+    if rev is None:
+      rev = fs.youngest_rev(self.fs_ptr)
     self.rev = int(rev)
 
     if cmd != None:
