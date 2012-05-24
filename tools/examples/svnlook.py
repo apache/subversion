@@ -109,7 +109,8 @@ class SVNLook(object):
     self._print_tree(DiffEditor, pass_root=1)
 
   def cmd_dirs_changed(self):
-    self._print_tree(DirsChangedEditor)
+    for dir in self.get_changed_dirs():
+       print(dir)
 
   def cmd_ids(self):
     self._print_tree(Editor, base_rev=0, pass_root=1)
@@ -266,7 +267,7 @@ class Editor(delta.Editor):
 # change_file_prop, close_file, close_edit, abort_edit
 # ?set_target_revision
 class DirsChangedEditor(delta.Editor):
-  """print names of changed dirs, callback is a printer function"""
+  """print names of changed dirs, callback(dir) is a printer function"""
   def __init__(self, callback):
     self.callback = callback
 
