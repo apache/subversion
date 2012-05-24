@@ -199,7 +199,8 @@ class Generator(gen_win.WinGeneratorBase):
         if depends[i].fname.startswith(self.projfilesdir):
           path = depends[i].fname[len(self.projfilesdir) + 1:]
         else:
-          path = os.path.relpath('.', self.projfilesdir) + depends[i].fname
+          path = os.path.join(os.path.relpath('.', self.projfilesdir),
+                              depends[i].fname)
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,
