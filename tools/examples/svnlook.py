@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# svnlook.py : a Python-based replacement for svnlook
+# svnlook.py : alternative svnlook in Python with library API
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -136,6 +136,10 @@ class SVNLook(object):
     repos.dir_delta(base_root, '', '', root, '',
 		    e_ptr, e_baton, authz_cb, 0, 1, 0, 0)
 
+
+# ---------------------------------------------------------
+# Delta Editors. For documentation see:
+# http://subversion.apache.org/docs/community-guide/#docs
 
 class Editor(delta.Editor):
   def __init__(self, root=None, base_root=None):
@@ -380,7 +384,7 @@ def usage(exit):
   output.write(
      "usage: %s REPOS_PATH rev REV [COMMAND] - inspect revision REV\n"
      "       %s REPOS_PATH txn TXN [COMMAND] - inspect transaction TXN\n"
-     "       %s REPOS_PATH [COMMAND] - inspect the youngest revision\n"
+     "       %s REPOS_PATH [COMMAND] - inspect the latest revision\n"
      "\n"
      "REV is a revision number > 0.\n"
      "TXN is a transaction name.\n"
