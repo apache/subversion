@@ -491,6 +491,47 @@ parse_explanation_item(struct explanation_item **parsed_item,
   return SVN_NO_ERROR;
 }
 
+/* Sqlite has an SQLITE_OMIT_EXPLAIN compilation flag, which may make
+   explain query just evaluate the query. Some older versions use a
+   different number of columns (and different texts) for
+   EXPLAIN query plan.
+
+   If none of this is true set *SUPPORTED to TRUE, otherwise to FALSE */
+static svn_error_t *
+supported_explain_query_plan(svn_boolean_t *supported,
+                             sqlite3 *sdb,
+                             apr_pool_t *scratch_pool)
+{
+  sqlite3_stmt *stmt;
+  int r;
+
+  *supported = TRUE;
+
+  r = sqlite3_prepare(sdb, "EXPLAIN QUERY PLAN SELECT 1",
+                      -1, &stmt, NULL);
+
+  if (r != SQLITE_OK)
+    {
+      *supported = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  if (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+      if (sqlite3_column_count(stmt) < 4)
+        {
+          *supported = FALSE;
+          /* Fall through */
+        }
+    }
+  else
+    *supported = FALSE;
+  SQLITE_ERR(sqlite3_reset(stmt));
+  SQLITE_ERR(sqlite3_finalize(stmt));
+  return SVN_NO_ERROR;
+}
+
+
 /* Returns TRUE if TABLE_NAME specifies a nodes table, which should be indexed
    by wc_id and either local_relpath or parent_relpath */
 static svn_boolean_t
@@ -520,41 +561,18 @@ test_query_expectations(apr_pool_t *scratch_pool)
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_error_t *warnings = NULL;
+  svn_boolean_t supports_query_info;
 
   SVN_ERR(create_memory_db(&sdb, scratch_pool));
 
-  /* Sqlite has an SQLITE_OMIT_EXPLAIN compilation flag. In this case the
-     'EXPLAIN QUERY PLAN' option is currently just ignored and the query
-     evaluated (status at Sqlite 3.7.12).
-     
-     Detect this case, and skip this test */
-  {
-    sqlite3_stmt *stmt;
-    int r;
-    r = sqlite3_prepare(sdb, "EXPLAIN QUERY PLAN SELECT 1",
-                        -1, &stmt, NULL);
-
-    if (r != SQLITE_OK)
-      {
-        SQLITE_ERR(sqlite3_close(sdb));
-        return svn_error_create(SVN_ERR_TEST_SKIPPED, warnings,
-                                "Sqlite doesn't support EXPLAIN QUERY PLAN");
-      }
-
-    if (sqlite3_step(stmt) == SQLITE_ROW)
-      {
-        if (sqlite3_column_count(stmt) < 4)
-          {
-            SQLITE_ERR(sqlite3_reset(stmt));
-            SQLITE_ERR(sqlite3_finalize(stmt));
-            SQLITE_ERR(sqlite3_close(sdb));
-            return svn_error_create(SVN_ERR_TEST_SKIPPED, warnings,
-                                "Sqlite doesn't support EXPLAIN QUERY PLAN");
-          }
-      }
-    SQLITE_ERR(sqlite3_reset(stmt));
-    SQLITE_ERR(sqlite3_finalize(stmt));
-  }
+  SVN_ERR(supported_explain_query_plan(&supports_query_info, sdb,
+                                       scratch_pool));
+  if (!supports_query_info)
+    {
+      SQLITE_ERR(sqlite3_close(sdb));
+      return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                              "Sqlite doesn't support EXPLAIN QUERY PLAN");
+    }
 
   for (i=0; i < STMT_SCHEMA_FIRST; i++)
     {
@@ -611,12 +629,12 @@ test_query_expectations(apr_pool_t *scratch_pool)
           if (! zDetail)
             continue;
 
-		  if (!rows)
-			rows = apr_array_make(iterpool, 10, sizeof(const char*));
+          if (!rows)
+            rows = apr_array_make(iterpool, 10, sizeof(const char*));
 
           detail = apr_pstrdup(iterpool, (const char*)zDetail);
 
-		  APR_ARRAY_PUSH(rows, const char *) = detail;
+          APR_ARRAY_PUSH(rows, const char *) = detail;
 
           SVN_ERR(parse_explanation_item(&item, detail, iterpool));
 
@@ -695,8 +713,12 @@ test_query_expectations(apr_pool_t *scratch_pool)
           svn_error_t *info = NULL;
           for (w = rows->nelts-1; w >= 0; w--)
             {
-              info = svn_error_createf(SVN_ERR_SQLITE_CONSTRAINT, info,
-                                       "|%s", APR_ARRAY_IDX(rows, w, const char*));
+              if (warned)
+                info = svn_error_createf(SVN_ERR_SQLITE_CONSTRAINT, info,
+                                         "|%s", APR_ARRAY_IDX(rows, w,
+                                                              const char*));
+              else
+                printf("|%s\n", APR_ARRAY_IDX(rows, w, const char*));
             }
 
           warnings = svn_error_compose_create(warnings, info);
