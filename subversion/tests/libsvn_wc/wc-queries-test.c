@@ -23,6 +23,7 @@
 
 #include "svn_pools.h"
 #include "svn_ctype.h"
+#include "private/svn_dep_compat.h"
 
 #include "svn_private_config.h"
 
@@ -170,14 +171,46 @@ create_memory_db(sqlite3 **db,
   return SVN_NO_ERROR;
 }
 
+/* Verify sqlite3 runtime version */
+static svn_error_t *
+test_sqlite_version(apr_pool_t *scratch_pool)
+{
+  printf("DBG: Using Sqlite %s\n", sqlite3_version);
+
+  if (sqlite3_libversion_number() != SQLITE_VERSION_NUMBER)
+    printf("DBG: Compiled against Sqlite %s", SQLITE_VERSION);
+
+  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+            "Compiled against Sqlite %s (at runtime we have Sqlite %s)",
+            SQLITE_VERSION, sqlite3_version);
+
+  if (! SQLITE_VERSION_AT_LEAST(3, 7, 9))
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+        "Sqlite upgrade recommended:\n"
+        "****************************************************************\n"
+        "*    Subversion needs at least Sqlite 3.7.9 to work optimal    *\n"
+        "*                                                              *\n"
+        "* With older versions, at least some queries that are expected *\n"
+        "* to be using an index are not. This makes some operations use *\n"
+        "* every node in the working copy instead of just one.          *\n"
+        "*                                                              *\n"
+        "* While Subversion works correctly in this case, you may see   *\n"
+        "* slowdowns of WELL MORE THAN 1000* in some cases!             *\n"
+        "*                                                              *\n"
+        "*                                                              *\n"
+        "*                SQLITE UPGRADE RECOMMENDED                    *\n"
+        "****************************************************************\n");
+
+  return SVN_NO_ERROR;
+}
+
 /* Parse all normal queries */
 static svn_error_t *
 test_parsable(apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
-
-  printf("DBG: Testing on Sqlite %s\n", sqlite3_version);
 
   SVN_ERR(create_memory_db(&sdb, scratch_pool));
 
@@ -658,6 +691,8 @@ test_query_expectations(apr_pool_t *scratch_pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
+    SVN_TEST_PASS2(test_sqlite_version,
+                   "sqlite up-to-date"),
     SVN_TEST_PASS2(test_parsable,
                    "queries are parsable"),
     SVN_TEST_PASS2(test_query_expectations,
