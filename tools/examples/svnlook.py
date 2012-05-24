@@ -39,12 +39,13 @@ Accessible API::
 [ ] changed
 [ ] date
 [ ] diff
-[ ] dirs-changed
+[x] dirs-changed
 [ ] ids
 [ ] info
 [x] log
 [ ] tree
 ---
+[ ] generator API to avoid passing lists
 """
 
 
@@ -134,6 +135,16 @@ class SVNLook(object):
   def get_author(self):
     """return string with the author name or None"""
     return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
+
+  def get_changed_dirs(self):
+    """return list of changed dirs
+       dir names end with trailing forward slash even on windows
+    """
+    dirlist = []
+    def list_callback(item):
+      dirlist.append(item)
+    self._walk_tree(DirsChangedEditor, callback=list_callback)
+    return dirlist
 
   def get_log(self):
     """return log message string or None if not present"""
