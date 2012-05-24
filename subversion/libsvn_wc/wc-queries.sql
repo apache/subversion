@@ -403,7 +403,8 @@ CREATE TEMPORARY TABLE changelist_list (
   local_relpath TEXT NOT NULL,
   notify INTEGER NOT NULL,
   changelist TEXT NOT NULL,
-  PRIMARY KEY (wc_id, local_relpath, notify)
+  /* Order NOTIFY descending to make us show clears (27) before adds (26) */
+  PRIMARY KEY (wc_id, local_relpath, notify DESC)
 )
 
 /* Create notify items for when a node is removed from a changelist and
@@ -441,7 +442,7 @@ DROP TABLE IF EXISTS targets_list
 -- STMT_SELECT_CHANGELIST_LIST
 SELECT wc_id, local_relpath, notify, changelist
 FROM changelist_list
-ORDER BY wc_id, local_relpath
+ORDER BY wc_id, local_relpath ASC, notify DESC
 
 -- STMT_CREATE_TARGETS_LIST
 DROP TABLE IF EXISTS targets_list;
