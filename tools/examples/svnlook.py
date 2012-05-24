@@ -31,7 +31,15 @@ import os
 from svn import core, fs, delta, repos
 
 class SVNLook(object):
-  def __init__(self, path, cmd, rev, txn):
+  def __init__(self, path, rev=None, txn=None, cmd=None):
+    """
+    path  - path to repository
+    rev   - revision number
+    txn   - path to transaction (usually to the one about to be committed)
+    cmd   - if set, specifies cmd_* method to execute
+
+    if both rev and txn params are empty, inspect latest committed revision
+    """
     path = core.svn_path_canonicalize(path)
     repos_ptr = repos.open(path)
     self.fs_ptr = repos.fs(repos_ptr)
@@ -44,7 +52,8 @@ class SVNLook(object):
         rev = fs.youngest_rev(self.fs_ptr)
     self.rev = rev
 
-    getattr(self, 'cmd_' + cmd)()
+    if cmd != None:
+      getattr(self, 'cmd_' + cmd)()
 
   def cmd_default(self):
     self.cmd_info()
@@ -441,7 +450,7 @@ def main():
   if not hasattr(SVNLook, 'cmd_' + cmd):
     usage(1)
 
-  SVNLook(sys.argv[1], cmd, rev, txn)
+  SVNLook(sys.argv[1], rev, txn, cmd)
 
 if __name__ == '__main__':
   main()
