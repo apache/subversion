@@ -393,7 +393,11 @@ UPDATE actual_node SET changelist = NULL
 -- STMT_MARK_SKIPPED_CHANGELIST_DIRS
 /* 7 corresponds to svn_wc_notify_skip */
 INSERT INTO changelist_list (wc_id, local_relpath, notify, changelist)
-SELECT wc_id, local_relpath, 7, ?1 FROM targets_list WHERE kind = 'dir'
+SELECT wc_id, local_relpath, 7, ?3
+FROM targets_list
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND kind = 'dir'
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
@@ -457,8 +461,6 @@ CREATE TEMPORARY TABLE targets_list (
   kind TEXT NOT NULL,
   PRIMARY KEY (wc_id, local_relpath)
   );
-CREATE INDEX targets_list_kind
-  ON targets_list (kind)
 /* need more indicies? */
 
 -- STMT_DROP_TARGETS_LIST
