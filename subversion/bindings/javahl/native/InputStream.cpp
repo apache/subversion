@@ -99,6 +99,14 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
+  /*
+   * Convert -1 from InputStream.read that means EOF, 0 which is subversion equivalent
+   */
+  if(jread == -1)
+    {
+      jread = 0;
+    }
+
   // Put the Java byte array into a helper object to retrieve the
   // data bytes.
   JNIByteArray outdata(data, true);
@@ -107,7 +115,7 @@ svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 
   // Catch when the Java method tells us it read too much data.
   if (jread > (jint) *len)
-    jread = -1;
+    jread = 0;
 
   // In the case of success copy the data back to the Subversion
   // buffer.
