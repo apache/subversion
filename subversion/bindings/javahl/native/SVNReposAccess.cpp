@@ -36,7 +36,6 @@
 
 SVNReposAccess::SVNReposAccess(const char *repos_url)
 {
-  JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
   m_sess_pool = svn_pool_create(JNIUtil::getPool());
 
   svn_ra_callbacks2_t *cbtable =
@@ -74,7 +73,7 @@ SVNReposAccess::getDatedRev(apr_time_t tm)
   svn_revnum_t rev;
 
   SVN_JNI_ERR(svn_ra_get_dated_revision(m_ra_session, &rev, tm,
-                                        requestPool.pool()),
+                                        requestPool.getPool()),
               SVN_INVALID_REVNUM);
 
   return rev;
@@ -87,10 +86,10 @@ SVNReposAccess::getLocks(const char *path, svn_depth_t depth)
   apr_hash_t *locks;
 
   SVN_JNI_ERR(svn_ra_get_locks2(m_ra_session, &locks, path, depth,
-                                requestPool.pool()),
+                                requestPool.getPool()),
               NULL);
 
-  return CreateJ::LockMap(locks, requestPool.pool());
+  return CreateJ::LockMap(locks, requestPool.getPool());
 }
 
 jobject
@@ -101,7 +100,7 @@ SVNReposAccess::checkPath(const char *path, Revision &revision)
 
   SVN_JNI_ERR(svn_ra_check_path(m_ra_session, path,
                                 revision.revision()->value.number,
-                                &kind, requestPool.pool()),
+                                &kind, requestPool.getPool()),
               NULL);
 
   return EnumMapper::mapNodeKind(kind);
