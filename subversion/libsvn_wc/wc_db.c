@@ -5091,7 +5091,8 @@ set_changelist_txn(void *baton,
   /* Update our changelists. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_ACTUAL_CHANGELISTS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, scb->new_changelist));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            scb->new_changelist));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   if (scb->new_changelist)
