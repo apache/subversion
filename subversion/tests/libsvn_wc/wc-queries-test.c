@@ -98,9 +98,6 @@ static const int slow_statements[] =
   STMT_SELECT_ALL_FILES,
   STMT_HAS_ACTUAL_NODES_CONFLICTS,
 
-  /* Join on targets table */
-  STMT_UPDATE_ACTUAL_CHANGELISTS,
-
   /* Need index? */
   STMT_SELECT_TARGETS,
   STMT_INSERT_ACTUAL_EMPTIES,

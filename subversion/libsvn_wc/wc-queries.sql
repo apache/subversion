@@ -378,9 +378,13 @@ INSERT INTO actual_node (
 VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_UPDATE_ACTUAL_CHANGELISTS
-UPDATE actual_node SET changelist = ?2
-WHERE wc_id = ?1 AND local_relpath IN
-(SELECT local_relpath FROM targets_list WHERE kind = 'file' AND wc_id = ?1)
+UPDATE actual_node SET changelist = ?3
+WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND local_relpath = (SELECT local_relpath FROM targets_list AS t
+                       WHERE wc_id = ?1
+                         AND t.local_relpath = actual_node.local_relpath
+                         AND kind = 'file')
 
 -- STMT_UPDATE_ACTUAL_CLEAR_CHANGELIST
 UPDATE actual_node SET changelist = NULL
