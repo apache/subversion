@@ -196,7 +196,7 @@ class SVNClient :public SVNBase
   ClientContext &getClientContext();
 
   const char *getLastPath();
-  void dispose();
+  void dispose(jobject jthis);
   static SVNClient *getCppObject(jobject jthis);
   SVNClient(jobject jthis_in);
   virtual ~SVNClient();
