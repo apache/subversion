@@ -101,11 +101,6 @@ static const int slow_statements[] =
   /* Join on targets table */
   STMT_UPDATE_ACTUAL_CHANGELISTS,
 
-  /* Moved to/from index? */
-  STMT_SELECT_MOVED_FROM_RELPATH,
-  STMT_SELECT_MOVED_HERE_CHILDREN,
-  STMT_SELECT_MOVED_PAIR,
-
   /* Need index? */
   STMT_SELECT_TARGETS,
   STMT_INSERT_ACTUAL_EMPTIES,
