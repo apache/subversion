@@ -54,10 +54,10 @@ SVNRepos *SVNRepos::getCppObject(jobject jthis)
   return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRepos *>(cppAddr));
 }
 
-void SVNRepos::dispose()
+void SVNRepos::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNRepos");
+  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNRepos");
 }
 
 void SVNRepos::cancelOperation()

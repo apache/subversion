@@ -30,7 +30,6 @@
 SVNBase::SVNBase()
     : pool(JNIUtil::getPool())
 {
-  jthis = NULL;
 }
 
 SVNBase::~SVNBase()
@@ -58,17 +57,6 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
       if (JNIUtil::isJavaExceptionThrown())
         return 0;
 
-      if (cppAddr)
-        {
-          /* jthis is not guaranteed to be the same between JNI invocations, so
-             we do a little dance here and store the updated version in our
-             object for this invocation.
-
-             findCppAddrForJObject() is, by necessity, called before any other
-             methods on the C++ object, so by doing this we can guarantee a
-             valid jthis pointer for subsequent uses. */
-          (reinterpret_cast<SVNBase *> (cppAddr))->jthis = jthis;
-        }
       return cppAddr;
     }
 }
@@ -82,17 +70,15 @@ void SVNBase::finalize()
   JNIUtil::enqueueForDeletion(this);
 }
 
-void SVNBase::dispose(jfieldID *fid, const char *className)
+void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
 {
-  jobject my_jthis = this->jthis;
-
   delete this;
   JNIEnv *env = JNIUtil::getEnv();
   SVNBase::findCppAddrFieldID(fid, className, env);
   if (*fid == 0)
     return;
 
-  env->SetLongField(my_jthis, *fid, 0);
+  env->SetLongField(jthis, *fid, 0);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 }
