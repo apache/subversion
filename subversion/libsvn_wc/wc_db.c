@@ -5100,7 +5100,8 @@ set_changelist_txn(void *baton,
       /* We have to notify that we skipped directories, so do that now. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_MARK_SKIPPED_CHANGELIST_DIRS));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 1, scb->new_changelist));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                                scb->new_changelist));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
