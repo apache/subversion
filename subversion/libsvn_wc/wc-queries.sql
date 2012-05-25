@@ -51,14 +51,14 @@ ORDER BY op_depth DESC
 -- STMT_SELECT_BASE_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties, file_external IS NOT NULL
+  symlink_target, last_mod_time, properties, file_external
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
 SELECT nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
-  depth, symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  depth, symlink_target, last_mod_time, properties, file_external,
   /* All the columns until now must match those returned by
      STMT_SELECT_BASE_NODE. The implementation of svn_wc__db_base_get_info()
      assumes that these columns are followed by the lock information) */
@@ -70,7 +70,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_BASE_CHILDREN_INFO
 SELECT local_relpath, nodes.repos_id, nodes.repos_path, presence, kind,
-  revision, depth, file_external IS NOT NULL,
+  revision, depth, file_external,
   lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
@@ -125,11 +125,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND changelist IS NOT NULL
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date, local_relpath, moved_here, moved_to, 
-  file_external IS NOT NULL
+  lock_comment, lock_date, local_relpath, moved_here, moved_to, file_external
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
-  AND nodes.repos_path = lock.repos_relpath
+  AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO

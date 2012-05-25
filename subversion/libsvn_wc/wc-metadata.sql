@@ -465,9 +465,11 @@ CREATE TABLE NODES (
   /* Is there a file external in this location. NULL if there
      is no file external, otherwise '1'  */
   /* ### Originally we had a wc-1.0 like skel in this place, so we
-     ### check for NULL */
-  file_external  TEXT,
-
+     ### check for NULL.
+     ### In Subversion 1.7 we defined this column as TEXT, but Sqlite
+     ### only uses this information for deciding how to optimize
+     ### anyway. */
+  file_external  INTEGER,
 
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
@@ -754,6 +756,10 @@ PRAGMA user_version = 29;
 -- STMT_UPGRADE_TO_30
 CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
 ON NODES (wc_id, moved_to, op_depth);
+
+/* Just to be sure clear out file external skels from pre 1.7.0 development
+   working copies that were never updated by 1.7.0+ style clients */
+UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
 
 /* ------------------------------------------------------------------------- */
 
