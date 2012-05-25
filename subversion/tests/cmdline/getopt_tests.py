@@ -25,7 +25,9 @@
 ######################################################################
 
 # General modules
-import sys, re, os.path
+import sys, re, os.path, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -138,31 +140,31 @@ def run_one_test(sbox, basename, *varargs):
   actual_stderr = process_lines(actual_stderr)
 
   if exp_stdout != actual_stdout:
-    print("Standard output does not match.")
-    print("Expected standard output:")
-    print("=====")
+    logger.warn("Standard output does not match.")
+    logger.warn("Expected standard output:")
+    logger.warn("=====")
     for x in exp_stdout:
-      sys.stdout.write(x)
-    print("=====")
-    print("Actual standard output:")
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
+    logger.warn("Actual standard output:")
+    logger.warn("=====")
     for x in actual_stdout:
-      sys.stdout.write(x)
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
     raise svntest.Failure
 
   if exp_stderr != actual_stderr:
-    print("Standard error does not match.")
-    print("Expected standard error:")
-    print("=====")
+    logger.warn("Standard error does not match.")
+    logger.warn("Expected standard error:")
+    logger.warn("=====")
     for x in exp_stderr:
-      sys.stdout.write(x)
-    print("=====")
-    print("Actual standard error:")
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
+    logger.warn("Actual standard error:")
+    logger.warn("=====")
     for x in actual_stderr:
-      sys.stdout.write(x)
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
     raise svntest.Failure
 
 def getopt_no_args(sbox):
