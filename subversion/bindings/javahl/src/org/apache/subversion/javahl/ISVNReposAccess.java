@@ -26,6 +26,12 @@ package org.apache.subversion.javahl;
 import java.util.Date;
 import java.util.Map;
 
+import org.apache.subversion.javahl.types.Depth;
+import org.apache.subversion.javahl.types.Lock;
+import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.Revision;
+import org.apache.subversion.javahl.types.Version;
+
 /**
  * This interface is an interface to interact with a remote Subversion
  * repository via the repository access method.

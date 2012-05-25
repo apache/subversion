@@ -27,6 +27,12 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Map;
 
+import org.apache.subversion.javahl.types.Depth;
+import org.apache.subversion.javahl.types.Lock;
+import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.Revision;
+import org.apache.subversion.javahl.types.Version;
+
 /**
  * This class allows direct access to remote repositories through a
  * lower-level API.

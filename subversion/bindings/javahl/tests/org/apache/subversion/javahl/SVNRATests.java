@@ -31,6 +31,11 @@ import java.util.Map;
 import java.util.HashSet;
 import java.io.IOException;
 
+import org.apache.subversion.javahl.types.Depth;
+import org.apache.subversion.javahl.types.Lock;
+import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.Revision;
+
 /**
  * This class is used for testing the SVNReposAccess class
  *
