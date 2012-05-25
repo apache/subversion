@@ -1,6 +1,14 @@
-This branch exists to test out the implementation of the repository access
-APIs with JavaHL.
+This branch exists to prepare implementation of the repository access
+APIs with JavaHL. It is being managed as a reintegrate-able branch, with 
+catch-up merges from the trunk.
 
-I currently only plan on implementing simple RA APIs in this interface.  I
-have no intention, or desire, to do a full editor implementation, though
-others are willing to do so.
+TODO:
+
+   * Prepare existing code for merging of SVNRa editor       [TODO] 
+   * Apply editor support patches                            [TODO]
+   * Implement reading of state and content of repository    [TODO]
+   * Review                                                  [TODO]
+   * Incorporate feedback                                    [TODO]
+   * Merge to trunk                                          [TODO]
+    
+
