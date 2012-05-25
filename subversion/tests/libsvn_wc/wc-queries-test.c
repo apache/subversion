@@ -89,7 +89,6 @@ static const int slow_statements[] =
   STMT_HAS_WORKING_NODES,
 
   /* Need review: */
-  STMT_SELECT_EXTERNAL_PROPERTIES,
   STMT_DELETE_ACTUAL_EMPTIES,
 
   /* Upgrade statements? */

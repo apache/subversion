@@ -1011,17 +1011,33 @@ DELETE FROM externals
 WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_SELECT_EXTERNAL_PROPERTIES
+/* ### It would be nice if Sqlite would handle
+ * SELECT IFNULL((SELECT properties FROM actual_node a
+ *                WHERE a.wc_id = ?1 AND A.local_relpath = n.local_relpath),
+ *               properties),
+ *        local_relpath, depth
+ * FROM nodes_current n
+ * WHERE wc_id = ?1
+ *   AND (local_relpath = ?2
+ *        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+ *   AND kind = 'dir' AND presence IN ('normal', 'incomplete')
+ * ### But it would take a double table scan execution plan for it.
+ * ### Maybe there is something else going on? */
 SELECT IFNULL((SELECT properties FROM actual_node a
                WHERE a.wc_id = ?1 AND A.local_relpath = n.local_relpath),
               properties),
        local_relpath, depth
-FROM nodes n
-WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND kind = 'dir' AND presence='normal'
-  AND op_depth=(SELECT MAX(op_depth) FROM nodes o
-                WHERE o.wc_id = ?1 AND o.local_relpath = n.local_relpath)
+FROM nodes_current n
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND kind = 'dir' AND presence IN ('normal', 'incomplete')
+UNION ALL
+SELECT IFNULL((SELECT properties FROM actual_node a
+               WHERE a.wc_id = ?1 AND A.local_relpath = n.local_relpath),
+              properties),
+       local_relpath, depth
+FROM nodes_current n
+WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND kind = 'dir' AND presence IN ('normal', 'incomplete')
 
 /* ------------------------------------------------------------------------- */
 
