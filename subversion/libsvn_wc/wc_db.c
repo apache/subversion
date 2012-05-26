@@ -5111,7 +5111,7 @@ set_changelist_txn(void *baton,
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ACTUAL_EMPTIES));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 

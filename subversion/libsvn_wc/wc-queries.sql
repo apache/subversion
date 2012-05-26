@@ -560,6 +560,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 -- STMT_DELETE_ACTUAL_EMPTIES
 DELETE FROM actual_node
 WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND properties IS NULL
   AND conflict_old IS NULL
   AND conflict_new IS NULL

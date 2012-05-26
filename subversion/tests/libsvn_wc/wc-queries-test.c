@@ -88,10 +88,7 @@ static const int slow_statements[] =
   STMT_LOOK_FOR_WORK,
   STMT_HAS_WORKING_NODES,
 
-  /* Need review: */
-  STMT_DELETE_ACTUAL_EMPTIES,
-
-  /* Upgrade statements? */
+  /* Upgrade statements */
   STMT_SELECT_OLD_TREE_CONFLICT,
   STMT_ERASE_OLD_CONFLICTS,
   STMT_SELECT_ALL_FILES,
