@@ -84,7 +84,7 @@ static const int slow_statements[] =
   STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT,  /* wc scan op_depth 0 */
   STMT_SELECT_ALL_NODES,                /* schema validation code */
 
-  /* Is there a record? ### S*/
+  /* Is there a record? ### Can we somehow check for LIMIT 1? */
   STMT_LOOK_FOR_WORK,
   STMT_HAS_WORKING_NODES,
 
