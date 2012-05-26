@@ -91,7 +91,6 @@ static const int slow_statements[] =
   /* Upgrade statements */
   STMT_SELECT_OLD_TREE_CONFLICT,
   STMT_ERASE_OLD_CONFLICTS,
-  STMT_SELECT_ALL_FILES,
   STMT_HAS_ACTUAL_NODES_CONFLICTS,
 
   /* Need index? */
