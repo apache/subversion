@@ -126,6 +126,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1342984
+   Avoid a full table scan on every directory during 'svn upgrade'
+   Justification:
+     Makes svn upgrade unnecessary slow. Trivial fix.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
