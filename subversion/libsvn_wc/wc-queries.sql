@@ -531,8 +531,9 @@ SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
    AND IS_STRICT_DESCENDANT_OF(N.local_relpath, ?2)
    AND A.changelist = ?3
 
--- STMT_SELECT_TARGETS
-SELECT local_relpath, parent_relpath from targets_list
+/* Only used by commented dump_targets() in wc_db.c */
+/*-- STMT_SELECT_TARGETS
+SELECT local_relpath, parent_relpath from targets_list*/
 
 -- STMT_INSERT_ACTUAL_EMPTIES
 INSERT OR IGNORE INTO actual_node (
@@ -1065,14 +1066,6 @@ INSERT INTO actual_node (
   wc_id, local_relpath, conflict_data, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
 
--- STMT_SELECT_OLD_TREE_CONFLICT
-SELECT wc_id, local_relpath, tree_conflict_data
-FROM actual_node
-WHERE tree_conflict_data IS NOT NULL
-
--- STMT_ERASE_OLD_CONFLICTS
-UPDATE actual_node SET tree_conflict_data = NULL
-
 -- STMT_SELECT_ALL_FILES
 SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND kind = 'file'
@@ -1083,13 +1076,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_HAS_WORKING_NODES
 SELECT 1 FROM nodes WHERE op_depth > 0
-LIMIT 1
-
--- STMT_HAS_ACTUAL_NODES_CONFLICTS
-SELECT 1 FROM actual_node
-WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
-           AND (conflict_new IS NULL) AND (conflict_working IS NULL)
-           AND (tree_conflict_data IS NULL))
 LIMIT 1
 
 /* --------------------------------------------------------------------------

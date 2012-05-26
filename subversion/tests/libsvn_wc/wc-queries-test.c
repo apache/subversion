@@ -80,29 +80,23 @@ static const int schema_statements[] =
 static const int slow_statements[] =
 {
   /* Operate on the entire WC */
-  STMT_HAS_SWITCHED_WCROOT,
-  STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT,
-  STMT_SELECT_ALL_NODES,
+  STMT_HAS_SWITCHED_WCROOT,             /* wc scan op_depth 0 */
+  STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT,  /* wc scan op_depth 0 */
+  STMT_SELECT_ALL_NODES,                /* schema validation code */
 
-  /* Is there a record? */
+  /* Is there a record? ### S*/
   STMT_LOOK_FOR_WORK,
   STMT_HAS_WORKING_NODES,
 
-  /* Upgrade statements */
-  STMT_SELECT_OLD_TREE_CONFLICT,
-  STMT_ERASE_OLD_CONFLICTS,
-  STMT_HAS_ACTUAL_NODES_CONFLICTS,
-
   /* Need index? */
-  STMT_SELECT_TARGETS,
-  STMT_INSERT_ACTUAL_EMPTIES,
   STMT_SELECT_PRISTINE_BY_MD5, /* Only used by deprecated api */
+
+  /* Full temporary table read */
+  STMT_INSERT_ACTUAL_EMPTIES,
+  STMT_SELECT_REVERT_LIST_RECURSIVE,
   STMT_SELECT_DELETE_LIST,
 
-  /* Create temporary table */
-  STMT_SELECT_REVERT_LIST_RECURSIVE,
-
-  /* Designed as slow */
+  /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,
 
   /* Slow, but just if foreign keys are enabled:
