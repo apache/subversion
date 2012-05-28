@@ -34,6 +34,7 @@ echo "========= configure"
 #            --without-berkeley-db \
 ./configure --enable-javahl --enable-maintainer-mode \
             --with-neon=/usr \
+            --with-serf=/usr/local \
             --with-apxs=/usr/sbin/apxs \
             --with-berkeley-db \
             --with-apr=/usr \
