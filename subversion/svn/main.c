@@ -1161,15 +1161,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Prints unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"
-     "  By default, this subcommand will add an extra newline to the end\n"
-     "  of the property values so that the output looks pretty.  Also,\n"
-     "  whenever there are multiple paths involved, each property value\n"
-     "  is prefixed with the path with which it is associated.  Use the\n"
-     "  --strict option to disable these beautifications (useful when\n"
-     "  redirecting a binary property value to a file, but available only\n"
-     "  if you supply a single TARGET to a non-recursive propget operation).\n"),
+     "  With --verbose, the target path and the property name are printed on\n"
+     "  separate lines before each value, like 'svn proplist --verbose'.\n"
+     "  Otherwise, if there is more than one TARGET or a depth other than\n"
+     "  'empty', the target path is printed on the same line before each value.\n"
+     "\n"
+     "  By default, an extra newline is printed after the property value so that\n"
+     "  the output looks pretty.  With a single TARGET and depth 'empty', you can\n"
+     "  use the --strict option to disable this (useful when redirecting a binary\n"
+     "  property value to a file, for example).\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
-     opt_changelist } },
+     opt_changelist },
+    {{'v', N_("print path, name and value on separate lines")},
+     {opt_strict, N_("don't print an extra newline")}} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -1179,8 +1183,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  1. Lists versioned props. If specified, REV determines in which\n"
      "     revision the target is first looked up.\n"
      "  2. Lists unversioned remote props on repos revision.\n"
-     "     TARGET only determines which repository to access.\n"),
-    {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist } },
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "  With --verbose, the property values are printed as well, like 'svn propget\n"
+     "  --verbose'.  With --quiet, the paths are not printed.\n"),
+    {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist },
+    {{'v', N_("print path, name and value on separate lines")},
+     {'q', N_("don't print the path")}} },
 
   { "propset", svn_cl__propset, {"pset", "ps"}, N_
     ("Set the value of a property on files, dirs, or revisions.\n"
