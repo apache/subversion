@@ -73,7 +73,18 @@ typedef enum svn_cl__longopt_t {
   opt_changelist,
   opt_config_dir,
   opt_config_options,
+  /* diff options */
   opt_diff_cmd,
+  opt_internal_diff,
+  opt_no_diff_deleted,
+  opt_show_copies_as_adds,
+  opt_notice_ancestry,
+  opt_summarize,
+  opt_use_git_diff_format,
+  opt_ignore_properties,
+  opt_properties_only,
+  opt_patch_compatible,
+  /* end of diff options */
   opt_dry_run,
   opt_editor_cmd,
   opt_encoding,
@@ -88,12 +99,9 @@ typedef enum svn_cl__longopt_t {
   opt_new_cmd,
   opt_no_auth_cache,
   opt_no_autoprops,
-  opt_no_diff_deleted,
-  opt_ignore_properties,
   opt_no_ignore,
   opt_no_unlock,
   opt_non_interactive,
-  opt_notice_ancestry,
   opt_old_cmd,
   opt_record_only,
   opt_relocate,
@@ -101,7 +109,6 @@ typedef enum svn_cl__longopt_t {
   opt_revprop,
   opt_stop_on_copy,
   opt_strict,
-  opt_summarize,
   opt_targets,
   opt_depth,
   opt_set_depth,
@@ -117,18 +124,13 @@ typedef enum svn_cl__longopt_t {
   opt_reintegrate,
   opt_trust_server_cert,
   opt_strip,
-  opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
   opt_ignore_whitespace,
   opt_diff,
-  opt_internal_diff,
-  opt_use_git_diff_format,
-  opt_patch_compatible,
   opt_allow_mixed_revisions,
   opt_include_externals,
   opt_symmetric,
-  opt_properties_only,
 } svn_cl__longopt_t;
 
 
@@ -241,17 +243,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
-  {"no-diff-deleted", opt_no_diff_deleted, 0,
-                    N_("do not print differences for deleted files")},
-  {"ignore-properties", opt_ignore_properties, 0,
-                    N_("ignore properties during the operation")},
-  {"notice-ancestry", opt_notice_ancestry, 0,
-                    N_("notice ancestry when calculating differences")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
                     N_("ignore ancestry when calculating merges")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
-  {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
@@ -283,7 +278,6 @@ const apr_getopt_option_t svn_cl__options[] =
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
   {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
-  {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG")},
@@ -336,8 +330,6 @@ const apr_getopt_option_t svn_cl__options[] =
                        "The expected component separator is '/' on all\n"
                        "                             "
                        "platforms. A leading '/' counts as one component.")},
-  {"show-copies-as-adds", opt_show_copies_as_adds, 0,
-                    N_("don't diff copied or moved files with their source")},
   {"ignore-keywords", opt_ignore_keywords, 0,
                     N_("don't expand keywords")},
   {"reverse-diff", opt_reverse_diff, 0,
@@ -345,10 +337,23 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching")},
   {"diff", opt_diff, 0, N_("produce diff output")}, /* maps to show_diff */
+  /* diff options */
+  {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
+  {"no-diff-deleted", opt_no_diff_deleted, 0,
+                    N_("do not print differences for deleted files")},
+  {"show-copies-as-adds", opt_show_copies_as_adds, 0,
+                    N_("don't diff copied or moved files with their source")},
+  {"notice-ancestry", opt_notice_ancestry, 0,
+                    N_("notice ancestry when calculating differences")},
+  {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
+  {"ignore-properties", opt_ignore_properties, 0,
+                    N_("ignore properties during the operation")},
+  {"properties-only", opt_properties_only, 0,
+                       N_("show only properties during the operation")},
   {"patch-compatible", opt_patch_compatible, 0,
                        N_("generate diff suitable for generic third-party\n"
                        "                             "
@@ -356,6 +361,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "--show-copies-as-adds --ignore-properties"
                        )},
+  /* end of diff options */
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow merge into mixed-revision working copy.\n"
                        "                             "
@@ -370,8 +376,6 @@ const apr_getopt_option_t svn_cl__options[] =
                        "fixed revision. (See the svn:externals property)")},
   {"symmetric", opt_symmetric, 0,
                        N_("Symmetric merge")},
-  {"properties-only", opt_properties_only, 0,
-                       N_("show only properties during the operation")},
 
   /* Long-opt Aliases
    *
@@ -1942,16 +1946,16 @@ main(int argc, const char *argv[])
         opt_state.trust_server_cert = TRUE;
         break;
       case opt_no_diff_deleted:
-        opt_state.no_diff_deleted = TRUE;
+        opt_state.diff.no_diff_deleted = TRUE;
         break;
       case opt_ignore_properties:
-        opt_state.ignore_properties = TRUE;
+        opt_state.diff.ignore_properties = TRUE;
         break;
       case opt_show_copies_as_adds:
-        opt_state.show_copies_as_adds = TRUE;
+        opt_state.diff.show_copies_as_adds = TRUE;
         break;
       case opt_notice_ancestry:
-        opt_state.notice_ancestry = TRUE;
+        opt_state.diff.notice_ancestry = TRUE;
         break;
       case opt_ignore_ancestry:
         opt_state.ignore_ancestry = TRUE;
@@ -1968,7 +1972,7 @@ main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
       case opt_diff_cmd:
-        opt_state.diff_cmd = apr_pstrdup(pool, opt_arg);
+        opt_state.diff.diff_cmd = apr_pstrdup(pool, opt_arg);
         break;
       case opt_merge_cmd:
         opt_state.merge_cmd = apr_pstrdup(pool, opt_arg);
@@ -2042,7 +2046,7 @@ main(int argc, const char *argv[])
         opt_state.no_unlock = TRUE;
         break;
       case opt_summarize:
-        opt_state.summarize = TRUE;
+        opt_state.diff.summarize = TRUE;
         break;
       case opt_remove:
         opt_state.remove = TRUE;
@@ -2128,13 +2132,13 @@ main(int argc, const char *argv[])
           opt_state.show_diff = TRUE;
           break;
       case opt_internal_diff:
-        opt_state.internal_diff = TRUE;
+        opt_state.diff.internal_diff = TRUE;
         break;
       case opt_patch_compatible:
-        opt_state.patch_compatible = TRUE;
+        opt_state.diff.patch_compatible = TRUE;
         break;
       case opt_use_git_diff_format:
-        opt_state.use_git_diff_format = TRUE;
+        opt_state.diff.use_git_diff_format = TRUE;
         break;
       case opt_allow_mixed_revisions:
         opt_state.allow_mixed_rev = TRUE;
@@ -2143,7 +2147,7 @@ main(int argc, const char *argv[])
         opt_state.include_externals = TRUE;
         break;
       case opt_properties_only:
-        opt_state.properties_only = TRUE;
+        opt_state.diff.properties_only = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -2329,7 +2333,7 @@ main(int argc, const char *argv[])
 
   /* Disallow simultaneous use of both --diff-cmd and
      --internal-diff.  */
-  if (opt_state.diff_cmd && opt_state.internal_diff)
+  if (opt_state.diff.diff_cmd && opt_state.diff.internal_diff)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("--diff-cmd and --internal-diff "
@@ -2522,13 +2526,13 @@ main(int argc, const char *argv[])
 
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
-  if (opt_state.diff_cmd)
+  if (opt_state.diff.diff_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
-                   SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff_cmd);
+                   SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff.diff_cmd);
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
-  if (opt_state.internal_diff)
+  if (opt_state.diff.internal_diff)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, NULL);
 
