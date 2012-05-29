@@ -163,7 +163,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_unlock;
 
   const char *message;           /* log message */
-  const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
