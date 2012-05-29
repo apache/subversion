@@ -2749,6 +2749,10 @@ diff_repos_wc_file_target(const char *target,
   apr_hash_t *file1_props = NULL;
   apr_hash_t *file2_props;
   svn_boolean_t is_copy = FALSE;
+  apr_hash_t *keywords = NULL;
+  svn_string_t *keywords_prop;
+  svn_subst_eol_style_t eol_style;
+  const char *eol_str;
 
   /* Get content and props of file 1 (the remote file). */
   SVN_ERR(svn_stream_open_unique(&file1_content, &file1_abspath, NULL,
@@ -2769,46 +2773,39 @@ diff_repos_wc_file_target(const char *target,
 
   SVN_ERR(svn_stream_close(file1_content));
 
+  SVN_ERR(svn_wc_prop_list2(&file2_props, ctx->wc_ctx, file2_abspath,
+                            scratch_pool, scratch_pool));
+
+  /* We might have to create a normalised version of the working file. */
+  svn_subst_eol_style_from_value(&eol_style, &eol_str,
+                                 apr_hash_get(file2_props,
+                                              SVN_PROP_EOL_STYLE,
+                                              APR_HASH_KEY_STRING));
+  keywords_prop = apr_hash_get(file2_props, SVN_PROP_KEYWORDS,
+                               APR_HASH_KEY_STRING);
+  if (keywords_prop)
+    SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_prop->data,
+                                      NULL, NULL, 0, NULL,
+                                      scratch_pool));
+  if (svn_subst_translation_required(eol_style, SVN_SUBST_NATIVE_EOL_STR,
+                                     keywords, FALSE, TRUE))
     {
-      apr_hash_t *keywords = NULL;
-      svn_string_t *keywords_prop;
-      svn_subst_eol_style_t eol_style;
-      const char *eol_str;
+      svn_stream_t *working_content;
+      svn_stream_t *normalized_content;
 
-      SVN_ERR(svn_wc_prop_list2(&file2_props, ctx->wc_ctx, file2_abspath,
-                                scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_readonly(&working_content, file2_abspath,
+                                       scratch_pool, scratch_pool));
 
-      /* We might have to create a normalised version of the working file. */
-      svn_subst_eol_style_from_value(&eol_style, &eol_str,
-                                     apr_hash_get(file2_props,
-                                                  SVN_PROP_EOL_STYLE,
-                                                  APR_HASH_KEY_STRING));
-      keywords_prop = apr_hash_get(file2_props, SVN_PROP_KEYWORDS,
-                                   APR_HASH_KEY_STRING);
-      if (keywords_prop)
-        SVN_ERR(svn_subst_build_keywords2(&keywords, keywords_prop->data,
-                                          NULL, NULL, 0, NULL,
-                                          scratch_pool));
-      if (svn_subst_translation_required(eol_style, SVN_SUBST_NATIVE_EOL_STR,
-                                         keywords, FALSE, TRUE))
-        {
-          svn_stream_t *working_content;
-          svn_stream_t *normalized_content;
-
-          SVN_ERR(svn_stream_open_readonly(&working_content, file2_abspath,
-                                           scratch_pool, scratch_pool));
-
-          /* Create a temporary file and copy normalised data into it. */
-          SVN_ERR(svn_stream_open_unique(&file2_content, &file2_abspath, NULL,
-                                         svn_io_file_del_on_pool_cleanup,
-                                         scratch_pool, scratch_pool));
-          normalized_content = svn_subst_stream_translated(
-                                 file2_content, SVN_SUBST_NATIVE_EOL_STR,
-                                 TRUE, keywords, FALSE, scratch_pool);
-          SVN_ERR(svn_stream_copy3(working_content, normalized_content,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   scratch_pool));
-        }
+      /* Create a temporary file and copy normalised data into it. */
+      SVN_ERR(svn_stream_open_unique(&file2_content, &file2_abspath, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     scratch_pool, scratch_pool));
+      normalized_content = svn_subst_stream_translated(
+                             file2_content, SVN_SUBST_NATIVE_EOL_STR,
+                             TRUE, keywords, FALSE, scratch_pool);
+      SVN_ERR(svn_stream_copy3(working_content, normalized_content,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               scratch_pool));
     }
 
   if (kind1 == svn_node_file && !(show_copies_as_adds && is_copy))
