@@ -42,7 +42,7 @@ class SVNReposAccess : public SVNBase
 
   SVNReposAccess(const char *repos_url);
   virtual ~SVNReposAccess();
-  void dispose();
+  void dispose(jobject jthis);
   static SVNReposAccess *getCppObject(jobject jthis);
  private:
   apr_pool_t *m_sess_pool;
