@@ -66,8 +66,7 @@
    option. Options that have both long and short options should just
    use the short option letter as identifier.  */
 typedef enum svn_cl__longopt_t {
-  opt_ancestor_path = SVN_OPT_FIRST_LONGOPT_ID,
-  opt_auth_password,
+  opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
   opt_auth_username,
   opt_autoprops,
   opt_changelist,
