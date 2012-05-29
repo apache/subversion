@@ -75,7 +75,7 @@ Java_org_apache_subversion_javahl_SVNClient_dispose
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  cl->dispose();
+  cl->dispose(jthis);
 }
 
 JNIEXPORT void JNICALL

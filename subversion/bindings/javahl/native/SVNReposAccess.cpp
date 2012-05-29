@@ -60,10 +60,10 @@ SVNReposAccess *SVNReposAccess::getCppObject(jobject jthis)
   return (cppAddr == 0 ? NULL : reinterpret_cast<SVNReposAccess *>(cppAddr));
 }
 
-void SVNReposAccess::dispose()
+void SVNReposAccess::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNReposAccess");
+  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNReposAccess");
 }
 
 svn_revnum_t
