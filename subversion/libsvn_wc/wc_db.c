@@ -109,12 +109,6 @@
 #define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
                  (svn_sqlite__column_bytes(stmt, i) > 2)
 
-/* This is a character used to escape itself and the globbing character in
-   globbing sql expressions below.  See escape_sqlite_like().
-
-   NOTE: this should match the character used within wc-metadata.sql  */
-#define LIKE_ESCAPE_CHAR     "#"
-
 /* Calculates the depth of the relpath below "" */
 APR_INLINE static int
 relpath_depth(const char *relpath)
@@ -451,44 +445,6 @@ lock_from_columns(svn_sqlite__stmt_t *stmt,
   return lock;
 }
 
-
-/* */
-static const char *
-escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
-{
-  char *result;
-  const char *old_ptr;
-  char *new_ptr;
-  int len = 0;
-
-  /* Count the number of extra characters we'll need in the escaped string.
-     We could just use the worst case (double) value, but we'd still need to
-     iterate over the string to get it's length.  So why not do something
-     useful why iterating over it, and save some memory at the same time? */
-  for (old_ptr = str; *old_ptr; ++old_ptr)
-    {
-      len++;
-      if (*old_ptr == '%'
-            || *old_ptr == '_'
-            || *old_ptr == LIKE_ESCAPE_CHAR[0])
-        len++;
-    }
-
-  result = apr_palloc(result_pool, len + 1);
-
-  /* Now do the escaping. */
-  for (old_ptr = str, new_ptr = result; *old_ptr; ++old_ptr, ++new_ptr)
-    {
-      if (*old_ptr == '%'
-            || *old_ptr == '_'
-            || *old_ptr == LIKE_ESCAPE_CHAR[0])
-        *(new_ptr++) = LIKE_ESCAPE_CHAR[0];
-      *new_ptr = *old_ptr;
-    }
-  *new_ptr = '\0';
-
-  return result;
-}
 
 /* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
    its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
