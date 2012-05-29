@@ -2729,9 +2729,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
  * target (either svn_node_file or svn_node_none). REV is the revision the
  * working file is diffed against. RA_SESSION points at the URL of the file
  * in the repository and is used to get the file's repository-version content,
- * if necessary. If DIFF_WITH_BASE is set, diff against the BASE version of
- * the local file instead of WORKING.
- * The other parameters are as in diff_repos_wc(). */
+ * if necessary. The other parameters are as in diff_repos_wc(). */
 static svn_error_t *
 diff_repos_wc_file_target(const char *target,
                           const char *file2_abspath,
@@ -2739,7 +2737,6 @@ diff_repos_wc_file_target(const char *target,
                           svn_revnum_t rev,
                           svn_boolean_t reverse,
                           svn_boolean_t show_copies_as_adds,
-                          svn_boolean_t diff_with_base,
                           const svn_wc_diff_callbacks4_t *callbacks,
                           void *callback_baton,
                           svn_ra_session_t *ra_session,
@@ -2772,32 +2769,6 @@ diff_repos_wc_file_target(const char *target,
 
   SVN_ERR(svn_stream_close(file1_content));
 
-  /* Get content and props of file 2 (the local file). */
-  if (diff_with_base)
-    {
-      svn_stream_t *pristine_content;
-
-      SVN_ERR(svn_wc_get_pristine_props(&file2_props, ctx->wc_ctx,
-                                        file2_abspath, scratch_pool,
-                                        scratch_pool));
-
-      /* ### We need a filename, but this API returns an opaque stream.
-       * ### This requires us to copy to a temporary file. Maybe libsvn_wc
-       * ### should also provide an API that returns a path to a file that
-       * ### contains pristine content, possibly temporary? */
-      SVN_ERR(svn_wc_get_pristine_contents2(&pristine_content,
-                                            ctx->wc_ctx,
-                                            file2_abspath,
-                                            scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_stream_open_unique(&file2_content, &file2_abspath, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
-                                     scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_copy3(pristine_content, file2_content,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               scratch_pool));
-    }
-  else
     {
       apr_hash_t *keywords = NULL;
       svn_string_t *keywords_prop;
@@ -3038,21 +3009,34 @@ diff_repos_wc(const char *path_or_url1,
   else
     callback_baton->revnum2 = rev;
 
-  /* If both diff targets can be diffed as files, fetch the file from the
-   * repository and generate a diff against the local version of the file. */
-  if ((kind1 == svn_node_file || kind1 == svn_node_none)
+  /* Check if our diff target is a copied node. */
+  SVN_ERR(svn_wc__node_get_origin(&is_copy, 
+                                  &copyfrom_rev,
+                                  &copy_source_repos_relpath,
+                                  &copy_source_repos_root_url,
+                                  NULL, NULL,
+                                  ctx->wc_ctx, abspath2,
+                                  FALSE, pool, pool));
+
+  /* If both diff targets can be diffed as files, fetch the appropriate
+   * file content from the repository and generate a diff against the
+   * local version of the file.
+   * However, if comparing the repository version of the file to the BASE
+   * tree version we can use the diff editor to transmit a delta instead
+   * of potentially huge file content. */
+  if ((!rev2_is_base || is_copy) &&
+      (kind1 == svn_node_file || kind1 == svn_node_none)
        && kind2 == svn_node_file)
     {
       SVN_ERR(diff_repos_wc_file_target(target, abspath2, kind1, rev,
                                         reverse, show_copies_as_adds,
-                                        rev2_is_base,
                                         callbacks, callback_baton,
                                         ra_session, ctx, pool));
 
       return SVN_NO_ERROR;
     }
 
-  /* Else, use the diff editor to generate the diff. */
+  /* Use the diff editor to generate the diff. */
   SVN_ERR(svn_wc__get_diff_editor(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
@@ -3077,14 +3061,6 @@ diff_repos_wc(const char *path_or_url1,
   else
     diff_depth = svn_depth_unknown;
 
-  /* Check if our diff target is a copied node. */
-  SVN_ERR(svn_wc__node_get_origin(&is_copy, 
-                                  &copyfrom_rev,
-                                  &copy_source_repos_relpath,
-                                  &copy_source_repos_root_url,
-                                  NULL, NULL,
-                                  ctx->wc_ctx, abspath2,
-                                  FALSE, pool, pool));
   if (is_copy)
     {
       const char *copyfrom_url;
