@@ -128,7 +128,7 @@ all2: targetdir
 package:
 	test -d $(SVNDIR)\$(CONFIG)\Subversion\tests\cmdline || mkdir $(SVNDIR)\$(CONFIG)\Subversion\tests\cmdline
 	test -d $(TARGETDIR)\bin || mkdir $(TARGETDIR)\bin
-	for %%i in (svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion svnrdump) do @$(CP) $(CONFIG)\subversion\%%i\%%i.exe $(TARGETDIR)\bin
+	for %%i in (svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion svnrdump svnmucc) do @$(CP) $(CONFIG)\subversion\%%i\%%i.exe $(TARGETDIR)\bin
 	for %%i in (diff diff3 diff4) do @if exist $(CONFIG)\tools\diff\%%i.exe $(CP) $(CONFIG)\tools\diff\%%i.exe $(TARGETDIR)\bin
 	$(CP) $(APRDIR)\$(CONFIG)/*.dll $(TARGETDIR)\bin
 	$(CP) $(APRUTILDIR)\$(CONFIG)/*.dll $(TARGETDIR)\bin

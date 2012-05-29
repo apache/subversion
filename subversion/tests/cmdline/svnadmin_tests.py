@@ -103,6 +103,16 @@ def check_hotcopy_fsfs(src, dst):
                                     % (row, rows1[i]))
           continue
 
+        # Special case for revprop-generation: It will always be zero in
+        # the hotcopy destination (i.e. a fresh cache generation)
+        if src_file == 'revprop-generation':
+          f2 = open(dst_path, 'r')
+          revprop_gen = int(f2.read().strip())
+          if revprop_gen != 0:
+              raise svntest.Failure("Hotcopy destination has non-zero " +
+                                    "revprop generation")
+          continue
+
         f1 = open(src_path, 'r')
         f2 = open(dst_path, 'r')
         while True:

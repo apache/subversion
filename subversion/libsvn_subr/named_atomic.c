@@ -84,15 +84,12 @@
  */
 #define SHM_NAME_SUFFIX "Shm"
 
-/* Prevent macro re-definition warning (on Windows in particular).
- */
-#ifdef SYNCHRONIZE
-#undef SYNCHRONIZE
-#endif
-
 /* Platform-dependent implementations of our basic atomic operations.
- * SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
+ * NA_SYNCHRONIZE(op) will ensure that the OP gets executed atomically.
  * This will be zero-overhead if OP itself is already atomic.
+ *
+ * (We don't call it SYNCHRONIZE because Windows has a preprocess macro by
+ * that name.)
  *
  * The default implementation will use the same mutex for initialization
  * as well as any type of data access.  This is quite expensive and we
@@ -108,8 +105,8 @@
 #define synched_cmpxchg(mem, value, comperand) \
   InterlockedCompareExchange64(mem, value, comperand)
 
-#define SYNCHRONIZE(_atomic,op) op;
-#define SYNCHRONIZE_IS_FAST TRUE
+#define NA_SYNCHRONIZE(_atomic,op) op;
+#define NA_SYNCHRONIZE_IS_FAST TRUE
 
 #elif SVN_HAS_ATOMIC_BUILTINS
 
@@ -121,8 +118,8 @@
 #define synched_cmpxchg(mem, value, comperand) \
   __sync_val_compare_and_swap(mem, comperand, value)
 
-#define SYNCHRONIZE(_atomic,op) op;
-#define SYNCHRONIZE_IS_FAST TRUE
+#define NA_SYNCHRONIZE(_atomic,op) op;
+#define NA_SYNCHRONIZE_IS_FAST TRUE
 
 #else
 
@@ -161,12 +158,12 @@ synched_cmpxchg(volatile apr_int64_t *mem,
   return old_value;
 }
 
-#define SYNCHRONIZE(_atomic,op)\
+#define NA_SYNCHRONIZE(_atomic,op)\
   SVN_ERR(lock(_atomic->mutex));\
   op;\
   SVN_ERR(unlock(_atomic->mutex,SVN_NO_ERROR));
 
-#define SYNCHRONIZE_IS_FAST FALSE
+#define NA_SYNCHRONIZE_IS_FAST FALSE
 
 #endif
 
@@ -344,9 +341,39 @@ return_atomic(svn_named_atomic__t **atomic,
 /* Implement API */
 
 svn_boolean_t
+svn_named_atomic__is_supported(void)
+{
+#ifdef _WIN32
+  static svn_tristate_t result = svn_tristate_unknown;
+
+  if (result == svn_tristate_unknown)
+    {
+      /* APR SHM implementation requires the creation of global objects */
+      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
+                                         NULL,
+                                         PAGE_READONLY,
+                                         0,
+                                         1,
+                                         "Global\\__RandomXZY_svn");
+      if (handle != NULL)
+        {
+          CloseHandle(handle);
+          result = svn_tristate_true;
+        }
+      else
+        result = svn_tristate_false;
+    }
+
+  return result == svn_tristate_true ? TRUE : FALSE;
+#else
+  return TRUE;
+#endif
+}
+
+svn_boolean_t
 svn_named_atomic__is_efficient(void)
 {
-  return SYNCHRONIZE_IS_FAST;
+  return NA_SYNCHRONIZE_IS_FAST;
 }
 
 svn_error_t *
@@ -518,7 +545,7 @@ svn_named_atomic__read(apr_int64_t *value,
                        svn_named_atomic__t *atomic)
 {
   SVN_ERR(validate(atomic));
-  SYNCHRONIZE(atomic, *value = synched_read(&atomic->data->value));
+  NA_SYNCHRONIZE(atomic, *value = synched_read(&atomic->data->value));
 
   return SVN_NO_ERROR;
 }
@@ -531,7 +558,7 @@ svn_named_atomic__write(apr_int64_t *old_value,
   apr_int64_t temp;
 
   SVN_ERR(validate(atomic));
-  SYNCHRONIZE(atomic, temp = synched_write(&atomic->data->value, new_value));
+  NA_SYNCHRONIZE(atomic, temp = synched_write(&atomic->data->value, new_value));
 
   if (old_value)
     *old_value = temp;
@@ -547,7 +574,7 @@ svn_named_atomic__add(apr_int64_t *new_value,
   apr_int64_t temp;
 
   SVN_ERR(validate(atomic));
-  SYNCHRONIZE(atomic, temp = synched_add(&atomic->data->value, delta));
+  NA_SYNCHRONIZE(atomic, temp = synched_add(&atomic->data->value, delta));
 
   if (new_value)
     *new_value = temp;
@@ -564,9 +591,9 @@ svn_named_atomic__cmpxchg(apr_int64_t *old_value,
   apr_int64_t temp;
 
   SVN_ERR(validate(atomic));
-  SYNCHRONIZE(atomic, temp = synched_cmpxchg(&atomic->data->value,
-                                             new_value,
-                                             comperand));
+  NA_SYNCHRONIZE(atomic, temp = synched_cmpxchg(&atomic->data->value,
+                                                new_value,
+                                                comperand));
 
   if (old_value)
     *old_value = temp;

@@ -44,15 +44,13 @@ typedef struct dir_stack_t
 } dir_stack_t;
 
 
-/* Call EDITOR's open_directory() function with the PATH and REVISION
- * arguments, and then add the resulting dir baton to the dir baton
- * stack.
+/* Call EDITOR's open_directory() function with the PATH argument, then
+ * add the resulting dir baton to the dir baton stack.
  */
 static svn_error_t *
 open_dir(apr_array_header_t *db_stack,
          const svn_delta_editor_t *editor,
          const char *path,
-         svn_revnum_t revision,
          apr_pool_t *pool)
 {
   void *parent_db, *db;
@@ -69,7 +67,8 @@ open_dir(apr_array_header_t *db_stack,
   /* Call the EDITOR's open_directory function to get a new directory
      baton. */
   subpool = svn_pool_create(pool);
-  SVN_ERR(editor->open_directory(path, parent_db, revision, subpool, &db));
+  SVN_ERR(editor->open_directory(path, parent_db, SVN_INVALID_REVNUM, subpool,
+                                 &db));
 
   /* Now add the dir baton to the stack. */
   item = apr_pcalloc(subpool, sizeof(*item));
@@ -131,13 +130,12 @@ count_components(const char *path)
 
 /*** Public interfaces ***/
 svn_error_t *
-svn_delta_path_driver(const svn_delta_editor_t *editor,
-                      void *edit_baton,
-                      svn_revnum_t revision,
-                      const apr_array_header_t *paths,
-                      svn_delta_path_driver_cb_func_t callback_func,
-                      void *callback_baton,
-                      apr_pool_t *pool)
+svn_delta_path_driver2(const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       const apr_array_header_t *paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool)
 {
   apr_array_header_t *db_stack = apr_array_make(pool, 4, sizeof(void *));
   const char *last_path = NULL;
@@ -155,9 +153,6 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
   iterpool = svn_pool_create(pool);
   item = apr_pcalloc(subpool, sizeof(*item));
 
-  /* Sort the paths in a depth-first directory-ish order. */
-  qsort(paths->elts, paths->nelts, paths->elt_size, svn_sort_compare_paths);
-
   /* If the root of the edit is also a target path, we want to call
      the callback function to let the user open the root directory and
      do what needs to be done.  Otherwise, we'll do the open_root()
@@ -171,7 +166,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
     }
   else
     {
-      SVN_ERR(editor->open_root(edit_baton, revision, subpool, &db));
+      SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM, subpool, &db));
     }
   item->pool = subpool;
   item->dir_baton = db;
@@ -238,7 +233,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
                 rel = apr_pstrmemdup(iterpool, pdir, piece - pdir);
 
               /* Open the subdirectory. */
-              SVN_ERR(open_dir(db_stack, editor, rel, revision, pool));
+              SVN_ERR(open_dir(db_stack, editor, rel, pool));
 
               /* If we found a '/', advance our PIECE pointer to
                  character just after that '/'.  Otherwise, we're

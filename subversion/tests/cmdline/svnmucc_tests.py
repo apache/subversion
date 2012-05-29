@@ -39,7 +39,7 @@ def reject_bogus_mergeinfo(sbox):
 
   sbox.build(create_wc=False)
 
-  expected_error = ".*(E200020.*Invalid revision|E175008.*property change)"
+  expected_error = ".*(E200020.*Invalid revision|E175002.*PROPPATCH)"
 
   # At present this tests the server, but if we ever make svnmucc
   # validate the mergeinfo up front then it will only test the client

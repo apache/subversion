@@ -237,9 +237,8 @@ svn_client_list2(const char *path_or_url,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
+  svn_client__pathrev_t *loc;
   svn_dirent_t *dirent;
-  const char *url;
   const char *fs_path;
   svn_error_t *err;
   apr_hash_t *locks;
@@ -249,20 +248,19 @@ svn_client_list2(const char *path_or_url,
   dirent_fields |= SVN_DIRENT_KIND;
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
-                                           peg_revision,
-                                           revision, ctx, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            path_or_url, NULL,
+                                            peg_revision,
+                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra__get_fspath_relative_to_root(ra_session, &fs_path, url,
-                                              pool));
+  fs_path = svn_client__pathrev_fspath(loc, pool);
 
-  SVN_ERR(ra_stat_compatible(ra_session, rev, &dirent, dirent_fields,
+  SVN_ERR(ra_stat_compatible(ra_session, loc->rev, &dirent, dirent_fields,
                              ctx, pool));
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                              _("URL '%s' non-existent in revision %ld"),
-                             url, rev);
+                             loc->url, loc->rev);
 
   /* Maybe get all locks under url. */
   if (fetch_locks)
@@ -292,7 +290,7 @@ svn_client_list2(const char *path_or_url,
       && (depth == svn_depth_files
           || depth == svn_depth_immediates
           || depth == svn_depth_infinity))
-    SVN_ERR(get_dir_contents(dirent_fields, "", rev, ra_session, locks,
+    SVN_ERR(get_dir_contents(dirent_fields, "", loc->rev, ra_session, locks,
                              fs_path, depth, ctx, list_func, baton, pool));
 
   return SVN_NO_ERROR;

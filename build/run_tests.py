@@ -453,6 +453,11 @@ class TestHarness:
     if self.milestone_filter is not None:
       svntest.main.options.milestone_filter = self.milestone_filter
     if self.set_log_level is not None:
+      # Somehow the logger is not setup correctly from win-tests.py, so
+      # setting the log level would fail. ### Please fix
+      if svntest.main.logger is None:
+        import logging
+        svntest.main.logger = logging.getLogger()
       svntest.main.logger.setLevel(self.set_log_level)
     if self.svn_bin is not None:
       svntest.main.options.svn_bin = self.svn_bin

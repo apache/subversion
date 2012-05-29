@@ -24,9 +24,6 @@
 
 
 #include <apr_uri.h>
-
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -198,13 +195,12 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
       ctx->file_pool = svn_pool_create(ctx->dst_rev_pool);
 
-      /* ### it would be nice to have a proper scratch_pool.  */
       SVN_ERR(svn_ra_serf__select_revprops(&ctx->props,
                                            ctx->revprop_target,
                                            ctx->revprop_rev,
                                            ctx->revs_props,
                                            ctx->dst_rev_pool,
-                                           ctx->dst_rev_pool));
+                                           scratch_pool));
 
       if (ctx->revstart_func)
         {
@@ -228,7 +224,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->set_target_revision(ctx->editor_baton,
                                                SVN_STR_TO_REV(rev),
-                                               ctx->dst_rev_pool));
+                                               scratch_pool));
     }
   else if (state == REPORT &&
            strcmp(name.name, "open-root") == 0)
@@ -273,7 +269,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, DELETE_ENTRY);
 
       SVN_ERR(ctx->editor->delete_entry(file_name, SVN_STR_TO_REV(rev),
-                                        info->baton, ctx->dst_rev_pool));
+                                        info->baton, scratch_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -334,7 +330,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
     {
       replay_info_t *info = parser->state->private;
 
-      SVN_ERR(ctx->editor->close_directory(info->baton, ctx->dst_rev_pool));
+      SVN_ERR(ctx->editor->close_directory(info->baton, scratch_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -426,8 +422,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       checksum = svn_xml_get_attr_value("checksum", attrs);
 
-      SVN_ERR(ctx->editor->close_file(info->baton, checksum,
-                                      ctx->file_pool));
+      SVN_ERR(ctx->editor->close_file(info->baton, checksum, scratch_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -643,10 +638,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_error_t *err;
   const char *report_target;
-  /* We're not really interested in the status code here in replay, but
-     the XML parsing code will abort on error if it doesn't have a place
-     to store the response status code. */
-  int status_code;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
@@ -663,6 +654,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = session->session_url_str;
   handler->body_delegate = create_replay_body;
@@ -678,7 +670,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   parser_ctx->start = start_replay;
   parser_ctx->end = end_replay;
   parser_ctx->cdata = cdata_replay;
-  parser_ctx->status_code = &status_code;
   parser_ctx->done = &replay_ctx->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
@@ -752,10 +743,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       svn_ra_serf__list_t *done_list;
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
-      /* We're not really interested in the status code here in replay, but
-         the XML parsing code will abort on error if it doesn't have a place
-         to store the response status code. */
-      int status_code;
 
       if (session->cancel_func)
         SVN_ERR(session->cancel_func(session->cancel_baton));
@@ -806,6 +793,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           /* Send the replay report request. */
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));
 
+          handler->handler_pool = replay_ctx->src_rev_pool;
           handler->method = "REPORT";
           handler->path = session->session_url_str;
           handler->body_delegate = create_replay_body;
@@ -828,7 +816,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           parser_ctx->start = start_replay;
           parser_ctx->end = end_replay;
           parser_ctx->cdata = cdata_replay;
-          parser_ctx->status_code = &status_code;
           parser_ctx->done = &replay_ctx->done;
           parser_ctx->done_list = &done_reports;
           parser_ctx->done_item = &replay_ctx->done_item;

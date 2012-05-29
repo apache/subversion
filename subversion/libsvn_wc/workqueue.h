@@ -122,7 +122,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* Set *WORK_ITEM to a new work item that describes a moves of
+/* Set *WORK_ITEM to a new work item that describes a move of
    a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
    storing in the working copy managing DST_ABSPATH.
 

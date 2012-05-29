@@ -149,6 +149,29 @@ mergeinfo for the merge is set on the deepest directories present.</p>
 
 </ul>
 
+<h3>Rationale</h3>
+
+<p><em>[JAF] The above may be the actual behaviour but sounds too simplistic
+  to be the desired behaviour.  Although a simple depth attribute is
+  recorded for each dir in the WC, the ambient depth of a dir in the WC is
+  not simply one of empty/files/immediates/infinity, but rather is a tree in
+  which different branches are populated to different depths.  Surely the
+  merge ought to respond to the ambient depth rather than the simple depth
+  attribute.</em></p>
+
+<p><em>[JAF] It's not clear whether an incoming addition should be honoured
+  if the added node would fall outside the ambient depth.  The sparse-
+  directories design doesn't seem to address this case for updates, let
+  alone merges.  It would be silly if a merge could delete such a node (that
+  was present in the WC despite being outside its parent's 'depth'
+  attribute) and could not then re-add a node of the same name in order to
+  perform both halves of an incoming replacement.  <a
+  href="http://subversion.tigris.org/issues/show_bug.cgi?id=4164" >Issue
+  #4164 "inconsistencies in merge handling of adds vs. edits in shallow
+  targets"</a> is related.</em></p>
+
+<p>See <a href="../sparse-directories.txt">sparse-directories design</a>.</p>
+
 </div>  <!-- sparse-checkouts -->
 
 <div class="h2" id="switched-paths">
@@ -238,6 +261,50 @@ SSRP - Switched subtree's repository parent
 --x    No mergeinfo elision possible</pre>
 
 </ul>
+
+<h3>Delete</h3>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=4163"
+  >Issue #4163 "merged deletion of switched subtrees records non-inheritable
+  mergeinfo"</a>: If a merge deletes the path SS, the desired behaviour
+  is currently undefined and the actual behaviour is that a commit will
+  delete <strong>both</strong> SS (from SSRP) and SS@BASE (from SSP).</p>
+
+<h3>Rationale</h3>
+
+<p>Why does merging work this way with switched subtrees?</p>
+
+<p>If a subtree (SS) is switched, that means the user has chosen for
+  the time being to work with a substitute for the original subtree
+  (SS@BASE), knowing that any modifications made in SS can be
+  committed only to the repository location of SS and the original
+  subtree SS@BASE remains hidden and unaffected.</p>
+
+<p>The general semantics of a merge is to apply local modifications
+  to the working copy and record the merge as having been applied
+  to the tree that is represented by the working copy.</p>
+
+<p>Merge tracking should ensure that the subtree of the merge that
+  goes into SS is recorded as being applied to SS, while the
+  subtree SS@BASE should be recorded as not having received that
+  merge.</p>
+
+<p>Since the working copy represents parts of two different branches,
+  two parts of the merge are thus applied to the two different
+  branches, and recorded as such when the user commits the result.</p>
+
+<p>If the user is doing a merge that may affect SS, it is reasonable
+  to assume that SS is an alternative variant of SS@BASE rather than
+  some totally unrelated item.  So, in terms of Subversion's loose
+  branching semantics, SS is a 'branch' of SS@BASE.  If the user
+  chooses to merge when the assumption is false and SS doesn't have
+  a sensible branching relationship with SS@BASE, the result will be
+  nonsensical or, in concrete terms, there will be merge conflicts.</p>
+
+<p>Note:  Many typical branching policies would forbid committing to
+  two branches at once, let alone committing merges to two branches
+  at once.  However, the user may have reasons for doing this merge
+  without intending to commit the result as-is.</p>
 
 </div>  <!-- switched-paths -->
 

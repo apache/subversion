@@ -301,7 +301,7 @@ log_entry_receiver(void *baton,
       end_revision.kind = svn_opt_revision_number;
       end_revision.value.number = log_entry->revision;
 
-      SVN_ERR(svn_stream_printf(outstream, pool, _("\n")));
+      SVN_ERR(svn_stream_puts(outstream, _("\n")));
       SVN_ERR(svn_client_diff_peg6(diff_options,
                                    lb->target_path_or_url,
                                    &lb->target_peg_revision,
@@ -313,13 +313,14 @@ log_entry_receiver(void *baton,
                                    FALSE, /* show copies as adds */
                                    FALSE, /* ignore content type */
                                    FALSE, /* ignore prop diff */
+                                   FALSE, /* properties only */
                                    FALSE, /* use git diff format */
                                    svn_cmdline_output_encoding(pool),
                                    outstream,
                                    errstream,
                                    NULL,
                                    lb->ctx, pool));
-      SVN_ERR(svn_stream_printf(outstream, pool, _("\n")));
+      SVN_ERR(svn_stream_puts(outstream, _("\n")));
       SVN_ERR(svn_stream_close(outstream));
       SVN_ERR(svn_stream_close(errstream));
     }

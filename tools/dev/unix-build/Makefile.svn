@@ -30,6 +30,7 @@
 #   |______________________________________________________________|
 
 ENABLE_PERL_BINDINGS ?= yes
+THREADING ?= yes
 ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
@@ -60,10 +61,10 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.4.5
+APR_VER		= 1.4.6
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
-APR_UTIL_VER	= 1.3.12
+APR_UTIL_VER	= 1.4.1
 HTTPD_VER	= 2.2.22
 NEON_VER	= 0.29.6
 SERF_VER	= 1.0.3
@@ -73,7 +74,7 @@ SQLITE_VER	= 3071100
 LIBMAGIC_VER	= 5.11
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.2
+PYTHON_VER	= 2.7.3
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -117,7 +118,7 @@ CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
-PYTHON_URL	= http://python.org/ftp/python/2.7.2/$(PYTHON_DIST)
+PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -292,7 +293,7 @@ $(APR_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifdef THREADING
+ifeq ($(THREADING),yes)
 THREADS_FLAG=--enable-threads
 else
 THREADS_FLAG=--disable-threads
@@ -304,11 +305,6 @@ endif
 
 # configure apr
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
-	cp $(APR_SRCDIR)/build/apr_hints.m4 \
-		$(APR_SRCDIR)/build/apr_hints.m4.orig
-	cat $(APR_SRCDIR)/build/apr_hints.m4.orig \
-		| sed -e '/^.*APR_ADDTO(CPPFLAGS, \[-D_POSIX_THREADS\]).*$$/d' \
-			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
@@ -779,7 +775,7 @@ $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
 
-ifdef THREADING
+ifeq ($(THREADING),yes)
 THREADSAFE_FLAG=--enable-threadsafe
 else
 THREADSAFE_FLAG=--disable-threadsafe

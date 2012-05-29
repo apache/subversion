@@ -38,6 +38,8 @@ TEST_DEPS =[for test_deps] [test_deps][end]
 
 TEST_PROGRAMS =[for test_progs] [test_progs][end]
 
+check-deps test-deps: [for test_helpers] [test_helpers][end]
+
 MANPAGES =[for manpages] [manpages][end]
 
 CLEAN_FILES =[for cfiles] [cfiles][end]
@@ -131,7 +133,7 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 	$(MKDIR) [areas.files.installdir]
 	cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] [areas.files.installdir]/$(PACKAGE_NAME)[areas.files.objext][else]
 	cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][end][end][for areas.apache_files]
-	cd [areas.apache_files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR_TOOLS)" ; $(INSTALL_MOD_SHARED_TOOLS) -n [areas.apache_files.name] [areas.apache_files.filename][end]
+	cd [areas.apache_files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.apache_files.name] [areas.apache_files.filename][end]
 [if-any areas.extra_install]	$(INSTALL_EXTRA_[areas.uppervar])
 [end][end][end]
 

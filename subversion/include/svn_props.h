@@ -111,7 +111,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
 
 /**
  * Creates a deep copy of @a hash (keys <tt>const char *</tt> and
- * values <tt>const svn_string_t</tt>) in @a pool.
+ * values <tt>const svn_string_t *</tt>) in @a pool.
  *
  * @since New in 1.6.
  */

@@ -460,5 +460,10 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
              advertisement of HTTPv2 protocol support (if any), effectively
              causing them to only speak our original HTTP protocol.
 
+7.7 SVN_SVNMUCC_IS_SVNSYITF
+
+  Scope:     'make install-tools'
+  Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
+
 * (TODO: others)
 

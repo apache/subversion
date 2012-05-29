@@ -187,7 +187,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
                     rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
-      rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
+      rbconfig_tmp=`$rbconfig "print RbConfig::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
     done
 

@@ -124,10 +124,6 @@ class Generator(gen_win.WinGeneratorBase):
       self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
       self.write_with_template(fname + '.filters', 'templates/vcnet_vcxproj_filters.ezt', data)
 
-  def find_rootpath(self):
-    "Gets the root path as understand by the project system"
-    return "$(SolutionDir)"
-
   def write(self):
     "Write a Solution (.sln)"
 
@@ -203,7 +199,8 @@ class Generator(gen_win.WinGeneratorBase):
         if depends[i].fname.startswith(self.projfilesdir):
           path = depends[i].fname[len(self.projfilesdir) + 1:]
         else:
-          path = '$(SolutionDir)' + depends[i].fname
+          path = os.path.join(os.path.relpath('.', self.projfilesdir),
+                              depends[i].fname)
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,

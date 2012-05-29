@@ -767,6 +767,11 @@ SVN_ERROR_START
              "Property value in filesystem differs from the provided "
              "base value")
 
+  /** @since New in 1.8. */
+  SVN_ERRDEF(SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION,
+             SVN_ERR_FS_CATEGORY_START + 50,
+             "The filesystem editor completion process was not followed")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
