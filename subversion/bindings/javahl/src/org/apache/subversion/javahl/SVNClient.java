@@ -156,7 +156,7 @@ public class SVNClient implements ISVNClient
 
     public void setProgressCallback(ProgressCallback listener)
     {
-        clientContext.listener = listener;
+        clientContext.setListener(listener);
     }
 
     public native void remove(Set<String> paths, boolean force,
@@ -502,24 +502,17 @@ public class SVNClient implements ISVNClient
      * A private class to hold the contextual information required to
      * persist in this object, such as notification handlers.
      */
-    private class ClientContext
+    private class ClientContext extends CommonContext
         implements ClientNotifyCallback, ProgressCallback,
             ConflictResolverCallback
     {
         public ClientNotifyCallback notify = null;
-        public ProgressCallback listener = null;
         public ConflictResolverCallback resolver = null;
 
         public void onNotify(ClientNotifyInformation notifyInfo)
         {
             if (notify != null)
                 notify.onNotify(notifyInfo);
-        }
-
-        public void onProgress(ProgressEvent event)
-        {
-            if (listener != null)
-                listener.onProgress(event);
         }
 
         public ConflictResult resolve(ConflictDescriptor conflict)
