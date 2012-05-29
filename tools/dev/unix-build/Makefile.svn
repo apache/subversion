@@ -31,7 +31,11 @@
 
 ENABLE_PERL_BINDINGS ?= yes
 THREADING ?= yes
-ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
+ifeq ($(THREADING),yes)
+ENABLE_JAVA_BINDINGS ?= yes
+else
+ENABLE_JAVA_BINDINGS ?= no
+endif
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
@@ -75,6 +79,7 @@ LIBMAGIC_VER	= 5.11
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.3
+JUNIT_VER	= 4.10
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -87,6 +92,7 @@ LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
 BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
+JUNIT_DIST	= junit-${JUNIT_VER}.jar
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -98,7 +104,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(LIBMAGIC_DIST) \
 		$(DISTDIR)/$(RUBY_DIST) \
 		$(DISTDIR)/$(BZ2_DIST) \
-		$(DISTDIR)/$(PYTHON_DIST)
+		$(DISTDIR)/$(PYTHON_DIST) \
+		$(DISTDIR)/$(JUNIT_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -119,6 +126,8 @@ LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
+JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -1072,6 +1081,14 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 
 
 #######################################################################
+# junit
+#######################################################################
+
+# fetch distfile for junit
+$(DISTDIR)/$(JUNIT_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(JUNIT_URL)
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1168,7 +1185,7 @@ endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	JAVAHL_FLAG=--enable-javahl=yes --with-jdk --with-jikes=no \
-		--with-junit=$(PWD)/junit.jar
+		--with-junit=$(DISTDIR)/$(JUNIT_DIST)
 else
 	JAVAHL_FLAG=--enable-javahl=no
 endif
@@ -1182,13 +1199,7 @@ SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
 endif
 
 # configure svn
-$(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
-	@if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
-		if [ ! -e $(PWD)/junit.jar ]; then \
-			echo "Please provide $(PWD)/junit.jar"; \
-			exit 1; \
-		fi; \
-	fi
+$(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
