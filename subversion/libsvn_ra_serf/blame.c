@@ -22,9 +22,6 @@
  */
 
 #include <apr_uri.h>
-
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -50,6 +47,7 @@
  */
 typedef enum blame_state_e {
   NONE = 0,
+  INITIAL = 0,
   FILE_REVS_REPORT,
   FILE_REV,
   REV_PROP,
@@ -111,6 +109,42 @@ typedef struct blame_context_t {
   svn_file_rev_handler_t file_rev;
   void *file_rev_baton;
 } blame_context_t;
+
+
+#if 0
+/* ### we cannot use this yet since the CDATA is unbounded and cannot be
+   ### collected by the parsing context. we need a streamy mechanism for
+   ### this report.  */
+
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t blame_ttable[] = {
+  { INITIAL, S_, "file-revs-report", FILE_REVS_REPORT,
+    FALSE, { NULL }, FALSE, FALSE },
+
+  { FILE_REVS_REPORT, S_, "file-rev", FILE_REV,
+    FALSE, { "path", "rev", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "rev-prop", REV_PROP,
+    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "remove-prop", REMOVE_PROP,
+    FALSE, { "name", "?encoding", NULL }, FALSE, TRUE },
+
+  { FILE_REV, D_, "merged-revision", MERGED_REVISION,
+    FALSE, { NULL }, FALSE, FALSE },
+
+  { FILE_REV, D_, "txdelta", TXDELTA,
+    TRUE, { NULL }, FALSE, TRUE },
+
+  { 0 }
+};
+
+#endif
+
 
 
 static blame_info_t *
@@ -427,8 +461,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *relative_url, *basecoll_url, *req_url;
-  int status_code;
+  const char *req_url;
   svn_error_t *err;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
@@ -441,13 +474,14 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->include_merged_revisions = include_merged_revisions;
   blame_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, session->session_url.path,
-                                         end, NULL, pool));
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, end,
+                                      pool, pool));
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
+  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_type = "text/xml";
@@ -464,7 +498,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   parser_ctx->end = end_blame;
   parser_ctx->cdata = cdata_blame;
   parser_ctx->done = &blame_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -474,9 +507,9 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool);
 
   err = svn_error_compose_create(
-            svn_ra_serf__error_on_status(status_code,
+            svn_ra_serf__error_on_status(handler->sline.code,
                                          handler->path,
-                                         parser_ctx->location),
+                                         handler->location),
             err);
 
   return svn_error_trace(err);

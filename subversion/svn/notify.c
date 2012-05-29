@@ -181,6 +181,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       if ((err = svn_cmdline_printf(pool, "D    %s\n", path_local)))
         goto print_error;
       break;
+    case svn_wc_notify_update_broken_lock:
+      if ((err = svn_cmdline_printf(pool, "B    %s\n", path_local)))
+        goto print_error;
+      break;
 
     case svn_wc_notify_update_external_removed:
       nb->received_some_change = TRUE;

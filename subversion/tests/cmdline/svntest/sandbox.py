@@ -276,6 +276,37 @@ class Sandbox:
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propdel', name, *targets)
 
+  def simple_propget(self, name, target):
+    """Return the value of the property NAME on TARGET.
+       TARGET is a relpath relative to the WC."""
+    target = self.ospath(target)
+    exit, out, err = svntest.main.run_svn(False, 'propget',
+                                          '--strict', name, target)
+    return ''.join(out)
+
+  def simple_proplist(self, target):
+    """Return a dictionary mapping property name to property value, of the
+       properties on TARGET.
+       TARGET is a relpath relative to the WC."""
+    target = self.ospath(target)
+    exit, out, err = svntest.main.run_svn(False, 'proplist',
+                                          '--verbose', '--quiet', target)
+    props = {}
+    for line in out:
+      line = line.rstrip('\r\n')
+      if line[2] != ' ':  # property name
+        name = line[2:]
+        val = None
+      elif line.startswith('    '):  # property value
+        if val is None:
+          val = line[4:]
+        else:
+          val += '\n' + line[4:]
+        props[name] = val
+      else:
+        raise Exception("Unexpected line '" + line + "' in proplist output" + str(out))
+    return props
+
   def simple_copy(self, source, dest):
     """Copy SOURCE to DEST in the WC.
        SOURCE and DEST are relpaths relative to the WC."""

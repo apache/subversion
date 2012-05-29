@@ -168,6 +168,41 @@ cstring_from_utf8(const char **path_apr,
 #endif
 }
 
+/* Helper function that allows to convert an APR-level PATH to something
+ * that we can pass the svn_error_wrap_apr. Since we use it in context
+ * of error reporting, having *some* path info may be more useful than
+ * having none.  Therefore, we use a best effort approach here.
+ *
+ * This is different from svn_io_file_name_get in that it uses a different
+ * signature style and will never fail.
+ */
+static const char *
+try_utf8_from_internal_style(const char *path, apr_pool_t *pool)
+{
+  svn_error_t *error;
+  const char *path_utf8;
+
+  /* Special case. */
+  if (path == NULL)
+    return "(NULL)";
+  
+  /* (try to) convert PATH to UTF-8. If that fails, continue with the plain
+   * PATH because it is the best we have. It may actually be UTF-8 already.
+   */
+  error = cstring_to_utf8(&path_utf8, path, pool);
+  if (error)
+    {
+      /* fallback to best representation we have */
+
+      svn_error_clear(error);
+      path_utf8 = path;
+    }
+
+  /* Toggle (back-)slashes etc. as necessary.
+   */
+  return svn_dirent_local_style(path_utf8, pool);
+}
+
 
 /* Set *NAME_P to the UTF-8 representation of directory entry NAME.
  * NAME is in the internal encoding used by APR; PARENT is in
@@ -193,6 +228,10 @@ entry_name_to_utf8(const char **name_p,
                    const char *parent,
                    apr_pool_t *pool)
 {
+#if defined(WIN32) || defined(DARWIN)
+  *name_p = apr_pstrdup(pool, name);
+  return SVN_NO_ERROR;
+#else
   svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, pool);
   if (err && err->apr_err == APR_EINVAL)
     {
@@ -202,6 +241,7 @@ entry_name_to_utf8(const char **name_p,
                                svn_dirent_local_style(parent, pool));
     }
   return err;
+#endif
 }
 
 
@@ -851,10 +891,10 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
 
 /* Set permissions PERMS on the FILE. This is a cheaper variant of the
  * file_perms_set wrapper() function because no locale-dependent string
- * conversion is required.
+ * conversion is required. POOL will be used for allocations.
  */
 static svn_error_t *
-file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms, apr_pool_t *pool)
 {
   const char *fname_apr;
   apr_status_t status;
@@ -866,7 +906,7 @@ file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
   status = apr_file_perms_set(fname_apr, perms);
   if (status)
     return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
-                              fname_apr);
+                              try_utf8_from_internal_style(fname_apr, pool));
   else
     return SVN_NO_ERROR;
 }
@@ -1911,11 +1951,11 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
         case APR_FLOCK_SHARED:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get shared lock on file '%s'"),
-                                    fname);
+                                    try_utf8_from_internal_style(fname, pool));
         case APR_FLOCK_EXCLUSIVE:
           return svn_error_wrap_apr(apr_err,
                                     _("Can't get exclusive lock on file '%s'"),
-                                    fname);
+                                    try_utf8_from_internal_style(fname, pool));
         default:
           SVN_ERR_MALFUNCTION();
         }
@@ -1948,7 +1988,8 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
   /* The actual unlock attempt. */
   apr_err = apr_file_unlock(lockfile_handle);
   if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"), fname);
+    return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
+                              try_utf8_from_internal_style(fname, pool));
   
 /* On Windows and OS/2 file locks are automatically released when
    the file handle closes */
@@ -3131,7 +3172,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
 
   if (name)
     return svn_error_wrap_apr(status, _(msg),
-                              svn_dirent_local_style(name, pool));
+                              try_utf8_from_internal_style(name, pool));
   else
     return svn_error_wrap_apr(status, "%s", _(msg_no_name));
 }
@@ -4296,7 +4337,7 @@ svn_io_open_unique_file3(apr_file_t **file,
   if (!using_system_temp_dir)
     {
       SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-      SVN_ERR(file_perms_set2(tempfile, perms));
+      SVN_ERR(file_perms_set2(tempfile, perms, scratch_pool));
     }
 #endif
 

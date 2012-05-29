@@ -47,6 +47,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 typedef struct hunk_info_t {
   /* The hunk. */

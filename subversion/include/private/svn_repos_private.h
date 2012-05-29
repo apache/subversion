@@ -93,12 +93,26 @@ svn_repos__fs_type(const char **fs_type,
 svn_error_t *
 svn_repos__get_commit_ev2(svn_editor_t **editor,
                           svn_repos_t *repos,
-                          svn_revnum_t revision,
-                          apr_hash_t *revprop_table,
+                          svn_authz_t *authz,
+                          const char *authz_repos_name,
+                          const char *authz_user,
+                          apr_hash_t *revprops,
+                          svn_commit_callback2_t commit_cb,
+                          void *commit_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_repos__replay_ev2(svn_fs_root_t *root,
+                      const char *base_dir,
+                      svn_revnum_t low_water_mark,
+                      svn_boolean_t send_deltas,
+                      svn_editor_t *editor,
+                      svn_repos_authz_func_t authz_read_func,
+                      void *authz_read_baton,
+                      apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

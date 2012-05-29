@@ -1398,6 +1398,59 @@ def upgrade_absent(sbox):
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, None)
 
+@Issue(4183)
+@XFail()
+@Skip(svntest.main.is_ra_type_file)
+def remove_subdir_with_authz_and_tc(sbox):
+  "remove a subdir with authz file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/B')
+  sbox.simple_commit()
+
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/B/E" : "*="})
+
+  # Now update back to r1. This will reintroduce A/B except A/B/E.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'               : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None, False,
+                                        wc_dir, '-r', '1')
+
+  # Perform some edit operation to introduce a tree conflict
+  svntest.main.file_write(sbox.ospath('A/B/lambda'), 'qq')
+
+  # And now update to r2. This tries to delete A/B and causes a tree conflict
+  # ### But is also causes an error in creating the copied state
+  # ###  svn: E220001: Cannot copy '<snip>\A\B\E' excluded by server
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'               : Item(status='  ', treeconflict='C'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None,
+                                        None, None,
+                                        None, None, False,
+                                        wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1427,6 +1480,7 @@ test_list = [ None,
               wc_delete,
               wc_commit_error_handling,
               upgrade_absent,
+              remove_subdir_with_authz_and_tc
              ]
 serial_only = True
 

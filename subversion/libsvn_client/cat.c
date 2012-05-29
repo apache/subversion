@@ -183,11 +183,10 @@ svn_client_cat2(svn_stream_t *out,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
+  svn_client__pathrev_t *loc;
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props;
-  const char *url;
   svn_stream_t *output = out;
   svn_error_t *err;
 
@@ -227,20 +226,21 @@ svn_client_cat2(svn_stream_t *out,
     }
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
-                                           peg_revision,
-                                           revision, ctx, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            path_or_url, NULL,
+                                            peg_revision,
+                                            revision, ctx, pool));
 
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
-  err = svn_ra_get_file(ra_session, "", rev, NULL, NULL, &props, pool);
+  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FILE)
         {
           return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, err,
-                                   _("URL '%s' refers to a directory"), url);
+                                   _("URL '%s' refers to a directory"),
+                                   loc->url);
         }
       else
         {
@@ -284,7 +284,7 @@ svn_client_cat2(svn_stream_t *out,
           SVN_ERR(svn_subst_build_keywords2
                   (&kw, keywords->data,
                    cmt_rev->data,
-                   url,
+                   loc->url,
                    when,
                    cmt_author ? cmt_author->data : NULL,
                    pool));
@@ -297,7 +297,7 @@ svn_client_cat2(svn_stream_t *out,
                                            eol_str, FALSE, kw, TRUE, pool);
     }
 
-  SVN_ERR(svn_ra_get_file(ra_session, "", rev, output, NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev, output, NULL, NULL, pool));
 
   if (out != output)
     /* Close the interjected stream */

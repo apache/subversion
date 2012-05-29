@@ -56,7 +56,7 @@ static const char default_adm_dir_name[] = ".svn";
 
 /* The name that is actually used for the WC admin directory.  The
    commonest case where this won't be the default is in Windows
-   ASP.NET development environments, which choke on ".svn". */
+   ASP.NET development environments, which used to choke on ".svn". */
 static const char *adm_dir_name = default_adm_dir_name;
 
 
@@ -108,40 +108,16 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
 }
 
 
-static const char *
-simple_extend(const char *adm_path,  /* ### adm_abspath?  */
-              svn_boolean_t use_tmp,
-              const char *subdir,
-              const char *child,
-              const char *extension,
-              apr_pool_t *result_pool)
+const char *
+svn_wc__adm_child(const char *path,
+                  const char *child,
+                  apr_pool_t *result_pool)
 {
-  if (subdir)
-    child = svn_dirent_join(subdir, child, result_pool);
-  if (extension)
-    child = apr_pstrcat(result_pool, child, extension, (char *)NULL);
-
-  if (use_tmp)
-    return svn_dirent_join_many(result_pool,
-                                adm_path,
-                                adm_dir_name,
-                                SVN_WC__ADM_TMP,
-                                child,
-                                NULL);
-
   return svn_dirent_join_many(result_pool,
-                              adm_path,
+                              path,
                               adm_dir_name,
                               child,
                               NULL);
-}
-
-
-const char *svn_wc__adm_child(const char *path,
-                              const char *child,
-                              apr_pool_t *result_pool)
-{
-  return simple_extend(path, FALSE, NULL, child, NULL, result_pool);
 }
 
 
@@ -173,12 +149,11 @@ svn_wc__adm_area_exists(const char *adm_abspath,
 static svn_error_t *
 make_adm_subdir(const char *path,
                 const char *subdir,
-                svn_boolean_t tmp,
                 apr_pool_t *pool)
 {
   const char *fullpath;
 
-  fullpath = simple_extend(path, tmp, NULL, subdir, NULL, pool);
+  fullpath = svn_wc__adm_child(path, subdir, pool);
 
   return svn_io_dir_make(fullpath, APR_OS_DEFAULT, pool);
 }
@@ -360,7 +335,7 @@ static svn_error_t *
 init_adm_tmp_area(const char *path, apr_pool_t *pool)
 {
   /* SVN_WC__ADM_TMP */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
+  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, pool));
 
   return SVN_NO_ERROR;
 }
@@ -387,7 +362,7 @@ init_adm(svn_wc__db_t *db,
   /** Make subdirectories. ***/
 
   /* SVN_WC__ADM_PRISTINE */
-  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));
+  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, pool));
 
   /* ### want to add another directory? do a format bump to ensure that
      ### all existing working copies get the new directories. or maybe
@@ -632,5 +607,18 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
                                    delete_when, pool, pool));
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__get_tmpdir(const char **tmpdir_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *wri_abspath,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(tmpdir_abspath,
+                                         wc_ctx->db, wri_abspath,
+                                         result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }

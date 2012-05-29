@@ -93,8 +93,8 @@ Commit access for specific areas:
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
-          sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
-        rdonch   Роман Донченко <DXDragon@yandex.ru>         (Swig-Python b.)
+          sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
+        rdonch   Роман Донченко <dpb@corrigendum.ru>         (Swig-Python b.)
 
   Packages:
 
@@ -201,6 +201,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
          moklo   Morten Kloster <morklo@gmail.com>           (diff-improvements br.)
+          vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (javahl-ra br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

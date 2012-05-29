@@ -90,6 +90,7 @@ export LC_ALL
 
 stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
+  echo "HTTPD stopped."
   exit 1
 }
 
@@ -433,6 +434,7 @@ rm "$HTTPD_CFG-copy"
 say "HTTPD is good"
 
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
+  echo "http://localhost:$HTTPD_PORT"
   exit
 fi
 

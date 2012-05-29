@@ -1566,7 +1566,12 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           svn_node_kind_t entry_kind = svn_node_none;
           svn_filesize_t entry_size = 0;
           svn_boolean_t has_props = FALSE;
-          svn_revnum_t created_rev = 0; /* ### SVN_INVALID_REVNUM  */
+          /* If 'created rev' was not requested, send 0.  We can't use
+           * SVN_INVALID_REVNUM as the tuple field is not optional.
+           * See the email thread on dev@, 2012-03-28, subject
+           * "buildbot failure in ASF Buildbot on svn-slik-w2k3-x64-ra",
+           * <http://svn.haxx.se/dev/archive-2012-03/0655.shtml>. */
+          svn_revnum_t created_rev = 0;
           const char *cdate = NULL;
           const char *last_author = NULL;
 

@@ -151,7 +151,9 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    Spec  Argument type             Item type
    ----  -----------------         ---------
    n     <none, absent>            Column assignment skip
-   i     apr_int64_t               Number
+   d     int                       Number
+   L     apr_int64_t               Number
+   i     apr_int64_t               Number (deprecated format spec)
    s     const char *              String
    b     const void *              Blob data
          apr_size_t                Blob length

@@ -141,6 +141,7 @@ class Generator(gen_base.GeneratorBase):
     data.bdb_test_progs = self.bdb_test_progs + self.bdb_scripts
     data.test_deps = self.test_deps + self.scripts
     data.test_progs = self.test_progs + self.scripts
+    data.test_helpers = self.test_helpers
 
     # write list of all manpages
     data.manpages = self.manpages
@@ -421,7 +422,8 @@ class Generator(gen_base.GeneratorBase):
         # in Makefile.in
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' or \
-           area[:7] == 'javahl-':
+           area[:7] == 'javahl-' \
+           or area == 'tools':
           ezt_area.extra_install = 'yes'
 
     ########################################

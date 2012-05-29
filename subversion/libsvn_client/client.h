@@ -227,28 +227,14 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
    for a URL or 'working' for a WC path.  If REVISION->kind is
    'unspecified', the operative revision is the peg revision.
 
-   Store the resulting ra_session in *RA_SESSION_P.  Store the actual
-   revision number of the object in *REV_P, and the final resulting
-   URL in *URL_P. REV_P and/or URL_P may be NULL if not wanted.
+   Store the resulting ra_session in *RA_SESSION_P.  Store the final
+   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
+   may be NULL if not wanted.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
    Use POOL for all allocations. */
-svn_error_t *
-svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
-                                 svn_revnum_t *rev_p,
-                                 const char **url_p,
-                                 const char *path_or_url,
-                                 const char *base_dir_abspath,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
-
-/* Like svn_client__ra_session_from_path() but returning a path-rev
- * instead of separate URL and rev outputs.  RESOLVED_LOC_P may be NULL
- * if not wanted. */
 svn_error_t *
 svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                  svn_client__pathrev_t **resolved_loc_p,
@@ -367,20 +353,36 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      apr_pool_t *pool);
 
 
+svn_error_t *
+svn_client__ra_provide_base(svn_stream_t **contents,
+                            svn_revnum_t *revision,
+                            void *baton,
+                            const char *repos_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
-/* ---------------------------------------------------------------- */
-
-/*** Status ***/
 
-/* Verify that the path can be deleted without losing stuff,
-   i.e. ensure that there are no modified or unversioned resources
-   under PATH.  This is similar to checking the output of the status
-   command.  CTX is used for the client's config options.  POOL is
-   used for all temporary allocations. */
-svn_error_t * svn_client__can_delete(const char *path,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
+svn_error_t *
+svn_client__ra_provide_props(apr_hash_t **props,
+                             svn_revnum_t *revision,
+                             void *baton,
+                             const char *repos_relpath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+                                void *baton,
+                                const char *repos_relpath,
+                                svn_revnum_t src_revision,
+                                apr_pool_t *scratch_pool);
+
+
+void *
+svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
+                             apr_hash_t *relpath_map,
+                             apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -879,10 +881,10 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If MD5_CHECKSUMS is not NULL, set *MD5_CHECKSUMS to a hash containing,
+   If SHA1_CHECKSUMS is not NULL, set *SHA1_CHECKSUMS to a hash containing,
    for each file transmitted, a mapping from the commit-item's (const
-   char *) path to the (const svn_checksum_t *) MD5 checksum of its new text
-   base.  Similarly for SHA1_CHECKSUMS.
+   char *) path to the (const svn_checksum_t *) SHA1 checksum of its new text
+   base.
 
    Use RESULT_POOL for all allocating the resulting hashes and SCRATCH_POOL
    for temporary allocations.
@@ -893,7 +895,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
@@ -976,11 +977,12 @@ svn_client__export_externals(apr_hash_t *externals,
                              apr_pool_t *pool);
 
 
-/* Perform status operations on each external in TRAVERSAL_INFO.  All
-   other options are the same as those passed to svn_client_status(). */
+/* Perform status operations on each external in EXTERNAL_MAP, a const char *
+   local_abspath of all externals mapping to the const char* defining_abspath.
+   All other options are the same as those passed to svn_client_status(). */
 svn_error_t *
 svn_client__do_external_status(svn_client_ctx_t *ctx,
-                               apr_hash_t *external_defs,
+                               apr_hash_t *external_map,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,

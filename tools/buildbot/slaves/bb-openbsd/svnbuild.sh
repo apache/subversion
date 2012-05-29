@@ -23,4 +23,4 @@ set -e
 set -x
 
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
-(cd .. && gmake BRANCH="$branch")
+(cd .. && gmake BRANCH="$branch" THREADING="no")

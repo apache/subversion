@@ -462,24 +462,22 @@ CREATE TABLE NODES (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* The serialized file external information. */
-  /* ### hack.  hack.  hack.
-     ### This information is already stored in properties, but because the
-     ### current working copy implementation is such a pain, we can't
-     ### readily retrieve it, hence this temporary cache column.
-     ### When it is removed, be sure to remove the extra column from
-     ### the db-tests.
-
-     ### Note: This is only here as a hack, and should *NOT* be added
-     ### to any wc_db APIs.  */
-  file_external  TEXT,
-
+  /* Is there a file external in this location. NULL if there
+     is no file external, otherwise '1'  */
+  /* ### Originally we had a wc-1.0 like skel in this place, so we
+     ### check for NULL.
+     ### In Subversion 1.7 we defined this column as TEXT, but Sqlite
+     ### only uses this information for deciding how to optimize
+     ### anyway. */
+  file_external  INTEGER,
 
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
   );
 
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+/* I_NODES_MOVED is introduced in format 30 */
+CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
 
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the highest (most "current") op_depth.  This view
@@ -753,6 +751,18 @@ PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 30 currently just contains some nice to haves that should be included
+   with the next format bump  */
+-- STMT_UPGRADE_TO_30
+CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
+ON NODES (wc_id, moved_to, op_depth);
+
+/* Just to be sure clear out file external skels from pre 1.7.0 development
+   working copies that were never updated by 1.7.0+ style clients */
+UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 
@@ -765,9 +775,9 @@ PRAGMA user_version = 29;
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
-/* TODO: Rename the "absent" presence value to "server-excluded" before
-   the 1.7 release. wc_db.c and this file have references to "absent" which
-   still need to be changed to "server-excluded". */
+/* TODO: Rename the "absent" presence value to "server-excluded". wc_db.c
+   and this file have references to "absent" which still need to be changed
+   to "server-excluded". */
 /* TODO: Un-confuse *_revision column names in the EXTERNALS table to
    "-r<operative> foo@<peg>", as suggested by the patch attached to
    http://svn.haxx.se/dev/archive-2011-09/0478.shtml */

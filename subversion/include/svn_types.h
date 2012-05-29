@@ -910,6 +910,10 @@ typedef struct svn_log_entry_t
    * Whether @a revision should be interpreted as non-inheritable in the
    * same sense of #svn_merge_range_t.
    *
+   * Only set when this #svn_log_entry_t instance is returned by the
+   * libsvn_client mergeinfo apis. Currently always FALSE when the
+   * #svn_log_entry_t instance is reported by the ra layer.
+   *
    * @since New in 1.7.
    */
   svn_boolean_t non_inheritable;

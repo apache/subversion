@@ -52,6 +52,13 @@ typedef struct callback_baton_t
      this base directory. */
   const char *base_dir_abspath;
 
+  /* TEMPORARY: Is 'base_dir_abspath' a versioned path?  cmpilato
+     suspects that the commit-to-multiple-disjoint-working-copies
+     code is getting this all wrong, sometimes passing an unversioned
+     (or versioned in a foreign wc) path here which sorta kinda
+     happens to work most of the time but is ultimately incorrect.  */
+  svn_boolean_t base_dir_isversioned;
+
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
   const apr_array_header_t *commit_items;
@@ -234,6 +241,30 @@ invalidate_wc_props(void *baton,
 }
 
 
+/* This implements the `svn_ra_get_wc_contents_func_t' interface. */
+static svn_error_t *
+get_wc_contents(void *baton,
+                svn_stream_t **contents,
+                const svn_checksum_t *sha1_checksum,
+                apr_pool_t *pool)
+{
+  callback_baton_t *cb = baton;
+
+  if (! (cb->base_dir_abspath && cb->base_dir_isversioned))
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(
+             svn_wc__get_pristine_contents_by_checksum(contents,
+                                                       cb->ctx->wc_ctx,
+                                                       cb->base_dir_abspath,
+                                                       sha1_checksum,
+                                                       pool, pool));
+}
+
+
 static svn_error_t *
 cancel_callback(void *baton)
 {
@@ -284,6 +315,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->progress_baton = ctx->progress_baton;
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
+  cbtable->get_wc_contents = get_wc_contents;
 
   cb->base_dir_abspath = base_dir_abspath;
   cb->commit_items = commit_items;
@@ -303,7 +335,10 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           uuid = NULL;
         }
       else
-        SVN_ERR(err);
+        {
+          SVN_ERR(err);
+          cb->base_dir_isversioned = TRUE;
+        }
     }
 
   /* If the caller allows for auto-following redirections, and the
@@ -474,31 +509,6 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
   *ra_session_p = ra_session;
   if (resolved_loc_p)
     *resolved_loc_p = resolved_loc;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
-                                 svn_revnum_t *rev_p,
-                                 const char **url_p,
-                                 const char *path_or_url,
-                                 const char *base_dir_abspath,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool)
-{
-  svn_client__pathrev_t *resolved_loc;
-
-  SVN_ERR(svn_client__ra_session_from_path2(ra_session_p, &resolved_loc,
-                                            path_or_url, base_dir_abspath,
-                                            peg_revision, revision,
-                                            ctx, pool));
-  if (rev_p)
-    *rev_p = resolved_loc->rev;
-  if (url_p)
-    *url_p = resolved_loc->url;
 
   return SVN_NO_ERROR;
 }
@@ -963,4 +973,150 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
     }
   svn_pool_destroy(sesspool);
   return SVN_NO_ERROR;
+}
+
+
+struct ra_ev2_baton {
+  /* The working copy context, from the client context.  */
+  svn_wc_context_t *wc_ctx;
+
+  /* For a given REPOS_RELPATH, provide a LOCAL_ABSPATH that represents
+     that repository node.  */
+  apr_hash_t *relpath_map;
+};
+
+
+svn_error_t *
+svn_client__ra_provide_base(svn_stream_t **contents,
+                            svn_revnum_t *revision,
+                            void *baton,
+                            const char *repos_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  struct ra_ev2_baton *reb = baton;
+  const char *local_abspath;
+  svn_error_t *err;
+
+  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
+                               APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  err = svn_wc_get_pristine_contents2(contents, reb->wc_ctx, local_abspath,
+                                      result_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (*contents != NULL)
+    {
+      /* The pristine contents refer to the BASE, or to the pristine of
+         a copy/move to this location. Fetch the correct revision.  */
+      SVN_ERR(svn_wc__node_get_commit_base(revision, NULL, NULL, NULL,
+                                           reb->wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__ra_provide_props(apr_hash_t **props,
+                             svn_revnum_t *revision,
+                             void *baton,
+                             const char *repos_relpath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  struct ra_ev2_baton *reb = baton;
+  const char *local_abspath;
+  svn_error_t *err;
+
+  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
+                               APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  err = svn_wc_get_pristine_props(props, reb->wc_ctx, local_abspath,
+                                  result_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (*props != NULL)
+    {
+      /* The pristine props refer to the BASE, or to the pristine props of
+         a copy/move to this location. Fetch the correct revision.  */
+      SVN_ERR(svn_wc__node_get_commit_base(revision, NULL, NULL, NULL,
+                                           reb->wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+                                void *baton,
+                                const char *repos_relpath,
+                                svn_revnum_t src_revision,
+                                apr_pool_t *scratch_pool)
+{
+  struct ra_ev2_baton *reb = baton;
+  svn_node_kind_t node_kind;
+  const char *local_abspath;
+
+  local_abspath = apr_hash_get(reb->relpath_map, repos_relpath,
+                               APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *kind = svn_kind_unknown;
+      return SVN_NO_ERROR;
+    }
+
+  /* ### what to do with SRC_REVISION?  */
+
+  SVN_ERR(svn_wc_read_kind(&node_kind, reb->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+
+void *
+svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
+                             apr_hash_t *relpath_map,
+                             apr_pool_t *result_pool)
+{
+  struct ra_ev2_baton *reb = apr_palloc(result_pool, sizeof(*reb));
+
+  SVN_ERR_ASSERT_NO_RETURN(wc_ctx != NULL);
+  SVN_ERR_ASSERT_NO_RETURN(relpath_map != NULL);
+
+  reb->wc_ctx = wc_ctx;
+  reb->relpath_map = relpath_map;
+
+  return reb;
 }

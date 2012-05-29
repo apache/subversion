@@ -402,14 +402,19 @@ import_children(const char *dir_abspath,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_dirents;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
+  sorted_dirents = svn_sort__hash(dirents, svn_sort_compare_items_lexically,
+                                  scratch_pool);
+  for (i = 0; i < sorted_dirents->nelts; i++)
     {
       const char *this_abspath, *this_edit_path;
-      const char *filename = svn__apr_hash_index_key(hi);
-      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_dirents, i,
+                                            svn_sort__item_t);
+      const char *filename = item.key;
+      const svn_io_dirent2_t *dirent = item.value;
 
       svn_pool_clear(iterpool);
 
@@ -1329,7 +1334,10 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
 {
   int rel_targets_nelts_fixed;
   int i;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
+
+  if (! (include_file_externals || include_dir_externals))
+    return SVN_NO_ERROR;
 
   /* Easy part of applying DEPTH to externals. */
   if (depth == svn_depth_empty)
@@ -1357,11 +1365,10 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
        * ### not at all. No other effect. So not doing that for now. */
      }
 
-  if (! (include_file_externals || include_dir_externals))
-    return SVN_NO_ERROR;
-
   /* Iterate *and* grow REL_TARGETS at the same time. */
   rel_targets_nelts_fixed = rel_targets->nelts;
+
+  iterpool = svn_pool_create(scratch_pool);
 
   for (i = 0; i < rel_targets_nelts_fixed; i++)
     {
@@ -1764,18 +1771,18 @@ svn_client_commit6(const apr_array_header_t *targets,
   cb.pool = pool;
 
   cmt_err = svn_error_trace(
-          svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
-                                               base_abspath, commit_items,
-                                               TRUE, FALSE, ctx, pool));
+              svn_client__open_ra_session_internal(&ra_session, NULL, base_url,
+                                                   base_abspath, commit_items,
+                                                   TRUE, FALSE, ctx, pool));
 
   if (cmt_err)
     goto cleanup;
 
   cmt_err = svn_error_trace(
-                 get_ra_editor(&editor, &edit_baton, ra_session, ctx,
-                               log_msg, commit_items, revprop_table,
-                               lock_tokens, keep_locks, capture_commit_info,
-                               &cb, pool));
+              get_ra_editor(&editor, &edit_baton, ra_session, ctx,
+                            log_msg, commit_items, revprop_table,
+                            lock_tokens, keep_locks, capture_commit_info,
+                            &cb, pool));
 
   if (cmt_err)
     goto cleanup;
@@ -1785,9 +1792,9 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   /* Perform the commit. */
   cmt_err = svn_error_trace(
-            svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, NULL,
-                                  &sha1_checksums, ctx, pool, iterpool));
+              svn_client__do_commit(base_url, commit_items, editor, edit_baton,
+                                    notify_prefix, &sha1_checksums, ctx, pool,
+                                    iterpool));
 
   /* Handle a successful commit. */
   if ((! cmt_err)

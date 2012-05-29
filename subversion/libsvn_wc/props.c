@@ -79,14 +79,12 @@ append_prop_conflict(svn_stream_t *stream,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   const svn_string_t *conflict_desc;
-  apr_size_t len;
   const char *native_text;
 
   SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel, pool, pool));
   native_text = svn_utf_cstring_from_utf8_fuzzy(conflict_desc->data, pool);
 
-  len = strlen(native_text);
-  return svn_stream_write(stream, native_text, &len);
+  return svn_stream_puts(stream, native_text);
 }
 
 
@@ -1844,7 +1842,6 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             const char *propname,
                             svn_depth_t depth,
-                            svn_boolean_t base_props,
                             svn_boolean_t pristine,
                             const apr_array_header_t *changelists,
                             svn_wc__proplist_receiver_t receiver_func,
@@ -1898,7 +1895,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
     case svn_depth_infinity:
       {
         SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
-                                                depth, base_props, pristine,
+                                                depth, pristine,
                                                 changelists, receiver, baton,
                                                 cancel_func, cancel_baton,
                                                 scratch_pool));

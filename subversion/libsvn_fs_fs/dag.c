@@ -778,11 +778,9 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
 
   subpool = svn_pool_create(pool);
 
-  /* Get a dirent hash for this directory. */
-  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev, subpool));
-
-  /* Find name in the ENTRIES hash. */
-  dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+  /* Search this directory for a dirent with that NAME. */
+  SVN_ERR(svn_fs_fs__rep_contents_dir_entry(&dirent, fs, parent_noderev,
+                                            name, subpool, subpool));
 
   /* If we never found ID in ENTRIES (perhaps because there are no
      ENTRIES, perhaps because ID just isn't in the existing ENTRIES

@@ -59,7 +59,7 @@
 #include "svn_private_config.h"
 #include "private/svn_io_private.h"
 #include "private/svn_wc_private.h"
-
+#include "private/svn_subr_private.h"
 
 
 struct svn_wc_committed_queue_t
@@ -2250,6 +2250,61 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                                                        scratch_pool));
 }
 
+
+typedef struct get_pristine_lazyopen_baton_t
+{
+  svn_wc_context_t *wc_ctx;
+  const char *wri_abspath;
+  const svn_checksum_t *sha1_checksum;
+
+} get_pristine_lazyopen_baton_t;
+
+
+/* Implements svn_stream_lazyopen_func_t */
+static svn_error_t *
+get_pristine_lazyopen_func(svn_stream_t **stream,
+                           void *baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  get_pristine_lazyopen_baton_t *b = baton;
+
+  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, b->wc_ctx->db,
+                                   b->wri_abspath, b->sha1_checksum,
+                                   result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
+                                          svn_wc_context_t *wc_ctx,
+                                          const char *wri_abspath,
+                                          const svn_checksum_t *sha1_checksum,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_boolean_t present;
+  
+  *contents = NULL;
+
+  SVN_ERR(svn_wc__db_pristine_check(&present, wc_ctx->db, wri_abspath,
+                                    sha1_checksum, scratch_pool));
+
+  if (present)
+    {
+      get_pristine_lazyopen_baton_t *gpl_baton;
+
+      gpl_baton = apr_pcalloc(result_pool, sizeof(*gpl_baton));
+      gpl_baton->wc_ctx = wc_ctx;
+      gpl_baton->wri_abspath = wri_abspath;
+      gpl_baton->sha1_checksum = sha1_checksum;
+      
+      *contents = svn_stream_lazyopen_create(get_pristine_lazyopen_func,
+                                             gpl_baton, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,

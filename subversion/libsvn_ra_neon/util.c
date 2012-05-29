@@ -245,7 +245,12 @@ end_207_element(void *baton, int state,
 
     case ELEM_responsedescription:
       if (b->in_propstat)
-        svn_stringbuf_set(b->propstat_description, b->cdata->data);
+        {
+          /* Remove leading newline added by DEBUG_CR on server */
+          svn_stringbuf_strip_whitespace(b->cdata);
+
+          svn_stringbuf_set(b->propstat_description, b->cdata->data);
+        }
       else
         {
           if (! svn_stringbuf_isempty(b->description))

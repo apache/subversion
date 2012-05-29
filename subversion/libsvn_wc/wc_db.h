@@ -1507,6 +1507,7 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             svn_boolean_t resolved_text,
                             svn_boolean_t resolved_props,
                             svn_boolean_t resolved_tree,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
@@ -2021,9 +2022,6 @@ svn_wc__db_read_props(apr_hash_t **props,
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  *
- * If BASE_PROPS is TRUE, read the properties from the BASE layer (op_depth=0),
- * without local modifications.
- *
  * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
  * op_depth).
  *
@@ -2034,7 +2032,6 @@ svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 svn_depth_t depth,
-                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 const apr_array_header_t *changelists,
                                 svn_wc__proplist_receiver_t receiver_func,
@@ -2121,7 +2118,6 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
    Allocate *MARKER_FILES in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL */
-/* ### This function will probably be removed. */
 svn_error_t *
 svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
                                      svn_wc__db_t *db,
@@ -2957,7 +2953,8 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
-apr_int64_t svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+int
+svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
 /* Set *HAVE_WORK TRUE if there is a working layer below the top layer and
    *HAVE_BASE if there is a base layer. Set *STATUS to the status of the
@@ -3061,19 +3058,19 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                  const char *trail_url,
                                  apr_pool_t *scratch_pool);
 
-/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+/* Set @a *excluded_subtrees to a hash mapping <tt>const char *</tt>
  * local absolute paths to <tt>const char *</tt> local absolute paths for
- * every path at or under @a local_abspath in @a db which are excluded by
- * the server (e.g. due to authz).  If no such paths are found then
+ * every path under @a local_abspath in @a db which are excluded by
+ * the server (e.g. due to authz), or user.  If no such paths are found then
  * @a *server_excluded_subtrees is set to @c NULL.
  * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
+svn_wc__db_get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.
@@ -3098,15 +3095,22 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   apr_pool_t *scratch_pool);
 
 
-/* Set *FINAL_ABSPATH to the final moved-to location for LOCAL_ABSPATH
- * after following any and all nested moves or set *FINAL_ABSPATH to
- * NULL if LOCAL_ABSPATH is not moved. */
+/* Possibly need two structures, one with relpaths and with abspaths?
+ * Only exposed for testing at present. */
+struct svn_wc__db_moved_to_t {
+  const char *local_relpath;  /* moved-to destination */
+  int op_depth;       /* op-root of source */
+};
+
+/* Set *FINAL_ABSPATH to an array of svn_wc__db_moved_to_t for
+ * LOCAL_ABSPATH after following any and all nested moves.
+ * Only exposed for testing at present. */
 svn_error_t *
-svn_wc__db_final_moved_to(const char **final_abspath,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* @} */
 
