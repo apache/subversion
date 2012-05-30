@@ -562,9 +562,9 @@ class Httpd:
   def _create_users_file(self):
     "Create users file"
     htpasswd = os.path.join(self.httpd_dir, 'bin', 'htpasswd.exe')
-    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-mbc', self.httpd_users,
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-mbcp', self.httpd_users,
                                     'jrandom', 'rayjandom'])
-    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-mb',  self.httpd_users,
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-mbp',  self.httpd_users,
                                     'jconstant', 'rayjandom'])
 
   def _create_mime_types_file(self):
