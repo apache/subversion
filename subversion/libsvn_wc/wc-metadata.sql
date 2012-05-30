@@ -169,7 +169,10 @@ CREATE TABLE ACTUAL_NODE (
   /* stsp: This is meant for text conflicts, right? What about property
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
-           conflict_data as well? */
+           conflict_data as well? 
+     rhuijben: Because that won't allow triggers to handle refcounts.
+               We would have to scan all conflict skels before cleaning up the
+               a single file from the pristine stor */
   older_checksum  TEXT REFERENCES PRISTINE (checksum),
   left_checksum  TEXT REFERENCES PRISTINE (checksum),
   right_checksum  TEXT REFERENCES PRISTINE (checksum),
@@ -495,7 +498,7 @@ CREATE VIEW NODES_CURRENT AS
                         AND n2.local_relpath = n.local_relpath);
 
 /* Many queries have to filter the nodes table to pick only that version
-   of each node with the base (least "current") op_depth.  This view
+   of each node with the BASE ("as checked out") op_depth.  This view
    does the heavy lifting for such queries. */
 CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
