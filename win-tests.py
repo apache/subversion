@@ -534,6 +534,12 @@ class Httpd:
     fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
     fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
 
+    # Don't handle .htaccess, symlinks, etc.
+    fp.write('<Directory />\n')
+    fp.write('AllowOverride None\n')
+    fp.write('Options None\n')
+    fp.write('</Directory>\n\n')
+
     # Define two locations for repositories
     fp.write(self._svn_repo('repositories'))
     fp.write(self._svn_repo('local_tmp'))
