@@ -841,8 +841,7 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
                  ranges from *MERGEINFO */
               if (!(*younger_mergeinfo))
                 *younger_mergeinfo = apr_hash_make(pool);
-              apr_hash_set(*younger_mergeinfo,
-                           (const char *)merge_source_path,
+              apr_hash_set(*younger_mergeinfo, merge_source_path,
                            APR_HASH_KEY_STRING, younger_rangelist);
               SVN_ERR(svn_mergeinfo_remove2(mergeinfo, *younger_mergeinfo,
                                             *mergeinfo, TRUE, pool, iterpool));
