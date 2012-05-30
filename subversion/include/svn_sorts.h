@@ -80,6 +80,13 @@ typedef struct svn_sort__item_t {
      apr_array_header_t *array;
      array = svn_sort__hash(hsh, svn_sort_compare_items_as_paths, pool);
    @endcode
+ *
+ * This function works like svn_sort_compare_items_lexically() except that it
+ * orders children in subdirectories directly after their parents. This allows
+ * using the given ordering for a depth first walk, but at a performance
+ * penalty. Code that doesn't need this special behavior for children, e.g. when
+ * sorting files at a single directory level should use
+ * svn_sort_compare_items_lexically() instead.
  */
 int
 svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
