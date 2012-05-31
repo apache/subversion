@@ -916,6 +916,20 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);
 
+/** Obtain a mapping of const char * local_abspaths to const svn_string_t*
+ * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
+ * and its descendants.
+ *
+ * Allocate the result in RESULT_POOL, and perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__prop_retrieve_recursive(apr_hash_t **values,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /**
  * For use by entries.c and entries-dump.c to read old-format working copies.

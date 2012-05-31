@@ -1909,6 +1909,22 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
+svn_wc__prop_retrieve_recursive(apr_hash_t **values,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_wc__db_prop_retrieve_recursive(values,
+                                               wc_ctx->db,
+                                               local_abspath,
+                                               propname,
+                                               result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_wc__get_pristine_props(apr_hash_t **props,
                            svn_wc__db_t *db,
                            const char *local_abspath,

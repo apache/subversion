@@ -743,7 +743,7 @@ recursive_propget_receiver(void *baton,
    Treat DEPTH as in svn_client_propget3().
 */
 static svn_error_t *
-get_prop_from_wc(apr_hash_t *props,
+get_prop_from_wc(apr_hash_t **props,
                  const char *propname,
                  const char *target_abspath,
                  svn_boolean_t pristine,
@@ -764,7 +764,19 @@ get_prop_from_wc(apr_hash_t *props,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  rb.props = props;
+  if (!pristine && depth == svn_depth_infinity
+      && (!changelists || changelists->nelts == 0))
+    {
+      /* Handle this common svn:mergeinfo case more efficient than the target
+         list handling in the recursive retrieval. */
+      SVN_ERR(svn_wc__prop_retrieve_recursive(
+                            props, ctx->wc_ctx, target_abspath, propname,
+                            result_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  *props = apr_hash_make(result_pool);
+  rb.props = *props;
   rb.pool = result_pool;
   rb.wc_ctx = ctx->wc_ctx;
 
@@ -802,8 +814,6 @@ svn_client_propget4(apr_hash_t **props,
                                                         target);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
-  *props = apr_hash_make(result_pool);
-
   if (! svn_path_is_url(target)
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
@@ -840,7 +850,7 @@ svn_client_propget4(apr_hash_t **props,
       else if (err)
         return svn_error_trace(err);
 
-      SVN_ERR(get_prop_from_wc(*props, propname, target,
+      SVN_ERR(get_prop_from_wc(props, propname, target,
                                pristine, kind,
                                depth, changelists, ctx, scratch_pool,
                                result_pool));
@@ -859,6 +869,7 @@ svn_client_propget4(apr_hash_t **props,
 
       SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind, scratch_pool));
 
+      *props = apr_hash_make(result_pool);
       SVN_ERR(remote_propget(*props, propname, loc->url, "",
                              kind, loc->rev, ra_session,
                              depth, result_pool, scratch_pool));

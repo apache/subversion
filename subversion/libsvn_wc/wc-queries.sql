@@ -1041,6 +1041,16 @@ FROM nodes_current n
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND kind = 'dir' AND presence IN ('normal', 'incomplete')
 
+-- STMT_SELECT_CURRENT_PROPS_RECURSIVE
+/* ### Ugly OR to make sqlite use the proper optimizations */
+SELECT IFNULL((SELECT properties FROM actual_node a
+               WHERE a.wc_id = ?1 AND A.local_relpath = n.local_relpath),
+              properties),
+       local_relpath
+FROM nodes_current n
+WHERE (wc_id = ?1 AND local_relpath = ?2)
+   OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
