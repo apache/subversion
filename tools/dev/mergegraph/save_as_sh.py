@@ -42,47 +42,47 @@ def comment(out, text):
   """Write the comment TEXT to the file-like object OUT."""
   print >> out, '#', text
 
+def node_branch(node_name):
+  """Extract branch name from a node name.
+     ### TODO: multi-char names."""
+  return node_name[:1]
+
+def node_url(node_name):
+  """Extract the URL (in command-line repo-relative URL syntax) from a
+     node name."""
+  return '^/' + node_branch(node_name)
+
+def node_rev(node_name):
+  """Extract revnum (as an integer) from a node name.
+     ### TODO: multi-char names."""
+  return int(node_name[1:]) + 1
+
+def add(revs, node_name, action, *args):
+  """Add the tuple (ACTION, (ARGS)) to the list REVS[REVNUM]."""
+  revnum = node_rev(node_name)
+  if not revnum in revs:
+    revs[revnum] = []
+  revs[revnum].append((action, args))
+
 def write_recipe(graph, out):
   """Write out a sequence of svn commands that will execute the branching
      and merging shown in GRAPH.  Write to the file-like object OUT."""
   revs = {}  # keyed by revnum
 
-  def node_branch(node_name):
-    """Extract branch name from a node name.
-       ### TODO: multi-char names."""
-    return node_name[:1]
-
-  def node_url(node_name):
-    """Extract the URL (in command-line repo-relative URL syntax) from a
-       node name."""
-    return '^/' + node_branch(node_name)
-
-  def node_rev(node_name):
-    """Extract revnum (as an integer) from a node name.
-       ### TODO: multi-char names."""
-    return int(node_name[1:]) + 1
-
-  def add(node_name, action, *args):
-    """Add the tuple (ACTION, (ARGS)) to the list REVS[REVNUM]."""
-    revnum = node_rev(node_name)
-    if not revnum in revs:
-      revs[revnum] = []
-    revs[revnum].append((action, args))
-
   for br, orig, r1, head in graph.branches:
     if orig:
-      add(br + str(r1), 'copy', orig, br)
+      add(revs, br + str(r1), 'copy', orig, br)
     else:
-      add(br + str(r1), 'mkproj', br)
+      add(revs, br + str(r1), 'mkproj', br)
 
   for base_node, src_node, tgt_node, kind in graph.merges:
-    add(tgt_node, 'merge', src_node, tgt_node, kind)
+    add(revs, tgt_node, 'merge', src_node, tgt_node, kind)
 
   for node_name in graph.changes:
     # Originally the 'changes' list could have entries that overlapped with
     # merges. We must either disallow that or filter out such changes here.
     #if not node_name in revs:
-    add(node_name, 'modify', node_name)
+    add(revs, node_name, 'modify', node_name)
 
   # Execute the actions for each revision in turn.
   for r in sorted(revs.keys()):
@@ -115,7 +115,7 @@ def write_recipe(graph, out):
               node_url(src_node) + '@' + str(node_rev(src_node)),
               node_branch(tgt_node))
       else:
-        raise 'unknown action: %s' % action
+        raise Exception('unknown action: %s' % action)
     svn(out, 'commit', '-m', 'r' + str(r))
 
 def write_sh_file(graph, filename):
