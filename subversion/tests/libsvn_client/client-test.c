@@ -689,7 +689,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
               repos_url, repos_uuid, 2, "iota", pool),
             svn_client__pathrev_create_with_relpath(
               repos_url, repos_uuid, 2, "A/iota", pool),
-            ctx, pool, pool));
+            NULL, ctx, pool, pool));
   SVN_TEST_STRING_ASSERT(svn_client__pathrev_relpath(yc_ancestor, pool),
                          "iota");
   SVN_TEST_ASSERT(yc_ancestor->rev == 1);
@@ -713,7 +713,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
               repos_url, repos_uuid, 0, "", pool),
             svn_client__pathrev_create_with_relpath(
               repos_url, repos_uuid, 3, "A/ROOT", pool),
-            ctx, pool, pool));
+            NULL, ctx, pool, pool));
   SVN_TEST_STRING_ASSERT(svn_client__pathrev_relpath(yc_ancestor, pool), "");
   SVN_TEST_ASSERT(yc_ancestor->rev == 0);
 
