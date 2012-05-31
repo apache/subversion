@@ -9550,7 +9550,8 @@ merge_locked(const char *source1,
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
     SVN_ERR(svn_client__get_youngest_common_ancestor(
-              &yca, source1_loc, source2_loc, ctx, scratch_pool, scratch_pool));
+                    &yca, source1_loc, source2_loc, ra_session1, ctx,
+                    scratch_pool, scratch_pool));
 
   /* Check for a youngest common ancestor.  If we have one, we'll be
      doing merge tracking.
@@ -10468,7 +10469,8 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
      actually related, we can't reintegrate if they are not.  Also
      get an initial value for the YCA revision number. */
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor, source_loc, &target->loc, ctx, iterpool, iterpool));
+              &yc_ancestor, source_loc, &target->loc, target_ra_session, ctx,
+              iterpool, iterpool));
   if (! yc_ancestor)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
@@ -10633,7 +10635,7 @@ find_reintegrate_merge(merge_source_t **source_p,
     SVN_ERR(svn_ra_reparent(target_ra_session, source.loc1->url, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor, source.loc2, source.loc1,
+            &yc_ancestor, source.loc2, source.loc1, target_ra_session,
             ctx, scratch_pool, scratch_pool));
 
   /* The source side of a reintegrate merge is not 'ancestral', except in
@@ -11443,7 +11445,7 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
             s_t->target_ra_session, ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &s_t->yca, s_t->source, &s_t->target->loc,
+            &s_t->yca, s_t->source, &s_t->target->loc, s_t->source_ra_session,
             ctx, result_pool, result_pool));
 
   /* Find the latest revision of A synced to B and the latest
