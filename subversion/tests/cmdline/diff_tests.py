@@ -1589,7 +1589,6 @@ def check_for_omitted_prefix_in_path_component(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-@XFail()
 def diff_renamed_file(sbox):
   "diff a file that has been renamed"
 
@@ -1960,7 +1959,7 @@ def diff_renamed_dir(sbox):
   svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
                                    os.path.join('A', 'D', 'I'))
 
-  # Check a repos->wc diff
+  # Check a wc->wc diff
   exit_code, diff_output, err_output = svntest.main.run_svn(
     None, 'diff', '--show-copies-as-adds', os.path.join('A', 'D'))
 
@@ -1971,6 +1970,23 @@ def diff_renamed_dir(sbox):
   if check_diff_output(diff_output,
                        os.path.join('A', 'D', 'I', 'pi'),
                        'A') :
+    raise svntest.Failure
+
+  # Check a repos->wc diff of the moved-here node before commit
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+    None, 'diff', '-r', '1', '--show-copies-as-adds',
+    os.path.join('A', 'D', 'I'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
+
+  # Check a repos->wc diff of the moved-away node before commit
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+    None, 'diff', '-r', '1', os.path.join('A', 'D', 'G'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
     raise svntest.Failure
 
   # Commit

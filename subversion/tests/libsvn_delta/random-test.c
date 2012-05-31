@@ -189,7 +189,7 @@ generate_random_file(apr_uint32_t maxlen,
         {
           const int ch = (random_bytes
                           ? (unsigned)random_bytes[r % bytes_range]
-                          : r % bytes_range);
+                          : (int)(r % bytes_range));
           if (buf == end)
             {
               apr_size_t ignore_length;

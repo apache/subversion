@@ -198,6 +198,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    LOC1 and LOC2.  If the locations have no common ancestor (including if
    they don't have the same repository root URL), set *ANCESTOR_P to NULL.
 
+   If SESSION is not NULL, use it for retrieving the common ancestor instead
+   of creating a new session.
+
    Use the authentication baton cached in CTX to authenticate against
    the repository.  Use POOL for all allocations.
 
@@ -207,6 +210,7 @@ svn_error_t *
 svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          const svn_client__pathrev_t *loc1,
                                          const svn_client__pathrev_t *loc2,
+                                         svn_ra_session_t *session,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);

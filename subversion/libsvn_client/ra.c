@@ -843,12 +843,12 @@ svn_error_t *
 svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          const svn_client__pathrev_t *loc1,
                                          const svn_client__pathrev_t *loc2,
+                                         svn_ra_session_t *session,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *sesspool = svn_pool_create(scratch_pool);
-  svn_ra_session_t *session;
+  apr_pool_t *sesspool = NULL;
   apr_hash_t *history1, *history2;
   apr_hash_index_t *hi;
   svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
@@ -863,7 +863,11 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
     }
 
   /* Open an RA session for the two locations. */
-  SVN_ERR(svn_client_open_ra_session(&session, loc1->url, ctx, sesspool));
+  if (session == NULL)
+    {
+      sesspool = svn_pool_create(scratch_pool);
+      SVN_ERR(svn_client_open_ra_session(&session, loc1->url, ctx, sesspool));
+    }
 
   /* We're going to cheat and use history-as-mergeinfo because it
      saves us a bunch of annoying custom data comparisons and such. */
@@ -879,8 +883,9 @@ svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                session, ctx, scratch_pool));
-  /* Close the source and target sessions. */
-  svn_pool_destroy(sesspool);
+  /* Close the ra session if we opened one. */
+  if (sesspool)
+    svn_pool_destroy(sesspool);
 
   /* Loop through the first location's history, check for overlapping
      paths and ranges in the second location's history, and
@@ -959,7 +964,7 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
                               ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &ancestor, loc1, loc2, ctx, result_pool, scratch_pool));
+            &ancestor, loc1, loc2, session, ctx, result_pool, scratch_pool));
 
   if (ancestor)
     {

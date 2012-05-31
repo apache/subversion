@@ -841,8 +841,7 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
                  ranges from *MERGEINFO */
               if (!(*younger_mergeinfo))
                 *younger_mergeinfo = apr_hash_make(pool);
-              apr_hash_set(*younger_mergeinfo,
-                           (const char *)merge_source_path,
+              apr_hash_set(*younger_mergeinfo, merge_source_path,
                            APR_HASH_KEY_STRING, younger_rangelist);
               SVN_ERR(svn_mergeinfo_remove2(mergeinfo, *younger_mergeinfo,
                                             *mergeinfo, TRUE, pool, iterpool));
@@ -888,25 +887,19 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
    *PROPS is an array of svn_prop_t structures representing regular properties
    to be added to the working copy TARGET_ABSPATH.
 
-   HONOR_MERGEINFO determines whether mergeinfo will be honored by this
-   function (when applicable).
+   The merge source and target are assumed to be in the same repository.
 
-   If mergeinfo is not being honored, SAME_REPOS is true, and
-   REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
-   SAME_REPOS is false, then filter out all mergeinfo
-   property additions (Issue #3383) from *PROPS.  If SAME_REPOS is
-   true then filter out mergeinfo property additions to TARGET_ABSPATH when
+   Filter out mergeinfo property additions to TARGET_ABSPATH when
    those additions refer to the same line of history as TARGET_ABSPATH as
    described below.
 
-   If mergeinfo is being honored and SAME_REPOS is true
-   then examine the added mergeinfo, looking at each range (or single rev)
+   Examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
    history as TARGET_ABSPATH (pegged at its base revision), then filter out
    that range.  If the entire rangelist for a given path is filtered then
    filter out the path as well.
 
-   If SAME_REPOS is true, RA_SESSION is an open RA session to the repository
+   RA_SESSION is an open RA session to the repository
    in which both the source and target live, else RA_SESSION is not used. It
    may be temporarily reparented as needed by this function.
 
@@ -917,9 +910,6 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 static svn_error_t *
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *target_abspath,
-                                  svn_boolean_t honor_mergeinfo,
-                                  svn_boolean_t same_repos,
-                                  svn_boolean_t reintegrate_merge,
                                   svn_ra_session_t *ra_session,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
@@ -931,28 +921,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   const char *repos_relpath;
   svn_client__pathrev_t target_base;
 
-  /* Issue #3383: We don't want mergeinfo from a foreign repos.
-
-     If this is a merge from a foreign repository we must strip all
-     incoming mergeinfo (including mergeinfo deletions).  Otherwise if
-     this property isn't mergeinfo or is NULL valued (i.e. prop removal)
-     or empty mergeinfo it does not require any special handling.  There
-     is nothing to filter out of empty mergeinfo and the concept of
-     filtering doesn't apply if we are trying to remove mergeinfo
-     entirely.  */
-  if (! same_repos)
-    return svn_error_trace(omit_mergeinfo_changes(props, *props, pool));
-
-  /* If we aren't honoring mergeinfo and this is a merge from the
-     same repository, then get outta here.  If this is a reintegrate
-     merge or a merge from a foreign repository we still need to
-     filter regardless of whether we are honoring mergeinfo or not. */
-  if (! honor_mergeinfo
-      && ! reintegrate_merge)
-    return SVN_NO_ERROR;
-
-  /* If this is a merge from the same repository and PATH itself has been
-     added there is no need to filter. */
+  /* If PATH itself has been added there is no need to filter. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,  &target_base.rev, &repos_relpath,
                                   &target_base.repos_root_url,
                                   &target_base.repos_uuid, NULL,
@@ -1246,14 +1215,25 @@ prepare_merge_props_changed(const apr_array_header_t **prop_updates,
          'forward' or 'reverse' merge and we filter unconditionally. */
       if (merge_b->merge_source.loc1->rev < merge_b->merge_source.loc2->rev
           || !merge_b->merge_source.ancestral)
-        SVN_ERR(filter_self_referential_mergeinfo(&props,
-                                                  local_abspath,
-                                                  HONOR_MERGEINFO(merge_b),
-                                                  merge_b->same_repos,
-                                                  merge_b->reintegrate_merge,
-                                                  merge_b->ra_session2,
-                                                  merge_b->ctx,
-                                                  result_pool));
+        {
+          /* Issue #3383: We don't want mergeinfo from a foreign repos.
+
+             If this is a merge from a foreign repository we must strip all
+             incoming mergeinfo (including mergeinfo deletions).  Otherwise if
+             this property isn't mergeinfo or is NULL valued (i.e. prop removal)
+             or empty mergeinfo it does not require any special handling.  There
+             is nothing to filter out of empty mergeinfo and the concept of
+             filtering doesn't apply if we are trying to remove mergeinfo
+             entirely.  */
+          if (! merge_b->same_repos)
+            SVN_ERR(omit_mergeinfo_changes(&props, props, result_pool));
+          else if (HONOR_MERGEINFO(merge_b) || merge_b->reintegrate_merge)
+            SVN_ERR(filter_self_referential_mergeinfo(&props,
+                                                      local_abspath,
+                                                      merge_b->ra_session2,
+                                                      merge_b->ctx,
+                                                      result_pool));
+        }
     }
   *prop_updates = props;
 
@@ -5814,7 +5794,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *subtrees_with_mergeinfo;
-  apr_hash_t *server_excluded_subtrees;
+  apr_hash_t *excluded_subtrees;
   apr_hash_t *switched_subtrees;
   apr_hash_t *shallow_subtrees;
   apr_hash_t *missing_subtrees;
@@ -5989,16 +5969,15 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
        }
     }
 
-  /* Case 6: Paths absent from disk due to server-side exclusion. */
-  SVN_ERR(svn_wc__get_server_excluded_subtrees(&server_excluded_subtrees,
-                                               ctx->wc_ctx,
-                                               target->abspath,
-                                               result_pool, scratch_pool));
-  if (server_excluded_subtrees)
+  /* Case 6: Paths absent from disk due to server or user exclusion. */
+  SVN_ERR(svn_wc__get_excluded_subtrees(&excluded_subtrees,
+                                        ctx->wc_ctx, target->abspath,
+                                        result_pool, scratch_pool));
+  if (excluded_subtrees)
     {
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(scratch_pool, server_excluded_subtrees);
+      for (hi = apr_hash_first(scratch_pool, excluded_subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -9571,7 +9550,8 @@ merge_locked(const char *source1,
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
     SVN_ERR(svn_client__get_youngest_common_ancestor(
-              &yca, source1_loc, source2_loc, ctx, scratch_pool, scratch_pool));
+                    &yca, source1_loc, source2_loc, ra_session1, ctx,
+                    scratch_pool, scratch_pool));
 
   /* Check for a youngest common ancestor.  If we have one, we'll be
      doing merge tracking.
@@ -10489,7 +10469,8 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
      actually related, we can't reintegrate if they are not.  Also
      get an initial value for the YCA revision number. */
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor, source_loc, &target->loc, ctx, iterpool, iterpool));
+              &yc_ancestor, source_loc, &target->loc, target_ra_session, ctx,
+              iterpool, iterpool));
   if (! yc_ancestor)
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
@@ -10654,7 +10635,7 @@ find_reintegrate_merge(merge_source_t **source_p,
     SVN_ERR(svn_ra_reparent(target_ra_session, source.loc1->url, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &yc_ancestor, source.loc2, source.loc1,
+            &yc_ancestor, source.loc2, source.loc1, target_ra_session,
             ctx, scratch_pool, scratch_pool));
 
   /* The source side of a reintegrate merge is not 'ancestral', except in
@@ -11464,7 +11445,7 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
             s_t->target_ra_session, ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_youngest_common_ancestor(
-            &s_t->yca, s_t->source, &s_t->target->loc,
+            &s_t->yca, s_t->source, &s_t->target->loc, s_t->source_ra_session,
             ctx, result_pool, result_pool));
 
   /* Find the latest revision of A synced to B and the latest

@@ -1208,6 +1208,17 @@ def revert_permissions_only(sbox):
                                        'revert', sbox.ospath('A/B/E/beta'))
     is_executable(sbox.ospath('A/B/E/beta'))
 
+  # copied file is always writeable
+  sbox.simple_update()
+  expected_output = ["A         %s\n" % sbox.ospath('A/B/E2')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'copy',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
+  is_writable(sbox.ospath('A/B/E2/alpha'))
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'revert', sbox.ospath('A/B/E2/alpha'))
+  is_writable(sbox.ospath('A/B/E2/alpha'))
+
 @XFail()
 @Issue(3851)
 def revert_copy_depth_files(sbox):

@@ -749,7 +749,6 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
                       apr_pool_t *pool)
 {
   node_revision_t *parent_noderev;
-  apr_hash_t *entries;
   svn_fs_t *fs = parent->fs;
   svn_fs_dirent_t *dirent;
   svn_fs_id_t *id;

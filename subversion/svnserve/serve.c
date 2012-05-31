@@ -2042,9 +2042,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__log(full_paths, start_rev, end_rev,
-                                   limit, send_changed_paths, strict_node,
-                                   include_merged_revisions, revprops,
-                                   pool)));
+                                   (int) limit, send_changed_paths,
+                                   strict_node, include_merged_revisions,
+                                   revprops, pool)));
 
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path->data;

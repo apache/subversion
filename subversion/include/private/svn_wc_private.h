@@ -888,10 +888,6 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
  * If @a propname is not NULL, the passed hash table will only contain
  * the property @a propname.
  *
- * If @a base_props is @c TRUE, get the unmodified BASE properties
- * from the working copy, instead of getting the current (or "WORKING")
- * properties.
- *
  * If @a pristine is not @c TRUE, and @a base_props is FALSE show local
  * modifications to the properties.
  *
@@ -912,7 +908,6 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             const char *propname,
                             svn_depth_t depth,
-                            svn_boolean_t base_props,
                             svn_boolean_t pristine,
                             const apr_array_header_t *changelists,
                             svn_wc__proplist_receiver_t receiver_func,
@@ -921,6 +916,20 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);
 
+/** Obtain a mapping of const char * local_abspaths to const svn_string_t*
+ * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
+ * and its descendants.
+ *
+ * Allocate the result in RESULT_POOL, and perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__prop_retrieve_recursive(apr_hash_t **values,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /**
  * For use by entries.c and entries-dump.c to read old-format working copies.
@@ -993,20 +1002,20 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
                               const char *trail_url,
                               apr_pool_t *scratch_pool);
 
-/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+/* Set @a *excluded_subtrees to a hash mapping <tt>const char *</tt>
  * local * absolute paths to <tt>const char *</tt> local absolute paths for
- * every path at or under @a local_abspath in @a wc_ctx which are excluded
- * by the server (e.g. because of authz).
- * If no server-excluded paths are found then @a *server_excluded_subtrees
+ * every path under @a local_abspath in @a wc_ctx which are excluded
+ * by the server (e.g. because of authz) or the users.
+ * If no excluded paths are found then @a *server_excluded_subtrees
  * is set to @c NULL.
  * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
-                                     svn_wc_context_t *wc_ctx,
-                                     const char *local_abspath,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
+svn_wc__get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.

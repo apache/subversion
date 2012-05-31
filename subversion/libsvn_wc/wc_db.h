@@ -2022,9 +2022,6 @@ svn_wc__db_read_props(apr_hash_t **props,
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  *
- * If BASE_PROPS is TRUE, read the properties from the BASE layer (op_depth=0),
- * without local modifications.
- *
  * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
  * op_depth).
  *
@@ -2035,7 +2032,6 @@ svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 svn_depth_t depth,
-                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 const apr_array_header_t *changelists,
                                 svn_wc__proplist_receiver_t receiver_func,
@@ -2062,6 +2058,22 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
+
+
+/** Obtain a mapping of const char * local_abspaths to const svn_string_t*
+ * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
+ * and its descendants.
+ *
+ * Allocate the result in RESULT_POOL, and perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *propname,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /* Set *CHILDREN to a new array of the (const char *) basenames of the
    immediate children of the working node at LOCAL_ABSPATH in DB.
@@ -2122,7 +2134,6 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
    Allocate *MARKER_FILES in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL */
-/* ### This function will probably be removed. */
 svn_error_t *
 svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
                                      svn_wc__db_t *db,
@@ -3063,19 +3074,19 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                  const char *trail_url,
                                  apr_pool_t *scratch_pool);
 
-/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+/* Set @a *excluded_subtrees to a hash mapping <tt>const char *</tt>
  * local absolute paths to <tt>const char *</tt> local absolute paths for
- * every path at or under @a local_abspath in @a db which are excluded by
- * the server (e.g. due to authz).  If no such paths are found then
+ * every path under @a local_abspath in @a db which are excluded by
+ * the server (e.g. due to authz), or user.  If no such paths are found then
  * @a *server_excluded_subtrees is set to @c NULL.
  * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
+svn_wc__db_get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.
