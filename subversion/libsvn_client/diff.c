@@ -3034,6 +3034,8 @@ diff_repos_wc(const char *path_or_url1,
     }
 
   /* Use the diff editor to generate the diff. */
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
   SVN_ERR(svn_wc__get_diff_editor(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
@@ -3050,8 +3052,6 @@ diff_repos_wc(const char *path_or_url1,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   pool, pool));
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
-  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
 
   if (depth != svn_depth_infinity)
     diff_depth = depth;
