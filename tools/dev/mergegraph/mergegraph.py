@@ -301,4 +301,8 @@ class MergeDot(MergeGraph, pydot.Dot):
        according to the given format."""
     if not filename:
       filename = graph.basename + '.' + format
-    pydot.Dot.write(graph, filename, format=format)
+    if format == 'sh':
+      import save_as_sh
+      save_as_sh.write_sh_file(graph, filename)
+    else:
+      pydot.Dot.write(graph, filename, format=format)
