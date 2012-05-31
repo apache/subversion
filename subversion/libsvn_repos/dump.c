@@ -735,7 +735,6 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
   unsigned int i;
   apr_array_header_t *sorted_entries;
