@@ -739,6 +739,10 @@ close_directory(void *dir_baton,
   unsigned int i;
   apr_array_header_t *sorted_entries;
 
+  /* Sort entries lexically instead of as paths. Even though the entries
+   * are full paths they're all in the same directory (see comment in struct
+   * dir_baton definition). So we really want to sort by basename, in which
+   * case the lexical sort function is more efficient. */
   sorted_entries = svn_sort__hash(db->deleted_entries,
                                   svn_sort_compare_items_lexically, pool);
   for (i = 0; i < sorted_entries->nelts; i++)
