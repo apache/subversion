@@ -30,35 +30,42 @@ def shebang_line(out):
 
 def command(out, cmd, *args):
   """Write the shell command CMD with the arguments ARGS to the file-like
-     object OUT."""
+     object OUT.
+  """
   print >> out, ' '.join((cmd,) + args)
 
 def svn(out, subcmd, *args):
   """Write an svn command with the given subcommand and arguments.  Write
-     to the file-like object OUT."""
+     to the file-like object OUT.
+  """
   command(out, 'svn', subcmd, *args)
 
 def comment(out, text):
-  """Write the comment TEXT to the file-like object OUT."""
+  """Write the comment TEXT to the file-like object OUT.
+  """
   print >> out, '#', text
 
 def node_branch(node_name):
   """Extract branch name from a node name.
-     ### TODO: multi-char names."""
+     ### TODO: multi-char names.
+  """
   return node_name[:1]
 
 def node_url(node_name):
   """Extract the URL (in command-line repo-relative URL syntax) from a
-     node name."""
+     node name.
+  """
   return '^/' + node_branch(node_name)
 
 def node_rev(node_name):
   """Extract revnum (as an integer) from a node name.
-     ### TODO: multi-char names."""
+     ### TODO: multi-char names.
+  """
   return int(node_name[1:]) + 1
 
 def add(revs, node_name, action, *args):
-  """Add the tuple (ACTION, (ARGS)) to the list REVS[REVNUM]."""
+  """Add the tuple (ACTION, (ARGS)) to the list REVS[REVNUM].
+  """
   revnum = node_rev(node_name)
   if not revnum in revs:
     revs[revnum] = []
@@ -66,7 +73,8 @@ def add(revs, node_name, action, *args):
 
 def write_recipe(graph, out):
   """Write out a sequence of svn commands that will execute the branching
-     and merging shown in GRAPH.  Write to the file-like object OUT."""
+     and merging shown in GRAPH.  Write to the file-like object OUT.
+  """
   revs = {}  # keyed by revnum
 
   for br, orig, r1, head in graph.branches:
@@ -121,7 +129,8 @@ def write_recipe(graph, out):
 def write_sh_file(graph, filename):
   """Write a file containing a sequence of 'svn' commands that when run will
      perform the branching and merging described by the MergeDot object
-     GRAPH.  Write to a new file named FILENAME."""
+     GRAPH.  Write to a new file named FILENAME.
+  """
   out_stream = open(filename, 'w')
   shebang_line(out_stream)
   write_recipe(graph, out_stream)
