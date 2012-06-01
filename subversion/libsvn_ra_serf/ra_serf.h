@@ -769,12 +769,6 @@ struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
 
-  /* Have we checked to see if there's an XML error in this response? */
-  svn_boolean_t init;
-
-  /* Was there an XML error response? */
-  svn_boolean_t has_xml_response;
-
   /* Are we done with the response? */
   svn_boolean_t done;
 
