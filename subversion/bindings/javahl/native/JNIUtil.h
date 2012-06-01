@@ -273,4 +273,12 @@ class JNIUtil
  */
 #define POP_AND_RETURN_NULL             POP_AND_RETURN(NULL)
 
+#define CPPADDR_NULL_PTR(expr, ret_val)                 \
+  do {                                                  \
+    if ((expr) == NULL) {                               \
+      JNIUtil::throwError(_("bad C++ this"));           \
+      return ret_val;                                   \
+    }                                                   \
+  } while (0)
+
 #endif  // JNIUTIL_H
