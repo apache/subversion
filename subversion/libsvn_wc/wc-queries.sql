@@ -905,7 +905,7 @@ SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
     ?7/*moved_here*/, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target,
-    (SELECT dst.moved_to FROM nodes_current AS dst
+    (SELECT dst.moved_to FROM nodes AS dst
                          WHERE dst.wc_id = ?1
                          AND dst.local_relpath = ?3
                          AND dst.op_depth = ?4)
@@ -923,7 +923,7 @@ SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
     ?7 /*moved_here*/, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target,
-    (SELECT dst.moved_to FROM nodes_current AS dst
+    (SELECT dst.moved_to FROM nodes AS dst
                          WHERE dst.wc_id = ?1
                          AND dst.local_relpath = ?3
                          AND dst.op_depth = ?4)
