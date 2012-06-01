@@ -35,10 +35,7 @@
 
 #include "wc.h"
 #include "workqueue.h"
-#include "adm_files.h"
 #include "props.h"
-#include "translate.h"
-#include "entries.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -221,17 +218,6 @@ copy_versioned_file(svn_wc__db_t *db,
         {
           svn_skel_t *work_item;
 
-          /* Remove 'read-only' from the destination file; it's a local add. */
-            {
-              const svn_string_t *needs_lock;
-              SVN_ERR(svn_wc__internal_propget(&needs_lock, db, src_abspath,
-                                               SVN_PROP_NEEDS_LOCK,
-                                               scratch_pool, scratch_pool));
-              if (needs_lock)
-                SVN_ERR(svn_io_set_file_read_write(tmp_dst_abspath,
-                                                   FALSE, scratch_pool));
-            }
-
           SVN_ERR(svn_wc__wq_build_file_move(&work_item, db, dir_abspath,
                                              tmp_dst_abspath, dst_abspath,
                                              scratch_pool, scratch_pool));
@@ -240,6 +226,11 @@ copy_versioned_file(svn_wc__db_t *db,
           if (disk_kind == svn_node_file)
             {
               svn_boolean_t modified;
+
+              /* Remove 'read-only' from the destination file;
+                 it's a local add now. */
+              SVN_ERR(svn_io_set_file_read_write(tmp_dst_abspath,
+                                                 FALSE, scratch_pool));
 
               /* It's faster to look for mods on the source now, as
                  the timestamp might match, than to examine the
