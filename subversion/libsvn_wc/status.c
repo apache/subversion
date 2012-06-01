@@ -2649,9 +2649,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   wb.repos_root = NULL;
   wb.repos_locks = NULL;
 
-  SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
   if (!ignore_patterns)
@@ -2673,7 +2670,12 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
         }
       else
         return svn_error_trace(err);
+
+      wb.externals = apr_hash_make(scratch_pool);
     }
+  else
+    SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
+                                               scratch_pool, scratch_pool));
 
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
@@ -2703,15 +2705,27 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
       /* It may be a file or an unversioned item. And this is an explicit
        * target, so no ignoring. An unversioned item (file or dir) shows a
        * status like '?', and can yield a tree conflicted path. */
-      SVN_ERR(get_child_status(&wb,
-                               local_abspath,
-                               info,
-                               dirent,
-                               ignore_patterns,
-                               get_all,
-                               status_func, status_baton,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
+      err = get_child_status(&wb,
+                             local_abspath,
+                             info,
+                             dirent,
+                             ignore_patterns,
+                             get_all,
+                             status_func, status_baton,
+                             cancel_func, cancel_baton,
+                             scratch_pool);
+
+      if (!info && err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* The parent is also not versioned, but it is not nice to show
+             an error about a path a user didn't intend to touch. */
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
+      SVN_ERR(err);
     }
 
   return SVN_NO_ERROR;
