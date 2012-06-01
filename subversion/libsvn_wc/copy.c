@@ -119,57 +119,6 @@ copy_to_tmpdir(const char **dst_abspath,
   return SVN_NO_ERROR;
 }
 
-
-/* If SRC_ABSPATH and DST_ABSPATH use different pristine stores, copy the
-   pristine text of SRC_ABSPATH (if there is one) into the pristine text
-   store connected to DST_ABSPATH.  This will only happen when copying into
-   a separate WC such as an external directory.
- */
-static svn_error_t *
-copy_pristine_text_if_necessary(svn_wc__db_t *db,
-                                const char *src_abspath,
-                                const char *dst_abspath,
-                                const char *tmpdir_abspath,
-                                const svn_checksum_t *checksum,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *scratch_pool)
-{
-  svn_boolean_t present;
-  svn_stream_t *src_pristine, *tmp_pristine;
-  const char *tmp_pristine_abspath;
-  const svn_checksum_t *sha1_checksum, *md5_checksum;
-
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
-
-  /* If it's already in DST_ABSPATH's pristine store, we're done. */
-  SVN_ERR(svn_wc__db_pristine_check(&present, db, dst_abspath, checksum,
-                                    scratch_pool));
-  if (present)
-    return SVN_NO_ERROR;
-
-  sha1_checksum = checksum;
-  SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db,
-                                      src_abspath, checksum,
-                                      scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc__db_pristine_read(&src_pristine, NULL, db,
-                                   src_abspath, sha1_checksum,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
-                                 tmpdir_abspath, svn_io_file_del_none,
-                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
-                           cancel_func, cancel_baton,
-                           scratch_pool));
-  SVN_ERR(svn_wc__db_pristine_install(db, tmp_pristine_abspath,
-                                      sha1_checksum, md5_checksum,
-                                      scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Copy the versioned file SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
    If METADATA_ONLY is true, copy only the versioned metadata,
    otherwise copy both the versioned metadata and the filesystem node (even
@@ -210,23 +159,10 @@ copy_versioned_file(svn_wc__db_t *db,
      ensure the destination WC has a copy of the pristine text. */
 
   if (copy_pristine_file)
-    {
-      const svn_checksum_t *checksum;
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &checksum, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   db, src_abspath,
-                                   scratch_pool, scratch_pool));
-
-      /* Checksum is NULL for local additions, but that should be handled
-         by our caller*/
-      if (checksum != NULL)
-        SVN_ERR(copy_pristine_text_if_necessary(db, src_abspath, dst_abspath,
-                                                tmpdir_abspath, checksum,
-                                                cancel_func, cancel_baton,
-                                                scratch_pool));
-    }
+    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath, NULL,
+                                         dst_op_root_abspath,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
 
   /* Prepare a temp copy of the filesystem node.  It is usually a file, but
      copy recursively if it's a dir. */
