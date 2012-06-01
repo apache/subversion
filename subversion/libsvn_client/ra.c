@@ -492,7 +492,8 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                                initial_url,
                                                base_dir_abspath, NULL,
                                                base_dir_abspath != NULL,
-                                               FALSE, ctx, pool));
+                                               base_dir_abspath == NULL,
+                                               ctx, pool));
 
   /* If we got a CORRECTED_URL, we'll want to refer to that as the
      URL-ized form of PATH_OR_URL from now on. */
