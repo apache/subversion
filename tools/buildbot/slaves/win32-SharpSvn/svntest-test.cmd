@@ -77,21 +77,21 @@ IF "%LOCAL%+%FSFS%" == "1+1" (
 
 IF "%SVN%+%FSFS%" == "1+1" (
   taskkill /im svnserve.exe /f 2> nul:
-  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://localhost %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://localhost %ARGS% "%TESTDIR%\tests"
+  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
+  win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
 )
 
 IF "%SERF%+%FSFS%" == "1+1" (
   taskkill /im httpd.exe /f 2> nul:
-  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library serf --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://localhost:%TESTPORT% %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library serf --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://localhost:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library serf --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+  win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library serf --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
 )
 
 IF "%NEON%+%FSFS%" == "1+1" (
   taskkill /im httpd.exe /f 2> nul:
-  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library neon --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://localhost:%TESTPORT% %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library neon --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://localhost:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+  echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library neon --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+  win-tests.py -c %PARALLEL% %MODE% -f fsfs --http-library neon --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
 )
