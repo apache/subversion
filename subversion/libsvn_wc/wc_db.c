@@ -10480,7 +10480,7 @@ get_moved_to(struct scan_deletion_baton_t *b,
              const char *local_relpath,
              apr_pool_t *scratch_pool)
 {
-  const char *moved_to_relpath = svn_sqlite__column_text(stmt, 2, NULL);
+  const char *moved_to_relpath = svn_sqlite__column_text(stmt, 3, NULL);
 
   if (moved_to_relpath)
     {
@@ -10546,8 +10546,11 @@ scan_deletion_txn(void *baton,
      check op-roots and parents of op-roots. */
   scan = (sd_baton->moved_to_op_root_relpath || sd_baton->moved_to_relpath);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_DELETION_INFO));
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb,
+                    scan ? STMT_SELECT_DELETION_INFO_SCAN
+                         : STMT_SELECT_DELETION_INFO));
+
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
@@ -10566,7 +10569,7 @@ scan_deletion_txn(void *baton,
                              path_for_error_message(wcroot, local_relpath,
                                                     scratch_pool));
 
-  op_depth = svn_sqlite__column_int(stmt, 3);
+  op_depth = svn_sqlite__column_int(stmt, 2);
 
   /* Special case: LOCAL_RELPATH not-present within a WORKING tree, we
      treat this as an op-root.  At commit time we need to explicitly
@@ -10620,8 +10623,6 @@ scan_deletion_txn(void *baton,
           if (scan || current_depth == op_depth)
             {
               SVN_ERR(svn_sqlite__reset(stmt));
-              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                                STMT_SELECT_DELETION_INFO));
               SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
                                         current_relpath));
               SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -10635,8 +10636,6 @@ scan_deletion_txn(void *baton,
 
       SVN_ERR_ASSERT(current_relpath[0] != '\0'); /* Catch invalid data */
       parent_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_DELETION_INFO));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, parent_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (!have_row)
@@ -10662,7 +10661,7 @@ scan_deletion_txn(void *baton,
         }
 
       current_relpath = parent_relpath;
-      op_depth = svn_sqlite__column_int(stmt, 3);
+      op_depth = svn_sqlite__column_int(stmt, 2);
       have_base = !svn_sqlite__column_is_null(stmt, 0);
     }
 
