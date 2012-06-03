@@ -276,15 +276,6 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   const char *session_url,
                                   apr_pool_t *pool);
 
-/* A default error handler for use with svn_wc_walk_entries3().  Returns
-   ERR in all cases. */
-svn_error_t *
-svn_client__default_walker_error_handler(const char *path,
-                                         svn_error_t *err,
-                                         void *walk_baton,
-                                         apr_pool_t *pool);
-
-
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/
