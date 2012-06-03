@@ -262,17 +262,6 @@ svn_client_get_repos_root(const char **repos_root,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_client__default_walker_error_handler(const char *path,
-                                         svn_error_t *err,
-                                         void *walk_baton,
-                                         apr_pool_t *pool)
-{
-  return svn_error_trace(err);
-}
-
-
 const svn_opt_revision_t *
 svn_cl__rev_default_to_head_or_base(const svn_opt_revision_t *revision,
                                     const char *path_or_url)
