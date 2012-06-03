@@ -133,6 +133,12 @@ Candidate changes:
    Votes:
      +1: rhuijben, steveking
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1345482
    Resolve a theoretical assertion when upgrading, in case the working copy
    contains tree conflicts with a url that is not canonical in 1.7+.
@@ -140,9 +146,3 @@ Candidate changes:
      Upgrading should be painless.
    Votes:
      +1: rhuijben, gstein, steveking
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
