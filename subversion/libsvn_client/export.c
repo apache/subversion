@@ -220,7 +220,8 @@ export_node(void *baton,
       if (eib->revision->kind == svn_opt_revision_working)
         {
           apr_finfo_t finfo;
-          SVN_ERR(svn_io_stat(&finfo, from_abspath, APR_FINFO_PROT, pool));
+          SVN_ERR(svn_io_stat(&finfo, local_abspath, APR_FINFO_PROT,
+                              scratch_pool));
           perm = finfo.protection;
         }
 #endif
