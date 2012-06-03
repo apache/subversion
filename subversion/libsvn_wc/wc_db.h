@@ -2177,12 +2177,16 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
    If the node is missing and ALLOW_MISSING is FALSE, then it will return
    SVN_ERR_WC_PATH_NOT_FOUND.
 
+   If SHOW_HIDDEN is FALSE and the status of LOCAL_ABSPATH is NOT_PRESENT or
+   EXCLUDED, set KIND to svn_kind_none.
+
    Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
 svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
 
 
