@@ -146,16 +146,13 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
   const char *conflict_new = NULL;
   const char *conflict_working = NULL;
   const char *prop_reject_file = NULL;
-  svn_kind_t kind;
   int i;
   const apr_array_header_t *conflicts;
-  const char *conflict_dir_abspath;
   svn_skel_t *work_items = NULL;
   svn_skel_t *work_item;
 
   *did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                     pool, pool));
 
@@ -175,11 +172,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
       else if (desc->kind == svn_wc_conflict_kind_property)
         prop_reject_file = desc->their_abspath;
     }
-
-  if (kind == svn_kind_dir)
-    conflict_dir_abspath = local_abspath;
-  else
-    conflict_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   if (resolve_text)
     {
@@ -215,7 +207,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                   : svn_diff_conflict_display_modified;
 
                 SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
-                                                       conflict_dir_abspath,
+                                                       local_abspath,
                                                        pool, pool));
                 SVN_ERR(svn_stream_open_unique(&tmp_stream,
                                                &auto_resolve_src,
@@ -252,9 +244,7 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
         {
           SVN_ERR(svn_wc__wq_build_file_copy_translated(
                     &work_item, db, local_abspath,
-                    svn_dirent_join(conflict_dir_abspath,
-                                    auto_resolve_src, pool),
-                    local_abspath, pool, pool));
+                    auto_resolve_src, local_abspath, pool, pool));
           work_items = svn_wc__wq_merge(work_items, work_item, pool);
         }
     }
