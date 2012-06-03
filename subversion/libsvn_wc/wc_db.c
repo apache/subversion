@@ -11639,6 +11639,7 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -11673,6 +11674,24 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                                    path_for_error_message(wcroot,
                                                           local_relpath,
                                                           scratch_pool));
+        }
+    }
+
+  if (!show_hidden)
+    {
+      int op_depth = svn_sqlite__column_int(stmt_info, 0);
+      svn_wc__db_status_t status = svn_sqlite__column_token(stmt_info, 3,
+                                                            presence_map);
+
+      if (op_depth > 0)
+        SVN_ERR(convert_to_working_status(&status, status));
+
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_excluded)
+        {
+          *kind = svn_kind_none;
+          SVN_ERR(svn_sqlite__reset(stmt_info));
+          return SVN_NO_ERROR;
         }
     }
 

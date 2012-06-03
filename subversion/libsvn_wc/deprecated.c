@@ -932,7 +932,9 @@ svn_wc_add3(const char *path,
     {
       svn_kind_t kind;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath, FALSE, pool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath,
+                                   FALSE /* allow_missing */,
+                                   FALSE /* show_hidden */, pool));
       if (kind == svn_kind_dir)
         {
           svn_wc_adm_access_t *adm_access;
