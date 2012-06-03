@@ -169,69 +169,6 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
 }
 
 svn_error_t *
-svn_client__path_relative_to_root(const char **rel_path,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *abspath_or_url,
-                                  const char *repos_root,
-                                  svn_boolean_t include_leading_slash,
-                                  svn_ra_session_t *ra_session,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  const char *repos_relpath;
-
-  /* If we have a WC path... */
-  if (! svn_path_is_url(abspath_or_url))
-    {
-      /* ... query it directly. */
-      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
-                                             wc_ctx,
-                                             abspath_or_url,
-                                             result_pool,
-                                             scratch_pool));
-
-      SVN_ERR_ASSERT(repos_relpath != NULL);
-    }
-  else if (repos_root != NULL)
-    {
-      repos_relpath = svn_uri_skip_ancestor(repos_root, abspath_or_url,
-                                            result_pool);
-      if (!repos_relpath)
-        return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                 _("URL '%s' is not a child of repository "
-                                   "root URL '%s'"),
-                                 abspath_or_url, repos_root);
-    }
-  else
-    {
-      svn_error_t *err;
-
-      SVN_ERR_ASSERT(ra_session != NULL);
-
-      /* Ask the RA layer to create a relative path for us */
-      err = svn_ra_get_path_relative_to_root(ra_session, &repos_relpath,
-                                             abspath_or_url, scratch_pool);
-
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-            return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, err,
-                                     _("URL '%s' is not inside repository"),
-                                     abspath_or_url);
-
-          return svn_error_trace(err);
-        }
-    }
-
-  if (include_leading_slash)
-    *rel_path = apr_pstrcat(result_pool, "/", repos_relpath, NULL);
-  else
-    *rel_path = repos_relpath;
-
-   return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                                const char *wc_abspath,
                                svn_client_ctx_t *ctx,
