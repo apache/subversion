@@ -1776,6 +1776,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   merge_cmd_baton_t *merge_b = baton;
   const char *mine_abspath = svn_dirent_join(merge_b->target->abspath,
                                              mine_relpath, scratch_pool);
+  svn_node_kind_t wc_kind;
   svn_node_kind_t kind;
   int i;
   apr_hash_t *file_props;
@@ -1834,7 +1835,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     svn_wc_notify_state_t obstr_state;
 
     SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
-                                      &kind,
+                                      &wc_kind,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
 
@@ -1967,10 +1968,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
       if (content_state)
         {
           /* directory already exists, is it under version control? */
-          svn_node_kind_t wc_kind;
-          SVN_ERR(svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx,
-                                   mine_abspath, FALSE, scratch_pool));
-
           if ((wc_kind != svn_node_none)
               && dry_run_deleted_p(merge_b, mine_abspath))
             *content_state = svn_wc_notify_state_changed;
