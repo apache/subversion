@@ -87,7 +87,7 @@ Candidate changes:
      Very simple fix that gives the working copy find code a huge performance
      boost.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
    
  * ^/subversion/branches/1.7.x-performance
    Use the working copy status walker as a first filter to find committable
@@ -131,7 +131,7 @@ Candidate changes:
    Justification:
      Makes svn upgrade unnecessary slow. Trivial fix.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r1345482
    Resolve a theoretical assertion when upgrading, in case the working copy
@@ -139,7 +139,7 @@ Candidate changes:
    Justification:
      Upgrading should be painless.
    Votes:
-     +1: rhuijben, gstein
+     +1: rhuijben, gstein, steveking
 
 Veto-blocked changes:
 =====================
