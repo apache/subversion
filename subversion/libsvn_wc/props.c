@@ -2223,31 +2223,10 @@ do_propset(svn_wc__db_t *db,
 {
   apr_hash_t *prophash;
   svn_wc_notify_action_t notify_action;
-  svn_wc__db_status_t status;
   svn_skel_t *work_item = NULL;
   svn_boolean_t clear_recorded_info = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* Get the node status for this path. */
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (status != svn_wc__db_status_normal
-      && status != svn_wc__db_status_added
-      && status != svn_wc__db_status_incomplete)
-    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-                             _("Can't set properties on '%s':"
-                               " invalid status for updating properties."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  /* Else, handle a regular property: */
-
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
@@ -2443,6 +2422,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind2(name);
+  svn_wc__db_status_t status;
   svn_kind_t kind;
   const char *dir_abspath;
 
@@ -2464,8 +2444,22 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
      backward we never call this API with depth > empty, so we only need
      to do the write check once per call, here (and not for every node in
      the node walker). */
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
-                               scratch_pool));
+    /* Get the node status for this path. */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                             _("Can't set properties on '%s':"
+                               " invalid status for updating properties."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   if (kind == svn_kind_dir)
     dir_abspath = local_abspath;
@@ -2474,7 +2468,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
 
-  if (depth == svn_depth_empty)
+  if (depth == svn_depth_empty || kind != svn_kind_dir)
     {
       apr_hash_t *changelist_hash = NULL;
 
