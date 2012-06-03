@@ -5793,7 +5793,6 @@ def update_nested_move_text_mod(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-@XFail()
 def update_with_parents_and_exclude(sbox):
   "bring a subtree in over an excluded path"
 
@@ -5820,7 +5819,7 @@ def update_with_parents_and_exclude(sbox):
                                         sbox.ospath('A'))
 
   expected_output = svntest.wc.State(wc_dir, {
-    # 'A'               : Item(status='A '),
+    'A'                 : Item(status='A '),
     'A/B'               : Item(status='A '),
     'A/B/F'             : Item(status='A '),
     'A/B/E'             : Item(status='A '),
@@ -5841,7 +5840,6 @@ def update_with_parents_and_exclude(sbox):
     'iota'              : Item(status='  ', wc_rev='1'),
   })
 
-  # This currently fails as A stays excluded
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         None,
