@@ -288,27 +288,18 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_boolean_t show_hidden,
                  apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t db_status;
   svn_kind_t db_kind;
-  svn_error_t *err;
 
-  err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             wc_ctx->db, local_abspath,
-                             scratch_pool, scratch_pool);
+  SVN_ERR(svn_wc__db_read_kind(&db_kind,
+                             wc_ctx->db, local_abspath, TRUE, show_hidden,
+                             scratch_pool));
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      *kind = svn_node_none;
-      return SVN_NO_ERROR;
-    }
+  if (db_kind == svn_kind_dir)
+    *kind = svn_node_dir;
+  else if (db_kind == svn_kind_file || db_kind == svn_kind_symlink)
+    *kind = svn_node_file;
   else
-    SVN_ERR(err);
-
-  SVN_ERR(convert_db_kind_to_node_kind(kind, db_kind, db_status, show_hidden));
+    *kind = svn_node_none;
 
   return SVN_NO_ERROR;
 }
