@@ -5793,6 +5793,64 @@ def update_nested_move_text_mod(sbox):
                                         None, None, None,
                                         None, None, 1)
 
+@XFail()
+def update_with_parents_and_exclude(sbox):
+  "bring a subtree in over an excluded path"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Now we are going to exclude A
+  expected_output = svntest.wc.State(wc_dir, {
+    'A' : Item(status='D '),
+  })
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''     : Item(status='  ', wc_rev='1'),
+    'iota' : Item(status='  ', wc_rev='1'),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, False,
+                                        '--set-depth', 'exclude',
+                                        sbox.ospath('A'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    # 'A'               : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+  })
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='1'),
+    'A'                 : Item(status='  ', wc_rev='1'),
+    'A/B'               : Item(status='  ', wc_rev='1'),
+    'A/B/F'             : Item(status='  ', wc_rev='1'),
+    'A/B/E'             : Item(status='  ', wc_rev='1'),
+    'A/B/E/beta'        : Item(status='  ', wc_rev='1'),
+    'A/B/E/alpha'       : Item(status='  ', wc_rev='1'),
+    'A/B/lambda'        : Item(status='  ', wc_rev='1'),
+    'iota'              : Item(status='  ', wc_rev='1'),
+  })
+
+  # This currently fails as A stays excluded
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, False,
+                                        '--parents',
+                                        sbox.ospath('A/B'))
+
 
 #######################################################################
 # Run the tests
@@ -5868,6 +5926,7 @@ test_list = [ None,
               update_binary_file_3,
               update_move_text_mod,
               update_nested_move_text_mod,
+              update_with_parents_and_exclude,
              ]
 
 if __name__ == '__main__':
