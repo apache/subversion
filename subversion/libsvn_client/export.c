@@ -217,7 +217,7 @@ export_node(void *baton,
          Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER
          is documented to be 'incredibly expensive' */
 #ifndef WIN32
-      if (revision->kind == svn_opt_revision_working)
+      if (eib->revision->kind == svn_opt_revision_working)
         {
           apr_finfo_t finfo;
           SVN_ERR(svn_io_stat(&finfo, from_abspath, APR_FINFO_PROT, pool));
