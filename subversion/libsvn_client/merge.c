@@ -10443,23 +10443,21 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *absolute_path = svn__apr_hash_index_key(hi);
+      const char *local_abspath = svn__apr_hash_index_key(hi);
       svn_client__pathrev_t *target_child;
-      const char *path_rel_to_root;
+      const char *repos_relpath;
       svn_mergeinfo_t target_history_as_mergeinfo;
 
       svn_pool_clear(iterpool);
 
       /* Convert the absolute path with mergeinfo on it to a path relative
          to the session root. */
-      SVN_ERR(svn_client__path_relative_to_root(&path_rel_to_root,
-                                                ctx->wc_ctx, absolute_path,
-                                                NULL, FALSE,
-                                                NULL, scratch_pool,
-                                                iterpool));
+      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                             ctx->wc_ctx, local_abspath,
+                                             scratch_pool, iterpool));
       target_child = svn_client__pathrev_create_with_relpath(
                        target->loc.repos_root_url, target->loc.repos_uuid,
-                       target->loc.rev, path_rel_to_root, iterpool);
+                       target->loc.rev, repos_relpath, iterpool);
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
                                                    NULL /* has_rev_zero_hist */,
                                                    target_child,
@@ -10468,8 +10466,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
                                                    target_ra_session,
                                                    ctx, scratch_pool));
 
-      apr_hash_set(target_history_hash,
-                   apr_pstrdup(scratch_pool, path_rel_to_root),
+      apr_hash_set(target_history_hash, repos_relpath,
                    APR_HASH_KEY_STRING, target_history_as_mergeinfo);
     }
 
