@@ -2855,7 +2855,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
  * be guaranteed by the repository write lock.
  *
  * The only racy situation occurs when the data is being read again by two
- * processes concurrently but in that situation,  the first process to
+ * processes concurrently but in that situation, the first process to
  * finish that procedure is guaranteed to be the only one that initializes
  * the SHM data.  Since even writers will first go through that
  * initialization phase, they will never operate on stale data.
@@ -6208,7 +6208,7 @@ write_hash_handler(void *baton,
    well as SHA1 in REP.   If rep sharing has been enabled and REPS_HASH
    is not NULL, it will be used in addition to the on-disk cache to find
    earlier reps with the same content.  When such existing reps can be
-   found,  we will truncate the one just written from the file and return
+   found, we will truncate the one just written from the file and return
    the existing rep.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_rep(representation_t *rep,
