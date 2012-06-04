@@ -4184,7 +4184,14 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
 {
   apr_hash_index_t *hi;
 
-  *str_entries_p = apr_hash_make(pool);
+  /* For now, we use a our own hash function to ensure that we get a
+   * (largely) stable order when serializing the data.  It also gives
+   * us some performance improvement.
+   *
+   * ### TODO ###
+   * Use some sorted or other fixed order data container.
+   */
+  *str_entries_p = svn_hash__make(pool);
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
