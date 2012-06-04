@@ -1957,6 +1957,8 @@ db_base_remove(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
+
   /* If there is no working node then any actual node must be deleted,
      unless it marks a conflict */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -1971,8 +1973,6 @@ db_base_remove(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
-  else
-    SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
