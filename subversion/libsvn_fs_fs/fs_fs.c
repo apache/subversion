@@ -935,12 +935,12 @@ read_format(int *pformat, int *max_files_per_dir,
             const char *path, apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_file_t *file;
-  char buf[80];
-  apr_size_t len;
+  svn_stream_t *stream;
+  svn_stringbuf_t *content;
+  svn_stringbuf_t *buf;
+  svn_boolean_t eos = FALSE;
 
-  err = svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                         APR_OS_DEFAULT, pool);
+  err = svn_stringbuf_from_file2(&content, path, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       /* Treat an absent format file as format 1.  Do not try to
@@ -958,62 +958,54 @@ read_format(int *pformat, int *max_files_per_dir,
     }
   SVN_ERR(err);
 
-  len = sizeof(buf);
-  err = svn_io_read_length_line(file, buf, &len, pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  stream = svn_stream_from_stringbuf(content, pool);
+  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+  if (buf->len == 0 && eos)
     {
       /* Return a more useful error message. */
-      svn_error_clear(err);
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                                _("Can't read first line of format file '%s'"),
                                svn_dirent_local_style(path, pool));
     }
-  SVN_ERR(err);
 
   /* Check that the first line contains only digits. */
-  SVN_ERR(check_format_file_buffer_numeric(buf, 0, path, pool));
-  SVN_ERR(svn_cstring_atoi(pformat, buf));
+  SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
+  SVN_ERR(svn_cstring_atoi(pformat, buf->data));
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
 
   /* Read any options. */
-  while (1)
+  while (!eos)
     {
-      len = sizeof(buf);
-      err = svn_io_read_length_line(file, buf, &len, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          /* No more options; that's okay. */
-          svn_error_clear(err);
-          break;
-        }
-      SVN_ERR(err);
+      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+      if (buf->len == 0)
+        break;
 
       if (*pformat >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT &&
-          strncmp(buf, "layout ", 7) == 0)
+          strncmp(buf->data, "layout ", 7) == 0)
         {
-          if (strcmp(buf+7, "linear") == 0)
+          if (strcmp(buf->data + 7, "linear") == 0)
             {
               *max_files_per_dir = 0;
               continue;
             }
 
-          if (strncmp(buf+7, "sharded ", 8) == 0)
+          if (strncmp(buf->data + 7, "sharded ", 8) == 0)
             {
               /* Check that the argument is numeric. */
-              SVN_ERR(check_format_file_buffer_numeric(buf, 15, path, pool));
-              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf + 15));
+              SVN_ERR(check_format_file_buffer_numeric(buf->data, 15, path, pool));
+              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf->data + 15));
               continue;
             }
         }
 
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
          _("'%s' contains invalid filesystem format option '%s'"),
-         svn_dirent_local_style(path, pool), buf);
+         svn_dirent_local_style(path, pool), buf->data);
     }
 
-  return svn_io_file_close(file, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Write the format number and maximum number of files per directory
