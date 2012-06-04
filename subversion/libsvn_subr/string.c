@@ -938,7 +938,7 @@ static const char decimal_table[100][4]
 
 /* Copy the two bytes at SOURCE[0] and SOURCE[1] to DEST[0] and DEST[1] */
 #define COPY_TWO_BYTES(dest,source)\
-    memcpy(dest, source, 2)
+  memcpy((dest), (source), 2)
 
 apr_size_t
 svn__ui64toa(char * dest, apr_uint64_t number)
