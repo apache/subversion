@@ -4602,6 +4602,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 struct record_baton_t {
   svn_filesize_t translated_size;
   apr_time_t last_mod_time;
+  int op_depth;
 };
 
 
@@ -4617,9 +4618,15 @@ db_record_fileinfo(void *baton,
   int affected_rows;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_NODE_FILEINFO));
+                                    (rb->op_depth >= 0)
+                                      ? STMT_UPDATE_NODE_FILEINFO_OPDEPTH
+                                      : STMT_UPDATE_NODE_FILEINFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
                             rb->translated_size, rb->last_mod_time));
+
+  if (rb->op_depth >= 0)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 5, rb->op_depth));
+
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   SVN_ERR_ASSERT(affected_rows == 1);
@@ -4631,6 +4638,7 @@ db_record_fileinfo(void *baton,
 svn_error_t *
 svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   const char *local_abspath,
+                                  int op_depth,
                                   svn_filesize_t translated_size,
                                   apr_time_t last_mod_time,
                                   apr_pool_t *scratch_pool)
@@ -4647,9 +4655,9 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 
   rb.translated_size = translated_size;
   rb.last_mod_time = last_mod_time;
+  rb.op_depth = op_depth;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_record_fileinfo, &rb,
-                              scratch_pool));
+  SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
@@ -4744,6 +4752,7 @@ set_props_txn(void *baton,
       struct record_baton_t rb;
       rb.translated_size = SVN_INVALID_FILESIZE;
       rb.last_mod_time = 0;
+      rb.op_depth = -1;
       SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
     }
 
@@ -7939,6 +7948,7 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   const svn_checksum_t **sha1_checksum,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
+                                  int *op_depth,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const char *wri_abspath,
@@ -7994,6 +8004,9 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
 
       if (changed_date)
         *changed_date = svn_sqlite__column_int64(stmt, 9);
+
+      if (op_depth)
+        *op_depth = svn_sqlite__column_int(stmt, 0);
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,

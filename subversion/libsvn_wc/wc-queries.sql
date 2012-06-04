@@ -352,6 +352,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2)
 
+-- STMT_UPDATE_NODE_FILEINFO_OPDEPTH
+UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?5
+
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2
