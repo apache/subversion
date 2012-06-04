@@ -2810,6 +2810,9 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
 /* Revprop caching management.
  *
+ * Mechanism:
+ * ----------
+ * 
  * Revprop caching needs to be activated and will be deactivated for the
  * respective FS instance if the necessary infrastructure could not be
  * initialized.  In deactivated mode, there is almost no runtime overhead
@@ -2835,6 +2838,27 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
  *
  * The overhead for the second and following accesses to revprops is
  * almost zero on most systems.
+ *
+ *
+ * Tech aspects:
+ * -------------
+ *
+ * A problem is that we need to provide a globally available file name to
+ * back the SHM implementation on OSes that need it.  We can only assume
+ * write access to some file within the respective repositories.  Because
+ * a given server process may access thousands of repositories during its
+ * lifetime, keeping the SHM data alive for all of them is also not an
+ * option.
+ *
+ * So, we store the new revprop generation on disk as part of each
+ * setrevprop call, i.e. this write will be serialized and the write order
+ * be guaranteed by the repository write lock.
+ *
+ * The only racy situation occurs when the data is being read again by two
+ * processes concurrently but in that situation,  the first process to
+ * finish that procedure is guaranteed to be the only one that initializes
+ * the SHM data.  Since even writers will first go through that
+ * initialization phase, they will never operate on stale data.
  */
 
 /* Read revprop generation as stored on disk for repository FS. The result
