@@ -477,23 +477,31 @@ delete_lock(svn_fs_t *fs,
 
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
-   repository-wide write lock, FALSE otherwise.  Use POOL for
-   allocations. */
+   repository-wide write lock, FALSE otherwise.  If MUST_EXIST is
+   not set, the function will simply return NULL in *LOCK_P instead
+   of creating an SVN_FS__ERR_NO_SUCH_LOCK error in case the lock
+   was not found (much faster).  Use POOL for allocations. */
 static svn_error_t *
 get_lock(svn_lock_t **lock_p,
          svn_fs_t *fs,
          const char *path,
          svn_boolean_t have_write_lock,
+         svn_boolean_t must_exist,
          apr_pool_t *pool)
 {
-  svn_lock_t *lock;
+  svn_lock_t *lock = NULL;
   const char *digest_path;
+  svn_node_kind_t kind;
 
   SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
+  SVN_ERR(svn_io_check_path(digest_path, &kind, pool));
 
-  SVN_ERR(read_digest_file(NULL, &lock, fs->path, digest_path, pool));
+  *lock_p = NULL;
+  if (kind != svn_node_none)
+    SVN_ERR(read_digest_file(NULL, &lock, fs->path, digest_path, pool));
+
   if (! lock)
-    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path);
+    return must_exist ? SVN_FS__ERR_NO_SUCH_LOCK(fs, path) : SVN_NO_ERROR;
 
   /* Don't return an expired lock. */
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
@@ -502,7 +510,6 @@ get_lock(svn_lock_t **lock_p,
          Read operations shouldn't change the filesystem. */
       if (have_write_lock)
         SVN_ERR(delete_lock(fs, lock, pool));
-      *lock_p = NULL;
       return SVN_FS__ERR_LOCK_EXPIRED(fs, lock->token);
     }
 
@@ -525,7 +532,7 @@ get_lock_helper(svn_fs_t *fs,
   svn_lock_t *lock;
   svn_error_t *err;
 
-  err = get_lock(&lock, fs, path, have_write_lock, pool);
+  err = get_lock(&lock, fs, path, have_write_lock, FALSE, pool);
 
   /* We've deliberately decided that this function doesn't tell the
      caller *why* the lock is unavailable.  */
@@ -881,7 +888,7 @@ unlock_body(void *baton, apr_pool_t *pool)
   svn_lock_t *lock;
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR(get_lock(&lock, ub->fs, ub->path, TRUE, pool));
+  SVN_ERR(get_lock(&lock, ub->fs, ub->path, TRUE, TRUE, pool));
 
   /* Unless breaking the lock, we do some checks. */
   if (! ub->break_lock)
