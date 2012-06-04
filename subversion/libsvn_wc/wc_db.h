@@ -1973,7 +1973,8 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
    Set WCROOT_ABSPATH to the working copy root, SHA1_CHECKSUM to the
    checksum of the node (a valid reference into the pristine store)
    and PRISTINE_PROPS to the node's pristine properties (to use for
-   installing the file).
+   installing the file). Set *CHANGED_DATE to the recorded changed date and
+   *OP_DEPTH to the nodes highest/current op_depth.
 
    If WRI_ABSPATH is not NULL, check for information in the working copy
    identified by WRI_ABSPATH.
@@ -1983,6 +1984,7 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   const svn_checksum_t **sha1_checksum,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
+                                  int *op_depth,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const char *wri_abspath,
@@ -2400,9 +2402,8 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
 
 /* Record the TRANSLATED_SIZE and LAST_MOD_TIME for a versioned node.
 
-   This function will record the information within the WORKING node,
-   if present, or within the BASE tree. If neither node is present, then
-   SVN_ERR_WC_PATH_NOT_FOUND will be returned.
+   This function will record the information within the highest WORKING node,
+   or if OP_DEPTH >= 0 at the specified OP_DEPTH.
 
    TRANSLATED_SIZE may be SVN_INVALID_FILESIZE, which will be recorded
    as such, implying "unknown size".
@@ -2413,6 +2414,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   const char *local_abspath,
+                                  int op_depth,
                                   svn_filesize_t translated_size,
                                   apr_time_t last_mod_time,
                                   apr_pool_t *scratch_pool);

@@ -72,6 +72,7 @@ struct work_item_dispatch {
 static svn_error_t *
 get_and_record_fileinfo(svn_wc__db_t *db,
                         const char *local_abspath,
+                        int op_depth,
                         svn_boolean_t ignore_enoent,
                         apr_pool_t *scratch_pool)
 {
@@ -87,7 +88,7 @@ get_and_record_fileinfo(svn_wc__db_t *db,
     }
 
   return svn_error_trace(svn_wc__db_global_record_fileinfo(
-                           db, local_abspath,
+                           db, local_abspath, op_depth,
                            dirent->filesize, dirent->mtime,
                            scratch_pool));
 }
@@ -463,13 +464,16 @@ process_commit_file_install(svn_wc__db_t *db,
   /* We will compute and modify the size and timestamp */
   if (overwrote_working)
     {
-      apr_finfo_t finfo;
+      const svn_io_dirent2_t *dirent;
 
-      SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                          APR_FINFO_MIN | APR_FINFO_LINK, scratch_pool));
-      SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
-                                                finfo.size, finfo.mtime,
-                                                scratch_pool));
+      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
+                                 scratch_pool, scratch_pool));
+
+      if (dirent->kind == svn_node_file)
+        SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath, 0,
+                                                  dirent->filesize,
+                                                  dirent->mtime,
+                                                  scratch_pool));
     }
   else
     {
@@ -644,6 +648,7 @@ run_file_install(svn_wc__db_t *db,
   const svn_checksum_t *checksum;
   apr_hash_t *props;
   apr_time_t changed_date;
+  int op_depth;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -656,7 +661,7 @@ run_file_install(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath,
                                             &checksum, &props,
-                                            &changed_date,
+                                            &changed_date, &op_depth,
                                             db, local_abspath, wri_abspath,
                                             scratch_pool, scratch_pool));
 
@@ -800,7 +805,7 @@ run_file_install(svn_wc__db_t *db,
   /* ### this should happen before we rename the file into place.  */
   if (record_fileinfo)
     {
-      SVN_ERR(get_and_record_fileinfo(db, local_abspath,
+      SVN_ERR(get_and_record_fileinfo(db, local_abspath, op_depth,
                                       FALSE /* ignore_enoent */,
                                       scratch_pool));
     }
@@ -1244,7 +1249,7 @@ run_record_fileinfo(svn_wc__db_t *db,
     }
 
 
-  return svn_error_trace(get_and_record_fileinfo(db, local_abspath,
+  return svn_error_trace(get_and_record_fileinfo(db, local_abspath, -1,
                                                  TRUE /* ignore_enoent */,
                                                  scratch_pool));
 }
