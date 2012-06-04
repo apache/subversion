@@ -1599,7 +1599,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "stat", "c(?r)", path, rev));
 
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 "'stat' not implemented"));
+                                 N_("'stat' not implemented")));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
 
   if (! list)
@@ -1658,7 +1658,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 
   /* Servers before 1.1 don't support this command. Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 "'get-locations' not implemented"));
+                                 N_("'get-locations' not implemented")));
 
   /* Read the hash items. */
   is_done = FALSE;
@@ -1712,7 +1712,8 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
 
   /* Servers before 1.5 don't support this command. Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 "'get-location-segments' not implemented"));
+                                 N_("'get-location-segments'"
+                                    " not implemented")));
 
   /* Parse the response. */
   is_done = FALSE;
@@ -1779,7 +1780,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 
   /* Servers before 1.1 don't support this command.  Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 "'get-file-revs' not implemented"));
+                                 N_("'get-file-revs' not implemented")));
 
   while (1)
     {
@@ -1910,8 +1911,8 @@ static svn_error_t *ra_svn_lock_compat(svn_ra_session_t *session,
 
       /* Servers before 1.2 doesn't support locking.  Check this here. */
       SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                     "Server doesn't support "
-                                     "the lock command"));
+                                     N_("Server doesn't support "
+                                        "the lock command")));
 
       err = svn_ra_svn_read_cmd_response(conn, iterpool, "l", &list);
 
@@ -1974,8 +1975,8 @@ static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
 
       /* Servers before 1.2 don't support locking.  Check this here. */
       SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, iterpool),
-                                     "Server doesn't support the unlock "
-                                     "command"));
+                                     N_("Server doesn't support the unlock "
+                                        "command")));
 
       err = svn_ra_svn_read_cmd_response(conn, iterpool, "");
 
@@ -2261,8 +2262,8 @@ static svn_error_t *ra_svn_get_lock(svn_ra_session_t *session,
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                 "Server doesn't support the get-lock "
-                                 "command"));
+                                 N_("Server doesn't support the get-lock "
+                                    "command")));
 
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
   if (list)
@@ -2314,8 +2315,8 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                 "Server doesn't support the get-lock "
-                                 "command"));
+                                 N_("Server doesn't support the get-lock "
+                                    "command")));
 
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &list));
 
@@ -2371,8 +2372,8 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
                                low_water_mark, send_deltas));
 
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                 "Server doesn't support the replay "
-                                 "command"));
+                                 N_("Server doesn't support the replay "
+                                    "command")));
 
   SVN_ERR(svn_ra_svn_drive_editor2(sess->conn, pool, editor, edit_baton,
                                    NULL, TRUE));
@@ -2402,8 +2403,8 @@ ra_svn_replay_range(svn_ra_session_t *session,
                                low_water_mark, send_deltas));
 
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                 "Server doesn't support the replay-range "
-                                 "command"));
+                                 N_("Server doesn't support the "
+                                    "replay-range command")));
 
   iterpool = svn_pool_create(pool);
   for (rev = start_revision; rev <= end_revision; rev++)
@@ -2501,7 +2502,7 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
 
   /* Servers before 1.6 don't support this command.  Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 "'get-deleted-rev' not implemented"));
+                                 N_("'get-deleted-rev' not implemented")));
 
   return svn_ra_svn_read_cmd_response(conn, pool, "r", revision_deleted);
 }
