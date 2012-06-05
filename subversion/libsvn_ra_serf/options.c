@@ -420,6 +420,8 @@ options_response_handler(serf_request_t *request,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_INHERITED_PROPS,
+               APR_HASH_KEY_STRING, capability_no);
 
   /* Then see which ones we can discover. */
   serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
