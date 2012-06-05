@@ -538,6 +538,7 @@ copy_or_move(svn_wc_context_t *wc_ctx,
   const char *src_wcroot_abspath;
   const char *dst_wcroot_abspath;
   svn_boolean_t within_one_wc;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -727,28 +728,33 @@ copy_or_move(svn_wc_context_t *wc_ctx,
   if (src_db_kind == svn_kind_file
       || src_db_kind == svn_kind_symlink)
     {
-      SVN_ERR(copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
-                                  tmpdir_abspath,
-                                  !within_one_wc && (checksum != NULL),
-                                  metadata_only, conflicted, is_move,
-                                  cancel_func, cancel_baton,
-                                  notify_func, notify_baton,
-                                  scratch_pool));
+      err = copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
+                                tmpdir_abspath,
+                                !within_one_wc && (checksum != NULL),
+                                metadata_only, conflicted, is_move,
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton,
+                                scratch_pool);
     }
   else
     {
-      SVN_ERR(copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
-                                 tmpdir_abspath,
-                                 metadata_only, is_move, within_one_wc,
-                                 cancel_func, cancel_baton,
-                                 notify_func, notify_baton,
-                                 scratch_pool));
+      err = copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
+                               tmpdir_abspath,
+                               metadata_only, is_move, within_one_wc,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               scratch_pool);
     }
 
+  if (err && svn_error_find_cause(err, SVN_ERR_CANCELLED))
+    return svn_error_trace(err);
+
   /* Run the work queue with the remaining work */
-  SVN_ERR(svn_wc__wq_run(db, dst_abspath,
-                         cancel_func, cancel_baton,
-                         scratch_pool));
+  SVN_ERR(svn_error_compose_create(
+                                err,
+                                svn_wc__wq_run(db, dst_abspath,
+                                                   cancel_func, cancel_baton,
+                                                   scratch_pool)));
 
   return SVN_NO_ERROR;
 }
