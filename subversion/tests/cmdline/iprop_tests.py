@@ -51,13 +51,13 @@ def iprops_basic_working(sbox):
   wc_dir = sbox.wc_dir
 
   # Paths of note.
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  D_path = os.path.join(wc_dir, 'A', 'D')
-  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
-  iota_path = os.path.join(wc_dir, 'iota')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  mu_path = sbox.ospath('A/mu')
+  D_path = sbox.ospath('A/D')
+  psi_path = sbox.ospath('A/D/H/psi')
+  iota_path = sbox.ospath('iota')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  G_path = sbox.ospath('A/D/G')
+  rho_path = sbox.ospath('A/D/G/rho')
 
   sbox.simple_propset('RootProp1', 'Root-Prop-Val1', '.')
   sbox.simple_propset('RootProp2', 'Root-Prop-Val2', '.')
@@ -175,8 +175,8 @@ def iprops_basic_repos(sbox):
   wc_dir = sbox.wc_dir
 
   # Paths of note.
-  D_path = os.path.join(wc_dir, 'A', 'D')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  D_path = sbox.ospath('A/D')
+  alpha_path = sbox.ospath('A/B/E/alpha')
 
   sbox.simple_propset('FileProp1', 'File-Prop-Val1', 'iota')
   sbox.simple_propset('FileProp2', 'File-Prop-Val2', 'A/D/H/psi')
@@ -296,6 +296,1114 @@ def iprops_basic_repos(sbox):
     sbox.repo_url + '/A/D/G/rho', expected_iprops, expected_explicit_props,
     'SomeProp')
 
+#----------------------------------------------------------------------
+# Property inheritance in a WC with switched subtrees.
+def iprops_switched_subtrees(sbox):
+  "inherited properties in switched subtrees"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Paths of note.
+  branch2_path        = sbox.ospath('branch2')
+  branch2_B_path      = sbox.ospath('branch2/B')
+  branch2_lambda_path = sbox.ospath('branch2/B/lambda')
+
+  # r2-3 - Create two branches
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/branch1', '-m', 'Make branch1')
+
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/branch2', '-m', 'Make branch2')
+  
+  # Create a root property and two branch properties
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  sbox.simple_propset('Root-Prop-1', 'Root-Prop-Val1', '.')
+  sbox.simple_propset('Branch-Name', 'Feature #1', 'branch1')
+  sbox.simple_propset('Branch-Name', 'Feature #2', 'branch2')
+
+  # Switch a subtree of branch2 to branch1:
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/branch1/B',
+                       branch2_B_path)
+
+  # Check for inherited props on branch2/B/lambda.  Since the prop changes
+  # made above have not been committed, there should be none.
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    branch2_B_path, expected_iprops, expected_explicit_props)
+
+ # r4 - Commit the prop changes made above.
+  svntest.main.run_svn(None, 'commit', '-m', 'Add some dir properties',
+                       wc_dir)
+
+  # Again check for inherited props on branch2/B/lambda.  And again there
+  # should be none because branch2/B is switched to ^/branch1/B@3.
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    branch2_lambda_path, expected_iprops, expected_explicit_props)
+
+  # Now update the WC, now branch2/B is switched to ^/branch1/B@4
+  # which does inherit properties from ^/branch1 and ^/.  The inherited
+  # properties cache should be updated to reflect this when asking what
+  # properties branch2/B/lambda inherits.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_iprops = {
+    sbox.repo_url              : {'Root-Prop-1' : 'Root-Prop-Val1'},
+    sbox.repo_url + '/branch1' : {'Branch-Name' : 'Feature #1'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    branch2_lambda_path, expected_iprops, expected_explicit_props)
+
+  # Now update the WC back to r3, where there are no properties.  The
+  # inheritable properties cache for the WC-root at branch2/B should be
+  # cleared and no inheritable properties found for branch2/B/lambda.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r3', wc_dir)
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    branch2_lambda_path, expected_iprops, expected_explicit_props)
+  # Update back to HEAD=r4 before continuing.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Now unswitch branch2/B and check branch2/B/lambda's inherited props.
+  # Now no iprop cache for branch2/B should exist and branch2/B/lambda
+  # should inherit from branch2 and '.'.
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/branch2/B',
+                       branch2_B_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_iprops = {
+    ### Working copy parents! ###
+    wc_dir       : {'Root-Prop-1' : 'Root-Prop-Val1'},
+    branch2_path : {'Branch-Name' : 'Feature #2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    branch2_lambda_path, expected_iprops, expected_explicit_props)
+
+  # Now switch the root of the WC to ^/branch2 and check the inherited
+  # properties on B/lambda.  It should inherit the explicit property
+  # on the WC path '.' (i.e. ^/branch2) and the property on the root
+  # of the repos via the inherited props cache.
+  svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
+                       sbox.repo_url + '/branch2', wc_dir)
+  expected_iprops = {
+    ### Root if a repos parent ###
+    sbox.repo_url : {'Root-Prop-1' : 'Root-Prop-Val1'},
+    ### Branch root is a working copy parent ###
+    wc_dir        : {'Branch-Name' : 'Feature #2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('B/lambda'),
+    expected_iprops, expected_explicit_props)
+
+#----------------------------------------------------------------------
+# Property inheritance with pegged wc and repos targets.
+def iprops_pegged_wc_targets(sbox):
+  "iprops of pegged targets at operative revs"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Paths of note.
+  C_path = sbox.ospath('A/C')
+  D_path = sbox.ospath('A/D')
+  G_path = sbox.ospath('A/D/G')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  replaced_alpha_path = sbox.ospath('A/D/G/E/alpha')
+
+  # r2 - Set some root properties and a property on A/D, and make an edit
+  # to A/B/E/alpha.
+  sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-set-in-r2', '.')
+  sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-set-in-r2', '.')
+  sbox.simple_propset('D-Prop', 'D-Prop-Val-set-in-r2', 'A/D')
+  svntest.main.file_write(alpha_path, "Edit in r2.\n")  
+  svntest.main.run_svn(None, 'commit', '-m', 'Add some properties',
+                       wc_dir)
+
+  # r3 - Change all of the properties.
+  sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-set-in-r3', '.')
+  sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-set-in-r3', '.')
+  sbox.simple_propset('D-Prop', 'D-Prop-Val-set-in-r3', 'A/D')
+  svntest.main.run_svn(None, 'commit', '-m', 'Modify some properties',
+                       wc_dir)
+
+  # Set some working properties.
+  sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-WORKING', '.')
+  sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-WORKING', '.')
+  sbox.simple_propset('D-Prop', 'D-Prop-Val-WORKING', 'A/D')
+
+  ### Peg Revision = HEAD
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | HEAD         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'HEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | HEAD         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'HEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | HEAD         | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'HEAD', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | HEAD         | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'HEAD',
+    '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | HEAD         | COMMITTED
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'HEAD',
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | HEAD         | COMMITTED
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'HEAD',
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | HEAD         | PREV
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'HEAD',
+    '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | HEAD         | PREV
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'HEAD',
+    '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | HEAD         | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'HEAD',
+    '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | HEAD         | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'HEAD',
+    '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | HEAD         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'HEAD',
+    '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | HEAD         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'HEAD',
+    '-rHEAD')
+
+  ### Peg Revision = Unspecified
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | unspecified  | unspecified
+  expected_iprops = {
+    wc_dir : {'RootProp1' : 'Root-Prop-Val-1-WORKING',
+              'RootProp2' : 'Root-Prop-Val-2-WORKING'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-WORKING'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props)
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | unspecified  | unspecified
+  expected_iprops = {
+    wc_dir : {'RootProp1' : 'Root-Prop-Val-1-WORKING'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | unspecified  | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, None, '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | unspecified  | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', None,
+    '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | unspecified  | revision=COMMITTED (i.e. r3)
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, None,
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | unspecified  | COMMITTED
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', None,
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | unspecified  | revision=PREV (i.e. r2)
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, None, '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | unspecified  | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', None,
+    '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | unspecified  | revision=BASE (i.e. r3)
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, None, '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | unspecified  | revision=BASE (i.e. r3)
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', None,
+    '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | unspecified  | revision=HEAD (i.e. r3)
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, None, '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | unspecified  | revision=HEAD (i.e. r3)
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', None,
+    '-rHEAD')
+
+  ### Peg Revision = rN
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | revision=1   | unspecified
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, '1')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | revision=1   | unspecified
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', '1')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | revision=1   | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, '1', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | revision=1   | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', '1', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | revision=1   | COMMITTED
+  # The last committed revision for A/D is r3.
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, '1',
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | revision=1   | COMMITTED
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', '1',
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | revision=3   | PREV
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, '3', '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | revision=3   | PREV
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', '3',
+    '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | revision=1   | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, '1', '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | revision=1   | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', '1',
+    '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | revision=2   | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, '2', '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | revision=1   | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', '1',
+    '-rHEAD')
+
+  ### Peg Revision = PREV
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | PREV         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'PREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | PREV         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'PREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | PREV         | revision=3
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'PREV', '-r3')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | PREV   |       revision=3
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'PREV',
+    '-r3')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | PREV         | COMMITTED
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'PREV',
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | PREV         | COMMITTED
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'PREV',
+    '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | PREV         | PREV
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r2'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'PREV', '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | PREV         | PREV
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'PREV',
+    '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | PREV         | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'PREV', '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | PREV         | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'PREV',
+    '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | PREV         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {'D-Prop' : 'D-Prop-Val-set-in-r3'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, None, 'PREV', '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | PREV         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    D_path, expected_iprops, expected_explicit_props, 'RootProp1', 'PREV',
+    '-rHEAD')
+
+  ### Peg Revision = BASE
+
+  # Replace A/D/G with a copy of ^/A/B.
+  # Check inherited props on base of A/D/G/E/alpha.
+  # Inherited props should always come from the repository parent of
+  # ^/A/B/E/alpha and so should not include the property (working or
+  # otherwise) on A/D.
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', G_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                    sbox.repo_url + '/A/B', G_path)
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | BASE         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | BASE         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE')
+
+# Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | BASE       | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | BASE         | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | BASE         | COMMITTED
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE', '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | BASE         | revision=2
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE', '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | BASE         | COMMITTED
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  # so PREV=r1, but there are no properties at all in r1.
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE', '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | BASE         | COMMITTED
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  # so PREV=r1, but there are no properties at all in r1.
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE', '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | BASE         | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE', '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | BASE         | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE', '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | BASE         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE', '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | BASE         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE', '-rHEAD')
+
+  ### Peg Revision = COMMITTED
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | COMMITTED    | unspecified
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | COMMITTED    | unspecified
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | COMMITTED    | revision=3
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED', '-r3')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | COMMITTED    | revision=3
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED', '-r3')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | COMMITTED    | COMMITTED
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED', '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | COMMITTED    | COMMITTED
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED', '-rCOMMITTED')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | COMMITTED    | PREV
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  # so PREV=r1, but there are no properties at all in r1.
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED', '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | COMMITTED    | PREV
+  # The most recent change on the copy source, ^/A/B/E/alpha is r2
+  # so PREV=r1, but there are no properties at all in r1.
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED', '-rPREV')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | COMMITTED    | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED', '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | COMMITTED    | BASE
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED', '-rBASE')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | WC     | COMMITTED    | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED', '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | WC     | COMMITTED    | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED', '-rHEAD')
+
+  # Revert the replacement with history of A/D/G and once again
+  # replace A/D/G, but this time without history (using and export
+  # of A/B.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', G_path, '-R')
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', G_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'export',
+                                     sbox.repo_url + '/A/B', G_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', G_path)
+  # Set a working prop on a file within the replaced tree, we should *never*
+  # see this property if asking about the
+  # file@[HEAD | PREV | COMMITTED | BASE]
+  sbox.simple_propset('FileProp', 'File-Prop-WORKING-NO-BASE',
+                      'A/D/G/E/alpha')
+
+  # There is no HEAD, PREV, COMMITTED, or BASE revs for A/D/G/E/alpha in this
+  # case # so be sure requests for such error out or return nothing as per the
+  # existing behavior for proplist and propget sans the --show-inherited-props
+  # option.
+  #
+  # proplist/propget WC-PATH@HEAD
+  svntest.actions.run_and_verify_svn(
+    None, None,
+    ".*Unknown node kind for '" + sbox.repo_url + "/A/D/G/E/alpha'\n",
+    'pl', '-v', '--show-inherited-props', replaced_alpha_path + '@HEAD')
+  svntest.actions.run_and_verify_svn(
+    None, None,
+    ".*'" + sbox.repo_url + "/A/D/G/E/alpha' does not exist in revision 3\n",
+    'pg', 'RootProp1', '-v', '--show-inherited-props',
+    replaced_alpha_path + '@HEAD')
+  # proplist/propget WC-PATH@PREV
+  svntest.actions.run_and_verify_svn(
+    None, None,
+    ".*Path '.*alpha' has no committed revision\n",
+    'pl', '-v', '--show-inherited-props', replaced_alpha_path + '@PREV')
+  svntest.actions.run_and_verify_svn(
+    None, None,
+    ".*Path '.*alpha' has no committed revision\n",
+    'pg', 'RootProp1', '-v', '--show-inherited-props', replaced_alpha_path + '@PREV')
+  # proplist/propget WC-PATH@COMMITTED
+  expected_iprops = {}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'COMMITTED')
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'COMMITTED')
+  # proplist/propget WC-PATH@BASE
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props, None,
+    'BASE')
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    replaced_alpha_path, expected_iprops, expected_explicit_props,
+    'RootProp1', 'BASE')
+
+#----------------------------------------------------------------------
+# Property inheritance with pegged repos targets at operative revs.
+def iprops_pegged_url_targets(sbox):
+  "iprops of pegged targets at operative revs"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Paths of note.
+  #C_path = sbox.ospath('A/C')
+  #D_path = sbox.ospath('A/D')
+  #G_path = sbox.ospath('A/D/G')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  #replaced_alpha_path = sbox.ospath('A/D/G/E/alpha')
+
+  # r2 - Set some root properties and some properties on A/D.
+  sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-set-in-r2', '.')
+  sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-set-in-r2', '.')
+  sbox.simple_propset('DirProp', 'Dir-Prop-Val-set-in-r2', '.')
+  sbox.simple_propset('DirProp', 'Dir-Prop-Val-set-in-r2-on-D', 'A/D')
+  sbox.simple_propset('D-Prop', 'D-Prop-Val-set-in-r2', 'A/D')
+  svntest.main.run_svn(None, 'commit', '-m', 'Add some properties',
+                       wc_dir)
+
+  # r3 - Make another change to all of the properties set in r2.
+  sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-set-in-r3', '.')
+  sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-set-in-r3', '.')
+  sbox.simple_propset('DirProp', 'Dir-Prop-Val-set-in-r3', '.')
+  sbox.simple_propset('DirProp', 'Dir-Prop-Val-set-in-r3-on-D', 'A/D')
+  sbox.simple_propset('D-Prop', 'D-Prop-Val-set-in-r3', 'A/D')
+  svntest.main.run_svn(None, 'commit', '-m', 'Modify some properties',
+                       wc_dir)
+
+  ### Peg Revision = Unspecified
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | unspecified  | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r3',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props)
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | unspecified  | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | unspecified  | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r2',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props, None,
+    None, '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | unspecified  | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', None, '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | unspecified  | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r3',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    None, None, '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | unspecified  | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', None, '-rHEAD')
+
+  ### Peg Revision = rN
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | revision=2   | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r2',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    None, '2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | revision=2   | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', '2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | revision=2   | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r2',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props, None,
+    '2', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | revision=2   | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', '2', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | revision=2   | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r3',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    None, '2', '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | revision=2   | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', '2', '-rHEAD')
+
+  ### Peg Revision = HEAD
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | HEAD         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r3',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    None, 'HEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | HEAD         | unspecified
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', 'HEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | HEAD         | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r2',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r2',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r2',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props, None,
+    'HEAD', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | HEAD         | revision=2
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r2'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r2-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', 'HEAD', '-r2')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # proplist  | URL    | HEAD         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'RootProp1' : 'Root-Prop-Val-1-set-in-r3',
+                     'RootProp2' : 'Root-Prop-Val-2-set-in-r3',
+                     'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'D-Prop'  : 'D-Prop-Val-set-in-r3',
+                             'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    None, 'HEAD', '-rHEAD')
+
+  # Operation | Target | Peg Revision | Operative Revision
+  # propget   | URL    | HEAD         | HEAD
+  expected_iprops = {
+    sbox.repo_url : {'DirProp'   : 'Dir-Prop-Val-set-in-r3'}}
+  expected_explicit_props = {'DirProp' : 'Dir-Prop-Val-set-in-r3-on-D'}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
+    'DirProp', 'HEAD', '-rHEAD')
+
 ########################################################################
 # Run the tests
 
@@ -303,6 +1411,9 @@ def iprops_basic_repos(sbox):
 test_list = [ None,
               iprops_basic_working,
               iprops_basic_repos,
+              iprops_switched_subtrees,
+              iprops_pegged_wc_targets,
+              iprops_pegged_url_targets,
             ]
 
 if __name__ == '__main__':

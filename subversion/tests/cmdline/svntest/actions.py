@@ -1577,12 +1577,13 @@ def run_and_verify_inherited_prop_xml(path_or_url,
                                       expected_inherited_props,
                                       expected_explicit_props,
                                       propname=None,
-                                      revision=None):
+                                      peg_rev=None,
+                                      *args):
   """If PROPNAME is None, then call run_and_verify_svn with proplist -v --xml
   --show-inherited-props on PATH_OR_URL, otherwise call run_and_verify_svn
   with propget PROPNAME --xml --show-inherited-props.
 
-  PATH_OR_URL is pegged at REVISION if the latter is not None.  If REVISION
+  PATH_OR_URL is pegged at PEG_REV if the latter is not None.  If PEG_REV
   is none, then PATH_OR_URL is pegged at HEAD if a url.
 
   EXPECTED_INHERITED_PROPS is a (possibly empty) dict mapping working copy
@@ -1593,20 +1594,20 @@ def run_and_verify_inherited_prop_xml(path_or_url,
   EXPECTED_EXPLICIT_PROPS don't match the results of proplist/propget.
   """
 
-  if revision is None:
+  if peg_rev is None:
     if sandbox.is_url(path_or_url):
       path_or_url = path_or_url + '@HEAD'
   else:
-    path_or_url = path_or_url + '@' + str(revision)
+    path_or_url = path_or_url + '@' + str(peg_rev)
 
   if (propname):
     exit_code, output, errput = svntest.actions.run_and_verify_svn(
       None, None, [], 'propget', propname, '--xml',
-      '--show-inherited-props', path_or_url)
+      '--show-inherited-props', path_or_url, *args)
   else:
     exit_code, output, errput = svntest.actions.run_and_verify_svn(
       None, None, [], 'proplist', '-v', '--xml', '--show-inherited-props',
-      path_or_url)
+      path_or_url, *args)
 
   if len(errput) > 0:
     raise Failure
