@@ -4648,8 +4648,7 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
   rb.translated_size = translated_size;
   rb.last_mod_time = last_mod_time;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_record_fileinfo, &rb,
-                              scratch_pool));
+  SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
