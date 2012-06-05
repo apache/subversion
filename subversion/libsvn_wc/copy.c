@@ -457,7 +457,7 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   /* Copy the remaining filesystem children, which are unversioned, skipping
      any conflict-marker files. */
-  if (disk_children)
+  if (disk_children && apr_hash_count(disk_children))
     {
       apr_hash_index_t *hi;
       apr_hash_t *marker_files;
