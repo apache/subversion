@@ -793,15 +793,16 @@ run_file_install(svn_wc__db_t *db,
      that when the lock is locally set (=modification) it is not read only */
   if (props && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
     {
+      svn_wc__db_status_t status;
       svn_wc__db_lock_t *lock;
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, &lock, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 
-      if (lock)
+      if (!lock && status != svn_wc__db_status_added)
         SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
     }
 
