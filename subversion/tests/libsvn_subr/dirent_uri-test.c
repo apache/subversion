@@ -882,6 +882,8 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "https://SERVER:80/",    "https://server:80" },
     { "svn://server:80",       "svn://server:80" },
     { "svn://SERVER:443/",     "svn://server:443" },
+    { "file:///C%7C/temp/REPOS", "file:///C%7C/temp/REPOS" },
+    { "file:///C|/temp/REPOS", "file:///C%7C/temp/REPOS" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
