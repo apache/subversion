@@ -4648,8 +4648,7 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
   rb.translated_size = translated_size;
   rb.last_mod_time = last_mod_time;
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_record_fileinfo, &rb,
-                              scratch_pool));
+  SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
@@ -10480,7 +10479,7 @@ get_moved_to(struct scan_deletion_baton_t *b,
              const char *local_relpath,
              apr_pool_t *scratch_pool)
 {
-  const char *moved_to_relpath = svn_sqlite__column_text(stmt, 2, NULL);
+  const char *moved_to_relpath = svn_sqlite__column_text(stmt, 3, NULL);
 
   if (moved_to_relpath)
     {
@@ -10546,8 +10545,11 @@ scan_deletion_txn(void *baton,
      check op-roots and parents of op-roots. */
   scan = (sd_baton->moved_to_op_root_relpath || sd_baton->moved_to_relpath);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_DELETION_INFO));
+  SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, wcroot->sdb,
+                    scan ? STMT_SELECT_DELETION_INFO_SCAN
+                         : STMT_SELECT_DELETION_INFO));
+
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
@@ -10566,7 +10568,7 @@ scan_deletion_txn(void *baton,
                              path_for_error_message(wcroot, local_relpath,
                                                     scratch_pool));
 
-  op_depth = svn_sqlite__column_int(stmt, 3);
+  op_depth = svn_sqlite__column_int(stmt, 2);
 
   /* Special case: LOCAL_RELPATH not-present within a WORKING tree, we
      treat this as an op-root.  At commit time we need to explicitly
@@ -10620,8 +10622,6 @@ scan_deletion_txn(void *baton,
           if (scan || current_depth == op_depth)
             {
               SVN_ERR(svn_sqlite__reset(stmt));
-              SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                                STMT_SELECT_DELETION_INFO));
               SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
                                         current_relpath));
               SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -10635,8 +10635,6 @@ scan_deletion_txn(void *baton,
 
       SVN_ERR_ASSERT(current_relpath[0] != '\0'); /* Catch invalid data */
       parent_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_DELETION_INFO));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, parent_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (!have_row)
@@ -10662,7 +10660,7 @@ scan_deletion_txn(void *baton,
         }
 
       current_relpath = parent_relpath;
-      op_depth = svn_sqlite__column_int(stmt, 3);
+      op_depth = svn_sqlite__column_int(stmt, 2);
       have_base = !svn_sqlite__column_is_null(stmt, 0);
     }
 
@@ -11640,6 +11638,7 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -11674,6 +11673,24 @@ svn_wc__db_read_kind(svn_kind_t *kind,
                                    path_for_error_message(wcroot,
                                                           local_relpath,
                                                           scratch_pool));
+        }
+    }
+
+  if (!show_hidden)
+    {
+      int op_depth = svn_sqlite__column_int(stmt_info, 0);
+      svn_wc__db_status_t status = svn_sqlite__column_token(stmt_info, 3,
+                                                            presence_map);
+
+      if (op_depth > 0)
+        SVN_ERR(convert_to_working_status(&status, status));
+
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_excluded)
+        {
+          *kind = svn_kind_none;
+          SVN_ERR(svn_sqlite__reset(stmt_info));
+          return SVN_NO_ERROR;
         }
     }
 

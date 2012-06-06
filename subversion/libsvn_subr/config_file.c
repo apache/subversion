@@ -120,6 +120,27 @@ parser_getc(parse_context_t *ctx, int *c)
   return SVN_NO_ERROR;
 }
 
+/* Simplified version of parser_getc() to be used inside skipping loops.
+ * It will not check for 'ungotton' chars and may or may not ignore '\r'.
+ *
+ * In a 'while(cond) getc();' loop, the first iteration must call
+ * parser_getc to handle all the special cases.  Later iterations should
+ * use parser_getc_plain for maximum performance.
+ */
+static APR_INLINE svn_error_t *
+parser_getc_plain(parse_context_t *ctx, int *c)
+{
+  if (ctx->buffer_pos < ctx->buffer_size)
+    {
+      *c = ctx->parser_buffer[ctx->buffer_pos];
+      ctx->buffer_pos++;
+
+      return SVN_NO_ERROR;
+    }
+
+  return parser_getc(ctx, c);
+}
+
 /* Emulate ungetc() because streams don't support it.
  *
  * Use CTX to store the ungotten character C.
@@ -143,10 +164,10 @@ skip_whitespace(parse_context_t *ctx, int *c, int *pcount)
   int count = 0;
 
   SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != '\n' && svn_ctype_isspace(ch))
+  while (svn_ctype_isspace(ch) && ch != '\n' && ch != EOF)
     {
       ++count;
-      SVN_ERR(parser_getc(ctx, &ch));
+      SVN_ERR(parser_getc_plain(ctx, &ch));
     }
   *pcount = count;
   *c = ch;
@@ -162,8 +183,8 @@ skip_to_eoln(parse_context_t *ctx, int *c)
   int ch;
 
   SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != '\n')
-    SVN_ERR(parser_getc(ctx, &ch));
+  while (ch != '\n' && ch != EOF)
+    SVN_ERR(parser_getc_plain(ctx, &ch));
 
   *c = ch;
   return SVN_NO_ERROR;

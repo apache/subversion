@@ -1776,6 +1776,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   merge_cmd_baton_t *merge_b = baton;
   const char *mine_abspath = svn_dirent_join(merge_b->target->abspath,
                                              mine_relpath, scratch_pool);
+  svn_node_kind_t wc_kind;
   svn_node_kind_t kind;
   int i;
   apr_hash_t *file_props;
@@ -1834,7 +1835,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     svn_wc_notify_state_t obstr_state;
 
     SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
-                                      &kind,
+                                      &wc_kind,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
 
@@ -1967,10 +1968,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
       if (content_state)
         {
           /* directory already exists, is it under version control? */
-          svn_node_kind_t wc_kind;
-          SVN_ERR(svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx,
-                                   mine_abspath, FALSE, scratch_pool));
-
           if ((wc_kind != svn_node_none)
               && dry_run_deleted_p(merge_b, mine_abspath))
             *content_state = svn_wc_notify_state_changed;
@@ -8856,7 +8853,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
  * repository, or by allocating a new *RA_SESSION in POOL.
  * (RA_SESSION itself cannot be null, of course.)
  *
- * CTX is used as for svn_client__open_ra_session_internal().
+ * CTX is used as for svn_client_open_ra_session().
  */
 static svn_error_t *
 ensure_ra_session_url(svn_ra_session_t **ra_session,
@@ -8876,8 +8873,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   if (! *ra_session || (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL))
     {
       svn_error_clear(err);
-      err = svn_client__open_ra_session_internal(ra_session, NULL, url, NULL,
-                                                 NULL, FALSE, TRUE, ctx, pool);
+      err = svn_client_open_ra_session(ra_session, url, ctx, pool);
     }
   SVN_ERR(err);
 
@@ -8944,6 +8940,7 @@ do_merge(apr_hash_t **modified_subtrees,
          svn_mergeinfo_catalog_t result_catalog,
          const apr_array_header_t *merge_sources,
          const merge_target_t *target,
+         svn_ra_session_t *src_session,
          svn_boolean_t sources_related,
          svn_boolean_t same_repos,
          svn_boolean_t ignore_ancestry,
@@ -8967,6 +8964,7 @@ do_merge(apr_hash_t **modified_subtrees,
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
   svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
+  const char *old_src_session_url = NULL;
   apr_pool_t *iterpool;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target->abspath));
@@ -9058,6 +9056,13 @@ do_merge(apr_hash_t **modified_subtrees,
   notify_baton.cur_ancestor_abspath = NULL;
   notify_baton.merge_b = &merge_cmd_baton;
   notify_baton.pool = result_pool;
+
+  if (src_session)
+    {
+      SVN_ERR(svn_ra_get_session_url(src_session, &old_src_session_url,
+                                     scratch_pool));
+      ra_session1 = src_session;
+    }
 
   for (i = 0; i < merge_sources->nelts; i++)
     {
@@ -9162,6 +9167,9 @@ do_merge(apr_hash_t **modified_subtrees,
   /* Let everyone know we're finished here. */
   notify_merge_completed(target->abspath, ctx, iterpool);
 
+  if (src_session)
+    SVN_ERR(svn_ra_reparent(src_session, old_src_session_url, iterpool));
+
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
@@ -9233,7 +9241,7 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
       modified_subtrees = apr_hash_make(scratch_pool);
       APR_ARRAY_PUSH(faux_sources, const merge_source_t *) = source;
       SVN_ERR(do_merge(&modified_subtrees, NULL, faux_sources, target,
-                       TRUE, same_repos,
+                       URL1_ra_session, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, FALSE, NULL, TRUE,
                        FALSE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
@@ -9265,14 +9273,14 @@ merge_cousins_and_supplement_mergeinfo(const merge_target_t *target,
       notify_mergeinfo_recording(target->abspath, NULL, ctx, scratch_pool);
       svn_pool_clear(subpool);
       SVN_ERR(do_merge(NULL, add_result_catalog, add_sources, target,
-                       TRUE, same_repos,
+                       URL1_ra_session, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, TRUE,
                        modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx,
                        scratch_pool, subpool));
       svn_pool_clear(subpool);
       SVN_ERR(do_merge(NULL, remove_result_catalog, remove_sources, target,
-                       TRUE, same_repos,
+                       URL1_ra_session, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, TRUE,
                        modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx,
@@ -9641,7 +9649,7 @@ merge_locked(const char *source1,
     }
 
   err = do_merge(NULL, NULL, merge_sources, target,
-                 related, same_repos,
+                 ra_session1, related, same_repos,
                  ignore_ancestry, force, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, scratch_pool, scratch_pool);
@@ -10435,23 +10443,21 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *absolute_path = svn__apr_hash_index_key(hi);
+      const char *local_abspath = svn__apr_hash_index_key(hi);
       svn_client__pathrev_t *target_child;
-      const char *path_rel_to_root;
+      const char *repos_relpath;
       svn_mergeinfo_t target_history_as_mergeinfo;
 
       svn_pool_clear(iterpool);
 
       /* Convert the absolute path with mergeinfo on it to a path relative
          to the session root. */
-      SVN_ERR(svn_client__path_relative_to_root(&path_rel_to_root,
-                                                ctx->wc_ctx, absolute_path,
-                                                NULL, FALSE,
-                                                NULL, scratch_pool,
-                                                iterpool));
+      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                             ctx->wc_ctx, local_abspath,
+                                             scratch_pool, iterpool));
       target_child = svn_client__pathrev_create_with_relpath(
                        target->loc.repos_root_url, target->loc.repos_uuid,
-                       target->loc.rev, path_rel_to_root, iterpool);
+                       target->loc.rev, repos_relpath, iterpool);
       SVN_ERR(svn_client__get_history_as_mergeinfo(&target_history_as_mergeinfo,
                                                    NULL /* has_rev_zero_hist */,
                                                    target_child,
@@ -10460,8 +10466,7 @@ calculate_left_hand_side(svn_client__pathrev_t **left_p,
                                                    target_ra_session,
                                                    ctx, scratch_pool));
 
-      apr_hash_set(target_history_hash,
-                   apr_pstrdup(scratch_pool, path_rel_to_root),
+      apr_hash_set(target_history_hash, repos_relpath,
                    APR_HASH_KEY_STRING, target_history_as_mergeinfo);
     }
 
@@ -10730,10 +10735,9 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
   SVN_ERR(open_target_wc(&target, target_abspath,
                          FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_client__open_ra_session_internal(target_ra_session_p, NULL,
-                                               target->loc.url,
-                                               NULL, NULL, FALSE, FALSE,
-                                               ctx, scratch_pool));
+  SVN_ERR(svn_client_open_ra_session(target_ra_session_p,
+                                     target->loc.url,
+                                     ctx, scratch_pool));
   if (! target->loc.url)
     return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                              _("Can't reintegrate into '%s' because it is "
@@ -10926,42 +10930,41 @@ merge_peg_locked(const char *source_path_or_url,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
+  /* Create a short lived session pool */
+  sesspool = svn_pool_create(scratch_pool);
+
   SVN_ERR(open_target_wc(&target, target_abspath,
                          allow_mixed_rev, TRUE, TRUE,
-                         ctx, scratch_pool, scratch_pool));
+                         ctx, sesspool, sesspool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
-  sesspool = svn_pool_create(scratch_pool);
   SVN_ERR(open_source_session(&source_loc, &ra_session,
                               source_path_or_url, source_peg_revision,
-                              ctx, sesspool, scratch_pool));
+                              ctx, sesspool, sesspool));
 
   /* Normalize our merge sources. */
   SVN_ERR(normalize_merge_sources(&merge_sources, source_path_or_url,
                                   source_loc,
                                   ranges_to_merge, ra_session, ctx,
-                                  scratch_pool, scratch_pool));
+                                  sesspool, sesspool));
 
   /* Check for same_repos. */
   same_repos = is_same_repos(&target->loc, source_loc, TRUE /* strict_urls */);
 
-  /* We're done with our little RA session. */
-  svn_pool_destroy(sesspool);
-
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
-  err = do_merge(NULL, NULL, merge_sources, target,
+  err = do_merge(NULL, NULL, merge_sources, target, ra_session,
                  TRUE, same_repos, ignore_ancestry, force, dry_run,
                  record_only, NULL, FALSE, FALSE, depth, merge_options,
-                 &use_sleep, ctx, scratch_pool, scratch_pool);
+                 &use_sleep, ctx, sesspool, sesspool);
 
   if (use_sleep)
-    svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
+    svn_io_sleep_for_timestamps(target_abspath, sesspool);
 
-  if (err)
-    return svn_error_trace(err);
+  /* We're done with our RA session. */
+  svn_pool_destroy(sesspool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -11596,7 +11599,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
       APR_ARRAY_PUSH(merge_sources, const merge_source_t *) = &source;
 
-      err = do_merge(NULL, NULL, merge_sources, target,
+      err = do_merge(NULL, NULL, merge_sources, target, NULL,
                      TRUE /*related*/,
                      TRUE /*same_repos*/, ignore_ancestry, force, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,

@@ -264,7 +264,10 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 
   /* Only check kind after processing the node itself. The node might
      have been deleted */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                               TRUE /* allow_missing */,
+                               TRUE /* show_hidden */,
+                               scratch_pool));
 
   if (recurse && kind == svn_kind_dir)
     {
@@ -2124,7 +2127,9 @@ revert_partial(svn_wc__db_t *db,
         {
           svn_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                                       FALSE /* allow_missing */,
+                                       FALSE /* show_hidden */,
                                        iterpool));
           if (kind != svn_kind_file)
             continue;

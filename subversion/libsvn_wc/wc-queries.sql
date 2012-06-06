@@ -279,22 +279,27 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 SELECT dav_cache FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
+-- STMT_SELECT_DELETION_INFO
+SELECT (SELECT b.presence FROM nodes AS b
+         WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
+       work.presence, work.op_depth
+FROM nodes_current AS work
+WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
+LIMIT 1
+
+-- STMT_SELECT_DELETION_INFO_SCAN
 /* ### FIXME.  modes_move.moved_to IS NOT NULL works when there is
  only one move but we need something else when there are several. */
--- STMT_SELECT_DELETION_INFO
-SELECT nodes_base.presence, nodes_work.presence, nodes_move.moved_to,
-       nodes_work.op_depth
-FROM nodes AS nodes_work
-LEFT OUTER JOIN nodes nodes_move ON nodes_move.wc_id = nodes_work.wc_id
-  AND nodes_move.local_relpath = nodes_work.local_relpath
-  AND nodes_move.moved_to IS NOT NULL
-LEFT OUTER JOIN nodes nodes_base ON nodes_base.wc_id = nodes_work.wc_id
- AND nodes_base.local_relpath = nodes_work.local_relpath
- AND nodes_base.op_depth = 0
-WHERE nodes_work.wc_id = ?1 AND nodes_work.local_relpath = ?2
-  AND nodes_work.op_depth = (SELECT MAX(op_depth) FROM nodes
-                             WHERE wc_id = ?1 AND local_relpath = ?2
-                                              AND op_depth > 0)
+SELECT (SELECT b.presence FROM nodes AS b
+         WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
+       work.presence, work.op_depth, moved.moved_to
+FROM nodes_current AS work
+LEFT OUTER JOIN nodes AS moved 
+  ON moved.wc_id = work.wc_id
+ AND moved.local_relpath = work.local_relpath
+ AND moved.moved_to IS NOT NULL
+WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
+LIMIT 1
 
 -- STMT_SELECT_OP_DEPTH_MOVED_TO
 SELECT op_depth, moved_to, repos_path, revision
@@ -346,6 +351,10 @@ UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2)
+
+-- STMT_UPDATE_NODE_FILEINFO_OPDEPTH
+UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?5
 
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = ?3
@@ -905,7 +914,7 @@ SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
     ?7/*moved_here*/, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target,
-    (SELECT dst.moved_to FROM nodes_current AS dst
+    (SELECT dst.moved_to FROM nodes AS dst
                          WHERE dst.wc_id = ?1
                          AND dst.local_relpath = ?3
                          AND dst.op_depth = ?4)
@@ -923,7 +932,7 @@ SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
     ?7 /*moved_here*/, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target,
-    (SELECT dst.moved_to FROM nodes_current AS dst
+    (SELECT dst.moved_to FROM nodes AS dst
                          WHERE dst.wc_id = ?1
                          AND dst.local_relpath = ?3
                          AND dst.op_depth = ?4)

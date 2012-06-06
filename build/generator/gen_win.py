@@ -188,8 +188,8 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.sln_version = '11.00'
           self.vcproj_version = '10.0'
           self.vcproj_extension = '.vcxproj'
-        elif val == '11':
-          self.vs_version = '11'
+        elif val == '2012' or val == '11':
+          self.vs_version = '2012'
           self.sln_version = '12.00'
           self.vcproj_version = '11.0'
           self.vcproj_extension = '.vcxproj'
