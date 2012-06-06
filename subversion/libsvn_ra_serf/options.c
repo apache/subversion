@@ -264,7 +264,7 @@ capabilities_headers_iterator_callback(void *baton,
 
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
-   svn_ra_serf__handle_xml_parser -- it just notices OPTIONS response
+   the expat-based response handler -- it just notices OPTIONS response
    headers first, before handing off to the xml parser.
    Implements svn_ra_serf__response_handler_t */
 static svn_error_t *
