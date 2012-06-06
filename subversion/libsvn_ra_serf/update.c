@@ -1166,13 +1166,12 @@ handle_stream(serf_request_t *request,
   /* not reached */
 }
 
+/* Open the file associated with INFO for editing, pass along any
+   propchanges we've recorded for it, and then close the file. */
 static svn_error_t *
 handle_propchange_only(report_info_t *info,
                        apr_pool_t *scratch_pool)
 {
-  /* Open the file for editing (without forcing an apply_textdelta),
-     pass along any propchanges we've recorded for it, and then close
-     the file. */
   SVN_ERR(open_updated_file(info, FALSE, scratch_pool));
   SVN_ERR(close_updated_file(info, scratch_pool));
   
@@ -1187,13 +1186,13 @@ handle_propchange_only(report_info_t *info,
 /* "Fetch" a file whose contents were made available via the
    get_wc_contents() callback (as opposed to requiring a GET to the
    server), and feed the information through the associated update
-   editor. */
+   editor.  In editor-speak, this will add/open the file, transmit any
+   property changes, handle the contents, and then close the file.  */
 static svn_error_t *
 local_fetch(report_info_t *info,
             apr_pool_t *scratch_pool)
 {
   SVN_ERR(open_updated_file(info, TRUE, scratch_pool));
-
   SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
                                   info->textdelta_baton, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(info->cached_contents));
