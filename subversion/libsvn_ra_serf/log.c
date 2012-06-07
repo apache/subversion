@@ -237,15 +237,18 @@ static svn_error_t *
 log_opened(svn_ra_serf__xml_estate_t *xes,
            void *baton,
            int entered_state,
+           const svn_ra_serf__dav_props_t *tag,
            apr_pool_t *scratch_pool)
 {
   log_context_t *log_ctx = baton;
-  apr_pool_t *state_pool = svn_ra_serf__xml_state_pool(xes);
 
-  SVN_ERR_ASSERT(entered_state == ITEM);
+  if (entered_state == ITEM)
+    {
+      apr_pool_t *state_pool = svn_ra_serf__xml_state_pool(xes);
 
-  log_ctx->collect_revprops = apr_hash_make(state_pool);
-  log_ctx->collect_paths = apr_hash_make(state_pool);
+      log_ctx->collect_revprops = apr_hash_make(state_pool);
+      log_ctx->collect_paths = apr_hash_make(state_pool);
+    }
 
   return SVN_NO_ERROR;
 }
