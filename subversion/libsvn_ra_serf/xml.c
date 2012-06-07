@@ -560,6 +560,11 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
       if (scan->from_state != current->state)
         continue;
 
+      /* Wildcard tag match.  */
+      if (*scan->name == '*')
+        break;
+
+      /* Found a specific transition.  */
       if (strcmp(elemname.name, scan->name) == 0
           && strcmp(elemname.namespace, scan->ns) == 0)
         break;
