@@ -8427,7 +8427,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
                                           pool));
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
-     (and elsewhere).  This code makes more thorough checks that the
+     (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
   {
     svn_revnum_t i;
