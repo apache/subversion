@@ -698,9 +698,6 @@ typedef struct svn_ra_serf__xml_transition_t {
      exist on the element, or SVN_ERR_XML_ATTRIB_NOT_FOUND will be raised.  */
   const char *collect_attrs[11];
 
-  /* When NAME is opened, should the callback be invoked?  */
-  svn_boolean_t custom_open;
-
   /* When NAME is closed, should the callback be invoked?  */
   svn_boolean_t custom_close;
 
@@ -713,9 +710,7 @@ svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
-#ifdef NOT_YET
   svn_ra_serf__xml_cdata_t cdata_cb,
-#endif
   void *baton,
   apr_pool_t *result_pool);
 

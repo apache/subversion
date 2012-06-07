@@ -85,24 +85,24 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
   /* The INITIAL state can transition into D:prop (LOCK) or
      to D:multistatus (PROPFIND)  */
   { INITIAL, D_, "prop", PROP,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
   { INITIAL, D_, "multistatus", MULTISTATUS,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { MULTISTATUS, D_, "response", RESPONSE,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { RESPONSE, D_, "propstat", PROPSTAT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { PROPSTAT, D_, "prop", PROP,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { PROP, D_, "lockdiscovery", LOCK_DISCOVERY,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { LOCK_DISCOVERY, D_, "activelock", ACTIVE_LOCK,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
 #if 0
   /* ### we don't really need to parse locktype/lockscope. we know what
@@ -113,29 +113,29 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
      ### just isn't important to validate, so disable this for now... */
 
   { ACTIVE_LOCK, D_, "locktype", LOCK_TYPE,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { LOCK_TYPE, D_, "write", WRITE,
-    FALSE, { NULL }, FALSE, TRUE },
+    FALSE, { NULL }, TRUE },
 
   { ACTIVE_LOCK, D_, "lockscope", LOCK_SCOPE,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { LOCK_SCOPE, D_, "exclusive", EXCLUSIVE,
-    FALSE, { NULL }, FALSE, TRUE },
+    FALSE, { NULL }, TRUE },
 #endif /* 0  */
 
   { ACTIVE_LOCK, D_, "timeout", TIMEOUT,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { ACTIVE_LOCK, D_, "locktoken", LOCK_TOKEN,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { LOCK_TOKEN, D_, "href", HREF,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { ACTIVE_LOCK, D_, "owner", OWNER,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   /* ACTIVE_LOCK has a D:depth child, but we can ignore that.  */
 
@@ -381,7 +381,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->lock->path = apr_pstrdup(pool, path); /* be sure  */
 
   xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                           NULL, locks_closed, lock_ctx,
+                                           NULL, locks_closed, NULL,
+                                           lock_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
@@ -471,7 +472,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                                             lock_ctx->path, iterpool);
 
       xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                               NULL, locks_closed, lock_ctx,
+                                               NULL, locks_closed, NULL,
+                                               lock_ctx,
                                                iterpool);
       handler = svn_ra_serf__create_expat_handler(xmlctx, iterpool);
 

@@ -64,16 +64,16 @@ typedef struct mergeinfo_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t mergeinfo_ttable[] = {
   { INITIAL, S_, SVN_DAV__MERGEINFO_REPORT, MERGEINFO_REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { MERGEINFO_REPORT, S_, SVN_DAV__MERGEINFO_ITEM, MERGEINFO_ITEM,
-    FALSE, { NULL }, FALSE, TRUE },
+    FALSE, { NULL }, TRUE },
 
   { MERGEINFO_ITEM, S_, SVN_DAV__MERGEINFO_PATH, MERGEINFO_PATH,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { MERGEINFO_ITEM, S_, SVN_DAV__MERGEINFO_INFO, MERGEINFO_INFO,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { 0 }
 };
@@ -214,7 +214,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   mergeinfo_ctx->include_descendants = include_descendants;
 
   xmlctx = svn_ra_serf__xml_context_create(mergeinfo_ttable,
-                                           NULL, mergeinfo_closed,
+                                           NULL, mergeinfo_closed, NULL,
                                            mergeinfo_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);

@@ -63,10 +63,10 @@ typedef struct date_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t date_ttable[] = {
   { INITIAL, S_, "dated-rev-report", REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { REPORT, D_, SVN_DAV__VERSION_NAME, VERSION_NAME,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { 0 }
 };
@@ -139,7 +139,8 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(date_ttable,
-                                           NULL, date_closed, date_ctx,
+                                           NULL, date_closed, NULL,
+                                           date_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
