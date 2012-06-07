@@ -166,7 +166,7 @@ def export_working_copy_with_mods(sbox):
     'A/D/G/tau'         : Item(status='A '),
     'A/mu'              : Item(status='A '),
     'A/B'               : Item(status='A '),
-    'A/B/E'             : Item(status='A '),
+    #'A/B/E'             : Item(status='A '), # Used to be reported as added
     'A/B/lambda'        : Item(status='A '),
     'A/B/F'             : Item(status='A '),
     'A/C'               : Item(status='A '),

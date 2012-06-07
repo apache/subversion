@@ -564,7 +564,9 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
   svn_boolean_t get_all;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
+                               FALSE /* allow_missing */,
+                               FALSE /* show_hidden */,
                                scratch_pool));
 
   if (kind == svn_kind_dir)

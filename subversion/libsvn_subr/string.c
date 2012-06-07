@@ -937,16 +937,8 @@ static const char decimal_table[100][4]
       , "90", "91", "92", "93", "94", "95", "96", "97", "98", "99"};
 
 /* Copy the two bytes at SOURCE[0] and SOURCE[1] to DEST[0] and DEST[1] */
-#if SVN_UNALIGNED_ACCESS_IS_OK
-#  define COPY_TWO_BYTES(dest,source)\
-      *(apr_uint16_t*)(dest) = *(apr_uint16_t*)(source);
-#else
-#  define COPY_TWO_BYTES(dest,source) \
-    do { \
-      (dest)[0] = (source)[0]; \
-      (dest)[1] = (source)[1]; \
-    } while (0)
-#endif
+#define COPY_TWO_BYTES(dest,source)\
+  memcpy((dest), (source), 2)
 
 apr_size_t
 svn__ui64toa(char * dest, apr_uint64_t number)

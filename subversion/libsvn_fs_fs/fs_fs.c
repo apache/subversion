@@ -935,12 +935,12 @@ read_format(int *pformat, int *max_files_per_dir,
             const char *path, apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_file_t *file;
-  char buf[80];
-  apr_size_t len;
+  svn_stream_t *stream;
+  svn_stringbuf_t *content;
+  svn_stringbuf_t *buf;
+  svn_boolean_t eos = FALSE;
 
-  err = svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                         APR_OS_DEFAULT, pool);
+  err = svn_stringbuf_from_file2(&content, path, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       /* Treat an absent format file as format 1.  Do not try to
@@ -958,62 +958,54 @@ read_format(int *pformat, int *max_files_per_dir,
     }
   SVN_ERR(err);
 
-  len = sizeof(buf);
-  err = svn_io_read_length_line(file, buf, &len, pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  stream = svn_stream_from_stringbuf(content, pool);
+  SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+  if (buf->len == 0 && eos)
     {
       /* Return a more useful error message. */
-      svn_error_clear(err);
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
                                _("Can't read first line of format file '%s'"),
                                svn_dirent_local_style(path, pool));
     }
-  SVN_ERR(err);
 
   /* Check that the first line contains only digits. */
-  SVN_ERR(check_format_file_buffer_numeric(buf, 0, path, pool));
-  SVN_ERR(svn_cstring_atoi(pformat, buf));
+  SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
+  SVN_ERR(svn_cstring_atoi(pformat, buf->data));
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
 
   /* Read any options. */
-  while (1)
+  while (!eos)
     {
-      len = sizeof(buf);
-      err = svn_io_read_length_line(file, buf, &len, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          /* No more options; that's okay. */
-          svn_error_clear(err);
-          break;
-        }
-      SVN_ERR(err);
+      SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eos, pool));
+      if (buf->len == 0)
+        break;
 
       if (*pformat >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT &&
-          strncmp(buf, "layout ", 7) == 0)
+          strncmp(buf->data, "layout ", 7) == 0)
         {
-          if (strcmp(buf+7, "linear") == 0)
+          if (strcmp(buf->data + 7, "linear") == 0)
             {
               *max_files_per_dir = 0;
               continue;
             }
 
-          if (strncmp(buf+7, "sharded ", 8) == 0)
+          if (strncmp(buf->data + 7, "sharded ", 8) == 0)
             {
               /* Check that the argument is numeric. */
-              SVN_ERR(check_format_file_buffer_numeric(buf, 15, path, pool));
-              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf + 15));
+              SVN_ERR(check_format_file_buffer_numeric(buf->data, 15, path, pool));
+              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf->data + 15));
               continue;
             }
         }
 
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
          _("'%s' contains invalid filesystem format option '%s'"),
-         svn_dirent_local_style(path, pool), buf);
+         svn_dirent_local_style(path, pool), buf->data);
     }
 
-  return svn_io_file_close(file, pool);
+  return SVN_NO_ERROR;
 }
 
 /* Write the format number and maximum number of files per directory
@@ -2810,6 +2802,9 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
 /* Revprop caching management.
  *
+ * Mechanism:
+ * ----------
+ * 
  * Revprop caching needs to be activated and will be deactivated for the
  * respective FS instance if the necessary infrastructure could not be
  * initialized.  In deactivated mode, there is almost no runtime overhead
@@ -2835,6 +2830,27 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
  *
  * The overhead for the second and following accesses to revprops is
  * almost zero on most systems.
+ *
+ *
+ * Tech aspects:
+ * -------------
+ *
+ * A problem is that we need to provide a globally available file name to
+ * back the SHM implementation on OSes that need it.  We can only assume
+ * write access to some file within the respective repositories.  Because
+ * a given server process may access thousands of repositories during its
+ * lifetime, keeping the SHM data alive for all of them is also not an
+ * option.
+ *
+ * So, we store the new revprop generation on disk as part of each
+ * setrevprop call, i.e. this write will be serialized and the write order
+ * be guaranteed by the repository write lock.
+ *
+ * The only racy situation occurs when the data is being read again by two
+ * processes concurrently but in that situation, the first process to
+ * finish that procedure is guaranteed to be the only one that initializes
+ * the SHM data.  Since even writers will first go through that
+ * initialization phase, they will never operate on stale data.
  */
 
 /* Read revprop generation as stored on disk for repository FS. The result
@@ -4160,7 +4176,14 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
 {
   apr_hash_index_t *hi;
 
-  *str_entries_p = apr_hash_make(pool);
+  /* For now, we use a our own hash function to ensure that we get a
+   * (largely) stable order when serializing the data.  It also gives
+   * us some performance improvement.
+   *
+   * ### TODO ###
+   * Use some sorted or other fixed order data container.
+   */
+  *str_entries_p = svn_hash__make(pool);
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -6177,7 +6200,7 @@ write_hash_handler(void *baton,
    well as SHA1 in REP.   If rep sharing has been enabled and REPS_HASH
    is not NULL, it will be used in addition to the on-disk cache to find
    earlier reps with the same content.  When such existing reps can be
-   found,  we will truncate the one just written from the file and return
+   found, we will truncate the one just written from the file and return
    the existing rep.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_rep(representation_t *rep,

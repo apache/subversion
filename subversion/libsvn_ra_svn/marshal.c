@@ -1150,10 +1150,7 @@ svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   va_start(ap, fmt);
   err = vwrite_tuple(conn, pool, fmt, ap);
   va_end(ap);
-  if (err)
-    return err;
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  return SVN_NO_ERROR;
+  return err ? err : svn_ra_svn_end_list(conn, pool);
 }
 
 svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
@@ -1163,24 +1160,18 @@ svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
   va_list ap;
   svn_error_t *err;
 
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( success ", 10));
   va_start(ap, fmt);
   err = vwrite_tuple(conn, pool, fmt, ap);
   va_end(ap);
-  if (err)
-    return err;
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  return SVN_NO_ERROR;
+  return err ? err : svn_ra_svn_end_list(conn, pool);
 }
 
 svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool, svn_error_t *err)
 {
   char buffer[128];
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_word(conn, pool, "failure"));
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(writebuf_write_short_string(conn, pool, "( failure ( ", 12));
   for (; err; err = err->child)
     {
       const char *msg;
@@ -1200,7 +1191,5 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
                                      err->file ? err->file : "",
                                      (apr_uint64_t) err->line));
     }
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  return SVN_NO_ERROR;
+  return writebuf_write_short_string(conn, pool, ") ) ", 4);
 }

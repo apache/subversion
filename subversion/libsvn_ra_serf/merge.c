@@ -47,6 +47,7 @@
  * This enum represents the current state of our XML parsing for a MERGE.
  */
 typedef enum merge_state_e {
+  INITIAL = 0,
   NONE = 0,
   MERGE_RESPONSE,
   UPDATED_SET,
@@ -58,7 +59,8 @@ typedef enum merge_state_e {
   AUTHOR,
   NAME,
   DATE,
-  IGNORE_PROP_NAME,
+  SKIP_HREF,
+  IGNORE_PROP_NAME = SKIP_HREF, /* ### leave old name for now  */
   NEED_PROP_NAME,
   PROP_VAL
 } merge_state_e;
@@ -102,6 +104,61 @@ struct svn_ra_serf__merge_context_t
 
   svn_commit_info_t *commit_info;
 };
+
+#if 0
+/* ### can't do this yet because we don't have wildcard transitions, which
+   ### is needed to capture a property name.  */
+
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t merge_ttable[] = {
+  { INITIAL, S_, "merge-response", MERGE_RESPONSE,
+    FALSE, { NULL }, FALSE },
+
+  { MERGE_RESPONSE, S_, "updated-set", UPDATED_SET,
+    FALSE, { NULL }, FALSE },
+
+  { UPDATED_SET, D_, "response", RESPONSE,
+    FALSE, { NULL }, FALSE },
+
+  { RESPONSE, D_, "href", HREF,
+    FALSE, { NULL }, FALSE },
+
+  { RESPONSE, D_, "propstat", PROPSTAT,
+    FALSE, { NULL }, FALSE },
+
+  { PROPSTAT, D_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+
+#if 0
+  /* Not needed.  */
+  { PROPSTAT, D_, "status", STATUS,
+    FALSE, { NULL }, FALSE },
+#endif
+
+  { PROP, D_, "resourcetype", RESOURCE_TYPE,
+    FALSE, { NULL }, FALSE },
+
+  { RESOURCE_TYPE, D_, "baseline", BASELINE,
+    FALSE, { NULL }, FALSE },
+
+  { RESOURCE_TYPE, D_, "collection", COLLECTION,
+    FALSE, { NULL }, FALSE },
+
+  { PROP, D_, "checked-in", SKIP_HREF,
+    FALSE, { NULL }, FALSE },
+
+  { PROP, "*", "*", PROP_VAL,
+    FALSE, { NULL }, FALSE },
+
+  { SKIP_HREF, D_, "href", PROP_VAL,
+    FALSE, { NULL }, FALSE },
+
+  { 0 }
+};
+
+#endif
+
 
 
 static merge_info_t *

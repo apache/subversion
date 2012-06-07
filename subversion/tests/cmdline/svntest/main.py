@@ -934,18 +934,23 @@ def canonicalize_url(input):
     return input
 
 
-def create_python_hook_script(hook_path, hook_script_code):
+def create_python_hook_script(hook_path, hook_script_code,
+                              cmd_alternative=None):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
   if windows:
-    # Use an absolute path since the working directory is not guaranteed
-    hook_path = os.path.abspath(hook_path)
-    # Fill the python file.
-    file_write("%s.py" % hook_path, hook_script_code)
-    # Fill the batch wrapper file.
-    file_append("%s.bat" % hook_path,
-                "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
+    if cmd_alternative is not None:
+      file_write("%s.bat" % hook_path,
+                  cmd_alternative)
+    else:
+      # Use an absolute path since the working directory is not guaranteed
+      hook_path = os.path.abspath(hook_path)
+      # Fill the python file.
+      file_write("%s.py" % hook_path, hook_script_code)
+      # Fill the batch wrapper file.
+      file_write("%s.bat" % hook_path,
+                 "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))

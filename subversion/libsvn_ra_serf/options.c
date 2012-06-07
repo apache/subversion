@@ -78,13 +78,13 @@ typedef struct options_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t options_ttable[] = {
   { INITIAL, D_, "options-response", OPTIONS,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { OPTIONS, D_, "activity-collection-set", ACTIVITY_COLLECTION,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { ACTIVITY_COLLECTION, D_, "href", HREF,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { 0 }
 };
@@ -264,7 +264,7 @@ capabilities_headers_iterator_callback(void *baton,
 
 
 /* A custom serf_response_handler_t which is mostly a wrapper around
-   svn_ra_serf__handle_xml_parser -- it just notices OPTIONS response
+   the expat-based response handler -- it just notices OPTIONS response
    headers first, before handing off to the xml parser.
    Implements svn_ra_serf__response_handler_t */
 static svn_error_t *
@@ -322,7 +322,8 @@ create_options_req(options_context_t **opt_ctx,
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   xmlctx = svn_ra_serf__xml_context_create(options_ttable,
-                                           NULL, options_closed, new_ctx,
+                                           NULL, options_closed, NULL,
+                                           new_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 

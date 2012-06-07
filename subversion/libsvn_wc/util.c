@@ -546,7 +546,9 @@ svn_wc__fetch_kind_func(svn_kind_t *kind,
   const char *local_abspath = svn_dirent_join(sfb->base_abspath, path,
                                               scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_kind(kind, sfb->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__db_read_kind(kind, sfb->db, local_abspath,
+                               FALSE /* allow_missing */,
+                               FALSE /* show_hidden */,
                                scratch_pool));
 
   return SVN_NO_ERROR;

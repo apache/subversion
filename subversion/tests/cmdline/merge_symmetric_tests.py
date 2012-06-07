@@ -481,6 +481,7 @@ def merge_twice_same_direction_2(sbox):
 #   Merge to and fro
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_1_1(sbox):
   """merge_to_and_fro_1_1"""
 
@@ -497,6 +498,7 @@ def merge_to_and_fro_1_1(sbox):
                   expect_3ways=[three_way_merge('A4', 'B7')])
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_1_2(sbox):
   """merge_to_and_fro_1_2"""
 
@@ -540,6 +542,7 @@ def init_merge_to_and_fro_2(sbox, mod_9, mod_10):
     no_op_commit(sbox)  # r10
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_2_1(sbox):
   """merge_to_and_fro_2_1"""
 
@@ -556,6 +559,7 @@ def merge_to_and_fro_2_1(sbox):
                   expect_3ways=[three_way_merge('A7', 'B10')])
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_2_2(sbox):
   """merge_to_and_fro_2_2"""
 
@@ -599,6 +603,7 @@ def init_merge_to_and_fro_3(sbox, mod_9, mod_10):
     no_op_commit(sbox)  # r10
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_3_1(sbox):
   """merge_to_and_fro_3_1"""
 
@@ -615,6 +620,7 @@ def merge_to_and_fro_3_1(sbox):
                   expect_3ways=[three_way_merge_no_op('B7', 'B10')])
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_3_2(sbox):
   """merge_to_and_fro_3_2"""
 
@@ -631,6 +637,7 @@ def merge_to_and_fro_3_2(sbox):
                   expect_3ways=[three_way_merge('B7', 'B10')])
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_4_1(sbox):
   """merge_to_and_fro_4_1"""
 
@@ -647,6 +654,7 @@ def merge_to_and_fro_4_1(sbox):
                   expect_3ways=[three_way_merge_no_op('B7', 'A10')])
 
 @SkipUnless(server_has_mergeinfo)
+@Wimp("needs SVN_WITH_SYMMETRIC_MERGE")
 def merge_to_and_fro_4_2(sbox):
   """merge_to_and_fro_4_2"""
 

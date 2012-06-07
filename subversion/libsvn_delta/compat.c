@@ -1494,7 +1494,6 @@ drive_ev1_props(const struct editor_baton *eb,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *old_props;
   apr_array_header_t *propdiffs;
-  const char *ev1_relpath;
   int i;
 
   /* If there are no properties to install, then just exit.  */
@@ -1526,8 +1525,6 @@ drive_ev1_props(const struct editor_baton *eb,
     }
 
   SVN_ERR(svn_prop_diffs(&propdiffs, change->props, old_props, scratch_pool));
-
-  ev1_relpath = svn_relpath_skip_ancestor(eb->base_relpath, repos_relpath);
 
   for (i = 0; i < propdiffs->nelts; i++)
     {

@@ -963,7 +963,16 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   "merge --reintegrate with subtree mergeinfo"
 
   # Create a standard greek tree, branch A to A_COPY in r2, A to A_COPY_2 in
-  # r3, A to A_COPY_3 in r3, and then make some changes under A in r5-8.
+  # r3, A to A_COPY_3 in r4, and then make some changes under A in r5-8.
+  #
+  #   A_COPY_3      4---------
+  #                /
+  #   A     -1--------5-6-7-8-
+  #            \ \
+  #   A_COPY    2-\-----------
+  #                \
+  #   A_COPY_2      3---------
+
   sbox.build()
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox, False, 3)
@@ -991,8 +1000,22 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # Now set up a situation where we try to reintegrate A_COPY back to A but
   # both of these paths have subtree mergeinfo.  Iff the mergeinfo on A_COPY
   # reflects that the same revisions have been applied across all of A_COPY,
-  # then the reintegrate merge should succeed.
+  # then the reintegrate merge should succeed.  We'll try that case first.
   #
+  #   A_COPY_3       4--------9---
+  #                 /          \
+  #                /            \c.
+  #   A     -1--------5-6-7-8---10-------------------WC--
+  #            \ \              (D)         \        /r.
+  #             \ \                    (mu)  \s.    /
+  #   A_COPY     2-\--------------------12---13--14------
+  #                 \                   /c.
+  #                  \                 /
+  #   A_COPY_2        3--------------11---
+  #
+  #   Key: c. = cherry-pick, s. = sync, r. = reintegrate.
+  #   Note: These diagrams show an overview and do not capture every detail.
+
   # r9 - Make a text change to A_COPY_3/D/gamma
   svntest.main.file_write(gamma_COPY_3_path, "New content")
   expected_output = wc.State(wc_dir, {'A_COPY_3/D/gamma' : Item(verb='Sending')})
@@ -1166,6 +1189,17 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # merge should fail, but should provide a helpful message as to where the
   # problems are.
   #
+  #   A_COPY_3        4--------9---
+  #                  /          \
+  #                 /            \c.        [-8]___
+  #   A     -1---------5-6-7-8---10----------------\-------WC--
+  #            \ \               (D)        \       \      /r.
+  #             \ \                    (mu)  \s.     \c.  /
+  #   A_COPY     2-\--------------------12---13--14--15--------
+  #                 \                   /c.          (D)
+  #                  \                 /
+  #   A_COPY_2        3--------------11---
+
   # First revert the previous reintegrate merge
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '-R', wc_dir)
@@ -1233,6 +1267,18 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #
   #   E) Reintegrate 'branch' to 'trunk'.  This fails as it appears not all
   #      of 'trunk' was previously merged to 'branch'
+  #
+  #                                       Step:   A   B    C   D    E
+  #   A_COPY_3    ----9---
+  #              /     \                      (D/g.->
+  #             /       \c.        [-8]___     D/g.m.) (D/g.m.)
+  #   A     ------------10----------------\------16-------18--------WC
+  #          \\         (D)        \       \        \        \      /r.
+  #           \\              (mu)  \s.     \c.      \s.      \s.  /
+  #   A_COPY   -\--------------12---13--14--15-------17-------19------
+  #              \             /c.          (D)
+  #               \           /
+  #   A_COPY_2     ---------11---
 
   # r16 - A) REPOS-to-REPOS rename of A/D/gamma to A/D/gamma_moved.  Since
   # r874258 WC-to-WC moves won't create mergeinfo on the dest if the source

@@ -3181,33 +3181,30 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
 svn_error_t *
 svn_io_file_close(apr_file_t *file, apr_pool_t *pool)
 {
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_close(file),
-     N_("Can't close file '%s'"),
-     N_("Can't close stream"),
-      pool);
+  return do_io_file_wrapper_cleanup(file, apr_file_close(file),
+                                    N_("Can't close file '%s'"),
+                                    N_("Can't close stream"),
+                                    pool);
 }
 
 
 svn_error_t *
 svn_io_file_getc(char *ch, apr_file_t *file, apr_pool_t *pool)
 {
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_getc(ch, file),
-     N_("Can't read file '%s'"),
-     N_("Can't read stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(file, apr_file_getc(ch, file),
+                                    N_("Can't read file '%s'"),
+                                    N_("Can't read stream"),
+                                    pool);
 }
 
 
 svn_error_t *
 svn_io_file_putc(char ch, apr_file_t *file, apr_pool_t *pool)
 {
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_putc(ch, file),
-     N_("Can't write file '%s'"),
-     N_("Can't write stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(file, apr_file_putc(ch, file),
+                                    N_("Can't write file '%s'"),
+                                    N_("Can't write stream"),
+                                    pool);
 }
 
 
@@ -3218,11 +3215,11 @@ svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
   /* Quoting APR: On NT this request is incredibly expensive, but accurate. */
   wanted &= ~SVN__APR_FINFO_MASK_OUT;
 
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_info_get(finfo, wanted, file),
-     N_("Can't get attribute information from file '%s'"),
-     N_("Can't get attribute information from stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(
+             file, apr_file_info_get(finfo, wanted, file),
+             N_("Can't get attribute information from file '%s'"),
+             N_("Can't get attribute information from stream"),
+             pool);
 }
 
 
@@ -3230,11 +3227,10 @@ svn_error_t *
 svn_io_file_read(apr_file_t *file, void *buf,
                  apr_size_t *nbytes, apr_pool_t *pool)
 {
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_read(file, buf, nbytes),
-     N_("Can't read file '%s'"),
-     N_("Can't read stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(file, apr_file_read(file, buf, nbytes),
+                                    N_("Can't read file '%s'"),
+                                    N_("Can't read stream"),
+                                    pool);
 }
 
 
@@ -3256,11 +3252,10 @@ svn_io_file_read_full2(apr_file_t *file, void *buf,
         *hit_eof = FALSE;
     }
 
-  return do_io_file_wrapper_cleanup
-    (file, status,
-     N_("Can't read file '%s'"),
-     N_("Can't read stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(file, status,
+                                    N_("Can't read file '%s'"),
+                                    N_("Can't read stream"),
+                                    pool);
 }
 
 
@@ -3268,11 +3263,11 @@ svn_error_t *
 svn_io_file_seek(apr_file_t *file, apr_seek_where_t where,
                  apr_off_t *offset, apr_pool_t *pool)
 {
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_seek(file, where, offset),
-     N_("Can't set position pointer in file '%s'"),
-     N_("Can't set position pointer in stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(
+             file, apr_file_seek(file, where, offset),
+             N_("Can't set position pointer in file '%s'"),
+             N_("Can't set position pointer in stream"),
+             pool);
 }
 
 
@@ -3375,17 +3370,15 @@ svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
   /* This is a work-around. APR would flush the write buffer
      _after_ truncating the file causing now invalid buffered
      data to be written behind OFFSET. */
-  SVN_ERR(do_io_file_wrapper_cleanup
-    (file, apr_file_flush(file),
-     N_("Can't flush file '%s'"),
-     N_("Can't flush stream"),
-     pool));
+  SVN_ERR(do_io_file_wrapper_cleanup(file, apr_file_flush(file),
+                                     N_("Can't flush file '%s'"),
+                                     N_("Can't flush stream"),
+                                     pool));
 
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_trunc(file, offset),
-     N_("Can't truncate file '%s'"),
-     N_("Can't truncate stream"),
-     pool);
+  return do_io_file_wrapper_cleanup(file, apr_file_trunc(file, offset),
+                                    N_("Can't truncate file '%s'"),
+                                    N_("Can't truncate stream"),
+                                    pool);
 }
 
 

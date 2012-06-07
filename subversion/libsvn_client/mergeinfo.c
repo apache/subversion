@@ -373,7 +373,6 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   const char *target_repos_rel_path;
   svn_mergeinfo_t mergeinfo;
   const char *repos_root;
-  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   *mergeinfo_cat = NULL;
@@ -389,12 +388,9 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
-                                            ctx->wc_ctx,
-                                            local_abspath,
-                                            NULL, FALSE,
-                                            NULL, scratch_pool,
-                                            scratch_pool));
+  SVN_ERR(svn_wc__node_get_repos_relpath(&target_repos_rel_path,
+                                         ctx->wc_ctx, local_abspath,
+                                         scratch_pool, scratch_pool));
 
   /* Get the mergeinfo for the LOCAL_ABSPATH target and set *INHERITED and
      *WALKED_PATH. */
@@ -414,38 +410,37 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
     }
 
   /* If LOCAL_ABSPATH is a directory and we want the subtree mergeinfo too,
-     then get it. */
-  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
-  if (kind == svn_node_dir && include_descendants)
+     then get it.
+
+     With WC-NG it is cheaper to do a single db transaction, than first
+     looking if we really have a directory. */
+  if (include_descendants)
     {
       apr_hash_t *mergeinfo_props;
       apr_hash_index_t *hi;
-      svn_opt_revision_t opt;
 
-      opt.kind = svn_opt_revision_unspecified;
-
-      SVN_ERR(svn_client_propget4(&mergeinfo_props,
-                                  SVN_PROP_MERGEINFO,
-                                  local_abspath,
-                                  &opt, &opt,
-                                  NULL, svn_depth_infinity, NULL,
-                                  ctx, scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__prop_retrieve_recursive(&mergeinfo_props,
+                                              ctx->wc_ctx, local_abspath,
+                                              SVN_PROP_MERGEINFO,
+                                              scratch_pool, scratch_pool));
 
       /* Convert *mergeinfo_props into a proper svn_mergeinfo_catalog_t */
       for (hi = apr_hash_first(scratch_pool, mergeinfo_props);
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *key_path = svn__apr_hash_index_key(hi);
+          const char *node_abspath = svn__apr_hash_index_key(hi);
           svn_string_t *propval = svn__apr_hash_index_val(hi);
           svn_mergeinfo_t subtree_mergeinfo;
+          const char *repos_relpath;
 
-          SVN_ERR(svn_client__path_relative_to_root(&key_path, ctx->wc_ctx,
-                                                    key_path,
-                                                    NULL, FALSE,
-                                                    NULL, result_pool,
-                                                    scratch_pool));
+          if (strcmp(node_abspath, local_abspath) == 0)
+            continue; /* Already parsed in svn_client__get_wc_mergeinfo */
+
+          SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                                 ctx->wc_ctx, node_abspath,
+                                                 result_pool, scratch_pool));
+
           SVN_ERR(svn_mergeinfo_parse(&subtree_mergeinfo, propval->data,
                                       result_pool));
 
@@ -455,7 +450,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
           if (*mergeinfo_cat == NULL)
             *mergeinfo_cat = apr_hash_make(result_pool);
 
-          apr_hash_set(*mergeinfo_cat, key_path,
+          apr_hash_set(*mergeinfo_cat, repos_relpath,
                        APR_HASH_KEY_STRING, subtree_mergeinfo);
         }
     }
@@ -1596,17 +1591,23 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
                         peg_revision, FALSE, FALSE, ctx, pool, pool));
   if (mergeinfo_cat)
     {
-      const char *path_or_url_repos_rel;
+      const char *repos_relpath;
 
-      if (! svn_path_is_url(path_or_url)
-          && ! svn_dirent_is_absolute(path_or_url))
-        SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+      if (! svn_path_is_url(path_or_url))
+        {
+          SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+          SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                                 ctx->wc_ctx, path_or_url,
+                                                 pool, pool));
+        }
+      else
+        {
+          repos_relpath = svn_uri_skip_ancestor(repos_root, path_or_url, pool);
 
-      SVN_ERR(svn_client__path_relative_to_root(&path_or_url_repos_rel,
-                                                ctx->wc_ctx, path_or_url,
-                                                repos_root, FALSE, NULL,
-                                                pool, pool));
-      mergeinfo = apr_hash_get(mergeinfo_cat, path_or_url_repos_rel,
+          SVN_ERR_ASSERT(repos_relpath != NULL); /* Or get_mergeinfo failed */
+        }
+
+      mergeinfo = apr_hash_get(mergeinfo_cat, repos_relpath,
                                APR_HASH_KEY_STRING);
     }
   else
@@ -1673,15 +1674,19 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                         ctx, scratch_pool, scratch_pool));
 
   if (!svn_path_is_url(target_path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&target_path_or_url, target_path_or_url, scratch_pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&target_path_or_url, target_path_or_url, scratch_pool));
+      SVN_ERR(svn_wc__node_get_repos_relpath(&target_repos_rel,
+                                             ctx->wc_ctx, target_path_or_url,
+                                             scratch_pool, scratch_pool));
+    }
+  else
+    {
+      target_repos_rel = svn_uri_skip_ancestor(repos_root, target_path_or_url,
+                                               scratch_pool);
 
-  SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel,
-                                            ctx->wc_ctx,
-                                            target_path_or_url,
-                                            repos_root,
-                                            FALSE /* leading_slash */, NULL,
-                                            scratch_pool,
-                                            scratch_pool));
+      SVN_ERR_ASSERT(target_repos_rel != NULL); /* Or get_mergeinfo should have failed */
+    }
 
   if (!target_mergeinfo_cat)
     {

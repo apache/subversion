@@ -211,7 +211,7 @@ def _usage_exit(err=None):
   print("           Use static apr and apr-util")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008 or 2010)")
+  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008, 2010 or 2012)")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")

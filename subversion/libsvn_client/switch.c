@@ -208,7 +208,8 @@ switch_internal(svn_revnum_t *result_rev,
           /* ### It would be nice if this function could reuse the existing
              ra session instead of opening two for its own use. */
           SVN_ERR(svn_client__get_youngest_common_ancestor(
-                  &yca, switch_loc, target_base_loc, ctx, pool, pool));
+                  &yca, switch_loc, target_base_loc, ra_session, ctx,
+                  pool, pool));
         }
       if (! yca)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,

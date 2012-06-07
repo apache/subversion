@@ -198,6 +198,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    LOC1 and LOC2.  If the locations have no common ancestor (including if
    they don't have the same repository root URL), set *ANCESTOR_P to NULL.
 
+   If SESSION is not NULL, use it for retrieving the common ancestor instead
+   of creating a new session.
+
    Use the authentication baton cached in CTX to authenticate against
    the repository.  Use POOL for all allocations.
 
@@ -207,6 +210,7 @@ svn_error_t *
 svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
                                          const svn_client__pathrev_t *loc1,
                                          const svn_client__pathrev_t *loc2,
+                                         svn_ra_session_t *session,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
@@ -271,40 +275,6 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   svn_ra_session_t *ra_session,
                                   const char *session_url,
                                   apr_pool_t *pool);
-
-/* Return the path of ABSPATH_OR_URL relative to the repository root
-   in REL_PATH (URI-decoded), allocated in RESULT_POOL.
-   If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
-   slash; otherwise, it will not.
-
-   REPOS_ROOT and RA_SESSION may be NULL if ABSPATH_OR_URL is a WC path,
-   otherwise at least one of them must be non-null.
-
-   CAUTION:  While having a leading slash on a so-called relative path
-   might work out well for functionality that interacts with
-   mergeinfo, it results in a relative path that cannot be naively
-   svn_path_join()'d with a repository root URL to provide a full URL.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_client__path_relative_to_root(const char **rel_path,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *abspath_or_url,
-                                  const char *repos_root,
-                                  svn_boolean_t include_leading_slash,
-                                  svn_ra_session_t *ra_session,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/* A default error handler for use with svn_wc_walk_entries3().  Returns
-   ERR in all cases. */
-svn_error_t *
-svn_client__default_walker_error_handler(const char *path,
-                                         svn_error_t *err,
-                                         void *walk_baton,
-                                         apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------- */
 
