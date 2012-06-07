@@ -466,7 +466,6 @@ copy_versioned_dir(svn_wc__db_t *db,
      any conflict-marker files. */
   if (disk_children && apr_hash_count(disk_children))
     {
-      apr_hash_index_t *hi;
       apr_hash_t *marker_files;
 
       SVN_ERR(svn_wc__db_get_conflict_marker_files(&marker_files, db,
@@ -551,7 +550,6 @@ copy_or_move(svn_wc_context_t *wc_ctx,
     svn_wc__db_status_t src_status, dstdir_status;
     const char *src_repos_root_url, *dst_repos_root_url;
     const char *src_repos_uuid, *dst_repos_uuid;
-    svn_error_t *err;
 
     err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL, NULL,
                                &src_repos_root_url, &src_repos_uuid, NULL,
@@ -664,7 +662,6 @@ copy_or_move(svn_wc_context_t *wc_ctx,
      disk, before actually doing the file copy. */
   {
     svn_wc__db_status_t dst_status;
-    svn_error_t *err;
 
     err = svn_wc__db_read_info(&dst_status, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
