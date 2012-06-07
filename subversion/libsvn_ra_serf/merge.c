@@ -69,7 +69,7 @@ typedef enum merge_state_e {
 
 
 /* Structure associated with a MERGE request. */
-typedef struct svn_ra_serf__merge_context_t
+typedef struct merge_context_t
 {
   apr_pool_t *pool;
 
@@ -84,7 +84,7 @@ typedef struct svn_ra_serf__merge_context_t
 
   svn_commit_info_t *commit_info;
 
-} svn_ra_serf__merge_context_t;
+} merge_context_t;
 
 
 #define D_ "DAV:"
@@ -154,7 +154,7 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
              apr_hash_t *attrs,
              apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *merge_ctx = baton;
+  merge_context_t *merge_ctx = baton;
 
   if (leaving_state == RESPONSE)
     {
@@ -264,307 +264,12 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 }
 
 
-#if 0
-
-static merge_info_t *
-push_state(svn_ra_serf__xml_parser_t *parser,
-           svn_ra_serf__merge_context_t *ctx,
-           merge_state_e state)
-{
-  merge_info_t *info;
-
-  svn_ra_serf__xml_push_state(parser, state);
-
-  if (state == RESPONSE)
-    {
-      info = apr_palloc(parser->state->pool, sizeof(*info));
-      info->pool = parser->state->pool;
-      info->props = apr_hash_make(info->pool);
-      info->prop_value = svn_stringbuf_create_empty(info->pool);
-
-      parser->state->private = info;
-    }
-
-  return parser->state->private;
-}
-
-static svn_error_t *
-start_merge(svn_ra_serf__xml_parser_t *parser,
-            svn_ra_serf__dav_props_t name,
-            const char **attrs,
-            apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__merge_context_t *ctx = parser->user_data;
-  merge_state_e state;
-  merge_info_t *info;
-
-  state = parser->state->current_state;
-
-  if (state == NONE &&
-      strcmp(name.name, "merge-response") == 0)
-    {
-      push_state(parser, ctx, MERGE_RESPONSE);
-    }
-  else if (state == NONE)
-    {
-      /* do nothing as we haven't seen our valid start tag yet. */
-    }
-  else if (state == MERGE_RESPONSE &&
-           strcmp(name.name, "updated-set") == 0)
-    {
-      push_state(parser, ctx, UPDATED_SET);
-    }
-  else if (state == UPDATED_SET &&
-           strcmp(name.name, "response") == 0)
-    {
-      push_state(parser, ctx, RESPONSE);
-    }
-  else if (state == RESPONSE &&
-           strcmp(name.name, "href") == 0)
-    {
-      info = push_state(parser, ctx, PROP_VAL);
-
-      info->prop_ns = name.namespace;
-      info->prop_name = "href";
-      svn_stringbuf_setempty(info->prop_value);
-    }
-  else if (state == RESPONSE &&
-           strcmp(name.name, "propstat") == 0)
-    {
-      push_state(parser, ctx, PROPSTAT);
-    }
-  else if (state == PROPSTAT &&
-           strcmp(name.name, "prop") == 0)
-    {
-      push_state(parser, ctx, PROP);
-    }
-  else if (state == PROPSTAT &&
-           strcmp(name.name, "status") == 0)
-    {
-      /* Do nothing for now. */
-    }
-  else if (state == PROP &&
-           strcmp(name.name, "resourcetype") == 0)
-    {
-      info = push_state(parser, ctx, RESOURCE_TYPE);
-      info->type = UNSET;
-    }
-  else if (state == RESOURCE_TYPE &&
-           strcmp(name.name, "baseline") == 0)
-    {
-      info = parser->state->private;
-
-      info->type = BASELINE;
-    }
-  else if (state == RESOURCE_TYPE &&
-           strcmp(name.name, "collection") == 0)
-    {
-      info = parser->state->private;
-
-      info->type = COLLECTION;
-    }
-  else if (state == PROP &&
-           strcmp(name.name, "checked-in") == 0)
-    {
-      info = push_state(parser, ctx, IGNORE_PROP_NAME);
-      info->prop_ns = name.namespace;
-      info->prop_name = "checked-in";
-      svn_stringbuf_setempty(info->prop_value);
-    }
-  else if (state == PROP)
-    {
-      push_state(parser, ctx, PROP_VAL);
-    }
-  else if (state == IGNORE_PROP_NAME)
-    {
-      push_state(parser, ctx, PROP_VAL);
-    }
-  else if (state == NEED_PROP_NAME)
-    {
-      info = push_state(parser, ctx, PROP_VAL);
-      info->prop_ns = name.namespace;
-      info->prop_name = apr_pstrdup(info->pool, name.name);
-      svn_stringbuf_setempty(info->prop_value);
-    }
-  else
-    {
-      SVN_ERR_MALFUNCTION();
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-end_merge(svn_ra_serf__xml_parser_t *parser,
-          svn_ra_serf__dav_props_t name,
-          apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__merge_context_t *ctx = parser->user_data;
-  merge_state_e state;
-  merge_info_t *info;
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == NONE)
-    {
-      /* nothing to close yet. */
-      return SVN_NO_ERROR;
-    }
-
-  if (state == RESPONSE &&
-      strcmp(name.name, "response") == 0)
-    {
-      if (info->type == BASELINE)
-        {
-          const char *str;
-
-          str = apr_hash_get(info->props, SVN_DAV__VERSION_NAME,
-                             APR_HASH_KEY_STRING);
-          if (str)
-            {
-              ctx->commit_info->revision = SVN_STR_TO_REV(str);
-            }
-          else
-            {
-              ctx->commit_info->revision = SVN_INVALID_REVNUM;
-            }
-
-          ctx->commit_info->date =
-              apr_pstrdup(ctx->pool,
-                          apr_hash_get(info->props, SVN_DAV__CREATIONDATE,
-                                       APR_HASH_KEY_STRING));
-
-          ctx->commit_info->author =
-              apr_pstrdup(ctx->pool,
-                          apr_hash_get(info->props, "creator-displayname",
-                                       APR_HASH_KEY_STRING));
-
-          ctx->commit_info->post_commit_err =
-             apr_pstrdup(ctx->pool,
-                         apr_hash_get(info->props,
-                                      "post-commit-err", APR_HASH_KEY_STRING));
-        }
-      else
-        {
-          const char *href;
-
-          href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_urlpath__skip_ancestor(ctx->merge_url, href))
-            {
-              return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                       _("A MERGE response for '%s' is not "
-                                         "a child of the destination ('%s')"),
-                                       href, ctx->merge_url);
-            }
-
-          /* We now need to dive all the way into the WC to update the
-           * base VCC url.
-           */
-          if ((! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
-              && ctx->session->wc_callbacks->push_wc_prop)
-            {
-              svn_string_t checked_in_str;
-              const char *checked_in;
-
-              /* From the above check, we know that CTX->MERGE_URL is
-                 an ancestor of HREF.  All that remains is to
-                 determine if HREF is the same as CTX->MERGE_URL, or --
-                 if not -- its relative value as a child thereof. */
-              href = svn_urlpath__skip_ancestor(ctx->merge_url, href);
-
-              checked_in = apr_hash_get(info->props, "checked-in",
-                                        APR_HASH_KEY_STRING);
-              checked_in_str.data = checked_in;
-              checked_in_str.len = strlen(checked_in);
-
-              SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
-                ctx->session->wc_callback_baton, href,
-                SVN_RA_SERF__WC_CHECKED_IN_URL, &checked_in_str, info->pool));
-            }
-        }
-
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == PROPSTAT &&
-           strcmp(name.name, "propstat") == 0)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == PROP &&
-           strcmp(name.name, "prop") == 0)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == RESOURCE_TYPE &&
-           strcmp(name.name, "resourcetype") == 0)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == IGNORE_PROP_NAME || state == NEED_PROP_NAME)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == PROP_VAL)
-    {
-      const char *value;
-
-      if (!info->prop_name)
-        {
-          /* ### gstein sez: dunno what this is about.  */
-          info->prop_name = apr_pstrdup(info->pool, name.name);
-        }
-
-      if (strcmp(info->prop_name, "href") == 0)
-        value = svn_urlpath__canonicalize(info->prop_value->data, info->pool);
-      else
-        value = apr_pstrmemdup(info->pool,
-                               info->prop_value->data, info->prop_value->len);
-
-      /* Set our property. */
-      apr_hash_set(info->props, info->prop_name, APR_HASH_KEY_STRING,
-                   value);
-
-      info->prop_ns = NULL;
-      info->prop_name = NULL;
-      svn_stringbuf_setempty(info->prop_value);
-
-      svn_ra_serf__xml_pop_state(parser);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cdata_merge(svn_ra_serf__xml_parser_t *parser,
-            const char *data,
-            apr_size_t len,
-            apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__merge_context_t *ctx = parser->user_data;
-  merge_state_e state;
-  merge_info_t *info;
-
-  UNUSED_CTX(ctx);
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == PROP_VAL)
-    svn_stringbuf_appendbytes(info->prop_value, data, len);
-
-  return SVN_NO_ERROR;
-}
-
-#endif /* 0 */
-
-
 static svn_error_t *
 setup_merge_headers(serf_bucket_t *headers,
                     void *baton,
                     apr_pool_t *pool)
 {
-  svn_ra_serf__merge_context_t *ctx = baton;
+  merge_context_t *ctx = baton;
 
   if (!ctx->keep_locks)
     {
@@ -629,7 +334,7 @@ create_merge_body(serf_bucket_t **bkt,
                   serf_bucket_alloc_t *alloc,
                   apr_pool_t *pool)
 {
-  svn_ra_serf__merge_context_t *ctx = baton;
+  merge_context_t *ctx = baton;
   serf_bucket_t *body_bkt;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
@@ -681,7 +386,7 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__merge_context_t *merge_ctx;
+  merge_context_t *merge_ctx;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
 
