@@ -10076,7 +10076,7 @@ scan_addition_txn(void *baton,
 
 
     /* ### This loop here is to skip up to the first node which is a BASE node,
-       because base_get_info() doesn't accomodate the scenario that
+       because base_get_info() doesn't accommodate the scenario that
        we're looking at here; we found the true op_root, which may be inside
        further changed trees. */
     while (TRUE)
