@@ -61,10 +61,10 @@ enum {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t gls_ttable[] = {
   { INITIAL, S_, "get-location-segments-report", REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { REPORT, S_, "location-segment", SEGMENT,
-    FALSE, { "?path", "range-start", "range-end", NULL }, FALSE, TRUE },
+    FALSE, { "?path", "range-start", "range-end", NULL }, TRUE },
 
   { 0 }
 };
@@ -177,7 +177,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
-                                           NULL, gls_closed, gls_ctx,
+                                           NULL, gls_closed, NULL,
+                                           gls_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 

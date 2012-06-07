@@ -120,25 +120,25 @@ typedef struct blame_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t blame_ttable[] = {
   { INITIAL, S_, "file-revs-report", FILE_REVS_REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { FILE_REVS_REPORT, S_, "file-rev", FILE_REV,
-    FALSE, { "path", "rev", NULL }, FALSE, TRUE },
+    FALSE, { "path", "rev", NULL }, TRUE },
 
   { FILE_REV, D_, "rev-prop", REV_PROP,
-    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+    TRUE, { "name", "?encoding", NULL }, TRUE },
 
   { FILE_REV, D_, "set-prop", SET_PROP,
-    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+    TRUE, { "name", "?encoding", NULL }, TRUE },
 
   { FILE_REV, D_, "remove-prop", REMOVE_PROP,
-    FALSE, { "name", "?encoding", NULL }, FALSE, TRUE },
+    FALSE, { "name", "?encoding", NULL }, TRUE },
 
   { FILE_REV, D_, "merged-revision", MERGED_REVISION,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { FILE_REV, D_, "txdelta", TXDELTA,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { 0 }
 };

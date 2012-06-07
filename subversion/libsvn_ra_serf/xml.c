@@ -449,9 +449,7 @@ svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
-#ifdef NOT_YET
   svn_ra_serf__xml_cdata_t cdata_cb,
-#endif
   void *baton,
   apr_pool_t *result_pool)
 {
@@ -462,9 +460,7 @@ svn_ra_serf__xml_context_create(
   xmlctx->ttable = ttable;
   xmlctx->opened_cb = opened_cb;
   xmlctx->closed_cb = closed_cb;
-#if 0
   xmlctx->cdata_cb = cdata_cb;
-#endif
   xmlctx->baton = baton;
   xmlctx->scratch_pool = svn_pool_create(result_pool);
 

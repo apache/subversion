@@ -74,28 +74,28 @@ typedef struct lock_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t getlocks_ttable[] = {
   { INITIAL, S_, "get-locks-report", REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { REPORT, S_, "lock", LOCK,
-    FALSE, { NULL }, FALSE, TRUE },
+    FALSE, { NULL }, TRUE },
 
   { LOCK, S_, "path", PATH,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { LOCK, S_, "token", TOKEN,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { LOCK, S_, "owner", OWNER,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { LOCK, S_, "comment", COMMENT,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { LOCK, S_, SVN_DAV__CREATIONDATE, CREATION_DATE,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { LOCK, S_, "expirationdate", EXPIRATION_DATE,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { 0 }
 };
@@ -248,7 +248,8 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_ctx->hash = apr_hash_make(pool);
 
   xmlctx = svn_ra_serf__xml_context_create(getlocks_ttable,
-                                           NULL, getlocks_closed, lock_ctx,
+                                           NULL, getlocks_closed, NULL,
+                                           lock_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
