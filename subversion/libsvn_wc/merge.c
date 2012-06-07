@@ -926,9 +926,10 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
 
 
 /* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to TARGET_ABSPATH.
- * The merge is trivial if the file at LEFT_ABSPATH equals TARGET_ABSPATH,
- * because in this case the content of RIGHT_ABSPATH can be copied to the
- * target. On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
+ * The merge is trivial if the file at LEFT_ABSPATH equals the detranslated
+ * form of the target at DETRANSLATED_TARGET_ABSPATH, because in this case
+ * the content of RIGHT_ABSPATH can be copied to the target.
+ * On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
  * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
  * changed. Install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
  * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE. */
@@ -938,6 +939,7 @@ merge_file_trivial(svn_skel_t **work_items,
                    const char *left_abspath,
                    const char *right_abspath,
                    const char *target_abspath,
+                   const char *detranslated_target_abspath,
                    svn_boolean_t dry_run,
                    svn_wc__db_t *db,
                    apr_pool_t *result_pool,
@@ -960,7 +962,8 @@ merge_file_trivial(svn_skel_t **work_items,
   /* If the LEFT side of the merge is equal to WORKING, then we can
    * copy RIGHT directly. */
   SVN_ERR(svn_io_files_contents_same_p(&same_contents, left_abspath,
-                                       target_abspath, scratch_pool));
+                                       detranslated_target_abspath,
+                                       scratch_pool));
   if (same_contents)
     {
       /* Check whether the left side equals the right side.
@@ -1418,8 +1421,8 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
   SVN_ERR(merge_file_trivial(work_items, merge_outcome,
                              left_abspath, right_abspath,
-                             target_abspath, dry_run, db,
-                             result_pool, scratch_pool));
+                             target_abspath, detranslated_target_abspath,
+                             dry_run, db, result_pool, scratch_pool));
   if (*merge_outcome == svn_wc_merge_no_merge)
     {
       if (is_binary)

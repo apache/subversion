@@ -1583,7 +1583,6 @@ tweak_statushash(void *baton,
                  svn_boolean_t is_dir_baton,
                  svn_wc__db_t *db,
                  const char *local_abspath,
-                 svn_boolean_t is_dir,
                  enum svn_wc_status_kind repos_node_status,
                  enum svn_wc_status_kind repos_text_status,
                  enum svn_wc_status_kind repos_prop_status,
@@ -1672,7 +1671,7 @@ tweak_statushash(void *baton,
          isn't available. */
       if (statstruct->repos_node_status == svn_wc_status_deleted)
         {
-          statstruct->ood_kind = is_dir ? svn_node_dir : svn_node_file;
+          statstruct->ood_kind = statstruct->kind;
 
           /* Pre 1.5 servers don't provide the revision a path was deleted.
              So we punt and use the last committed revision of the path's
@@ -2068,16 +2067,13 @@ delete_entry(const char *path,
   struct dir_baton *db = parent_baton;
   struct edit_baton *eb = db->edit_baton;
   const char *local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
-  svn_kind_t kind;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
      close_dir, because there's no risk of having to honor the 'added'
      flag.  We already know this item exists in the working copy. */
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
   SVN_ERR(tweak_statushash(db, db, TRUE, eb->db,
-                           local_abspath, kind == svn_kind_dir,
+                           local_abspath,
                            svn_wc_status_deleted, 0, 0, revision, NULL, pool));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
@@ -2086,7 +2082,6 @@ delete_entry(const char *path,
   if (db->parent_baton && (! *eb->target_basename))
     SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE,eb->db,
                              db->local_abspath,
-                             kind == svn_kind_dir,
                              svn_wc_status_modified, svn_wc_status_modified,
                              0, SVN_INVALID_REVNUM, NULL, pool));
 
@@ -2209,7 +2204,7 @@ close_directory(void *dir_baton,
           /* ### When we add directory locking, we need to find a
              ### directory lock here. */
           SVN_ERR(tweak_statushash(pb, db, TRUE, eb->db, db->local_abspath,
-                                   TRUE, repos_node_status, repos_text_status,
+                                   repos_node_status, repos_text_status,
                                    repos_prop_status, SVN_INVALID_REVNUM, NULL,
                                    pool));
         }
@@ -2454,7 +2449,7 @@ close_file(void *file_baton,
     }
 
   return tweak_statushash(fb, NULL, FALSE, fb->edit_baton->db,
-                          fb->local_abspath, FALSE, repos_node_status,
+                          fb->local_abspath, repos_node_status,
                           repos_text_status, repos_prop_status,
                           SVN_INVALID_REVNUM, repos_lock, pool);
 }
@@ -2649,9 +2644,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   wb.repos_root = NULL;
   wb.repos_locks = NULL;
 
-  SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
   if (!ignore_patterns)
@@ -2673,7 +2665,12 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
         }
       else
         return svn_error_trace(err);
+
+      wb.externals = apr_hash_make(scratch_pool);
     }
+  else
+    SVN_ERR(svn_wc__db_externals_defined_below(&wb.externals, db, local_abspath,
+                                               scratch_pool, scratch_pool));
 
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
@@ -2703,15 +2700,27 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
       /* It may be a file or an unversioned item. And this is an explicit
        * target, so no ignoring. An unversioned item (file or dir) shows a
        * status like '?', and can yield a tree conflicted path. */
-      SVN_ERR(get_child_status(&wb,
-                               local_abspath,
-                               info,
-                               dirent,
-                               ignore_patterns,
-                               get_all,
-                               status_func, status_baton,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
+      err = get_child_status(&wb,
+                             local_abspath,
+                             info,
+                             dirent,
+                             ignore_patterns,
+                             get_all,
+                             status_func, status_baton,
+                             cancel_func, cancel_baton,
+                             scratch_pool);
+
+      if (!info && err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* The parent is also not versioned, but it is not nice to show
+             an error about a path a user didn't intend to touch. */
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
+      SVN_ERR(err);
     }
 
   return SVN_NO_ERROR;

@@ -99,47 +99,47 @@ typedef struct log_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t log_ttable[] = {
   { INITIAL, S_, "log-report", REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   /* Note that we have an opener here. We need to construct a new LOG_ENTRY
      to record multiple paths.  */
   { REPORT, S_, "log-item", ITEM,
-    FALSE, { NULL }, TRUE, TRUE },
+    FALSE, { NULL }, TRUE },
 
   { ITEM, D_, SVN_DAV__VERSION_NAME, VERSION,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { ITEM, D_, "creator-displayname", CREATOR,
-    TRUE, { "?encoding", NULL }, FALSE, TRUE },
+    TRUE, { "?encoding", NULL }, TRUE },
 
   { ITEM, S_, "date", DATE,
-    TRUE, { "?encoding", NULL }, FALSE, TRUE },
+    TRUE, { "?encoding", NULL }, TRUE },
 
   { ITEM, D_, "comment", COMMENT,
-    TRUE, { "?encoding", NULL }, FALSE, TRUE },
+    TRUE, { "?encoding", NULL }, TRUE },
 
   { ITEM, S_, "revprop", REVPROP,
-    TRUE, { "name", "?encoding", NULL }, FALSE, TRUE },
+    TRUE, { "name", "?encoding", NULL }, TRUE },
 
   { ITEM, S_, "has-children", HAS_CHILDREN,
-    FALSE, { NULL }, FALSE, TRUE },
+    FALSE, { NULL }, TRUE },
 
   { ITEM, S_, "subtractive-merge", SUBTRACTIVE_MERGE,
-    FALSE, { NULL }, FALSE, TRUE },
+    FALSE, { NULL }, TRUE },
 
   { ITEM, S_, "added-path", ADDED_PATH,
     TRUE, { "?node-kind", "?text-mods", "?prop-mods",
-            "?copyfrom-path", "?copyfrom-rev", NULL }, FALSE, TRUE },
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ITEM, S_, "replaced-path", REPLACED_PATH,
     TRUE, { "?node-kind", "?text-mods", "?prop-mods",
-            "?copyfrom-path", "?copyfrom-rev", NULL }, FALSE, TRUE },
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ITEM, S_, "deleted-path", DELETED_PATH,
-    TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, FALSE, TRUE },
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, TRUE },
 
   { ITEM, S_, "modified-path", MODIFIED_PATH,
-    TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, FALSE, TRUE },
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, TRUE },
 
   { 0 }
 };
@@ -237,15 +237,18 @@ static svn_error_t *
 log_opened(svn_ra_serf__xml_estate_t *xes,
            void *baton,
            int entered_state,
+           const svn_ra_serf__dav_props_t *tag,
            apr_pool_t *scratch_pool)
 {
   log_context_t *log_ctx = baton;
-  apr_pool_t *state_pool = svn_ra_serf__xml_state_pool(xes);
 
-  SVN_ERR_ASSERT(entered_state == ITEM);
+  if (entered_state == ITEM)
+    {
+      apr_pool_t *state_pool = svn_ra_serf__xml_state_pool(xes);
 
-  log_ctx->collect_revprops = apr_hash_make(state_pool);
-  log_ctx->collect_paths = apr_hash_make(state_pool);
+      log_ctx->collect_revprops = apr_hash_make(state_pool);
+      log_ctx->collect_paths = apr_hash_make(state_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -582,7 +585,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(log_ttable,
-                                           log_opened, log_closed, log_ctx,
+                                           log_opened, log_closed, NULL,
+                                           log_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 

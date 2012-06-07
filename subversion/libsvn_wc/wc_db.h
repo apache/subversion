@@ -941,6 +941,18 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
                              apr_pool_t *scratch_pool);
 
 
+/* If necessary transfers the PRISTINE file of SRC_LOCAL_ABSPATH to the
+   working copy identified by DST_WRI_ABSPATH. If CHECKSUM is not NULL, use
+   CHECKSUM to identify which pristine file to transfer. */
+svn_error_t *
+svn_wc__db_pristine_transfer(svn_wc__db_t *db,
+                             const char *src_local_abspath,
+                             const svn_checksum_t *checksum,
+                             const char *dst_wri_abspath,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool);
+
 /* Remove the pristine text with SHA-1 checksum SHA1_CHECKSUM from the
  * pristine store, iff it is not referenced by any of the (other) WC DB
  * tables. */
@@ -2059,6 +2071,22 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+
+/** Obtain a mapping of const char * local_abspaths to const svn_string_t*
+ * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
+ * and its descendants.
+ *
+ * Allocate the result in RESULT_POOL, and perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *propname,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /* Set *CHILDREN to a new array of the (const char *) basenames of the
    immediate children of the working node at LOCAL_ABSPATH in DB.
 
@@ -2149,12 +2177,16 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
    If the node is missing and ALLOW_MISSING is FALSE, then it will return
    SVN_ERR_WC_PATH_NOT_FOUND.
 
+   If SHOW_HIDDEN is FALSE and the status of LOCAL_ABSPATH is NOT_PRESENT or
+   EXCLUDED, set KIND to svn_kind_none.
+
    Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
 svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
 
 

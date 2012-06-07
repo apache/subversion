@@ -264,7 +264,10 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 
   /* Only check kind after processing the node itself. The node might
      have been deleted */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                               TRUE /* allow_missing */,
+                               TRUE /* show_hidden */,
+                               scratch_pool));
 
   if (recurse && kind == svn_kind_dir)
     {
@@ -1805,25 +1808,30 @@ revert_restore(svn_wc__db_t *db,
                 }
               else
                 {
-                  svn_boolean_t read_only;
-                  svn_string_t *needs_lock_prop;
-
-                  SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
-                                                     scratch_pool));
-
-                  needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
-                                                 APR_HASH_KEY_STRING);
-                  if (needs_lock_prop && !read_only)
+                  if (status == svn_wc__db_status_normal)
                     {
-                      SVN_ERR(svn_io_set_file_read_only(local_abspath,
-                                                        FALSE, scratch_pool));
-                      notify_required = TRUE;
-                    }
-                  else if (!needs_lock_prop && read_only)
-                    {
-                      SVN_ERR(svn_io_set_file_read_write(local_abspath,
-                                                         FALSE, scratch_pool));
-                      notify_required = TRUE;
+                      svn_boolean_t read_only;
+                      svn_string_t *needs_lock_prop;
+
+                      SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
+                                                         scratch_pool));
+
+                      needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
+                                                     APR_HASH_KEY_STRING);
+                      if (needs_lock_prop && !read_only)
+                        {
+                          SVN_ERR(svn_io_set_file_read_only(local_abspath,
+                                                            FALSE,
+                                                            scratch_pool));
+                          notify_required = TRUE;
+                        }
+                      else if (!needs_lock_prop && read_only)
+                        {
+                          SVN_ERR(svn_io_set_file_read_write(local_abspath,
+                                                             FALSE,
+                                                             scratch_pool));
+                          notify_required = TRUE;
+                        }
                     }
 
 #if !defined(WIN32) && !defined(__OS2__)
@@ -2119,7 +2127,9 @@ revert_partial(svn_wc__db_t *db,
         {
           svn_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                                       FALSE /* allow_missing */,
+                                       FALSE /* show_hidden */,
                                        iterpool));
           if (kind != svn_kind_file)
             continue;

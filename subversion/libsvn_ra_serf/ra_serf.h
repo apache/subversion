@@ -618,11 +618,21 @@ typedef struct svn_ra_serf__xml_context_t svn_ra_serf__xml_context_t;
 /* An opaque structure for the XML parse element/state.  */
 typedef struct svn_ra_serf__xml_estate_t svn_ra_serf__xml_estate_t;
 
-/* Called just after the parser moves into ENTERED_STATE.  */
+/* Called just after the parser moves into ENTERED_STATE. The tag causing
+   the transition is passed in TAG.
+
+   This callback is applied to a parsing context by using the
+   svn_ra_serf__xml_context_customize() function.
+
+   NOTE: this callback, when set, will be invoked on *every* transition.
+   The callback must examine ENTERED_STATE to determine if any action
+   must be taken. The original state is not provided, but must be derived
+   from ENTERED_STATE and/or the TAG causing the transition (if needed).  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_opened_t)(svn_ra_serf__xml_estate_t *xes,
                              void *baton,
                              int entered_state,
+                             const svn_ra_serf__dav_props_t *tag,
                              apr_pool_t *scratch_pool);
 
 
@@ -644,6 +654,16 @@ typedef svn_error_t *
                              const svn_string_t *cdata,
                              apr_hash_t *attrs,
                              apr_pool_t *scratch_pool);
+
+
+/* ### TBD  */
+typedef svn_error_t *
+(*svn_ra_serf__xml_cdata_t)(svn_ra_serf__xml_estate_t *xes,
+                            void *baton,
+                            int current_state,
+                            const char *data,
+                            apr_size_t *len,
+                            apr_pool_t *scratch_pool);
 
 
 /* State transition table.
@@ -678,20 +698,19 @@ typedef struct svn_ra_serf__xml_transition_t {
      exist on the element, or SVN_ERR_XML_ATTRIB_NOT_FOUND will be raised.  */
   const char *collect_attrs[11];
 
-  /* When NAME is opened, should the callback be invoked?  */
-  svn_boolean_t custom_open;
-
   /* When NAME is closed, should the callback be invoked?  */
   svn_boolean_t custom_close;
 
 } svn_ra_serf__xml_transition_t;
 
 
+/* ### docco  */
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
+  svn_ra_serf__xml_cdata_t cdata_cb,
   void *baton,
   apr_pool_t *result_pool);
 
@@ -768,12 +787,6 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
 struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
-
-  /* Have we checked to see if there's an XML error in this response? */
-  svn_boolean_t init;
-
-  /* Was there an XML error response? */
-  svn_boolean_t has_xml_response;
 
   /* Are we done with the response? */
   svn_boolean_t done;

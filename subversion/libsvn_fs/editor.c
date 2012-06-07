@@ -214,7 +214,7 @@ can_modify(svn_fs_root_t *txn_root,
   if (!SVN_IS_VALID_REVNUM(revision))
     /* ### use a custom error code?  */
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             N_("Revision for modifying '%s' is required"),
+                             _("Revision for modifying '%s' is required"),
                              fspath);
 #endif
 
@@ -451,7 +451,7 @@ add_absent_cb(void *baton,
   /* ### use a custom error code  */
   return svn_error_create(
            SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           N_("The filesystem does not support 'absent' nodes"));
+           _("The filesystem does not support 'absent' nodes"));
 }
 
 

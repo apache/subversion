@@ -902,9 +902,7 @@ begin_error_parsing(svn_ra_serf__xml_start_element_t start,
   svn_ra_serf__server_error_t *server_err;
 
   server_err = apr_pcalloc(result_pool, sizeof(*server_err));
-  server_err->init = TRUE;
   server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
-  server_err->has_xml_response = TRUE;
   server_err->contains_precondition_error = FALSE;
   server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
   server_err->collect_cdata = FALSE;
@@ -926,59 +924,6 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  apr_pool_t *pool)
 {
   apr_status_t status;
-  svn_ra_serf__server_error_t *server_err = baton;
-
-  if (server_err)
-    {
-      if (!server_err->init)
-        {
-          serf_bucket_t *hdrs;
-          const char *val;
-
-          server_err->init = TRUE;
-          hdrs = serf_bucket_response_get_headers(response);
-          val = serf_bucket_headers_get(hdrs, "Content-Type");
-          if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
-            {
-              /* ### we should figure out how to reuse begin_error_parsing  */
-
-              server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
-              server_err->has_xml_response = TRUE;
-              server_err->contains_precondition_error = FALSE;
-              server_err->cdata = svn_stringbuf_create_empty(pool);
-              server_err->collect_cdata = FALSE;
-              server_err->parser.pool = server_err->error->pool;
-              server_err->parser.user_data = server_err;
-              server_err->parser.start = start_error;
-              server_err->parser.end = end_error;
-              server_err->parser.cdata = cdata_error;
-              server_err->parser.done = &server_err->done;
-              server_err->parser.ignore_errors = TRUE;
-            }
-          else
-            {
-              server_err->error = SVN_NO_ERROR;
-            }
-        }
-
-      if (server_err->has_xml_response)
-        {
-          svn_error_t *err = svn_ra_serf__handle_xml_parser(
-                                                        request,
-                                                        response,
-                                                        &server_err->parser,
-                                                        pool);
-
-          if (server_err->done && server_err->error->apr_err == APR_SUCCESS)
-            {
-              svn_error_clear(server_err->error);
-              server_err->error = SVN_NO_ERROR;
-            }
-
-          return svn_error_trace(err);
-        }
-
-    }
 
   status = drain_bucket(response);
   if (status)
@@ -1457,11 +1402,51 @@ handle_server_error(serf_request_t *request,
                     apr_pool_t *scratch_pool)
 {
   svn_ra_serf__server_error_t server_err = { 0 };
+  serf_bucket_t *hdrs;
+  const char *val;
 
-  svn_error_clear(svn_ra_serf__handle_discard_body(request, response,
-                                                   &server_err, scratch_pool));
+  hdrs = serf_bucket_response_get_headers(response);
+  val = serf_bucket_headers_get(hdrs, "Content-Type");
+  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+    {
+      /* ### we should figure out how to reuse begin_error_parsing  */
 
-  return server_err.error;
+      server_err.error = svn_error_create(APR_SUCCESS, NULL, NULL);
+      server_err.contains_precondition_error = FALSE;
+      server_err.cdata = svn_stringbuf_create_empty(scratch_pool);
+      server_err.collect_cdata = FALSE;
+      server_err.parser.pool = server_err.error->pool;
+      server_err.parser.user_data = &server_err;
+      server_err.parser.start = start_error;
+      server_err.parser.end = end_error;
+      server_err.parser.cdata = cdata_error;
+      server_err.parser.done = &server_err.done;
+      server_err.parser.ignore_errors = TRUE;
+
+      /* We don't care about any errors except for SERVER_ERR.ERROR  */
+      svn_error_clear(svn_ra_serf__handle_xml_parser(request,
+                                                     response,
+                                                     &server_err.parser,
+                                                     scratch_pool));
+
+      /* ### checking DONE is silly. the above only parses whatever has
+         ### been received at the network interface. totally wrong. but
+         ### it is what we have for now (maintaining historical code),
+         ### until we fully migrate.  */
+      if (server_err.done && server_err.error->apr_err == APR_SUCCESS)
+        {
+          svn_error_clear(server_err.error);
+          server_err.error = SVN_NO_ERROR;
+        }
+
+      return svn_error_trace(server_err.error);
+    }
+
+  /* The only error that we will return is from the XML response body.
+     Otherwise, ignore the entire body and return success.  */
+  (void) drain_bucket(response);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1491,10 +1476,14 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       err = handle_server_error(request, response, pool);
 
-      SVN_ERR(svn_error_compose_create(
-        svn_ra_serf__handle_discard_body(request, response, NULL, pool),
-        err));
-      return SVN_NO_ERROR;
+      /* ### the above call should have drained the entire response. this
+         ### call is historical, and probably not required. but during
+         ### the rework of this core handling... let's keep it for now.  */
+      status = drain_bucket(response);
+      if (status)
+        err = svn_error_compose_create(svn_error_wrap_apr(status, NULL),
+                                       err);
+      return svn_error_trace(err);
     }
 
   if (ctx->headers_baton == NULL)

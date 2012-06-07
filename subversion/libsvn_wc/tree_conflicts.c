@@ -158,14 +158,17 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
                             _("Invalid version info in tree conflict "
                               "description"));
 
-  repos_root = apr_pstrmemdup(result_pool,
-                                           skel->children->next->data,
-                                           skel->children->next->len);
+  repos_root = apr_pstrmemdup(scratch_pool,
+                              skel->children->next->data,
+                              skel->children->next->len);
   if (*repos_root == '\0')
     {
       *version_info = NULL;
       return SVN_NO_ERROR;
     }
+
+  /* Apply the Subversion 1.7+ url canonicalization rules to a pre 1.7 url */
+  repos_root = svn_uri_canonicalize(repos_root, result_pool);
 
   peg_rev = SVN_STR_TO_REV(apr_pstrmemdup(scratch_pool,
                                           skel->children->next->next->data,
