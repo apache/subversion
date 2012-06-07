@@ -40,13 +40,13 @@ public class CommonContext
             listener.onProgress(event);
     }
 
-	public ProgressCallback getListener()
-	{
-		return listener;
-	}
+    public ProgressCallback getListener()
+    {
+        return listener;
+    }
 
-	public void setListener(ProgressCallback listener)
-	{
-		this.listener = listener;
-	}
+    public void setListener(ProgressCallback listener)
+    {
+        this.listener = listener;
+    }
 }
