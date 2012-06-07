@@ -67,6 +67,8 @@
 #
 # To prevent the server from advertising httpv2, pass USE_HTTPV1 in
 # the environment.
+#
+# To enable "SVNCacheRevProps on" set CACHE_REVPROPS in the environment.
 # 
 # To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
 # appropriate value in the environment.
@@ -184,6 +186,11 @@ fi
 SVN_PATH_AUTHZ_LINE=""
 if [ ${SVN_PATH_AUTHZ:+set} ]; then
  SVN_PATH_AUTHZ_LINE="SVNPathAuthz      ${SVN_PATH_AUTHZ}"
+fi
+
+CACHE_REVPROPS_SETTING=off
+if [ ${CACHE_REVPROPS:+set} ]; then
+  CACHE_REVPROPS_SETTING=on
 fi
 
 # Find the source and build directories. The build dir can be found if it is
@@ -380,6 +387,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /svn-test-work/local_tmp/repos>
