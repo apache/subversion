@@ -1187,7 +1187,7 @@ ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	JAVAHL_FLAG=--enable-javahl=yes --with-jdk --with-jikes=no \
 		--with-junit=$(DISTDIR)/$(JUNIT_DIST)
 else
-	JAVAHL_FLAG=--enable-javahl=no
+	JAVAHL_FLAG=--with-jdk=no
 endif
 
 ifdef PROFILE
