@@ -618,11 +618,21 @@ typedef struct svn_ra_serf__xml_context_t svn_ra_serf__xml_context_t;
 /* An opaque structure for the XML parse element/state.  */
 typedef struct svn_ra_serf__xml_estate_t svn_ra_serf__xml_estate_t;
 
-/* Called just after the parser moves into ENTERED_STATE.  */
+/* Called just after the parser moves into ENTERED_STATE. The tag causing
+   the transition is passed in TAG.
+
+   This callback is applied to a parsing context by using the
+   svn_ra_serf__xml_context_customize() function.
+
+   NOTE: this callback, when set, will be invoked on *every* transition.
+   The callback must examine ENTERED_STATE to determine if any action
+   must be taken. The original state is not provided, but must be derived
+   from ENTERED_STATE and/or the TAG causing the transition (if needed).  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_opened_t)(svn_ra_serf__xml_estate_t *xes,
                              void *baton,
                              int entered_state,
+                             const svn_ra_serf__dav_props_t *tag,
                              apr_pool_t *scratch_pool);
 
 
@@ -644,6 +654,16 @@ typedef svn_error_t *
                              const svn_string_t *cdata,
                              apr_hash_t *attrs,
                              apr_pool_t *scratch_pool);
+
+
+/* ### TBD  */
+typedef svn_error_t *
+(*svn_ra_serf__xml_cdata_t)(svn_ra_serf__xml_estate_t *xes,
+                            void *baton,
+                            int current_state,
+                            const char *data,
+                            apr_size_t *len,
+                            apr_pool_t *scratch_pool);
 
 
 /* State transition table.
@@ -687,11 +707,15 @@ typedef struct svn_ra_serf__xml_transition_t {
 } svn_ra_serf__xml_transition_t;
 
 
+/* ### docco  */
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
+#ifdef NOT_YET
+  svn_ra_serf__xml_cdata_t cdata_cb,
+#endif
   void *baton,
   apr_pool_t *result_pool);
 

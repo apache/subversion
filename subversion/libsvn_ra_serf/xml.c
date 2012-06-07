@@ -55,6 +55,7 @@ struct svn_ra_serf__xml_context_t {
   /* The callback information.  */
   svn_ra_serf__xml_opened_t opened_cb;
   svn_ra_serf__xml_closed_t closed_cb;
+  svn_ra_serf__xml_cdata_t cdata_cb;
   void *baton;
 
   /* Linked list of free states.  */
@@ -448,6 +449,9 @@ svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
+#ifdef NOT_YET
+  svn_ra_serf__xml_cdata_t cdata_cb,
+#endif
   void *baton,
   apr_pool_t *result_pool)
 {
@@ -458,6 +462,9 @@ svn_ra_serf__xml_context_create(
   xmlctx->ttable = ttable;
   xmlctx->opened_cb = opened_cb;
   xmlctx->closed_cb = closed_cb;
+#if 0
+  xmlctx->cdata_cb = cdata_cb;
+#endif
   xmlctx->baton = baton;
   xmlctx->scratch_pool = svn_pool_create(result_pool);
 
@@ -648,11 +655,12 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
   new_xes->prev = current;
   xmlctx->current = new_xes;
 
-  if (scan->custom_open)
+  if (xmlctx->opened_cb)
     {
       START_CALLBACK(xmlctx);
       SVN_ERR(xmlctx->opened_cb(new_xes, xmlctx->baton,
-                                new_xes->state, xmlctx->scratch_pool));
+                                new_xes->state, &new_xes->tag,
+                                xmlctx->scratch_pool));
       END_CALLBACK(xmlctx);
       svn_pool_clear(xmlctx->scratch_pool);
     }
