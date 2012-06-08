@@ -1200,6 +1200,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
   apr_pool_t *scratch_pool;
+  svn_error_t *err;
 
   if (parser->error)
     return;
@@ -1214,7 +1215,11 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
 
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->start(parser, name, attrs, scratch_pool);
+  err = parser->start(parser, name, attrs, scratch_pool);
+  if (err && APR_STATUS_IS_EOF(err->apr_err))
+    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  parser->error = err;
 }
 
 
@@ -1224,6 +1229,7 @@ end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
+  svn_error_t *err;
   apr_pool_t *scratch_pool;
 
   if (parser->error)
@@ -1234,7 +1240,11 @@ end_xml(void *userData, const char *raw_name)
 
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->end(parser, name, scratch_pool);
+  err = parser->end(parser, name, scratch_pool);
+  if (err && APR_STATUS_IS_EOF(err->apr_err))
+    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  parser->error = err;
 }
 
 
@@ -1243,6 +1253,7 @@ static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+  svn_error_t *err;
   apr_pool_t *scratch_pool;
 
   if (parser->error)
@@ -1254,7 +1265,11 @@ cdata_xml(void *userData, const char *data, int len)
   /* ### get a real scratch_pool  */
   scratch_pool = parser->state->pool;
 
-  parser->error = parser->cdata(parser, data, len, scratch_pool);
+  err = parser->cdata(parser, data, len, scratch_pool);
+  if (err && APR_STATUS_IS_EOF(err->apr_err))
+    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  parser->error = err;
 }
 
 /* Flip the requisite bits in CTX to indicate that processing of the
