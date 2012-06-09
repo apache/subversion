@@ -432,15 +432,15 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
       is_match = TRUE;
       for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
         {
-          apr_uintptr_t chunk = *(const apr_size_t *)(file[0].curp + delta);
+          apr_uintptr_t chunk = *(const apr_uintptr_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
             break;
 
           for (i = 1; i < file_len; i++)
-            if (chunk != *(const apr_size_t *)(file[i].curp + delta))
+            if (chunk != *(const apr_uintptr_t *)(file[i].curp + delta))
               {
                 is_match = FALSE;
-                delta -= sizeof(apr_size_t);
+                delta -= sizeof(apr_uintptr_t);
                 break;
               }
         }
