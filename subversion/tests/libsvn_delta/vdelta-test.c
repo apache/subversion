@@ -60,10 +60,11 @@ do_one_diff(apr_file_t *source_file, apr_file_t *target_file,
 
   *count = 0;
   *len = 0;
-  svn_txdelta(&delta_stream,
-              svn_stream_from_aprfile(source_file, fpool),
-              svn_stream_from_aprfile(target_file, fpool),
-              fpool);
+  svn_txdelta2(&delta_stream,
+               svn_stream_from_aprfile(source_file, fpool),
+               svn_stream_from_aprfile(target_file, fpool),
+               FALSE,
+               fpool);
   do {
     svn_error_t *err;
     err = svn_txdelta_next_window(&delta_window, delta_stream, wpool);
@@ -124,14 +125,16 @@ do_one_test_cycle(apr_file_t *source_file_A, apr_file_t *target_file_A,
         apr_file_seek(target_file_B, APR_SET, &offset);
       }
 
-      svn_txdelta(&stream_A,
-                  svn_stream_from_aprfile(source_file_A, fpool),
-                  svn_stream_from_aprfile(target_file_A, fpool),
-                  fpool);
-      svn_txdelta(&stream_B,
-                  svn_stream_from_aprfile(source_file_B, fpool),
-                  svn_stream_from_aprfile(target_file_B, fpool),
-                  fpool);
+      svn_txdelta2(&stream_A,
+                   svn_stream_from_aprfile(source_file_A, fpool),
+                   svn_stream_from_aprfile(target_file_A, fpool),
+                   FALSE,
+                   fpool);
+      svn_txdelta2(&stream_B,
+                   svn_stream_from_aprfile(source_file_B, fpool),
+                   svn_stream_from_aprfile(target_file_B, fpool),
+                   FALSE,
+                   fpool);
 
       for (count_AB = 0; count_AB < count_B; ++count_AB)
         {
