@@ -4115,7 +4115,11 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   else
     source_stream = svn_stream_empty(pool);
   SVN_ERR(read_representation(&target_stream, fs, target->data_rep, pool));
-  svn_txdelta(stream_p, source_stream, target_stream, pool);
+
+  /* Because source and target stream will already verify their content,
+   * there is no need to do this once more.  In particular if the stream
+   * content is being fetched from cache. */
+  svn_txdelta2(stream_p, source_stream, target_stream, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
