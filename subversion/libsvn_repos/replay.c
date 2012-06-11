@@ -338,12 +338,6 @@ add_subdir(svn_fs_root_t *source_root,
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-is_within_base_path(const char *path, const char *base_path)
-{
-  return svn_relpath_skip_ancestor(base_path, path) != NULL;
-}
-
 /* Given PATH deleted under ROOT, return in READABLE whether the path was
    readable prior to the deletion.  Consult COPIES (a stack of 'struct
    copy_info') and AUTHZ_READ_FUNC. */
@@ -567,7 +561,7 @@ path_driver_cb_func(void **dir_baton,
          all. */
       if (copyfrom_path
           && ((! src_readable)
-              || (! is_within_base_path(copyfrom_path + 1, base_path))
+              || (svn_relpath_skip_ancestor(base_path, copyfrom_path + 1) == NULL)
               || (cb->low_water_mark > copyfrom_rev)))
         {
           copyfrom_path = NULL;
@@ -851,14 +845,7 @@ svn_repos_replay2(svn_fs_root_t *root,
 
           /* If the base_path doesn't match the top directory of this path
              we don't want anything to do with it... */
-          if (is_within_base_path(path, base_path))
-            {
-              APR_ARRAY_PUSH(paths, const char *) = path;
-              apr_hash_set(changed_paths, path, keylen, change);
-            }
-          /* ...unless this was a change to one of the parent directories of
-             base_path. */
-          else if (is_within_base_path(base_path, path))
+          if (svn_relpath_skip_ancestor(base_path, path) != NULL)
             {
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
