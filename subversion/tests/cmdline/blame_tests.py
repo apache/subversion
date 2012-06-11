@@ -333,6 +333,7 @@ def blame_eol_styles(sbox):
 
   # do the test for each eol-style
   for eol in ['CR', 'LF', 'CRLF', 'native']:
+    svntest.main.run_svn(None, 'propdel', 'svn:eol-style', file_path)
     svntest.main.file_write(file_path, "This is no longer the file 'iota'.\n")
 
     for i in range(1,3):
