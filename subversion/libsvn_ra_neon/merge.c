@@ -627,7 +627,7 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
 
   buf_size += SVN_LEN(SVN_LOCK_TOKEN_LIST_CLOSE);
 
-  svn_stringbuf_ensure(lockbuf, buf_size + 1);
+  svn_stringbuf_ensure(lockbuf, buf_size);
 
   /* Now append all the temporary hash's keys and values into the
      stringbuf.  This is better than doing apr_pstrcat() in a loop,

@@ -699,7 +699,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
               ? len
               : SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD;
 
-      svn_stringbuf_ensure(stringbuf, stringbuf->len + readbuf_len + 1);
+      svn_stringbuf_ensure(stringbuf, stringbuf->len + readbuf_len);
       dest = stringbuf->data + stringbuf->len;
     }
 
