@@ -137,7 +137,6 @@ struct path_driver_cb_baton
   void *authz_read_baton;
 
   const char *base_path; /* relpath */
-  size_t base_path_len;
 
   svn_revnum_t low_water_mark;
   /* Stack of active copy operations. */
@@ -340,8 +339,7 @@ add_subdir(svn_fs_root_t *source_root,
 }
 
 static svn_boolean_t
-is_within_base_path(const char *path, const char *base_path,
-                    apr_ssize_t base_len)
+is_within_base_path(const char *path, const char *base_path)
 {
   return svn_relpath_skip_ancestor(base_path, path) != NULL;
 }
@@ -480,7 +478,6 @@ path_driver_cb_func(void **dir_baton,
   svn_fs_root_t *source_root = cb->compare_root;
   const char *source_fspath = NULL;
   const char *base_path = cb->base_path;
-  size_t base_path_len = cb->base_path_len;
 
   *dir_baton = NULL;
 
@@ -570,8 +567,7 @@ path_driver_cb_func(void **dir_baton,
          all. */
       if (copyfrom_path
           && ((! src_readable)
-              || (! is_within_base_path(copyfrom_path + 1, base_path,
-                                        base_path_len))
+              || (! is_within_base_path(copyfrom_path + 1, base_path))
               || (cb->low_water_mark > copyfrom_rev)))
         {
           copyfrom_path = NULL;
@@ -806,7 +802,6 @@ svn_repos_replay2(svn_fs_root_t *root,
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
-  size_t base_path_len;
 
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
@@ -823,8 +818,6 @@ svn_repos_replay2(svn_fs_root_t *root,
     base_path = "";
   else if (base_path[0] == '/')
     ++base_path;
-
-  base_path_len = strlen(base_path);
 
   /* Make an array from the keys of our CHANGED_PATHS hash, and copy
      the values into a new hash whose keys have no leading slashes. */
@@ -858,14 +851,14 @@ svn_repos_replay2(svn_fs_root_t *root,
 
           /* If the base_path doesn't match the top directory of this path
              we don't want anything to do with it... */
-          if (is_within_base_path(path, base_path, base_path_len))
+          if (is_within_base_path(path, base_path))
             {
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
             }
           /* ...unless this was a change to one of the parent directories of
              base_path. */
-          else if (is_within_base_path(base_path, path, keylen))
+          else if (is_within_base_path(base_path, path))
             {
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
@@ -886,7 +879,6 @@ svn_repos_replay2(svn_fs_root_t *root,
   cb_baton.authz_read_func = authz_read_func;
   cb_baton.authz_read_baton = authz_read_baton;
   cb_baton.base_path = base_path;
-  cb_baton.base_path_len = base_path_len;
   cb_baton.low_water_mark = low_water_mark;
   cb_baton.compare_root = NULL;
 
