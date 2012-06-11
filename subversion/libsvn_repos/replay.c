@@ -850,6 +850,13 @@ svn_repos_replay2(svn_fs_root_t *root,
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
             }
+          /* ...unless this was a change to one of the parent directories of
+             base_path. */
+          else if (svn_relpath_skip_ancestor(path, base_path) != NULL)
+            {
+              APR_ARRAY_PUSH(paths, const char *) = path;
+              apr_hash_set(changed_paths, path, keylen, change);
+            }
         }
     }
 
