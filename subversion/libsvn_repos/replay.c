@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_delta_private.h"
 
 
 /*** Backstory ***/
@@ -791,6 +792,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                   void *authz_read_baton,
                   apr_pool_t *pool)
 {
+#if 1
   apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
   apr_hash_index_t *hi;
@@ -901,6 +903,54 @@ svn_repos_replay2(svn_fs_root_t *root,
   return svn_delta_path_driver(editor, edit_baton,
                                SVN_INVALID_REVNUM, paths,
                                path_driver_cb_func, &cb_baton, pool);
+#else
+  svn_editor_t *editorv2;
+  struct svn_delta__extra_baton *exb;
+  svn_delta__unlock_func_t unlock_func;
+  svn_boolean_t send_abs_paths;
+  const char *repos_root = "";
+  void *unlock_baton;
+
+  /* Special-case r0, which we know is an empty revision; if we don't
+     special-case it we might end up trying to compare it to "r-1". */
+  if (svn_fs_is_revision_root(root)
+        && svn_fs_revision_root_revision(root) == 0)
+    {
+      SVN_ERR(editor->set_target_revision(edit_baton, 0, pool));
+      return SVN_NO_ERROR;
+    }
+
+  /* Determine the revision to use throughout the edit, and call
+     EDITOR's set_target_revision() function.  */
+  if (svn_fs_is_revision_root(root))
+    {
+      svn_revnum_t revision = svn_fs_revision_root_revision(root);
+      SVN_ERR(editor->set_target_revision(edit_baton, revision, pool));
+    }
+
+  if (! base_path)
+    base_path = "";
+  else if (base_path[0] == '/')
+    ++base_path;
+
+  /* Use the shim to convert our editor to an Ev2 editor, and pass it down
+     the stack. */
+  SVN_ERR(svn_delta__editor_from_delta(&editorv2, &exb,
+                                       &unlock_func, &unlock_baton,
+                                       editor, edit_baton,
+                                       &send_abs_paths,
+                                       repos_root, "",
+                                       NULL, NULL,
+                                       NULL, NULL,
+                                       NULL, NULL,
+                                       pool, pool));
+
+  SVN_ERR(svn_repos__replay_ev2(root, base_path, low_water_mark, send_deltas,
+                                editorv2, authz_read_func, authz_read_baton,
+                                pool));
+
+  return SVN_NO_ERROR;
+#endif
 }
 
 
