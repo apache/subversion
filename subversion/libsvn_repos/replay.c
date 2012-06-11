@@ -343,14 +343,7 @@ static svn_boolean_t
 is_within_base_path(const char *path, const char *base_path,
                     apr_ssize_t base_len)
 {
-  if (base_path[0] == '\0')
-    return TRUE;
-
-  if (strncmp(base_path, path, base_len) == 0
-      && (path[base_len] == '/' || path[base_len] == '\0'))
-    return TRUE;
-
-  return FALSE;
+  return svn_relpath_skip_ancestor(base_path, path) != NULL;
 }
 
 /* Given PATH deleted under ROOT, return in READABLE whether the path was
