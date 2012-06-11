@@ -180,9 +180,7 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
 
 /* A macro to mark sections of code that belong to the 'symmetric merge'
  * feature while it's still new. */
-#ifdef SVN_DEBUG
 #define SVN_WITH_SYMMETRIC_MERGE
-#endif
 
 #ifdef SVN_WITH_SYMMETRIC_MERGE
 

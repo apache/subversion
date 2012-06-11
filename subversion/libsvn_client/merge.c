@@ -11462,9 +11462,6 @@ find_symmetric_merge(svn_client__pathrev_t **base_p,
   SVN_ERR(find_base_on_target(&base_on_target, &mid, s_t,
                               ctx, scratch_pool, scratch_pool));
 
-  SVN_DBG(("base on source: %s@%ld\n", base_on_source->url, base_on_source->rev));
-  SVN_DBG(("base on target: %s@%ld\n", base_on_target->url, base_on_target->rev));
-
   /* Choose a base. */
   if (base_on_source->rev >= base_on_target->rev)
     {
@@ -11568,11 +11565,6 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
   source.loc1 = merge->base;
   source.loc2 = merge->right;
   source.ancestral = (merge->mid == NULL);
-  SVN_DBG(("yca   %s@%ld\n", merge->yca->url, merge->yca->rev));
-  SVN_DBG(("base  %s@%ld\n", merge->base->url, merge->base->rev));
-  if (merge->mid)
-    SVN_DBG(("mid   %s@%ld\n", merge->mid->url, merge->mid->rev));
-  SVN_DBG(("right %s@%ld\n", merge->right->url, merge->right->rev));
 
   if (merge->mid)
     {
