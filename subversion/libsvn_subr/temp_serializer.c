@@ -72,7 +72,7 @@ struct svn_temp_serializer__context_t
   source_stack_t *source;
 };
 
-/* Mmake sure the serialized data len is a multiple of the default alignment,
+/* Make sure the serialized data len is a multiple of the default alignment,
  * i.e. structures may be appended without violating member alignment
  * guarantees.
  */
@@ -83,7 +83,7 @@ align_buffer_end(svn_temp_serializer__context_t *context)
   apr_size_t aligned_len = APR_ALIGN_DEFAULT(current_len);
   if (aligned_len != current_len)
     {
-      svn_stringbuf_ensure(context->buffer, aligned_len+1);
+      svn_stringbuf_ensure(context->buffer, aligned_len);
       context->buffer->len = aligned_len;
     }
 }

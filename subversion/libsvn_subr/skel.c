@@ -501,7 +501,7 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str)
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len + 1);
+          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len);
           svn_stringbuf_appendbytes(str, buf, length_len);
           svn_stringbuf_appendbyte(str, ' ');
           svn_stringbuf_appendbytes(str, skel->data, skel->len);

@@ -380,7 +380,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
       {
         /* Append the next chunk to the string read so far.
          */
-        svn_stringbuf_ensure(str, str->len + LINE_CHUNK_SIZE + 1);
+        svn_stringbuf_ensure(str, str->len + LINE_CHUNK_SIZE);
         numbytes = LINE_CHUNK_SIZE;
         SVN_ERR(svn_stream_read(stream, str->data + str->len, &numbytes));
         str->len += numbytes;
