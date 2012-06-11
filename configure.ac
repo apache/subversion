@@ -1431,9 +1431,12 @@ if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
 
 
 You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created Makefile which will build
+installed and linked to APR-UTIL.  We have created a Makefile which will build
 Subversion without support for the Berkeley DB back-end.  You can find the
 latest version of Berkeley DB here:
-  http://www.oracle.com/technology/software/products/berkeley-db/index.html
+
+  http://www.oracle.com/technetwork/products/berkeleydb/downloads/index.html
+
+or explicitly specify --without-berkeley-db to silence this warning.
 ])
 fi
