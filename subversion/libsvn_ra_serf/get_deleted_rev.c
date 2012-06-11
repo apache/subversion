@@ -56,10 +56,10 @@ typedef struct drev_context_t {
 #define S_ SVN_XML_NAMESPACE
 static const svn_ra_serf__xml_transition_t getdrev_ttable[] = {
   { INITIAL, S_, "get-deleted-rev-report", REPORT,
-    FALSE, { NULL }, FALSE, FALSE },
+    FALSE, { NULL }, FALSE },
 
   { REPORT, D_, SVN_DAV__VERSION_NAME, VERSION_NAME,
-    TRUE, { NULL }, FALSE, TRUE },
+    TRUE, { NULL }, TRUE },
 
   { 0 }
 };
@@ -151,7 +151,8 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getdrev_ttable,
-                                           NULL, getdrev_closed, drev_ctx,
+                                           NULL, getdrev_closed, NULL,
+                                           drev_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 

@@ -55,6 +55,7 @@ struct svn_ra_serf__xml_context_t {
   /* The callback information.  */
   svn_ra_serf__xml_opened_t opened_cb;
   svn_ra_serf__xml_closed_t closed_cb;
+  svn_ra_serf__xml_cdata_t cdata_cb;
   void *baton;
 
   /* Linked list of free states.  */
@@ -448,6 +449,7 @@ svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
+  svn_ra_serf__xml_cdata_t cdata_cb,
   void *baton,
   apr_pool_t *result_pool)
 {
@@ -458,6 +460,7 @@ svn_ra_serf__xml_context_create(
   xmlctx->ttable = ttable;
   xmlctx->opened_cb = opened_cb;
   xmlctx->closed_cb = closed_cb;
+  xmlctx->cdata_cb = cdata_cb;
   xmlctx->baton = baton;
   xmlctx->scratch_pool = svn_pool_create(result_pool);
 
@@ -557,6 +560,11 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
       if (scan->from_state != current->state)
         continue;
 
+      /* Wildcard tag match.  */
+      if (*scan->name == '*')
+        break;
+
+      /* Found a specific transition.  */
       if (strcmp(elemname.name, scan->name) == 0
           && strcmp(elemname.namespace, scan->ns) == 0)
         break;
@@ -648,11 +656,12 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
   new_xes->prev = current;
   xmlctx->current = new_xes;
 
-  if (scan->custom_open)
+  if (xmlctx->opened_cb)
     {
       START_CALLBACK(xmlctx);
       SVN_ERR(xmlctx->opened_cb(new_xes, xmlctx->baton,
-                                new_xes->state, xmlctx->scratch_pool));
+                                new_xes->state, &new_xes->tag,
+                                xmlctx->scratch_pool));
       END_CALLBACK(xmlctx);
       svn_pool_clear(xmlctx->scratch_pool);
     }

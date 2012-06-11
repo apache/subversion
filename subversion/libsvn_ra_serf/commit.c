@@ -2135,40 +2135,37 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   commit_context_t *ctx = edit_baton;
-  svn_ra_serf__merge_context_t *merge_ctx;
-  svn_ra_serf__handler_t *handler;
-  svn_boolean_t *merge_done;
   const char *merge_target =
     ctx->activity_url ? ctx->activity_url : ctx->txn_url;
+  const svn_commit_info_t *commit_info;
+  int response_code;
 
   /* MERGE our activity */
-  SVN_ERR(svn_ra_serf__merge_create_req(&merge_ctx, ctx->session,
-                                        ctx->session->conns[0],
-                                        merge_target,
-                                        ctx->lock_tokens,
-                                        ctx->keep_locks,
-                                        pool));
+  SVN_ERR(svn_ra_serf__run_merge(&commit_info, &response_code,
+                                 ctx->session,
+                                 ctx->session->conns[0],
+                                 merge_target,
+                                 ctx->lock_tokens,
+                                 ctx->keep_locks,
+                                 pool, pool));
 
-  merge_done = svn_ra_serf__merge_get_done_ptr(merge_ctx);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(merge_done, ctx->session, pool));
-
-  if (svn_ra_serf__merge_get_status(merge_ctx) != 200)
+  if (response_code != 200)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                _("MERGE request failed: returned %d "
                                  "(during commit)"),
-                               svn_ra_serf__merge_get_status(merge_ctx));
+                               response_code);
     }
 
   /* Inform the WC that we did a commit.  */
   if (ctx->callback)
-    SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
-                          ctx->callback_baton, pool));
+    SVN_ERR(ctx->callback(commit_info, ctx->callback_baton, pool));
 
   /* If we're using activities, DELETE our completed activity.  */
   if (ctx->activity_url)
     {
+      svn_ra_serf__handler_t *handler;
+
       handler = apr_pcalloc(pool, sizeof(*handler));
       handler->handler_pool = pool;
       handler->method = "DELETE";

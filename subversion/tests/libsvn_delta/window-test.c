@@ -70,7 +70,7 @@ stream_window_test(apr_pool_t *pool)
   target_str.len = 109000;
   target_stream = svn_stream_from_string(&target_str, pool);
 
-  svn_txdelta(&txstream, source_stream, target_stream, pool);
+  svn_txdelta2(&txstream, source_stream, target_stream, TRUE, pool);
 
   while (1)
     {

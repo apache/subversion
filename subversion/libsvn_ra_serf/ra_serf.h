@@ -618,11 +618,21 @@ typedef struct svn_ra_serf__xml_context_t svn_ra_serf__xml_context_t;
 /* An opaque structure for the XML parse element/state.  */
 typedef struct svn_ra_serf__xml_estate_t svn_ra_serf__xml_estate_t;
 
-/* Called just after the parser moves into ENTERED_STATE.  */
+/* Called just after the parser moves into ENTERED_STATE. The tag causing
+   the transition is passed in TAG.
+
+   This callback is applied to a parsing context by using the
+   svn_ra_serf__xml_context_customize() function.
+
+   NOTE: this callback, when set, will be invoked on *every* transition.
+   The callback must examine ENTERED_STATE to determine if any action
+   must be taken. The original state is not provided, but must be derived
+   from ENTERED_STATE and/or the TAG causing the transition (if needed).  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_opened_t)(svn_ra_serf__xml_estate_t *xes,
                              void *baton,
                              int entered_state,
+                             const svn_ra_serf__dav_props_t *tag,
                              apr_pool_t *scratch_pool);
 
 
@@ -632,8 +642,11 @@ typedef svn_error_t *
    non-NULL and contain the collected cdata.
 
    If attribute collection was enabled for this state, then ATTRS will
-   contain the attributes collected for this element only. Use
-   svn_ra_serf__xml_gather_since() to gather up data from outer states.
+   contain the attributes collected for this element only, along with
+   any values stored via svn_ra_serf__xml_note().
+
+   Use svn_ra_serf__xml_gather_since() to gather up data from outer states.
+
    ATTRS is char* -> char*.
 
    Temporary allocations may be made in SCRATCH_POOL.  */
@@ -644,6 +657,16 @@ typedef svn_error_t *
                              const svn_string_t *cdata,
                              apr_hash_t *attrs,
                              apr_pool_t *scratch_pool);
+
+
+/* ### TBD  */
+typedef svn_error_t *
+(*svn_ra_serf__xml_cdata_t)(svn_ra_serf__xml_estate_t *xes,
+                            void *baton,
+                            int current_state,
+                            const char *data,
+                            apr_size_t *len,
+                            apr_pool_t *scratch_pool);
 
 
 /* State transition table.
@@ -667,7 +690,8 @@ typedef struct svn_ra_serf__xml_transition_t {
   /* Moving to this state  */
   int to_state;
 
-  /* Should the cdata of NAME be collected?  */
+  /* Should the cdata of NAME be collected? Note that CUSTOM_CLOSE should
+     be TRUE in order to capture this cdata.  */
   svn_boolean_t collect_cdata;
 
   /* Which attributes of NAME should be collected? Terminate with NULL.
@@ -678,20 +702,19 @@ typedef struct svn_ra_serf__xml_transition_t {
      exist on the element, or SVN_ERR_XML_ATTRIB_NOT_FOUND will be raised.  */
   const char *collect_attrs[11];
 
-  /* When NAME is opened, should the callback be invoked?  */
-  svn_boolean_t custom_open;
-
   /* When NAME is closed, should the callback be invoked?  */
   svn_boolean_t custom_close;
 
 } svn_ra_serf__xml_transition_t;
 
 
+/* ### docco  */
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
+  svn_ra_serf__xml_cdata_t cdata_cb,
   void *baton,
   apr_pool_t *result_pool);
 
@@ -1221,17 +1244,6 @@ svn_ra_serf__get_resource_type(svn_kind_t *kind,
 
 /** MERGE-related functions **/
 
-typedef struct svn_ra_serf__merge_context_t svn_ra_serf__merge_context_t;
-
-svn_boolean_t*
-svn_ra_serf__merge_get_done_ptr(svn_ra_serf__merge_context_t *ctx);
-
-svn_commit_info_t*
-svn_ra_serf__merge_get_commit_info(svn_ra_serf__merge_context_t *ctx);
-
-int
-svn_ra_serf__merge_get_status(svn_ra_serf__merge_context_t *ctx);
-
 void
 svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
                                    const char *parent,
@@ -1245,13 +1257,16 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
    client.  If KEEP_LOCKS is set, instruct the server to not release
    locks set on the paths included in this commit.  */
 svn_error_t *
-svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
-                              svn_ra_serf__session_t *session,
-                              svn_ra_serf__connection_t *conn,
-                              const char *merge_resource_url,
-                              apr_hash_t *lock_tokens,
-                              svn_boolean_t keep_locks,
-                              apr_pool_t *pool);
+svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
+                       int *response_code,
+                       svn_ra_serf__session_t *session,
+                       svn_ra_serf__connection_t *conn,
+                       const char *merge_resource_url,
+                       apr_hash_t *lock_tokens,
+                       svn_boolean_t keep_locks,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 
 /** OPTIONS-related functions **/
 

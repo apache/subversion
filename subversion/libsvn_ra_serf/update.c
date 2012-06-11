@@ -1166,13 +1166,12 @@ handle_stream(serf_request_t *request,
   /* not reached */
 }
 
+/* Open the file associated with INFO for editing, pass along any
+   propchanges we've recorded for it, and then close the file. */
 static svn_error_t *
 handle_propchange_only(report_info_t *info,
                        apr_pool_t *scratch_pool)
 {
-  /* Open the file for editing (without forcing an apply_textdelta),
-     pass along any propchanges we've recorded for it, and then close
-     the file. */
   SVN_ERR(open_updated_file(info, FALSE, scratch_pool));
   SVN_ERR(close_updated_file(info, scratch_pool));
   
@@ -1187,13 +1186,13 @@ handle_propchange_only(report_info_t *info,
 /* "Fetch" a file whose contents were made available via the
    get_wc_contents() callback (as opposed to requiring a GET to the
    server), and feed the information through the associated update
-   editor. */
+   editor.  In editor-speak, this will add/open the file, transmit any
+   property changes, handle the contents, and then close the file.  */
 static svn_error_t *
-local_fetch(report_info_t *info,
-            apr_pool_t *scratch_pool)
+handle_local_content(report_info_t *info,
+                     apr_pool_t *scratch_pool)
 {
   SVN_ERR(open_updated_file(info, TRUE, scratch_pool));
-
   SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
                                   info->textdelta_baton, NULL, scratch_pool));
   SVN_ERR(svn_stream_close(info->cached_contents));
@@ -1203,63 +1202,9 @@ local_fetch(report_info_t *info,
   /* We're done with our pool. */
   svn_pool_destroy(info->pool);
 
+  info->dir->ref_count--;
+
   return SVN_NO_ERROR;
-}
-
-/* Implements svn_ra_serf__response_handler_t */
-static svn_error_t *
-handle_local_fetch(serf_request_t *request,
-                   serf_bucket_t *response,
-                   void *handler_baton,
-                   apr_pool_t *pool)
-{
-  report_fetch_t *fetch_ctx = handler_baton;
-  apr_status_t status;
-  svn_error_t *err;
-  const char *data;
-  apr_size_t len;
-
-  /* ### new field. make sure we didn't miss some initialization.  */
-  SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
-
-  /* If the error code wasn't 200, something went wrong. Don't use the returned
-     data as its probably an error message. Just bail out instead. */
-  if (fetch_ctx->handler->sline.code != 200)
-    {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("HEAD request failed: %d %s"),
-                              fetch_ctx->handler->sline.code,
-                              fetch_ctx->handler->sline.reason);
-      return error_fetch(request, fetch_ctx, err);
-    }
-
-  while (1)
-    {
-      status = serf_bucket_read(response, 8000, &data, &len);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-      if (APR_STATUS_IS_EOF(status))
-        {
-          err = local_fetch(fetch_ctx->info, fetch_ctx->info->pool);
-          if (err)
-            {
-              return error_fetch(request, fetch_ctx, err);
-            }
-
-          fetch_ctx->done = TRUE;
-          fetch_ctx->done_item.data = fetch_ctx;
-          fetch_ctx->done_item.next = *fetch_ctx->done_list;
-          *fetch_ctx->done_list = &fetch_ctx->done_item;
-          return svn_error_wrap_apr(status, NULL);
-        }
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-    }
-  /* not reached */
 }
 
 /* --------------------------------------------------------- */
@@ -1332,43 +1277,35 @@ fetch_file(report_context_t *ctx, report_info_t *info)
             }
         }          
 
-      /* If the working copy can provided cached contents for this
-         file, we'll send a simple HEAD request (which I'll claim is
-         to verify readability, but really is just so I can provide a
-         Serf-queued-request-compliant way of processing the contents
-         after the PROPFIND for the file's properties ... ugh).
-
-         Otherwise, we use a GET request for the file's contents. */
+      /* If the working copy can provide cached contents for this
+         file, we don't have to fetch them from the server. */
       if (info->cached_contents)
         {
-          report_fetch_t *fetch_ctx;
+          /* If we'll be doing a PROPFIND for this file... */
+          if (info->propfind)
+            { 
+              /* ... then we'll just leave ourselves a little "todo"
+                 about that fact (and we'll deal with the file content
+                 stuff later, after we've handled that PROPFIND
+                 response. */
+              svn_ra_serf__list_t *list_item;
 
-          fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
-          fetch_ctx->info = info;
-          fetch_ctx->done_list = &ctx->done_fetches;
-          fetch_ctx->sess = ctx->sess;
-          fetch_ctx->conn = conn;
-
-          handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
-
-          handler->handler_pool = info->dir->pool;
-          handler->method = "HEAD";
-          handler->path = fetch_ctx->info->url;
-
-          handler->conn = conn;
-          handler->session = ctx->sess;
-
-          handler->response_handler = handle_local_fetch;
-          handler->response_baton = fetch_ctx;
-
-          fetch_ctx->handler = handler;
-
-          svn_ra_serf__request_create(handler);
-
-          ctx->active_fetches++;
+              list_item = apr_pcalloc(info->dir->pool, sizeof(*list_item));
+              list_item->data = info;
+              list_item->next = ctx->file_propchanges_only;
+              ctx->file_propchanges_only = list_item;
+            }
+          else
+            {
+              /* Otherwise, if we've no PROPFIND to do, we might as
+                 well take care of those locally accessible file
+                 contents now. */
+              SVN_ERR(handle_local_content(info, info->pool));
+            }
         }
       else
         {
+          /* Otherwise, we use a GET request for the file's contents. */
           report_fetch_t *fetch_ctx;
 
           fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
@@ -2545,7 +2482,20 @@ finish_report(void *report_baton,
                */
               if (cur)
                 {
-                  SVN_ERR(handle_propchange_only(cur->data, iterpool_inner));
+                  report_info_t *info = cur->data;
+
+                  /* If we've got cached file content for this file,
+                     take care of the locally collected properties and
+                     file content at once.  Otherwise, just deal with
+                     the collected properties. */
+                  if (info->cached_contents)
+                    {
+                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                    }
+                  else
+                    {
+                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
+                    }
 
                   if (!prev)
                     {

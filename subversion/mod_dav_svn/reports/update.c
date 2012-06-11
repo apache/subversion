@@ -582,10 +582,10 @@ upd_add_directory(const char *path,
 
 static svn_error_t *
 upd_open_directory(const char *path,
-                                        void *parent_baton,
-                                        svn_revnum_t base_revision,
-                                        apr_pool_t *pool,
-                                        void **child_baton)
+                   void *parent_baton,
+                   svn_revnum_t base_revision,
+                   apr_pool_t *pool,
+                   void **child_baton)
 {
   return open_helper(TRUE /* is_dir */,
                      path, parent_baton, base_revision, pool, child_baton);
