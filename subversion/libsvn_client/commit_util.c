@@ -1576,15 +1576,13 @@ do_item_commit(svn_client_commit_item3_t *item,
       return SVN_NO_ERROR;
     }
 
-/*  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS) ||
-        (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))*/
-    {
-      if (item->path)
-        SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, item->path,
-                                  scratch_pool, scratch_pool));
-      else
-        props = apr_hash_make(scratch_pool);
-    }
+  /* Fetch our props.  Whether we send them or not, we need them to determine
+     how to detranslate this file. */
+  if (item->path)
+    SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, item->path,
+                              scratch_pool, scratch_pool));
+  else
+    props = apr_hash_make(scratch_pool);
 
   if ((kind == svn_node_file)
       && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
