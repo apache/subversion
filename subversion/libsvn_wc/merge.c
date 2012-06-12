@@ -1555,7 +1555,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
       {
         *merge_content_outcome = svn_wc_merge_no_merge;
         if (merge_props_outcome)
-          *merge_props_outcome = svn_wc_merge_no_merge;
+          *merge_props_outcome = svn_wc_notify_state_unchanged;
         return SVN_NO_ERROR;
       }
 
