@@ -101,6 +101,7 @@
    (though not necessarily in the same order in which they
    occurred). */
 
+/* #define USE_EV2_IMPL */
 
 
 /*** Helper functions. ***/
@@ -147,6 +148,7 @@ struct path_driver_cb_baton
   apr_pool_t *pool;
 };
 
+#ifndef USE_EV2_IMPL
 /* Recursively traverse EDIT_PATH (as it exists under SOURCE_ROOT) emitting
    the appropriate editor calls to add it and its children without any
    history.  This is meant to be used when either a subset of the tree
@@ -777,6 +779,7 @@ path_driver_cb_func(void **dir_baton,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 
@@ -792,7 +795,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                   void *authz_read_baton,
                   apr_pool_t *pool)
 {
-#if 1
+#ifndef USE_EV2_IMPL
   apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
   apr_hash_index_t *hi;
