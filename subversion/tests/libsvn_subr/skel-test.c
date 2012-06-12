@@ -216,7 +216,7 @@ gen_implicit_length_all_chars(apr_size_t *len_p)
   for (i = 0; i < 256; i++)
     if (! skel_is_space( (apr_byte_t)i)
         && ! skel_is_paren( (apr_byte_t)i))
-      name[pos++] = i;
+      name[pos++] = (char)i;
 
   *len_p = pos;
   return name;
@@ -375,7 +375,7 @@ parse_explicit_length(apr_pool_t *pool)
       {
         char buf[1];
 
-        buf[0] = i;
+        buf[0] = (char)i;
         SVN_ERR(try_explicit_length(buf, 1, 1, pool));
       }
   }
@@ -386,7 +386,7 @@ parse_explicit_length(apr_pool_t *pool)
     char data[256];
 
     for (i = 0; i < 256; i++)
-      data[i] = i;
+      data[i] = (char)i;
 
     SVN_ERR(try_explicit_length(data, 256, 256, pool));
   }
@@ -592,7 +592,7 @@ parse_list(apr_pool_t *pool)
                       svn_skel_t *child;
                       char buf[1];
 
-                      buf[0] = atom_byte;
+                      buf[0] = (char)atom_byte;
 
                       put_list_start(str,  (apr_byte_t)sep, sep_count);
                       for (i = 0; i < list_len; i++)
@@ -619,7 +619,7 @@ parse_list(apr_pool_t *pool)
                     char data[256];
 
                     for (i = 0; i < 256; i++)
-                      data[i] = i;
+                      data[i] = (char)i;
 
                     put_list_start(str,  (apr_byte_t)sep, sep_count);
                     for (i = 0; i < list_len; i++)
@@ -797,7 +797,7 @@ unparse_list(apr_pool_t *pool)
     for (byte = 0; byte < 256; byte++)
       if (skel_is_name( (apr_byte_t)byte))
         {
-          char buf = byte;
+          char buf = (char)byte;
           add(build_atom(1, &buf, pool), list);
         }
 
@@ -858,7 +858,7 @@ unparse_list(apr_pool_t *pool)
             val = i * 10 + j;
             for (k = 0; k < sizeof(buf); k++)
               {
-                buf[k] = val;
+                buf[k] = (char)val;
                 val += j;
               }
 

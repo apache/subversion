@@ -198,7 +198,7 @@ generate_random_file(apr_uint32_t maxlen,
               buf = file_buffer;
             }
 
-          *buf++ = ch;
+          *buf++ = (char)ch;
           r = r * 1103515245 + 12345;
         }
     }
