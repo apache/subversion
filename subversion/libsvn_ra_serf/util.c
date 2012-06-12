@@ -1887,16 +1887,24 @@ handle_response(serf_request_t *request,
                                            &handler->server_error->parser,
                                            scratch_pool);
 
-      /* APR_EOF will be returned when parsing is complete.  If we see
-         any other error, return it immediately.
+      /* If we do not receive an error or it is a non-transient error, return
+         immediately.
 
-         In practice the only other error we expect to see is APR_EAGAIN,
-         which indicates the network has no more data right now. This
-         svn_error_t will get unwrapped, and that APR_EAGAIN will be
-         returned to serf. We'll get called later, when more network data
-         is available.  */
-      if (!err || !APR_STATUS_IS_EOF(err->apr_err))
+         APR_EOF will be returned when parsing is complete.
+
+         APR_EAGAIN & WAIT_CONN may be intermittently returned as we proceed through
+         parsing and the network has no more data right now.  If we receive that,
+         clear the error and return - allowing serf to wait for more data.
+         */
+      if (!err || !SERF_BUCKET_READ_ERROR(err->apr_err))
         return svn_error_trace(err);
+
+      if (!APR_STATUS_IS_EOF(err->apr_err))
+        {
+          *serf_status = err->apr_err;
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
 
       /* Clear the EOF. We don't need it.  */
       svn_error_clear(err);
