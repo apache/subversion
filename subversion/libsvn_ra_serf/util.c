@@ -1216,7 +1216,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   err = parser->start(parser, name, attrs, scratch_pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
     err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
 
   parser->error = err;
@@ -1241,7 +1241,7 @@ end_xml(void *userData, const char *raw_name)
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   err = parser->end(parser, name, scratch_pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
     err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
 
   parser->error = err;
@@ -1266,7 +1266,7 @@ cdata_xml(void *userData, const char *data, int len)
   scratch_pool = parser->state->pool;
 
   err = parser->cdata(parser, data, len, scratch_pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
     err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
 
   parser->error = err;
