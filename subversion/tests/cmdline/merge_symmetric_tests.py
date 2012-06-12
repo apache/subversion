@@ -848,7 +848,6 @@ def subtree_to_and_fro(sbox):
 # Symmetric merges ignore subtree mergeinfo gaps older than the last rev
 # synced to the target root.
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   "sync merge ignores source subtree mergeinfo"
 
