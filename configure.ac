@@ -1372,6 +1372,11 @@ if test "$CC" = "clang"; then
   CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
 fi
 
+# Clang also doesn't (yet) support the '-ansi' flag
+if test "$CC" = "clang"; then
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-ansi //'`
+fi
+
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
         [Defined to be the path separator used on your local filesystem])
