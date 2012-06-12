@@ -220,7 +220,7 @@ typedef struct report_info_t
   /* controlling file_baton and textdelta handler */
   void *file_baton;
   const char *base_checksum;
-  const char *final_sha1_checksum; /* ### currently unused */
+  const char *final_sha1_checksum;
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
