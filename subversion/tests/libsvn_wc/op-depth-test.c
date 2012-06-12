@@ -1277,7 +1277,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
                                         NULL, NULL, FALSE, NULL, NULL,
                                         b->pool));
 
-  after = apr_palloc(b->pool, sizeof(*after) * (num_before + num_added + 1));
+  after = apr_palloc(b->pool, sizeof(*after) * (apr_size_t)(num_before + num_added + 1));
   for (i = 0; i < num_before; ++i)
     after[i] = before[i];
   for (i = 0; i < num_added; ++i)

@@ -123,7 +123,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   diff_mem_baton_t *mem_baton = baton;
   source_tokens_t *src = &(mem_baton->sources[datasource_to_index(datasource)]);
 
-  if (src->tokens->nelts > src->next_token)
+  if ((apr_size_t)src->tokens->nelts > src->next_token)
     {
       /* There are actually tokens to be returned */
       char *buf = mem_baton->normalization_buf[0];
