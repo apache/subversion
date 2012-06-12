@@ -415,9 +415,9 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
      (*inbuflen+len) is encoded data length
      (*inbuflen+len)/4 is the number of complete 4-bytes sets
      (*inbuflen+len)/4*3 is the number of decoded bytes
-     (*inbuflen+len)/4*3+1 is the number of decoded bytes plus a null
+     svn_stringbuf_ensure will add an additional byte for the terminating 0.
   */
-  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3 + 1);
+  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3);
 
   while ( !*done && p < end )
     {

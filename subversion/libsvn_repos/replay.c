@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_delta_private.h"
 
 
 /*** Backstory ***/
@@ -137,7 +138,6 @@ struct path_driver_cb_baton
   void *authz_read_baton;
 
   const char *base_path; /* relpath */
-  size_t base_path_len;
 
   svn_revnum_t low_water_mark;
   /* Stack of active copy operations. */
@@ -339,20 +339,6 @@ add_subdir(svn_fs_root_t *source_root,
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-is_within_base_path(const char *path, const char *base_path,
-                    apr_ssize_t base_len)
-{
-  if (base_path[0] == '\0')
-    return TRUE;
-
-  if (strncmp(base_path, path, base_len) == 0
-      && (path[base_len] == '/' || path[base_len] == '\0'))
-    return TRUE;
-
-  return FALSE;
-}
-
 /* Given PATH deleted under ROOT, return in READABLE whether the path was
    readable prior to the deletion.  Consult COPIES (a stack of 'struct
    copy_info') and AUTHZ_READ_FUNC. */
@@ -487,7 +473,6 @@ path_driver_cb_func(void **dir_baton,
   svn_fs_root_t *source_root = cb->compare_root;
   const char *source_fspath = NULL;
   const char *base_path = cb->base_path;
-  size_t base_path_len = cb->base_path_len;
 
   *dir_baton = NULL;
 
@@ -577,8 +562,7 @@ path_driver_cb_func(void **dir_baton,
          all. */
       if (copyfrom_path
           && ((! src_readable)
-              || (! is_within_base_path(copyfrom_path + 1, base_path,
-                                        base_path_len))
+              || (svn_relpath_skip_ancestor(base_path, copyfrom_path + 1) == NULL)
               || (cb->low_water_mark > copyfrom_rev)))
         {
           copyfrom_path = NULL;
@@ -808,12 +792,12 @@ svn_repos_replay2(svn_fs_root_t *root,
                   void *authz_read_baton,
                   apr_pool_t *pool)
 {
+#if 1
   apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
-  size_t base_path_len;
 
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
@@ -830,8 +814,6 @@ svn_repos_replay2(svn_fs_root_t *root,
     base_path = "";
   else if (base_path[0] == '/')
     ++base_path;
-
-  base_path_len = strlen(base_path);
 
   /* Make an array from the keys of our CHANGED_PATHS hash, and copy
      the values into a new hash whose keys have no leading slashes. */
@@ -865,14 +847,14 @@ svn_repos_replay2(svn_fs_root_t *root,
 
           /* If the base_path doesn't match the top directory of this path
              we don't want anything to do with it... */
-          if (is_within_base_path(path, base_path, base_path_len))
+          if (svn_relpath_skip_ancestor(base_path, path) != NULL)
             {
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
             }
           /* ...unless this was a change to one of the parent directories of
              base_path. */
-          else if (is_within_base_path(base_path, path, keylen))
+          else if (svn_relpath_skip_ancestor(path, base_path) != NULL)
             {
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
@@ -893,7 +875,6 @@ svn_repos_replay2(svn_fs_root_t *root,
   cb_baton.authz_read_func = authz_read_func;
   cb_baton.authz_read_baton = authz_read_baton;
   cb_baton.base_path = base_path;
-  cb_baton.base_path_len = base_path_len;
   cb_baton.low_water_mark = low_water_mark;
   cb_baton.compare_root = NULL;
 
@@ -922,11 +903,72 @@ svn_repos_replay2(svn_fs_root_t *root,
   return svn_delta_path_driver(editor, edit_baton,
                                SVN_INVALID_REVNUM, paths,
                                path_driver_cb_func, &cb_baton, pool);
+#else
+  svn_editor_t *editorv2;
+  struct svn_delta__extra_baton *exb;
+  svn_delta__unlock_func_t unlock_func;
+  svn_boolean_t send_abs_paths;
+  const char *repos_root = "";
+  void *unlock_baton;
+
+  /* Special-case r0, which we know is an empty revision; if we don't
+     special-case it we might end up trying to compare it to "r-1". */
+  if (svn_fs_is_revision_root(root)
+        && svn_fs_revision_root_revision(root) == 0)
+    {
+      SVN_ERR(editor->set_target_revision(edit_baton, 0, pool));
+      return SVN_NO_ERROR;
+    }
+
+  /* Determine the revision to use throughout the edit, and call
+     EDITOR's set_target_revision() function.  */
+  if (svn_fs_is_revision_root(root))
+    {
+      svn_revnum_t revision = svn_fs_revision_root_revision(root);
+      SVN_ERR(editor->set_target_revision(edit_baton, revision, pool));
+    }
+
+  if (! base_path)
+    base_path = "";
+  else if (base_path[0] == '/')
+    ++base_path;
+
+  /* Use the shim to convert our editor to an Ev2 editor, and pass it down
+     the stack. */
+  SVN_ERR(svn_delta__editor_from_delta(&editorv2, &exb,
+                                       &unlock_func, &unlock_baton,
+                                       editor, edit_baton,
+                                       &send_abs_paths,
+                                       repos_root, "",
+                                       NULL, NULL,
+                                       NULL, NULL,
+                                       NULL, NULL,
+                                       pool, pool));
+
+  SVN_ERR(svn_repos__replay_ev2(root, base_path, low_water_mark, send_deltas,
+                                editorv2, authz_read_func, authz_read_baton,
+                                pool));
+
+  return SVN_NO_ERROR;
+#endif
+}
+
+
+/*****************************************************************
+ *                      Ev2 Implementation                       *
+ *****************************************************************/
+
+static svn_error_t *
+replay_node(const char *repos_relpath,
+            svn_editor_t *editor,
+            apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
 }
 
 svn_error_t *
 svn_repos__replay_ev2(svn_fs_root_t *root,
-                      const char *base_dir,
+                      const char *base_repos_relpath,
                       svn_revnum_t low_water_mark,
                       svn_boolean_t send_deltas,
                       svn_editor_t *editor,
@@ -934,5 +976,103 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
                       void *authz_read_baton,
                       apr_pool_t *scratch_pool)
 {
-  SVN__NOT_IMPLEMENTED();
+  apr_hash_t *fs_changes;
+  apr_hash_t *changed_paths;
+  apr_hash_index_t *hi;
+  apr_array_header_t *paths;
+  svn_fs_root_t *compare_root;
+  apr_array_header_t *copies;
+  apr_pool_t *iterpool;
+  int i;
+
+  SVN_ERR_ASSERT(!svn_dirent_is_absolute(base_repos_relpath));
+
+  /* Special-case r0, which we know is an empty revision; if we don't
+     special-case it we might end up trying to compare it to "r-1". */
+  if (svn_fs_is_revision_root(root)
+        && svn_fs_revision_root_revision(root) == 0)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  /* Fetch the paths changed under ROOT. */
+  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, scratch_pool));
+
+  /* Make an array from the keys of our CHANGED_PATHS hash, and copy
+     the values into a new hash whose keys have no leading slashes. */
+  paths = apr_array_make(scratch_pool, apr_hash_count(fs_changes),
+                         sizeof(const char *));
+  changed_paths = apr_hash_make(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, fs_changes); hi;
+        hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t keylen;
+      const char *path;
+      svn_fs_path_change2_t *change;
+      svn_boolean_t allowed = TRUE;
+
+      apr_hash_this(hi, &key, &keylen, &val);
+      path = key;
+      change = val;
+
+      if (authz_read_func)
+        SVN_ERR(authz_read_func(&allowed, root, path, authz_read_baton,
+                                scratch_pool));
+
+      if (allowed)
+        {
+          if (path[0] == '/')
+            {
+              path++;
+              keylen--;
+            }
+
+          /* If the base_path doesn't match the top directory of this path
+             we don't want anything to do with it... */
+          if (svn_relpath_skip_ancestor(base_repos_relpath, path) != NULL)
+            {
+              APR_ARRAY_PUSH(paths, const char *) = path;
+              apr_hash_set(changed_paths, path, keylen, change);
+            }
+          /* ...unless this was a change to one of the parent directories of
+             base_path. */
+          else if (svn_relpath_skip_ancestor(path, base_repos_relpath) != NULL)
+            {
+              APR_ARRAY_PUSH(paths, const char *) = path;
+              apr_hash_set(changed_paths, path, keylen, change);
+            }
+        }
+    }
+
+  /* If we were not given a low water mark, assume that everything is there,
+     all the way back to revision 0. */
+  if (! SVN_IS_VALID_REVNUM(low_water_mark))
+    low_water_mark = 0;
+
+  if (send_deltas)
+    {
+      SVN_ERR(svn_fs_revision_root(&compare_root,
+                                   svn_fs_root_fs(root),
+                                   svn_fs_is_revision_root(root)
+                                     ? svn_fs_revision_root_revision(root) - 1
+                                     : svn_fs_txn_root_base_revision(root),
+                                   scratch_pool));
+    }
+  else
+    compare_root = NULL;
+
+  copies = apr_array_make(scratch_pool, 4, sizeof(struct copy_info *));
+
+  /* Now actually handle the various paths. */
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *repos_relpath = APR_ARRAY_IDX(paths, i, const char *);
+      SVN_ERR(replay_node(repos_relpath, editor, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }

@@ -1,6 +1,6 @@
 /*
- * svn_string.c:  routines to manipulate counted-length strings
- *                (svn_stringbuf_t and svn_string_t) and C strings.
+ * string.c:  routines to manipulate counted-length strings
+ *            (svn_stringbuf_t and svn_string_t) and C strings.
  *
  *
  * ====================================================================
@@ -407,7 +407,7 @@ svn_stringbuf_set(svn_stringbuf_t *str, const char *value)
 {
   apr_size_t amt = strlen(value);
 
-  svn_stringbuf_ensure(str, amt + 1);
+  svn_stringbuf_ensure(str, amt);
   memcpy(str->data, value, amt + 1);
   str->len = amt;
 }
@@ -549,8 +549,8 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
 
   total_len = str->len + count;  /* total size needed */
 
-  /* +1 for null terminator. */
-  svn_stringbuf_ensure(str, (total_len + 1));
+  /* svn_stringbuf_ensure adds 1 for null terminator. */
+  svn_stringbuf_ensure(str, total_len);
 
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
