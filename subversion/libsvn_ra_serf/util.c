@@ -1843,28 +1843,43 @@ handle_response(serf_request_t *request,
       /* 405 Method Not allowed.
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
-      /* ### this is completely wrong. it only catches the current network
-         ### packet. we need ongoing parsing. see SERVER_ERROR down below
-         ### in the process_body: area. we'll eventually move to that.  */
-      SVN_ERR(handle_server_error(request, response, scratch_pool));
+      serf_bucket_t *hdrs;
+      const char *val;
 
-      if (!handler->session->pending_error)
+      hdrs = serf_bucket_response_get_headers(response);
+      val = serf_bucket_headers_get(hdrs, "Content-Type");
+      if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
         {
-          apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+          svn_ra_serf__server_error_t *server_err;
 
-          /* 405 == Method Not Allowed (Occurs when trying to lock a working
-             copy path which no longer exists at HEAD in the repository. */
-          if (handler->sline.code == 405
-              && strcmp(handler->method, "LOCK") == 0)
-            apr_err = SVN_ERR_FS_OUT_OF_DATE;
+          server_err = begin_error_parsing(start_error, end_error, cdata_error,
+                                           handler->handler_pool);
+          /* Get the parser to set our DONE flag.  */
+          server_err->parser.done = &handler->done;
 
-          return svn_error_createf(apr_err, NULL,
-                                   _("%s request on '%s' failed: %d %s"),
+          handler->server_error = server_err;
+        }
+      else
+        {
+          handler->discard_body = TRUE;
+
+          if (!handler->session->pending_error)
+            {
+              apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
+              /* 405 == Method Not Allowed (Occurs when trying to lock a working
+                copy path which no longer exists at HEAD in the repository. */
+              if (handler->sline.code == 405
+                  && strcmp(handler->method, "LOCK") == 0)
+                apr_err = SVN_ERR_FS_OUT_OF_DATE;
+
+              handler->session->pending_error =
+                  svn_error_createf(apr_err, NULL,
+                                    _("%s request on '%s' failed: %d %s"),
                                    handler->method, handler->path,
                                    handler->sline.code, handler->sline.reason);
+            }
         }
-
-      return SVN_NO_ERROR; /* Error is set in caller */
     }
 
   /* Stop processing the above, on every packet arrival.  */
