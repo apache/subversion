@@ -1366,6 +1366,12 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 
+# Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
+### I think we get this flag from APR, so the fix probably belongs there
+if test "$CC" = "clang"; then
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
+fi
+
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
         [Defined to be the path separator used on your local filesystem])
