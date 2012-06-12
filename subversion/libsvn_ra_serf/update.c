@@ -1811,8 +1811,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in
              addition to <fetch-file>s and such) when *not* in
              "send-all" mode.  As a client, we're smart enough to know
-             that's wrong, so we'll just push an ignorable state
-             here. */
+             that's wrong, so we'll just ignore these tags. */
           ;
         }
       else
