@@ -1479,12 +1479,15 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
           return svn_error_trace(err);                         \
       }                                                         \
   } else
-#define RECOVERABLE_RETRY_LOOP \
-  i < 10; i++
+#define RECOVERABLE_RETRY_TEST \
+  i < 10
+#define RECOVERABLE_RETRY_NEXT \
+  i++
 #else
 #define RETRY_RECOVERABLE(err, filehandle, expr)  SVN_ERR(expr)
 #define IGNORE_RECOVERABLE(err, expr) SVN_ERR(expr)
-#define RECOVERABLE_RETRY_LOOP ;
+#define RECOVERABLE_RETRY_TEST
+#define RECOVERABLE_RETRY_NEXT
 #endif
 
 /* Long enough to hold: "<svn_revnum_t> <node id> <copy id>\0"
@@ -1509,7 +1512,7 @@ read_current(const char *fname, char **buf, apr_pool_t *pool)
 
   *buf = apr_palloc(pool, CURRENT_BUF_LEN);
   iterpool = svn_pool_create(pool);
-  for (i = 0; RECOVERABLE_RETRY_LOOP)
+  for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
     {
       svn_pool_clear(iterpool);
 
@@ -3207,7 +3210,7 @@ revision_proplist(apr_hash_t **proplist_p,
 
       proplist = apr_hash_make(pool);
       iterpool = svn_pool_create(pool);
-      for (i = 0; RECOVERABLE_RETRY_LOOP)
+      for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
         {
           svn_pool_clear(iterpool);
 
@@ -5039,7 +5042,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   cb->txn_id = apr_palloc(cb->pool, MAX_KEY_SIZE);
 
   iterpool = svn_pool_create(pool);
-  for (i = 0; RECOVERABLE_RETRY_LOOP)
+  for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
     {
       svn_pool_clear(iterpool);
 
