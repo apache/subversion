@@ -1806,6 +1806,16 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
           svn_stringbuf_setempty(info->prop_value);
         }
+      else if (strcmp(name.name, "txdelta") == 0)
+        {
+          /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in
+             addition to <fetch-file>s and such) when *not* in
+             "send-all" mode.  As a client, we're smart enough to know
+             that's wrong, so we'll just push an ignorable state
+             here. */
+          /*push_state(parser, ctx, TXDELTA);*/
+          ;
+        }
       else
         {
           return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
