@@ -1896,7 +1896,7 @@ handle_response(serf_request_t *request,
          parsing and the network has no more data right now.  If we receive that,
          clear the error and return - allowing serf to wait for more data.
          */
-      if (!err || !SERF_BUCKET_READ_ERROR(err->apr_err))
+      if (!err || SERF_BUCKET_READ_ERROR(err->apr_err))
         return svn_error_trace(err);
 
       if (!APR_STATUS_IS_EOF(err->apr_err))
