@@ -64,7 +64,8 @@ encrypt_data(const svn_string_t *orig,
   if (CryptProtectData(&blobin, description, NULL, NULL, NULL,
                        CRYPTPROTECT_UI_FORBIDDEN, &blobout))
     {
-      crypted = svn_string_ncreate(blobout.pbData, blobout.cbData, pool);
+      crypted = svn_string_ncreate((const char *)blobout.pbData,
+                                   blobout.cbData, pool);
       LocalFree(blobout.pbData);
     }
   return crypted;
@@ -87,7 +88,8 @@ decrypt_data(const svn_string_t *crypted,
                          CRYPTPROTECT_UI_FORBIDDEN, &blobout))
     {
       if (0 == lstrcmpW(descr, description))
-        orig = svn_string_ncreate(blobout.pbData, blobout.cbData, pool);
+        orig = svn_string_ncreate((const char *)blobout.pbData,
+                                  blobout.cbData, pool);
       LocalFree(blobout.pbData);
       LocalFree(descr);
     }
