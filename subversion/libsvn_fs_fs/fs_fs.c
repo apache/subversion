@@ -3837,7 +3837,8 @@ get_contents(struct rep_read_baton *rb,
              char *buf,
              apr_size_t *len)
 {
-  apr_size_t copy_len, remaining = *len, offset;
+  apr_size_t copy_len, remaining = *len;
+  apr_off_t offset;
   char *cur = buf;
   struct rep_state *rs;
 
