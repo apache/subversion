@@ -753,6 +753,7 @@ def cherry3_fwd(sbox):
 #----------------------------------------------------------------------
 # Symmetric merges ignore subtree mergeinfo during reintegrate.
 @SkipUnless(server_has_mergeinfo)
+@XFail()
 def subtree_to_and_fro(sbox):
   "reintegrate ignores source subtree mergeinfo"
 
@@ -825,7 +826,7 @@ def subtree_to_and_fro(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     None, [], svntest.verify.AnyOutput,
-    'merge', '--reintegrate', sbox.repo_url + '/A_COPY', A_path)
+    'merge', '--symmetric', sbox.repo_url + '/A_COPY', A_path)
 
   # The 'old' merge produced a warning that reintegrate could not be used.
   # Not claiming this is perfect, but it's better(?) than a conflict:
@@ -847,6 +848,7 @@ def subtree_to_and_fro(sbox):
 # Symmetric merges ignore subtree mergeinfo gaps older than the last rev
 # synced to the target root.
 @SkipUnless(server_has_mergeinfo)
+@XFail()
 def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   "sync merge ignores source subtree mergeinfo"
 
