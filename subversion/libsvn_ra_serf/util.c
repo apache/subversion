@@ -1419,6 +1419,7 @@ handle_server_error(serf_request_t *request,
   svn_ra_serf__server_error_t server_err = { 0 };
   serf_bucket_t *hdrs;
   const char *val;
+  apr_status_t err;
 
   hdrs = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(hdrs, "Content-Type");
@@ -1458,8 +1459,11 @@ handle_server_error(serf_request_t *request,
     }
 
   /* The only error that we will return is from the XML response body.
-     Otherwise, ignore the entire body and return success.  */
-  (void) drain_bucket(response);
+     Otherwise, ignore the entire body but allow SUCCESS/EOF/EAGAIN to
+     surface. */
+  err = drain_bucket(response);
+  if (err && !SERF_BUCKET_READ_ERROR(err))
+    return svn_error_wrap_apr(err, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1487,17 +1491,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   /* Woo-hoo.  Nothing here to see.  */
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
-      add_done_item(ctx);
-
       err = handle_server_error(request, response, pool);
 
-      /* ### the above call should have drained the entire response. this
-         ### call is historical, and probably not required. but during
-         ### the rework of this core handling... let's keep it for now.  */
-      status = drain_bucket(response);
-      if (status)
-        err = svn_error_compose_create(svn_error_wrap_apr(status, NULL),
-                                       err);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        add_done_item(ctx);
+
       return svn_error_trace(err);
     }
 
