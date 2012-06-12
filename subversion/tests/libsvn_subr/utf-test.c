@@ -197,7 +197,7 @@ utf_validate2(apr_pool_t *pool)
       /* A random string; experiment shows that it's occasionally (less
          than 1%) valid but usually invalid. */
       for (j = 0; j < sizeof(str) - 1; ++j)
-        str[j] = range_rand(0, 255);
+        str[j] = (char)range_rand(0, 255);
       str[sizeof(str) - 1] = 0;
       len = strlen(str);
 

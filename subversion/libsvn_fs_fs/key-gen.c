@@ -60,7 +60,7 @@ svn_fs_fs__add_keys(const char *key1, const char *key2, char *result)
       carry = val / 36;
       val = val % 36;
 
-      buf[i3++] = (val <= 9) ? (val + '0') : (val - 10 + 'a');
+      buf[i3++] = (char)((val <= 9) ? (val + '0') : (val - 10 + 'a'));
 
       if (i1>=0)
         i1--;
