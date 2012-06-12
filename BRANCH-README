@@ -4,11 +4,76 @@ catch-up merges from the trunk.
 
 TODO:
 
-   * Prepare existing code for merging of SVNRa editor       [TODO] 
-   * Apply editor support patches                            [TODO]
-   * Implement reading of state and content of repository    [TODO]
-   * Review                                                  [TODO]
-   * Incorporate feedback                                    [TODO]
-   * Merge to trunk                                          [TODO]
-    
+   * Prepare existing code for merging of SVNRa editor       [IN PROGRESS]
+   
+      01. JavaHL: Changed return value from the 
+          java svn_stream_t read function to be compatible 
+          with the txdelta_next_window function              [trunk@1342720]
+          
+      02. JavaHL: Explicitly pass jobject jthis when 
+          processing dispose() call rather  than stashing a
+          reference in the SVNBase class where it can be 
+          misused later                                      [trunk@1342810]
+          
+      03. JavaHL: Add SVN_JNI_STRING macro to reduce amount
+          of code necessary to declare JNIStringHolder and
+          check for exceptions                               [IN REVIEW]
+          
+      04. JavaHL: New method for creating java objects
+          linked to their C++ counterpart                    [IN REVIEW]   
+          
+      05. JavaHL: Factored out common context for later use
+          by SVNRa class                                     [IN REVIEW]
+          
+      06. JavaHL: Minimal implementation of SVNRa            [TODO]
+          
+      07. JavaHL: Merge existing SVNRepoAccess into SVNRA    [TODO]
 
+          
+   * Implement other ra functions not requiring addition code
+     refactoring                                             [TODO]
+
+
+   * Apply editor support patches                            [TODO]
+      xx. JavaHL: Support returning non const, empty rather
+          than NULL hash as required by 
+          (svn_ra_get_commit_editor3) 
+          apr_hash_t *revprop_table parameter                [br.@1343456 TBR]
+          
+      xx. JavaHL: Support keeping global reference to the
+          callback java object as required by the RA API due
+          to callback being used across method calls         [TODO]
+          
+      xx. JavaHL: Added support for creating of svn_string_t
+          from JNIByteArray                                  [TODO]
+          
+      xx. JavaHL: Added SVN_JNI_BYTE_ARRAY macro to reduce
+          amount of duplicate code dealing with jbyteArray
+          wrapper and checking for exceptions                [TODO]
+      
+      xx. JavaHL: Factor out common java string map
+          processing into StringsTable class from
+          svn_string_t specific processing in the
+          RevpropTable class                                 [TODO]
+
+          
+   * Commit RA editor implementation                         [TODO]
+
+
+   * Use of the java runtime exceptions                      [TODO]
+
+      * Proposal                                             [TODO]
+
+      * Implementation                                       [TODO]
+
+
+   * Implement reading of state and content of repository    [TODO]
+
+
+   * Branch Review                                           [TODO]
+
+
+   * Incorporate feedback                                    [TODO]
+
+
+   * Merge to trunk                                          [TODO]
