@@ -1480,7 +1480,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
       }                                                         \
   } else
 #define RECOVERABLE_RETRY_LOOP \
-  i < RECOVERABLE_RETRY_COUNT; i++
+  i < 10; i++
 #else
 #define RETRY_RECOVERABLE(err, filehandle, expr)  SVN_ERR(expr)
 #define IGNORE_RECOVERABLE(err, expr) SVN_ERR(expr)
