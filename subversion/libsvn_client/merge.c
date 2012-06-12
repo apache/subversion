@@ -11555,19 +11555,16 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
                           apr_pool_t *scratch_pool)
 {
   merge_target_t *target;
-  merge_source_t source;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
 
   SVN_ERR(open_target_wc(&target, target_abspath, TRUE, TRUE, TRUE,
                          ctx, scratch_pool, scratch_pool));
 
-  source.loc1 = merge->base;
-  source.loc2 = merge->right;
-  source.ancestral = (merge->mid == NULL);
-
   if (merge->mid)
     {
+      merge_source_t source = { merge->base, merge->right,
+                                (merge->mid == NULL) /* ancestral */ };
       svn_ra_session_t *ra_session = NULL;
 
       SVN_ERR(ensure_ra_session_url(&ra_session, source.loc1->url,
@@ -11586,6 +11583,17 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
     }
   else
     {
+      /* Ignoring the base that we found, we pass the YCA instead and let
+         do_merge() work out which subtrees need which revision ranges to
+         be merged.  This enables do_merge() to fill in revision-range
+         gaps that are older than the base that we calculated (which is
+         for the root path of the merge).
+
+         An improvement would be to change find_symmetric_merge() to
+         find the base for each sutree, and then here use the oldest base
+         among all subtrees. */
+      merge_source_t source = { merge->yca, merge->right,
+                                (merge->mid == NULL) /* ancestral */ };
       apr_array_header_t *merge_sources;
 
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
