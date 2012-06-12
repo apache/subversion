@@ -1813,7 +1813,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              "send-all" mode.  As a client, we're smart enough to know
              that's wrong, so we'll just push an ignorable state
              here. */
-          /*push_state(parser, ctx, TXDELTA);*/
           ;
         }
       else
