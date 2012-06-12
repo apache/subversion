@@ -2126,7 +2126,7 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
         {
           apr_finfo_t finfo;
           if (! (status = apr_stat(&finfo, filename, APR_FINFO_MIN, pool)))
-            res_initial_len = finfo.size;
+            res_initial_len = (apr_size_t)finfo.size;
         }
     }
 
