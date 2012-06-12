@@ -310,7 +310,6 @@ def update_binary_file_2(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(4128)
 def update_binary_file_3(sbox):
   "update locally modified file to equal versions"
@@ -367,7 +366,7 @@ def update_binary_file_3(sbox):
 
   # Create expected output tree for an update to rev 2.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/theta' : Item(status='  '),
+    'A/theta' : Item(status='G '),
     })
 
   # Create expected disk tree for the update
