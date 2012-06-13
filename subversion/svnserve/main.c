@@ -898,60 +898,6 @@ int main(int argc, const char *argv[])
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-#ifdef SIGUSR1
-  /* Disable SIGPIPE generation for the platforms that have it. */
-  apr_signal(SIGUSR1, SIG_IGN);
-/*
-#ifdef WIN32
-LRESULT CALLBACK ipc_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-  switch (message)
-  {
-    case WM_USER:  ipc_recv(0);
-    break;
-    default:  return DefWindowProc(hWnd, message, wParam, lParam);
-    break;
-    
-  }
-  return 0;
-}
-#endif
-void ipc_init()
-{
-  string cdir = config_dir();
-  db_path = cdir + "/dropbox.xdf";
-  sig_path = cdir + "/sig";
-#ifndef WIN32
-  signal(SIGUSR1, ipc_recv);
-#else
-  //welcome to hell
-  HINSTANCE inst = (HINSTANCE)GetWindowLong((HWND)GDK_WINDOW_HWND(get_mainwin()->window), GWL_HINSTANCE);
-  WNDCLASSEX wcex;
-  wcex.cbSize = sizeof(WNDCLASSEX);
-  wcex.style = 0;
-  wcex.lpfnWndProc = ipc_window_proc;
-  wcex.cbClsExtra = 0;
-  wcex.cbWndExtra = 0;
-  wcex.hCursor = 0;
-  wcex.hbrBackground = 0;
-  wcex.hIcon = 0;
-  wcex.hIconSm = 0;
-  wcex.hInstance = inst;
-  wcex.lpszMenuName = NULL;
-  wcex.lpszClassName = "MyApp Messages";
-  if(!RegisterClassEx(&wcex))
-    cerr << "Cannot register IPC window class!" << endl;
-  ipc_window = CreateWindow(wcex.lpszClassName, "MyApp IPC", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,  500, 100, HWND_MESSAGE, NULL, inst, NULL);
-  if(!ipc_window)
-    cerr << "Cannot create IPC window (" << (int)GetLastError() << ")" << endl;
-#endif
-  ofstream out(sig_path.c_str());
-  out << getpid() << endl;
-  out.close();
-}
-*/
-#endif
-
   if (pid_filename)
     SVN_INT_ERR(write_pid_file(pid_filename, pool));
 
