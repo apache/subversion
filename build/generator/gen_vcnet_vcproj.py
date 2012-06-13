@@ -156,7 +156,6 @@ class Generator(gen_win.WinGeneratorBase):
                           ('project_guid', self.makeguid('svn_locale')),
                         ))
     self.write_zlib_project_file('zlib' + self.vcproj_extension)
-    self.write_neon_project_file('neon' + self.vcproj_extension)
     self.write_serf_project_file('serf' + self.vcproj_extension)
 
     install_targets = self.get_install_targets()

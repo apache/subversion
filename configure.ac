@@ -115,29 +115,7 @@ AC_SUBST(SVN_LT_SOVERSION)
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
-# Either a space-separated list of allowable Neon versions, or "any" to
-# mean allow anything.
-NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28 0\.29"
-NEON_RECOMMENDED_VER="0.29.6"
-NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
-dnl You can skip the neon version check only if you know what you are doing 
-AC_ARG_ENABLE(neon-version-check,
-  AS_HELP_STRING([--disable-neon-version-check],
-                 [do not check the Neon version]),
-  [
-    if test "$enableval" = "no" ; then
-      NEON_ALLOWED_LIST="any"
-    fi
-  ],
-  [])
-SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
-
-if test "$svn_lib_neon" = "yes"; then
-  AC_DEFINE([SVN_HAVE_NEON], 1,
-            [Defined if support for Neon is enabled])
-fi
-
-dnl Search for serf as an alternative to neon
+dnl Search for serf
 SVN_LIB_SERF(1,0,0)
 
 if test "$svn_lib_serf" = "yes"; then
@@ -840,12 +818,6 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
 fi
-  
-if test "$svn_lib_neon" = "yes"; then
-  BUILD_RULES="$BUILD_RULES neon-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-ramod-lib/install-ramod-lib install-neon-lib/'`"
-  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-neon-lib"
-fi
 
 if test "$svn_lib_serf" = "yes"; then
   BUILD_RULES="$BUILD_RULES serf-lib"
@@ -924,10 +896,7 @@ AS_HELP_STRING([--with-openssl],
                 process where to locate the OpenSSL library when (and only when)
                 building Serf as an integrated part of the Subversion build
                 process. When linking to a previously installed version of Serf
-                instead, you do not need to use this option. (Note that
-                Subversion may also or alternatively be configured to use the
-                Neon library for http:// and https:// access; see the
-                --with-neon and --with-ssl options.)]),
+                instead, you do not need to use this option.]),
 [])
 
 AC_ARG_ENABLE(debug,
@@ -996,7 +965,6 @@ AC_SUBST([libsvn_fs_fs_LDFLAGS])
 AC_SUBST([libsvn_fs_util_LDFLAGS])
 AC_SUBST([libsvn_ra_LDFLAGS])
 AC_SUBST([libsvn_ra_local_LDFLAGS])
-AC_SUBST([libsvn_ra_neon_LDFLAGS])
 AC_SUBST([libsvn_ra_serf_LDFLAGS])
 AC_SUBST([libsvn_ra_svn_LDFLAGS])
 AC_SUBST([libsvn_repos_LDFLAGS])
@@ -1232,11 +1200,6 @@ AS_HELP_STRING([--enable-runtime-module-search],
 ])
 
 if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
-  ### We want ra_local first to handle the following scenario:
-  ### user has neon and db3 in /usr/local, and db4 in
-  ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 
-  ### libsvn_fs.la then libtool ends up linking libsvn_fs to the db3
-  ### in /usr/local/lib
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
       [Defined if libsvn_client should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
@@ -1247,14 +1210,6 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
       [Defined if libsvn_client should link against libsvn_ra_svn])
   svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
   svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
-
-  if test "$svn_lib_neon" = "yes"; then
-    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_NEON, 1,
-          [Defined if libsvn_client should link against libsvn_ra_neon])
-    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_NEON_DEPS)"
-    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-neon-lib"
-    svn_ra_lib_link="$svn_ra_lib_link \$(RA_NEON_LINK)"
-  fi
 
   if test "$svn_lib_serf" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SERF, 1,

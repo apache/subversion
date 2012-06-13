@@ -42,7 +42,6 @@ SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
 
 SCHEMA_DIR = subversion/svn/schema
 
-NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
@@ -70,7 +69,6 @@ gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
 gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
-neon_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
 includedir = @includedir@
@@ -129,7 +127,7 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
            @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
-           @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ @SVN_NEON_INCLUDES@ \
+           @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
            @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
@@ -218,7 +216,6 @@ libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
 libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
 libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
 libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
-libsvn_ra_neon_LDFLAGS = @libsvn_ra_neon_LDFLAGS@
 libsvn_ra_serf_LDFLAGS = @libsvn_ra_serf_LDFLAGS@
 libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
 libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
@@ -245,7 +242,6 @@ INSTALL_GPG_AGENT_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_GSSAPI_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
-INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
@@ -584,15 +580,9 @@ external-clean external-distclean external-extraclean:
             revlist="$$i $$revlist";                    \
         done;                                           \
         for i in $$revlist; do                          \
-            if test "$$i" = "neon" -a "$$target" = "extraclean"; then    \
-                echo "------ making distclean (no extraclean) in $$i";    \
-                (cd $$i && $(MAKE) distclean) || exit 1;                 \
-                echo "------ completed distclean (no extraclean) in $$i"; \
-            else                                                         \
-                echo "------ making $$target in $$i";       \
-                (cd $$i && $(MAKE) $$target) || exit 1;     \
-                echo "------ completed $$target in $$i";    \
-            fi;                                             \
+            echo "------ making $$target in $$i";       \
+            (cd $$i && $(MAKE) $$target) || exit 1;     \
+            echo "------ completed $$target in $$i";    \
         done;
 
 
