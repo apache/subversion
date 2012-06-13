@@ -360,14 +360,13 @@ get_file_from_ra(struct file_baton *b,
    corresponding property in PRISTINE_PROPS.
 
      Issue #3657 'dav update report handler in skelta mode can cause
-     spurious conflicts'.  When communicating with the repository via ra_serf
-     and ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
+     spurious conflicts'.  When communicating with the repository via ra_serf,
+     the change_dir_prop and change_file_prop svn_delta_editor_t
      callbacks are called (obviously) when a directory or file property has
      changed between the start and end of the edit.  Less obvious however,
      is that these callbacks may be made describing *all* of the properties
      on FILE_BATON->PATH when using the DAV providers, not just the change(s).
-     (Specifically ra_neon does this for diff/merge and ra_serf does it
-     for diff/merge/update/switch).
+     (Specifically ra_serf does it for diff/merge/update/switch).
 
      This means that the change_[file|dir]_prop svn_delta_editor_t callbacks
      may be made where there are no property changes (i.e. a noop change of
