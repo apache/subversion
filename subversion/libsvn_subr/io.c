@@ -4020,8 +4020,8 @@ contents_identical_p(svn_boolean_t *identical_p,
   apr_size_t bytes_read1, bytes_read2;
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_file_t *file1_h = NULL;
-  apr_file_t *file2_h = NULL;
+  apr_file_t *file1_h;
+  apr_file_t *file2_h;
   svn_boolean_t eof1 = FALSE;
   svn_boolean_t eof2 = FALSE;
 
@@ -4084,16 +4084,16 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 
   if (q)
     {
-      *same = 0;
+      *same = FALSE;
       return SVN_NO_ERROR;
     }
 
   SVN_ERR(contents_identical_p(&q, file1, file2, pool));
 
   if (q)
-    *same = 1;
+    *same = TRUE;
   else
-    *same = 0;
+    *same = FALSE;
 
   return SVN_NO_ERROR;
 }
