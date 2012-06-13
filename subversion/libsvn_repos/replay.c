@@ -950,7 +950,8 @@ svn_repos_replay2(svn_fs_root_t *root,
                                        NULL, NULL,
                                        pool, pool));
 
-  SVN_ERR(svn_repos__replay_ev2(root, base_path, low_water_mark, send_deltas,
+  /* ### We're ignoring SEND_DELTAS here. */
+  SVN_ERR(svn_repos__replay_ev2(root, base_path, low_water_mark,
                                 editorv2, authz_read_func, authz_read_baton,
                                 pool));
 
@@ -967,7 +968,6 @@ static svn_error_t *
 replay_node(svn_fs_root_t *root,
             const char *repos_relpath,
             svn_editor_t *editor,
-            svn_fs_root_t *source_root,
             svn_revnum_t low_water_mark,
             const char *base_repos_relpath,
             apr_array_header_t *copies,
@@ -988,6 +988,7 @@ replay_node(svn_fs_root_t *root,
   void *file_baton = NULL;
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
+  svn_fs_root_t *source_root = NULL;
   const char *source_fspath = NULL;
 
   /* Initialize SOURCE_FSPATH. */
@@ -1294,7 +1295,6 @@ svn_error_t *
 svn_repos__replay_ev2(svn_fs_root_t *root,
                       const char *base_repos_relpath,
                       svn_revnum_t low_water_mark,
-                      svn_boolean_t send_deltas,
                       svn_editor_t *editor,
                       svn_repos_authz_func_t authz_read_func,
                       void *authz_read_baton,
@@ -1304,7 +1304,6 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   apr_hash_t *changed_paths;
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
-  svn_fs_root_t *compare_root;
   apr_array_header_t *copies;
   apr_pool_t *iterpool;
   int i;
@@ -1375,18 +1374,6 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   if (! SVN_IS_VALID_REVNUM(low_water_mark))
     low_water_mark = 0;
 
-  if (send_deltas)
-    {
-      SVN_ERR(svn_fs_revision_root(&compare_root,
-                                   svn_fs_root_fs(root),
-                                   svn_fs_is_revision_root(root)
-                                     ? svn_fs_revision_root_revision(root) - 1
-                                     : svn_fs_txn_root_base_revision(root),
-                                   scratch_pool));
-    }
-  else
-    compare_root = NULL;
-
   copies = apr_array_make(scratch_pool, 4, sizeof(struct copy_info *));
 
   /* Now actually handle the various paths. */
@@ -1396,7 +1383,7 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
       const char *repos_relpath = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(replay_node(root, repos_relpath, editor, compare_root,
+      SVN_ERR(replay_node(root, repos_relpath, editor,
                           low_water_mark,
                           base_repos_relpath, copies, changed_paths,
                           authz_read_func, authz_read_baton,
