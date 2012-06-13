@@ -1395,6 +1395,7 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
     {
       const char *repos_relpath = APR_ARRAY_IDX(paths, i, const char *);
 
+      svn_pool_clear(iterpool);
       SVN_ERR(replay_node(root, repos_relpath, editor, compare_root,
                           low_water_mark,
                           base_repos_relpath, copies, changed_paths,
