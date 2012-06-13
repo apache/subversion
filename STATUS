@@ -139,12 +139,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1340556
-   Avoid a stat per working copy find operation by statting .svn instead of two
-   nodes inside .svn, per wc-directory that doesn't have a .svn directory.
-   Justification:
-     Very simple fix that gives the working copy find code a huge performance
-     boost.
-   Votes:
-     +1: rhuijben, steveking, gstein
