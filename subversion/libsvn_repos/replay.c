@@ -340,6 +340,7 @@ add_subdir(svn_fs_root_t *source_root,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* Given PATH deleted under ROOT, return in READABLE whether the path was
    readable prior to the deletion.  Consult COPIES (a stack of 'struct
@@ -456,6 +457,7 @@ fill_copyfrom(svn_fs_root_t **copyfrom_root,
   return SVN_NO_ERROR;
 }
 
+#ifndef USE_EV2_IMPL
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
@@ -962,12 +964,331 @@ svn_repos_replay2(svn_fs_root_t *root,
  *****************************************************************/
 
 static svn_error_t *
-replay_node(const char *repos_relpath,
+replay_node(svn_fs_root_t *root,
+            const char *repos_relpath,
             svn_editor_t *editor,
+            svn_fs_root_t *source_root,
+            svn_revnum_t low_water_mark,
+            const char *base_repos_relpath,
+            apr_array_header_t *copies,
+            apr_hash_t *changed_paths,
+            svn_repos_authz_func_t authz_read_func,
+            void *authz_read_baton,
+            apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
+#ifndef USE_EV2_IMPL
 {
   SVN__NOT_IMPLEMENTED();
 }
+#else
+{
+  svn_fs_path_change2_t *change;
+  svn_boolean_t do_add = FALSE;
+  svn_boolean_t do_delete = FALSE;
+  void *file_baton = NULL;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+  const char *source_fspath = NULL;
+
+  /* Initialize SOURCE_FSPATH. */
+  if (source_root)
+    source_fspath = svn_fspath__canonicalize(repos_relpath, scratch_pool);
+
+  /* First, flush the copies stack so it only contains ancestors of path. */
+  while (copies->nelts > 0
+         && (svn_relpath_skip_ancestor(APR_ARRAY_IDX(copies,
+                                                    copies->nelts - 1,
+                                                     struct copy_info *)->path,
+                                       repos_relpath) == NULL) )
+    apr_array_pop(copies);
+
+  change = apr_hash_get(changed_paths, repos_relpath, APR_HASH_KEY_STRING);
+  if (! change)
+    {
+      /* This can only happen if the path was removed from changed_paths
+         by an earlier call to add_subdir, which means the path was already
+         handled and we should simply ignore it. */
+      return SVN_NO_ERROR;
+    }
+  switch (change->change_kind)
+    {
+    case svn_fs_path_change_add:
+      do_add = TRUE;
+      break;
+
+    case svn_fs_path_change_delete:
+      do_delete = TRUE;
+      break;
+
+    case svn_fs_path_change_replace:
+      do_add = TRUE;
+      do_delete = TRUE;
+      break;
+
+    case svn_fs_path_change_modify:
+    default:
+      /* do nothing */
+      break;
+    }
+
+  /* Handle any deletions. */
+  if (do_delete)
+    {
+      svn_boolean_t readable;
+
+      /* Issue #4121: delete under under a copy, of a path that was unreadable
+         at its pre-copy location. */
+      SVN_ERR(was_readable(&readable, root, repos_relpath, copies,
+                            authz_read_func, authz_read_baton,
+                            scratch_pool, scratch_pool));
+      if (readable)
+        SVN_ERR(svn_editor_delete(editor, repos_relpath, SVN_INVALID_REVNUM));
+    }
+
+  /* Fetch the node kind if it makes sense to do so. */
+  if (! do_delete || do_add)
+    {
+      if (change->node_kind == svn_node_unknown)
+        SVN_ERR(svn_fs_check_path(&(change->node_kind), root, repos_relpath,
+                                  scratch_pool));
+      if ((change->node_kind != svn_node_dir) &&
+          (change->node_kind != svn_node_file))
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("Filesystem path '%s' is neither a file "
+                                   "nor a directory"), repos_relpath);
+    }
+
+  /* Handle any adds/opens. */
+  if (do_add)
+    {
+      svn_boolean_t src_readable;
+      svn_fs_root_t *copyfrom_root;
+
+      /* Was this node copied? */
+      SVN_ERR(fill_copyfrom(&copyfrom_root, &copyfrom_path, &copyfrom_rev,
+                            &src_readable, root, change,
+                            authz_read_func, authz_read_baton,
+                            repos_relpath, scratch_pool, scratch_pool));
+
+      /* If we have a copyfrom path, and we can't read it or we're just
+         ignoring it, or the copyfrom rev is prior to the low water mark
+         then we just null them out and do a raw add with no history at
+         all. */
+      if (copyfrom_path
+          && ((! src_readable)
+              || (svn_relpath_skip_ancestor(base_repos_relpath,
+                                            copyfrom_path + 1) == NULL)
+              || (low_water_mark > copyfrom_rev)))
+        {
+          copyfrom_path = NULL;
+          copyfrom_rev = SVN_INVALID_REVNUM;
+        }
+
+      /* Do the right thing based on the path KIND. */
+      if (change->node_kind == svn_node_dir)
+        {
+          /* If this is a copy, but we can't represent it as such,
+             then we just do a recursive add of the source path
+             contents. */
+          if (change->copyfrom_path && ! copyfrom_path)
+            {
+              SVN_ERR(add_subdir(copyfrom_root, root, editor, edit_baton,
+                                 repos_relpath, parent_baton,
+                                 change->copyfrom_path,
+                                 authz_read_func, authz_read_baton,
+                                 changed_paths, scratch_pool, dir_baton));
+            }
+          else
+            {
+              apr_array_header_t *children = NULL;
+              apr_hash_t *props = NULL;
+
+              SVN_ERR(svn_editor_add_directory(editor, repos_relpath,
+                                               children, props,
+                                               SVN_INVALID_REVNUM));
+              /*SVN_ERR(editor->add_directory(repos_relpath, parent_baton,
+                                            copyfrom_path, copyfrom_rev,
+                                            scratch_pool, dir_baton));*/
+            }
+        }
+      else
+        {
+          apr_hash_t *props = NULL;
+          svn_checksum_t *checksum = NULL;
+          svn_stream_t *contents = NULL;
+
+          SVN_ERR(svn_editor_add_file(editor, repos_relpath, checksum,
+                                      contents, props, SVN_INVALID_REVNUM));
+          /*SVN_ERR(editor->add_file(repos_relpath, parent_baton, copyfrom_path,
+                                   copyfrom_rev, scratch_pool, &file_baton));*/
+        }
+
+      /* If we represent this as a copy... */
+      if (copyfrom_path)
+        {
+          /* If it is a directory, make sure descendants get the correct
+             delta source by remembering that we are operating inside a
+             (possibly nested) copy operation. */
+          if (change->node_kind == svn_node_dir)
+            {
+              struct copy_info *info = apr_pcalloc(result_pool, sizeof(*info));
+
+              info->path = apr_pstrdup(result_pool, repos_relpath);
+              info->copyfrom_path = apr_pstrdup(result_pool, copyfrom_path);
+              info->copyfrom_rev = copyfrom_rev;
+
+              APR_ARRAY_PUSH(copies, struct copy_info *) = info;
+            }
+
+          /* Save the source so that we can use it later, when we
+             need to generate text and prop deltas. */
+          source_root = copyfrom_root;
+          source_fspath = copyfrom_path;
+        }
+      else
+        /* Else, we are an add without history... */
+        {
+          /* If an ancestor is added with history, we need to forget about
+             that here, go on with life and repeat all the mistakes of our
+             past... */
+          if (change->node_kind == svn_node_dir && copies->nelts > 0)
+            {
+              struct copy_info *info = apr_pcalloc(result_pool, sizeof(*info));
+
+              info->path = apr_pstrdup(result_pool, repos_relpath);
+              info->copyfrom_path = NULL;
+              info->copyfrom_rev = SVN_INVALID_REVNUM;
+
+              APR_ARRAY_PUSH(copies, struct copy_info *) = info;
+            }
+          source_root = NULL;
+          source_fspath = NULL;
+        }
+    }
+  else if (! do_delete)
+    {
+      /* If we are inside an add with history, we need to adjust the
+         delta source. */
+      if (copies->nelts > 0)
+        {
+          struct copy_info *info = APR_ARRAY_IDX(copies,
+                                                 copies->nelts - 1,
+                                                 struct copy_info *);
+          if (info->copyfrom_path)
+            {
+              const char *relpath = svn_relpath_skip_ancestor(info->path,
+                                                              repos_relpath);
+              SVN_ERR_ASSERT(relpath && *relpath);
+              SVN_ERR(svn_fs_revision_root(&source_root,
+                                           svn_fs_root_fs(root),
+                                           info->copyfrom_rev, scratch_pool));
+              source_fspath = svn_fspath__join(info->copyfrom_path,
+                                               relpath, scratch_pool);
+            }
+          else
+            {
+              /* This is an add without history, nested inside an
+                 add with history.  We have no delta source in this case. */
+              source_root = NULL;
+              source_fspath = NULL;
+            }
+        }
+    }
+
+  if (! do_delete || do_add)
+    {
+      /* Is this a copy that was downgraded to a raw add?  (If so,
+         we'll need to transmit properties and file contents and such
+         for it regardless of what the CHANGE structure's text_mod
+         and prop_mod flags say.)  */
+      svn_boolean_t downgraded_copy = (change->copyfrom_known
+                                       && change->copyfrom_path
+                                       && (! copyfrom_path));
+
+      /* Handle property modifications. */
+      if (change->prop_mod || downgraded_copy)
+        {
+          apr_array_header_t *prop_diffs;
+          apr_hash_t *old_props;
+          apr_hash_t *new_props;
+          int i;
+
+          if (source_root)
+            SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
+                                         source_fspath, scratch_pool));
+          else
+            old_props = apr_hash_make(scratch_pool);
+
+          SVN_ERR(svn_fs_node_proplist(&new_props, root, repos_relpath,
+                                       scratch_pool));
+
+          SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
+                                 scratch_pool));
+
+          for (i = 0; i < prop_diffs->nelts; ++i)
+            {
+              svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+               if (change->node_kind == svn_node_dir)
+                 SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
+                                                 pc->value, scratch_pool));
+               else if (change->node_kind == svn_node_file)
+                 SVN_ERR(editor->change_file_prop(file_baton, pc->name,
+                                                  pc->value, scratch_pool));
+            }
+        }
+
+      /* Handle textual modifications. */
+      if (change->node_kind == svn_node_file
+          && (change->text_mod || downgraded_copy))
+        {
+          svn_txdelta_window_handler_t delta_handler;
+          void *delta_handler_baton;
+          const char *hex_digest = NULL;
+
+          if (source_root && source_fspath)
+            {
+              svn_checksum_t *checksum;
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
+                                           source_root, source_fspath, TRUE,
+                                           scratch_pool));
+              hex_digest = svn_checksum_to_cstring(checksum, scratch_pool);
+            }
+
+          SVN_ERR(editor->apply_textdelta(file_baton, hex_digest, scratch_pool,
+                                          &delta_handler,
+                                          &delta_handler_baton));
+          if (cb->compare_root)
+            {
+              svn_txdelta_stream_t *delta_stream;
+
+              SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream, source_root,
+                                                   source_fspath, root,
+                                                   repos_relpath,
+                                                   scratch_pool));
+              SVN_ERR(svn_txdelta_send_txstream(delta_stream, delta_handler,
+                                                delta_handler_baton,
+                                                scratch_pool));
+            }
+          else
+            SVN_ERR(delta_handler(NULL, delta_handler_baton));
+        }
+    }
+
+  /* Close the file baton if we opened it. */
+  if (file_baton)
+    {
+      svn_checksum_t *checksum;
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root,
+                                   repos_relpath, TRUE, scratch_pool));
+      SVN_ERR(editor->close_file(file_baton,
+                                 svn_checksum_to_cstring(checksum,
+                                                         scratch_pool),
+                                 scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 svn_error_t *
 svn_repos__replay_ev2(svn_fs_root_t *root,
@@ -1073,7 +1394,12 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *repos_relpath = APR_ARRAY_IDX(paths, i, const char *);
-      SVN_ERR(replay_node(repos_relpath, editor, iterpool));
+
+      SVN_ERR(replay_node(root, repos_relpath, editor, compare_root,
+                          low_water_mark,
+                          base_repos_relpath, copies, changed_paths,
+                          authz_read_func, authz_read_baton,
+                          scratch_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
