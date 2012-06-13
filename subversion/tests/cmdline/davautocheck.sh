@@ -69,6 +69,8 @@
 # the environment.
 #
 # To enable "SVNCacheRevProps on" set CACHE_REVPROPS in the environment.
+#
+# To test over https set USE_SSL in the environment.
 # 
 # To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
 # appropriate value in the environment.
@@ -282,6 +284,10 @@ if [ ${APACHE_MPM:+set} ]; then
     LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
       || fail "MPM module not found"
 fi
+if [ ${USE_SSL:+set} ]; then
+    LOAD_MOD_SSL=$(get_loadmodule_config mod_ssl) \
+      || fail "SSL module not found"
+fi
 
 random_port() {
   if [ -n "$BASH_VERSION" ]; then
@@ -309,6 +315,53 @@ mkdir "$HTTPD_ROOT" \
 
 say "Using directory '$HTTPD_ROOT'..."
 
+if [ ${USE_SSL:+set} ]; then
+  say "Setting up SSL"
+  BASE_URL="https://localhost:$HTTPD_PORT"
+# A self-signed certifcate for localhost generated via:
+#   openssl req -new -x509 -nodes -out cert.pem -keyout cert-key.pem
+  SSL_CERTIFICATE_FILE="$HTTPD_ROOT/cert.pem"
+cat > "$SSL_CERTIFICATE_FILE" <<__EOF__
+-----BEGIN CERTIFICATE-----
+MIICrTCCAhagAwIBAgIJAN/ks6HqqeVKMA0GCSqGSIb3DQEBBQUAMEQxGjAYBgNV
+BAoTEUFwYWNoZSBTdWJ2ZXJzaW9uMRIwEAYDVQQLEwl0ZXN0c3VpdGUxEjAQBgNV
+BAMTCWxvY2FsaG9zdDAeFw0xMjA2MTIyMTIyNDlaFw0xMjA3MTIyMTIyNDlaMEQx
+GjAYBgNVBAoTEUFwYWNoZSBTdWJ2ZXJzaW9uMRIwEAYDVQQLEwl0ZXN0c3VpdGUx
+EjAQBgNVBAMTCWxvY2FsaG9zdDCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA
+pAIkUHZbKgb6n75AZu7YG3skAeFZRVCiu9K/KwLKxDlhDuXhAjrGUOyfwtvj0Ezw
+F6J1Ke6NJFNOMw9FKcp9BegUyWHQ0hTxQSbgIGCgZGG74LUO5kdHQBU9bu/3daF+
+TC0e08OO90RLAoNr/CADZOTDDPD1QYFS3Au49GZPtI8CAwEAAaOBpjCBozAdBgNV
+HQ4EFgQUKgls7+vC/CGZKNJUczUSo+ZL2wAwdAYDVR0jBG0wa4AUKgls7+vC/CGZ
+KNJUczUSo+ZL2wChSKRGMEQxGjAYBgNVBAoTEUFwYWNoZSBTdWJ2ZXJzaW9uMRIw
+EAYDVQQLEwl0ZXN0c3VpdGUxEjAQBgNVBAMTCWxvY2FsaG9zdIIJAN/ks6HqqeVK
+MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQADgYEAFMkecdq3XuJaRaC+4G38
+RNzUFR5Mnv/Ue/43J5CEJ5g2RTxro8DnGcYw2Qbv8lCUDBhkQ8L/lwnLe5jd204D
+Ad9t+1LXNyrYYncOmoZyzKupbfR0m6qz2Q45tqEztHokVWLnchiBaOL0nnGY0rPM
+zyc9CVIgp7ivvAud6ja++CQ=
+-----END CERTIFICATE-----
+__EOF__
+  SSL_CERTIFICATE_KEY_FILE="$HTTPD_ROOT/cert-key.pem"
+cat > "$SSL_CERTIFICATE_KEY_FILE" <<__EOF__
+ -----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCkAiRQdlsqBvqfvkBm7tgbeyQB4VlFUKK70r8rAsrEOWEO5eEC
+OsZQ7J/C2+PQTPAXonUp7o0kU04zD0Upyn0F6BTJYdDSFPFBJuAgYKBkYbvgtQ7m
+R0dAFT1u7/d1oX5MLR7Tw473REsCg2v8IANk5MMM8PVBgVLcC7j0Zk+0jwIDAQAB
+AoGAFU0x6kF1FcBSTO0o8DWVW/xicNwT/Cy89igpLCzwqQvKz2SMFP4NQ/V3ypdE
+v4k+pdMz5H5XVqB7R6Z0FTl3g1ecfZoxYuMYWgzaaS6nx1xWJUqMTUqHArt9Sl/K
+/k6H5cNPC3JxGv7Blz87a3ypi93ZgSOJZDixG0BoRClGegECQQDVLTMqH5pVeBH1
+kfY2O8initMhi1lluM7yREbvZtxm844P11m7V4sOX9XQtBaaW3qLjzIru0TBJCL6
+F1JF7mYlAkEAxPRsJuFtBtWpQvnFzX3uXtaJtKtBIHbyBhmzo4f+ed/JU4Kzu1Pk
+CMnKgglg8rzU8/0HIU0AiaV2ItlQwb6PowJATZkWds7qLxJ19x4ascMxV0uBb0R6
+Vjzfl/CioaKfuBoQLFQHpdpIFANuoXnsgGOsSADoEmMos+WjlcXHfQ06wQJBAJTe
+79Tftephm+QtKc9urbvvy/zNKZghcEUeLkOgqsByYBoIhFRHT+k4piJudmJkS071
+ZetM6eghMk+bFcisgqMCQDD3kQ8gYOS9GbHPuTF4dfFSBx51nvd+hWNna1wi3rl+
+7nYzmrRWOp4ZMUG7i6GwqYHZ9stwJ/xRup5oink5VoQ=
+-----END RSA PRIVATE KEY-----
+__EOF__
+  SSL_MAKE_VAR="SSL_CERT=$SSL_CERTIFICATE_FILE"
+  SSL_TEST_ARG="--ssl-cert $SSL_CERTIFICATE_FILE"
+fi
+
 say "Adding users for lock authentication"
 $HTPASSWD -bc $HTTPD_USERS jrandom   rayjandom
 $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
@@ -317,6 +370,7 @@ touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_MPM
+$LOAD_MOD_SSL
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
@@ -343,6 +397,14 @@ else
   cat >> "$HTTPD_CFG" <<__EOF__
 # TODO: maybe uncomment this for prefork,worker MPMs only?
 # Mutex file:lock mpm-accept
+__EOF__
+fi
+
+if [ ${USE_SSL:+set} ]; then
+cat >> "$HTTPD_CFG" <<__EOF__
+SSLEngine on
+SSLCertificateFile $SSL_CERTIFICATE_FILE
+SSLCertificateKeyFile $SSL_CERTIFICATE_KEY_FILE
 __EOF__
 fi
 
@@ -424,7 +486,7 @@ say "HTTPD started and listening on '$BASE_URL'..."
 ### server/request.c:ap_process_request_internal():
 ###   [Wed Feb 22 13:06:55 2006] [crit] [client 127.0.0.1] configuration error:  couldn't check user: /cfg
 HTTP_FETCH=wget
-HTTP_FETCH_OUTPUT="-q -O"
+HTTP_FETCH_OUTPUT="--no-check-certificate -q -O"
 type wget > /dev/null 2>&1
 if [ $? -ne 0 ]; then
   type curl > /dev/null 2>&1
@@ -432,7 +494,7 @@ if [ $? -ne 0 ]; then
     fail "Neither curl or wget found."
   fi
   HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT='-s -o'
+  HTTP_FETCH_OUTPUT='-s -k -o'
 fi
 $HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
 diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
@@ -463,13 +525,13 @@ else
 fi
 
 if [ $# = 0 ]; then
-  time make check "BASE_URL=$BASE_URL"
+  time make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@")
+  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
   r=$?
 fi
 
