@@ -755,7 +755,7 @@ def cherry3_fwd(sbox):
 @SkipUnless(server_has_mergeinfo)
 @XFail()
 def subtree_to_and_fro(sbox):
-  "reintegrate ignores source subtree mergeinfo"
+  "reintegrate considers source subtree mergeinfo"
 
 #     A (--o-o-o-o---------x
 #       ( \         \     /
@@ -849,7 +849,7 @@ def subtree_to_and_fro(sbox):
 # synced to the target root.
 @SkipUnless(server_has_mergeinfo)
 def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
-  "sync merge ignores source subtree mergeinfo"
+  "sync merge considers target subtree mergeinfo"
 
   #   A (--o-o-o-o------------------
   #     ( \         \        \     \
