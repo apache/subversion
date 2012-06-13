@@ -31,6 +31,7 @@ INSTALLDIR=E:\svn
 
 EXPATVER=2.0.0
 HTTPDVER=2.2.13
+SERFVER=1.1.0
 OPENSSLVER=0.9.8k
 SQLITEVER=3.6.3
 ZLIBVER=1.2.3
@@ -48,7 +49,7 @@ APRUTILDIR=$(HTTPDDIR)\srclib\apr-util
 APRICONVDIR=$(HTTPDDIR)\srclib\apr-iconv
 SQLITEDIR=$(SOURCESDIR)\sqlite-amalgamation
 ZLIBDIR=$(SOURCESDIR)\zlib-$(ZLIBVER)
-SERFDIR=$(SOURCESDIR)\serf
+SERFDIR=$(SOURCESDIR)\serf-$(SERFVER)
 
 all:
 	@echo Available targets: newfiles versionstamp
