@@ -142,12 +142,6 @@ def _usage_exit(err=None):
   print("           look for Berkeley DB headers and libs in")
   print("           DIR")
   print("")
-  print("  --with-neon=DIR")
-  print("           the Neon sources are in DIR")
-  print("")
-  print("  --without-neon")
-  print("           Don't build Neon sources (if present)")
-  print("")
   print("  --with-serf=DIR")
   print("           the Serf sources are in DIR")
   print("")
@@ -162,11 +156,11 @@ def _usage_exit(err=None):
   print("           implies --enable-nls")
   print("")
   print("  --with-openssl=DIR")
-  print("           tell neon to look for OpenSSL headers")
+  print("           tell serf to look for OpenSSL headers")
   print("           and libs in DIR")
   print("")
   print("  --with-zlib=DIR")
-  print("           tell neon to look for ZLib headers and")
+  print("           tell Subversion to look for ZLib headers and")
   print("           libs in DIR")
   print("")
   print("  --with-jdk=DIR")
@@ -242,8 +236,6 @@ if __name__ == '__main__':
                             'with-apr-util=',
                             'with-apr-iconv=',
                             'with-berkeley-db=',
-                            'with-neon=',
-                            'without-neon',
                             'with-serf=',
                             'with-httpd=',
                             'with-libintl=',
