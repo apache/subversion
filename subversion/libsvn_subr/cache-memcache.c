@@ -36,6 +36,11 @@
 
 #include <apr_memcache.h>
 
+/* Older APRs do not have this.  */
+#ifndef APR_INT16_MAX
+#define APR_INT16_MAX   (0x7fff)
+#endif
+
 /* A note on thread safety:
 
    The apr_memcache_t object does its own mutex handling, and nothing
