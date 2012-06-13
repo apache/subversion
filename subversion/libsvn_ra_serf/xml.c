@@ -751,11 +751,29 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
                           const char *data,
                           apr_size_t len)
 {
-  /* If we're collecting cdata, but NOT waiting for a closing tag
-     (ie. not within an unknown tag), then copy the cdata.  */
-  if (xmlctx->current->cdata != NULL
-      && xmlctx->waiting.namespace == NULL)
-    svn_stringbuf_appendbytes(xmlctx->current->cdata, data, len);
+  /* If we are waiting for a closing tag, then we are uninterested in
+     the cdata. Just return.  */
+  if (xmlctx->waiting.namespace != NULL)
+    return SVN_NO_ERROR;
+
+  /* If the current state is collecting cdata, then copy the cdata.  */
+  if (xmlctx->current->cdata != NULL)
+    {
+      svn_stringbuf_appendbytes(xmlctx->current->cdata, data, len);
+    }
+  /* ... else if a CDATA_CB has been supplied, then invoke it for
+     all states.  */
+  else if (xmlctx->cdata_cb != NULL)
+    {
+      START_CALLBACK(xmlctx);
+      SVN_ERR(xmlctx->cdata_cb(xmlctx->current,
+                               xmlctx->baton,
+                               xmlctx->current->state,
+                               data, len,
+                               xmlctx->scratch_pool));
+      END_CALLBACK(xmlctx);
+      svn_pool_clear(xmlctx->scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
