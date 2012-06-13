@@ -399,7 +399,7 @@ estimate_unparsed_size(const svn_skel_t *skel)
     }
   else
     {
-      int total_len;
+      apr_size_t total_len;
       svn_skel_t *child;
 
       /* Allow space for opening and closing parens, and a space
