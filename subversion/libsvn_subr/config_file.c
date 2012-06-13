@@ -809,7 +809,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   ssl-pkcs11-provider        Name of PKCS#11 provider to use."  NL
         "###   http-library               Which library to use for http/https"
                                                                              NL
-        "###                              connections (neon or serf)"        NL
+        "###                              connections."                      NL
         "###   store-passwords            Specifies whether passwords used"  NL
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL
@@ -886,6 +886,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
+        "###"                                                                NL
+        "### Most users will not need to explicitly set the http-library"    NL
+        "### option, but valid values for the option include:"               NL
+        "###    'serf': Serf-based module (Subversion 1.5 - present)"        NL
+        "###    'neon': Neon-based module (Subversion 1.0 - 1.7)"            NL
+        "### Availability of these modules may depend on your specific"      NL
+        "### Subversion distribution."                                       NL
         "###"                                                                NL
         "### The commented-out examples below are intended only to"          NL
         "### demonstrate how to use this file; any resemblance to actual"    NL
