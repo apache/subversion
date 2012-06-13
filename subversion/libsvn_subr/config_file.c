@@ -797,9 +797,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
                                                                              NL
         "###   http-compression           Whether to compress HTTP requests" NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
-#ifdef SVN_NEON_0_26
-        "###   http-auth-types            Auth types to use for HTTP library"NL
-#endif
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL
@@ -915,9 +912,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-username = blah"                                       NL
         "# http-proxy-password = doubleblah"                                 NL
         "# http-timeout = 60"                                                NL
-#ifdef SVN_NEON_0_26
-        "# http-auth-types = basic;digest;negotiate"                         NL
-#endif
         "# neon-debug-mask = 130"                                            NL
 #ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "# store-plaintext-passwords = no"                                   NL
@@ -958,9 +952,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-username = defaultusername"                            NL
         "# http-proxy-password = defaultpassword"                            NL
         "# http-compression = no"                                            NL
-#ifdef SVN_NEON_0_26
-        "# http-auth-types = basic;digest;negotiate"                         NL
-#endif
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
