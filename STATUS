@@ -140,14 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1345482
-   Resolve a theoretical assertion when upgrading, in case the working copy
-   contains tree conflicts with a url that is not canonical in 1.7+.
-   Justification:
-     Upgrading should be painless.
-   Votes:
-     +1: rhuijben, gstein, steveking
-
  * r1349367, r1349371, r1349380
    Fix a bug in ra_serf that prevented it working against pre-1.2 servers.
    Justification:
