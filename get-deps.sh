@@ -25,7 +25,6 @@
 
 APR=apr-1.4.6
 APR_UTIL=apr-util-1.4.1
-NEON=neon-0.29.6
 SERF=serf-1.0.1
 ZLIB=zlib-1.2.6
 SQLITE_VERSION=3.7.12
@@ -65,16 +64,6 @@ get_apr() {
 
     mv $APR apr
     mv $APR_UTIL apr-util
-}
-
-get_neon() {
-    cd $TEMPDIR
-    $HTTP_FETCH http://webdav.org/neon/$NEON.tar.gz
-    cd $BASEDIR
-
-    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
-
-    mv $NEON neon
 }
 
 get_serf() {
@@ -124,7 +113,6 @@ get_deps() {
       done
     else
       get_apr
-      get_neon
       get_serf
       get_zlib
       get_sqlite

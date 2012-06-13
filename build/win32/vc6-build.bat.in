@@ -56,7 +56,6 @@ if not exist src-%DIR% goto svnerr
 if not exist zlib goto zliberr
 if not exist zlib\zlibstat.lib goto zlibstaterr
 if not exist src-%DIR%\db4-win32 goto bdberr
-if not exist src-%DIR%\neon goto neonerr
 if not exist gettext goto gettexterr
 goto allok
 
@@ -83,9 +82,6 @@ echo Please copy zlib\static32\zlibstat.lib to zlib\zlibstat.lib
 goto end
 :bdberr
 echo Unable to find Berekely DB
-goto end
-:neonerr
-echo Unable to find neon
 goto end
 :gettexterr
 echo Unable to find gettext
