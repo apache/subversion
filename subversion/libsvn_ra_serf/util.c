@@ -2427,9 +2427,6 @@ expat_response_handler(serf_request_t *request,
 
       /* The parsing went fine. What has the bucket told us?  */
 
-      if (APR_STATUS_IS_EAGAIN(status))
-        return svn_error_wrap_apr(status, NULL);
-
       if (APR_STATUS_IS_EOF(status))
         {
           /* Tell expat we've reached the end of the content. Ignore the
@@ -2441,7 +2438,10 @@ expat_response_handler(serf_request_t *request,
 
           /* ### should check XMLCTX to see if it has returned to the
              ### INITIAL state. we may have ended early...  */
+        }
 
+      if (status && !SERF_BUCKET_READ_ERROR(status))
+        {
           return svn_error_wrap_apr(status, NULL);
         }
     }
