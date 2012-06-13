@@ -393,6 +393,10 @@ svn_cl__merge(apr_getopt_t *os,
       if (two_sources_specified)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("SOURCE2 can't be used with --symmetric"));
+      if (first_range_start.kind != svn_opt_revision_unspecified
+          || first_range_end.kind != svn_opt_revision_unspecified)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("a revision range can't be used with --symmetric"));
 
       SVN_ERR_W(svn_cl__check_related_source_and_target(
                   sourcepath1, &peg_revision1, targetpath, &unspecified,
