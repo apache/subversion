@@ -79,15 +79,6 @@ Candidate changes:
      ^/subversion/branches/1.7.x-issue4153  
    Votes:
      +1: stsp
-
- * r1340556
-   Avoid a stat per working copy find operation by statting .svn instead of two
-   nodes inside .svn, per wc-directory that doesn't have a .svn directory.
-   Justification:
-     Very simple fix that gives the working copy find code a huge performance
-     boost.
-   Votes:
-     +1: rhuijben, steveking
    
  * ^/subversion/branches/1.7.x-performance
    Use the working copy status walker as a first filter to find committable
@@ -108,7 +99,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1341012
    Votes:
-     +1: stsp
+     +1: stsp, gstein
 
  * 1341031
    Sort output of 'svn proplist' to avoid randomness with APR-1.4.6
@@ -116,7 +107,7 @@ Candidate changes:
      Sorted output is nicer for users. Some users even perceive random output
      order with APR-1.4.6 as a regression.
    Votes:
-     +1: stsp
+     +1: stsp, gstein
 
  * r1341034
    Sort output of 'svn propget -R' to avoid randomness with APR-1.4.6
@@ -124,26 +115,7 @@ Candidate changes:
      Sorted output is nicer for users. Some users even perceive random output
      order with APR-1.4.6 as a regression.
    Votes:
-     +1: stsp
-
- * r1342984
-   Avoid a full table scan on every directory during 'svn upgrade'
-   Justification:
-     Makes svn upgrade unnecessary slow. Trivial fix.
-   Votes:
-     +1: rhuijben, steveking
-
- * r1346765
-   Allow file://C:\users\me/repos style paths as argument to svn, svnadmin and
-   svnsync on Windows, like we did in 1.6. (file://%CD%/repos is nice in test
-   scripts)
-   Justification:
-     Small regression. Easy to fix in the option parser. Fixes a privately
-     reported user issue
-     svnsync: Session is rooted at 'file:///C:%5CUsers%5Cme/repos/
-     C:%5CUsers%5Cme/repos' but the repos root is 'file:///C:%5CUsers%5Cme/repos'
-   Votes:
-     +1: rhuijben, stsp
+     +1: stsp, gstein
 
  * r1348822, r1349215
    Fix "svn status -u --depth empty FILE"
@@ -152,14 +124,7 @@ Candidate changes:
      Simple fix, test included.
    Branch: https://svn.apache.org/repos/asf/subversion/branches/1.7.x-r1348822
    Votes:
-     +1: stsp
-
- * r1349367, r1349371, r1349380
-   Fix a bug in ra_serf that prevented it working against pre-1.2 servers.
-   Justification:
-     Violation of our compatibility promise.
-   Votes:
-     +1: cmpilato, hwright
+     +1: stsp, gstein
 
  * r1349778
    For issue #3962, fix example output of 'svn status' shown in 'svn
@@ -167,7 +132,7 @@ Candidate changes:
    Justification:
      OCD.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, gstein
 
 Veto-blocked changes:
 =====================
@@ -182,3 +147,38 @@ Approved changes:
      Upgrading should be painless.
    Votes:
      +1: rhuijben, gstein, steveking
+
+ * r1349367, r1349371, r1349380
+   Fix a bug in ra_serf that prevented it working against pre-1.2 servers.
+   Justification:
+     Violation of our compatibility promise.
+   Votes:
+     +1: cmpilato, hwright, gstein
+
+ * r1346765
+   Allow file://C:\users\me/repos style paths as argument to svn, svnadmin and
+   svnsync on Windows, like we did in 1.6. (file://%CD%/repos is nice in test
+   scripts)
+   Justification:
+     Small regression. Easy to fix in the option parser. Fixes a privately
+     reported user issue
+     svnsync: Session is rooted at 'file:///C:%5CUsers%5Cme/repos/
+     C:%5CUsers%5Cme/repos' but the repos root is 'file:///C:%5CUsers%5Cme/repos'
+   Votes:
+     +1: rhuijben, stsp, gstein
+
+ * r1342984
+   Avoid a full table scan on every directory during 'svn upgrade'
+   Justification:
+     Makes svn upgrade unnecessary slow. Trivial fix.
+   Votes:
+     +1: rhuijben, steveking, gstein
+
+ * r1340556
+   Avoid a stat per working copy find operation by statting .svn instead of two
+   nodes inside .svn, per wc-directory that doesn't have a .svn directory.
+   Justification:
+     Very simple fix that gives the working copy find code a huge performance
+     boost.
+   Votes:
+     +1: rhuijben, steveking, gstein
