@@ -257,6 +257,13 @@ if __name__ == '__main__':
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
+
+                            # Keep distributions that help by adding a path
+                            # working. On unix this would be filtered by
+                            # configure, but on Windows gen-make.py is used
+                            # directly.
+                            'with-neon=',
+                            'without-neon',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")
@@ -281,6 +288,9 @@ if __name__ == '__main__':
         if opt != '--debug':
           rest.add(opt, val)
       del prev_conf
+    elif opt == '--with-neon' or opt == '--without-neon':
+      # Provide a warning that we ignored these arguments
+      print("Ignoring no longer supported argument '%s'" % opt)
     else:
       rest.add(opt, val)
 
