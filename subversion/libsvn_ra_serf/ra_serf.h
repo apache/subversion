@@ -708,7 +708,22 @@ typedef struct svn_ra_serf__xml_transition_t {
 } svn_ra_serf__xml_transition_t;
 
 
-/* ### docco  */
+/* Construct an XML parsing context, based on the TTABLE transition table.
+   As content is parsed, the CLOSED_CB callback will be invoked according
+   to the definition in the table.
+
+   If OPENED_CB is not NULL, then it will be invoked for *every* tag-open
+   event. The callback will need to use the ENTERED_STATE and TAG parameters
+   to decide what it would like to do.
+
+   If CDATA_CB is not NULL, then it will be called for all cdata that is
+   not be automatically collected (based on the transition table record's
+   COLLECT_CDATA flag). It will be called in every state, so the callback
+   must examine the CURRENT_STATE parameter to decide what to do.
+
+   The same BATON value will be passed to all three callbacks.
+
+   The context will be created within RESULT_POOL.  */
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
   const svn_ra_serf__xml_transition_t *ttable,
