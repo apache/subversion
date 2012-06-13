@@ -61,7 +61,7 @@ static int canonicalize_username(sasl_conn_t *conn,
                                  char *out, /* the output buffer */
                                  unsigned out_max, unsigned *out_len)
 {
-  int realm_len = strlen(user_realm);
+  size_t realm_len = strlen(user_realm);
   char *pos;
 
   *out_len = inlen;
