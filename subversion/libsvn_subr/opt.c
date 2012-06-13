@@ -1015,6 +1015,20 @@ svn_opt__arg_canonicalize_url(const char **url_out, const char *url_in,
   /* Auto-escape some ASCII characters. */
   target = svn_path_uri_autoescape(target, pool);
 
+#if '/' != SVN_PATH_LOCAL_SEPARATOR
+  /* Allow using file:///C:\users\me/repos on Windows, like we did in 1.6 */
+  if (strchr(target, SVN_PATH_LOCAL_SEPARATOR))
+    {
+      char *p = apr_pstrdup(pool, target);
+      target = p;
+
+      /* Convert all local-style separators to the canonical ones. */
+      for (; *p != '\0'; ++p)
+        if (*p == SVN_PATH_LOCAL_SEPARATOR)
+          *p = '/';
+    }
+#endif
+
   /* Verify that no backpaths are present in the URL. */
   if (svn_path_is_backpath_present(target))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,

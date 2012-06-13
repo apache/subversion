@@ -140,18 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1346765
-   Allow file://C:\users\me/repos style paths as argument to svn, svnadmin and
-   svnsync on Windows, like we did in 1.6. (file://%CD%/repos is nice in test
-   scripts)
-   Justification:
-     Small regression. Easy to fix in the option parser. Fixes a privately
-     reported user issue
-     svnsync: Session is rooted at 'file:///C:%5CUsers%5Cme/repos/
-     C:%5CUsers%5Cme/repos' but the repos root is 'file:///C:%5CUsers%5Cme/repos'
-   Votes:
-     +1: rhuijben, stsp, gstein
-
  * r1342984
    Avoid a full table scan on every directory during 'svn upgrade'
    Justification:
