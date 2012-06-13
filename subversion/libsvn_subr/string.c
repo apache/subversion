@@ -976,7 +976,7 @@ svn__ui64toa(char * dest, apr_uint64_t number)
       /* Number is larger than 100^4, i.e. we can write 4x2 chars.
        * Also, use 32 bit DIVs as these are about twice as fast.
        */
-      reduced = number % 100000000;
+      reduced = (apr_uint32_t)(number % 100000000);
       number /= 100000000;
 
       COPY_TWO_BYTES(target - 0, decimal_table[reduced % 100]);
