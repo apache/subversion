@@ -462,7 +462,7 @@ svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   if (str->len < 10)
     {
-      SVN_ERR(writebuf_writechar(conn, pool, (char)str->len + '0'));
+      SVN_ERR(writebuf_writechar(conn, pool, (char)(str->len + '0')));
       SVN_ERR(writebuf_writechar(conn, pool, ':'));
     }
   else
@@ -480,7 +480,7 @@ svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
 
   if (len < 10)
     {
-      SVN_ERR(writebuf_writechar(conn, pool, (char)len + '0'));
+      SVN_ERR(writebuf_writechar(conn, pool, (char)(len + '0')));
       SVN_ERR(writebuf_writechar(conn, pool, ':'));
     }
   else

@@ -1573,7 +1573,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
 
         for (cp = parm; (*cp && !svn_ctype_isspace(*cp) && *cp != '='); ++cp)
           {
-            *cp = apr_tolower(*cp);
+            *cp = (char)apr_tolower(*cp);
           }
 
         if (!*cp)

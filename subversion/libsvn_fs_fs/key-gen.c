@@ -115,7 +115,7 @@ svn_fs_fs__next_key(const char *this, apr_size_t *len, char *next)
               if (c == '9')
                 next[i] = 'a';
               else
-                next[i] = c + 1;
+                next[i] = ++c;
             }
         }
       else
