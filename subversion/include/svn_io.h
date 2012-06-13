@@ -592,14 +592,14 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
 void
 svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool);
 
-/** Set @a *different_p to non-zero if @a file1 and @a file2 have different
- * sizes, else set to zero.  Both @a file1 and @a file2 are utf8-encoded.
+/** Set @a *different_p to TRUE if @a file1 and @a file2 have different
+ * sizes, else set to FALSE.  Both @a file1 and @a file2 are utf8-encoded.
  *
  * Setting @a *different_p to zero does not mean the files definitely
  * have the same size, it merely means that the sizes are not
  * definitely different.  That is, if the size of one or both files
  * cannot be determined, then the sizes are not known to be different,
- * so @a *different_p is set to 0.
+ * so @a *different_p is set to FALSE.
  */
 svn_error_t *
 svn_io_filesizes_different_p(svn_boolean_t *different_p,
