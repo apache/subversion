@@ -2429,6 +2429,11 @@ finish_report(void *report_baton,
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
 
+      if (!err && handler->done && handler->server_error)
+        {
+          err = handler->server_error->error;
+        }
+
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
