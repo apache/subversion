@@ -161,6 +161,13 @@ Candidate changes:
    Votes:
      +1: cmpilato, hwright
 
+ * r1349778
+   Fix example output of 'svn status' shown in 'svn help status'.
+   Justification:
+     OCD.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
