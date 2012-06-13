@@ -102,9 +102,6 @@ typedef struct blame_context_t {
   svn_revnum_t end;
   svn_boolean_t include_merged_revisions;
 
-  /* are we done? */
-  svn_boolean_t done;
-
   /* blame handler and baton */
   svn_file_rev_handler_t file_rev;
   void *file_rev_baton;
@@ -472,7 +469,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->start = start;
   blame_ctx->end = end;
   blame_ctx->include_merged_revisions = include_merged_revisions;
-  blame_ctx->done = FALSE;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                       session, NULL /* conn */,
@@ -497,14 +493,12 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   parser_ctx->start = start_blame;
   parser_ctx->end = end_blame;
   parser_ctx->cdata = cdata_blame;
-  parser_ctx->done = &blame_ctx->done;
+  parser_ctx->done = &handler->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool);
+  err = svn_ra_serf__context_run_one(handler, pool);
 
   err = svn_error_compose_create(
             svn_ra_serf__error_on_status(handler->sline.code,
