@@ -1772,6 +1772,14 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_val = NULL;
           info->prop_val_len = 0;
         }
+      else if (strcmp(name.name, "txdelta") == 0)
+        {
+          /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in
+             addition to <fetch-file>s and such) when *not* in
+             "send-all" mode.  As a client, we're smart enough to know
+             that's wrong, so we'll just ignore these tags. */
+          ;
+        }
       else
         {
           return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,

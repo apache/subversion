@@ -140,13 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1349367, r1349371, r1349380
-   Fix a bug in ra_serf that prevented it working against pre-1.2 servers.
-   Justification:
-     Violation of our compatibility promise.
-   Votes:
-     +1: cmpilato, hwright, gstein
-
  * r1346765
    Allow file://C:\users\me/repos style paths as argument to svn, svnadmin and
    svnsync on Windows, like we did in 1.6. (file://%CD%/repos is nice in test
