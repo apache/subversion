@@ -276,8 +276,8 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
       if (x1 == (char)-1 || x2 == (char)-1)
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      digest[i] = (x1 << 4) | x2;
-      is_nonzero |= (x1 << 4) | x2;
+      digest[i] = (char)((x1 << 4) | x2);
+      is_nonzero |= (char)((x1 << 4) | x2);
     }
 
   if (!is_nonzero)

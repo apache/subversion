@@ -238,7 +238,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
         case svn_txdelta_new:    *ip = (0x2 << 6); break;
         }
       if (op->length >> 6 == 0)
-        *ip++ |= op->length;
+        *ip++ |= (unsigned char)op->length;
       else
         ip = encode_int(ip + 1, op->length);
       if (op->action_code != svn_txdelta_new)
