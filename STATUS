@@ -140,13 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1342984
-   Avoid a full table scan on every directory during 'svn upgrade'
-   Justification:
-     Makes svn upgrade unnecessary slow. Trivial fix.
-   Votes:
-     +1: rhuijben, steveking, gstein
-
  * r1340556
    Avoid a stat per working copy find operation by statting .svn instead of two
    nodes inside .svn, per wc-directory that doesn't have a .svn directory.
