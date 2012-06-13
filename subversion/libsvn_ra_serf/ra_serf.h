@@ -659,13 +659,18 @@ typedef svn_error_t *
                              apr_pool_t *scratch_pool);
 
 
-/* ### TBD  */
+/* Called for all states that are not using the builtin cdata collection.
+   This callback is (only) appropriate for unbounded-size cdata content.
+
+   CURRENT_STATE may be used to decide what to do with the data.
+
+   Temporary allocations may be made in SCRATCH_POOL.  */
 typedef svn_error_t *
 (*svn_ra_serf__xml_cdata_t)(svn_ra_serf__xml_estate_t *xes,
                             void *baton,
                             int current_state,
                             const char *data,
-                            apr_size_t *len,
+                            apr_size_t len,
                             apr_pool_t *scratch_pool);
 
 
