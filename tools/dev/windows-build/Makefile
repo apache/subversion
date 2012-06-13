@@ -31,7 +31,6 @@ INSTALLDIR=E:\svn
 
 EXPATVER=2.0.0
 HTTPDVER=2.2.13
-NEONVER=0.28.2
 OPENSSLVER=0.9.8k
 SQLITEVER=3.6.3
 ZLIBVER=1.2.3
@@ -40,7 +39,6 @@ ZLIBVER=1.2.3
 PATCHESDIR=$(HOME)\mydiffs\svn
 OPENSSLDIR=$(SOURCESDIR)\openssl-$(OPENSSLVER)
 EXPATDIR=$(SOURCESDIR)\expat-$(EXPATVER)
-NEONDIR=$(SOURCESDIR)\neon-$(NEONVER)
 HTTPDDIR=$(SOURCESDIR)\httpd-$(HTTPDVER)
 #APRDIR=$(SOURCESDIR)\apr
 #APRUTILDIR=$(SOURCESDIR)\apr-util
@@ -101,10 +99,10 @@ targetdir: TARGETDIRset
 
 # TODO: pass --with-apr-* if you don't have httpd; make --with-* args optional
 config: targetdir
-	python gen-make.py --$(CONFIG) --with-httpd=$(HTTPDDIR) --with-neon=$(NEONDIR) --with-serf=$(SERFDIR) --with-openssl=$(OPENSSLDIR) --with-sqlite=$(SQLITEDIR) --with-zlib=$(ZLIBDIR) $(ENABLE_ML) --vsnet-version=2008 -t vcproj 2>&1 | tee log.gen-make
+	python gen-make.py --$(CONFIG) --with-httpd=$(HTTPDDIR) --with-serf=$(SERFDIR) --with-openssl=$(OPENSSLDIR) --with-sqlite=$(SQLITEDIR) --with-zlib=$(ZLIBDIR) $(ENABLE_ML) --vsnet-version=2008 -t vcproj 2>&1 | tee log.gen-make
 
 # Visual Studio 2008
-libsvn_auth_gnome_keyring libsvn_auth_kwallet libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_fs_base libsvn_fs_fs libsvn_fs_util libsvn_ra libsvn_ra_local libsvn_ra_neon libsvn_ra_serf libsvn_ra_svn libsvn_repos libsvn_subr libsvn_wc: targetdir
+libsvn_auth_gnome_keyring libsvn_auth_kwallet libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_fs_base libsvn_fs_fs libsvn_fs_util libsvn_ra libsvn_ra_local libsvn_ra_serf libsvn_ra_svn libsvn_repos libsvn_subr libsvn_wc: targetdir
 	$(MSBUILD) /t:Libraries\$@
 	$(MAKE) package
 svn svnadmin svndumpfilter svnlook svnmucc svnserve svnsync svnversion svnrdump entries-dump: targetdir
