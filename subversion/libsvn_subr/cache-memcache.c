@@ -29,17 +29,13 @@
 
 #include "svn_private_config.h"
 #include "private/svn_cache.h"
+#include "private/svn_dep_compat.h"
 
 #include "cache.h"
 
 #ifdef SVN_HAVE_MEMCACHE
 
 #include <apr_memcache.h>
-
-/* Older APRs do not have this.  */
-#ifndef APR_INT16_MAX
-#define APR_INT16_MAX   (0x7fff)
-#endif
 
 /* A note on thread safety:
 
