@@ -143,7 +143,7 @@ typedef struct report_dir_t
   apr_hash_t *removed_props;
 
   /* The propfind request for our current directory */
-  svn_ra_serf__propfind_context_t *propfind;
+  svn_ra_serf__handler_t *propfind_handler;
 
   /* Has the server told us to fetch the dir props? */
   svn_boolean_t fetch_props;
@@ -203,7 +203,7 @@ typedef struct report_info_t
   svn_revnum_t copyfrom_rev;
 
   /* The propfind request for our current file (if present) */
-  svn_ra_serf__propfind_context_t *propfind;
+  svn_ra_serf__handler_t *propfind_handler;
 
   /* Has the server told us to fetch the file props? */
   svn_boolean_t fetch_props;
@@ -346,7 +346,7 @@ struct report_context_t {
   /* number of pending PROPFIND requests */
   unsigned int active_propfinds;
 
-  /* completed PROPFIND requests (contains svn_ra_serf__propfind_context_t) */
+  /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
@@ -1230,15 +1230,18 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
-  info->propfind = NULL;
+  info->propfind_handler = NULL;
   if (info->fetch_props)
     {
-      SVN_ERR(svn_ra_serf__deliver_props(&info->propfind, info->props,
+      SVN_ERR(svn_ra_serf__deliver_props(&info->propfind_handler, info->props,
                                          ctx->sess, conn, info->url,
                                          ctx->target_rev, "0", all_props,
                                          &ctx->done_propfinds,
                                          info->dir->pool));
-      SVN_ERR_ASSERT(info->propfind);
+      SVN_ERR_ASSERT(info->propfind_handler);
+
+      /* Create a serf request for the PROPFIND.  */
+      svn_ra_serf__request_create(info->propfind_handler);
 
       ctx->active_propfinds++;
     }
@@ -1282,7 +1285,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       if (info->cached_contents)
         {
           /* If we'll be doing a PROPFIND for this file... */
-          if (info->propfind)
+          if (info->propfind_handler)
             { 
               /* ... then we'll just leave ourselves a little "todo"
                  about that fact (and we'll deal with the file content
@@ -1339,7 +1342,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           ctx->active_fetches++;
         }
     }
-  else if (info->propfind)
+  else if (info->propfind_handler)
     {
       svn_ra_serf__list_t *list_item;
 
@@ -1892,7 +1895,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* Unconditionally set fetch_props now. */
           info->dir->fetch_props = TRUE;
 
-          SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind,
+          SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              ctx->sess->conns[ctx->sess->cur_conn],
                                              info->dir->url,
@@ -1900,7 +1903,10 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                              all_props,
                                              &ctx->done_propfinds,
                                              info->dir->pool));
-          SVN_ERR_ASSERT(info->dir->propfind);
+          SVN_ERR_ASSERT(info->dir->propfind_handler);
+
+          /* Create a serf request for the PROPFIND.  */
+          svn_ra_serf__request_create(info->dir->propfind_handler);
 
           ctx->active_propfinds++;
 
@@ -1910,7 +1916,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          info->dir->propfind = NULL;
+          info->dir->propfind_handler = NULL;
         }
 
       svn_ra_serf__xml_pop_state(parser);
@@ -2481,7 +2487,7 @@ finish_report(void *report_baton,
                 {
                   report_info_t *item = cur->data;
 
-                  if (item->propfind == done_list->data)
+                  if (item->propfind_handler == done_list->data)
                     {
                       break;
                     }
@@ -2549,9 +2555,9 @@ finish_report(void *report_baton,
            *   we've already completed the propfind
            * then, we know it's time for us to close this directory.
            */
-          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed &&
-                 (!cur_dir->fetch_props ||
-                  svn_ra_serf__propfind_is_done(cur_dir->propfind)))
+          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed
+                 && (!cur_dir->fetch_props
+                     || cur_dir->propfind_handler->done))
             {
               report_dir_t *parent = cur_dir->parent_dir;
 
