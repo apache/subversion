@@ -777,7 +777,10 @@ svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
 
 
 /* Returns XES->STATE_POOL for allocating structures that should live
-   as long as the state identified by XES.  */
+   as long as the state identified by XES.
+
+   Note: a state pool is created upon demand, so only use this function
+   when memory is required for a given state.  */
 apr_pool_t *
 svn_ra_serf__xml_state_pool(svn_ra_serf__xml_estate_t *xes);
 
