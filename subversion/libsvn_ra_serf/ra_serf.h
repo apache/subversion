@@ -1027,16 +1027,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
 
 /** PROPFIND-related functions **/
 
-/* Opaque structure representing PROPFINDs. */
-typedef struct svn_ra_serf__propfind_context_t svn_ra_serf__propfind_context_t;
-
-/*
- * Returns a flag representing whether the PROPFIND @a ctx is completed.
- */
-svn_boolean_t
-svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
-
-
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
@@ -1046,7 +1036,7 @@ svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
  * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
-svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
+svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
                            apr_hash_t *prop_vals,
                            svn_ra_serf__session_t *sess,
                            svn_ra_serf__connection_t *conn,
@@ -1058,13 +1048,12 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
                            apr_pool_t *pool);
 
 /*
- * This helper function will block until the PROP_CTX indicates that is done
- * or another error is returned.
+ * This helper function will block until PROPFIND_HANDLER indicates that is
+ * done or another error is returned.
  */
 svn_error_t *
-svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
-                            svn_ra_serf__session_t *sess,
-                            apr_pool_t *pool);
+svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
+                            apr_pool_t *scratch_pool);
 
 /* This is a blocking version of deliver_props.
 
