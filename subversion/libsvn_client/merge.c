@@ -7475,7 +7475,8 @@ get_operative_immediate_children(apr_hash_t **operative_children,
   APR_ARRAY_PUSH(log_targets, const char *) = "";
   SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
                           oldest_rev, 0, TRUE, FALSE, FALSE,
-                          NULL, log_find_operative_subtree_revs,
+                          apr_array_make(scratch_pool, 0, sizeof(const char *)),
+                          log_find_operative_subtree_revs,
                           &log_baton, scratch_pool));
 
   return SVN_NO_ERROR;
