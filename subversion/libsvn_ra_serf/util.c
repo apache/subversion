@@ -990,11 +990,6 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
     }
   else
     {
-      /* ### hmm. this is a bit early. we have not seen EOF. if the
-         ### caller thinks we are "done", then it may never call into
-         ### serf_context_run() again to flush the response.  */
-      handler->done = TRUE;
-
       /* The body was not text/xml, so we don't know what to do with it.
          Toss anything that arrives.  */
       handler->discard_body = TRUE;
@@ -1175,11 +1170,6 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         }
       else
         {
-          /* ### hmm. this is a bit early. we have not seen EOF. if the
-             ### caller thinks we are "done", then it may never call into
-             ### serf_context_run() again to flush the response.  */
-          handler->done = TRUE;
-
           /* The body was not text/xml, so we don't know what to do with it.
              Toss anything that arrives.  */
           handler->discard_body = TRUE;
@@ -1891,6 +1881,14 @@ handle_response(serf_request_t *request,
   if (handler->discard_body)
     {
       *serf_status = drain_bucket(response);
+
+      /* If the handler hasn't set done (which it shouldn't have) and
+         we now have the EOF, go ahead and set it so that we can stop
+         our context loops.
+       */
+      if (!handler->done && APR_STATUS_IS_EOF(*serf_status))
+          handler->done = TRUE;
+
       return SVN_NO_ERROR;
     }
 
