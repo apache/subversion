@@ -952,6 +952,9 @@ svn_repos_replay2(svn_fs_root_t *root,
                                        NULL, NULL,
                                        pool, pool));
 
+  /* Tell the shim that we're starting the process. */
+  SVN_ERR(exb->start_edit(exb->baton, svn_fs_revision_root_revision(root)));
+
   /* ### We're ignoring SEND_DELTAS here. */
   SVN_ERR(svn_repos__replay_ev2(root, base_path, low_water_mark,
                                 editorv2, authz_read_func, authz_read_baton,
@@ -1501,6 +1504,9 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
                           authz_read_func, authz_read_baton,
                           scratch_pool, iterpool));
     }
+
+  /* ### We should probably abort on an error condition. */
+  SVN_ERR(svn_editor_complete(editor));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
