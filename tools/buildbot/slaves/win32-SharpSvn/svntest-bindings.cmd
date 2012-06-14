@@ -67,6 +67,12 @@ for %%i in (*.dll) do (
 )
 popd
 
+svnversion . /1.7.x | find "S" > nul:
+IF ERRORLEVEL 1 (
+  ECHO --- Building 1.7.x: Skipping perl tests ---
+  EXIT /B %result%
+)
+
 SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-release;
 pushd subversion\bindings\swig\perl\native
 perl -MExtUtils::Command::MM -e test_harness() t\*.t
