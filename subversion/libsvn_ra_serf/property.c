@@ -56,7 +56,7 @@ typedef enum prop_state_e {
 /*
  * This structure represents a pending PROPFIND response.
  */
-typedef struct svn_ra_serf__propfind_context_t {
+typedef struct propfind_context_t {
   /* pool to issue allocations from */
   apr_pool_t *pool;
 
@@ -81,7 +81,7 @@ typedef struct svn_ra_serf__propfind_context_t {
 
   /* hash table that will be updated with the properties
    *
-   * This can be shared between multiple svn_ra_serf__propfind_context_t
+   * This can be shared between multiple propfind_context_t
    * structures
    */
   apr_hash_t *ret_props;
@@ -91,7 +91,7 @@ typedef struct svn_ra_serf__propfind_context_t {
 
   svn_ra_serf__list_t done_item;
 
-} svn_ra_serf__propfind_context_t;
+} propfind_context_t;
 
 
 #define D_ "DAV:"
@@ -152,7 +152,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
                 apr_hash_t *attrs,
                 apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = baton;
+  propfind_context_t *ctx = baton;
 
   if (leaving_state == MULTISTATUS)
     {
@@ -367,200 +367,12 @@ svn_ra_serf__set_prop(apr_hash_t *props,
 }
 
 
-#if 0
-
-static prop_info_t *
-push_state(svn_ra_serf__xml_parser_t *parser,
-           svn_ra_serf__propfind_context_t *propfind,
-           prop_state_e state)
-{
-  svn_ra_serf__xml_push_state(parser, state);
-
-  if (state == PROPVAL)
-    {
-      prop_info_t *info;
-
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
-      info->pool = parser->state->pool;
-      info->value = svn_stringbuf_create_empty(info->pool);
-
-      parser->state->private = info;
-    }
-
-  return parser->state->private;
-}
-
-/*
- * Expat callback invoked on a start element tag for a PROPFIND response.
- */
-static svn_error_t *
-start_propfind(svn_ra_serf__xml_parser_t *parser,
-               svn_ra_serf__dav_props_t name,
-               const char **attrs,
-               apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
-  prop_state_e state;
-  prop_info_t *info;
-
-  state = parser->state->current_state;
-
-  if (state == NONE && strcmp(name.name, "response") == 0)
-    {
-      svn_ra_serf__xml_push_state(parser, RESPONSE);
-    }
-  else if (state == RESPONSE && strcmp(name.name, "href") == 0)
-    {
-      info = push_state(parser, ctx, PROPVAL);
-      info->ns = name.namespace;
-      info->name = "href";
-    }
-  else if (state == RESPONSE && strcmp(name.name, "prop") == 0)
-    {
-      push_state(parser, ctx, PROP);
-    }
-  else if (state == PROP)
-    {
-      info = push_state(parser, ctx, PROPVAL);
-      info->ns = name.namespace;
-      info->name = apr_pstrdup(info->pool, name.name);
-      info->encoding = apr_pstrdup(info->pool,
-                                   svn_xml_get_attr_value("V:encoding", attrs));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/*
- * Expat callback invoked on an end element tag for a PROPFIND response.
- */
-static svn_error_t *
-end_propfind(svn_ra_serf__xml_parser_t *parser,
-             svn_ra_serf__dav_props_t name,
-             apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
-  prop_state_e state;
-  prop_info_t *info;
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == RESPONSE && strcmp(name.name, "response") == 0)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == PROP && strcmp(name.name, "prop") == 0)
-    {
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == PROPVAL)
-    {
-      const char *ns;
-      const char *pname;
-      const svn_string_t *val_str = NULL;
-
-      /* if we didn't see a CDATA element, we may want the tag name
-       * as long as it isn't equivalent to the property name.
-       */
-      /* ### gstein sez: I have no idea what this is about.  */
-      if (*info->value->data == '\0')
-        {
-          if (strcmp(info->name, name.name) != 0)
-            val_str = svn_string_create(name.name, ctx->pool);
-          else
-            val_str = svn_string_create_empty(ctx->pool);
-        }
-
-      if (parser->state->prev->current_state == RESPONSE &&
-          strcmp(name.name, "href") == 0)
-        {
-          if (strcmp(ctx->depth, "1") == 0)
-            {
-              ctx->current_path =
-                svn_urlpath__canonicalize(info->value->data, ctx->pool);
-            }
-          else
-            {
-              ctx->current_path = ctx->path;
-            }
-        }
-      else if (info->encoding)
-        {
-          if (strcmp(info->encoding, "base64") == 0)
-            {
-              const svn_string_t *morph;
-
-              morph = svn_stringbuf__morph_into_string(info->value);
-#ifdef SVN_DEBUG
-              info->value = NULL;  /* morph killed the stringbuf.  */
-#endif
-              val_str = svn_base64_decode_string(morph, ctx->pool);
-            }
-          else
-            {
-              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                       NULL,
-                                       _("Got unrecognized encoding '%s'"),
-                                       info->encoding);
-            }
-        }
-
-      /* ### there may be better logic to ensure this is set above, but just
-         ### going for the easy win here.  */
-      if (val_str == NULL)
-        val_str = svn_string_create_from_buf(info->value, ctx->pool);
-
-      ns = apr_pstrdup(ctx->pool, info->ns);
-      pname = apr_pstrdup(ctx->pool, info->name);
-
-      /* set the return props and update our cache too. */
-      svn_ra_serf__set_ver_prop(ctx->ret_props,
-                                ctx->current_path, ctx->rev,
-                                ns, pname, val_str,
-                                ctx->pool);
-
-      svn_ra_serf__xml_pop_state(parser);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/*
- * Expat callback invoked on CDATA elements in a PROPFIND response.
- *
- * This callback can be called multiple times.
- */
-static svn_error_t *
-cdata_propfind(svn_ra_serf__xml_parser_t *parser,
-               const char *data,
-               apr_size_t len,
-               apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__propfind_context_t *ctx = parser->user_data;
-  prop_state_e state;
-  prop_info_t *info;
-
-  UNUSED_CTX(ctx);
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == PROPVAL)
-    svn_stringbuf_appendbytes(info->value, data, len);
-
-  return SVN_NO_ERROR;
-}
-
-#endif
-
-
 static svn_error_t *
 setup_propfind_headers(serf_bucket_t *headers,
                         void *setup_baton,
                         apr_pool_t *pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = setup_baton;
+  propfind_context_t *ctx = setup_baton;
 
   if (ctx->conn->using_compression)
     {
@@ -584,7 +396,7 @@ create_propfind_body(serf_bucket_t **bkt,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
-  svn_ra_serf__propfind_context_t *ctx = setup_baton;
+  propfind_context_t *ctx = setup_baton;
 
   serf_bucket_t *body_bkt, *tmp;
   const svn_ra_serf__dav_props_t *prop;
@@ -668,7 +480,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
                            svn_ra_serf__list_t **done_list,
                            apr_pool_t *pool)
 {
-  svn_ra_serf__propfind_context_t *new_prop_ctx;
+  propfind_context_t *new_prop_ctx;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
 
