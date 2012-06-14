@@ -1043,7 +1043,7 @@ def fixStream(e, revFile):
       break
 
   if not m:
-    raise "Couldn't find end of rep!"
+    raise Exception("Couldn't find end of rep!")
 
   finalOffset = errorOffset + srcLength
   srcOffset = errorOffset
