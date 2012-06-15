@@ -1093,7 +1093,7 @@ svn_repos_load_fs4(svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  const svn_repos_parse_fns2_t *parser;
+  const svn_repos_parse_fns3_t *parser;
   void *parse_baton;
   struct parse_baton *pb;
 
