@@ -286,6 +286,13 @@ static const svn_ra_serf__dav_props_t check_path_props[] =
   { NULL }
 };
 
+static const svn_ra_serf__dav_props_t type_and_checksum_props[] =
+{
+  { "DAV:", "resourcetype" },
+  { SVN_DAV_PROP_NS_DAV, "sha1-checksum" },
+  { NULL }
+};
+
 /* WC props compatibility with ra_neon. */
 #define SVN_RA_SERF__WC_CHECKED_IN_URL SVN_PROP_WC_PREFIX "ra_dav:version-url"
 
