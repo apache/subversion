@@ -394,9 +394,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
-
-  serf_sess->conns = apr_palloc(serf_sess->pool, sizeof(*serf_sess->conns) * 4);
-
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
                                     sizeof(*serf_sess->conns[0]));
   serf_sess->conns[0]->http10 = TRUE;  /* until we confirm HTTP/1.1  */
