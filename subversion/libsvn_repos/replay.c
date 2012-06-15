@@ -802,6 +802,27 @@ fetch_kind_func(svn_kind_t *kind,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  svn_fs_root_t *root = baton;
+  svn_fs_root_t *prev_root;
+  svn_fs_t *fs = svn_fs_root_fs(root);
+
+  SVN_ERR(svn_fs_revision_root(&prev_root, fs,
+                               svn_fs_revision_root_revision(root) - 1,
+                               scratch_pool));
+
+  SVN_ERR(svn_fs_node_proplist(props, prev_root, path, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
 #endif
 
 
@@ -968,7 +989,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                                        repos_root, "",
                                        NULL, NULL,
                                        fetch_kind_func, root,
-                                       NULL, NULL,
+                                       fetch_props_func, root,
                                        pool, pool));
 
   /* Tell the shim that we're starting the process. */
@@ -1414,7 +1435,7 @@ replay_node(svn_fs_root_t *root,
 
       /* Handle textual modifications. */
       if (change->node_kind == svn_node_file
-          && (change->text_mod || downgraded_copy))
+          && (change->text_mod || change->prop_mod || downgraded_copy))
         {
           svn_checksum_t *checksum;
           svn_stream_t *contents;
@@ -1429,6 +1450,16 @@ replay_node(svn_fs_root_t *root,
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
                                         SVN_INVALID_REVNUM, props, checksum,
                                         contents));
+        }
+
+      if (change->node_kind == svn_node_dir
+          && (change->prop_mod || downgraded_copy))
+        {
+          apr_array_header_t *children = NULL;
+
+          SVN_ERR(svn_editor_alter_directory(editor, repos_relpath,
+                                             SVN_INVALID_REVNUM, children,
+                                             props));
         }
     }
 
