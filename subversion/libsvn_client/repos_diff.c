@@ -143,12 +143,12 @@ struct dir_baton {
   /* A cache of any property changes (svn_prop_t) received for this dir. */
   apr_array_header_t *propchanges;
 
-  /* The pristine-property list attached to this directory. */
-  apr_hash_t *pristine_props;
-
   /* The pool passed in by add_dir, open_dir, or open_root.
      Also, the pool this dir baton is allocated in. */
   apr_pool_t *pool;
+
+  /* Base revision of directory. */
+  svn_revnum_t base_revision;
 };
 
 /* File level baton.
@@ -216,6 +216,7 @@ make_dir_baton(const char *path,
                struct dir_baton *parent_baton,
                struct edit_baton *edit_baton,
                svn_boolean_t added,
+               svn_revnum_t base_revision,
                apr_pool_t *pool)
 {
   apr_pool_t *dir_pool = svn_pool_create(pool);
@@ -230,6 +231,7 @@ make_dir_baton(const char *path,
   dir_baton->pool = dir_pool;
   dir_baton->path = apr_pstrdup(dir_pool, path);
   dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  dir_baton->base_revision = base_revision;
 
   return dir_baton;
 }
@@ -459,10 +461,8 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
-
-  SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &b->pristine_props,
-                          b->path, base_revision, 0, pool));
+  struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, base_revision,
+                                       pool);
 
   *root_baton = b;
   return SVN_NO_ERROR;
@@ -659,8 +659,7 @@ add_directory(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton(path, pb, eb, TRUE, pool);
-  b->pristine_props = eb->empty_hash;
+  b = make_dir_baton(path, pb, eb, TRUE, SVN_INVALID_REVNUM, pool);
   *child_baton = b;
 
   /* Skip *everything* within a newly tree-conflicted directory,
@@ -745,7 +744,8 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
 
-  b = make_dir_baton(path, pb, pb->edit_baton, FALSE, pool);
+  b = make_dir_baton(path, pb, pb->edit_baton, FALSE, base_revision, pool);
+
   *child_baton = b;
 
   /* Skip *everything* within a newly tree-conflicted directory
@@ -755,9 +755,6 @@ open_directory(const char *path,
       b->skip = TRUE;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &b->pristine_props,
-                          b->path, base_revision, 0, pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened(
                 &b->tree_conflicted, &b->skip,
@@ -1091,6 +1088,7 @@ close_directory(void *dir_baton,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_boolean_t skipped = FALSE;
   apr_pool_t *scratch_pool;
+  apr_hash_t *pristine_props;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
@@ -1101,17 +1099,28 @@ close_directory(void *dir_baton,
 
   scratch_pool = b->pool;
 
-  if (!b->added && b->propchanges->nelts > 0)
-    remove_non_prop_changes(b->pristine_props, b->propchanges);
+  if (b->added)
+    {
+      pristine_props = eb->empty_hash;
+    }
+  else
+    {
+      SVN_ERR(svn_ra_get_dir2(eb->ra_session, NULL, NULL, &pristine_props,
+                              b->path, b->base_revision, 0, scratch_pool));
+    }
 
-  /* Report any prop changes. */
+  if (b->propchanges->nelts > 0)
+    {
+      remove_non_prop_changes(pristine_props, b->propchanges);
+    }
+
   if (b->propchanges->nelts > 0)
     {
       svn_boolean_t tree_conflicted = FALSE;
       SVN_ERR(eb->diff_callbacks->dir_props_changed(
                &prop_state, &tree_conflicted,
                b->path, b->added,
-               b->propchanges, b->pristine_props,
+               b->propchanges, pristine_props,
                b->edit_baton->diff_cmd_baton, scratch_pool));
       if (tree_conflicted)
         b->tree_conflicted = TRUE;
