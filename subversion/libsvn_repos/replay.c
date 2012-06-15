@@ -1303,8 +1303,12 @@ replay_node(svn_fs_root_t *root,
       else
         {
           if (copyfrom_path)
-            SVN_ERR(svn_editor_copy(editor, copyfrom_path, copyfrom_rev,
-                                    repos_relpath, SVN_INVALID_REVNUM));
+            {
+              if (copyfrom_path[0] == '/')
+                ++copyfrom_path;
+              SVN_ERR(svn_editor_copy(editor, copyfrom_path, copyfrom_rev,
+                                      repos_relpath, SVN_INVALID_REVNUM));
+            }
           else
             {
               apr_hash_t *props;
