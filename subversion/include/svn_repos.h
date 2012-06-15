@@ -2705,12 +2705,21 @@ svn_repos_load_fs(svn_repos_t *repos,
 
 
 /**
- * A vtable that is driven by svn_repos_parse_dumpstream2().
+ * A vtable that is driven by svn_repos_parse_dumpstream3().
+ * ### TODO: Add a new callback for the dumpfile version header.
  *
- * @since New in 1.1.
+ * @since New in 1.8.
  */
-typedef struct svn_repos_parse_fns2_t
+typedef struct svn_repos_parse_fns3_t
 {
+  /** The parser has discovered a new uuid record within the parsing
+   * session represented by @a parse_baton.  The uuid's value is
+   * @a uuid, and it is allocated in @a pool.
+   */
+  svn_error_t *(*uuid_record)(const char *uuid,
+                              void *parse_baton,
+                              apr_pool_t *pool);
+
   /** The parser has discovered a new revision record within the
    * parsing session represented by @a parse_baton.  All the headers are
    * placed in @a headers (allocated in @a pool), which maps <tt>const
@@ -2722,14 +2731,6 @@ typedef struct svn_repos_parse_fns2_t
                                       apr_hash_t *headers,
                                       void *parse_baton,
                                       apr_pool_t *pool);
-
-  /** The parser has discovered a new uuid record within the parsing
-   * session represented by @a parse_baton.  The uuid's value is
-   * @a uuid, and it is allocated in @a pool.
-   */
-  svn_error_t *(*uuid_record)(const char *uuid,
-                              void *parse_baton,
-                              apr_pool_t *pool);
 
   /** The parser has discovered a new node record within the current
    * revision represented by @a revision_baton.  All the headers are
@@ -2793,22 +2794,26 @@ typedef struct svn_repos_parse_fns2_t
    */
   svn_error_t *(*close_revision)(void *revision_baton);
 
-} svn_repos_parse_fns2_t;
-
-/** @deprecated Provided for backward compatibility with the 1.2 API. */
-typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
+} svn_repos_parse_fns3_t;
 
 
 /**
  * Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
+ * ### TODO: Add a boolean option to treat text-deltas as text, because
+ * a dump-filtering tool shouldn't apply the deltas.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
  *
  * This parser has built-in knowledge of the dumpfile format, but only
- * in a general sense:
+ * in a limited sense:
+ *
+ *    * ### TODO: it recognizes the "magic" format-version header.
+ *
+ *    * it recognizes the UUID header.
  *
  *    * it recognizes revision and node records by looking for either
  *      a REVISION_NUMBER or NODE_PATH headers.
@@ -2822,11 +2827,11 @@ typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
  * This is enough knowledge to make it easy on vtable implementors,
  * but still allow expansion of the format:  most headers are ignored.
  *
- * @since New in 1.1.
+ * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_parse_dumpstream2(svn_stream_t *stream,
-                            const svn_repos_parse_fns2_t *parse_fns,
+svn_repos_parse_dumpstream3(svn_stream_t *stream,
+                            const svn_repos_parse_fns3_t *parse_fns,
                             void *parse_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
@@ -2868,7 +2873,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser4(const svn_repos_parse_fns2_t **parser,
+svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_revnum_t start_rev,
@@ -2881,44 +2886,59 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns2_t **parser,
                                void *notify_baton,
                                apr_pool_t *pool);
 
-/**
- * Similar to svn_repos_get_fs_build_parser4(), but with @a start_rev
- * and @a end_rev always passed as #SVN_INVALID_REVNUM.
- *
- * @deprecated Provided for backward compatibility with the 1.7 API.
- * @since New in 1.7.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
-                               void **parse_baton,
-                               svn_repos_t *repos,
-                               svn_boolean_t use_history,
-                               svn_boolean_t validate_props,
-                               enum svn_repos_load_uuid uuid_action,
-                               const char *parent_dir,
-                               svn_repos_notify_func_t notify_func,
-                               void *notify_baton,
-                               apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream
- * in place if a #svn_repos_notify_func_t and baton and with
- * @a validate_props always FALSE.
+ * A vtable that is driven by svn_repos_parse_dumpstream2().
+ * Similar to #svn_repos_parse_fns3_t except that it lacks
+ * the delete_node_property and apply_textdelta callbacks.
  *
- * @since New in 1.1.
- * @deprecated Provided for backward compatibility with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
-SVN_DEPRECATED
-svn_error_t *
-svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **parser,
-                               void **parse_baton,
-                               svn_repos_t *repos,
-                               svn_boolean_t use_history,
-                               enum svn_repos_load_uuid uuid_action,
-                               svn_stream_t *outstream,
-                               const char *parent_dir,
-                               apr_pool_t *pool);
+typedef struct svn_repos_parse_fns2_t
+{
+  /** Same as #svn_repos_parse_fns3_t.new_revision_record. */
+  svn_error_t *(*new_revision_record)(void **revision_baton,
+                                      apr_hash_t *headers,
+                                      void *parse_baton,
+                                      apr_pool_t *pool);
+  /** Same as #svn_repos_parse_fns3_t.uuid_record. */
+  svn_error_t *(*uuid_record)(const char *uuid,
+                              void *parse_baton,
+                              apr_pool_t *pool);
+  /** Same as #svn_repos_parse_fns3_t.new_node_record. */
+  svn_error_t *(*new_node_record)(void **node_baton,
+                                  apr_hash_t *headers,
+                                  void *revision_baton,
+                                  apr_pool_t *pool);
+  /** Same as #svn_repos_parse_fns3_t.set_revision_property. */
+  svn_error_t *(*set_revision_property)(void *revision_baton,
+                                        const char *name,
+                                        const svn_string_t *value);
+  /** Same as #svn_repos_parse_fns3_t.set_node_property. */
+  svn_error_t *(*set_node_property)(void *node_baton,
+                                    const char *name,
+                                    const svn_string_t *value);
+  /** Same as #svn_repos_parse_fns3_t.delete_node_property. */
+  svn_error_t *(*delete_node_property)(void *node_baton,
+                                       const char *name);
+  /** Same as #svn_repos_parse_fns3_t.remove_node_props. */
+  svn_error_t *(*remove_node_props)(void *node_baton);
+  /** Same as #svn_repos_parse_fns3_t.set_fulltext. */
+  svn_error_t *(*set_fulltext)(svn_stream_t **stream,
+                               void *node_baton);
+  /** Same as #svn_repos_parse_fns3_t.apply_textdelta. */
+  svn_error_t *(*apply_textdelta)(svn_txdelta_window_handler_t *handler,
+                                  void **handler_baton,
+                                  void *node_baton);
+  /** Same as #svn_repos_parse_fns3_t.close_node. */
+  svn_error_t *(*close_node)(void *node_baton);
+  /** Same as #svn_repos_parse_fns3_t.close_revision. */
+  svn_error_t *(*close_revision)(void *revision_baton);
+} svn_repos_parse_fns2_t;
+
+/** @deprecated Provided for backward compatibility with the 1.7 API. */
+typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
+
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
@@ -2964,6 +2984,21 @@ typedef struct svn_repos_parse_fns_t
 
 
 /**
+ * Similar to svn_repos_parse_dumpstream3(), but uses the more limited
+ * #svn_repos_parser_fns2_t vtable type.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_repos_parse_dumpstream2(svn_stream_t *stream,
+                            const svn_repos_parser_fns2_t *parse_fns,
+                            void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
+/**
  * Similar to svn_repos_parse_dumpstream2(), but uses the more limited
  * #svn_repos_parser_fns_t vtable type.
  *
@@ -2978,6 +3013,45 @@ svn_repos_parse_dumpstream(svn_stream_t *stream,
                            void *cancel_baton,
                            apr_pool_t *pool);
 
+/**
+ * Similar to svn_repos_get_fs_build_parser4(), but with @a start_rev
+ * and @a end_rev always passed as #SVN_INVALID_REVNUM, and yielding
+ * the more limited svn_repos_parse_fns2_t.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream
+ * in place if a #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
+ *
+ * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               enum svn_repos_load_uuid uuid_action,
+                               svn_stream_t *outstream,
+                               const char *parent_dir,
+                               apr_pool_t *pool);
 
 /**
  * Similar to svn_repos_get_fs_build_parser2(), but yields the more

@@ -181,7 +181,7 @@ read_key_or_val(char **pbuf,
 static svn_error_t *
 parse_property_block(svn_stream_t *stream,
                      svn_filesize_t content_length,
-                     const svn_repos_parse_fns2_t *parse_fns,
+                     const svn_repos_parse_fns3_t *parse_fns,
                      void *record_baton,
                      void *parse_baton,
                      svn_boolean_t is_node,
@@ -299,7 +299,7 @@ static svn_error_t *
 parse_text_block(svn_stream_t *stream,
                  svn_filesize_t content_length,
                  svn_boolean_t is_delta,
-                 const svn_repos_parse_fns2_t *parse_fns,
+                 const svn_repos_parse_fns3_t *parse_fns,
                  void *record_baton,
                  char *buffer,
                  apr_size_t buflen,
@@ -406,8 +406,8 @@ parse_format_version(const char *versionstring, int *version)
 /** The public routines **/
 
 svn_error_t *
-svn_repos_parse_dumpstream2(svn_stream_t *stream,
-                            const svn_repos_parse_fns2_t *parse_fns,
+svn_repos_parse_dumpstream3(svn_stream_t *stream,
+                            const svn_repos_parse_fns3_t *parse_fns,
                             void *parse_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,

@@ -1016,7 +1016,7 @@ close_revision(void *baton)
 
 
 svn_error_t *
-svn_repos_get_fs_build_parser4(const svn_repos_parse_fns2_t **callbacks,
+svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_revnum_t start_rev,
@@ -1029,7 +1029,7 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns2_t **callbacks,
                                void *notify_baton,
                                apr_pool_t *pool)
 {
-  svn_repos_parse_fns2_t *parser = apr_pcalloc(pool, sizeof(*parser));
+  svn_repos_parse_fns3_t *parser = apr_pcalloc(pool, sizeof(*parser));
   struct parse_baton *pb = apr_pcalloc(pool, sizeof(*pb));
 
   if (parent_dir)
@@ -1042,9 +1042,9 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns2_t **callbacks,
   if (SVN_IS_VALID_REVNUM(start_rev))
     SVN_ERR_ASSERT(start_rev <= end_rev);
 
+  parser->uuid_record = uuid_record;
   parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
-  parser->uuid_record = uuid_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
   parser->remove_node_props = remove_node_props;
@@ -1116,6 +1116,6 @@ svn_repos_load_fs4(svn_repos_t *repos,
   pb->use_pre_commit_hook = use_pre_commit_hook;
   pb->use_post_commit_hook = use_post_commit_hook;
 
-  return svn_repos_parse_dumpstream2(dumpstream, parser, parse_baton,
+  return svn_repos_parse_dumpstream3(dumpstream, parser, parse_baton,
                                      cancel_func, cancel_baton, pool);
 }
