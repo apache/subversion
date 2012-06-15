@@ -2840,6 +2840,75 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               switch_editor, switch_baton, pool);
 }
 
+/* Helper svn_ra_serf__get_file(). Attempts to fetch file contents
+ * using SESSION->wc_callbacks->get_wc_contents() if sha1 property is
+ * present in PROPS.
+ * 
+ * Sets *FOUND_P to TRUE if file contents was successfuly fetched.
+ * 
+ * Performs all temporary allocations in POOL.
+ */
+static svn_error_t *
+try_get_wc_contents(svn_boolean_t *found_p,
+                    svn_ra_serf__session_t *session,
+                    apr_hash_t *props,
+                    svn_stream_t *dst_stream,
+                    apr_pool_t *pool)
+{
+  apr_hash_t *svn_props;
+  const char *sha1_checksum_prop;
+  svn_checksum_t *checksum;
+  svn_stream_t *wc_stream;
+  svn_error_t *err;
+
+  /* No contents found by default. */
+  *found_p = FALSE;
+
+  if (!session->wc_callbacks->get_wc_contents)
+    {
+      /* No callback, nothing to do. */
+      return SVN_NO_ERROR;
+    }
+
+
+  svn_props = apr_hash_get(props, SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+  if (!svn_props)
+    {
+      /* No checksum property in response. */
+      return SVN_NO_ERROR;
+    }
+
+  sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
+
+  if (!sha1_checksum_prop)
+    {
+      /* No checksum property in response. */
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
+                                 sha1_checksum_prop, pool));
+
+  err = session->wc_callbacks->get_wc_contents(
+          session->wc_callback_baton, &wc_stream, checksum, pool);
+
+  if (err)
+    {
+      svn_error_clear(err);
+
+      /* Ignore errors for now. */
+      return SVN_NO_ERROR;
+    }
+  
+  if (wc_stream)
+    {
+      SVN_ERR(svn_stream_copy3(wc_stream, dst_stream, NULL, NULL, pool));
+      *found_p = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
@@ -2854,6 +2923,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   const char *fetch_url;
   apr_hash_t *fetch_props;
   svn_kind_t res_kind;
+  const svn_ra_serf__dav_props_t *which_props;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
@@ -2878,9 +2948,22 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* REVISION is always SVN_INVALID_REVNUM  */
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
 
+  if (props)
+    {
+      which_props = all_props;
+    }
+  else if (stream && session->wc_callbacks->get_wc_contents)
+    {
+      which_props = type_and_checksum_props;
+    }
+  else
+    {
+      which_props = check_path_props;
+    }
+     
   SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
                                         SVN_INVALID_REVNUM,
-                                        props ? all_props : check_path_props,
+                                        which_props,
                                         pool, pool));
 
   /* Verify that resource type is not collection. */
@@ -2902,39 +2985,46 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   if (stream)
     {
-      report_fetch_t *stream_ctx;
-      svn_ra_serf__handler_t *handler;
+      svn_boolean_t found;
+      SVN_ERR(try_get_wc_contents(&found, session, fetch_props, stream, pool));
 
-      /* Create the fetch context. */
-      stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
-      stream_ctx->target_stream = stream;
-      stream_ctx->sess = session;
-      stream_ctx->conn = conn;
-      stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
-      stream_ctx->info->name = fetch_url;
+      /* No contents found in the WC, let's fetch from server. */
+      if (!found)
+        {
+          report_fetch_t *stream_ctx;
+          svn_ra_serf__handler_t *handler;
 
-      handler = apr_pcalloc(pool, sizeof(*handler));
+          /* Create the fetch context. */
+          stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
+          stream_ctx->target_stream = stream;
+          stream_ctx->sess = session;
+          stream_ctx->conn = conn;
+          stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
+          stream_ctx->info->name = fetch_url;
 
-      handler->handler_pool = pool;
-      handler->method = "GET";
-      handler->path = fetch_url;
-      handler->conn = conn;
-      handler->session = session;
+          handler = apr_pcalloc(pool, sizeof(*handler));
 
-      handler->header_delegate = headers_fetch;
-      handler->header_delegate_baton = stream_ctx;
+          handler->handler_pool = pool;
+          handler->method = "GET";
+          handler->path = fetch_url;
+          handler->conn = conn;
+          handler->session = session;
 
-      handler->response_handler = handle_stream;
-      handler->response_baton = stream_ctx;
+          handler->header_delegate = headers_fetch;
+          handler->header_delegate_baton = stream_ctx;
 
-      handler->response_error = cancel_fetch;
-      handler->response_error_baton = stream_ctx;
+          handler->response_handler = handle_stream;
+          handler->response_baton = stream_ctx;
 
-      stream_ctx->handler = handler;
+          handler->response_error = cancel_fetch;
+          handler->response_error_baton = stream_ctx;
 
-      svn_ra_serf__request_create(handler);
+          stream_ctx->handler = handler;
 
-      SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+          svn_ra_serf__request_create(handler);
+
+          SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+        }
     }
 
   return SVN_NO_ERROR;
