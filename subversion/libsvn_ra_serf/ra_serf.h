@@ -738,6 +738,10 @@ svn_ra_serf__xml_context_create(
   void *baton,
   apr_pool_t *result_pool);
 
+/* Destroy all subpools for this structure. */
+void
+svn_ra_serf__xml_context_destroy(
+  svn_ra_serf__xml_context_t *xmlctx);
 
 /* Construct a handler with the response function/baton set up to parse
    a response body using the given XML context. The handler and its

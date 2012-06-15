@@ -443,6 +443,12 @@ lazy_create_pool(void *baton)
   return xes->state_pool;
 }
 
+void
+svn_ra_serf__xml_context_destroy(
+  svn_ra_serf__xml_context_t *xmlctx)
+{
+  svn_pool_destroy(xmlctx->scratch_pool);
+}
 
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
