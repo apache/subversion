@@ -2439,6 +2439,7 @@ expat_response_handler(serf_request_t *request,
              return status. We just don't care.  */
           (void) XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
 
+          svn_ra_serf__xml_context_destroy(ectx->xmlctx);
           apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
                                xml_parser_cleanup);
 
