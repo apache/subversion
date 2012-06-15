@@ -783,6 +783,25 @@ path_driver_cb_func(void **dir_baton,
 
   return SVN_NO_ERROR;
 }
+
+#else
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  svn_fs_root_t *root = baton;
+  svn_node_kind_t node_kind;
+
+  SVN_ERR(svn_fs_check_path(&node_kind, root, path, scratch_pool));
+
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  return SVN_NO_ERROR;
+}
+
 #endif
 
 
@@ -948,7 +967,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                                        &send_abs_paths,
                                        repos_root, "",
                                        NULL, NULL,
-                                       NULL, NULL,
+                                       fetch_kind_func, root,
                                        NULL, NULL,
                                        pool, pool));
 
@@ -1256,8 +1275,12 @@ replay_node(svn_fs_root_t *root,
           else
             {
               if (copyfrom_path)
-                SVN_ERR(svn_editor_copy(editor, copyfrom_path, copyfrom_rev,
-                                        repos_relpath, SVN_INVALID_REVNUM));
+                {
+                  if (copyfrom_path[0] == '/')
+                    ++copyfrom_path;
+                  SVN_ERR(svn_editor_copy(editor, copyfrom_path, copyfrom_rev,
+                                          repos_relpath, SVN_INVALID_REVNUM));
+                }
               else
                 {
                   apr_array_header_t *children;
