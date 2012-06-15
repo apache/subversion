@@ -1,4 +1,4 @@
-﻿The following people have commit access to the Subversion sources.
+The following people have commit access to the Subversion sources.
 Note that this is not a full list of Subversion's authors, however --
 for that, you'd need to look over the log messages to see all the
 patch contributors.
@@ -95,6 +95,7 @@ Commit access for specific areas:
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
         rdonch   Роман Донченко <dpb@corrigendum.ru>         (Swig-Python b.)
+          vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
 
   Packages:
 
