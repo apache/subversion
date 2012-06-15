@@ -1451,6 +1451,7 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   apr_array_header_t *paths;
   apr_array_header_t *copies;
   apr_pool_t *iterpool;
+  svn_error_t *err = SVN_NO_ERROR;
   int i;
 
   SVN_ERR_ASSERT(!svn_dirent_is_absolute(base_repos_relpath));
@@ -1533,15 +1534,18 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
       const char *repos_relpath = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(replay_node(root, repos_relpath, editor,
-                          low_water_mark,
-                          base_repos_relpath, copies, changed_paths,
-                          authz_read_func, authz_read_baton,
-                          scratch_pool, iterpool));
+      err = replay_node(root, repos_relpath, editor, low_water_mark,
+                        base_repos_relpath, copies, changed_paths,
+                        authz_read_func, authz_read_baton,
+                        scratch_pool, iterpool);
+      if (err)
+        break;
     }
 
-  /* ### We should probably abort on an error condition. */
-  SVN_ERR(svn_editor_complete(editor));
+  if (err)
+    return svn_error_compose_create(err, svn_editor_abort(editor));
+  else
+    SVN_ERR(svn_editor_complete(editor));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
