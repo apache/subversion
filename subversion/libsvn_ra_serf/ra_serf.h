@@ -103,6 +103,9 @@ typedef struct svn_ra_serf__connection_t {
 
 } svn_ra_serf__connection_t;
 
+/** Max. number of connctions we'll open to the server. */
+#define MAX_NR_OF_CONNS 4
+
 /*
  * The master serf RA session.
  *
@@ -122,7 +125,7 @@ struct svn_ra_serf__session_t {
   svn_boolean_t using_compression;
 
   /* The current connection */
-  svn_ra_serf__connection_t **conns;
+  svn_ra_serf__connection_t *conns[MAX_NR_OF_CONNS];
   int num_conns;
   int cur_conn;
 

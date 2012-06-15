@@ -2253,8 +2253,6 @@ link_path(void *report_baton,
   return APR_SUCCESS;
 }
 
-/** Max. number of connctions we'll open to the server. */
-#define MAX_NR_OF_CONNS 4
 /** Minimum nr. of outstanding requests needed before a new connection is
  *  opened. */
 #define REQS_PER_CONN 8
