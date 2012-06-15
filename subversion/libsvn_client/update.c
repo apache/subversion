@@ -562,7 +562,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
 
@@ -585,12 +585,12 @@ svn_client_update4(apr_array_header_t **result_revs,
       const char *local_abspath;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
       err = svn_client__update_internal(&result_rev, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
@@ -598,7 +598,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         adds_as_modification,
                                         make_parents,
                                         FALSE, &sleep,
-                                        ctx, subpool);
+                                        ctx, iterpool);
 
       if (err)
         {
@@ -615,15 +615,15 @@ svn_client_update4(apr_array_header_t **result_revs,
               svn_wc_notify_t *notify;
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_skip,
-                                            subpool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+                                            iterpool);
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
         }
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
