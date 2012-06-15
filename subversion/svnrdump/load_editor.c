@@ -1146,7 +1146,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
                            void *cancel_baton,
                            apr_pool_t *pool)
 {
-  svn_repos_parse_fns2_t *parser;
+  svn_repos_parse_fns3_t *parser;
   struct parse_baton *parse_baton;
   const svn_string_t *lock_string;
   svn_boolean_t be_atomic;
@@ -1185,7 +1185,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
 
-  err = svn_repos_parse_dumpstream2(stream, parser, parse_baton,
+  err = svn_repos_parse_dumpstream3(stream, parser, parse_baton,
                                     cancel_func, cancel_baton, pool);
 
   /* If all goes well, or if we're cancelled cleanly, don't leave a
