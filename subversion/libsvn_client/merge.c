@@ -6222,6 +6222,36 @@ merge_range_find_extremes(svn_revnum_t *min_rev_p,
         *max_rev_p = range_max;
     }
 }
+/* Wrapper around svn_ra_get_log2(). Invoke RECEIVER with RECEIVER_BATON
+ * on each commit from START to END on TARGET.
+ * Important: Revision properties are not retrieved by this functions for
+ * performance reasons.
+ */
+
+static svn_error_t *
+get_log(svn_ra_session_t *ra_session,
+        const char *target,
+        svn_revnum_t youngest_rev,
+        svn_revnum_t oldest_rev,
+        svn_boolean_t discover_changed_paths,
+        svn_log_entry_receiver_t receiver,
+        void *receiver_baton,
+        apr_pool_t *pool)
+{
+  apr_array_header_t *log_targets;
+  apr_array_header_t *revprops;
+  
+  log_targets = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(log_targets, const char *) = target;
+
+  revprops = apr_array_make(pool, 0, sizeof(const char *));
+
+  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
+                          oldest_rev, 0, discover_changed_paths, FALSE, FALSE,
+                          revprops, receiver, receiver_baton, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Set *OPERATIVE_RANGES_P to an array of svn_merge_range_t * merge
    range objects copied wholesale from RANGES which have the property
@@ -6247,9 +6277,6 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
     apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t));
   apr_array_header_t *operative_ranges =
     apr_array_make(ranges->pool, ranges->nelts, ranges->elt_size);
-  apr_array_header_t *log_targets =
-    apr_array_make(pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(log_targets, const char *) = "";
 
   /* Find the revision extremes of the RANGES we have. */
   merge_range_find_extremes(&oldest_rev, &youngest_rev, ranges);
@@ -6258,10 +6285,8 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
 
   /* Get logs across those ranges, recording which revisions hold
      changes to our object's history. */
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                          oldest_rev, 0, FALSE, FALSE, FALSE,
-                          apr_array_make(pool, 0, sizeof(const char *)),
-                          log_changed_revs, changed_revs, pool));
+  SVN_ERR(get_log(ra_session, "", youngest_rev, oldest_rev, FALSE,
+                  log_changed_revs, changed_revs, pool));
 
   /* Are there *any* changes? */
   if (changed_revs->nelts)
@@ -7450,7 +7475,6 @@ get_operative_immediate_children(apr_hash_t **operative_children,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *log_targets;
   log_find_operative_subtree_baton_t log_baton;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(oldest_rev));
@@ -7471,13 +7495,11 @@ get_operative_immediate_children(apr_hash_t **operative_children,
   log_baton.depth = depth;
   log_baton.wc_ctx = wc_ctx;
   log_baton.result_pool = result_pool;
-  log_targets = apr_array_make(scratch_pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(log_targets, const char *) = "";
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                          oldest_rev, 0, TRUE, FALSE, FALSE,
-                          apr_array_make(scratch_pool, 0, sizeof(const char *)),
-                          log_find_operative_subtree_revs,
-                          &log_baton, scratch_pool));
+
+  SVN_ERR(get_log(ra_session, "", youngest_rev, oldest_rev,
+                  TRUE, /* discover_changed_paths */
+                  log_find_operative_subtree_revs,
+                  &log_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8346,7 +8368,6 @@ remove_noop_subtree_ranges(const merge_source_t *source,
   apr_array_header_t *requested_ranges;
   apr_array_header_t *subtree_gap_ranges;
   apr_array_header_t *subtree_remaining_ranges;
-  apr_array_header_t *log_targets;
   log_noop_baton_t log_gap_baton;
   svn_merge_range_t *oldest_gap_rev;
   svn_merge_range_t *youngest_gap_rev;
@@ -8364,7 +8385,6 @@ remove_noop_subtree_ranges(const merge_source_t *source,
 
   subtree_remaining_ranges = apr_array_make(scratch_pool, 1,
                                             sizeof(svn_merge_range_t *));
-  log_targets = apr_array_make(scratch_pool, 1, sizeof(const char *));
 
   /* Given the requested merge of SOURCE->rev1:rev2 might there be any
      part of this range required for subtrees but not for the target? */
@@ -8430,18 +8450,14 @@ remove_noop_subtree_ranges(const merge_source_t *source,
                                                   sizeof(svn_revnum_t *));
   log_gap_baton.pool = svn_pool_create(scratch_pool);
 
-  APR_ARRAY_PUSH(log_targets, const char *) = "";
-
   /* Invoke the svn_log_entry_receiver_t receiver log_noop_revs() from
      oldest to youngest.  The receiver is optimized to add ranges to
      log_gap_baton.merged_ranges and log_gap_baton.operative_ranges, but
      requires that the revs arrive oldest to youngest -- see log_noop_revs()
      and rangelist_merge_revision(). */
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, oldest_gap_rev->start + 1,
-                          youngest_gap_rev->end, 0, TRUE, TRUE, FALSE,
-                          apr_array_make(scratch_pool, 0,
-                                         sizeof(const char *)),
-                          log_noop_revs, &log_gap_baton, scratch_pool));
+  SVN_ERR(get_log(ra_session, "", oldest_gap_rev->start + 1,
+                  youngest_gap_rev->end, TRUE,
+                  log_noop_revs, &log_gap_baton, scratch_pool));
 
   inoperative_ranges = svn_rangelist__initialize(oldest_gap_rev->start,
                                                  youngest_gap_rev->end,
@@ -10015,8 +10031,6 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
         (APR_ARRAY_IDX(potentially_unmerged_ranges,
                        potentially_unmerged_ranges->nelts - 1,
                        svn_merge_range_t *))->end;
-      apr_array_header_t *log_targets = apr_array_make(scratch_pool, 1,
-                                                       sizeof(const char *));
       log_find_operative_baton_t log_baton;
 
       log_baton.merged_catalog = merged_catalog;
@@ -10027,14 +10041,10 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
         = svn_client__pathrev_fspath(target_loc, scratch_pool);
       log_baton.result_pool = result_pool;
 
-      APR_ARRAY_PUSH(log_targets, const char *) = "";
-
-      SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                              oldest_rev, 0, TRUE, FALSE, FALSE,
-                              apr_array_make(scratch_pool, 0,
-                                             sizeof(const char *)),
-                              log_find_operative_revs, &log_baton,
-                              scratch_pool));
+      SVN_ERR(get_log(ra_session, "", youngest_rev, oldest_rev,
+                      TRUE, /* discover_changed_paths */
+                      log_find_operative_revs, &log_baton,
+                      scratch_pool));
     }
 
   return SVN_NO_ERROR;
