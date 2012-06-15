@@ -42,22 +42,6 @@
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
 
-
-/* Structure associated with a CHECKOUT request. */
-typedef struct checkout_context_t {
-  /* The handler running the CHECKOUT.  */
-  svn_ra_serf__handler_t *handler;
-
-  /* The pool for allocating RESOURCE_URL.  */
-  apr_pool_t *result_pool;
-
-  /* The activity that will hold the checked-out resource.  */
-  const char *activity_url;
-
-  /* The output:  */
-  const char *resource_url;
-
-} checkout_context_t;
 
 /* Baton passed back with the commit editor. */
 typedef struct commit_context_t {
@@ -250,7 +234,7 @@ create_checkout_body(serf_bucket_t **bkt,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
-  checkout_context_t *ctx = baton;
+  const char *activity_url = baton;
   serf_bucket_t *body_bkt;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
@@ -262,10 +246,10 @@ create_checkout_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set", NULL);
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
-  SVN_ERR_ASSERT(ctx->activity_url != NULL);
+  SVN_ERR_ASSERT(activity_url != NULL);
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
-                                     ctx->activity_url,
-                                     strlen(ctx->activity_url));
+                                     activity_url,
+                                     strlen(activity_url));
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:activity-set");
@@ -274,53 +258,6 @@ create_checkout_body(serf_bucket_t **bkt,
 
   *bkt = body_bkt;
   return SVN_NO_ERROR;
-}
-
-/* Implements svn_ra_serf__response_handler_t */
-static svn_error_t *
-handle_checkout(serf_request_t *request,
-                serf_bucket_t *response,
-                void *baton,
-                apr_pool_t *pool)
-{
-  checkout_context_t *ctx = baton;
-  svn_ra_serf__handler_t *handler = ctx->handler;
-
-  svn_error_t *err = svn_ra_serf__expect_empty_body(request, response,
-                                                    handler, pool);
-
-  /* These handler functions are supposed to return an APR_EOF status
-     wrapped in a svn_error_t to indicate to serf that the response was
-     completely read. While we have to return this status code to our
-     caller, we should treat it as the normal case for now. */
-  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
-    return err;
-
-  /* Get the resulting location. */
-  if (handler->done && handler->sline.code == 201)
-    {
-      serf_bucket_t *hdrs;
-      apr_uri_t uri;
-      const char *location;
-      apr_status_t status;
-
-      hdrs = serf_bucket_response_get_headers(response);
-      location = serf_bucket_headers_get(hdrs, "Location");
-      if (!location)
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
-                                _("No Location header received"));
-
-      status = apr_uri_parse(pool, location, &uri);
-
-      if (status)
-        err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
-
-      SVN_ERR_ASSERT(ctx->result_pool != NULL);
-      ctx->resource_url = svn_urlpath__canonicalize(uri.path,
-                                                    ctx->result_pool);
-    }
-
-  return err;
 }
 
 
@@ -351,7 +288,6 @@ checkout_node(const char **working_url,
               apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t handler = { 0 };
-  checkout_context_t checkout_ctx = { 0 };
 
   /* HANDLER_POOL is the scratch pool since we don't need to remember
      anything from the handler. We just want the working resource.  */
@@ -359,16 +295,12 @@ checkout_node(const char **working_url,
   handler.session = commit_ctx->session;
   handler.conn = commit_ctx->conn;
 
-  checkout_ctx.handler = &handler;
-  checkout_ctx.result_pool = result_pool;
-  checkout_ctx.activity_url = commit_ctx->activity_url;
-
   handler.body_delegate = create_checkout_body;
-  handler.body_delegate_baton = &checkout_ctx;
+  handler.body_delegate_baton = (/* const */ void *)commit_ctx->activity_url;
   handler.body_type = "text/xml";
 
-  handler.response_handler = handle_checkout;
-  handler.response_baton = &checkout_ctx;
+  handler.response_handler = svn_ra_serf__expect_empty_body;
+  handler.response_baton = &handler;
 
   handler.method = "CHECKOUT";
   handler.path = node_url;
@@ -378,8 +310,11 @@ checkout_node(const char **working_url,
   if (handler.sline.code != 201)
     return svn_error_trace(return_response_err(&handler));
 
-  /* Already in the correct pool.  */
-  *working_url = checkout_ctx.resource_url;
+  if (handler.location == NULL)
+    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                            _("No Location header received"));
+
+  *working_url = apr_pstrdup(result_pool, handler.location);
 
   return SVN_NO_ERROR;
 }
