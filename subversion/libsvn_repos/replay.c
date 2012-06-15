@@ -1168,6 +1168,7 @@ replay_node(svn_fs_root_t *root,
   svn_boolean_t do_delete = FALSE;
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
+  svn_revnum_t replaces_rev;
 
   /* First, flush the copies stack so it only contains ancestors of path. */
   while (copies->nelts > 0
@@ -1207,7 +1208,7 @@ replay_node(svn_fs_root_t *root,
     }
 
   /* Handle any deletions. */
-  if (do_delete)
+  if (do_delete && ! do_add)
     {
       svn_boolean_t readable;
 
@@ -1218,7 +1219,15 @@ replay_node(svn_fs_root_t *root,
                             scratch_pool, scratch_pool));
       if (readable)
         SVN_ERR(svn_editor_delete(editor, repos_relpath, SVN_INVALID_REVNUM));
+
+      return SVN_NO_ERROR;
     }
+
+  /* Handle replacements. */
+  if (do_delete && do_add)
+    replaces_rev = svn_fs_revision_root_revision(root);
+  else
+    replaces_rev = SVN_INVALID_REVNUM;
 
   /* Fetch the node kind if it makes sense to do so. */
   if (! do_delete || do_add)
@@ -1279,7 +1288,7 @@ replay_node(svn_fs_root_t *root,
                   if (copyfrom_path[0] == '/')
                     ++copyfrom_path;
                   SVN_ERR(svn_editor_copy(editor, copyfrom_path, copyfrom_rev,
-                                          repos_relpath, SVN_INVALID_REVNUM));
+                                          repos_relpath, replaces_rev));
                 }
               else
                 {
@@ -1296,7 +1305,7 @@ replay_node(svn_fs_root_t *root,
 
                   SVN_ERR(svn_editor_add_directory(editor, repos_relpath,
                                                    children, props,
-                                                   SVN_INVALID_REVNUM));
+                                                   replaces_rev));
                 }
             }
         }
@@ -1307,7 +1316,7 @@ replay_node(svn_fs_root_t *root,
               if (copyfrom_path[0] == '/')
                 ++copyfrom_path;
               SVN_ERR(svn_editor_copy(editor, copyfrom_path, copyfrom_rev,
-                                      repos_relpath, SVN_INVALID_REVNUM));
+                                      repos_relpath, replaces_rev));
             }
           else
             {
@@ -1325,8 +1334,7 @@ replay_node(svn_fs_root_t *root,
                                            repos_relpath, TRUE, scratch_pool));
 
               SVN_ERR(svn_editor_add_file(editor, repos_relpath, checksum,
-                                          contents, props,
-                                          SVN_INVALID_REVNUM));
+                                          contents, props, replaces_rev));
             }
         }
 
