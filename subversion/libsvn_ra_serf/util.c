@@ -2370,7 +2370,15 @@ expat_response_handler(serf_request_t *request,
 {
   struct expat_ctx_t *ectx = baton;
 
-  SVN_ERR_ASSERT(ectx->parser != NULL);
+  if (!ectx->parser)
+    {
+      ectx->parser = XML_ParserCreate(NULL);
+      apr_pool_cleanup_register(ectx->cleanup_pool, &ectx->parser,
+                                xml_parser_cleanup, apr_pool_cleanup_null);
+      XML_SetUserData(ectx->parser, ectx);
+      XML_SetElementHandler(ectx->parser, expat_start, expat_end);
+      XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
+    }
 
   /* ### should we bail on anything < 200 or >= 300 ??
      ### actually: < 200 should really be handled by the core.  */
@@ -2457,12 +2465,8 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
 
   ectx = apr_pcalloc(result_pool, sizeof(*ectx));
   ectx->xmlctx = xmlctx;
-  ectx->parser = XML_ParserCreate(NULL);
-  apr_pool_cleanup_register(result_pool, &ectx->parser,
-                            xml_parser_cleanup, apr_pool_cleanup_null);
-  XML_SetUserData(ectx->parser, ectx);
-  XML_SetElementHandler(ectx->parser, expat_start, expat_end);
-  XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
+  ectx->parser = NULL;
+  ectx->cleanup_pool = result_pool;
 
 
   handler = apr_pcalloc(result_pool, sizeof(*handler));
