@@ -2706,12 +2706,19 @@ svn_repos_load_fs(svn_repos_t *repos,
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream3().
- * ### TODO: Add a new callback for the dumpfile version header.
  *
  * @since New in 1.8.
  */
 typedef struct svn_repos_parse_fns3_t
 {
+  /** The parser has discovered a new "magic header" record within the
+   * parsing session represented by @a parse_baton.  The dump-format
+   * version number is @a version.
+   */
+  svn_error_t *(*magic_header_record)(int version,
+                                      void *parse_baton,
+                                      apr_pool_t *pool);
+
   /** The parser has discovered a new uuid record within the parsing
    * session represented by @a parse_baton.  The uuid's value is
    * @a uuid, and it is allocated in @a pool.
@@ -2801,8 +2808,10 @@ typedef struct svn_repos_parse_fns3_t
  * Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
- * ### TODO: Add a boolean option to treat text-deltas as text, because
- * a dump-filtering tool shouldn't apply the deltas.
+ * If @a deltas_are_text is @c TRUE, handle text-deltas with the @a
+ * set_fulltext callback.  This is useful when manipulating a dump
+ * stream without loading it.  Otherwise handle text-deltas with the
+ * @a apply_textdelta callback.
  *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
@@ -2811,7 +2820,7 @@ typedef struct svn_repos_parse_fns3_t
  * This parser has built-in knowledge of the dumpfile format, but only
  * in a limited sense:
  *
- *    * ### TODO: it recognizes the "magic" format-version header.
+ *    * it recognizes the "magic" format-version header.
  *
  *    * it recognizes the UUID header.
  *
@@ -2825,7 +2834,8 @@ typedef struct svn_repos_parse_fns3_t
  *      and text, and pass the pieces to the vtable.
  *
  * This is enough knowledge to make it easy on vtable implementors,
- * but still allow expansion of the format:  most headers are ignored.
+ * but still allow expansion of the format: most headers do not have
+ * to be handled explicitly.
  *
  * @since New in 1.8.
  */
@@ -2833,6 +2843,7 @@ svn_error_t *
 svn_repos_parse_dumpstream3(svn_stream_t *stream,
                             const svn_repos_parse_fns3_t *parse_fns,
                             void *parse_baton,
+                            svn_boolean_t deltas_are_text,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *pool);

@@ -584,6 +584,14 @@ new_revision_record(void **revision_baton,
 }
 
 static svn_error_t *
+magic_header_record(int version,
+            void *parse_baton,
+            apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 uuid_record(const char *uuid,
             void *parse_baton,
             apr_pool_t *pool)
@@ -1163,8 +1171,9 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
                                            session_url, pool));
 
   parser = apr_pcalloc(pool, sizeof(*parser));
-  parser->new_revision_record = new_revision_record;
+  parser->magic_header_record = magic_header_record;
   parser->uuid_record = uuid_record;
+  parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
@@ -1185,7 +1194,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
 
-  err = svn_repos_parse_dumpstream3(stream, parser, parse_baton,
+  err = svn_repos_parse_dumpstream3(stream, parser, parse_baton, FALSE,
                                     cancel_func, cancel_baton, pool);
 
   /* If all goes well, or if we're cancelled cleanly, don't leave a

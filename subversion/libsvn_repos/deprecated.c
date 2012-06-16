@@ -824,6 +824,7 @@ fns3_from_fns2(const svn_repos_parser_fns2_t *fns2,
   svn_repos_parse_fns3_t *fns3;
 
   fns3 = apr_palloc(pool, sizeof(*fns3));
+  fns3->magic_header_record = NULL;
   fns3->uuid_record = fns2->uuid_record;
   fns3->new_revision_record = fns2->new_revision_record;
   fns3->new_node_record = fns2->new_node_record;
@@ -848,7 +849,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
 {
   svn_repos_parse_fns3_t *fns3 = fns3_from_fns2(parse_fns, pool);
 
-  return svn_repos_parse_dumpstream3(stream, fns3, parse_baton,
+  return svn_repos_parse_dumpstream3(stream, fns3, parse_baton, FALSE,
                                      cancel_func, cancel_baton, pool);
 }
 
