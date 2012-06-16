@@ -1,0 +1,71 @@
+SVN-fs-dump-format-version: 3
+
+UUID: 95ae2ea4-9df8-40f9-8aee-3e2af6f6aa3c
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2012-06-15T15:58:51.002886Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 103
+Content-length: 103
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2012-06-15T16:00:19.178493Z
+K 7
+svn:log
+V 4
+Test
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 41
+Content-length: 41
+
+K 4
+soup
+V 16
+No soup for you.
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 114
+Content-length: 114
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2012-06-15T16:01:26.311580Z
+K 7
+svn:log
+V 14
+Create branch
+
+PROPS-END
+
+Node-path: branch1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: trunk
+
+

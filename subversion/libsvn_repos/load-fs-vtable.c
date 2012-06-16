@@ -589,6 +589,13 @@ maybe_add_with_history(struct node_baton *nb,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+magic_header_record(int version,
+                    void *parse_baton,
+                    apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 uuid_record(const char *uuid,
@@ -1042,6 +1049,7 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
   if (SVN_IS_VALID_REVNUM(start_rev))
     SVN_ERR_ASSERT(start_rev <= end_rev);
 
+  parser->magic_header_record = magic_header_record;
   parser->uuid_record = uuid_record;
   parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
@@ -1116,6 +1124,6 @@ svn_repos_load_fs4(svn_repos_t *repos,
   pb->use_pre_commit_hook = use_pre_commit_hook;
   pb->use_post_commit_hook = use_post_commit_hook;
 
-  return svn_repos_parse_dumpstream3(dumpstream, parser, parse_baton,
+  return svn_repos_parse_dumpstream3(dumpstream, parser, parse_baton, FALSE,
                                      cancel_func, cancel_baton, pool);
 }
