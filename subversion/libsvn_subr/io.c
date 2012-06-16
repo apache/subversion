@@ -1391,28 +1391,33 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
     {
       apr_finfo_t finfo;
       apr_file_t *fd;
+      const char *fname_base, *fname;
+      apr_uint32_t randomish;
+      svn_error_t *err;
 
       /* Get the perms for a newly created file to find out what bits
         should be set.
 
-        Normally del_on_close can be problematic because APR might
-        delete the file if we spawned any child processes. In this
-        case, the lifetime of this file handle is about 3 lines of
-        code, so we can safely use del_on_close here.
-
-        Not so fast! If some other thread forks off a child, then the
-        APR cleanups run, and the file will disappear. So use
-        del_on_pool_cleanup instead.
+        Explictly delete the file because we want this file to be as
+        short-lived as possible since its presence means other
+        processes may have to try multiple names.
 
         Using svn_io_open_uniquely_named() here because other tempfile
         creation functions tweak the permission bits of files they create.
       */
-      SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "default-perms", NULL,
-                                         svn_io_file_del_on_pool_cleanup,
-                                         scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
-      SVN_ERR(svn_io_file_close(fd, scratch_pool));
+      randomish = ((apr_uint32_t)(apr_uint64_t)scratch_pool
+                   + (apr_uint32_t)((apr_uint64_t)scratch_pool >> 32)
+                   + (apr_uint32_t)apr_time_now());
+      fname_base = apr_psprintf(scratch_pool, "svn-%08x", randomish);
 
+      SVN_ERR(svn_io_open_uniquely_named(&fd, &fname, NULL, fname_base,
+                                         NULL, svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
+      err = svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool);
+      err = svn_error_compose_create(err, svn_io_file_close(fd, scratch_pool));
+      err = svn_error_compose_create(err, svn_io_remove_file2(fname, TRUE,
+                                                              scratch_pool));
+      SVN_ERR(err);
       *perms = finfo.protection;
       default_perms = finfo.protection;
     }
