@@ -1227,7 +1227,11 @@ typedef enum svn_wc_notify_action_t
 
   /** Operation failed because a node is obstructed.
    * @since New in 1.8. */
-  svn_wc_notify_failed_obstruction
+  svn_wc_notify_failed_obstruction,
+
+  /** Summary of conflicts in the working copy.
+   * @since New in 1.8. */
+  svn_wc_notify_conflict_summary
 
 } svn_wc_notify_action_t;
 
@@ -1412,6 +1416,12 @@ typedef struct svn_wc_notify_t {
   /** The fuzz factor the hunk was applied with.
    * @since New in 1.7 */
   svn_linenum_t hunk_fuzz;
+
+  /** Number of conflicts per kind, for conflict summary notification.
+   * @since New in 1.8 */
+  unsigned int text_conflicts;
+  unsigned int prop_conflicts;
+  unsigned int tree_conflicts;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
