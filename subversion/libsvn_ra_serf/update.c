@@ -1079,19 +1079,15 @@ handle_stream(serf_request_t *request,
               apr_pool_t *pool)
 {
   report_fetch_t *fetch_ctx = handler_baton;
-  const char *location;
   svn_error_t *err;
   apr_status_t status;
 
   /* ### new field. make sure we didn't miss some initialization.  */
   SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
 
-  /* Woo-hoo.  Nothing here to see.  */
-  location = svn_ra_serf__response_get_location(response, pool);
-
   err = svn_ra_serf__error_on_status(fetch_ctx->handler->sline.code,
                                      fetch_ctx->info->name,
-                                     location);
+                                     fetch_ctx->handler->location);
   if (err)
     {
       fetch_ctx->handler->done = TRUE;
