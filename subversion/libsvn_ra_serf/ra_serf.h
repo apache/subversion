@@ -931,12 +931,6 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       void *baton,
                                       apr_pool_t *pool);
 
-/* Return the value of the RESPONSE's Location header if any, or NULL
- * otherwise.  All allocations will be made in POOL.
- */
-const char *
-svn_ra_serf__response_get_location(serf_bucket_t *response,
-                                   apr_pool_t *pool);
 
 /** XML helper functions. **/
 

@@ -941,16 +941,29 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
   return drain_bucket(response);
 }
 
-const char *
-svn_ra_serf__response_get_location(serf_bucket_t *response,
-                                   apr_pool_t *pool)
+
+/* Return the value of the RESPONSE's Location header if any, or NULL
+   otherwise.  All allocations will be made in POOL.  */
+static const char *
+response_get_location(serf_bucket_t *response,
+                      apr_pool_t *pool)
 {
   serf_bucket_t *headers;
-  const char *val;
+  const char *location;
+  apr_status_t status;
+  apr_uri_t uri;
 
   headers = serf_bucket_response_get_headers(response);
-  val = serf_bucket_headers_get(headers, "Location");
-  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
+  location = serf_bucket_headers_get(headers, "Location");
+  if (location == NULL)
+    return NULL;
+
+  /* Ignore the scheme/host/port. Or just return as-is if we can't parse.  */
+  status = apr_uri_parse(pool, location, &uri);
+  if (!status)
+    location = uri.path;
+
+  return svn_urlpath__canonicalize(location, pool);
 }
 
 
@@ -1812,8 +1825,7 @@ handle_response(serf_request_t *request,
     }
 
   /* ... and set up the header fields in HANDLER.  */
-  handler->location = svn_ra_serf__response_get_location(
-                          response, handler->handler_pool);
+  handler->location = response_get_location(response, handler->handler_pool);
 
   /* On the last request, we failed authentication. We succeeded this time,
      so let's save away these credentials.  */
