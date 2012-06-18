@@ -11230,8 +11230,8 @@ branch_history_get_endpoints(svn_client__pathrev_t **oldest_p,
 }
 
 /* Set *BASE_P to the last location on SOURCE_BRANCH such that all changes
- * on SOURCE_BRANCH up to and including *BASE_P have already been merged
- * into the target branch -- or, specifically, are recorded in
+ * on SOURCE_BRANCH after YCA up to and including *BASE_P have already
+ * been merged into the target branch -- or, specifically, are recorded in
  * TARGET_MERGEINFO.
  *
  *               *BASE_P       TIP
