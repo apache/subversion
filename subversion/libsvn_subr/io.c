@@ -1405,8 +1405,7 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
         Using svn_io_open_uniquely_named() here because other tempfile
         creation functions tweak the permission bits of files they create.
       */
-      randomish = ((apr_uint32_t)(apr_uint64_t)scratch_pool
-                   + (apr_uint32_t)((apr_uint64_t)scratch_pool >> 32)
+      randomish = ((apr_uint32_t)(apr_uintptr_t)scratch_pool
                    + (apr_uint32_t)apr_time_now());
       fname_base = apr_psprintf(scratch_pool, "svn-%08x", randomish);
 
