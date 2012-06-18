@@ -10675,7 +10675,7 @@ find_reintegrate_merge(merge_source_t **source_p,
       /* Have we actually merged anything to the source from the
          target?  If so, make sure we've merged a contiguous
          prefix. */
-      svn_mergeinfo_t final_unmerged_catalog = apr_hash_make(scratch_pool);
+      svn_mergeinfo_catalog_t final_unmerged_catalog = apr_hash_make(scratch_pool);
 
       SVN_ERR(find_unsynced_ranges(source_loc, yc_ancestor,
                                    unmerged_to_source_mergeinfo_catalog,

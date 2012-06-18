@@ -502,7 +502,7 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                         apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  svn_mergeinfo_t repos_mergeinfo_cat;
+  svn_mergeinfo_catalog_t repos_mergeinfo_cat;
   apr_array_header_t *rel_paths = apr_array_make(scratch_pool, 1,
                                                  sizeof(const char *));
   const char *old_session_url;
@@ -1499,7 +1499,7 @@ logs_for_mergeinfo_rangelist(const char *source_url,
                              const apr_array_header_t *merge_source_fspaths,
                              svn_boolean_t filtering_merged,
                              const apr_array_header_t *rangelist,
-                             svn_mergeinfo_t target_mergeinfo_catalog,
+                             svn_mergeinfo_catalog_t target_mergeinfo_catalog,
                              const char *target_fspath,
                              svn_boolean_t discover_changed_paths,
                              const apr_array_header_t *revprops,
