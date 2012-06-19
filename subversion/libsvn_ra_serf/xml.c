@@ -661,7 +661,8 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                 }
 
               if (value)
-                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING, value);
+                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING,
+                             apr_pstrdup(new_pool, value));
             }
         }
     }
