@@ -982,12 +982,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
-    case svn_wc_notify_conflict_resolver_start:
+    case svn_wc_notify_conflict_resolver_starting:
       /* Once all operations invoke the interactive conflict resolution after
        * they've completed, we can run svn_cl__print_conflict_stats() here. */
       break;
 
-    case svn_wc_notify_conflict_resolver_end:
+    case svn_wc_notify_conflict_resolver_done:
       break;
 
     default:
