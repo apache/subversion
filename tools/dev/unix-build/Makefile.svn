@@ -1154,41 +1154,6 @@ MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
-else ifeq ($(BRANCH_MAJOR),1.4)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-NEON_FLAG=--with-neon="$(PREFIX)/neon"
-else ifeq ($(BRANCH_MAJOR),1.3)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-NEON_FLAG=--with-neon="$(PREFIX)/neon"
-else ifeq ($(BRANCH_MAJOR),1.2)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-NEON_FLAG=--with-neon="$(PREFIX)/neon"
-else ifeq ($(BRANCH_MAJOR),1.1)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-NEON_FLAG=--with-neon="$(PREFIX)/neon"
-else ifeq ($(BRANCH_MAJOR),1.0)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-NEON_FLAG=--with-neon="$(PREFIX)/neon"
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
