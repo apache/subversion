@@ -134,6 +134,13 @@ Candidate changes:
    Votes:
      +1: cmpilato, gstein
 
+ * r1351772
+   Add missing new-in-1.7 notification API enum values to JavaHL.
+   Justification:
+     Incomplete API in JavaHL bindings. Requested by SVNKit developers.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
