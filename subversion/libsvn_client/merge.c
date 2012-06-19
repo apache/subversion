@@ -9545,7 +9545,7 @@ merge_locked(const char *source1,
   svn_client__pathrev_t *yca = NULL;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
-  /* Resolve conflicts post-update for 1.7 and above API users. */
+  /* Resolve conflicts post-merge for 1.7 and above API users. */
   svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
@@ -10972,7 +10972,7 @@ merge_peg_locked(const char *source_path_or_url,
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
-  /* Resolve conflicts post-update for 1.7 and above API users. */
+  /* Resolve conflicts post-merge for 1.7 and above API users. */
   svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
@@ -11631,7 +11631,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
   merge_target_t *target;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
-  /* Resolve conflicts post-update for 1.7 and above API users. */
+  /* Resolve conflicts post-merge for 1.7 and above API users. */
   svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
