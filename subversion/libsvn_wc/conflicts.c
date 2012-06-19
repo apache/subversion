@@ -358,86 +358,40 @@ svn_wc__resolve_text_conflict(svn_wc__db_t *db,
                            scratch_pool));
 }
 
-/* Baton for gather_conflict_stats() */
-struct gather_conflict_stats_baton {
-  svn_wc__db_t *db;
-  apr_array_header_t *conflicted_paths;
-  unsigned int text_conflicts;
-  unsigned int prop_conflicts;
-  unsigned int tree_conflicts;
-  apr_pool_t *pool;
-} gather_conflict_stats_baton;
 
-
-/* Implements svn_wc_status4_t to walk all conflicts to resolve.
- * Gathers conflicts for the purpose of sending a conflict summary
- * and then process conflicts in turn. */
-static svn_error_t *
-gather_conflict_stats(void *baton,
-                      const char *local_abspath,
-                      const svn_wc_status3_t *status,
-                      apr_pool_t *scratch_pool)
+/* Baton for conflict_status_walker */
+struct conflict_status_walker_baton
 {
-  struct gather_conflict_stats_baton *b = baton;
+  svn_wc__db_t *db;
+  svn_boolean_t resolve_text;
+  const char *resolve_prop;
+  svn_boolean_t resolve_tree;
+  svn_wc_conflict_choice_t conflict_choice;
+  svn_wc_conflict_resolver_func2_t conflict_func;
+  void *conflict_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
+};
+
+/* Implements svn_wc_status4_t to walk all conflicts to resolve */
+static svn_error_t *
+conflict_status_walker(void *baton,
+                       const char *local_abspath,
+                       const svn_wc_status3_t *status,
+                       apr_pool_t *scratch_pool)
+{
+  struct conflict_status_walker_baton *cswb = baton;
+  svn_wc__db_t *db = cswb->db;
+
   const apr_array_header_t *conflicts;
+  apr_pool_t *iterpool;
   int i;
+  svn_boolean_t resolved = FALSE;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
-
-  APR_ARRAY_PUSH(b->conflicted_paths,
-                 const char *) = apr_pstrdup(b->pool, local_abspath);
-
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, b->db, local_abspath,
-                                    scratch_pool, scratch_pool));
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      const svn_wc_conflict_description2_t *cd;
-
-      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
-      switch (cd->kind)
-        {
-          case svn_wc_conflict_kind_text:
-            b->text_conflicts++;
-            break;
-          case svn_wc_conflict_kind_property:
-            b->prop_conflicts++;
-            break;
-          case svn_wc_conflict_kind_tree:
-            b->tree_conflicts++;
-            break;
-          default:
-            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
-                                     NULL, _("Unkown conflict kind %d"),
-                                     cd->kind);
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Give the conflict callback a go at resolving all conflicts at LOCAL_ABSPATH.
- * All parameters as in svn_wc__resolve_conflicts(). */
-static svn_error_t *
-resolve_conflicts_on_node(const char *local_abspath,
-                          svn_wc__db_t *db,
-                          svn_boolean_t resolve_text,
-                          const char *resolve_prop,
-                          svn_boolean_t resolve_tree,
-                          svn_wc_conflict_choice_t conflict_choice,
-                          svn_wc_conflict_resolver_func2_t conflict_func,
-                          void *conflict_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *conflicts;
-  svn_boolean_t resolved = FALSE;
-  int i;
-  apr_pool_t *iterpool;
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -448,7 +402,7 @@ resolve_conflicts_on_node(const char *local_abspath,
     {
       const svn_wc_conflict_description2_t *cd;
       svn_boolean_t did_resolve;
-      svn_wc_conflict_choice_t my_choice = conflict_choice;
+      svn_wc_conflict_choice_t my_choice = cswb->conflict_choice;
 
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
@@ -458,13 +412,13 @@ resolve_conflicts_on_node(const char *local_abspath,
         {
           svn_wc_conflict_result_t *result;
 
-          if (!conflict_func)
+          if (!cswb->conflict_func)
             return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                     _("No conflict-callback and no "
                                       "pre-defined conflict-choice provided"));
 
-          SVN_ERR(conflict_func(&result, cd, conflict_baton,
-                                iterpool, iterpool));
+          SVN_ERR(cswb->conflict_func(&result, cd, cswb->conflict_baton,
+                                      iterpool, iterpool));
 
           my_choice = result->choice;
         }
@@ -476,7 +430,7 @@ resolve_conflicts_on_node(const char *local_abspath,
       switch (cd->kind)
         {
           case svn_wc_conflict_kind_tree:
-            if (!resolve_tree)
+            if (!cswb->resolve_tree)
               break;
 
             /* For now, we only clear tree conflict information and resolve
@@ -501,27 +455,26 @@ resolve_conflicts_on_node(const char *local_abspath,
                                              FALSE /* resolve_props */,
                                              TRUE /* resolve_tree */,
                                              my_choice,
-                                             cancel_func,
-                                             cancel_baton,
+                                             cswb->cancel_func,
+                                             cswb->cancel_baton,
                                              iterpool));
 
             resolved = TRUE;
             break;
 
           case svn_wc_conflict_kind_text:
-            if (!resolve_text)
+            if (!cswb->resolve_text)
               break;
 
             SVN_ERR(resolve_conflict_on_node(&did_resolve,
                                              db,
                                              local_abspath,
                                              TRUE /* resolve_text */,
-
                                              FALSE /* resolve_props */,
                                              FALSE /* resolve_tree */,
                                              my_choice,
-                                             cancel_func,
-                                             cancel_baton,
+                                             cswb->cancel_func,
+                                             cswb->cancel_baton,
                                              iterpool));
 
             if (did_resolve)
@@ -529,13 +482,13 @@ resolve_conflicts_on_node(const char *local_abspath,
             break;
 
           case svn_wc_conflict_kind_property:
-            if (!resolve_prop)
+            if (!cswb->resolve_prop)
               break;
 
             /* ### this is bogus. resolve_conflict_on_node() does not handle
                ### individual property resolution.  */
-            if (*resolve_prop != '\0' &&
-                strcmp(resolve_prop, cd->property_name) != 0)
+            if (*cswb->resolve_prop != '\0' &&
+                strcmp(cswb->resolve_prop, cd->property_name) != 0)
               {
                 break; /* Skip this property conflict */
               }
@@ -549,8 +502,8 @@ resolve_conflicts_on_node(const char *local_abspath,
                                              TRUE /* resolve_props */,
                                              FALSE /* resolve_tree */,
                                              my_choice,
-                                             cancel_func,
-                                             cancel_baton,
+                                             cswb->cancel_func,
+                                             cswb->cancel_baton,
                                              iterpool));
 
             if (did_resolve)
@@ -564,12 +517,12 @@ resolve_conflicts_on_node(const char *local_abspath,
     }
 
   /* Notify */
-  if (notify_func && resolved)
-    notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath,
-                                     svn_wc_notify_resolved,
-                                     iterpool),
-                iterpool);
+  if (cswb->notify_func && resolved)
+    cswb->notify_func(cswb->notify_baton,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_resolved,
+                                           iterpool),
+                      iterpool);
 
   svn_pool_destroy(iterpool);
 
@@ -594,9 +547,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
 {
   svn_kind_t kind;
   svn_boolean_t conflicted;
-  struct gather_conflict_stats_baton gcsb;
-  int i;
-  apr_pool_t *iterpool;
+  struct conflict_status_walker_baton cswb;
 
   /* ### the underlying code does NOT support resolving individual
      ### properties. bail out if the caller tries it.  */
@@ -621,14 +572,21 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   else if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  gcsb.db = wc_ctx->db;
-  gcsb.conflicted_paths = apr_array_make(scratch_pool, 0, sizeof(const char *));
-  gcsb.text_conflicts = 0;
-  gcsb.prop_conflicts = 0;
-  gcsb.tree_conflicts = 0;
-  gcsb.pool = scratch_pool;
+  cswb.db = wc_ctx->db;
+  cswb.resolve_text = resolve_text;
+  cswb.resolve_prop = resolve_prop;
+  cswb.resolve_tree = resolve_tree;
+  cswb.conflict_choice = conflict_choice;
 
-  /* Gather conflicts within LOCAL_ABSPATH. */
+  cswb.conflict_func = conflict_func;
+  cswb.conflict_baton = conflict_baton;
+
+  cswb.cancel_func = cancel_func;
+  cswb.cancel_baton = cancel_baton;
+
+  cswb.notify_func = notify_func;
+  cswb.notify_baton = notify_baton;
+
   SVN_ERR(svn_wc_walk_status(wc_ctx,
                              local_abspath,
                              depth,
@@ -636,41 +594,9 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                              FALSE /* no_ignore */,
                              TRUE /* ignore_text_mods */,
                              NULL /* ignore_patterns */,
-                             gather_conflict_stats, &gcsb,
+                             conflict_status_walker, &cswb,
                              cancel_func, cancel_baton,
                              scratch_pool));
-
-  /* Send a conflict summary notification. */
-  if (notify_func)
-    {
-      svn_wc_notify_t *notify;
-
-      notify = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_conflict_summary,
-                                    scratch_pool),
-      notify->text_conflicts = gcsb.text_conflicts;
-      notify->prop_conflicts = gcsb.prop_conflicts;
-      notify->tree_conflicts = gcsb.tree_conflicts;
-      notify_func(notify_baton, notify, scratch_pool);
-    }
-
-  /* Give the conflict callback a go at resolving conflicts. */
-  iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < gcsb.conflicted_paths->nelts; i++)
-    {
-      const char *conflicted_path;
-
-      svn_pool_clear(iterpool);
-      conflicted_path = APR_ARRAY_IDX(gcsb.conflicted_paths, i, const char *);
-      SVN_ERR(resolve_conflicts_on_node(conflicted_path, wc_ctx->db,
-                                        resolve_text, resolve_prop,
-                                        resolve_tree, conflict_choice,
-                                        conflict_func, conflict_baton,
-                                        cancel_func, cancel_baton,
-                                        notify_func, notify_baton,
-                                        iterpool));
-    }
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
