@@ -2426,6 +2426,20 @@ expat_response_handler(serf_request_t *request,
       /* ### should we have an IGNORE_ERRORS flag like the v1 parser?  */
 
       expat_status = XML_Parse(ectx->parser, data, (int)len, 0 /* isFinal */);
+
+      /* We need to check INNER_ERROR first. This is an error from the
+         callbacks that has been "dropped off" for us to retrieve. On
+         current Expat parsers, we stop the parser when an error occurs,
+         so we want to ignore EXPAT_STATUS (which reports the stoppage).
+
+         If an error is not present, THEN we go ahead and look for parsing
+         errors.  */
+      if (ectx->inner_error)
+        {
+          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
+                               xml_parser_cleanup);
+          return svn_error_trace(ectx->inner_error);
+        }
       if (expat_status == XML_STATUS_ERROR)
         return svn_error_createf(SVN_ERR_XML_MALFORMED,
                                  ectx->inner_error,
@@ -2434,14 +2448,6 @@ expat_response_handler(serf_request_t *request,
                                  ectx->handler->method,
                                  ectx->handler->sline.code,
                                  ectx->handler->sline.reason);
-
-      /* Was an error dropped off for us?  */
-      if (ectx->inner_error)
-        {
-          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
-                               xml_parser_cleanup);
-          return svn_error_trace(ectx->inner_error);
-        }
 
       /* The parsing went fine. What has the bucket told us?  */
 
