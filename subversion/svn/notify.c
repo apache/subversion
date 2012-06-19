@@ -982,15 +982,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
-    case svn_wc_notify_conflict_summary:
-      /* Once all operations invoke the interactive conflict resolution after
-       * they've completed, we can run svn_cl__print_conflict_stats() here.
-       * For now, allow the resolver to override stats we've gathered. */
-      nb->text_conflicts = n->text_conflicts;
-      nb->prop_conflicts = n->prop_conflicts;
-      nb->tree_conflicts = n->tree_conflicts;
-      break;
-
     default:
       break;
     }
