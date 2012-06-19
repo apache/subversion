@@ -1470,7 +1470,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-javahl 2>&1) | \
+			make check-all-javahl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 
