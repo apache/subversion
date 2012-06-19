@@ -587,6 +587,13 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   cswb.notify_func = notify_func;
   cswb.notify_baton = notify_baton;
 
+  if (notify_func)
+    notify_func(notify_baton,
+                svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_conflict_resolver_start,
+                                    scratch_pool),
+                scratch_pool);
+
   SVN_ERR(svn_wc_walk_status(wc_ctx,
                              local_abspath,
                              depth,
@@ -597,6 +604,13 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                              conflict_status_walker, &cswb,
                              cancel_func, cancel_baton,
                              scratch_pool));
+
+  if (notify_func)
+    notify_func(notify_baton,
+                svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_conflict_resolver_end,
+                                    scratch_pool),
+                scratch_pool);
 
   return SVN_NO_ERROR;
 }
