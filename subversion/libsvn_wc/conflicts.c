@@ -590,7 +590,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   if (notify_func)
     notify_func(notify_baton,
                 svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_conflict_resolver_start,
+                                    svn_wc_notify_conflict_resolver_starting,
                                     scratch_pool),
                 scratch_pool);
 
@@ -608,7 +608,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   if (notify_func)
     notify_func(notify_baton,
                 svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_conflict_resolver_end,
+                                    svn_wc_notify_conflict_resolver_done,
                                     scratch_pool),
                 scratch_pool);
 

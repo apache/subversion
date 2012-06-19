@@ -553,8 +553,8 @@ public class ClientNotifyInformation extends EventObject
         failed_obstructed ("failed by obstruction"),
 
         /** Conflict resolver is starting/ending. */
-        conflict_resolver_start ("conflict resolver start"),
-        conflict_resolver_end ("conflict resolver end");
+        conflict_resolver_starting ("conflict resolver starting"),
+        conflict_resolver_done ("conflict resolver done");
 
         /**
          * The description of the action.
