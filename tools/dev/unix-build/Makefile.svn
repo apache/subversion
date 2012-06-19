@@ -1160,7 +1160,6 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
-NEON_FLAG=
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1410,10 +1409,16 @@ svn-check-prepare-ramdisk:
 			mkdir -p "$(RAMDISK)/tmp"; \
 	fi
 
+ifndef NEON_FLAG
+svn-check-neon:
+	@echo Neon is not supported by this build of Subversion, skipping tests
+	@true
+else
 svn-check-neon: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
+endif
 
 svn-check-serf: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
