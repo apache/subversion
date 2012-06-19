@@ -9546,7 +9546,7 @@ merge_locked(const char *source1,
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
   /* Resolve conflicts post-update for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_update = (ctx->conflict_func2 != NULL);
+  svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
 
@@ -9585,7 +9585,7 @@ merge_locked(const char *source1,
                     &yca, source1_loc, source2_loc, ra_session1, ctx,
                     scratch_pool, scratch_pool));
 
-  if (resolve_conflicts_post_update)
+  if (resolve_conflicts_post_merge)
     {
       /* Remove the conflict resolution callback from the client context.
        * We invoke it after of the merge instead of during the merge. */
@@ -9697,7 +9697,7 @@ merge_locked(const char *source1,
   if (err)
     return svn_error_trace(err);
 
-  if (resolve_conflicts_post_update)
+  if (resolve_conflicts_post_merge)
     {
       /* Resolve conflicts within the merge target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
@@ -10973,7 +10973,7 @@ merge_peg_locked(const char *source_path_or_url,
   svn_error_t *err;
   svn_boolean_t same_repos;
   /* Resolve conflicts post-update for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_update = (ctx->conflict_func2 != NULL);
+  svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
 
@@ -11000,7 +11000,7 @@ merge_peg_locked(const char *source_path_or_url,
   /* Check for same_repos. */
   same_repos = is_same_repos(&target->loc, source_loc, TRUE /* strict_urls */);
 
-  if (resolve_conflicts_post_update)
+  if (resolve_conflicts_post_merge)
     {
       /* Remove the conflict resolution callback from the client context.
        * We invoke it after of the merge instead of during the merge. */
@@ -11023,7 +11023,7 @@ merge_peg_locked(const char *source_path_or_url,
   /* We're done with our RA session. */
   svn_pool_destroy(sesspool);
 
-  if (resolve_conflicts_post_update)
+  if (resolve_conflicts_post_merge)
     {
       /* Resolve conflicts within the merge target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
@@ -11632,14 +11632,14 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   /* Resolve conflicts post-update for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_update = (ctx->conflict_func2 != NULL);
+  svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
   svn_wc_conflict_resolver_func2_t conflict_func2;
   void *conflict_baton2;
 
   SVN_ERR(open_target_wc(&target, target_abspath, TRUE, TRUE, TRUE,
                          ctx, scratch_pool, scratch_pool));
 
-  if (resolve_conflicts_post_update)
+  if (resolve_conflicts_post_merge)
     {
       /* Remove the conflict resolution callback from the client context.
        * We invoke it after of the merge instead of during the merge. */
@@ -11699,7 +11699,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
 
   SVN_ERR(err);
 
-  if (resolve_conflicts_post_update)
+  if (resolve_conflicts_post_merge)
     {
       /* Resolve conflicts within the merge target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
