@@ -189,7 +189,7 @@ struct svn_ra_serf__session_t {
   const char *uuid;
 
   /* Connection timeout value */
-  long timeout;
+  apr_short_interval_time_t timeout;
 
   /* HTTPv1 flags */
   svn_tristate_t supports_deadprop_count;

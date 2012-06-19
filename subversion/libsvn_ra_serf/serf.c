@@ -270,6 +270,11 @@ load_config(svn_ra_serf__session_t *session,
   else
     session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
 
+  if (session->timeout < 0) /* Always true for DEFAULT_HTTP_TIMEOUT */
+    session->timeout = apr_time_from_sec(600); /* 10 min */
+
+  SVN_ERR_ASSERT(session->timeout > 0);
+
   /* Convert the proxy port value, if any. */
   if (port_str)
     {
