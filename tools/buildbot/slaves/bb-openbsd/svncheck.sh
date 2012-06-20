@@ -29,6 +29,6 @@ export MALLOC_OPTIONS=S
                                   svn-check-svn \
                                   svn-check-neon \
                                   svn-check-serf)
-grep -q "^FAIL:" tests.log* && exit 1
-grep -q "^XPASS:" tests.log* && exit 1
+grep -q "^FAIL:" tests.log.svn-check* && exit 1
+grep -q "^XPASS:" tests.log.svn-check* && exit 1
 exit 0
