@@ -61,8 +61,14 @@ merge_reintegrate(const char *source_path_or_url,
 
   if (url1)
     {
-      svn_opt_revision_t revision1 = { svn_opt_revision_number, { rev1 } };
-      svn_opt_revision_t revision2 = { svn_opt_revision_number, { rev2 } };
+      svn_opt_revision_t revision1;
+      svn_opt_revision_t revision2;
+
+      revision1.kind = svn_opt_revision_number;
+      revision1.value.number = rev1;
+
+      revision2.kind = svn_opt_revision_number;
+      revision2.value.number = rev2;
 
       /* Do the merge.  Set 'allow_mixed_rev' to true, not because we want
        * to allow a mixed-rev WC but simply to bypass the check, as it was
