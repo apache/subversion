@@ -373,6 +373,11 @@ AC_ARG_WITH(expat,
                  [svn_lib_expat="$withval"],
                  [svn_lib_expat="::expat"])
 
+# APR-util accepts "builtin" as an argument to this option so if the user
+# passed "builtin" pretend the user didn't specify the --with-expat option
+# at all. Expat will (hopefully) be found in apr-util.
+test "_$svn_lib_expat" = "_builtin" && svn_lib_expat="::expat"
+
 AC_MSG_CHECKING([for Expat])
 if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
   SVN_XML_INCLUDES=""
