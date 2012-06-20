@@ -3382,7 +3382,9 @@ set_cached_window(svn_txdelta_window_t *window,
   if (rs->window_cache)
     {
       /* store the window and the first offset _past_ it */
-      svn_fs_fs__txdelta_cached_window_t cached_window = { window, rs->off };
+      svn_fs_fs__txdelta_cached_window_t cached_window;
+      cached_window.window = window;
+      cached_window.end_offset = rs->off;
 
       /* but key it with the start offset because that is the known state
        * when we will look it up */
@@ -5254,7 +5256,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       /* build parameters: (name, new entry) pair */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
-      replace_baton_t baton = {name, NULL};
+      replace_baton_t baton;
+      baton.name = name;
+      baton.new_entry = NULL;
 
       if (id)
         {

@@ -1551,7 +1551,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 {
   if (svn_path_is_url(target))
     {
-      struct capture_baton_t cb = { commit_info_p, pool };
+      struct capture_baton_t cb;
+      cb.info = commit_info_p;
+      cb.pool = pool;
 
       SVN_ERR(svn_client_propset_remote(propname, propval, target, skip_checks,
                                         base_revision_for_url, revprop_table,
@@ -1864,8 +1866,10 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  struct status4_wrapper_baton swb = { ctx->wc_ctx, status_func,
-                                       status_baton };
+  struct status4_wrapper_baton swb;
+  swb.wc_ctx = ctx->wc_ctx;
+  swb.old_func = status_func;
+  swb.old_baton = status_baton;
 
   return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
                             update, no_ignore, ignore_externals, TRUE,

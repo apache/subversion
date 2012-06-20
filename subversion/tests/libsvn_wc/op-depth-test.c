@@ -233,7 +233,9 @@ wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
   apr_array_header_t *result_revs;
   apr_array_header_t *paths = apr_array_make(b->pool, 1,
                                              sizeof(const char *));
-  svn_opt_revision_t revision = { svn_opt_revision_number, { revnum } };
+  svn_opt_revision_t revision;
+  revision.kind = svn_opt_revision_number;
+  revision.value.number = revnum;
 
   APR_ARRAY_PUSH(paths, const char *) = wc_path(b, path);
   SVN_ERR(svn_client_create_context(&ctx, b->pool));
@@ -449,8 +451,12 @@ check_db_rows(svn_test__sandbox_t *b,
   svn_boolean_t have_row;
   apr_hash_t *found_hash = apr_hash_make(b->pool);
   apr_hash_t *expected_hash = apr_hash_make(b->pool);
-  comparison_baton_t comparison_baton
-    = { expected_hash, found_hash, b->pool, NULL };
+  comparison_baton_t comparison_baton;
+
+  comparison_baton.expected_hash = expected_hash;
+  comparison_baton.found_hash = found_hash;
+  comparison_baton.scratch_pool = b->pool;
+  comparison_baton.errors = NULL;
 
   /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
@@ -511,23 +517,23 @@ struct copy_subtest_t
   nodes_row_t expected[20];
 };
 
+#define source_everything   "A/B"
+
+#define source_base_file    "A/B/lambda"
+#define source_base_dir     "A/B/E"
+
+#define source_added_file   "A/B/file-added"
+#define source_added_dir    "A/B/D-added"
+#define source_added_dir2   "A/B/D-added/D2"
+
+#define source_copied_file  "A/B/lambda-copied"
+#define source_copied_dir   "A/B/E-copied"
+
 /* Check that all kinds of WC-to-WC copies give correct op_depth results:
  * create a Greek tree, make copies in it, and check the resulting DB rows. */
 static svn_error_t *
 wc_wc_copies(svn_test__sandbox_t *b)
 {
-  const char source_everything[]  = "A/B";
-
-  const char source_base_file[]   = "A/B/lambda";
-  const char source_base_dir[]    = "A/B/E";
-
-  const char source_added_file[]  = "A/B/file-added";
-  const char source_added_dir[]   = "A/B/D-added";
-  const char source_added_dir2[]  = "A/B/D-added/D2";
-
-  const char source_copied_file[] = "A/B/lambda-copied";
-  const char source_copied_dir[]  = "A/B/E-copied";
-
   SVN_ERR(add_and_commit_greek_tree(b));
 
   /* Create the various kinds of source node which will be copied */
@@ -744,13 +750,15 @@ repo_wc_copies(svn_test__sandbox_t *b)
     for (subtest = subtests; subtest->from_path; subtest++)
       {
         svn_opt_revision_t rev = { svn_opt_revision_number, { 1 } };
-        svn_client_copy_source_t source = { NULL, &rev, &rev };
+        svn_client_copy_source_t source;
         apr_array_header_t *sources
           = apr_array_make(b->pool, 0, sizeof(svn_client_copy_source_t *));
 
         source.path = svn_path_url_add_component2(b->repos_url,
                                                   subtest->from_path,
                                                   b->pool);
+        source.revision = &rev;
+        source.peg_revision = &rev;
         APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
         SVN_ERR(svn_client_copy6(sources,
                                  wc_path(b, subtest->to_path),

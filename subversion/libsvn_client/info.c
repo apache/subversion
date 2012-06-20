@@ -293,7 +293,9 @@ svn_client_info3(const char *abspath_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      wc_info_receiver_baton_t b = { receiver, receiver_baton };
+      wc_info_receiver_baton_t b;
+      b.client_receiver_func = receiver;
+      b.client_receiver_baton = receiver_baton;
       return svn_error_trace(
         svn_wc__get_info(ctx->wc_ctx, abspath_or_url, depth,
                         fetch_excluded, fetch_actual_only, changelists,

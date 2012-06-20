@@ -1846,8 +1846,10 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
 {
   svn_wc__proplist_receiver_t receiver = receiver_func;
   void *baton = receiver_baton;
-  struct propname_filter_baton_t pfb = { receiver_func, receiver_baton,
-                                         propname };
+  struct propname_filter_baton_t pfb;
+  pfb.receiver_func = receiver_func;
+  pfb.receiver_baton = receiver_baton;
+  pfb.propname = propname;
 
   SVN_ERR_ASSERT(receiver_func);
 
@@ -2473,8 +2475,13 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      struct propset_walk_baton wb = { name, value, wc_ctx->db, skip_checks,
-                                       notify_func, notify_baton };
+      struct propset_walk_baton wb;
+      wb.propname = name;
+      wb.propval = value;
+      wb.db = wc_ctx->db;
+      wb.force = skip_checks;
+      wb.notify_func = notify_func;
+      wb.notify_baton = notify_baton;
 
       SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath,
                                              FALSE, changelist_filter,
