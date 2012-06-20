@@ -30,3 +30,4 @@ done
 svn update ../../unix-build
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
 (cd .. && gmake BRANCH="$branch" reset clean)
+rm -f tests.log* fails.log*
