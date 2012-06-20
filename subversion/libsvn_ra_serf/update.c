@@ -2866,11 +2866,26 @@ try_get_wc_contents(svn_boolean_t *found_p,
       return SVN_NO_ERROR;
     }
 
-  sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
+  /* If we are talking to an old server, then the sha1-checksum property
+     will not exist. In our property parsing code, we don't bother to
+     check the <status> element which would indicate a 404. That section
+     needs to name the 404'd property, so our parsing code only sees:
 
+       <g0:sha1-checksum/>
+
+     That is parsed as an empty string value for the property.
+
+     When checking the property, if it is missing (NULL), or the above
+     empty string, then we know the property doesn't exist.
+
+     Strictly speaking, we could start parsing <status> and omit any
+     properties that were 404'd. But the 404 only happens when we ask
+     for a specific property, and it is easier to just check for the
+     empty string. Since it isn't a legal value in this case, we won't
+     get confused with a truly existent property.  */
+  sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
   if (sha1_checksum_prop == NULL || *sha1_checksum_prop == '\0')
     {
-      /* No checksum property in response (missing or empty string).  */
       return SVN_NO_ERROR;
     }
 
