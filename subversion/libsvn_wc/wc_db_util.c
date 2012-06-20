@@ -197,6 +197,7 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
                     apr_pool_t *scratch_pool)
 {
   struct txn_baton_t tb;
+
   tb.wcroot = wcroot;
   tb.local_relpath = local_relpath;
   tb.cb_func = cb_func;

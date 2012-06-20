@@ -9644,6 +9644,7 @@ merge_locked(const char *source1,
       else
         {
           merge_source_t source;
+
           source.loc1 = source1_loc;
           source.loc2 = source2_loc;
           source.ancestral = FALSE;
@@ -9679,6 +9680,7 @@ merge_locked(const char *source1,
   else
     {
       merge_source_t source;
+
       source.loc1 = source1_loc;
       source.loc2 = source2_loc;
       source.ancestral = FALSE;

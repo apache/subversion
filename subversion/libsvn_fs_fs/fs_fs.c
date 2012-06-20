@@ -3524,6 +3524,7 @@ set_cached_window(svn_txdelta_window_t *window,
     {
       /* store the window and the first offset _past_ it */
       svn_fs_fs__txdelta_cached_window_t cached_window;
+
       cached_window.window = window;
       cached_window.end_offset = rs->off;
 
@@ -5557,6 +5558,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
+
       baton.name = name;
       baton.new_entry = NULL;
 

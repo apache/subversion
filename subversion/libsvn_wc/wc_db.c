@@ -5142,6 +5142,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct set_changelist_baton_t scb;
+
   scb.new_changelist = new_changelist;
   scb.changelist_filter = changelist_filter;
   scb.depth = depth;
@@ -5783,6 +5784,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct revert_list_read_baton b;
+
   b.reverted = reverted;
   b.conflict_old = conflict_old;
   b.conflict_new = conflict_new;
@@ -5862,6 +5864,7 @@ svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct revert_list_read_copied_children_baton b;
+
   b.children = children;
   b.result_pool = result_pool;
 
@@ -8142,6 +8145,7 @@ read_url(const char **url,
          apr_pool_t *scratch_pool)
 {
   struct read_url_baton_t rub;
+
   rub.url = url;
   rub.result_pool = result_pool;
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, read_url_txn, &rub,
@@ -13330,6 +13334,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct revision_status_baton_t rsb;
+
   rsb.min_revision = min_revision;
   rsb.max_revision = max_revision;
   rsb.is_sparse_checkout = is_sparse_checkout;

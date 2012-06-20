@@ -239,6 +239,7 @@ wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
   apr_array_header_t *paths = apr_array_make(b->pool, 1,
                                              sizeof(const char *));
   svn_opt_revision_t revision;
+
   revision.kind = svn_opt_revision_number;
   revision.value.number = revnum;
 

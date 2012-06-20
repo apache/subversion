@@ -83,6 +83,7 @@ proc_found(const char *proc, apr_pool_t *pool)
       /* all processes and their I/O data */
       apr_proc_t process;
       const char * args[2];
+
       args[0] = proc;
       args[1] = NULL;
       svn_error_clear(adjust_proc_path(&args[0], &directory, pool));
