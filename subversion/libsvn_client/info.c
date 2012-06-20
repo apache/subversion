@@ -349,6 +349,7 @@ svn_client_info3(const char *abspath_or_url,
     {
       /* Do all digging in the working copy. */
       wc_info_receiver_baton_t b;
+
       b.client_receiver_func = receiver;
       b.client_receiver_baton = receiver_baton;
       return svn_error_trace(

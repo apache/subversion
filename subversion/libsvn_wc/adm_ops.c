@@ -2697,6 +2697,7 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        apr_pool_t *scratch_pool)
 {
   struct get_cl_fn_baton gnb;
+
   gnb.db = wc_ctx->db;
   gnb.clhash = NULL;
   gnb.callback_func = callback_func;

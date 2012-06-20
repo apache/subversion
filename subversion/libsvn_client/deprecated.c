@@ -1644,6 +1644,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
   if (svn_path_is_url(target))
     {
       struct capture_baton_t cb;
+
       cb.info = commit_info_p;
       cb.pool = pool;
 
@@ -1959,6 +1960,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   struct status4_wrapper_baton swb;
+
   swb.wc_ctx = ctx->wc_ctx;
   swb.old_func = status_func;
   swb.old_baton = status_baton;

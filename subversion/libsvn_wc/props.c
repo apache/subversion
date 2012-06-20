@@ -1853,6 +1853,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
   svn_wc__proplist_receiver_t receiver = receiver_func;
   void *baton = receiver_baton;
   struct propname_filter_baton_t pfb;
+
   pfb.receiver_func = receiver_func;
   pfb.receiver_baton = receiver_baton;
   pfb.propname = propname;
@@ -2492,6 +2493,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   else
     {
       struct propset_walk_baton wb;
+
       wb.propname = name;
       wb.propval = value;
       wb.db = wc_ctx->db;

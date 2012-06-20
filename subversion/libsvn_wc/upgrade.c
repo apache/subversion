@@ -1546,6 +1546,7 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool)
 {
   struct bump_baton bb;
+
   bb.wcroot_abspath = wcroot_abspath;
 
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
