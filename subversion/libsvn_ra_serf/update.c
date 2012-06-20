@@ -2874,9 +2874,9 @@ try_get_wc_contents(svn_boolean_t *found_p,
 
   sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
 
-  if (!sha1_checksum_prop)
+  if (sha1_checksum_prop == NULL || *sha1_checksum_prop == '\0')
     {
-      /* No checksum property in response. */
+      /* No checksum property in response (missing or empty string).  */
       return SVN_NO_ERROR;
     }
 
