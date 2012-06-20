@@ -55,18 +55,20 @@ usage() {
 # getters
 get_apr() {
     cd $TEMPDIR
-    $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
-    $HTTP_FETCH $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
+    test -d $BASEDIR/apr      || $HTTP_FETCH $APACHE_MIRROR/apr/$APR.tar.bz2
+    test -d $BASEDIR/apr-util || $HTTP_FETCH $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
     cd $BASEDIR
 
-    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
-    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
+    test -d $BASEDIR/apr      || bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
+    test -d $BASEDIR/apr-util || bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
 
-    mv $APR apr
-    mv $APR_UTIL apr-util
+    test -d $BASEDIR/apr      || mv $APR apr
+    test -d $BASEDIR/apr-util || mv $APR_UTIL apr-util
 }
 
 get_serf() {
+    test -d $BASEDIR/serf && return
+
     cd $TEMPDIR
     $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
     cd $BASEDIR
@@ -77,6 +79,8 @@ get_serf() {
 }
 
 get_zlib() {
+    test -d $BASEDIR/zlib && return
+
     cd $TEMPDIR
     $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
     cd $BASEDIR
@@ -87,6 +91,8 @@ get_zlib() {
 }
 
 get_sqlite() {
+    test -d $BASEDIR/sqlite-amalgamation && return
+
     cd $TEMPDIR
     $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
     cd $BASEDIR
