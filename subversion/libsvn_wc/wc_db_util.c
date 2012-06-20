@@ -196,7 +196,11 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
                     void *cb_baton,
                     apr_pool_t *scratch_pool)
 {
-  struct txn_baton_t tb = { wcroot, local_relpath, cb_func, cb_baton };
+  struct txn_baton_t tb;
+  tb.wcroot = wcroot;
+  tb.local_relpath = local_relpath;
+  tb.cb_func = cb_func;
+  tb.cb_baton = cb_baton;
 
   return svn_error_trace(
     svn_sqlite__with_lock(wcroot->sdb, run_txn, &tb, scratch_pool));

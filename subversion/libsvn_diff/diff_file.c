@@ -1167,9 +1167,12 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
                             apr_pool_t *pool)
 {
   apr_getopt_t *os;
-  struct opt_parsing_error_baton_t opt_parsing_error_baton = { NULL, pool };
+  struct opt_parsing_error_baton_t opt_parsing_error_baton;
   /* Make room for each option (starting at index 1) plus trailing NULL. */
   const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
+
+  opt_parsing_error_baton.err = NULL;
+  opt_parsing_error_baton.pool = pool;
 
   argv[0] = "";
   memcpy((void *) (argv + 1), args->elts, sizeof(char*) * args->nelts);

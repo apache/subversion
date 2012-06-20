@@ -9643,7 +9643,10 @@ merge_locked(const char *source1,
          side, and merge the right. */
       else
         {
-          merge_source_t source = { source1_loc, source2_loc, FALSE };
+          merge_source_t source;
+          source.loc1 = source1_loc;
+          source.loc2 = source2_loc;
+          source.ancestral = FALSE;
 
           err = merge_cousins_and_supplement_mergeinfo(target,
                                                        ra_session1,
@@ -9675,7 +9678,10 @@ merge_locked(const char *source1,
     }
   else
     {
-      merge_source_t source = { source1_loc, source2_loc, FALSE };
+      merge_source_t source;
+      source.loc1 = source1_loc;
+      source.loc2 = source2_loc;
+      source.ancestral = FALSE;
 
       /* Build a single-item merge_source_t array. */
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
@@ -11651,9 +11657,12 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
 
   if (merge->mid)
     {
-      merge_source_t source = { merge->base, merge->right,
-                                (merge->mid == NULL) /* ancestral */ };
+      merge_source_t source;
       svn_ra_session_t *ra_session = NULL;
+
+      source.loc1 = merge->base;
+      source.loc2 = merge->right;
+      source.ancestral = (merge->mid == NULL);
 
       SVN_ERR(ensure_ra_session_url(&ra_session, source.loc1->url,
                                     ctx, scratch_pool));
@@ -11680,9 +11689,12 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
          An improvement would be to change find_symmetric_merge() to
          find the base for each sutree, and then here use the oldest base
          among all subtrees. */
-      merge_source_t source = { merge->yca, merge->right,
-                                (merge->mid == NULL) /* ancestral */ };
+      merge_source_t source;
       apr_array_header_t *merge_sources;
+
+      source.loc1 = merge->yca;
+      source.loc2 = merge->right;
+      source.ancestral = (merge->mid == NULL);
 
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
       APR_ARRAY_PUSH(merge_sources, const merge_source_t *) = &source;
