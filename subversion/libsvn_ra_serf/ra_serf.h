@@ -71,22 +71,11 @@ typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
   serf_connection_t *conn;
 
-  /* The server is not Apache/mod_dav_svn (directly) and only supports
-     HTTP/1.0. Thus, we cannot send chunked requests.  */
-  svn_boolean_t http10;
-
   /* Bucket allocator for this connection. */
   serf_bucket_alloc_t *bkt_alloc;
 
-  /* Host name */
-  const char *hostname;
-
-  /* Are we using ssl */
-  svn_boolean_t using_ssl;
-  int server_cert_failures; /* Collected cert failures in chain */
-
-  /* Should we ask for compressed responses? */
-  svn_boolean_t using_compression;
+  /* Collected cert failures in chain.  */
+  int server_cert_failures;
 
   /* What was the last HTTP status code we got on this connection? */
   int last_status_code;
@@ -97,9 +86,6 @@ typedef struct svn_ra_serf__connection_t {
   svn_auth_iterstate_t *ssl_client_pw_auth_state;
 
   svn_ra_serf__session_t *session;
-
-  /* user agent string */
-  const char *useragent;
 
 } svn_ra_serf__connection_t;
 
@@ -124,6 +110,9 @@ struct svn_ra_serf__session_t {
   /* Should we ask for compressed responses? */
   svn_boolean_t using_compression;
 
+  /* The user agent string */
+  const char *useragent;
+
   /* The current connection */
   svn_ra_serf__connection_t *conns[MAX_NR_OF_CONNS];
   int num_conns;
@@ -136,6 +125,10 @@ struct svn_ra_serf__session_t {
   /* The actual discovered root; may be NULL until we know it. */
   apr_uri_t repos_root;
   const char *repos_root_str;
+
+  /* The server is not Apache/mod_dav_svn (directly) and only supports
+     HTTP/1.0. Thus, we cannot send chunked requests.  */
+  svn_boolean_t http10;
 
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;

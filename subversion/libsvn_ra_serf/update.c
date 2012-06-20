@@ -730,7 +730,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
-  else if (fetch_ctx->conn->using_compression)
+  else if (fetch_ctx->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -2269,16 +2269,10 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       apr_status_t status;
 
       sess->conns[cur] = apr_pcalloc(sess->pool, sizeof(*sess->conns[cur]));
-      sess->conns[cur]->http10 = TRUE;  /* until we confirm HTTP/1.1  */
-      sess->conns[cur]->http10 = FALSE; /* ### don't change behavior yet  */
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
-      sess->conns[cur]->hostname  = sess->conns[0]->hostname;
-      sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
-      sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
       sess->conns[cur]->last_status_code = -1;
       sess->conns[cur]->session = sess;
-      sess->conns[cur]->useragent = sess->conns[0]->useragent;
       status = serf_connection_create2(&sess->conns[cur]->conn,
                                        sess->context,
                                        sess->session_url,
@@ -2321,7 +2315,7 @@ headers_report(serf_bucket_t *headers,
 {
   report_context_t *report = baton;
 
-  if (report->conn->using_compression)
+  if (report->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
