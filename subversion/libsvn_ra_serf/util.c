@@ -257,7 +257,7 @@ ssl_server_cert(void *baton, int failures,
       int i;
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->hostname,
+          if (apr_fnmatch(s, conn->session->session_url.hostname,
                           APR_FNM_PERIOD) == APR_SUCCESS) {
               found_matching_hostname = 1;
               cert_info.hostname = s;
@@ -269,7 +269,7 @@ ssl_server_cert(void *baton, int failures,
   /* Match server certificate CN with the hostname of the server */
   if (!found_matching_hostname && cert_info.hostname)
     {
-      if (apr_fnmatch(cert_info.hostname, conn->hostname,
+      if (apr_fnmatch(cert_info.hostname, conn->session->session_url.hostname,
                       APR_FNM_PERIOD) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
@@ -364,7 +364,7 @@ conn_setup(apr_socket_t *sock,
   *read_bkt = serf_context_bucket_socket_create(conn->session->context,
                                                sock, conn->bkt_alloc);
 
-  if (conn->using_ssl)
+  if (conn->session->using_ssl)
     {
       /* input stream */
       *read_bkt = serf_bucket_ssl_decrypt_create(*read_bkt, conn->ssl_context,
@@ -374,7 +374,8 @@ conn_setup(apr_socket_t *sock,
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
 
 #if SERF_VERSION_AT_LEAST(1,0,0)
-          serf_ssl_set_hostname(conn->ssl_context, conn->hostname);
+          serf_ssl_set_hostname(conn->ssl_context,
+                                conn->session->session_url.hostname);
 #endif
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
@@ -479,7 +480,7 @@ connection_closed(svn_ra_serf__connection_t *conn,
       SVN_ERR_MALFUNCTION();
     }
 
-  if (conn->using_ssl)
+  if (conn->session->using_ssl)
     conn->ssl_context = NULL;
 
   return SVN_NO_ERROR;
@@ -632,7 +633,7 @@ static svn_error_t *
 setup_serf_req(serf_request_t *request,
                serf_bucket_t **req_bkt,
                serf_bucket_t **hdrs_bkt,
-               svn_ra_serf__connection_t *conn,
+               svn_ra_serf__session_t *session,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type,
                apr_pool_t *request_pool,
@@ -643,7 +644,7 @@ setup_serf_req(serf_request_t *request,
 #if SERF_VERSION_AT_LEAST(1, 1, 0)
   svn_spillbuf_t *buf;
 
-  if (conn->http10 && body_bkt != NULL)
+  if (session->http10 && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -669,7 +670,7 @@ setup_serf_req(serf_request_t *request,
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
 #if SERF_VERSION_AT_LEAST(1, 1, 0)
-  if (conn->http10)
+  if (session->http10)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
@@ -680,10 +681,10 @@ setup_serf_req(serf_request_t *request,
 
   *hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
 
-  /* We use serf_bucket_headers_setn() because the string below have a
+  /* We use serf_bucket_headers_setn() because the USERAGENT has a
      lifetime longer than this bucket. Thus, there is no need to copy
      the header values.  */
-  serf_bucket_headers_setn(*hdrs_bkt, "User-Agent", conn->useragent);
+  serf_bucket_headers_setn(*hdrs_bkt, "User-Agent", session->useragent);
 
   if (content_type)
     {
@@ -1774,6 +1775,10 @@ handle_response(serf_request_t *request,
 
       handler->sline = sl;
       handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
+
+      /* HTTP/1.1? (or later)  */
+      if (sl.version != SERF_HTTP_10)
+        handler->session->http10 = FALSE;
     }
 
   /* Keep reading from the network until we've read all the headers.  */
@@ -2030,7 +2035,7 @@ setup_request(serf_request_t *request,
     }
 
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
-                         handler->conn, handler->method, handler->path,
+                         handler->session, handler->method, handler->path,
                          body_bkt, handler->body_type,
                          request_pool, scratch_pool));
 
