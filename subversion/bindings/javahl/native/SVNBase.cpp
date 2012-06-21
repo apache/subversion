@@ -97,3 +97,29 @@ inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
         }
     }
 }
+
+jobject SVNBase::createCppBoundObject(const char *clazzName)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create java session object
+  jclass clazz = env->FindClass(clazzName);
+  if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
+
+  static jmethodID ctor = 0;
+  if (ctor == 0)
+  {
+      ctor = env->GetMethodID(clazz, "<init>", "(J)V");
+      if (JNIUtil::isJavaExceptionThrown())
+          return NULL;
+  }
+
+  jlong cppAddr = this->getCppAddr();
+
+  jobject jself = env->NewObject(clazz, ctor, cppAddr);
+  if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
+
+  return jself;
+}
