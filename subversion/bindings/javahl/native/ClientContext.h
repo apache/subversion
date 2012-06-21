@@ -29,6 +29,8 @@
 
 #include <string>
 
+#include "RaSharedContext.h"
+
 #include "svn_types.h"
 #include "svn_client.h"
 
@@ -36,7 +38,6 @@
 #include "Pool.h"
 #include "JNIStringHolder.h"
 
-class Prompter;
 class CommitMessage;
 
 /**
@@ -44,25 +45,14 @@ class CommitMessage;
  * and implements the functions read & close of svn_stream_t.
  *
  */
-class ClientContext
+class ClientContext : public RaSharedContext
 {
  private:
   svn_client_ctx_t *m_context;
-  const SVN::Pool *m_pool;
-  jobject m_jctx;
-
-  std::string m_userName;
-  std::string m_passWord;
-  std::string m_configDir;
-
-  Prompter *m_prompter;
-  bool m_cancelOperation;
 
  protected:
   static void notify(void *baton, const svn_wc_notify_t *notify,
                      apr_pool_t *pool);
-  static void progress(apr_off_t progressVal, apr_off_t total,
-                       void *baton, apr_pool_t *pool);
   static svn_error_t *resolve(svn_wc_conflict_result_t **result,
                               const svn_wc_conflict_description2_t *desc,
                               void *baton,
@@ -73,24 +63,9 @@ class ClientContext
 
  public:
   ClientContext(jobject jsvnclient, SVN::Pool &pool);
-  ~ClientContext();
-
-  static svn_error_t *checkCancel(void *cancelBaton);
+  virtual ~ClientContext();
 
   svn_client_ctx_t *getContext(CommitMessage *message, SVN::Pool &in_pool);
-
-  void username(const char *pi_username);
-  void password(const char *pi_password);
-  void setPrompt(Prompter *prompter);
-  void cancelOperation();
-  const char *getConfigDirectory() const;
-
-  /**
-   * Set the configuration directory, taking the usual steps to
-   * ensure that Subversion's config file templates exist in the
-   * specified location.
-   */
-  void setConfigDirectory(const char *configDir);
 };
 
 #endif // CLIENTCONTEXT_H
