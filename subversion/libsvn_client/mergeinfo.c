@@ -1641,8 +1641,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   const char *target_repos_rel;
   svn_mergeinfo_catalog_t target_mergeinfo_cat;
 
-  /* A hash of paths, at or under TARGET_PATH_OR_URL, mapped to rangelists.  Not
-     technically mergeinfo, so not using the svn_mergeinfo_t type. */
+  /* A hash of paths, at or under TARGET_PATH_OR_URL, mapped to
+     rangelists.  Not technically mergeinfo, so not using the
+     svn_mergeinfo_t type. */
   apr_hash_t *inheritable_subtree_merges;
 
   svn_mergeinfo_t source_history;
@@ -1675,7 +1676,8 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 
   if (!svn_path_is_url(target_path_or_url))
     {
-      SVN_ERR(svn_dirent_get_absolute(&target_path_or_url, target_path_or_url, scratch_pool));
+      SVN_ERR(svn_dirent_get_absolute(&target_path_or_url,
+                                      target_path_or_url, scratch_pool));
       SVN_ERR(svn_wc__node_get_repos_relpath(&target_repos_rel,
                                              ctx->wc_ctx, target_path_or_url,
                                              scratch_pool, scratch_pool));
@@ -1685,7 +1687,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
       target_repos_rel = svn_uri_skip_ancestor(repos_root, target_path_or_url,
                                                scratch_pool);
 
-      SVN_ERR_ASSERT(target_repos_rel != NULL); /* Or get_mergeinfo should have failed */
+      /* TARGET_REPOS_REL should be non-NULL, else get_mergeinfo
+         should have failed.  */
+      SVN_ERR_ASSERT(target_repos_rel != NULL); 
     }
 
   if (!target_mergeinfo_cat)
@@ -1745,9 +1749,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   /* Close the source and target sessions. */
   svn_pool_destroy(sesspool);
 
-  /* Separate the explicit or inherited mergeinfo on TARGET_PATH_OR_URL, and possibly
-     its explicit subtree mergeinfo, into their inheritable and non-inheritable
-     parts. */
+  /* Separate the explicit or inherited mergeinfo on TARGET_PATH_OR_URL,
+     and possibly its explicit subtree mergeinfo, into their
+     inheritable and non-inheritable parts. */
   master_noninheritable_rangelist =
     apr_array_make(scratch_pool, 64, sizeof(svn_merge_range_t *));
   master_inheritable_rangelist = apr_array_make(scratch_pool, 64,
@@ -1756,13 +1760,11 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  for (hi_catalog = apr_hash_first(scratch_pool,
-                                   target_mergeinfo_cat);
+  for (hi_catalog = apr_hash_first(scratch_pool, target_mergeinfo_cat);
        hi_catalog;
        hi_catalog = apr_hash_next(hi_catalog))
     {
-      svn_mergeinfo_t subtree_mergeinfo =
-        svn__apr_hash_index_val(hi_catalog);
+      svn_mergeinfo_t subtree_mergeinfo = svn__apr_hash_index_val(hi_catalog);
       svn_mergeinfo_t subtree_history;
       svn_mergeinfo_t subtree_source_history;
       svn_mergeinfo_t subtree_inheritable_mergeinfo;
@@ -1776,9 +1778,9 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 
       if (is_subtree)
         {
-          /* If SUBTREE_PATH is a proper subtree of TARGET_PATH_OR_URL then make
-             a copy of SOURCE_HISTORY that is path adjusted for the
-             subtree.  */
+          /* If SUBTREE_PATH is a proper subtree of TARGET_PATH_OR_URL
+             then make a copy of SOURCE_HISTORY that is path adjusted
+             for the subtree.  */
           const char *subtree_rel_path =
             subtree_path + strlen(target_repos_rel) + 1;
 
@@ -1936,8 +1938,8 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                         source_history,
                                         scratch_pool, scratch_pool));
 
-      /* From what might be eligible subtract what we know is partially merged
-         and then merge that back. */
+      /* From what might be eligible subtract what we know is
+         partially merged and then merge that back. */
       SVN_ERR(svn_rangelist_remove(&source_master_rangelist,
                                    master_noninheritable_rangelist,
                                    source_master_rangelist,
