@@ -29,7 +29,7 @@ import org.apache.subversion.javahl.callback.ProgressCallback;
  * A private class to hold the contextual information required to
  * persist in this object, such as notification handlers.
  */
-public class CommonContext
+public class RaSharedContext
     implements ProgressCallback
 {
     private ProgressCallback listener = null;
