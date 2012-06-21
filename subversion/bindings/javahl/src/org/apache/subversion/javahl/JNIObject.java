@@ -33,7 +33,7 @@ public abstract class JNIObject
      * slot for the address of the native peer. The JNI code controls this
      * field. If it is set to 0 then underlying JNI object has been freed
      */
-    protected long cppAddr;
+    protected final long cppAddr;
 
     protected JNIObject(long cppAddr)
     {
