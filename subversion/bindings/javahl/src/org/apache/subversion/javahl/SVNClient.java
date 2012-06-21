@@ -502,7 +502,7 @@ public class SVNClient implements ISVNClient
      * A private class to hold the contextual information required to
      * persist in this object, such as notification handlers.
      */
-    private class ClientContext extends CommonContext
+    private class ClientContext extends RaSharedContext
         implements ClientNotifyCallback, ProgressCallback,
             ConflictResolverCallback
     {
