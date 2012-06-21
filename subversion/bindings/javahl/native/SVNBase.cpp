@@ -42,7 +42,7 @@ jlong SVNBase::getCppAddr() const
 }
 
 jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
-                                     const char *className)
+    const char *className)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -50,8 +50,7 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
   if (*fid == 0)
     {
       return 0;
-    }
-  else
+    } else
     {
       jlong cppAddr = env->GetLongField(jthis, *fid);
       if (JNIUtil::isJavaExceptionThrown())
@@ -84,7 +83,7 @@ void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
 }
 
 inline void SVNBase::findCppAddrFieldID(jfieldID *fid, const char *className,
-                                        JNIEnv *env)
+    JNIEnv *env)
 {
   if (*fid == 0)
     {
@@ -105,21 +104,21 @@ jobject SVNBase::createCppBoundObject(const char *clazzName)
   // Create java session object
   jclass clazz = env->FindClass(clazzName);
   if (JNIUtil::isJavaExceptionThrown())
-      return NULL;
+    return NULL;
 
   static jmethodID ctor = 0;
   if (ctor == 0)
-  {
+    {
       ctor = env->GetMethodID(clazz, "<init>", "(J)V");
       if (JNIUtil::isJavaExceptionThrown())
-          return NULL;
-  }
+        return NULL;
+    }
 
   jlong cppAddr = this->getCppAddr();
 
   jobject jself = env->NewObject(clazz, ctor, cppAddr);
   if (JNIUtil::isJavaExceptionThrown())
-      return NULL;
+    return NULL;
 
   return jself;
 }
