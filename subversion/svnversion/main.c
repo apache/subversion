@@ -179,10 +179,8 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        {
-          usage(pool);
-          return EXIT_FAILURE;
-        }
+        usage(pool);  /* this will exit() */
+
       switch (opt)
         {
         case 'n':
@@ -201,8 +199,7 @@ main(int argc, const char *argv[])
           is_version = TRUE;
           break;
         default:
-          usage(pool);
-          return EXIT_FAILURE;
+          usage(pool);  /* this will exit() */
         }
     }
 
@@ -212,10 +209,7 @@ main(int argc, const char *argv[])
       exit(0);
     }
   if (os->ind > argc || os->ind < argc - 2)
-    {
-      usage(pool);
-      return EXIT_FAILURE;
-    }
+    usage(pool);  /* this will exit() */
 
   SVN_INT_ERR(svn_utf_cstring_to_utf8(&wc_path,
                                       (os->ind < argc) ? os->argv[os->ind]

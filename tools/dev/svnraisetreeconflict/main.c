@@ -365,10 +365,8 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        {
-          usage(pool);
-          return EXIT_FAILURE;
-        }
+        usage(pool);  /* this will exit() */
+
       switch (opt)
         {
         case 'h':
@@ -379,8 +377,7 @@ main(int argc, const char *argv[])
           exit(0);
           break;
         default:
-          usage(pool);
-          return EXIT_FAILURE;
+          usage(pool);  /* this will exit() */
         }
     }
 
@@ -396,10 +393,7 @@ main(int argc, const char *argv[])
     }
 
   if (remaining_argv->nelts < 1)
-    {
-      usage(pool);
-      return EXIT_FAILURE;
-    }
+    usage(pool);  /* this will exit() */
 
   /* Do the main task */
   SVNRAISETC_INT_ERR(raise_tree_conflict(remaining_argv->nelts,

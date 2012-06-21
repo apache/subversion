@@ -1227,7 +1227,14 @@ typedef enum svn_wc_notify_action_t
 
   /** Operation failed because a node is obstructed.
    * @since New in 1.8. */
-  svn_wc_notify_failed_obstruction
+  svn_wc_notify_failed_obstruction,
+
+  /** Conflict resolver is starting or done.
+   * This can be used by clients to detect when to display conflict summary
+   * information, for example.
+   * @since New in 1.8. */
+  svn_wc_notify_conflict_resolver_starting,
+  svn_wc_notify_conflict_resolver_done
 
 } svn_wc_notify_action_t;
 
@@ -1697,9 +1704,9 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type but should use
- * svn_wc_create_conflict_description_text2() or
- * svn_wc_create_conflict_description_prop2() or
- * svn_wc_create_conflict_description_tree2() instead.
+ * svn_wc_conflict_description_create_text2() or
+ * svn_wc_conflict_description_create_prop2() or
+ * svn_wc_conflict_description_create_tree2() instead.
  *
  * @since New in 1.7.
  */

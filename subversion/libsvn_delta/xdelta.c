@@ -109,8 +109,13 @@ struct block
 /* A hash table, using open addressing, of the blocks of the source. */
 struct blocks
 {
-  /* The largest valid index of slots. */
-  apr_size_t max;
+  /* The largest valid index of slots.
+     This value has an upper bound proportionate to the text delta
+     window size, so unless we dramatically increase the window size,
+     it's safe to make this a 32-bit value.  In any case, it has to be
+     hte same width as the block position index, (struct
+     block).pos. */
+  apr_uint32_t max;
   /* Source buffer that the positions in SLOTS refer to. */
   const char* data;
   /* The vector of blocks.  A pos value of NO_POSITION represents an unused
@@ -133,7 +138,7 @@ static apr_uint32_t hash_func(apr_uint32_t sum)
    data into the table BLOCKS.  Ignore true duplicates, i.e. blocks with
    actually the same content. */
 static void
-add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_size_t pos)
+add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_uint32_t pos)
 {
   apr_uint32_t h = hash_func(adlersum) & blocks->max;
 
@@ -176,17 +181,30 @@ init_blocks_table(const char *data,
                   struct blocks *blocks,
                   apr_pool_t *pool)
 {
-  apr_size_t i;
   apr_size_t nblocks;
-  apr_size_t nslots = 1;
+  apr_size_t wnslots = 1;
+  apr_uint32_t nslots;
+  apr_uint32_t i;
 
   /* Be pessimistic about the block count. */
   nblocks = datalen / MATCH_BLOCKSIZE + 1;
   /* Find nearest larger power of two. */
-  while (nslots <= nblocks)
-    nslots *= 2;
+  while (wnslots <= nblocks)
+    wnslots *= 2;
   /* Double the number of slots to avoid a too high load. */
-  nslots *= 2;
+  wnslots *= 2;
+  /* Narrow the number of slots to 32 bits, which is the size of the
+     block position index in the hash table.
+     Sanity check: On 64-bit platforms, apr_size_t is likely to be
+     larger than apr_uint32_t. Make sure that the number of slots
+     actually fits into blocks->max.  It's safe to use a hard assert
+     here, because the largest possible value for nslots is
+     proportional to the text delta window size and is therefore much
+     smaller than the range of an apr_uint32_t.  If we ever happen to
+     increase the window size too much, this assertion will get
+     triggered by the test suite. */
+  nslots = (apr_uint32_t) wnslots;
+  SVN_ERR_ASSERT_NO_RETURN(wnslots == nslots);
   blocks->max = nslots - 1;
   blocks->data = data;
   blocks->slots = apr_palloc(pool, nslots * sizeof(*(blocks->slots)));

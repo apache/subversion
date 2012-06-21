@@ -145,6 +145,16 @@ class SVNTests extends TestCase
     protected static String rootUrl;
 
     /**
+     * Username to use in tests
+     */
+    protected final static String USERNAME = "jrandom";
+    
+    /**
+     * Password to use in tests
+     */
+    protected final static String PASSWORD = "rayjandom";
+    
+    /**
      * Create a JUnit <code>TestCase</code> instance.
      */
     protected SVNTests()
@@ -276,7 +286,7 @@ class SVNTests extends TestCase
         this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
         this.client.setPrompt(new DefaultPromptUserPassword());
-        this.client.username("jrandom");
+        this.client.username(USERNAME);
         this.client.setProgressCallback(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap<String, MyCommitItem>();
@@ -284,7 +294,7 @@ class SVNTests extends TestCase
     /**
      * the default prompt : never prompts the user, provides defaults answers
      */
-    private static class DefaultPromptUserPassword implements UserPasswordCallback
+    protected static class DefaultPromptUserPassword implements UserPasswordCallback
     {
 
         public int askTrustSSLServer(String info, boolean allowPermanently)
@@ -304,12 +314,12 @@ class SVNTests extends TestCase
 
         public String getPassword()
         {
-            return "rayjandom";
+            return PASSWORD;
         }
 
         public String getUsername()
         {
-            return "jrandom";
+            return USERNAME;
         }
 
         public boolean prompt(String realm, String username)

@@ -120,6 +120,8 @@ class AprHashPrinter:
     def to_string(self):
         """Return a string to be displayed before children are displayed, or
            return None if we don't want any such."""
+        if not self.hash_p:
+            return 'NULL'
         return 'hash of ' + str(apr_hash_count(self.hash_p)) + ' items'
 
     def children(self):
@@ -134,16 +136,6 @@ class PtrAprHashPrinter(AprHashPrinter):
     """for pointer to 'apr_hash_t' of 'char *' keys and unknown values"""
     def __init__(self, val):
         self.hash_p = val
-
-    def to_string(self):
-        if not self.hash_p:
-            return 'NULL'
-        return AprHashPrinter.to_string(self)
-
-    def children(self):
-        if not self.hash_p:
-            return []
-        return AprHashPrinter.children(self)
 
 class AprArrayPrinter:
     """for 'apr_array_header_t' of unknown elements"""
@@ -170,16 +162,6 @@ class PtrAprArrayPrinter(AprArrayPrinter):
             self.array = None
         else:
             self.array = val.dereference()
-
-    def to_string(self):
-        if not self.array:
-            return 'NULL'
-        return AprArrayPrinter.to_string(self)
-
-    def children(self):
-        if not self.array:
-            return []
-        return AprArrayPrinter.children(self)
 
 
 ########################################################################
@@ -214,7 +196,10 @@ class SvnMergeinfoCatalogPrinter:
 
     def children(self):
         if self.hash_p == 0:
-            return None
+            # Return an empty list so GDB prints only the 'NULL' that is
+            # returned by to_string().  If instead we were to return None
+            # here, GDB would issue a 'not iterable' error message.
+            return []
         mergeinfoType = gdb.lookup_type('svn_mergeinfo_t')
         return children_as_map(children_of_apr_hash(self.hash_p, mergeinfoType))
 

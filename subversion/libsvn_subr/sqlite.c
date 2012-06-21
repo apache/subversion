@@ -50,8 +50,8 @@
   #include <sqlite3.h>
 #endif
 
-#if !SQLITE_VERSION_AT_LEAST(3,6,18)
-#error SQLite is too old -- version 3.6.18 is the minimum required version
+#if !SQLITE_VERSION_AT_LEAST(3,7,12)
+#error SQLite is too old -- version 3.7.12 is the minimum required version
 #endif
 
 INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
@@ -685,16 +685,14 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
     else
       SVN_ERR_MALFUNCTION();
 
-    /* If this flag is defined (3.6.x), then let's turn off SQLite's mutexes.
-       All svn objects are single-threaded, so we can already guarantee that
-       our use of the SQLite handle will be serialized properly.
+    /* Turn off SQLite's mutexes. All svn objects are single-threaded,
+       so we can already guarantee that our use of the SQLite handle
+       will be serialized properly.
 
        Note: in 3.6.x, we've already config'd SQLite into MULTITHREAD mode,
        so this is probably redundant, but if we are running in a process where
        somebody initialized SQLite before us it is needed anyway.  */
-#ifdef SQLITE_OPEN_NOMUTEX
     flags |= SQLITE_OPEN_NOMUTEX;
-#endif
 
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
@@ -813,23 +811,9 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
-  /* Work around a bug in SQLite 3.7.7.  The bug was fixed in SQLite 3.7.7.1.
-
-     See:
-
-       Date: Sun, 26 Jun 2011 18:52:14 -0400
-       From: Richard Hipp <drh@sqlite.org>
-       To: General Discussion of SQLite Database <sqlite-users@sqlite.org>
-       Cc: dev@subversion.apache.org
-       Subject: Re: [sqlite] PRAGMA bug in 3.7.7 (but fine in 3.7.6.3)
-       Message-ID: <BANLkTimDypWGY-8tHFgJsTxN6ty6OkdJ0Q@mail.gmail.com>
-   */
+  /* ### simplify this. remnants of some old SQLite compat code.  */
   {
     int ignored_err = SQLITE_OK;
-#if !SQLITE_VERSION_AT_LEAST(3,7,8) && defined(SQLITE_SCHEMA)
-    if (!strcmp(sqlite3_libversion(), "3.7.7"))
-      ignored_err = SQLITE_SCHEMA;
-#endif
 
     SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", ignored_err));
   }
@@ -853,7 +837,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  Requires SQLite >= 3.6.18  */
               "PRAGMA recursive_triggers=ON;"));
 
-#if SQLITE_VERSION_AT_LEAST(3,6,19) && defined(SVN_DEBUG)
+#if defined(SVN_DEBUG)
   /* When running in debug mode, enable the checking of foreign key
      constraints.  This has possible performance implications, so we don't
      bother to do it for production...for now. */
@@ -1132,12 +1116,14 @@ wrapped_func(sqlite3_context *context,
              sqlite3_value *values[])
 {
   struct function_wrapper_baton_t *fwb = sqlite3_user_data(context);
-  svn_sqlite__context_t sctx = { context };
+  svn_sqlite__context_t sctx;
   svn_sqlite__value_t **local_vals =
                             apr_palloc(fwb->scratch_pool,
                                        sizeof(svn_sqlite__value_t *) * argc);
   svn_error_t *err;
   int i;
+
+  sctx.context = context;
 
   for (i = 0; i < argc; i++)
     {

@@ -1545,7 +1545,9 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool)
 {
-  struct bump_baton bb = { wcroot_abspath };
+  struct bump_baton bb;
+
+  bb.wcroot_abspath = wcroot_abspath;
 
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,

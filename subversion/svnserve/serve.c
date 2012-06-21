@@ -2928,7 +2928,7 @@ repos_path_valid(const char *path)
          consisting of just dots and spaces.  Win32 functions treat
          paths such as ".. " and "......." inconsistently.  Make sure
          no one can escape out of the root. */
-      if (path - s >= 2 && strspn(s, ". ") == path - s)
+      if (path - s >= 2 && strspn(s, ". ") == (size_t)(path - s))
         return FALSE;
 #else  /* ! WIN32 */
       if (path - s == 2 && s[0] == '.' && s[1] == '.')

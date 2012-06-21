@@ -104,7 +104,7 @@ canonicalize_to_lower(char c)
   if (c < 'A' || c > 'Z')
     return c;
   else
-    return c - 'A' + 'a';
+    return (char)(c - 'A' + 'a');
 }
 
 /* Locale insensitive toupper() for converting parts of dirents and urls
@@ -115,7 +115,7 @@ canonicalize_to_upper(char c)
   if (c < 'a' || c > 'z')
     return c;
   else
-    return c - 'a' + 'A';
+    return (char)(c - 'a' + 'A');
 }
 
 /* Calculates the length of the dirent absolute or non absolute root in

@@ -529,11 +529,11 @@ test24(apr_pool_t *pool)
   SVN_TEST_ASSERT(length == 19);
   SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
 
-  length = svn__ui64toa(buffer, 0);
+  length = svn__ui64toa(buffer, 0ull);
   SVN_TEST_ASSERT(length == 1);
   SVN_TEST_STRING_ASSERT(buffer, "0");
 
-  length = svn__ui64toa(buffer, 0xffffffffffffffffll);
+  length = svn__ui64toa(buffer, 0xffffffffffffffffull);
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
 

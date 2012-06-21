@@ -1451,8 +1451,6 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
  * these macros do not.
  */
 
-#define RECOVERABLE_RETRY_COUNT 10
-
 #ifdef ESTALE
 /* Do not use do-while due to the embedded 'continue'.  */
 #define RETRY_RECOVERABLE(err, filehandle, expr)                \
@@ -1481,9 +1479,15 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
           return svn_error_trace(err);                         \
       }                                                         \
   } else
+#define RECOVERABLE_RETRY_TEST \
+  i < 10
+#define RECOVERABLE_RETRY_NEXT \
+  i++
 #else
 #define RETRY_RECOVERABLE(err, filehandle, expr)  SVN_ERR(expr)
 #define IGNORE_RECOVERABLE(err, expr) SVN_ERR(expr)
+#define RECOVERABLE_RETRY_TEST
+#define RECOVERABLE_RETRY_NEXT
 #endif
 
 /* Long enough to hold: "<svn_revnum_t> <node id> <copy id>\0"
@@ -1508,7 +1512,7 @@ read_current(const char *fname, char **buf, apr_pool_t *pool)
 
   *buf = apr_palloc(pool, CURRENT_BUF_LEN);
   iterpool = svn_pool_create(pool);
-  for (i = 0; i < RECOVERABLE_RETRY_COUNT; i++)
+  for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
     {
       svn_pool_clear(iterpool);
 
@@ -3206,7 +3210,7 @@ revision_proplist(apr_hash_t **proplist_p,
 
       proplist = apr_hash_make(pool);
       iterpool = svn_pool_create(pool);
-      for (i = 0; i < RECOVERABLE_RETRY_COUNT; i++)
+      for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
         {
           svn_pool_clear(iterpool);
 
@@ -3519,7 +3523,10 @@ set_cached_window(svn_txdelta_window_t *window,
   if (rs->window_cache)
     {
       /* store the window and the first offset _past_ it */
-      svn_fs_fs__txdelta_cached_window_t cached_window = { window, rs->off };
+      svn_fs_fs__txdelta_cached_window_t cached_window;
+
+      cached_window.window = window;
+      cached_window.end_offset = rs->off;
 
       /* but key it with the start offset because that is the known state
        * when we will look it up */
@@ -3837,7 +3844,8 @@ get_contents(struct rep_read_baton *rb,
              char *buf,
              apr_size_t *len)
 {
-  apr_size_t copy_len, remaining = *len, offset;
+  apr_size_t copy_len, remaining = *len;
+  apr_off_t offset;
   char *cur = buf;
   struct rep_state *rs;
 
@@ -4115,7 +4123,11 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   else
     source_stream = svn_stream_empty(pool);
   SVN_ERR(read_representation(&target_stream, fs, target->data_rep, pool));
-  svn_txdelta(stream_p, source_stream, target_stream, pool);
+
+  /* Because source and target stream will already verify their content,
+   * there is no need to do this once more.  In particular if the stream
+   * content is being fetched from cache. */
+  svn_txdelta2(stream_p, source_stream, target_stream, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -5033,7 +5045,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   cb->txn_id = apr_palloc(cb->pool, MAX_KEY_SIZE);
 
   iterpool = svn_pool_create(pool);
-  for (i = 0; i < RECOVERABLE_RETRY_COUNT; ++i)
+  for (i = 0; RECOVERABLE_RETRY_TEST; RECOVERABLE_RETRY_NEXT)
     {
       svn_pool_clear(iterpool);
 
@@ -5545,7 +5557,10 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       /* build parameters: (name, new entry) pair */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
-      replace_baton_t baton = {name, NULL};
+      replace_baton_t baton;
+
+      baton.name = name;
+      baton.new_entry = NULL;
 
       if (id)
         {
@@ -8427,7 +8442,7 @@ svn_fs_fs__verify(svn_fs_t *fs,
                                           pool));
 
   /* Issue #4129: bogus pred-counts and minfo-cnt's on the root node-rev
-     (and elsewhere).  This code makes more thorough checks that the
+     (and elsewhere).  This code makes more thorough checks than the
      commit-time checks in validate_root_noderev(). */
   {
     svn_revnum_t i;

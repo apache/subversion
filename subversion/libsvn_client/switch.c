@@ -92,6 +92,10 @@ switch_internal(svn_revnum_t *result_rev,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
                                   : NULL;
+  /* Resolve conflicts post-switch for 1.7 and above API users. */
+  svn_boolean_t resolve_conflicts_post_switch = (ctx->conflict_func2 != NULL);
+  svn_wc_conflict_resolver_func2_t conflict_func2;
+  void *conflict_baton2;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -218,6 +222,16 @@ switch_internal(svn_revnum_t *result_rev,
                                  svn_dirent_dirname(local_abspath, pool));
     }
 
+  if (resolve_conflicts_post_switch)
+    {
+      /* Remove the conflict resolution callback from the client context.
+       * We invoke it after of the switch instead of during the switch. */
+      conflict_func2 = ctx->conflict_func2;
+      conflict_baton2 = ctx->conflict_baton2;
+      ctx->conflict_func2 = NULL;
+      ctx->conflict_baton2 = NULL;
+    }
+
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
@@ -323,6 +337,21 @@ switch_internal(svn_revnum_t *result_rev,
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)
     *result_rev = revnum;
+
+  if (resolve_conflicts_post_switch)
+    {
+      /* Resolve conflicts within the switched target. */
+      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                        depth,
+                                        TRUE /* resolve_text */,
+                                        "" /* resolve_prop (ALL props) */,
+                                        TRUE /* resolve_tree */,
+                                        svn_wc_conflict_choose_unspecified,
+                                        conflict_func2, conflict_baton2,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        ctx->notify_func2, ctx->notify_baton2,
+                                        pool));
+    }
 
   return SVN_NO_ERROR;
 }

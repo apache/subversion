@@ -2027,7 +2027,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
  */
 typedef struct svn_ra_plugin_t
 {
-  /** The proper name of the RA library, (like "ra_neon" or "ra_local") */
+  /** The proper name of the RA library, (like "ra_serf" or "ra_local") */
   const char *name;
 
   /** Short doc string printed out by `svn --version` */
@@ -2298,7 +2298,7 @@ typedef svn_error_t *(*svn_ra_init_func_t)(int abi_version,
 
 /* Public RA implementations. */
 
-/** Initialize libsvn_ra_neon.
+/** Initialize libsvn_ra_serf.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
 SVN_DEPRECATED

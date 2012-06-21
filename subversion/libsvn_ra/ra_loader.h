@@ -353,9 +353,6 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
-svn_error_t *svn_ra_neon__init(const svn_version_t *loader_version,
-                              const svn_ra__vtable_t **vtable,
-                              apr_pool_t *pool);
 svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,
                                const svn_ra__vtable_t **vtable,
                                apr_pool_t *pool);

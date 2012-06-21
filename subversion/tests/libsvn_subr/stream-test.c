@@ -138,7 +138,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
         {
           if (c == 127)
             repeat++;
-          c = (c + 1) % 127;
+          c = (char)((c + 1) % 127);
           repeat_iter = repeat;
         }
     }

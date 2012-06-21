@@ -71,10 +71,10 @@ GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.4.1
 HTTPD_VER	= 2.2.22
 NEON_VER	= 0.29.6
-SERF_VER	= 1.0.3
+SERF_VER	= 1.1.0
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
-SQLITE_VER	= 3071100
+SQLITE_VER	= 3071201
 LIBMAGIC_VER	= 5.11
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
@@ -1132,12 +1132,20 @@ $(SVN_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifeq ($(BRANCH_MAJOR),1.6)
+ifeq ($(BRANCH_MAJOR),1.7)
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+NEON_FLAG=--with-neon="$(PREFIX)/neon"
+else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
+NEON_FLAG=--with-neon="$(PREFIX)/neon"
 else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
@@ -1145,37 +1153,8 @@ MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.4)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.3)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.2)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.1)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.0)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else
+NEON_FLAG=--with-neon="$(PREFIX)/neon"
+else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
@@ -1187,7 +1166,7 @@ ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	JAVAHL_FLAG=--enable-javahl=yes --with-jdk --with-jikes=no \
 		--with-junit=$(DISTDIR)/$(JUNIT_DIST)
 else
-	JAVAHL_FLAG=--enable-javahl=no
+	JAVAHL_FLAG=--with-jdk=no
 endif
 
 ifdef PROFILE
@@ -1212,7 +1191,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--prefix="$(SVN_PREFIX)" \
 			--with-apr="$(PREFIX)/apr" \
 			--with-apr-util="$(PREFIX)/apr" \
-			--with-neon="$(PREFIX)/neon" \
+			$(NEON_FLAG) \
 			$(SVN_WITH_HTTPD) \
 			$(SVN_WITH_SASL) \
 			$(SERF_FLAG) \
@@ -1430,10 +1409,16 @@ svn-check-prepare-ramdisk:
 			mkdir -p "$(RAMDISK)/tmp"; \
 	fi
 
+ifndef NEON_FLAG
+svn-check-neon:
+	@echo Neon is not supported by this build of Subversion, skipping tests
+	@true
+else
 svn-check-neon: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
+endif
 
 svn-check-serf: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
@@ -1485,7 +1470,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-javahl 2>&1) | \
+			make check-all-javahl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 

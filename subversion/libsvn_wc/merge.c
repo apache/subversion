@@ -929,6 +929,8 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
  * The merge is trivial if the file at LEFT_ABSPATH equals the detranslated
  * form of the target at DETRANSLATED_TARGET_ABSPATH, because in this case
  * the content of RIGHT_ABSPATH can be copied to the target.
+ * Another trivial case is if DETRANSLATED_TARGET_ABSPATH is identical to 
+ * RIGHT_ABSPATH - we can just accept the existing content as merge result.
  * On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
  * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
  * changed. Install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
@@ -991,6 +993,23 @@ merge_file_trivial(svn_skel_t **work_items,
         }
 
       return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* Check whether the existing version equals the right side. If it 
+       * does, the locally existing, changed file equals the incoming
+       * file, so there is no conflict. For binary files, we historically
+       * conflicted them needlessly, while merge_text_file figured it out 
+       * eventually and returned svn_wc_merge_unchanged for them, which
+       * is what we do here. */
+      SVN_ERR(svn_io_files_contents_same_p(&same_contents,
+                                           detranslated_target_abspath,
+                                           right_abspath, scratch_pool));
+      if (same_contents)
+        {
+          *merge_outcome = svn_wc_merge_unchanged;
+          return SVN_NO_ERROR;
+        }
     }
 
   *merge_outcome = svn_wc_merge_no_merge;
@@ -1536,7 +1555,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
       {
         *merge_content_outcome = svn_wc_merge_no_merge;
         if (merge_props_outcome)
-          *merge_props_outcome = svn_wc_merge_no_merge;
+          *merge_props_outcome = svn_wc_notify_state_unchanged;
         return SVN_NO_ERROR;
       }
 
