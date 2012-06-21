@@ -756,8 +756,8 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
                                   apr_pool_t *result_pool);
 
 
-/* Allocated within XES->STATE_POOL. Changes are not allowd. Make a deep
-   copy, as appropriate.
+/* Allocated within XES->STATE_POOL. Changes are not allowd (callers
+   should make a deep copy if they need to make changes).
 
    The resulting hash maps char* names to char* values.  */
 apr_hash_t *
