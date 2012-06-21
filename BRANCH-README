@@ -17,21 +17,21 @@ TODO:
           
       03. JavaHL: Add SVN_JNI_STRING macro to reduce amount
           of code necessary to declare JNIStringHolder and
-          check for exceptions                               [IN REVIEW]
+          check for exceptions                               [POSTPONED]
           
       04. JavaHL: New method for creating java objects
-          linked to their C++ counterpart                    [IN REVIEW]   
+          linked to their C++ counterpart                    [br.@1352400]   
           
       05. JavaHL: Factored out common context for later use
-          by SVNRa class                                     [IN REVIEW]
+          by SVNRa class                                     [br.@1352403]
           
-      06. JavaHL: Minimal implementation of SVNRa            [TODO]
+      06. JavaHL: Minimal implementation of SVNRa            [br.@1352419]
           
-      07. JavaHL: Merge existing SVNRepoAccess into SVNRA    [TODO]
+      07. JavaHL: Merge existing SVNRepoAccess into SVNRA    [IN PROGRESS]
 
           
-   * Implement other ra functions not requiring addition code
-     refactoring                                             [TODO]
+   * Implement other ra functions not requiring additional
+     code refactoring                                        [TODO]
 
 
    * Apply editor support patches                            [TODO]
