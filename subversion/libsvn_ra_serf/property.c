@@ -46,6 +46,7 @@ typedef enum prop_state_e {
   RESPONSE,
   HREF,
   PROPSTAT,
+  STATUS,
   PROP,
   PROPVAL,
   COLLECTION,
@@ -86,6 +87,13 @@ typedef struct propfind_context_t {
    */
   apr_hash_t *ret_props;
 
+  /* hash table containing all the properties associated with the
+   * "current" <propstat> tag.  These will get copied into RET_PROPS
+   * if the status code similarly associated indicates that they are
+   * "good"; otherwise, they'll get discarded.
+   */
+  apr_hash_t *ps_props;
+
   /* If not-NULL, add us to this list when we're done. */
   svn_ra_serf__list_t **done_list;
 
@@ -107,7 +115,10 @@ static const svn_ra_serf__xml_transition_t propfind_ttable[] = {
     TRUE, { NULL }, TRUE },
 
   { RESPONSE, D_, "propstat", PROPSTAT,
-    FALSE, { NULL }, FALSE },
+    FALSE, { NULL }, TRUE },
+
+  { PROPSTAT, D_, "status", STATUS,
+    TRUE, { NULL }, TRUE },
 
   { PROPSTAT, D_, "prop", PROP,
     FALSE, { NULL }, FALSE },
@@ -125,6 +136,46 @@ static const svn_ra_serf__xml_transition_t propfind_ttable[] = {
 };
 
 
+/* Return the HTTP status code contained in STATUS_LINE, or 0 if
+   there's a problem parsing it. */
+static int parse_status_code(const char *status_line)
+{
+  /* STATUS_LINE should be of form: "HTTP/1.1 200 OK" */
+  if (status_line[0] == 'H' &&
+      status_line[1] == 'T' &&
+      status_line[2] == 'T' &&
+      status_line[3] == 'P' &&
+      status_line[4] == '/' &&
+      (status_line[5] >= '0' && status_line[5] <= '9') &&
+      status_line[6] == '.' &&
+      (status_line[7] >= '0' && status_line[7] <= '9') &&
+      status_line[8] == ' ')
+    {
+      char *reason;
+
+      return apr_strtoi64(status_line + 8, &reason, 10);
+    }
+  return 0;
+}
+
+
+/* Conforms to svn_ra_serf__path_rev_walker_t  */
+static svn_error_t *
+copy_into_ret_props(void *baton,
+                    const char *path, apr_ssize_t path_len,
+                    const char *ns, apr_ssize_t ns_len,
+                    const char *name, apr_ssize_t name_len,
+                    const svn_string_t *val,
+                    apr_pool_t *pool)
+{
+  propfind_context_t *ctx = baton;
+
+  svn_ra_serf__set_ver_prop(ctx->ret_props, path, ctx->rev, ns, name,
+                            val, ctx->pool);
+  return SVN_NO_ERROR;
+}
+
+
 /* Conforms to svn_ra_serf__xml_opened_t  */
 static svn_error_t *
 propfind_opened(svn_ra_serf__xml_estate_t *xes,
@@ -133,10 +184,16 @@ propfind_opened(svn_ra_serf__xml_estate_t *xes,
                 const svn_ra_serf__dav_props_t *tag,
                 apr_pool_t *scratch_pool)
 {
+  propfind_context_t *ctx = baton;
+
   if (entered_state == PROPVAL)
     {
       svn_ra_serf__xml_note(xes, PROPVAL, "ns", tag->namespace);
       svn_ra_serf__xml_note(xes, PROPVAL, "name", tag->name);
+    }
+  else if (entered_state == PROPSTAT)
+    {
+      ctx->ps_props = apr_hash_make(ctx->pool);
     }
 
   return SVN_NO_ERROR;
@@ -193,7 +250,17 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
     {
       svn_ra_serf__xml_note(xes, PROPVAL, "altvalue", cdata->data);
     }
-  else
+  else if (leaving_state == STATUS)
+    {
+      /* Parse the status field, and remember if this is a property
+         that we wish to ignore.  (Typically, if it's not a 200, the
+         status will be 404 to indicate that a property we
+         specifically requested from the server doesn't exist.)  */
+      int status = parse_status_code(cdata->data);
+      if (status != 200)
+        svn_ra_serf__xml_note(xes, PROPSTAT, "ignore-prop", "*");
+    }
+  else if (leaving_state == PROPVAL)
     {
       const char *encoding = apr_hash_get(attrs, "V:encoding",
                                           APR_HASH_KEY_STRING);
@@ -203,8 +270,6 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
       const char *ns;
       const char *name;
       const char *altvalue;
-
-      SVN_ERR_ASSERT(leaving_state == PROPVAL);
 
       if (encoding)
         {
@@ -225,7 +290,16 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
 
       /* The current path sits on the RESPONSE state. Gather up all the
          state from this PROPVAL to the (grandparent) RESPONSE state,
-         and grab the path from there.  */
+         and grab the path from there.
+
+         Now, it would be nice if we could, at this point, know that
+         the status code for this property indicated a problem -- then
+         we could simply bail out here and ignore the property.
+         Sadly, though, we might get the status code *after* we get
+         the property value.  So we'll carry on with our processing
+         here, setting the property and value as expected.  Once we
+         know for sure the status code associate with the property,
+         we'll decide its fate.  */
       gathered = svn_ra_serf__xml_gather_since(xes, RESPONSE);
 
       /* These will be dup'd into CTX->POOL, as necessary.  */
@@ -241,9 +315,34 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
       if (altvalue != NULL)
         val_str = svn_string_create(altvalue, ctx->pool);
 
-      svn_ra_serf__set_ver_prop(ctx->ret_props,
+      svn_ra_serf__set_ver_prop(ctx->ps_props,
                                 path, ctx->rev, ns, name, val_str,
                                 ctx->pool);
+    }
+  else
+    {
+      apr_hash_t *gathered;
+      const char *path;
+
+      SVN_ERR_ASSERT(leaving_state == PROPSTAT);
+
+      gathered = svn_ra_serf__xml_gather_since(xes, PROPSTAT);
+
+      path = apr_hash_get(gathered, "path", APR_HASH_KEY_STRING);
+      if (path == NULL)
+        path = ctx->path;
+
+      /* If we've squirreled away a note that says we want to ignore
+         these properties, we'll do so.  Otherwise, we need to copy
+         them from the temporary hash into the ctx->ret_props hash. */
+      if (! apr_hash_get(gathered, "ignore-prop", APR_HASH_KEY_STRING))
+        {
+          SVN_ERR(svn_ra_serf__walk_all_paths(ctx->ps_props, ctx->rev,
+                                              copy_into_ret_props, ctx,
+                                              scratch_pool));
+        }
+
+      ctx->ps_props = NULL;
     }
 
   return SVN_NO_ERROR;
