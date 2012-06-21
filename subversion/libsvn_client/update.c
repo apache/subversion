@@ -562,9 +562,13 @@ svn_client_update4(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
+  /* Resolve conflicts post-update for 1.7 and above API users. */
+  svn_boolean_t resolve_conflicts_post_update = (ctx->conflict_func2 != NULL);
+  svn_wc_conflict_resolver_func2_t conflict_func2;
+  void *conflict_baton2;
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -578,6 +582,16 @@ svn_client_update4(apr_array_header_t **result_revs,
                                  _("'%s' is not a local path"), path);
     }
 
+  if (resolve_conflicts_post_update)
+    {
+      /* Remove the conflict resolution callback from the client context.
+       * We invoke it after of the update instead of during the update. */
+      conflict_func2 = ctx->conflict_func2;
+      conflict_baton2 = ctx->conflict_baton2;
+      ctx->conflict_func2 = NULL;
+      ctx->conflict_baton2 = NULL;
+    }
+
   for (i = 0; i < paths->nelts; ++i)
     {
       svn_error_t *err = SVN_NO_ERROR;
@@ -585,12 +599,12 @@ svn_client_update4(apr_array_header_t **result_revs,
       const char *local_abspath;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
       err = svn_client__update_internal(&result_rev, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
@@ -598,7 +612,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         adds_as_modification,
                                         make_parents,
                                         FALSE, &sleep,
-                                        ctx, subpool);
+                                        ctx, iterpool);
 
       if (err)
         {
@@ -615,17 +629,38 @@ svn_client_update4(apr_array_header_t **result_revs,
               svn_wc_notify_t *notify;
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_skip,
-                                            subpool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+                                            iterpool);
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
         }
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
+
+  if (resolve_conflicts_post_update)
+    {
+      const char *common_abspath;
+
+      /* Resolve conflicts within the updated subtree.
+       * ### This will resolve conflicts which are siblings of paths in
+       * ### the target list but were not part of this update. */
+      SVN_ERR(svn_dirent_condense_targets(&common_abspath, NULL, paths,
+                                          TRUE, pool, pool));
+      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, common_abspath,
+                                        depth,
+                                        TRUE /* resolve_text */,
+                                        "" /* resolve_prop (ALL props) */,
+                                        TRUE /* resolve_tree */,
+                                        svn_wc_conflict_choose_unspecified,
+                                        conflict_func2, conflict_baton2,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        ctx->notify_func2, ctx->notify_baton2,
+                                        pool));
+    }
 
   return SVN_NO_ERROR;
 }

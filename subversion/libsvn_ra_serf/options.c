@@ -450,9 +450,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
   cap_result = apr_hash_get(serf_sess->capabilities,
                             capability, APR_HASH_KEY_STRING);
 
-  /* Some capabilities depend on the repository as well as the server.
-     NOTE: svn_ra_neon__has_capability() has a very similar code block.  If
-     you change something here, check there as well. */
+  /* Some capabilities depend on the repository as well as the server. */
   if (cap_result == capability_server_yes)
     {
       if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)

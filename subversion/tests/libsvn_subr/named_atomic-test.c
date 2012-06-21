@@ -82,7 +82,10 @@ proc_found(const char *proc, apr_pool_t *pool)
 
       /* all processes and their I/O data */
       apr_proc_t process;
-      const char * args[2] = {proc, NULL};
+      const char * args[2];
+
+      args[0] = proc;
+      args[1] = NULL;
       svn_error_clear(adjust_proc_path(&args[0], &directory, pool));
 
       /* try to start the process */
@@ -307,15 +310,14 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
   /* start sub-processes */
   for (i = 0; i < count; ++i)
     {
-      const char * args[6] =
-        {
-          proc,
-          apr_itoa(pool, i),
-          apr_itoa(pool, count),
-          apr_itoa(pool, iterations),
-          name_namespace,
-          NULL
-        };
+      const char * args[6];
+
+      args[0] = proc;
+      args[1] = apr_itoa(pool, i);
+      args[2] = apr_itoa(pool, count);
+      args[3] = apr_itoa(pool, iterations);
+      args[4] = name_namespace;
+      args[5] = NULL;
 
       error = svn_io_start_cmd3(&process[i],
                                 directory,  /* working directory */

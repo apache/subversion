@@ -256,6 +256,19 @@ struct node_baton_t
 
 /* Filtering vtable members */
 
+/* File-format stamp. */
+static svn_error_t *
+magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
+{
+  struct parse_baton_t *pb = parse_baton;
+  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
+                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
+                            version));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* New revision: set up revision_baton, decide if we skip it. */
 static svn_error_t *
 new_revision_record(void **revision_baton,
@@ -878,10 +891,11 @@ close_revision(void *revision_baton)
 
 
 /* Filtering vtable */
-svn_repos_parse_fns2_t filtering_vtable =
+svn_repos_parse_fns3_t filtering_vtable =
   {
-    new_revision_record,
+    magic_header_record,
     uuid_record,
+    new_revision_record,
     new_node_record,
     set_revision_property,
     set_node_property,
@@ -1032,17 +1046,6 @@ parse_baton_initialize(struct parse_baton_t **pb,
   baton->last_live_revision = SVN_INVALID_REVNUM;
   baton->oldest_original_rev = SVN_INVALID_REVNUM;
 
-  /* This is non-ideal: We should pass through the version of the
-   * input dumpstream.  However, our API currently doesn't allow that.
-   * Hardcoding version 2 is acceptable because:
-   *   - We currently do not accept version 3 or greater.
-   *   - Dumpstream version 1 is so ancient as to be ignorable
-   *     (0.17.x and earlier)
-   */
-  SVN_ERR(svn_stream_printf(baton->out_stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            2));
-
   *pb = baton;
   return SVN_NO_ERROR;
 }
@@ -1144,8 +1147,8 @@ do_filter(apr_getopt_t *os,
     }
 
   SVN_ERR(parse_baton_initialize(&pb, opt_state, do_exclude, pool));
-  SVN_ERR(svn_repos_parse_dumpstream2(pb->in_stream, &filtering_vtable, pb,
-                                      NULL, NULL, pool));
+  SVN_ERR(svn_repos_parse_dumpstream3(pb->in_stream, &filtering_vtable, pb,
+                                      TRUE, NULL, NULL, pool));
 
   /* The rest of this is just reporting.  If we aren't reporting, get
      outta here. */

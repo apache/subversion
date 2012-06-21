@@ -367,10 +367,26 @@ svn_txdelta_md5_digest(svn_txdelta_stream_t *stream);
  *
  * @a source and @a target are both readable generic streams.  When we call
  * svn_txdelta_next_window() on @a *stream, it will read from @a source and
- * @a target to gather as much data as it needs.
+ * @a target to gather as much data as it needs.  If @a calculate_checksum
+ * is set, you may call @ref svn_txdelta_md5_digest to get an MD5 checksum
+ * for @a target.
  *
  * Do any necessary allocation in a sub-pool of @a pool.
+ *
+ * @since New in 1.8.
  */
+void
+svn_txdelta2(svn_txdelta_stream_t **stream,
+             svn_stream_t *source,
+             svn_stream_t *target,
+             svn_boolean_t calculate_checksum,
+             apr_pool_t *pool);
+
+/** Similar to svn_txdelta2 but always calculating the target checksum.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 void
 svn_txdelta(svn_txdelta_stream_t **stream,
             svn_stream_t *source,

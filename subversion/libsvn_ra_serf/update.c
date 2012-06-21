@@ -143,7 +143,7 @@ typedef struct report_dir_t
   apr_hash_t *removed_props;
 
   /* The propfind request for our current directory */
-  svn_ra_serf__propfind_context_t *propfind;
+  svn_ra_serf__handler_t *propfind_handler;
 
   /* Has the server told us to fetch the dir props? */
   svn_boolean_t fetch_props;
@@ -203,7 +203,7 @@ typedef struct report_info_t
   svn_revnum_t copyfrom_rev;
 
   /* The propfind request for our current file (if present) */
-  svn_ra_serf__propfind_context_t *propfind;
+  svn_ra_serf__handler_t *propfind_handler;
 
   /* Has the server told us to fetch the file props? */
   svn_boolean_t fetch_props;
@@ -220,7 +220,7 @@ typedef struct report_info_t
   /* controlling file_baton and textdelta handler */
   void *file_baton;
   const char *base_checksum;
-  const char *final_sha1_checksum; /* ### currently unused */
+  const char *final_sha1_checksum;
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
@@ -346,7 +346,7 @@ struct report_context_t {
   /* number of pending PROPFIND requests */
   unsigned int active_propfinds;
 
-  /* completed PROPFIND requests (contains svn_ra_serf__propfind_context_t) */
+  /* completed PROPFIND requests (contains svn_ra_serf__handler_t) */
   svn_ra_serf__list_t *done_propfinds;
 
   /* list of files that only have prop changes (contains report_info_t) */
@@ -730,7 +730,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
-  else if (fetch_ctx->conn->using_compression)
+  else if (fetch_ctx->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -1079,19 +1079,15 @@ handle_stream(serf_request_t *request,
               apr_pool_t *pool)
 {
   report_fetch_t *fetch_ctx = handler_baton;
-  const char *location;
   svn_error_t *err;
   apr_status_t status;
 
   /* ### new field. make sure we didn't miss some initialization.  */
   SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
 
-  /* Woo-hoo.  Nothing here to see.  */
-  location = svn_ra_serf__response_get_location(response, pool);
-
   err = svn_ra_serf__error_on_status(fetch_ctx->handler->sline.code,
                                      fetch_ctx->info->name,
-                                     location);
+                                     fetch_ctx->handler->location);
   if (err)
     {
       fetch_ctx->handler->done = TRUE;
@@ -1189,8 +1185,8 @@ handle_propchange_only(report_info_t *info,
    editor.  In editor-speak, this will add/open the file, transmit any
    property changes, handle the contents, and then close the file.  */
 static svn_error_t *
-local_fetch(report_info_t *info,
-            apr_pool_t *scratch_pool)
+handle_local_content(report_info_t *info,
+                     apr_pool_t *scratch_pool)
 {
   SVN_ERR(open_updated_file(info, TRUE, scratch_pool));
   SVN_ERR(svn_txdelta_send_stream(info->cached_contents, info->textdelta,
@@ -1202,63 +1198,9 @@ local_fetch(report_info_t *info,
   /* We're done with our pool. */
   svn_pool_destroy(info->pool);
 
+  info->dir->ref_count--;
+
   return SVN_NO_ERROR;
-}
-
-/* Implements svn_ra_serf__response_handler_t */
-static svn_error_t *
-handle_local_fetch(serf_request_t *request,
-                   serf_bucket_t *response,
-                   void *handler_baton,
-                   apr_pool_t *pool)
-{
-  report_fetch_t *fetch_ctx = handler_baton;
-  apr_status_t status;
-  svn_error_t *err;
-  const char *data;
-  apr_size_t len;
-
-  /* ### new field. make sure we didn't miss some initialization.  */
-  SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
-
-  /* If the error code wasn't 200, something went wrong. Don't use the returned
-     data as its probably an error message. Just bail out instead. */
-  if (fetch_ctx->handler->sline.code != 200)
-    {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("HEAD request failed: %d %s"),
-                              fetch_ctx->handler->sline.code,
-                              fetch_ctx->handler->sline.reason);
-      return error_fetch(request, fetch_ctx, err);
-    }
-
-  while (1)
-    {
-      status = serf_bucket_read(response, 8000, &data, &len);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-      if (APR_STATUS_IS_EOF(status))
-        {
-          err = local_fetch(fetch_ctx->info, fetch_ctx->info->pool);
-          if (err)
-            {
-              return error_fetch(request, fetch_ctx, err);
-            }
-
-          fetch_ctx->done = TRUE;
-          fetch_ctx->done_item.data = fetch_ctx;
-          fetch_ctx->done_item.next = *fetch_ctx->done_list;
-          *fetch_ctx->done_list = &fetch_ctx->done_item;
-          return svn_error_wrap_apr(status, NULL);
-        }
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-    }
-  /* not reached */
 }
 
 /* --------------------------------------------------------- */
@@ -1284,15 +1226,18 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
-  info->propfind = NULL;
+  info->propfind_handler = NULL;
   if (info->fetch_props)
     {
-      SVN_ERR(svn_ra_serf__deliver_props(&info->propfind, info->props,
+      SVN_ERR(svn_ra_serf__deliver_props(&info->propfind_handler, info->props,
                                          ctx->sess, conn, info->url,
                                          ctx->target_rev, "0", all_props,
                                          &ctx->done_propfinds,
                                          info->dir->pool));
-      SVN_ERR_ASSERT(info->propfind);
+      SVN_ERR_ASSERT(info->propfind_handler);
+
+      /* Create a serf request for the PROPFIND.  */
+      svn_ra_serf__request_create(info->propfind_handler);
 
       ctx->active_propfinds++;
     }
@@ -1331,43 +1276,35 @@ fetch_file(report_context_t *ctx, report_info_t *info)
             }
         }          
 
-      /* If the working copy can provided cached contents for this
-         file, we'll send a simple HEAD request (which I'll claim is
-         to verify readability, but really is just so I can provide a
-         Serf-queued-request-compliant way of processing the contents
-         after the PROPFIND for the file's properties ... ugh).
-
-         Otherwise, we use a GET request for the file's contents. */
+      /* If the working copy can provide cached contents for this
+         file, we don't have to fetch them from the server. */
       if (info->cached_contents)
         {
-          report_fetch_t *fetch_ctx;
+          /* If we'll be doing a PROPFIND for this file... */
+          if (info->propfind_handler)
+            { 
+              /* ... then we'll just leave ourselves a little "todo"
+                 about that fact (and we'll deal with the file content
+                 stuff later, after we've handled that PROPFIND
+                 response. */
+              svn_ra_serf__list_t *list_item;
 
-          fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
-          fetch_ctx->info = info;
-          fetch_ctx->done_list = &ctx->done_fetches;
-          fetch_ctx->sess = ctx->sess;
-          fetch_ctx->conn = conn;
-
-          handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
-
-          handler->handler_pool = info->dir->pool;
-          handler->method = "HEAD";
-          handler->path = fetch_ctx->info->url;
-
-          handler->conn = conn;
-          handler->session = ctx->sess;
-
-          handler->response_handler = handle_local_fetch;
-          handler->response_baton = fetch_ctx;
-
-          fetch_ctx->handler = handler;
-
-          svn_ra_serf__request_create(handler);
-
-          ctx->active_fetches++;
+              list_item = apr_pcalloc(info->dir->pool, sizeof(*list_item));
+              list_item->data = info;
+              list_item->next = ctx->file_propchanges_only;
+              ctx->file_propchanges_only = list_item;
+            }
+          else
+            {
+              /* Otherwise, if we've no PROPFIND to do, we might as
+                 well take care of those locally accessible file
+                 contents now. */
+              SVN_ERR(handle_local_content(info, info->pool));
+            }
         }
       else
         {
+          /* Otherwise, we use a GET request for the file's contents. */
           report_fetch_t *fetch_ctx;
 
           fetch_ctx = apr_pcalloc(info->dir->pool, sizeof(*fetch_ctx));
@@ -1401,7 +1338,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           ctx->active_fetches++;
         }
     }
-  else if (info->propfind)
+  else if (info->propfind_handler)
     {
       svn_ra_serf__list_t *list_item;
 
@@ -1868,6 +1805,14 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
           svn_stringbuf_setempty(info->prop_value);
         }
+      else if (strcmp(name.name, "txdelta") == 0)
+        {
+          /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in
+             addition to <fetch-file>s and such) when *not* in
+             "send-all" mode.  As a client, we're smart enough to know
+             that's wrong, so we'll just ignore these tags. */
+          ;
+        }
       else
         {
           return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -1946,7 +1891,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* Unconditionally set fetch_props now. */
           info->dir->fetch_props = TRUE;
 
-          SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind,
+          SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              ctx->sess->conns[ctx->sess->cur_conn],
                                              info->dir->url,
@@ -1954,7 +1899,10 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                              all_props,
                                              &ctx->done_propfinds,
                                              info->dir->pool));
-          SVN_ERR_ASSERT(info->dir->propfind);
+          SVN_ERR_ASSERT(info->dir->propfind_handler);
+
+          /* Create a serf request for the PROPFIND.  */
+          svn_ra_serf__request_create(info->dir->propfind_handler);
 
           ctx->active_propfinds++;
 
@@ -1964,7 +1912,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         }
       else
         {
-          info->dir->propfind = NULL;
+          info->dir->propfind_handler = NULL;
         }
 
       svn_ra_serf__xml_pop_state(parser);
@@ -2301,8 +2249,6 @@ link_path(void *report_baton,
   return APR_SUCCESS;
 }
 
-/** Max. number of connctions we'll open to the server. */
-#define MAX_NR_OF_CONNS 4
 /** Minimum nr. of outstanding requests needed before a new connection is
  *  opened. */
 #define REQS_PER_CONN 8
@@ -2323,16 +2269,10 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       apr_status_t status;
 
       sess->conns[cur] = apr_pcalloc(sess->pool, sizeof(*sess->conns[cur]));
-      sess->conns[cur]->http10 = TRUE;  /* until we confirm HTTP/1.1  */
-      sess->conns[cur]->http10 = FALSE; /* ### don't change behavior yet  */
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
-      sess->conns[cur]->hostname  = sess->conns[0]->hostname;
-      sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
-      sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
       sess->conns[cur]->last_status_code = -1;
       sess->conns[cur]->session = sess;
-      sess->conns[cur]->useragent = sess->conns[0]->useragent;
       status = serf_connection_create2(&sess->conns[cur]->conn,
                                        sess->context,
                                        sess->session_url,
@@ -2375,7 +2315,7 @@ headers_report(serf_bucket_t *headers,
 {
   report_context_t *report = baton;
 
-  if (report->conn->using_compression)
+  if (report->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -2483,6 +2423,11 @@ finish_report(void *report_baton,
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
 
+      if (!err && handler->done && handler->server_error)
+        {
+          err = handler->server_error->error;
+        }
+
       if (APR_STATUS_IS_TIMEUP(status))
         {
           svn_error_clear(err);
@@ -2530,7 +2475,7 @@ finish_report(void *report_baton,
                 {
                   report_info_t *item = cur->data;
 
-                  if (item->propfind == done_list->data)
+                  if (item->propfind_handler == done_list->data)
                     {
                       break;
                     }
@@ -2544,7 +2489,20 @@ finish_report(void *report_baton,
                */
               if (cur)
                 {
-                  SVN_ERR(handle_propchange_only(cur->data, iterpool_inner));
+                  report_info_t *info = cur->data;
+
+                  /* If we've got cached file content for this file,
+                     take care of the locally collected properties and
+                     file content at once.  Otherwise, just deal with
+                     the collected properties. */
+                  if (info->cached_contents)
+                    {
+                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                    }
+                  else
+                    {
+                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
+                    }
 
                   if (!prev)
                     {
@@ -2585,9 +2543,9 @@ finish_report(void *report_baton,
            *   we've already completed the propfind
            * then, we know it's time for us to close this directory.
            */
-          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed &&
-                 (!cur_dir->fetch_props ||
-                  svn_ra_serf__propfind_is_done(cur_dir->propfind)))
+          while (cur_dir && !cur_dir->ref_count && cur_dir->tag_closed
+                 && (!cur_dir->fetch_props
+                     || cur_dir->propfind_handler->done))
             {
               report_dir_t *parent = cur_dir->parent_dir;
 
@@ -2870,6 +2828,90 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               switch_editor, switch_baton, pool);
 }
 
+/* Helper svn_ra_serf__get_file(). Attempts to fetch file contents
+ * using SESSION->wc_callbacks->get_wc_contents() if sha1 property is
+ * present in PROPS.
+ * 
+ * Sets *FOUND_P to TRUE if file contents was successfuly fetched.
+ * 
+ * Performs all temporary allocations in POOL.
+ */
+static svn_error_t *
+try_get_wc_contents(svn_boolean_t *found_p,
+                    svn_ra_serf__session_t *session,
+                    apr_hash_t *props,
+                    svn_stream_t *dst_stream,
+                    apr_pool_t *pool)
+{
+  apr_hash_t *svn_props;
+  const char *sha1_checksum_prop;
+  svn_checksum_t *checksum;
+  svn_stream_t *wc_stream;
+  svn_error_t *err;
+
+  /* No contents found by default. */
+  *found_p = FALSE;
+
+  if (!session->wc_callbacks->get_wc_contents)
+    {
+      /* No callback, nothing to do. */
+      return SVN_NO_ERROR;
+    }
+
+
+  svn_props = apr_hash_get(props, SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+  if (!svn_props)
+    {
+      /* No checksum property in response. */
+      return SVN_NO_ERROR;
+    }
+
+  /* If we are talking to an old server, then the sha1-checksum property
+     will not exist. In our property parsing code, we don't bother to
+     check the <status> element which would indicate a 404. That section
+     needs to name the 404'd property, so our parsing code only sees:
+
+       <g0:sha1-checksum/>
+
+     That is parsed as an empty string value for the property.
+
+     When checking the property, if it is missing (NULL), or the above
+     empty string, then we know the property doesn't exist.
+
+     Strictly speaking, we could start parsing <status> and omit any
+     properties that were 404'd. But the 404 only happens when we ask
+     for a specific property, and it is easier to just check for the
+     empty string. Since it isn't a legal value in this case, we won't
+     get confused with a truly existent property.  */
+  sha1_checksum_prop = svn_prop_get_value(svn_props, "sha1-checksum");
+  if (sha1_checksum_prop == NULL || *sha1_checksum_prop == '\0')
+    {
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
+                                 sha1_checksum_prop, pool));
+
+  err = session->wc_callbacks->get_wc_contents(
+          session->wc_callback_baton, &wc_stream, checksum, pool);
+
+  if (err)
+    {
+      svn_error_clear(err);
+
+      /* Ignore errors for now. */
+      return SVN_NO_ERROR;
+    }
+  
+  if (wc_stream)
+    {
+      SVN_ERR(svn_stream_copy3(wc_stream, dst_stream, NULL, NULL, pool));
+      *found_p = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__get_file(svn_ra_session_t *ra_session,
                       const char *path,
@@ -2884,6 +2926,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   const char *fetch_url;
   apr_hash_t *fetch_props;
   svn_kind_t res_kind;
+  const svn_ra_serf__dav_props_t *which_props;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
@@ -2908,9 +2951,22 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* REVISION is always SVN_INVALID_REVNUM  */
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(revision));
 
+  if (props)
+    {
+      which_props = all_props;
+    }
+  else if (stream && session->wc_callbacks->get_wc_contents)
+    {
+      which_props = type_and_checksum_props;
+    }
+  else
+    {
+      which_props = check_path_props;
+    }
+     
   SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
                                         SVN_INVALID_REVNUM,
-                                        props ? all_props : check_path_props,
+                                        which_props,
                                         pool, pool));
 
   /* Verify that resource type is not collection. */
@@ -2932,39 +2988,46 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   if (stream)
     {
-      report_fetch_t *stream_ctx;
-      svn_ra_serf__handler_t *handler;
+      svn_boolean_t found;
+      SVN_ERR(try_get_wc_contents(&found, session, fetch_props, stream, pool));
 
-      /* Create the fetch context. */
-      stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
-      stream_ctx->target_stream = stream;
-      stream_ctx->sess = session;
-      stream_ctx->conn = conn;
-      stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
-      stream_ctx->info->name = fetch_url;
+      /* No contents found in the WC, let's fetch from server. */
+      if (!found)
+        {
+          report_fetch_t *stream_ctx;
+          svn_ra_serf__handler_t *handler;
 
-      handler = apr_pcalloc(pool, sizeof(*handler));
+          /* Create the fetch context. */
+          stream_ctx = apr_pcalloc(pool, sizeof(*stream_ctx));
+          stream_ctx->target_stream = stream;
+          stream_ctx->sess = session;
+          stream_ctx->conn = conn;
+          stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
+          stream_ctx->info->name = fetch_url;
 
-      handler->handler_pool = pool;
-      handler->method = "GET";
-      handler->path = fetch_url;
-      handler->conn = conn;
-      handler->session = session;
+          handler = apr_pcalloc(pool, sizeof(*handler));
 
-      handler->header_delegate = headers_fetch;
-      handler->header_delegate_baton = stream_ctx;
+          handler->handler_pool = pool;
+          handler->method = "GET";
+          handler->path = fetch_url;
+          handler->conn = conn;
+          handler->session = session;
 
-      handler->response_handler = handle_stream;
-      handler->response_baton = stream_ctx;
+          handler->header_delegate = headers_fetch;
+          handler->header_delegate_baton = stream_ctx;
 
-      handler->response_error = cancel_fetch;
-      handler->response_error_baton = stream_ctx;
+          handler->response_handler = handle_stream;
+          handler->response_baton = stream_ctx;
 
-      stream_ctx->handler = handler;
+          handler->response_error = cancel_fetch;
+          handler->response_error_baton = stream_ctx;
 
-      svn_ra_serf__request_create(handler);
+          stream_ctx->handler = handler;
 
-      SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+          svn_ra_serf__request_create(handler);
+
+          SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
+        }
     }
 
   return SVN_NO_ERROR;

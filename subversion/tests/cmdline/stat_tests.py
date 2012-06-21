@@ -1567,6 +1567,82 @@ def status_depth_update(sbox):
 
 
 #----------------------------------------------------------------------
+def status_depth_update_local_modifications(sbox):
+  "run 'status --depth=X -u' with local changes"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  D_path = os.path.join(A_path, 'D')
+
+  mu_path = os.path.join(A_path, 'mu')
+  gamma_path = os.path.join(D_path, 'gamma')
+
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+
+  svntest.main.file_append(mu_path, 'modified')
+  svntest.main.file_append(gamma_path, 'modified')
+
+  # depth=empty
+  expected = svntest.verify.UnorderedOutput(
+                  [" M               1   %s\n" % A_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=empty", A_path)
+
+  expected = svntest.verify.UnorderedOutput(
+                  ["M                1   %s\n" % mu_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=empty", mu_path)
+
+  # depth=files
+  expected = svntest.verify.UnorderedOutput(
+                  ["M                1   %s\n" % mu_path,
+                   " M               1   %s\n" % A_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=files",
+                                     A_path)
+
+  # depth=immediates
+  expected = svntest.verify.UnorderedOutput(
+                  [" M               1   %s\n" % A_path,
+                   " M               1   %s\n" % D_path,
+                   "M                1   %s\n" % mu_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=immediates",
+                                     A_path)
+
+  # depth=infinity (the default)
+  expected = svntest.verify.UnorderedOutput(
+                  [" M               1   %s\n" % A_path,
+                   " M               1   %s\n" % D_path,
+                   "M                1   %s\n" % mu_path,
+                   "M                1   %s\n" % gamma_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=infinity",
+                                     A_path)
+
+#----------------------------------------------------------------------
 # Test for issue #2420
 @Issue(2420)
 def status_dash_u_deleted_directories(sbox):
@@ -1995,6 +2071,7 @@ test_list = [ None,
               status_dash_u_deleted_directories,
               status_depth_local,
               status_depth_update,
+              status_depth_update_local_modifications,
               status_dash_u_type_change,
               status_with_tree_conflicts,
               status_nested_wc_old_format,

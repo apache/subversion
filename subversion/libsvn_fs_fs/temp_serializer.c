@@ -48,16 +48,16 @@ encode_number(apr_int64_t number, char *key_buffer)
   if (number < 0)
   {
     number = -number;
-    *key_buffer = (number & 63) + ' ' + 65;
+    *key_buffer = (char)((number & 63) + ' ' + 65);
   }
   else
-    *key_buffer = (number & 63) + ' ' + 1;
+    *key_buffer = (char)((number & 63) + ' ' + 1);
   number /= 64;
 
   /* write 7 bits / byte until no significant bits are left */
   while (number)
   {
-    *++key_buffer = (number & 127) + ' ' + 1;
+    *++key_buffer = (char)((number & 127) + ' ' + 1);
     number /= 128;
   }
 

@@ -33,8 +33,9 @@ import tempfile
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 
-# Get some helper routines from svnadmin_tests
+# Get some helper routines
 from svnadmin_tests import load_and_verify_dumpstream, test_create
+from svntest.main import run_svn, run_svnadmin
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -651,6 +652,23 @@ def match_empty_prefix(sbox):
   # doesn't seem to be a consistent way to quote such an argument to
   # prevent expansion.
 
+@Issue(2760)
+def accepts_deltas(sbox):
+  "accepts deltas in the input"
+  # Accept format v3 (as created by 'svnadmin --deltas' or svnrdump).
+
+  test_create(sbox)
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'simple_v3.dump')
+  dumpfile = open(dumpfile_location).read()
+
+  filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
+                                                        "trunk", "--quiet")
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+
+  
+
 ########################################################################
 # Run the tests
 
@@ -664,6 +682,7 @@ test_list = [ None,
               filter_mergeinfo_revs_outside_of_dump_stream,
               dropped_but_not_renumbered_empty_revs,
               match_empty_prefix,
+              accepts_deltas,
               ]
 
 if __name__ == '__main__':

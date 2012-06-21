@@ -443,6 +443,12 @@ lazy_create_pool(void *baton)
   return xes->state_pool;
 }
 
+void
+svn_ra_serf__xml_context_destroy(
+  svn_ra_serf__xml_context_t *xmlctx)
+{
+  svn_pool_destroy(xmlctx->scratch_pool);
+}
 
 svn_ra_serf__xml_context_t *
 svn_ra_serf__xml_context_create(
@@ -483,12 +489,35 @@ svn_ra_serf__xml_gather_since(svn_ra_serf__xml_estate_t *xes,
                               int stop_state)
 {
   apr_hash_t *data;
+  apr_pool_t *pool;
 
   ensure_pool(xes);
+  pool = xes->state_pool;
 
-  data = apr_hash_make(xes->state_pool);
+  data = apr_hash_make(pool);
 
-  /* ### gather data  */
+  for (; xes != NULL; xes = xes->prev)
+    {
+      if (xes->attrs != NULL)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(pool, xes->attrs); hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              apr_ssize_t klen;
+              void *val;
+
+              /* Parent name/value lifetimes are at least as long as POOL.  */
+              apr_hash_this(hi, &key, &klen, &val);
+              apr_hash_set(data, key, klen, val);
+            }
+        }
+
+      if (xes->state == stop_state)
+        break;
+    }
 
   return data;
 }
@@ -560,6 +589,11 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
       if (scan->from_state != current->state)
         continue;
 
+      /* Wildcard tag match.  */
+      if (*scan->name == '*')
+        break;
+
+      /* Found a specific transition.  */
       if (strcmp(elemname.name, scan->name) == 0
           && strcmp(elemname.namespace, scan->ns) == 0)
         break;
@@ -627,7 +661,8 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                 }
 
               if (value)
-                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING, value);
+                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING,
+                             apr_pstrdup(new_pool, value));
             }
         }
     }
@@ -746,11 +781,29 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
                           const char *data,
                           apr_size_t len)
 {
-  /* If we're collecting cdata, but NOT waiting for a closing tag
-     (ie. not within an unknown tag), then copy the cdata.  */
-  if (xmlctx->current->cdata != NULL
-      && xmlctx->waiting.namespace == NULL)
-    svn_stringbuf_appendbytes(xmlctx->current->cdata, data, len);
+  /* If we are waiting for a closing tag, then we are uninterested in
+     the cdata. Just return.  */
+  if (xmlctx->waiting.namespace != NULL)
+    return SVN_NO_ERROR;
+
+  /* If the current state is collecting cdata, then copy the cdata.  */
+  if (xmlctx->current->cdata != NULL)
+    {
+      svn_stringbuf_appendbytes(xmlctx->current->cdata, data, len);
+    }
+  /* ... else if a CDATA_CB has been supplied, then invoke it for
+     all states.  */
+  else if (xmlctx->cdata_cb != NULL)
+    {
+      START_CALLBACK(xmlctx);
+      SVN_ERR(xmlctx->cdata_cb(xmlctx->current,
+                               xmlctx->baton,
+                               xmlctx->current->state,
+                               data, len,
+                               xmlctx->scratch_pool));
+      END_CALLBACK(xmlctx);
+      svn_pool_clear(xmlctx->scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }

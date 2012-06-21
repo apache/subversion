@@ -198,7 +198,7 @@ generate_random_file(apr_uint32_t maxlen,
               buf = file_buffer;
             }
 
-          *buf++ = ch;
+          *buf++ = (char)ch;
           r = r * 1103515245 + 12345;
         }
     }
@@ -336,10 +336,11 @@ random_test(apr_pool_t *pool)
                               delta_pool);
 
       /* Make stage 1: create the text delta.  */
-      svn_txdelta(&txdelta_stream,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream,
+                   svn_stream_from_aprfile(source, delta_pool),
+                   svn_stream_from_aprfile(target, delta_pool),
+                   FALSE,
+                   delta_pool);
 
       SVN_ERR(svn_txdelta_send_txstream(txdelta_stream,
                                         handler,
@@ -421,15 +422,17 @@ do_random_combine_test(apr_pool_t *pool,
 
       /* Make stage 1: create the text deltas.  */
 
-      svn_txdelta(&txdelta_stream_A,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(middle, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream_A,
+                   svn_stream_from_aprfile(source, delta_pool),
+                   svn_stream_from_aprfile(middle, delta_pool),
+                   FALSE,
+                   delta_pool);
 
-      svn_txdelta(&txdelta_stream_B,
-                  svn_stream_from_aprfile(middle_copy, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream_B,
+                   svn_stream_from_aprfile(middle_copy, delta_pool),
+                   svn_stream_from_aprfile(target, delta_pool),
+                   FALSE,
+                   delta_pool);
 
       {
         svn_txdelta_window_t *window_A;

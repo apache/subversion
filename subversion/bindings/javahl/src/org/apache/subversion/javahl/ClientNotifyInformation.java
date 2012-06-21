@@ -550,8 +550,11 @@ public class ClientNotifyInformation extends EventObject
         update_broken_lock ("broken lock removed"),
 
         /** Operation failed because a node is obstructed */
-        failed_obstructed ("failed by obstruction");
+        failed_obstructed ("failed by obstruction"),
 
+        /** Conflict resolver is starting/ending. */
+        conflict_resolver_starting ("conflict resolver starting"),
+        conflict_resolver_done ("conflict resolver done");
 
         /**
          * The description of the action.

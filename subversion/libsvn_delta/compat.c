@@ -1136,7 +1136,6 @@ add_symlink_cb(void *baton,
 #endif
 
   SVN__NOT_IMPLEMENTED();
-  return SVN_NO_ERROR;
 }
 
 /* This implements svn_editor_cb_add_absent_t */
@@ -1248,7 +1247,6 @@ alter_symlink_cb(void *baton,
   /* ### do something  */
 
   SVN__NOT_IMPLEMENTED();
-  return SVN_NO_ERROR;
 }
 
 /* This implements svn_editor_cb_delete_t */
@@ -1344,7 +1342,6 @@ rotate_cb(void *baton,
           apr_pool_t *scratch_pool)
 {
   SVN__NOT_IMPLEMENTED();
-  return SVN_NO_ERROR;
 }
 
 
