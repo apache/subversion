@@ -159,7 +159,7 @@ svn_client__youngest_common_ancestor(const char **ancestor_url,
 svn_error_t *
 svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                              const char *wc_abspath,
-                             svn_client_ctx_t *ctx,
+                             svn_wc_context_t *wc_ctx,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 

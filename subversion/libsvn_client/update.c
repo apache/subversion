@@ -222,7 +222,7 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Check if our anchor exists in BASE. If it doesn't we can't update. */
   SVN_ERR(svn_client__wc_node_get_base(&anchor_loc, anchor_abspath,
-                                       ctx, pool, pool));
+                                       ctx->wc_ctx, pool, pool));
 
   /* It does not make sense to update conflict victims. */
   err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
