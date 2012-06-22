@@ -22,6 +22,7 @@
  */
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.SVNTests.DefaultPromptUserPassword;
 import org.apache.subversion.javahl.callback.*;
 
 import java.net.URI;
@@ -31,6 +32,9 @@ import java.util.Map;
 import java.util.HashSet;
 import java.io.IOException;
 
+import org.apache.subversion.javahl.ra.ISVNRa;
+import org.apache.subversion.javahl.ra.SVNRaConfigDefault;
+import org.apache.subversion.javahl.ra.SVNRaFactory;
 import org.apache.subversion.javahl.types.Depth;
 import org.apache.subversion.javahl.types.Lock;
 import org.apache.subversion.javahl.types.NodeKind;
@@ -109,5 +113,32 @@ public class SVNRATests extends SVNTests
 
         kind = ra.checkPath("A", Revision.getInstance(1));
         assertEquals(NodeKind.dir, kind);
+    }
+    
+    public static ISVNRa getSession(String url, String configDirectory)
+    {
+        SVNRaConfigDefault config = new SVNRaConfigDefault();
+        config.setUsername(USERNAME);
+        config.setPassword(PASSWORD);
+        config.setPrompt(new DefaultPromptUserPassword());
+        config.setConfigDirectory(configDirectory);
+        
+        ISVNRa raSession = SVNRaFactory.createRaSession(url, null, config);
+
+        assertNotNull("Null session was returned by factory", raSession);
+
+        return raSession;
+    }
+    
+    private ISVNRa getSession()
+    {
+        return getSession(thisTest.getUrl().toASCIIString(), super.conf.getAbsolutePath());
+    }
+    
+    public void testGetLatestRevision() throws Exception
+    {
+        ISVNRa session = getSession();
+
+        assertEquals(1, session.getLatestRevision());
     }
 }
