@@ -122,19 +122,23 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
-      SVN_ERR(svn_client_mergeinfo_log(TRUE, target, &tgt_peg_revision,
-                                       source, &src_peg_revision,
-                                       print_log_rev, NULL,
-                                       TRUE, depth, NULL, ctx,
-                                       pool));
+      SVN_ERR(svn_client_mergeinfo_log2(TRUE, target, &tgt_peg_revision,
+                                        source, &src_peg_revision,
+                                        &(opt_state->start_revision),
+                                        &(opt_state->end_revision),
+                                        print_log_rev, NULL,
+                                        TRUE, depth, NULL, ctx,
+                                        pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
-      SVN_ERR(svn_client_mergeinfo_log(FALSE, target, &tgt_peg_revision,
-                                       source, &src_peg_revision,
-                                       print_log_rev, NULL,
-                                       TRUE, depth, NULL, ctx,
-                                       pool));
+      SVN_ERR(svn_client_mergeinfo_log2(FALSE, target, &tgt_peg_revision,
+                                        source, &src_peg_revision,
+                                        &(opt_state->start_revision),
+                                        &(opt_state->end_revision),
+                                        print_log_rev, NULL,
+                                        TRUE, depth, NULL, ctx,
+                                        pool));
     }
   return SVN_NO_ERROR;
 }
