@@ -397,10 +397,23 @@ def iprops_switched_subtrees(sbox):
     sbox.ospath('B/lambda'),
     expected_iprops, expected_explicit_props)
 
+  # Check that switched files have properties cached too.
+  # Switch the root of the WC to ^/A, then switch mu to ^/branch1/mu.
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A', wc_dir)
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/branch1/mu',
+                       sbox.ospath('mu'))
+  expected_iprops = {
+    sbox.repo_url              : {'Root-Prop-1' : 'Root-Prop-Val1'},
+    sbox.repo_url + '/branch1' : {'Branch-Name' : 'Feature #1'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('mu'),
+    expected_iprops, expected_explicit_props)
+
 #----------------------------------------------------------------------
 # Property inheritance with pegged wc and repos targets.
 def iprops_pegged_wc_targets(sbox):
-  "iprops of pegged targets at operative revs"
+  "iprops of pegged wc targets at operative revs"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1180,7 +1193,7 @@ def iprops_pegged_wc_targets(sbox):
 #----------------------------------------------------------------------
 # Property inheritance with pegged repos targets at operative revs.
 def iprops_pegged_url_targets(sbox):
-  "iprops of pegged targets at operative revs"
+  "iprops of pegged url targets at operative revs"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1404,6 +1417,92 @@ def iprops_pegged_url_targets(sbox):
     sbox.repo_url + '/A/D', expected_iprops, expected_explicit_props,
     'DirProp', 'HEAD', '-rHEAD')
 
+#----------------------------------------------------------------------
+# Inherited property caching during shallow updates.
+def iprops_shallow_operative_depths(sbox):
+  "iprop caching works with shallow updates"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2 - Create a branch..
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/branch1', '-m', 'Make branch1')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # r3 - Create a root property and some branch properties
+  sbox.simple_propset('Root-Prop-1', 'Root-Prop-Val1', '.')
+  sbox.simple_propset('Branch-Name', 'Feature #1', 'branch1')
+  sbox.simple_propset('Branch-Name', 'Trunk', 'A')
+  svntest.main.run_svn(None, 'commit', '-m', 'Add some properties',
+                       wc_dir)
+
+  # r4 - Change the root and a branch properties added in r3.
+  sbox.simple_propset('Root-Prop-1', 'Root-Prop-Val1.1', '.')
+  sbox.simple_propset('Branch-Name', 'Feature No. 1', 'branch1')
+  sbox.simple_propset('Branch-Name', 'Trunk Branch', 'A')
+  svntest.main.run_svn(None, 'commit', '-m', 'Change some properties',
+                       wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Switch the WC to ^/branch1:
+  svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
+                       sbox.repo_url + '/branch1', wc_dir)
+  # Switch the B to ^/A/B:
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A/B',
+                       sbox.ospath('B'))
+  # Switch the mu to ^/A/mu:
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A/mu',
+                       sbox.ospath('mu'))
+  # Update the whole WC back to r3.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r3', wc_dir)
+
+  # Check the inherited props on B/E within the switched subtree
+  # and the switched file mu.  The props should all be inherited
+  # from repository locations and reflect the values at r3.
+  expected_iprops = {
+    sbox.repo_url        : {'Root-Prop-1' : 'Root-Prop-Val1'},
+    sbox.repo_url + '/A' : {'Branch-Name' : 'Trunk'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('mu'), expected_iprops, expected_explicit_props)
+
+  # Update only the root of the WC (to HEAD=r4) using a shallow update.
+  # Again check the inherited props on B/E.  This shouldn't affect the
+  # switched subtree at all, the props it inherits should still reflect
+  # the values at r3.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth=empty', wc_dir)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('mu'), expected_iprops, expected_explicit_props)
+
+  # Update the root of the WC (to HEAD=r4) at depth=files.  B/E should
+  # still inherit vales from r3, but mu should now inherit props from r4.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth=files', wc_dir)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
+  expected_iprops = {
+    sbox.repo_url        : {'Root-Prop-1' : 'Root-Prop-Val1.1'},
+    sbox.repo_url + '/A' : {'Branch-Name' : 'Trunk Branch'}}
+  expected_explicit_props = {}
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('mu'), expected_iprops, expected_explicit_props)
+
+  # Update the root of the WC (to HEAD=r4) at depth=immediates.  Now both B/E
+  # and mu inherit props from r4.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth=immediates', wc_dir)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
+  svntest.actions.run_and_verify_inherited_prop_xml(
+    sbox.ospath('mu'), expected_iprops, expected_explicit_props)
+
 ########################################################################
 # Run the tests
 
@@ -1414,6 +1513,7 @@ test_list = [ None,
               iprops_switched_subtrees,
               iprops_pegged_wc_targets,
               iprops_pegged_url_targets,
+              iprops_shallow_operative_depths,
             ]
 
 if __name__ == '__main__':
