@@ -37,16 +37,15 @@ public class SVNRa extends JNIObject implements ISVNRa
 {
     @Override
     public native long getLatestRevision();
-    
-    public native long getDatedRevision(Date date)
-            throws SubversionException;
+
+    public native long getDatedRevision(Date date) throws SubversionException;
 
     public native Map<String, Lock> getLocks(String path, Depth depth)
             throws SubversionException;
 
     public native NodeKind checkPath(String path, Revision revision)
             throws SubversionException;
-        
+
     @Override
     public native void finalize() throws Throwable;
 
