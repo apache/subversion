@@ -5,7 +5,7 @@
 
 #include "RaSharedContext.h"
 
-class RaContext : public RaSharedContext
+class RaContext: public RaSharedContext
 {
   public:
     RaContext(jobject contextHolder, SVN::Pool &pool, jobject jconfig);

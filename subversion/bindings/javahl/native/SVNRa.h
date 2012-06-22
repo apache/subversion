@@ -15,7 +15,7 @@ class SVNEditor;
 /*
  * This class wraps Ra based operations from svn_ra.h
  */
-class SVNRa : public SVNBase
+class SVNRa: public SVNBase
 {
   public:
     static SVNRa *getCppObject(jobject jthis);
