@@ -24,6 +24,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
     * ra_serf avoids re-downloading content present in pristine store (r1333936)
+    * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
 
   - Client-side bugfixes:
     *
