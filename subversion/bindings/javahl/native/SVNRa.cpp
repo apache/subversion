@@ -3,6 +3,8 @@
 
 #include "svn_ra.h"
 
+#include "CreateJ.h"
+#include "EnumMapper.h"
 #include "SVNRa.h"
 
 #include "svn_private_config.h"
@@ -92,4 +94,44 @@ SVNRa::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
   SVNBase::dispose(jthis, &fid, JAVA_CLASS_SVN_RA);
+}
+
+svn_revnum_t
+SVNRa::getDatedRev(apr_time_t tm)
+{
+  SVN::Pool requestPool;
+  svn_revnum_t rev;
+
+  SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev, tm,
+                                        requestPool.getPool()),
+              SVN_INVALID_REVNUM);
+
+  return rev;
+}
+
+jobject
+SVNRa::getLocks(const char *path, svn_depth_t depth)
+{
+  SVN::Pool requestPool;
+  apr_hash_t *locks;
+
+  SVN_JNI_ERR(svn_ra_get_locks2(m_session, &locks, path, depth,
+                                requestPool.getPool()),
+              NULL);
+
+  return CreateJ::LockMap(locks, requestPool.getPool());
+}
+
+jobject
+SVNRa::checkPath(const char *path, Revision &revision)
+{
+  SVN::Pool requestPool;
+  svn_node_kind_t kind;
+
+  SVN_JNI_ERR(svn_ra_check_path(m_session, path,
+                                revision.revision()->value.number,
+                                &kind, requestPool.getPool()),
+              NULL);
+
+  return EnumMapper::mapNodeKind(kind);
 }

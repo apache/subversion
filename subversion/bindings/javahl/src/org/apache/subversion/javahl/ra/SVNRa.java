@@ -23,13 +23,30 @@
 
 package org.apache.subversion.javahl.ra;
 
+import java.util.Date;
+import java.util.Map;
+
 import org.apache.subversion.javahl.JNIObject;
+import org.apache.subversion.javahl.SubversionException;
+import org.apache.subversion.javahl.types.Depth;
+import org.apache.subversion.javahl.types.Lock;
+import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.Revision;
 
 public class SVNRa extends JNIObject implements ISVNRa
 {
     @Override
     public native long getLatestRevision();
+    
+    public native long getDatedRevision(Date date)
+            throws SubversionException;
 
+    public native Map<String, Lock> getLocks(String path, Depth depth)
+            throws SubversionException;
+
+    public native NodeKind checkPath(String path, Revision revision)
+            throws SubversionException;
+        
     @Override
     public native void finalize() throws Throwable;
 

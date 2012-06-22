@@ -4,6 +4,8 @@
 #include "JNIUtil.h"
 #include "Prompter.h"
 #include "SVNRa.h"
+#include "Revision.h"
+#include "EnumMapper.h"
 
 #include "svn_private_config.h"
 
@@ -34,4 +36,53 @@ Java_org_apache_subversion_javahl_ra_SVNRa_getLatestRevision(JNIEnv *env,
   CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
   return ras->getLatestRevision();
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRa_getDatedRevision
+(JNIEnv *env, jobject jthis, jobject jdate)
+{
+  JNIEntry(SVNRa, getDatedRevision);
+  SVNRa *ras = SVNRa::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
+
+  apr_time_t date = JNIUtil::getDate(jdate);
+  if (JNIUtil::isExceptionThrown())
+    return SVN_INVALID_REVNUM;
+
+  return ras->getDatedRev(date);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRa_getLocks
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth)
+{
+  JNIEntry(SVNRa, getLocks);
+  SVNRa *ras = SVNRa::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return ras->getLocks(path, EnumMapper::toDepth(jdepth));
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRa_checkPath
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
+{
+  JNIEntry(SVNReposAccess, checkPath);
+  SVNRa *ras = SVNRa::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision revision(jrevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return ras->checkPath(path, revision);
 }
