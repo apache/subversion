@@ -5,7 +5,7 @@
 #define STRING_RETURN_SIGNATURE "()Ljava/lang/String;"
 
 RaContext::RaContext(jobject contextHolder, SVN::Pool &pool, jobject jconfig)
-  :RaSharedContext(pool), m_raCallbacks(NULL)
+    : RaSharedContext(pool), m_raCallbacks(NULL)
 {
   /*
    * Extract config properties
@@ -19,67 +19,67 @@ RaContext::RaContext(jobject contextHolder, SVN::Pool &pool, jobject jconfig)
 
   if (midUsername == 0 || midPassword == 0 || midConfigDirectory == 0
       || midPrompt == 0)
-  {
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/ra/ISVNRaConfig");
-    if (JNIUtil::isJavaExceptionThrown())
-      return;
+    {
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/ra/ISVNRaConfig");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
 
-    midUsername = env->GetMethodID(clazz, "getUsername",
-        STRING_RETURN_SIGNATURE);
-    if (JNIUtil::isJavaExceptionThrown() || midUsername == 0)
-      return;
+      midUsername = env->GetMethodID(clazz, "getUsername",
+          STRING_RETURN_SIGNATURE);
+      if (JNIUtil::isJavaExceptionThrown() || midUsername == 0)
+        return;
 
-    midPassword = env->GetMethodID(clazz, "getPassword",
-        STRING_RETURN_SIGNATURE);
-    if (JNIUtil::isJavaExceptionThrown() || midPassword == 0)
-      return;
+      midPassword = env->GetMethodID(clazz, "getPassword",
+          STRING_RETURN_SIGNATURE);
+      if (JNIUtil::isJavaExceptionThrown() || midPassword == 0)
+        return;
 
-    midConfigDirectory = env->GetMethodID(clazz, "getConfigDirectory",
-        STRING_RETURN_SIGNATURE);
-    if (JNIUtil::isJavaExceptionThrown() || midConfigDirectory == 0)
-      return;
+      midConfigDirectory = env->GetMethodID(clazz, "getConfigDirectory",
+          STRING_RETURN_SIGNATURE);
+      if (JNIUtil::isJavaExceptionThrown() || midConfigDirectory == 0)
+        return;
 
-    midPrompt = env->GetMethodID(clazz, "getPrompt",
-        "()Lorg/apache/subversion/javahl/callback/UserPasswordCallback;");
-    if (JNIUtil::isJavaExceptionThrown() || midPrompt == 0)
-      return;
+      midPrompt = env->GetMethodID(clazz, "getPrompt",
+          "()Lorg/apache/subversion/javahl/callback/UserPasswordCallback;");
+      if (JNIUtil::isJavaExceptionThrown() || midPrompt == 0)
+        return;
 
-    env->DeleteLocalRef(clazz);
-  }
+      env->DeleteLocalRef(clazz);
+    }
 
   jstring jusername = (jstring) env->CallObjectMethod(jconfig, midUsername);
   if (JNIUtil::isExceptionThrown())
     return;
 
   if (jusername != NULL)
-  {
-    JNIStringHolder usernameStr(jusername);
-    if (JNIUtil::isExceptionThrown())
     {
-      return;
+      JNIStringHolder usernameStr(jusername);
+      if (JNIUtil::isExceptionThrown())
+        {
+          return;
+        }
+
+      username(usernameStr);
+
+      JNIUtil::getEnv()->DeleteLocalRef(jusername);
     }
-
-    username(usernameStr);
-
-    JNIUtil::getEnv()->DeleteLocalRef(jusername);
-  }
 
   jstring jpassword = (jstring) env->CallObjectMethod(jconfig, midPassword);
   if (JNIUtil::isExceptionThrown())
     return;
 
   if (jpassword != NULL)
-  {
-    JNIStringHolder passwordStr(jpassword);
-    if (JNIUtil::isExceptionThrown())
     {
-      return;
+      JNIStringHolder passwordStr(jpassword);
+      if (JNIUtil::isExceptionThrown())
+        {
+          return;
+        }
+
+      password(passwordStr);
+
+      JNIUtil::getEnv()->DeleteLocalRef(jpassword);
     }
-
-    password(passwordStr);
-
-    JNIUtil::getEnv()->DeleteLocalRef(jpassword);
-  }
 
   jstring jconfigDirectory = (jstring) env->CallObjectMethod(jconfig,
       midConfigDirectory);
@@ -88,11 +88,11 @@ RaContext::RaContext(jobject contextHolder, SVN::Pool &pool, jobject jconfig)
 
   JNIStringHolder configDirectory(jconfigDirectory);
   if (JNIUtil::isExceptionThrown())
-  {
-    return;
-  }
+    {
+      return;
+    }
 
-  setConfigDirectory (configDirectory);
+  setConfigDirectory(configDirectory);
 
   JNIUtil::getEnv()->DeleteLocalRef(jconfigDirectory);
 
@@ -101,14 +101,14 @@ RaContext::RaContext(jobject contextHolder, SVN::Pool &pool, jobject jconfig)
     return;
 
   if (jprompter != NULL)
-  {
-    Prompter *prompter = Prompter::makeCPrompter(jprompter);
-    if (JNIUtil::isExceptionThrown())
-      return;
+    {
+      Prompter *prompter = Prompter::makeCPrompter(jprompter);
+      if (JNIUtil::isExceptionThrown())
+        return;
 
-    setPrompt(prompter);
-    JNIUtil::getEnv()->DeleteLocalRef(jprompter);
-  }
+      setPrompt(prompter);
+      JNIUtil::getEnv()->DeleteLocalRef(jprompter);
+    }
 
   /*
    * Attach session context java object

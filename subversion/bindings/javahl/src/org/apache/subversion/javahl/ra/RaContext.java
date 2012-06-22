@@ -26,8 +26,8 @@ package org.apache.subversion.javahl.ra;
 import org.apache.subversion.javahl.RaSharedContext;
 
 /**
- *  This class is used internally by the JavaHL implementation and not
- *  considered part part of the public API. 
+ * This class is used internally by the JavaHL implementation and not considered
+ * part part of the public API.
  */
 public class RaContext extends RaSharedContext
 {

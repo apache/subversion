@@ -24,15 +24,15 @@ SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
 
   JNIStringHolder url(jurl);
   if (JNIUtil::isExceptionThrown())
-  {
-    return;
-  }
+    {
+      return;
+    }
 
   JNIStringHolder uuid(juuid);
   if (JNIUtil::isExceptionThrown())
-  {
-    return;
-  }
+    {
+      return;
+    }
 
   // Create java session object
   jclass clazz = env->FindClass(JAVA_CLASS_SVN_RA);
@@ -41,11 +41,11 @@ SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
 
   static jmethodID ctor = 0;
   if (ctor == 0)
-  {
-    ctor = env->GetMethodID(clazz, "<init>", "(J)V");
-    if (JNIUtil::isJavaExceptionThrown())
-      return;
-  }
+    {
+      ctor = env->GetMethodID(clazz, "<init>", "(J)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
 
   jlong cppAddr = this->getCppAddr();
 
@@ -62,17 +62,17 @@ SVNRa::SVNRa(jobject *jthis_out, jstring jurl, jstring juuid, jobject jconfig)
   //TODO: add corrected URL support
   SVN_JNI_ERR(
       svn_ra_open4(&m_session, NULL, url, uuid, m_context->getCallbacks(),
-          m_context->getCallbackBaton(), m_context->getConfigData(),
-          pool.getPool()),
+                   m_context->getCallbackBaton(), m_context->getConfigData(),
+                   pool.getPool()),
       );
 }
 
 SVNRa::~SVNRa()
 {
   if (m_context)
-  {
-    delete m_context;
-  }
+    {
+      delete m_context;
+    }
 }
 
 jlong

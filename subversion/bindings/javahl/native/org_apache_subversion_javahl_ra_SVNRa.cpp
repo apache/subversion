@@ -7,10 +7,8 @@
 
 #include "svn_private_config.h"
 
-
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_ra_SVNRa_finalize
-(JNIEnv *env, jobject jthis)
+Java_org_apache_subversion_javahl_ra_SVNRa_finalize(JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNRa, finalize);
   SVNRa *ras = SVNRa::getCppObject(jthis);
@@ -18,8 +16,8 @@ Java_org_apache_subversion_javahl_ra_SVNRa_finalize
     ras->finalize();
 }
 
-JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_ra_SVNRa_dispose
-(JNIEnv *env, jobject jthis)
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRa_dispose(JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNRa, dispose);
   SVNRa *ras = SVNRa::getCppObject(jthis);
@@ -27,8 +25,9 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_ra_SVNRa_dispose
     ras->dispose(jthis);
 }
 
-JNIEXPORT jlong JNICALL Java_org_apache_subversion_javahl_ra_SVNRa_getLatestRevision
-(JNIEnv *env, jobject jthis)
+JNIEXPORT jlong JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRa_getLatestRevision(JNIEnv *env,
+                                                             jobject jthis)
 {
   JNIEntry(SVNRa, getLatestRevision);
   SVNRa *ras = SVNRa::getCppObject(jthis);

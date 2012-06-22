@@ -8,8 +8,9 @@
 
 #include "svn_private_config.h"
 
-JNIEXPORT jobject JNICALL Java_org_apache_subversion_javahl_ra_SVNRaFactory_createRaSession
-(JNIEnv *env, jclass jclass, jstring jurl, jstring juuid, jobject jconfig)
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRaFactory_createRaSession(
+    JNIEnv *env, jclass jclass, jstring jurl, jstring juuid, jobject jconfig)
 {
   //JNI macros need jthis but this is a static call
   jobject jthis = NULL;
@@ -19,7 +20,7 @@ JNIEXPORT jobject JNICALL Java_org_apache_subversion_javahl_ra_SVNRaFactory_crea
    * Initialize ra layer if we have not done so yet
    */
   static bool initialized = false;
-  if(!initialized)
+  if (!initialized)
     {
       SVN_JNI_ERR(svn_ra_initialize(JNIUtil::getPool()), NULL);
       initialized = true;
