@@ -23,6 +23,15 @@
 
 package org.apache.subversion.javahl.ra;
 
+import java.util.Date;
+import java.util.Map;
+
+import org.apache.subversion.javahl.SubversionException;
+import org.apache.subversion.javahl.types.Depth;
+import org.apache.subversion.javahl.types.Lock;
+import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.Revision;
+
 /**
  * Represent an instance of RA session
  */
@@ -38,4 +47,17 @@ public interface ISVNRa
      * @return latest revision
      */
     public long getLatestRevision();
+    
+    /**
+     * @param date      The date
+     * @return          The latest revision at date
+     */
+    public long getDatedRevision(Date date)
+        throws SubversionException;
+
+    public Map<String, Lock> getLocks(String path, Depth depth)
+        throws SubversionException;
+
+    public NodeKind checkPath(String path, Revision revision)
+        throws SubversionException;
 }

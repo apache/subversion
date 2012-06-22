@@ -22,10 +22,6 @@
  */
 package org.apache.subversion.javahl;
 
-import org.apache.subversion.javahl.SVNTests.DefaultPromptUserPassword;
-import org.apache.subversion.javahl.callback.*;
-
-import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 import java.util.Map;
@@ -47,8 +43,6 @@ import org.apache.subversion.javahl.types.Revision;
  */
 public class SVNRATests extends SVNTests
 {
-    protected ISVNReposAccess ra;
-
     protected OneTest thisTest;
 
     public SVNRATests()
@@ -65,7 +59,6 @@ public class SVNRATests extends SVNTests
         super.setUp();
 
         thisTest = new OneTest();
-        ra = new SVNReposAccess(thisTest.getUrl());
     }
 
     /**
@@ -81,20 +74,24 @@ public class SVNRATests extends SVNTests
     public void testDatedRev()
         throws SubversionException, IOException
     {
-        long revision = ra.getDatedRevision(new Date());
+        ISVNRa session = getSession();
+
+        long revision = session.getDatedRevision(new Date());
         assertEquals(revision, 1);
     }
 
     public void testGetLocks()
         throws SubversionException, IOException
     {
+        ISVNRa session = getSession();
+
         Set<String> iotaPathSet = new HashSet<String>(1);
         String iotaPath = thisTest.getWCPath() + "/iota";
         iotaPathSet.add(iotaPath);
 
         client.lock(iotaPathSet, "foo", false);
 
-        Map<String, Lock> locks = ra.getLocks("iota", Depth.infinity);
+        Map<String, Lock> locks = session.getLocks("iota", Depth.infinity);
 
         assertEquals(locks.size(), 1);
         Lock lock = locks.get("/iota");
@@ -105,13 +102,15 @@ public class SVNRATests extends SVNTests
     public void testCheckPath()
         throws SubversionException, IOException
     {
-        NodeKind kind = ra.checkPath("iota", Revision.getInstance(1));
+        ISVNRa session = getSession();
+
+        NodeKind kind = session.checkPath("iota", Revision.getInstance(1));
         assertEquals(NodeKind.file, kind);
 
-        kind = ra.checkPath("iota", Revision.getInstance(0));
+        kind = session.checkPath("iota", Revision.getInstance(0));
         assertEquals(NodeKind.none, kind);
 
-        kind = ra.checkPath("A", Revision.getInstance(1));
+        kind = session.checkPath("A", Revision.getInstance(1));
         assertEquals(NodeKind.dir, kind);
     }
     

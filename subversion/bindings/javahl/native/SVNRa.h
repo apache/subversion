@@ -7,6 +7,7 @@
 
 #include "SVNBase.h"
 #include "RaContext.h"
+#include "Revision.h"
 
 #include <set>
 
@@ -23,6 +24,10 @@ class SVNRa: public SVNBase
     ~SVNRa();
 
     jlong getLatestRevision();
+
+    svn_revnum_t getDatedRev(apr_time_t time);
+    jobject getLocks(const char *path, svn_depth_t depth);
+    jobject checkPath(const char *path, Revision &revision);
 
     virtual void dispose(jobject jthis);
 
