@@ -1049,6 +1049,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  specified by the --show-revs option.  If --show-revs isn't passed,\n"
      "  it defaults to --show-revs='merged'.\n"
      "\n"
+     "  If --revision (-r) is provided, filter the displayed information to\n"
+     "  show only that which is associated with the revisions within the\n"
+     "  specified range.  Revision numbers, dates, and the 'HEAD' keyword are\n"
+     "  valid range values.\n"
+     "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
     {'r', 'R', opt_depth, opt_show_revs} },
 
@@ -2463,6 +2468,7 @@ main(int argc, const char *argv[])
   if (subcommand->cmd_func != svn_cl__blame
       && subcommand->cmd_func != svn_cl__diff
       && subcommand->cmd_func != svn_cl__log
+      && subcommand->cmd_func != svn_cl__mergeinfo
       && subcommand->cmd_func != svn_cl__merge)
     {
       if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
