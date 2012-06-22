@@ -25,13 +25,27 @@ TODO:
       05. JavaHL: Factored out common context for later use
           by SVNRa class                                     [br.@1352403]
           
-      06. JavaHL: Minimal implementation of SVNRa            [br.@1352419]
+      06. JavaHL: Minimal implementation of SVNRa:
+          getLatestRevision()                                [br.@1352419]
           
-      07. JavaHL: Merge existing SVNRepoAccess into SVNRA    [IN PROGRESS]
+      07. JavaHL: Merge existing SVNRepoAccess into SVNRa    [br.@1352737]
+
+      08. JavaHL: Move logic from JNI wrapper methods into
+          their C++ counterparts for consistency with the 
+          rest of the code                                   [IN PROGRESS]
+
+      09. JavaHL: Switch getDatedRevision from Date to long
+           to avoid issue #2359                              [IN PROGRESS]
 
           
    * Implement other ra functions not requiring additional
      code refactoring                                        [TODO]
+      
+      xx. JavaHL: Implement getUUID()                        [TODO]
+
+      xx. JavaHL: Implement getUrl()                         [TODO]
+
+      xx. JavaHL: Implement reparent()                       [TODO]
 
 
    * Apply editor support patches                            [TODO]
@@ -49,7 +63,7 @@ TODO:
           
       xx. JavaHL: Added SVN_JNI_BYTE_ARRAY macro to reduce
           amount of duplicate code dealing with jbyteArray
-          wrapper and checking for exceptions                [TODO]
+          wrapper and checking for exceptions                [POSTPONED]
       
       xx. JavaHL: Factor out common java string map
           processing into StringsTable class from
