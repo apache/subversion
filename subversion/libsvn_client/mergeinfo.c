@@ -1668,14 +1668,12 @@ svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
         (source_start_revision->kind == svn_opt_revision_number) ||
         (source_start_revision->kind == svn_opt_revision_date) ||
         (source_start_revision->kind == svn_opt_revision_head)))
-    return svn_error_create
-      (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
   if (!((source_end_revision->kind == svn_opt_revision_unspecified) ||
         (source_end_revision->kind == svn_opt_revision_number) ||
         (source_end_revision->kind == svn_opt_revision_date) ||
         (source_end_revision->kind == svn_opt_revision_head)))
-    return svn_error_create
-      (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
   if ((source_end_revision->kind == svn_opt_revision_unspecified)
       && (source_start_revision->kind != svn_opt_revision_unspecified))
     source_end_revision = source_start_revision;
