@@ -185,6 +185,8 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
+                svn_wc_conflict_resolver_func2_t conflict_func2,
+                void *conflict_baton2,
                 apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
@@ -374,7 +376,7 @@ update_internal(svn_revnum_t *result_rev,
                                     clean_checkout,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    conflict_func2, conflict_baton2,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -465,6 +467,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t innerupdate,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
+                            svn_wc_conflict_resolver_func2_t conflict_func2,
+                            void *conflict_baton2,
                             apr_pool_t *pool)
 {
   const char *anchor_abspath, *lockroot_abspath;
@@ -514,7 +518,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification, timestamp_sleep,
-                                FALSE, ctx, pool);
+                                FALSE, ctx, conflict_func2, conflict_baton2,
+                                pool);
           if (err)
             goto cleanup;
           anchor_abspath = missing_parent;
@@ -538,7 +543,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification, timestamp_sleep,
-                        TRUE, ctx, pool);
+                        TRUE, ctx, conflict_func2, conflict_baton2, pool);
  cleanup:
   err = svn_error_compose_create(
             err,
@@ -567,8 +572,6 @@ svn_client_update4(apr_array_header_t **result_revs,
   svn_boolean_t sleep = FALSE;
   /* Resolve conflicts post-update for 1.7 and above API users. */
   svn_boolean_t resolve_conflicts_post_update = (ctx->conflict_func2 != NULL);
-  svn_wc_conflict_resolver_func2_t conflict_func2;
-  void *conflict_baton2;
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -580,16 +583,6 @@ svn_client_update4(apr_array_header_t **result_revs,
       if (svn_path_is_url(path))
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("'%s' is not a local path"), path);
-    }
-
-  if (resolve_conflicts_post_update)
-    {
-      /* Remove the conflict resolution callback from the client context.
-       * We invoke it after of the update instead of during the update. */
-      conflict_func2 = ctx->conflict_func2;
-      conflict_baton2 = ctx->conflict_baton2;
-      ctx->conflict_func2 = NULL;
-      ctx->conflict_baton2 = NULL;
     }
 
   for (i = 0; i < paths->nelts; ++i)
@@ -612,7 +605,9 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         adds_as_modification,
                                         make_parents,
                                         FALSE, &sleep,
-                                        ctx, iterpool);
+                                        ctx,
+                                        NULL, NULL, /* postpone conflicts */
+                                        iterpool);
 
       if (err)
         {
@@ -657,7 +652,8 @@ svn_client_update4(apr_array_header_t **result_revs,
                                           "" /* resolve_prop (ALL props) */,
                                           TRUE /* resolve_tree */,
                                           svn_wc_conflict_choose_unspecified,
-                                          conflict_func2, conflict_baton2,
+                                          ctx->conflict_func2,
+                                          ctx->conflict_baton2,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           ctx->notify_func2, ctx->notify_baton2,
                                           iterpool);
