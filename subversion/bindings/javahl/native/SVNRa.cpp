@@ -104,6 +104,21 @@ SVNRa::getUUID()
   return juuid;
 }
 
+jstring
+SVNRa::getUrl()
+{
+  SVN::Pool subPool(pool);
+  const char * url;
+
+  SVN_JNI_ERR(svn_ra_get_session_url(m_session, &url, subPool.getPool()), NULL);
+
+  jstring jurl = JNIUtil::makeJString(url);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jurl;
+}
+
 void
 SVNRa::dispose(jobject jthis)
 {

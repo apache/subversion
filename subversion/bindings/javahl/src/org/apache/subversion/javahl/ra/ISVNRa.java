@@ -54,6 +54,11 @@ public interface ISVNRa
     public String getUUID();
     
     /**
+     * @return parent url for this session
+     */
+    public String getUrl();
+    
+    /**
      * @param date
      *            The date
      * @return The latest revision at date

@@ -131,7 +131,12 @@ public class SVNRATests extends SVNTests
     
     private ISVNRa getSession()
     {
-        return getSession(thisTest.getUrl().toASCIIString(), super.conf.getAbsolutePath());
+        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
+    }
+    
+    private String getTestRepoUrl()
+    {
+        return thisTest.getUrl().toASCIIString();
     }
     
     public void testGetLatestRevision() throws Exception
@@ -151,5 +156,12 @@ public class SVNRATests extends SVNTests
          * fixed UUID
          */
         assertNotNull(session.getUUID());
+    }
+
+    public void testGetUrl() throws Exception
+    {
+        ISVNRa session = getSession();
+
+        assertEquals(getTestRepoUrl(), session.getUrl());
     }
 }

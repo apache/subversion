@@ -49,6 +49,17 @@ Java_org_apache_subversion_javahl_ra_SVNRa_getUUID
   return ras->getUUID();
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_apache_subversion_javahl_ra_SVNRa_getUrl
+(JNIEnv *env, jobject jthis)
+{
+  JNIEntry(SVNRa, getUrl);
+  SVNRa *ras = SVNRa::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getUrl();
+}
+
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_ra_SVNRa_getDatedRevision
 (JNIEnv *env, jobject jthis, jlong timestamp)

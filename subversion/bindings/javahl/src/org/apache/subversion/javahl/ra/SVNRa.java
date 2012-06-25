@@ -43,6 +43,9 @@ public class SVNRa extends JNIObject implements ISVNRa
     
     @Override
     public native String getUUID();
+
+    @Override
+    public native String getUrl();
     
     public native long getDatedRevision(long timestamp) throws SubversionException;
 
