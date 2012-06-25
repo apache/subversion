@@ -232,6 +232,10 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
         svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
 
+def load_dumpstream(sbox, dump, *varargs):
+  "Load dump text without verification."
+  return load_and_verify_dumpstream(sbox, None, None, None, dump,
+                                    *varargs)
 
 ######################################################################
 # Tests
@@ -808,8 +812,7 @@ def load_with_parent_dir(sbox):
                                      ['\n', 'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample",
                                      "-m", "Create sample dir")
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
-                             '/sample')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', '/sample')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'
   svntest.actions.run_and_verify_svn(None,
@@ -831,8 +834,7 @@ def load_with_parent_dir(sbox):
                                      ['\n', 'Committed revision 11.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample-2",
                                      "-m", "Create sample-2 dir")
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
-                             'sample-2')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', 'sample-2')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'.
   svntest.actions.run_and_verify_svn(None,
@@ -1142,7 +1144,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
                                     'svnadmin_tests_data',
                                     'mergeinfo_included_full.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full, '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_full, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -1184,15 +1186,9 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   test_create(sbox)
 
   # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r1_10).read(), '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r11_13).read(), '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r14_15).read(), '--ignore-uuid')
 
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
@@ -1221,13 +1217,11 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
                                         'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full,
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_full, '--parent-dir', 'Projects/Project-X',
+                  '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.  This is exactly the
   # same expected mergeinfo we previously checked, except that the
@@ -1263,22 +1257,15 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   test_create(sbox)
 
   # Load this skeleton repos into the empty target:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r1_10).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r11_13).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r14_15).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
@@ -1590,13 +1577,13 @@ def load_ranges(sbox):
 
   # Load our dumpfile, 2 revisions at a time, verifying that we have
   # the correct youngest revision after each load.
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r0:2')
+  load_dumpstream(sbox, dumpdata, '-r0:2')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['2\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r3:4')
+  load_dumpstream(sbox, dumpdata, '-r3:4')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['4\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r5:6')
+  load_dumpstream(sbox, dumpdata, '-r5:6')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
                                          None, 'youngest', sbox.repo_dir)
 
