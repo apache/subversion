@@ -461,6 +461,10 @@ svn_client__make_local_parents(const char *path,
    target which are missing from the working copy.
 
    NOTE:  You may not specify both INNERUPDATE and MAKE_PARENTS as true.
+
+   Use CONFLICT_FUNC2 and CONFLICT_BATON2 instead of CTX->CONFLICT_FUNC2
+   and CTX->CONFLICT_BATON2. If CONFLICT_FUNC2 is NULL, postpone all conflicts
+   allowing the caller to perform post-update conflict resolution.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
@@ -475,6 +479,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t innerupdate,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
+                            svn_wc_conflict_resolver_func2_t conflict_func2,
+                            void *conflict_baton2,
                             apr_pool_t *pool);
 
 /* Checkout into LOCAL_ABSPATH a working copy of URL at REVISION, and (if not
