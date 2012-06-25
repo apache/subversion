@@ -94,8 +94,6 @@ switch_internal(svn_revnum_t *result_rev,
                                   : NULL;
   /* Resolve conflicts post-switch for 1.7 and above API users. */
   svn_boolean_t resolve_conflicts_post_switch = (ctx->conflict_func2 != NULL);
-  svn_wc_conflict_resolver_func2_t conflict_func2;
-  void *conflict_baton2;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -222,17 +220,6 @@ switch_internal(svn_revnum_t *result_rev,
                                  svn_dirent_dirname(local_abspath, pool));
     }
 
-  if (resolve_conflicts_post_switch)
-    {
-      /* Remove the conflict resolution callback from the client context.
-       * We invoke it after of the switch instead of during the switch. */
-      conflict_func2 = ctx->conflict_func2;
-      conflict_baton2 = ctx->conflict_baton2;
-      ctx->conflict_func2 = NULL;
-      ctx->conflict_baton2 = NULL;
-    }
-
-
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
@@ -252,7 +239,10 @@ switch_internal(svn_revnum_t *result_rev,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    resolve_conflicts_post_switch ?
+                                      NULL : ctx->conflict_func2,
+                                    resolve_conflicts_post_switch ?
+                                      NULL : ctx->conflict_baton2,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -347,7 +337,8 @@ switch_internal(svn_revnum_t *result_rev,
                                         "" /* resolve_prop (ALL props) */,
                                         TRUE /* resolve_tree */,
                                         svn_wc_conflict_choose_unspecified,
-                                        conflict_func2, conflict_baton2,
+                                        ctx->conflict_func2,
+                                        ctx->conflict_baton2,
                                         ctx->cancel_func, ctx->cancel_baton,
                                         ctx->notify_func2, ctx->notify_baton2,
                                         pool));
