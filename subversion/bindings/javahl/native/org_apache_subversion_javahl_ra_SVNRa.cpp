@@ -46,11 +46,7 @@ Java_org_apache_subversion_javahl_ra_SVNRa_getDatedRevision
   SVNRa *ras = SVNRa::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
-  apr_time_t date = JNIUtil::getDate(jdate);
-  if (JNIUtil::isExceptionThrown())
-    return SVN_INVALID_REVNUM;
-
-  return ras->getDatedRev(date);
+  return ras->getDatedRev(jdate);
 }
 
 JNIEXPORT jobject JNICALL
@@ -61,11 +57,7 @@ Java_org_apache_subversion_javahl_ra_SVNRa_getLocks
   SVNRa *ras = SVNRa::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, NULL);
 
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  return ras->getLocks(path, EnumMapper::toDepth(jdepth));
+  return ras->getLocks(jpath, jdepth);
 }
 
 JNIEXPORT jobject JNICALL
@@ -76,13 +68,5 @@ Java_org_apache_subversion_javahl_ra_SVNRa_checkPath
   SVNRa *ras = SVNRa::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, NULL);
 
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  Revision revision(jrevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  return ras->checkPath(path, revision);
+  return ras->checkPath(jpath, jrevision);
 }
