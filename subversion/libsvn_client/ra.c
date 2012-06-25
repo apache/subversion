@@ -245,7 +245,7 @@ invalidate_wc_props(void *baton,
 static svn_error_t *
 get_wc_contents(void *baton,
                 svn_stream_t **contents,
-                const svn_checksum_t *sha1_checksum,
+                const svn_checksum_t *checksum,
                 apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
@@ -260,7 +260,7 @@ get_wc_contents(void *baton,
              svn_wc__get_pristine_contents_by_checksum(contents,
                                                        cb->ctx->wc_ctx,
                                                        cb->base_dir_abspath,
-                                                       sha1_checksum,
+                                                       checksum,
                                                        pool, pool));
 }
 
