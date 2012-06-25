@@ -910,10 +910,10 @@ def reflect_dropped_renumbered_revs(sbox):
                                      "-m", "Create toplevel dir")
 
   # Load the dump stream in sbox.repo_url
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], None, False, dumpfile)
 
   # Load the dump stream in toplevel dir
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+  load_and_verify_dumpstream(sbox,[],[], None, False, dumpfile, '--parent-dir',
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
