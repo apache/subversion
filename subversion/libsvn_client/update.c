@@ -637,7 +637,6 @@ svn_client_update4(apr_array_header_t **result_revs,
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
 
-  svn_pool_destroy(iterpool);
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
@@ -648,6 +647,7 @@ svn_client_update4(apr_array_header_t **result_revs,
           svn_error_t *err = SVN_NO_ERROR;
           const char *local_abspath;
 
+          svn_pool_clear(iterpool);
           path = APR_ARRAY_IDX(paths, i, const char *);
 
           /* Resolve conflicts within the updated subtree. */
@@ -660,7 +660,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                                           conflict_func2, conflict_baton2,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           ctx->notify_func2, ctx->notify_baton2,
-                                          pool);
+                                          iterpool);
           if (err)
             {
               if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
@@ -670,6 +670,8 @@ svn_client_update4(apr_array_header_t **result_revs,
             }
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
