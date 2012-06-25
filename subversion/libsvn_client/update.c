@@ -663,7 +663,8 @@ svn_client_update4(apr_array_header_t **result_revs,
                                           iterpool);
           if (err)
             {
-              if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+              if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+                  && (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
                 return svn_error_trace(err);
 
               svn_error_clear(err);
