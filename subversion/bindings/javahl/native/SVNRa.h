@@ -25,9 +25,9 @@ class SVNRa: public SVNBase
 
     jlong getLatestRevision();
 
-    svn_revnum_t getDatedRev(apr_time_t time);
-    jobject getLocks(const char *path, svn_depth_t depth);
-    jobject checkPath(const char *path, Revision &revision);
+    svn_revnum_t getDatedRev(jobject date);
+    jobject getLocks(jstring jpath, jobject jdepth);
+    jobject checkPath(jstring jpath, jobject jrevision);
 
     virtual void dispose(jobject jthis);
 

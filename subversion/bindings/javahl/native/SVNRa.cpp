@@ -97,10 +97,14 @@ SVNRa::dispose(jobject jthis)
 }
 
 svn_revnum_t
-SVNRa::getDatedRev(apr_time_t tm)
+SVNRa::getDatedRev(jobject jdate)
 {
   SVN::Pool requestPool;
   svn_revnum_t rev;
+
+  apr_time_t tm = JNIUtil::getDate(jdate);
+  if (JNIUtil::isExceptionThrown())
+    return SVN_INVALID_REVNUM;
 
   SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev, tm,
                                         requestPool.getPool()),
@@ -110,10 +114,18 @@ SVNRa::getDatedRev(apr_time_t tm)
 }
 
 jobject
-SVNRa::getLocks(const char *path, svn_depth_t depth)
+SVNRa::getLocks(jstring jpath, jobject jdepth)
 {
   SVN::Pool requestPool;
   apr_hash_t *locks;
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  svn_depth_t depth = EnumMapper::toDepth(jdepth);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
   SVN_JNI_ERR(svn_ra_get_locks2(m_session, &locks, path, depth,
                                 requestPool.getPool()),
@@ -123,10 +135,18 @@ SVNRa::getLocks(const char *path, svn_depth_t depth)
 }
 
 jobject
-SVNRa::checkPath(const char *path, Revision &revision)
+SVNRa::checkPath(jstring jpath, jobject jrevision)
 {
   SVN::Pool requestPool;
   svn_node_kind_t kind;
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision revision(jrevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
   SVN_JNI_ERR(svn_ra_check_path(m_session, path,
                                 revision.revision()->value.number,
