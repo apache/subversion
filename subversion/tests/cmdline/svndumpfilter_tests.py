@@ -658,7 +658,7 @@ def accepts_deltas(sbox):
 
   filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
                                                         "trunk", "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+  load_and_verify_dumpstream(sbox, [], [], None, False, filtered_out)
 
   
 

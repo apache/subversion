@@ -184,11 +184,12 @@ def get_txns(repo_dir):
   return txns
 
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
-                               revs, dump, *varargs):
-  """Load the array of lines passed in 'dump' into the
-  current tests' repository and verify the repository content
-  using the array of wc.States passed in revs. VARARGS are optional
-  arguments passed to the 'load' command"""
+                               revs, check_props, dump, *varargs):
+  """Load the array of lines passed in DUMP into the current tests'
+  repository and verify the repository content using the array of
+  wc.States passed in REVS.  If CHECK_PROPS is True, check properties
+  of each rev's items.  VARARGS are optional arguments passed to the
+  'load' command."""
 
   if isinstance(dump, str):
     dump = [ dump ]
@@ -223,7 +224,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                          "update", "-r%s" % (rev+1),
                                          sbox.wc_dir)
 
-      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
+      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir, check_props)
       rev_tree = revs[rev].old_tree()
 
       try:
@@ -234,7 +235,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
 
 def load_dumpstream(sbox, dump, *varargs):
   "Load dump text without verification."
-  return load_and_verify_dumpstream(sbox, None, None, None, dump,
+  return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
 ######################################################################
@@ -312,7 +313,7 @@ def extra_headers(sbox):
   dumpfile[3:3] = \
        [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
 #----------------------------------------------------------------------
@@ -331,7 +332,7 @@ def extra_blockcontent(sbox):
   # Insert the extra content after "PROPS-END\n"
   dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
 #----------------------------------------------------------------------
@@ -345,7 +346,7 @@ def inconsistent_headers(sbox):
   dumpfile[-2] = "Content-length: 30\n\n"
 
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dumpfile)
+                             dumpfile_revisions, False, dumpfile)
 
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
@@ -365,7 +366,7 @@ def empty_date(sbox):
          "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
          ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
   # Verify that the revision still lacks the svn:date property.
@@ -1389,7 +1390,7 @@ text
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dump_str,
+                             dumpfile_revisions, False, dump_str,
                              '--ignore-uuid')
 
   # Now try it again bypassing prop validation.  (This interface takes
@@ -1410,8 +1411,8 @@ def verify_non_utf8_paths(sbox):
   test_create(sbox)
 
   # Load the dumpstream
-  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, dumpfile,
-                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
+                             dumpfile, '--ignore-uuid')
 
   # Replace the path 'A' in revision 1 with a non-UTF-8 sequence.
   # This has been observed in repositories in the wild, though Subversion
