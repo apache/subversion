@@ -54,6 +54,12 @@ public interface ISVNRa
      * @return The latest revision at date
      */
     public long getDatedRevision(Date date) throws SubversionException;
+    
+    /**
+     * @param timestamp (in nano seconds) used as a cutoff time 
+     * @return the latest revision at that moment
+     */
+    public long getDatedRevision(long timestamp) throws SubversionException;
 
     public Map<String, Lock> getLocks(String path, Depth depth)
             throws SubversionException;

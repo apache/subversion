@@ -23,6 +23,9 @@
 
 package org.apache.subversion.javahl.ra;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 import java.util.Date;
 import java.util.Map;
 
@@ -38,7 +41,13 @@ public class SVNRa extends JNIObject implements ISVNRa
     @Override
     public native long getLatestRevision();
 
-    public native long getDatedRevision(Date date) throws SubversionException;
+    public native long getDatedRevision(long timestamp) throws SubversionException;
+
+    public long getDatedRevision(Date date) throws SubversionException
+    {
+        long timestamp = NANOSECONDS.convert(date.getTime(), MILLISECONDS);
+        return getDatedRevision(timestamp);
+    }
 
     public native Map<String, Lock> getLocks(String path, Depth depth)
             throws SubversionException;
