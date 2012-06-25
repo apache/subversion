@@ -140,4 +140,16 @@ public class SVNRATests extends SVNTests
 
         assertEquals(1, session.getLatestRevision());
     }
+
+    public void testGetUUID() throws Exception
+    {
+        ISVNRa session = getSession();
+
+        /*
+         * Test UUID
+         * TODO: Test for actual UUID once test dump file has
+         * fixed UUID
+         */
+        assertNotNull(session.getUUID());
+    }
 }
