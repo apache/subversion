@@ -4,7 +4,7 @@ catch-up merges from the trunk.
 
 TODO:
 
-   * Prepare existing code for merging of SVNRa editor       [IN PROGRESS]
+   * Prepare existing code for merging of SVNRa editor       [COMPLETED]
    
       01. JavaHL: Changed return value from the 
           java svn_stream_t read function to be compatible 
@@ -32,23 +32,27 @@ TODO:
 
       08. JavaHL: Move logic from JNI wrapper methods into
           their C++ counterparts for consistency with the 
-          rest of the code                                   [IN PROGRESS]
+          rest of the code                                   [br.@1353373]
 
       09. JavaHL: Switch getDatedRevision from Date to long
-           to avoid issue #2359                              [IN PROGRESS]
+           to avoid issue #2359                              [br.@1353376]
 
           
    * Implement other ra functions not requiring additional
-     code refactoring                                        [TODO]
+     code refactoring                                        [IN PROGRESS]
       
-      xx. JavaHL: Implement getUUID()                        [TODO]
+      10. JavaHL: Implement getUUID()                        [br.@1353377]
 
-      xx. JavaHL: Implement getUrl()                         [TODO]
+      11. JavaHL: Implement getUrl()                         [br.@1353380]
 
-      xx. JavaHL: Implement reparent()                       [TODO]
+      12. JavaHL: Implement reparent()                       [IN PROGRESS]
+
+      13. JavaHL: Implement getRoot()                        [IN PROGRESS]
+
+      14. JavaHL: Implement setProgressCallback()            [IN PROGRESS]
 
 
-   * Apply editor support patches                            [TODO]
+   * Apply editor support patches                            [IN PROGRESS]
       xx. JavaHL: Support returning non const, empty rather
           than NULL hash as required by 
           (svn_ra_get_commit_editor3) 
@@ -56,10 +60,10 @@ TODO:
           
       xx. JavaHL: Support keeping global reference to the
           callback java object as required by the RA API due
-          to callback being used across method calls         [TODO]
+          to callback being used across method calls         [IN REVIEW]
           
       xx. JavaHL: Added support for creating of svn_string_t
-          from JNIByteArray                                  [TODO]
+          from JNIByteArray                                  [IN PROGRESS]
           
       xx. JavaHL: Added SVN_JNI_BYTE_ARRAY macro to reduce
           amount of duplicate code dealing with jbyteArray
@@ -68,10 +72,10 @@ TODO:
       xx. JavaHL: Factor out common java string map
           processing into StringsTable class from
           svn_string_t specific processing in the
-          RevpropTable class                                 [TODO]
+          RevpropTable class                                 [IN PROGRESS]
 
           
-   * Commit RA editor implementation                         [TODO]
+   * Commit RA editor implementation                         [IN PROGRESS]
 
 
    * Use of the java runtime exceptions                      [TODO]
@@ -85,6 +89,28 @@ TODO:
 
 
    * RA Ev2 implementation                                   [TODO]
+
+
+   * Tidyups                                                 [TODO]
+   
+     xx. JavaHL: Use static dump file in test so that 
+         commit times and UUID properties can be tested      [TODO]
+
+     xx. Make sure all functions declarations match 
+         exceptions that can be thrown from them             [TODO]
+
+     xx. Reparent() call with "BAD" url causes JVM to
+         segfault                                            [TODO]
+
+     xx. Document that SVNRa class is not part of public API
+         only ISVNRa is                                      [TODO]
+
+     xx. Implement RaSession builder to make default use
+         case as simple as possible                          [TODO]
+
+     xx. Check all error messages to make sure standard SVN 
+         ones are used where possible. For new ones check
+         compliance with project standards                   [TODO]
 
 
    * Branch Review                                           [TODO]
