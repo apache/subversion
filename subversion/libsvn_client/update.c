@@ -643,23 +643,32 @@ svn_client_update4(apr_array_header_t **result_revs,
 
   if (resolve_conflicts_post_update)
     {
-      const char *common_abspath;
+      for (i = 0; i < paths->nelts; ++i)
+        {
+          svn_error_t *err = SVN_NO_ERROR;
+          const char *local_abspath;
 
-      /* Resolve conflicts within the updated subtree.
-       * ### This will resolve conflicts which are siblings of paths in
-       * ### the target list but were not part of this update. */
-      SVN_ERR(svn_dirent_condense_targets(&common_abspath, NULL, paths,
-                                          TRUE, pool, pool));
-      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, common_abspath,
-                                        depth,
-                                        TRUE /* resolve_text */,
-                                        "" /* resolve_prop (ALL props) */,
-                                        TRUE /* resolve_tree */,
-                                        svn_wc_conflict_choose_unspecified,
-                                        conflict_func2, conflict_baton2,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        ctx->notify_func2, ctx->notify_baton2,
-                                        pool));
+          path = APR_ARRAY_IDX(paths, i, const char *);
+
+          /* Resolve conflicts within the updated subtree. */
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
+          err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath, depth,
+                                          TRUE /* resolve_text */,
+                                          "" /* resolve_prop (ALL props) */,
+                                          TRUE /* resolve_tree */,
+                                          svn_wc_conflict_choose_unspecified,
+                                          conflict_func2, conflict_baton2,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          ctx->notify_func2, ctx->notify_baton2,
+                                          pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+                return svn_error_trace(err);
+
+              svn_error_clear(err);
+            }
+        }
     }
 
   return SVN_NO_ERROR;
