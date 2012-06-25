@@ -97,14 +97,12 @@ SVNRa::dispose(jobject jthis)
 }
 
 svn_revnum_t
-SVNRa::getDatedRev(jobject jdate)
+SVNRa::getDatedRev(jlong timestamp)
 {
   SVN::Pool requestPool;
   svn_revnum_t rev;
 
-  apr_time_t tm = JNIUtil::getDate(jdate);
-  if (JNIUtil::isExceptionThrown())
-    return SVN_INVALID_REVNUM;
+  apr_time_t tm = timestamp;
 
   SVN_JNI_ERR(svn_ra_get_dated_revision(m_session, &rev, tm,
                                         requestPool.getPool()),

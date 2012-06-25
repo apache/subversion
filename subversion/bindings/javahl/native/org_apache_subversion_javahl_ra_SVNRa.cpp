@@ -40,13 +40,13 @@ Java_org_apache_subversion_javahl_ra_SVNRa_getLatestRevision(JNIEnv *env,
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_ra_SVNRa_getDatedRevision
-(JNIEnv *env, jobject jthis, jobject jdate)
+(JNIEnv *env, jobject jthis, jlong timestamp)
 {
   JNIEntry(SVNRa, getDatedRevision);
   SVNRa *ras = SVNRa::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
 
-  return ras->getDatedRev(jdate);
+  return ras->getDatedRev(timestamp);
 }
 
 JNIEXPORT jobject JNICALL
