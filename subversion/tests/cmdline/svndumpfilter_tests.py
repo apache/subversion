@@ -654,11 +654,28 @@ def accepts_deltas(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'simple_v3.dump')
-  dumpfile = open(dumpfile_location).read()
+  dump_in = open(dumpfile_location).read()
 
-  filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
+  dump_out, err = filter_and_return_output(dump_in, 0, "include",
                                                         "trunk", "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, False, filtered_out)
+
+  expected_revs = [
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'soup': 'No soup for you!'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'soup': 'No soup for you!'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'story': 'Yada yada yada...'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    ]
+
+  load_and_verify_dumpstream(sbox, [], [], expected_revs, True, dump_out,
+                             '--ignore-uuid')
 
   
 

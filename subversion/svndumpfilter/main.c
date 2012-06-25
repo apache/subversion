@@ -110,6 +110,28 @@ write_prop_to_stringbuf(svn_stringbuf_t *strbuf,
 }
 
 
+/* Writes a property deletion in dumpfile format to given stringbuf. */
+static void
+write_propdel_to_stringbuf(svn_stringbuf_t **strbuf,
+                           const char *name)
+{
+  int bytes_used;
+  size_t namelen;
+  char buf[SVN_KEYLINE_MAXLEN];
+
+  /* Output name length, then name. */
+  namelen = strlen(name);
+  svn_stringbuf_appendbytes(*strbuf, "D ", 2);
+
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, namelen);
+  svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
+  svn_stringbuf_appendbyte(*strbuf, '\n');
+
+  svn_stringbuf_appendbytes(*strbuf, name, namelen);
+  svn_stringbuf_appendbyte(*strbuf, '\n');
+}
+
+
 /* Compare the node-path PATH with the (const char *) prefixes in PFXLIST.
  * Return TRUE if any prefix is a prefix of PATH (matching whole path
  * components); FALSE otherwise.
@@ -187,6 +209,7 @@ struct parse_baton_t
   svn_boolean_t do_renumber_revs;
   svn_boolean_t preserve_revprops;
   svn_boolean_t skip_missing_merge_sources;
+  svn_boolean_t allow_deltas;
   apr_array_header_t *prefixes;
 
   /* Input and output streams. */
@@ -250,6 +273,13 @@ struct node_baton_t
   /* Pointers to dumpfile data. */
   svn_stringbuf_t *header;
   svn_stringbuf_t *props;
+
+  /* Expect deltas? */
+  svn_boolean_t has_prop_delta;
+  svn_boolean_t has_text_delta;
+
+  /* We might need the node path in a parse error message. */
+  char *node_path;
 };
 
 
@@ -261,6 +291,10 @@ static svn_error_t *
 magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
 {
   struct parse_baton_t *pb = parse_baton;
+
+  if (version >= SVN_REPOS_DUMPFILE_FORMAT_VERSION_DELTAS)
+    pb->allow_deltas = TRUE;
+
   SVN_ERR(svn_stream_printf(pb->out_stream, pool,
                             SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
                             version));
@@ -566,10 +600,13 @@ new_node_record(void **node_baton,
 
       nb->has_props = FALSE;
       nb->has_text = FALSE;
+      nb->has_prop_delta = FALSE;
+      nb->has_text_delta = FALSE;
       nb->writing_begun = FALSE;
       nb->tcl = tcl ? svn__atoui64(tcl) : 0;
       nb->header = svn_stringbuf_create_empty(pool);
       nb->props = svn_stringbuf_create_empty(pool);
+      nb->node_path = apr_pstrdup(pool, node_path);
 
       /* Now we know for sure that we have a node that will not be
          skipped, flush the revision if it has not already been done. */
@@ -581,6 +618,14 @@ new_node_record(void **node_baton,
         {
           const char *key = svn__apr_hash_index_key(hi);
           const char *val = svn__apr_hash_index_val(hi);
+
+          if ((!strcmp(key, SVN_REPOS_DUMPFILE_PROP_DELTA))
+              && (!strcmp(val, "true")))
+            nb->has_prop_delta = TRUE;
+
+          if ((!strcmp(key, SVN_REPOS_DUMPFILE_TEXT_DELTA))
+              && (!strcmp(val, "true")))
+            nb->has_text_delta = TRUE;
 
           if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
               || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
@@ -804,10 +849,12 @@ set_node_property(void *node_baton,
   if (nb->do_skip)
     return SVN_NO_ERROR;
 
-  if (!nb->has_props)
-    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            _("Delta property block detected - "
-                              "not supported by svndumpfilter"));
+  if (! (nb->has_props || nb->has_prop_delta))
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Delta property block detected, but deltas "
+                               "are not enabled for node '%s' in original "
+                               "revision %ld"),
+                             nb->node_path, rb->rev_orig);
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
@@ -817,7 +864,31 @@ set_node_property(void *node_baton,
       value = filtered_mergeinfo;
     }
 
+  nb->has_props = TRUE;
   write_prop_to_stringbuf(nb->props, name, value);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_node_property(void *node_baton, const char *name)
+{
+  struct node_baton_t *nb = node_baton;
+  struct revision_baton_t *rb = nb->rb;
+
+  if (nb->do_skip)
+    return SVN_NO_ERROR;
+
+  if (!nb->has_prop_delta)
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Delta property block detected, but deltas "
+                               "are not enabled for node '%s' in original"
+                               "revision %ld"),
+                             nb->node_path, rb->rev_orig);
+ 
+  nb->has_props = TRUE;
+  write_propdel_to_stringbuf(&(nb->props), name);
 
   return SVN_NO_ERROR;
 }
@@ -899,7 +970,7 @@ svn_repos_parse_fns3_t filtering_vtable =
     new_node_record,
     set_revision_property,
     set_node_property,
-    NULL,
+    delete_node_property,
     remove_node_props,
     set_fulltext,
     NULL,
@@ -1045,6 +1116,7 @@ parse_baton_initialize(struct parse_baton_t **pb,
   baton->renumber_history = apr_hash_make(pool);
   baton->last_live_revision = SVN_INVALID_REVNUM;
   baton->oldest_original_rev = SVN_INVALID_REVNUM;
+  baton->allow_deltas = FALSE;
 
   *pb = baton;
   return SVN_NO_ERROR;
