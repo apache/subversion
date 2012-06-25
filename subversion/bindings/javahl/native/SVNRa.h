@@ -24,6 +24,7 @@ class SVNRa: public SVNBase
     ~SVNRa();
 
     jlong getLatestRevision();
+    jstring getUUID();
 
     svn_revnum_t getDatedRev(jlong timestamp);
     jobject getLocks(jstring jpath, jobject jdepth);

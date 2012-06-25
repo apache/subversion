@@ -89,6 +89,21 @@ SVNRa::getLatestRevision()
   return rev;
 }
 
+jstring
+SVNRa::getUUID()
+{
+  SVN::Pool subPool(pool);
+  const char * uuid;
+
+  SVN_JNI_ERR(svn_ra_get_uuid2(m_session, &uuid, subPool.getPool()), NULL);
+
+  jstring juuid = JNIUtil::makeJString(uuid);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return juuid;
+}
+
 void
 SVNRa::dispose(jobject jthis)
 {
