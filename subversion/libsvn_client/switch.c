@@ -92,8 +92,6 @@ switch_internal(svn_revnum_t *result_rev,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
                                   : NULL;
-  /* Resolve conflicts post-switch for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_switch = (ctx->conflict_func2 != NULL);
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -325,7 +323,7 @@ switch_internal(svn_revnum_t *result_rev,
   if (result_rev)
     *result_rev = revnum;
 
-  if (resolve_conflicts_post_switch)
+  if (ctx->conflict_func2)
     {
       /* Resolve conflicts within the switched target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,

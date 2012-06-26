@@ -9546,8 +9546,6 @@ merge_locked(const char *source1,
   svn_client__pathrev_t *yca = NULL;
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
-  /* Resolve conflicts post-merge for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
 
   /* ### FIXME: This function really ought to do a history check on
      the left and right sides of the merge source, and -- if one is an
@@ -9694,7 +9692,7 @@ merge_locked(const char *source1,
   if (err)
     return svn_error_trace(err);
 
-  if (resolve_conflicts_post_merge)
+  if (ctx->conflict_func2)
     {
       /* Resolve conflicts within the merge target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
@@ -10970,8 +10968,6 @@ merge_peg_locked(const char *source_path_or_url,
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
-  /* Resolve conflicts post-merge for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
@@ -11009,7 +11005,7 @@ merge_peg_locked(const char *source_path_or_url,
   /* We're done with our RA session. */
   svn_pool_destroy(sesspool);
 
-  if (resolve_conflicts_post_merge)
+  if (ctx->conflict_func2)
     {
       /* Resolve conflicts within the merge target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
@@ -11618,8 +11614,6 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
   merge_target_t *target;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
-  /* Resolve conflicts post-merge for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_merge = (ctx->conflict_func2 != NULL);
 
   SVN_ERR(open_target_wc(&target, target_abspath, TRUE, TRUE, TRUE,
                          ctx, scratch_pool, scratch_pool));
@@ -11680,7 +11674,7 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
 
   SVN_ERR(err);
 
-  if (resolve_conflicts_post_merge)
+  if (ctx->conflict_func2)
     {
       /* Resolve conflicts within the merge target. */
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,

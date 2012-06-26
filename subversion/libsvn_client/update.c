@@ -570,8 +570,6 @@ svn_client_update4(apr_array_header_t **result_revs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
-  /* Resolve conflicts post-update for 1.7 and above API users. */
-  svn_boolean_t resolve_conflicts_post_update = (ctx->conflict_func2 != NULL);
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -635,7 +633,7 @@ svn_client_update4(apr_array_header_t **result_revs,
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
-  if (resolve_conflicts_post_update)
+  if (ctx->conflict_func2)
     {
       for (i = 0; i < paths->nelts; ++i)
         {
