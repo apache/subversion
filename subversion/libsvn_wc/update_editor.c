@@ -5341,7 +5341,7 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
       return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, err, err->message);
     }
 
-  *wc_root = is_root || (kind == svn_kind_dir && is_switched);
+  *wc_root = is_root || is_switched;
 
   return SVN_NO_ERROR;
 }

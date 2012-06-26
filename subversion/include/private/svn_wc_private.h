@@ -922,6 +922,69 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *inherited_props to a depth-first ordered array of
+ * #svn_prop_inherited_item_t * structures representing the properties
+ * inherited by @a local_abspath from the ACTUAL tree above
+ * @a local_abspath (looking through to the WORKING or BASE tree as
+ * required), up to and including the root of the working copy and
+ * any cached inherited properties inherited by the root.  If any
+ * cached inherited properties are found or a working copy parent
+ * representing the repository root is reached, then set
+ * @a *cached_iprops_found to TRUE, set it to FALSE otherwise.
+ *
+ * Allocate @a *inherited_props in @a result_pool.  Use @a scratch_pool
+ * for temporary allocations.
+ */
+svn_error_t *
+svn_wc__get_iprops(apr_array_header_t **inherited_props,
+                   svn_boolean_t *cached_iprops_found,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *propname,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Cache the inherited properties @a inherited_props (a depth-first ordered
+ * array of #svn_prop_inherited_item_t * structures) for the BASE node at
+ * @a local_abspath.  If there is no base node at @a local_abspath, then do
+ * nothing.  If @a local_abspath is not in the working copy, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__cache_iprops(apr_array_header_t *inherited_props,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Delete all cached inherited properties for the BASE node at LOCAL_ABSPATH.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__delete_iprops(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *iprops_paths to a hash mapping const char * absolute working
+ * copy paths to the same for each path in the working copy at or below
+ * @a local_abspath, limited by @a depth, that has cached inherited
+ * properties for the base node of the path.  Allocate @a *iprop_paths
+ * in @a result_pool.  Use @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__get_cached_iprop_children(apr_hash_t **iprop_paths,
+                                  svn_depth_t depth,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 /**
  * For use by entries.c and entries-dump.c to read old-format working copies.

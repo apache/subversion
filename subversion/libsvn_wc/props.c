@@ -46,6 +46,7 @@
 #include "svn_wc.h"
 #include "svn_utf.h"
 #include "svn_diff.h"
+#include "svn_sorts.h"
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
@@ -2731,4 +2732,254 @@ svn_wc__has_magic_property(const apr_array_header_t *properties)
         return TRUE;
     }
   return FALSE;
+}
+
+/* Remove all prop name value pairs from PROP_HASH where the property
+   name is not PROPNAME. */
+static void
+filter_unwanted_props(apr_hash_t *prop_hash,
+                      const char * propname,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, prop_hash);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *ipropname = svn__apr_hash_index_key(hi);
+
+      if (strcmp(ipropname, propname) != 0)
+        apr_hash_set(prop_hash, ipropname, APR_HASH_KEY_STRING, NULL);
+    }
+  return;
+}
+
+svn_error_t *
+svn_wc__get_iprops(apr_array_header_t **inherited_props,
+                   svn_boolean_t *cached_iprops_found,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *propname,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_array_header_t *cached_iprops = NULL;
+  const char *parent_abspath = local_abspath;
+  svn_boolean_t is_wc_root = FALSE;
+
+  SVN_ERR_ASSERT(inherited_props);
+  *inherited_props = apr_array_make(result_pool, 1,
+                                    sizeof(svn_prop_inherited_item_t *));
+
+  /* Our starting assumption. */
+  *cached_iprops_found = FALSE;
+
+  /* Walk up to the root of the WC looking for inherited properties.  When we
+     reach the WC root also check for cached inherited properties. */
+  while (TRUE)
+    {
+      apr_hash_t *actual_props;
+
+      SVN_ERR(svn_wc_is_wc_root2(&is_wc_root, wc_ctx, parent_abspath,
+                                 scratch_pool));
+      if (is_wc_root)
+        {
+          const char *child_repos_relpath;
+
+          SVN_ERR(svn_wc__node_get_repos_relpath(&child_repos_relpath,
+                                                 wc_ctx, parent_abspath,
+                                                 scratch_pool,
+                                                 scratch_pool));
+
+          /* If the WC root is also the root of the repository then by
+             definition there are no inheritable properties to be had,
+             but we still consider the question "did we definitively find
+             any iprops to be found?" answered in the affirmative. */
+          if (child_repos_relpath[0] == '\0')
+            {
+              *cached_iprops_found = TRUE;
+            }
+          else
+            {
+              /* Grab the cached inherited properties for the WC root. */
+              SVN_ERR(svn_wc__db_read_cached_iprops(&cached_iprops,
+                                                    wc_ctx->db,
+                                                    parent_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+              if (cached_iprops)
+                {
+                  *cached_iprops_found = TRUE;          
+                }          
+            }
+        }
+
+      /* If PARENT_ABSPATH is a true parent of LOCAL_ABSPATH, then
+         LOCAL_ABSPATH can inherit properties from it. */
+      if (strcmp(local_abspath, parent_abspath) != 0)
+        {
+          SVN_ERR(svn_wc__db_read_props(&actual_props, wc_ctx->db,
+                                        parent_abspath, result_pool,
+                                        scratch_pool));
+          if (actual_props)
+            {
+              /* If we only want PROPNAME filter out any other properties. */
+              if (propname)
+                filter_unwanted_props(actual_props, propname, scratch_pool);
+
+              if (apr_hash_count(actual_props))
+                {
+                  svn_prop_inherited_item_t *iprop_elt =
+                    apr_pcalloc(result_pool,
+                                sizeof(svn_prop_inherited_item_t));
+                  iprop_elt->path_or_url = apr_pstrdup(result_pool,
+                                                       parent_abspath);
+                  iprop_elt->prop_hash = actual_props;
+                  /* Build the output array in depth-first order. */
+                  svn_sort__array_insert(&iprop_elt, *inherited_props, 0);
+                }
+            }
+        }
+
+      /* Inheritance only goes as far as the nearest WC root. */
+      if (is_wc_root)
+        break;
+
+      /* Keep looking for the WC root. */
+      parent_abspath = svn_dirent_dirname(parent_abspath, scratch_pool);
+    }
+
+  if (cached_iprops)
+    {
+      for (i = cached_iprops->nelts - 1; i >= 0; i--)
+        {
+          svn_prop_inherited_item_t *cached_iprop =
+            APR_ARRAY_IDX(cached_iprops, i, svn_prop_inherited_item_t *);
+
+          /* An empty property hash in the iprops cache means there are no
+             inherited properties. */
+          if (apr_hash_count(cached_iprop->prop_hash) == 0)
+            continue;
+
+          if (propname)
+            filter_unwanted_props(cached_iprop->prop_hash, propname,
+                                  scratch_pool);
+
+          /* If we didn't filter everything then keep this iprop. */
+          if (apr_hash_count(cached_iprop->prop_hash))
+            svn_sort__array_insert(&cached_iprop, *inherited_props, 0);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__cache_iprops(apr_array_header_t *inherited_props,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  if (inherited_props)
+    {
+      int i;
+      const char *repos_root_url;
+      svn_revnum_t revision;
+      svn_error_t *err = svn_wc__node_get_base(&revision, NULL,
+                                               &repos_root_url, NULL,
+                                               wc_ctx, local_abspath,
+                                               scratch_pool, scratch_pool);
+
+      /* Can't cache iprops for paths which aren't part of the WC. */
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+            {
+              svn_error_clear(err);
+
+              /* Keep error for consistent with the other of the svn_wc__*
+                 private APIs. */
+              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                       _("The node '%s' was not found."),
+                                       svn_dirent_local_style(local_abspath,
+                                                              scratch_pool));
+            }
+          else
+            {
+              return svn_error_trace(err);
+            }
+        }
+
+      /* If there is no base node at LOCAL_ABSPATH there is nothing to do. */
+      if (SVN_IS_VALID_REVNUM(revision))
+        {
+          /* Remove stale cached iprops. */
+          SVN_ERR(svn_wc__db_remove_cached_iprops(wc_ctx->db, local_abspath,
+                                                  scratch_pool));
+
+          if (inherited_props->nelts)
+            {
+              for (i = 0; i < inherited_props->nelts; i++)
+                {
+                  svn_prop_inherited_item_t *iprop =
+                    APR_ARRAY_IDX(inherited_props, i,
+                                  svn_prop_inherited_item_t *);
+
+                  /* Only cache properties inherited from the repository. */
+                  if (svn_path_is_url(iprop->path_or_url))
+                    {
+                      const char *repos_parent_relpath =
+                        svn_uri_skip_ancestor(repos_root_url,
+                                              iprop->path_or_url,
+                                              scratch_pool);
+                      SVN_ERR(svn_wc__db_cache_iprops(repos_parent_relpath,
+                                                      iprop->prop_hash,
+                                                      revision, wc_ctx->db,
+                                                      local_abspath,
+                                                      scratch_pool));
+                    }
+                }
+            }
+          else
+            {
+              /* Cache no inheritable props. */
+              SVN_ERR(svn_wc__db_cache_iprops("",
+                                              apr_hash_make(scratch_pool),
+                                              revision,
+                                              wc_ctx->db, local_abspath,
+                                              scratch_pool));
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__delete_iprops(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_remove_cached_iprops(wc_ctx->db, local_abspath,
+                                          scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__get_cached_iprop_children(apr_hash_t **iprop_paths,
+                                  svn_depth_t depth,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_get_children_with_cached_iprops(iprop_paths,
+                                                     depth,
+                                                     local_abspath,
+                                                     wc_ctx->db,
+                                                     result_pool,
+                                                     scratch_pool));
+  return SVN_NO_ERROR;
 }

@@ -5786,14 +5786,14 @@ def merge_to_path_with_switched_children(sbox):
   expected_mergeinfo_output = wc.State(A_COPY_D_path, {
     ''      : Item(status=' G'),
     'H'     : Item(status=' G'),
-    'H/psi' : Item(status=' G')
+    'H/psi' : Item(status=' U')
     })
   expected_elision_output = wc.State(A_COPY_D_path, {
     })
   expected_disk_D.tweak('', props={SVN_PROP_MERGEINFO : '/A/D:5,6*'})
   expected_disk_D.tweak('H', props={SVN_PROP_MERGEINFO : '/A/D/H:5*,8'})
   expected_disk_D.tweak('H/psi', contents="New content",
-                        props={SVN_PROP_MERGEINFO :'/A/D/H/psi:5,8'})
+                        props={SVN_PROP_MERGEINFO :'/A/D/H/psi:5'})
   expected_status_D.tweak('H/psi', status='MM')
   svntest.actions.run_and_verify_merge(A_COPY_D_path, '4', '5',
                                        sbox.repo_url + '/A/D', None,
@@ -5856,7 +5856,7 @@ def merge_to_path_with_switched_children(sbox):
     'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5*,8'}),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
     'D/H/psi'   : Item("New content",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/psi:5,8'}),
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/psi:5'}),
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_COPY_path, { })

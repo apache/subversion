@@ -1444,6 +1444,48 @@ WHERE wc_id == ?1
 
 /* ------------------------------------------------------------------------- */
 
+/* Queries for cached inherited properties. */
+
+-- STMT_SELECT_IPROPS
+SELECT repos_parent_relpath, inheritable_props FROM inheritable_props
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+  AND op_depth = ?3
+  AND revision = ?4
+ORDER BY repos_parent_relpath
+
+-- STMT_INSERT_IPROP
+INSERT OR REPLACE INTO inheritable_props (
+  wc_id, local_relpath, op_depth, repos_parent_relpath, revision,
+  inheritable_props)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+
+-- STMT_DELETE_IPROPS_RECURSIVE
+DELETE FROM inheritable_props
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+
+-- STMT_DELETE_IPROPS
+DELETE FROM inheritable_props
+WHERE wc_id = ?1
+  AND (local_relpath = ?2)
+
+-- STMT_SELECT_INODES
+SELECT local_relpath FROM inheritable_props
+WHERE wc_id = ?1
+  AND local_relpath = ?2
+
+-- STMT_SELECT_INODES_RECURSIVE
+SELECT local_relpath FROM inheritable_props
+WHERE wc_id = ?1
+  AND (?2 = ''
+       OR local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+
+/* ------------------------------------------------------------------------- */
+
 /* Grab all the statements related to the schema.  */
 
 -- include: wc-metadata

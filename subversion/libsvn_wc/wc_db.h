@@ -2062,6 +2062,64 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Read a BASE node's inherited property information.
+
+   Set *IPROPS to to a depth-first ordered array of
+   svn_prop_inherited_item_t * structures representing the cached
+   inherited properties for the BASE node at LOCAL_ABSPATH.
+
+   If no cached properties are found, then set *IPROPS to NULL.
+   If LOCAL_ABSPATH represents the root of the repository, then set
+   *IPROPS to an empty array.
+
+   Allocate *IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
+   allocations. */
+svn_error_t *
+svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Find BASE nodes with cached inherited properties.
+
+   Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
+   paths to the same for each path in the working copy at or below
+   LOCAL_ABSPATH, limited by DEPTH, that has cached inherited properties
+   for the BASE node of the path.  Allocate *IPROP_PATHS in RESULT_POOL.
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_get_children_with_cached_iprops(apr_hash_t **iprop_paths,
+                                           svn_depth_t depth,
+                                           const char *local_abspath,
+                                           svn_wc__db_t *db,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool);
+
+/* Cache inherited properites for a node in the BASE tree.
+
+   Cache the inherited properties PROPS (a hash table mapping char *
+   property names onto svn_string_t * property values) inherited from
+   REPOS_PARENT_RELPATH at REVISION, for the BASE node at LOCAL_ABSPATH.
+
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_cache_iprops(const char *repos_parent_relpath,
+                        apr_hash_t *props,
+                        svn_revnum_t revision,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
+
+/* Delete a BASE node's inherited properites.
+
+   Remove any inherited property caches for the BASE node at
+   LOCAL_ABSPATH.  Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_remove_cached_iprops(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool);
+
 /* Set *CHILDREN to a new array of the (const char *) basenames of the
    immediate children of the working node at LOCAL_ABSPATH in DB.
 
