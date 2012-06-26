@@ -42,7 +42,6 @@ SVN_EXTERNAL_PROJECT_SUBDIRS = @SVN_EXTERNAL_PROJECT_SUBDIRS@
 
 SCHEMA_DIR = subversion/svn/schema
 
-NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
@@ -70,7 +69,6 @@ gnome_keyring_libdir = @libdir@
 gpg_agent_libdir = @libdir@
 gssapi_libdir = @libdir@
 kwallet_libdir = @libdir@
-neon_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
 includedir = @includedir@
@@ -129,7 +127,7 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
            @SVN_DB_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ @SVN_GSSAPI_INCLUDES@ \
-           @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ @SVN_NEON_INCLUDES@ \
+           @SVN_KWALLET_INCLUDES@ @SVN_MAGIC_INCLUDES@ \
            @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_SQLITE_INCLUDES@ \
            @SVN_XML_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
@@ -218,7 +216,6 @@ libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
 libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
 libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
 libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
-libsvn_ra_neon_LDFLAGS = @libsvn_ra_neon_LDFLAGS@
 libsvn_ra_serf_LDFLAGS = @libsvn_ra_serf_LDFLAGS@
 libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
 libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
@@ -245,7 +242,6 @@ INSTALL_GPG_AGENT_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_GSSAPI_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
-INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
@@ -451,7 +447,7 @@ check-all-javahl: check-apache-javahl check-tigris-javahl
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
-check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
 	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
@@ -491,6 +487,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 	  if test "$(SET_LOG_LEVEL)" != ""; then                             \
 	    flags="--set-log-level $(SET_LOG_LEVEL) $$flags";                \
 	  fi;                                                                \
+	  if test "$(SSL_CERT)" != ""; then                                  \
+	    flags="--ssl-cert $(SSL_CERT) $$flags";                          \
+	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
@@ -504,38 +503,38 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
+davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod svnmucc
+davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
 	@APXS=$(APXS) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=svn://127.0.0.1
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
-svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@env PYTHON=$(PYTHON) THREADED=$(THREADED) \
 	  $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
 
-svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svncheck6: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check BASE_URL=svn://\[::1\]
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
-svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+svnsshcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
 
-bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ svnmucc
+bdbcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
@@ -584,15 +583,9 @@ external-clean external-distclean external-extraclean:
             revlist="$$i $$revlist";                    \
         done;                                           \
         for i in $$revlist; do                          \
-            if test "$$i" = "neon" -a "$$target" = "extraclean"; then    \
-                echo "------ making distclean (no extraclean) in $$i";    \
-                (cd $$i && $(MAKE) distclean) || exit 1;                 \
-                echo "------ completed distclean (no extraclean) in $$i"; \
-            else                                                         \
-                echo "------ making $$target in $$i";       \
-                (cd $$i && $(MAKE) $$target) || exit 1;     \
-                echo "------ completed $$target in $$i";    \
-            fi;                                             \
+            echo "------ making $$target in $$i";       \
+            (cd $$i && $(MAKE) $$target) || exit 1;     \
+            echo "------ completed $$target in $$i";    \
         done;
 
 
@@ -863,3 +856,11 @@ clean-ctypes-python:
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-checks.sql
+
+# Compatibility symlink.
+# This runs after the target of the same name in build-outputs.mk.
+INSTALL_EXTRA_TOOLS=\
+  $(MKDIR) $(DESTDIR)$(bindir); \
+  test -n "$$SVN_SVNMUCC_IS_SVNSYITF" && \
+  ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
+  ln -sf $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT)

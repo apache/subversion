@@ -865,7 +865,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
- * the conflict in @a txn, with the same lifetime as @a txn;
+ * the conflict in @a txn, allocated within @a pool;
  * otherwise, set @a *conflict_p to NULL.
  *
  * If the commit succeeds, @a txn is invalid.
@@ -880,6 +880,9 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
  * something else went wrong in post commit FS processing.
+ *
+ * @note See api-errata/1.8/fs001.txt for information on how this
+ * function was documented in versions prior to 1.8.
  *
  * ### need to document this better. there are four combinations of
  * ### return values:
@@ -1109,7 +1112,9 @@ svn_fs_editor_create_for(svn_editor_t **editor,
  * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
  *
  * @note After calling this function, @a editor will be marked as completed
- * and no further operations may be performed on it.
+ * and no further operations may be performed on it. The underlying
+ * transaction will either be committed or aborted once this function is
+ * called. It cannot be recovered for additional work.
  *
  * @a result_pool will be used to allocate space for @a conflict_path.
  * @a scratch_pool will be used for all temporary allocations.
@@ -1656,13 +1661,15 @@ svn_fs_copied_from(svn_revnum_t *rev_p,
 /** Set @a *root_p and @a *path_p to the revision root and path of the
  * destination of the most recent copy event that caused @a path to
  * exist where it does in @a root, or to NULL if no such copy exists.
- * When non-NULL, allocate @a *root_p and @a *path_p in @a pool.
  *
  * @a *path_p might be a parent of @a path, rather than @a path
  * itself.  However, it will always be the deepest relevant path.
  * That is, if a copy occurs underneath another copy in the same txn,
  * this function makes sure to set @a *path_p to the longest copy
  * destination path that is still a parent of or equal to @a path.
+ *
+ * Values returned in @a *root_p and @a *path_p will be allocated
+ * from @a pool.
  *
  * @since New in 1.3.
  */

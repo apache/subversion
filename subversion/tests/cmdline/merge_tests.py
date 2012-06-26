@@ -15216,7 +15216,7 @@ def merge_automatic_conflict_resolution(sbox):
                                      'revert', '--recursive', wc_dir)
 
   # Test --accept mine-conflict and mine-full
-  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
+  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='C ')})
   expected_disk.tweak('D/H/psi', contents="BASE.\n")
   expected_status.tweak('D/H/psi', status='  ')
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
@@ -15251,7 +15251,7 @@ def merge_automatic_conflict_resolution(sbox):
                                      'revert', '--recursive', wc_dir)
 
   # Test --accept theirs-conflict and theirs-full
-  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
+  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='C ')})
   expected_disk.tweak('D/H/psi', contents="New content")
   expected_status.tweak('D/H/psi', status='M ')
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
@@ -15285,7 +15285,7 @@ def merge_automatic_conflict_resolution(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
   # Test --accept base
-  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
+  expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='C ')})
   expected_elision_output = wc.State(A_COPY_path, {
     })
   expected_disk.tweak('D/H/psi', contents="This is the file 'psi'.\n")

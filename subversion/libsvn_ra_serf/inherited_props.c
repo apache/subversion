@@ -286,9 +286,13 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   const char *target_url;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, NULL, revision, NULL,
-                                         pool));
+  SVN_ERR(svn_ra_serf__get_stable_url(&path,
+                                      NULL /* latest_revnum */,
+                                      session,
+                                      NULL /* conn */,
+                                      NULL /* url */,
+                                      revision,
+                                      pool, pool));
 
   target_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
@@ -323,7 +327,6 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   parser_ctx->end = end_element;
   parser_ctx->cdata = cdata_handler;
   parser_ctx->done = &iprops_ctx->done;
-  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -333,7 +336,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&iprops_ctx->done, session, pool);
 
   err2 = svn_ra_serf__error_on_status(status_code, handler->path,
-                                      parser_ctx->location);
+                                      handler->location);
   if (err2)
     {
       svn_error_clear(err);

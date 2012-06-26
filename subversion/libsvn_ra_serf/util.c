@@ -33,11 +33,14 @@
 #include <serf.h>
 #include <serf_bucket_types.h>
 
+#include <expat.h>
+
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_dep_compat.h"
@@ -55,6 +58,17 @@
 #define XML_STATUS_ERROR 0
 #endif
 
+#ifndef XML_VERSION_AT_LEAST
+#define XML_VERSION_AT_LEAST(major,minor,patch)                  \
+(((major) < XML_MAJOR_VERSION)                                       \
+ || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
+ || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
+     (patch) <= XML_MICRO_VERSION))
+#endif /* APR_VERSION_AT_LEAST */
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+#define EXPAT_HAS_STOPPARSER
+#endif
 
 /* Read/write chunks of this size into the spillbuf.  */
 #define PARSE_CHUNK_SIZE 8000
@@ -77,6 +91,19 @@ struct svn_ra_serf__pending_t {
 
 #define HAS_PENDING_DATA(p) ((p) != NULL && (p)->buf != NULL \
                              && svn_spillbuf__get_size((p)->buf) != 0)
+
+
+struct expat_ctx_t {
+  svn_ra_serf__xml_context_t *xmlctx;
+  XML_Parser parser;
+  svn_ra_serf__handler_t *handler;
+
+  svn_error_t *inner_error;
+
+  /* Do not use this pool for allocation. It is merely recorded for running
+     the cleanup handler.  */
+  apr_pool_t *cleanup_pool;
+};
 
 
 static const apr_uint32_t serf_failure_map[][2] =
@@ -113,6 +140,23 @@ ssl_convert_serf_failures(int failures)
 
   return svn_failures;
 }
+
+
+static apr_status_t
+save_error(svn_ra_serf__session_t *session,
+           svn_error_t *err)
+{
+  if (err || session->pending_error)
+    {
+      session->pending_error = svn_error_compose_create(
+                                  session->pending_error,
+                                  err);
+      return session->pending_error->apr_err;
+    }
+
+  return APR_SUCCESS;
+}
+
 
 /* Construct the realmstring, e.g. https://svn.collab.net:443. */
 static const char *
@@ -213,7 +257,7 @@ ssl_server_cert(void *baton, int failures,
       int i;
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->hostname,
+          if (apr_fnmatch(s, conn->session->session_url.hostname,
                           APR_FNM_PERIOD) == APR_SUCCESS) {
               found_matching_hostname = 1;
               cert_info.hostname = s;
@@ -225,7 +269,7 @@ ssl_server_cert(void *baton, int failures,
   /* Match server certificate CN with the hostname of the server */
   if (!found_matching_hostname && cert_info.hostname)
     {
-      if (apr_fnmatch(cert_info.hostname, conn->hostname,
+      if (apr_fnmatch(cert_info.hostname, conn->session->session_url.hostname,
                       APR_FNM_PERIOD) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
@@ -273,21 +317,10 @@ ssl_server_cert_cb(void *baton, int failures,
   svn_error_t *err;
 
   subpool = svn_pool_create(session->pool);
-  err = ssl_server_cert(baton, failures, cert, subpool);
-
+  err = svn_error_trace(ssl_server_cert(baton, failures, cert, subpool));
   svn_pool_destroy(subpool);
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                                    session->pending_error,
-                                                    err);
-
-      return session->pending_error->apr_err;
-    }
-
-  return APR_SUCCESS;
-
+  return save_error(session, err);
 }
 
 static svn_error_t *
@@ -331,7 +364,7 @@ conn_setup(apr_socket_t *sock,
   *read_bkt = serf_context_bucket_socket_create(conn->session->context,
                                                sock, conn->bkt_alloc);
 
-  if (conn->using_ssl)
+  if (conn->session->using_ssl)
     {
       /* input stream */
       *read_bkt = serf_bucket_ssl_decrypt_create(*read_bkt, conn->ssl_context,
@@ -341,7 +374,8 @@ conn_setup(apr_socket_t *sock,
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*read_bkt);
 
 #if SERF_VERSION_AT_LEAST(1,0,0)
-          serf_ssl_set_hostname(conn->ssl_context, conn->hostname);
+          serf_ssl_set_hostname(conn->ssl_context,
+                                conn->session->session_url.hostname);
 #endif
 
           serf_ssl_client_cert_provider_set(conn->ssl_context,
@@ -391,24 +425,14 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 {
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
-  apr_status_t status = APR_SUCCESS;
+  svn_error_t *err;
 
-  svn_error_t *err = conn_setup(sock,
-                                read_bkt,
-                                write_bkt,
-                                baton,
-                                pool);
-
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                          session->pending_error,
-                                          err);
-
-      status = session->pending_error->apr_err;
-    }
-
-  return status;
+  err = svn_error_trace(conn_setup(sock,
+                                   read_bkt,
+                                   write_bkt,
+                                   baton,
+                                   pool));
+  return save_error(session, err);
 }
 
 
@@ -447,8 +471,7 @@ accept_head(serf_request_t *request,
 }
 
 static svn_error_t *
-connection_closed(serf_connection_t *conn,
-                  svn_ra_serf__connection_t *sc,
+connection_closed(svn_ra_serf__connection_t *conn,
                   apr_status_t why,
                   apr_pool_t *pool)
 {
@@ -457,8 +480,8 @@ connection_closed(serf_connection_t *conn,
       SVN_ERR_MALFUNCTION();
     }
 
-  if (sc->using_ssl)
-      sc->ssl_context = NULL;
+  if (conn->session->using_ssl)
+    conn->ssl_context = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -469,15 +492,12 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
                          apr_status_t why,
                          apr_pool_t *pool)
 {
-  svn_ra_serf__connection_t *sc = closed_baton;
+  svn_ra_serf__connection_t *ra_conn = closed_baton;
   svn_error_t *err;
 
-  err = connection_closed(conn, sc, why, pool);
+  err = svn_error_trace(connection_closed(ra_conn, why, pool));
 
-  if (err)
-    sc->session->pending_error = svn_error_compose_create(
-                                            sc->session->pending_error,
-                                            err);
+  (void) save_error(ra_conn->session, err);
 }
 
 
@@ -528,20 +548,11 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
 {
   svn_ra_serf__connection_t *conn = data;
   svn_ra_serf__session_t *session = conn->session;
-  svn_error_t *err = handle_client_cert(data,
-                                        cert_path,
-                                        session->pool);
+  svn_error_t *err;
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                                    session->pending_error,
-                                                    err);
+  err = svn_error_trace(handle_client_cert(data, cert_path, session->pool));
 
-      return session->pending_error->apr_err;
-    }
-
-  return APR_SUCCESS;
+  return save_error(session, err);
 }
 
 /* Implementation for svn_ra_serf__handle_client_cert_pw */
@@ -590,21 +601,14 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 {
   svn_ra_serf__connection_t *conn = data;
   svn_ra_serf__session_t *session = conn->session;
-  svn_error_t *err = handle_client_cert_pw(data,
-                                           cert_path,
-                                           password,
-                                           session->pool);
+  svn_error_t *err;
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(
-                                          session->pending_error,
-                                          err);
+  err = svn_error_trace(handle_client_cert_pw(data,
+                                              cert_path,
+                                              password,
+                                              session->pool));
 
-      return session->pending_error->apr_err;
-    }
-
-  return APR_SUCCESS;
+  return save_error(session, err);
 }
 
 
@@ -629,7 +633,7 @@ static svn_error_t *
 setup_serf_req(serf_request_t *request,
                serf_bucket_t **req_bkt,
                serf_bucket_t **hdrs_bkt,
-               svn_ra_serf__connection_t *conn,
+               svn_ra_serf__session_t *session,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type,
                apr_pool_t *request_pool,
@@ -640,7 +644,7 @@ setup_serf_req(serf_request_t *request,
 #if SERF_VERSION_AT_LEAST(1, 1, 0)
   svn_spillbuf_t *buf;
 
-  if (conn->http10 && body_bkt != NULL)
+  if (session->http10 && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -666,7 +670,7 @@ setup_serf_req(serf_request_t *request,
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
 #if SERF_VERSION_AT_LEAST(1, 1, 0)
-  if (conn->http10)
+  if (session->http10)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
@@ -677,10 +681,10 @@ setup_serf_req(serf_request_t *request,
 
   *hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
 
-  /* We use serf_bucket_headers_setn() because the string below have a
+  /* We use serf_bucket_headers_setn() because the USERAGENT has a
      lifetime longer than this bucket. Thus, there is no need to copy
      the header values.  */
-  serf_bucket_headers_setn(*hdrs_bkt, "User-Agent", conn->useragent);
+  serf_bucket_headers_setn(*hdrs_bkt, "User-Agent", session->useragent);
 
   if (content_type)
     {
@@ -756,6 +760,28 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 }
 
 
+svn_error_t *
+svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
+                             apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  /* Create a serf request based on HANDLER.  */
+  svn_ra_serf__request_create(handler);
+
+  /* Wait until the response logic marks its DONE status.  */
+  err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
+                                      scratch_pool);
+  if (handler->server_error)
+    {
+      err = svn_error_compose_create(err, handler->server_error->error);
+      handler->server_error = NULL;
+    }
+
+  return svn_error_trace(err);
+}
+
+
 /*
  * Expat callback invoked on a start element tag for an error response.
  */
@@ -819,15 +845,10 @@ end_error(svn_ra_serf__xml_parser_t *parser,
       /* On the server dav_error_response_tag() will add a leading
          and trailing newline if DEBUG_CR is defined in mod_dav.h,
          so remove any such characters here. */
-      apr_size_t len;
-      const char *cd = ctx->cdata->data;
-      if (*cd == '\n')
-        ++cd;
-      len = strlen(cd);
-      if (len > 0 && cd[len-1] == '\n')
-        --len;
+      svn_stringbuf_strip_whitespace(ctx->cdata);
 
-      ctx->error->message = apr_pstrmemdup(ctx->error->pool, cd, len);
+      ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
+                                           ctx->cdata->len);
       ctx->collect_cdata = FALSE;
     }
 
@@ -855,6 +876,47 @@ cdata_error(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+
+static apr_status_t
+drain_bucket(serf_bucket_t *bucket)
+{
+  /* Read whatever is in the bucket, and just drop it.  */
+  while (1)
+    {
+      apr_status_t status;
+      const char *data;
+      apr_size_t len;
+
+      status = serf_bucket_read(bucket, SERF_READ_ALL_AVAIL, &data, &len);
+      if (status)
+        return status;
+    }
+}
+
+
+static svn_ra_serf__server_error_t *
+begin_error_parsing(svn_ra_serf__xml_start_element_t start,
+                    svn_ra_serf__xml_end_element_t end,
+                    svn_ra_serf__xml_cdata_chunk_handler_t cdata,
+                    apr_pool_t *result_pool)
+{
+  svn_ra_serf__server_error_t *server_err;
+
+  server_err = apr_pcalloc(result_pool, sizeof(*server_err));
+  server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
+  server_err->contains_precondition_error = FALSE;
+  server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
+  server_err->collect_cdata = FALSE;
+  server_err->parser.pool = server_err->error->pool;
+  server_err->parser.user_data = server_err;
+  server_err->parser.start = start;
+  server_err->parser.end = end;
+  server_err->parser.cdata = cdata;
+  server_err->parser.ignore_errors = TRUE;
+
+  return server_err;
+}
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_discard_body(serf_request_t *request,
@@ -863,61 +925,8 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  apr_pool_t *pool)
 {
   apr_status_t status;
-  svn_ra_serf__server_error_t *server_err = baton;
 
-  if (server_err)
-    {
-      if (!server_err->init)
-        {
-          serf_bucket_t *hdrs;
-          const char *val;
-
-          server_err->init = TRUE;
-          hdrs = serf_bucket_response_get_headers(response);
-          val = serf_bucket_headers_get(hdrs, "Content-Type");
-          if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
-            {
-              server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
-              server_err->has_xml_response = TRUE;
-              server_err->contains_precondition_error = FALSE;
-              server_err->cdata = svn_stringbuf_create_empty(pool);
-              server_err->collect_cdata = FALSE;
-              server_err->parser.pool = server_err->error->pool;
-              server_err->parser.user_data = server_err;
-              server_err->parser.start = start_error;
-              server_err->parser.end = end_error;
-              server_err->parser.cdata = cdata_error;
-              server_err->parser.done = &server_err->done;
-              server_err->parser.ignore_errors = TRUE;
-            }
-          else
-            {
-              server_err->error = SVN_NO_ERROR;
-            }
-        }
-
-      if (server_err->has_xml_response)
-        {
-          svn_error_t *err = svn_ra_serf__handle_xml_parser(
-                                                        request,
-                                                        response,
-                                                        &server_err->parser,
-                                                        pool);
-
-          if (server_err->done && server_err->error->apr_err == APR_SUCCESS)
-            {
-              svn_error_clear(server_err->error);
-              server_err->error = SVN_NO_ERROR;
-            }
-
-          return svn_error_trace(err);
-        }
-
-    }
-
-  status = svn_ra_serf__response_discard_handler(request, response,
-                                                 NULL, pool);
-
+  status = drain_bucket(response);
   if (status)
     return svn_error_wrap_apr(status, NULL);
 
@@ -930,70 +939,82 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       void *baton,
                                       apr_pool_t *pool)
 {
-  /* Just loop through and discard the body. */
-  while (1)
-    {
-      apr_status_t status;
-      const char *data;
-      apr_size_t len;
-
-      status = serf_bucket_read(response, SERF_READ_ALL_AVAIL, &data, &len);
-
-      if (status)
-        {
-          return status;
-        }
-
-      /* feed me */
-    }
+  return drain_bucket(response);
 }
 
-const char *
-svn_ra_serf__response_get_location(serf_bucket_t *response,
-                                   apr_pool_t *pool)
+
+/* Return the value of the RESPONSE's Location header if any, or NULL
+   otherwise.  All allocations will be made in POOL.  */
+static const char *
+response_get_location(serf_bucket_t *response,
+                      apr_pool_t *pool)
 {
   serf_bucket_t *headers;
-  const char *val;
+  const char *location;
+  apr_status_t status;
+  apr_uri_t uri;
 
   headers = serf_bucket_response_get_headers(response);
-  val = serf_bucket_headers_get(headers, "Location");
-  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
+  location = serf_bucket_headers_get(headers, "Location");
+  if (location == NULL)
+    return NULL;
+
+  /* Ignore the scheme/host/port. Or just return as-is if we can't parse.  */
+  status = apr_uri_parse(pool, location, &uri);
+  if (!status)
+    location = uri.path;
+
+  return svn_urlpath__canonicalize(location, pool);
 }
+
 
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
-svn_ra_serf__handle_status_only(serf_request_t *request,
-                                serf_bucket_t *response,
-                                void *baton,
-                                apr_pool_t *pool)
+svn_ra_serf__expect_empty_body(serf_request_t *request,
+                               serf_bucket_t *response,
+                               void *baton,
+                               apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  svn_ra_serf__simple_request_context_t *ctx = baton;
+  svn_ra_serf__handler_t *handler = baton;
+  serf_bucket_t *hdrs;
+  const char *val;
 
-  SVN_ERR_ASSERT(ctx->pool);
+  /* This function is just like handle_multistatus_only() except for the
+     XML parsing callbacks. We want to look for the human-readable element.  */
 
-  err = svn_ra_serf__handle_discard_body(request, response,
-                                         &ctx->server_error, pool);
+  /* We should see this just once, in order to initialize SERVER_ERROR.
+     At that point, the core error processing will take over. If we choose
+     not to parse an error, then we'll never return here (because we
+     change the response handler).  */
+  SVN_ERR_ASSERT(handler->server_error == NULL);
 
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  hdrs = serf_bucket_response_get_headers(response);
+  val = serf_bucket_headers_get(hdrs, "Content-Type");
+  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
     {
-      serf_status_line sl;
-      apr_status_t status;
+      svn_ra_serf__server_error_t *server_err;
 
-      status = serf_bucket_response_status(response, &sl);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
+      server_err = begin_error_parsing(start_error, end_error, cdata_error,
+                                       handler->handler_pool);
 
-      ctx->status = sl.code;
-      ctx->reason = sl.reason ? apr_pstrdup(ctx->pool, sl.reason) : NULL;
-      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
-      ctx->done = TRUE;
+      /* Get the parser to set our DONE flag.  */
+      server_err->parser.done = &handler->done;
+
+      handler->server_error = server_err;
+    }
+  else
+    {
+      /* The body was not text/xml, so we don't know what to do with it.
+         Toss anything that arrives.  */
+      handler->discard_body = TRUE;
     }
 
-  return svn_error_trace(err);
+  /* Returning SVN_NO_ERROR will return APR_SUCCESS to serf, which tells it
+     to call the response handler again. That will start up the XML parsing,
+     or it will be dropped on the floor (per the decision above).  */
+  return SVN_NO_ERROR;
 }
+
 
 /* Given a string like "HTTP/1.1 500 (status)" in BUF, parse out the numeric
    status code into *STATUS_CODE_OUT.  Ignores leading whitespace. */
@@ -1076,6 +1097,9 @@ end_207(svn_ra_serf__xml_parser_t *parser,
     }
   if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
     {
+      /* Remove leading newline added by DEBUG_CR on server */
+      svn_stringbuf_strip_whitespace(ctx->cdata);
+
       ctx->collect_cdata = FALSE;
       ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
                                            ctx->cdata->len);
@@ -1126,90 +1150,50 @@ svn_error_t *
 svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
-                                     apr_pool_t *pool)
+                                     apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  svn_ra_serf__simple_request_context_t *ctx = baton;
-  svn_ra_serf__server_error_t *server_err = &ctx->server_error;
+  svn_ra_serf__handler_t *handler = baton;
 
-  SVN_ERR_ASSERT(ctx->pool);
+  /* This function is just like expect_empty_body() except for the
+     XML parsing callbacks. We are looking for very limited pieces of
+     the multistatus response.  */
 
-  /* If necessary, initialize our XML parser. */
-  if (server_err && !server_err->init)
+  /* We should see this just once, in order to initialize SERVER_ERROR.
+     At that point, the core error processing will take over. If we choose
+     not to parse an error, then we'll never return here (because we
+     change the response handler).  */
+  SVN_ERR_ASSERT(handler->server_error == NULL);
+
     {
       serf_bucket_t *hdrs;
       const char *val;
 
-      server_err->init = TRUE;
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
         {
-          server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
-          server_err->has_xml_response = TRUE;
-          server_err->contains_precondition_error = FALSE;
-          server_err->cdata = svn_stringbuf_create_empty(server_err->error->pool);
-          server_err->collect_cdata = FALSE;
-          server_err->parser.pool = server_err->error->pool;
-          server_err->parser.user_data = server_err;
-          server_err->parser.start = start_207;
-          server_err->parser.end = end_207;
-          server_err->parser.cdata = cdata_207;
-          server_err->parser.done = &ctx->done;
-          server_err->parser.ignore_errors = TRUE;
+          svn_ra_serf__server_error_t *server_err;
+
+          server_err = begin_error_parsing(start_207, end_207, cdata_207,
+                                           handler->handler_pool);
+
+          /* Get the parser to set our DONE flag.  */
+          server_err->parser.done = &handler->done;
+
+          handler->server_error = server_err;
         }
       else
         {
-          ctx->done = TRUE;
-          server_err->error = SVN_NO_ERROR;
+          /* The body was not text/xml, so we don't know what to do with it.
+             Toss anything that arrives.  */
+          handler->discard_body = TRUE;
         }
     }
 
-  /* If server_err->error still contains APR_SUCCESS, it means that we
-     have not successfully parsed the XML yet. */
-  if (server_err && server_err->error
-      && server_err->error->apr_err == APR_SUCCESS)
-    {
-      err = svn_ra_serf__handle_xml_parser(request, response,
-                                           &server_err->parser, pool);
-
-      /* APR_EOF will be returned when parsing is complete.  If we see
-         any other error, return it immediately.  In practice the only
-         other error we expect to see is APR_EAGAIN, which indicates that
-         we could not parse the XML because the contents are not yet
-         available to be read. */
-      if (!err || !APR_STATUS_IS_EOF(err->apr_err))
-        {
-          return svn_error_trace(err);
-        }
-      else if (ctx->done && server_err->error->apr_err == APR_SUCCESS)
-        {
-          svn_error_clear(server_err->error);
-          server_err->error = SVN_NO_ERROR;
-        }
-
-      svn_error_clear(err);
-    }
-
-  err = svn_ra_serf__handle_discard_body(request, response, NULL, pool);
-
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
-    {
-      serf_status_line sl;
-      apr_status_t status;
-
-      status = serf_bucket_response_status(response, &sl);
-      if (SERF_BUCKET_READ_ERROR(status))
-        {
-          return svn_error_wrap_apr(status, NULL);
-        }
-
-      ctx->status = sl.code;
-      ctx->reason = sl.reason ? apr_pstrdup(ctx->pool, sl.reason) : NULL;
-      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
-    }
-
-  return svn_error_trace(err);
+  /* Returning SVN_NO_ERROR will return APR_SUCCESS to serf, which tells it
+     to call the response handler again. That will start up the XML parsing,
+     or it will be dropped on the floor (per the decision above).  */
+  return SVN_NO_ERROR;
 }
 
 
@@ -1220,6 +1204,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
   apr_pool_t *scratch_pool;
+  svn_error_t *err;
 
   if (parser->error)
     return;
@@ -1234,7 +1219,11 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
 
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->start(parser, name, attrs, scratch_pool);
+  err = parser->start(parser, name, attrs, scratch_pool);
+  if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
+    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  parser->error = err;
 }
 
 
@@ -1244,6 +1233,7 @@ end_xml(void *userData, const char *raw_name)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
   svn_ra_serf__dav_props_t name;
+  svn_error_t *err;
   apr_pool_t *scratch_pool;
 
   if (parser->error)
@@ -1254,7 +1244,11 @@ end_xml(void *userData, const char *raw_name)
 
   svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
-  parser->error = parser->end(parser, name, scratch_pool);
+  err = parser->end(parser, name, scratch_pool);
+  if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
+    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  parser->error = err;
 }
 
 
@@ -1263,6 +1257,7 @@ static void
 cdata_xml(void *userData, const char *data, int len)
 {
   svn_ra_serf__xml_parser_t *parser = userData;
+  svn_error_t *err;
   apr_pool_t *scratch_pool;
 
   if (parser->error)
@@ -1274,7 +1269,11 @@ cdata_xml(void *userData, const char *data, int len)
   /* ### get a real scratch_pool  */
   scratch_pool = parser->state->pool;
 
-  parser->error = parser->cdata(parser, data, len, scratch_pool);
+  err = parser->cdata(parser, data, len, scratch_pool);
+  if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
+    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  parser->error = err;
 }
 
 /* Flip the requisite bits in CTX to indicate that processing of the
@@ -1326,7 +1325,7 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
 {
   int xml_status;
 
-  xml_status = XML_Parse(ctx->xmlp, data, len, 0);
+  xml_status = XML_Parse(ctx->xmlp, data, (int) len, 0);
   if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
     {
       if (sl == NULL)
@@ -1415,6 +1414,65 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 }
 
 
+/* ### this is still broken conceptually. just shifting incrementally... */
+static svn_error_t *
+handle_server_error(serf_request_t *request,
+                    serf_bucket_t *response,
+                    apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__server_error_t server_err = { 0 };
+  serf_bucket_t *hdrs;
+  const char *val;
+  apr_status_t err;
+
+  hdrs = serf_bucket_response_get_headers(response);
+  val = serf_bucket_headers_get(hdrs, "Content-Type");
+  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+    {
+      /* ### we should figure out how to reuse begin_error_parsing  */
+
+      server_err.error = svn_error_create(APR_SUCCESS, NULL, NULL);
+      server_err.contains_precondition_error = FALSE;
+      server_err.cdata = svn_stringbuf_create_empty(scratch_pool);
+      server_err.collect_cdata = FALSE;
+      server_err.parser.pool = server_err.error->pool;
+      server_err.parser.user_data = &server_err;
+      server_err.parser.start = start_error;
+      server_err.parser.end = end_error;
+      server_err.parser.cdata = cdata_error;
+      server_err.parser.done = &server_err.done;
+      server_err.parser.ignore_errors = TRUE;
+
+      /* We don't care about any errors except for SERVER_ERR.ERROR  */
+      svn_error_clear(svn_ra_serf__handle_xml_parser(request,
+                                                     response,
+                                                     &server_err.parser,
+                                                     scratch_pool));
+
+      /* ### checking DONE is silly. the above only parses whatever has
+         ### been received at the network interface. totally wrong. but
+         ### it is what we have for now (maintaining historical code),
+         ### until we fully migrate.  */
+      if (server_err.done && server_err.error->apr_err == APR_SUCCESS)
+        {
+          svn_error_clear(server_err.error);
+          server_err.error = SVN_NO_ERROR;
+        }
+
+      return svn_error_trace(server_err.error);
+    }
+
+  /* The only error that we will return is from the XML response body.
+     Otherwise, ignore the entire body but allow SUCCESS/EOF/EAGAIN to
+     surface. */
+  err = drain_bucket(response);
+  if (err && !SERF_BUCKET_READ_ERROR(err))
+    return svn_error_wrap_apr(err, NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
@@ -1427,36 +1485,22 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   svn_ra_serf__xml_parser_t *ctx = baton;
   svn_error_t *err;
 
+  /* ### get the HANDLER rather than fetching this.  */
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
       return svn_error_wrap_apr(status, NULL);
     }
 
-  if (ctx->status_code)
-    {
-      *ctx->status_code = sl.code;
-    }
-
-  if (sl.code == 301 || sl.code == 302 || sl.code == 307)
-    {
-      ctx->location = svn_ra_serf__response_get_location(response, ctx->pool);
-    }
-
   /* Woo-hoo.  Nothing here to see.  */
   if (sl.code == 404 && ctx->ignore_errors == FALSE)
     {
-      /* If our caller won't know about the 404, abort() for now. */
-      SVN_ERR_ASSERT(ctx->status_code);
+      err = handle_server_error(request, response, pool);
 
-      add_done_item(ctx);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        add_done_item(ctx);
 
-      err = svn_ra_serf__handle_server_error(request, response, pool);
-
-      SVN_ERR(svn_error_compose_create(
-        svn_ra_serf__handle_discard_body(request, response, NULL, pool),
-        err));
-      return SVN_NO_ERROR;
+      return svn_error_trace(err);
     }
 
   if (ctx->headers_baton == NULL)
@@ -1591,19 +1635,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   /* not reached */
 }
 
-/* Implements svn_ra_serf__response_handler_t */
-svn_error_t *
-svn_ra_serf__handle_server_error(serf_request_t *request,
-                                 serf_bucket_t *response,
-                                 apr_pool_t *pool)
-{
-  svn_ra_serf__server_error_t server_err = { 0 };
-
-  svn_error_clear(svn_ra_serf__handle_discard_body(request, response,
-                                                   &server_err, pool));
-
-  return server_err.error;
-}
 
 apr_status_t
 svn_ra_serf__credentials_callback(char **username, char **password,
@@ -1612,8 +1643,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
                                   const char *realm,
                                   apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = baton;
-  svn_ra_serf__session_t *session = ctx->session;
+  svn_ra_serf__handler_t *handler = baton;
+  svn_ra_serf__session_t *session = handler->session;
   void *creds;
   svn_auth_cred_simple_t *simple_creds;
   svn_error_t *err;
@@ -1642,8 +1673,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 
       if (err)
         {
-          session->pending_error
-              = svn_error_compose_create(session->pending_error, err);
+          (void) save_error(session, err);
           return err->apr_err;
         }
 
@@ -1652,13 +1682,11 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!creds || session->auth_attempts > 4)
         {
           /* No more credentials. */
-          session->pending_error
-              = svn_error_compose_create(
-                    session->pending_error,
-                    svn_error_create(
-                          SVN_ERR_AUTHN_FAILED, NULL,
-                          _("No more credentials or we tried too many times.\n"
-                            "Authentication failed")));
+          (void) save_error(session,
+                            svn_error_create(
+                              SVN_ERR_AUTHN_FAILED, NULL,
+                              _("No more credentials or we tried too many"
+                                "times.\nAuthentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
 
@@ -1676,21 +1704,20 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          session->pending_error
-              = svn_error_compose_create(
-                      ctx->session->pending_error,
-                      svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                                       _("Proxy authentication failed")));
+          (void) save_error(session, 
+                            svn_error_create(
+                              SVN_ERR_AUTHN_FAILED, NULL,
+                              _("Proxy authentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
     }
 
-  ctx->conn->last_status_code = code;
+  handler->conn->last_status_code = code;
 
   return APR_SUCCESS;
 }
 
-/* Wait for HTTP response status and headers, and invoke CTX->
+/* Wait for HTTP response status and headers, and invoke HANDLER->
    response_handler() to carry out operation-specific processing.
    Afterwards, check for connection close.
 
@@ -1700,46 +1727,82 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 static svn_error_t *
 handle_response(serf_request_t *request,
                 serf_bucket_t *response,
-                svn_ra_serf__handler_t *ctx,
+                svn_ra_serf__handler_t *handler,
                 apr_status_t *serf_status,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
-  serf_status_line sl;
   apr_status_t status;
+  svn_error_t *err;
+
+  /* ### need to verify whether this already gets init'd on every
+     ### successful exit. for an error-exit, it will (properly) be
+     ### ignored by the caller.  */
+  *serf_status = APR_SUCCESS;
 
   if (!response)
     {
-      /* Uh-oh.  Our connection died.  Requeue. */
-      if (ctx->response_error)
-        SVN_ERR(ctx->response_error(request, response, 0,
-                                    ctx->response_error_baton));
+      /* Uh-oh. Our connection died.  */
+      if (handler->response_error)
+        SVN_ERR(handler->response_error(request, response, 0,
+                                        handler->response_error_baton));
 
-      svn_ra_serf__request_create(ctx);
+      /* Requeue another request for this handler.
+         ### how do we know if the handler can deal with this?!  */
+      svn_ra_serf__request_create(handler);
 
-      return APR_SUCCESS;
+      return SVN_NO_ERROR;
     }
 
-  status = serf_bucket_response_status(response, &sl);
-  if (SERF_BUCKET_READ_ERROR(status))
+  /* If we're reading the body, then skip all this preparation.  */
+  if (handler->reading_body)
+    goto process_body;
+
+  /* Copy the Status-Line info into HANDLER, if we don't yet have it.  */
+  if (handler->sline.version == 0)
     {
-      *serf_status = status;
-      return SVN_NO_ERROR; /* Handled by serf */
-    }
-  if (!sl.version && (APR_STATUS_IS_EOF(status) ||
-                      APR_STATUS_IS_EAGAIN(status)))
-    {
-      *serf_status = status;
-      return SVN_NO_ERROR; /* Handled by serf */
+      serf_status_line sl;
+
+      status = serf_bucket_response_status(response, &sl);
+      if (status != APR_SUCCESS)
+        {
+          /* The response line is not (yet) ready, or some other error.  */
+          *serf_status = status;
+          return SVN_NO_ERROR; /* Handled by serf */
+        }
+
+      /* If we got APR_SUCCESS, then we should have Status-Line info.  */
+      SVN_ERR_ASSERT(sl.version != 0);
+
+      handler->sline = sl;
+      handler->sline.reason = apr_pstrdup(handler->handler_pool, sl.reason);
+
+      /* HTTP/1.1? (or later)  */
+      if (sl.version != SERF_HTTP_10)
+        handler->session->http10 = FALSE;
     }
 
+  /* Keep reading from the network until we've read all the headers.  */
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
+      /* The typical "error" will be APR_EAGAIN, meaning that more input
+         from the network is required to complete the reading of the
+         headers.  */
       if (!APR_STATUS_IS_EOF(status))
         {
+          /* Either the headers are not (yet) complete, or there really
+             was an error.  */
           *serf_status = status;
           return SVN_NO_ERROR;
         }
+
+      /* wait_for_headers() will return EOF if there is no body in this
+         response, or if we completely read the body. The latter is not
+         true since we would have set READING_BODY to get the body read,
+         and we would not be back to this code block.
+
+         It can also return EOF if we truly hit EOF while (say) processing
+         the headers. aka Badness.  */
 
       /* Cases where a lack of a response body (via EOF) is okay:
        *  - A HEAD request
@@ -1749,102 +1812,200 @@ handle_response(serf_request_t *request,
        * the server closed on us early or we're reading too much.  Either way,
        * scream loudly.
        */
-      if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
+      if (strcmp(handler->method, "HEAD") != 0
+          && handler->sline.code != 204
+          && handler->sline.code != 304)
         {
-          svn_error_t *err =
-              svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                svn_error_wrap_apr(status, NULL),
-                                _("Premature EOF seen from server "
-                                  "(http status=%d)"), sl.code);
-          /* This discard may be no-op, but let's preserve the algorithm
-             used elsewhere in this function for clarity's sake. */
-          svn_ra_serf__response_discard_handler(request, response, NULL, pool);
+          err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                                  svn_error_wrap_apr(status, NULL),
+                                  _("Premature EOF seen from server"
+                                    " (http status=%d)"),
+                                  handler->sline.code);
+
+          /* In case anything else arrives... discard it.  */
+          handler->discard_body = TRUE;
+
           return err;
         }
     }
 
-  if (ctx->conn->last_status_code == 401 && sl.code < 400)
+  /* ... and set up the header fields in HANDLER.  */
+  handler->location = response_get_location(response, handler->handler_pool);
+
+  /* On the last request, we failed authentication. We succeeded this time,
+     so let's save away these credentials.  */
+  if (handler->conn->last_status_code == 401 && handler->sline.code < 400)
     {
-      SVN_ERR(svn_auth_save_credentials(ctx->session->auth_state,
-                                        ctx->session->pool));
-      ctx->session->auth_attempts = 0;
-      ctx->session->auth_state = NULL;
+      SVN_ERR(svn_auth_save_credentials(handler->session->auth_state,
+                                        handler->session->pool));
+      handler->session->auth_attempts = 0;
+      handler->session->auth_state = NULL;
     }
+  handler->conn->last_status_code = handler->sline.code;
 
-  ctx->conn->last_status_code = sl.code;
-
-  if (sl.code == 405 || sl.code == 409 || sl.code >= 500)
+  if (handler->sline.code == 405
+      || handler->sline.code == 409
+      || handler->sline.code >= 500)
     {
       /* 405 Method Not allowed.
          409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
-      SVN_ERR(svn_ra_serf__handle_server_error(request, response, pool));
+      serf_bucket_t *hdrs;
+      const char *val;
 
-      if (!ctx->session->pending_error)
+      hdrs = serf_bucket_response_get_headers(response);
+      val = serf_bucket_headers_get(hdrs, "Content-Type");
+      if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
         {
-          apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+          svn_ra_serf__server_error_t *server_err;
 
-          /* 405 == Method Not Allowed (Occurs when trying to lock a working
-             copy path which no longer exists at HEAD in the repository. */
+          server_err = begin_error_parsing(start_error, end_error, cdata_error,
+                                           handler->handler_pool);
+          /* Get the parser to set our DONE flag.  */
+          server_err->parser.done = &handler->done;
 
-          if (sl.code == 405 && !strcmp(ctx->method, "LOCK"))
-            apr_err = SVN_ERR_FS_OUT_OF_DATE;
-
-          return
-              svn_error_createf(apr_err, NULL,
-                                _("%s request on '%s' failed: %d %s"),
-                                ctx->method, ctx->path, sl.code, sl.reason);
+          handler->server_error = server_err;
         }
-
-      return SVN_NO_ERROR; /* Error is set in caller */
-    }
-  else
-    {
-      svn_error_t *err;
-
-      err = ctx->response_handler(request,response, ctx->response_baton, pool);
-
-      if (err
-          && (!SERF_BUCKET_READ_ERROR(err->apr_err)
-               || APR_STATUS_IS_ECONNRESET(err->apr_err)))
+      else
         {
-          /* These errors are special cased in serf
-             ### We hope no handler returns these by accident. */
+          handler->discard_body = TRUE;
+
+          if (!handler->session->pending_error)
+            {
+              apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+
+              /* 405 == Method Not Allowed (Occurs when trying to lock a working
+                copy path which no longer exists at HEAD in the repository. */
+              if (handler->sline.code == 405
+                  && strcmp(handler->method, "LOCK") == 0)
+                apr_err = SVN_ERR_FS_OUT_OF_DATE;
+
+              handler->session->pending_error =
+                  svn_error_createf(apr_err, NULL,
+                                    _("%s request on '%s' failed: %d %s"),
+                                   handler->method, handler->path,
+                                   handler->sline.code, handler->sline.reason);
+            }
+        }
+    }
+
+  /* Stop processing the above, on every packet arrival.  */
+  handler->reading_body = TRUE;
+
+ process_body:
+
+  /* We've been instructed to ignore the body. Drain whatever is present.  */
+  if (handler->discard_body)
+    {
+      *serf_status = drain_bucket(response);
+
+      /* If the handler hasn't set done (which it shouldn't have) and
+         we now have the EOF, go ahead and set it so that we can stop
+         our context loops.
+       */
+      if (!handler->done && APR_STATUS_IS_EOF(*serf_status))
+          handler->done = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
+  /* If we are supposed to parse the body as a server_error, then do
+     that now.  */
+  if (handler->server_error != NULL)
+    {
+      err = svn_ra_serf__handle_xml_parser(request, response,
+                                           &handler->server_error->parser,
+                                           scratch_pool);
+
+      /* If we do not receive an error or it is a non-transient error, return
+         immediately.
+
+         APR_EOF will be returned when parsing is complete.
+
+         APR_EAGAIN & WAIT_CONN may be intermittently returned as we proceed through
+         parsing and the network has no more data right now.  If we receive that,
+         clear the error and return - allowing serf to wait for more data.
+         */
+      if (!err || SERF_BUCKET_READ_ERROR(err->apr_err))
+        return svn_error_trace(err);
+
+      if (!APR_STATUS_IS_EOF(err->apr_err))
+        {
           *serf_status = err->apr_err;
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
 
-      return svn_error_trace(err);
+      /* Clear the EOF. We don't need it.  */
+      svn_error_clear(err);
+
+      /* If the parsing is done, and we did not extract an error, then
+         simply toss everything, and anything else that might arrive.
+         The higher-level code will need to investigate HANDLER->SLINE,
+         as we have no further information for them.  */
+      if (handler->done
+          && handler->server_error->error->apr_err == APR_SUCCESS)
+        {
+          svn_error_clear(handler->server_error->error);
+
+          /* Stop parsing for a server error.  */
+          handler->server_error = NULL;
+
+          /* If anything arrives after this, then just discard it.  */
+          handler->discard_body = TRUE;
+        }
+
+      *serf_status = APR_EOF;
+      return SVN_NO_ERROR;
     }
+
+  /* Pass the body along to the registered response handler.  */
+  err = handler->response_handler(request, response,
+                                  handler->response_baton,
+                                  scratch_pool);
+
+  if (err
+      && (!SERF_BUCKET_READ_ERROR(err->apr_err)
+          || APR_STATUS_IS_ECONNRESET(err->apr_err)))
+    {
+      /* These errors are special cased in serf
+         ### We hope no handler returns these by accident. */
+      *serf_status = err->apr_err;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(err);
 }
 
 
 /* Implements serf_response_handler_t for handle_response. Storing
-   errors in ctx->session->pending_error if appropriate. */
+   errors in handler->session->pending_error if appropriate. */
 static apr_status_t
 handle_response_cb(serf_request_t *request,
                    serf_bucket_t *response,
                    void *baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__handler_t *ctx = baton;
-  svn_ra_serf__session_t *session = ctx->session;
+  svn_ra_serf__handler_t *handler = baton;
   svn_error_t *err;
-  apr_status_t serf_status = APR_SUCCESS;
+  apr_status_t inner_status;
+  apr_status_t outer_status;
 
-  err = svn_error_trace(
-          handle_response(request, response, ctx, &serf_status, pool));
+  err = svn_error_trace(handle_response(request, response,
+                                        handler, &inner_status,
+                                        scratch_pool));
 
-  if (err || session->pending_error)
-    {
-      session->pending_error = svn_error_compose_create(session->pending_error,
-                                                        err);
+  /* Select the right status value to return.  */
+  outer_status = save_error(handler->session, err);
+  if (!outer_status)
+    outer_status = inner_status;
 
-      serf_status = session->pending_error->apr_err;
-    }
+  /* Make sure the DONE flag is set properly.  */
+  if (APR_STATUS_IS_EOF(outer_status) || APR_STATUS_IS_EOF(inner_status))
+    handler->done = TRUE;
 
-  return serf_status;
+  return outer_status;
 }
 
 /* Perform basic request setup, with special handling for HEAD requests,
@@ -1852,34 +2013,21 @@ handle_response_cb(serf_request_t *request,
    headers and body. */
 static svn_error_t *
 setup_request(serf_request_t *request,
-              svn_ra_serf__handler_t *ctx,
+              svn_ra_serf__handler_t *handler,
               serf_bucket_t **req_bkt,
-              serf_response_acceptor_t *acceptor,
-              void **acceptor_baton,
-              serf_response_handler_t *handler,
-              void **handler_baton,
               apr_pool_t *request_pool,
               apr_pool_t *scratch_pool)
 {
   serf_bucket_t *body_bkt;
   serf_bucket_t *headers_bkt;
 
-  /* Default response acceptor.  */
-  *acceptor = accept_response;
-  *acceptor_baton = ctx->session;
-
-  if (strcmp(ctx->method, "HEAD") == 0)
-    {
-      *acceptor = accept_head;
-    }
-
-  if (ctx->body_delegate)
+  if (handler->body_delegate)
     {
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
 
       /* ### should pass the scratch_pool  */
-      SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
-                                 bkt_alloc, request_pool));
+      SVN_ERR(handler->body_delegate(&body_bkt, handler->body_delegate_baton,
+                                     bkt_alloc, request_pool));
     }
   else
     {
@@ -1887,19 +2035,17 @@ setup_request(serf_request_t *request,
     }
 
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
-                         ctx->conn, ctx->method, ctx->path,
-                         body_bkt, ctx->body_type,
+                         handler->session, handler->method, handler->path,
+                         body_bkt, handler->body_type,
                          request_pool, scratch_pool));
 
-  if (ctx->header_delegate)
+  if (handler->header_delegate)
     {
       /* ### should pass the scratch_pool  */
-      SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
-                                   request_pool));
+      SVN_ERR(handler->header_delegate(headers_bkt,
+                                       handler->header_delegate_baton,
+                                       request_pool));
     }
-
-  *handler = handle_response_cb;
-  *handler_baton = ctx;
 
   return APR_SUCCESS;
 }
@@ -1913,43 +2059,57 @@ setup_request_cb(serf_request_t *request,
               serf_bucket_t **req_bkt,
               serf_response_acceptor_t *acceptor,
               void **acceptor_baton,
-              serf_response_handler_t *handler,
-              void **handler_baton,
+              serf_response_handler_t *s_handler,
+              void **s_handler_baton,
               apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = setup_baton;
+  svn_ra_serf__handler_t *handler = setup_baton;
   svn_error_t *err;
 
   /* ### construct a scratch_pool? serf gives us a pool that will live for
      ### the duration of the request.  */
   apr_pool_t *scratch_pool = pool;
 
-  err = setup_request(request, ctx,
-                      req_bkt,
-                      acceptor, acceptor_baton,
-                      handler, handler_baton,
-                      pool /* request_pool */, scratch_pool);
+  if (strcmp(handler->method, "HEAD") == 0)
+    *acceptor = accept_head;
+  else
+    *acceptor = accept_response;
+  *acceptor_baton = handler->session;
 
-  if (err)
-    {
-      ctx->session->pending_error
-                = svn_error_compose_create(ctx->session->pending_error,
-                                           err);
+  *s_handler = handle_response_cb;
+  *s_handler_baton = handler;
 
-      return err->apr_err;
-    }
+  err = svn_error_trace(setup_request(request, handler, req_bkt,
+                                      pool /* request_pool */, scratch_pool));
 
-  return APR_SUCCESS;
+  return save_error(handler->session, err);
 }
 
 void
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
+  SVN_ERR_ASSERT_NO_RETURN(handler->handler_pool != NULL);
+
+  /* In case HANDLER is re-queued, reset the various transient fields.
+
+     ### prior to recent changes, HANDLER was constant. maybe we should
+     ### break out these processing fields, apart from the request
+     ### definition.  */
+  handler->done = FALSE;
+  handler->server_error = NULL;
+  handler->sline.version = 0;
+  handler->location = NULL;
+  handler->reading_body = FALSE;
+  handler->discard_body = FALSE;
+
+  /* ### do we ever alter the >response_handler?  */
+
   /* ### do we need to hold onto the returned request object, or just
      ### not worry about it (the serf ctx will manage it).  */
   (void) serf_connection_request_create(handler->conn->conn,
                                         setup_request_cb, handler);
 }
+
 
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
@@ -1983,26 +2143,22 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       apr_hash_t *props;
       svn_error_t *err;
 
-      err = svn_ra_serf__retrieve_props(&props, session, conn,
-                                        path, SVN_INVALID_REVNUM,
-                                        "0", base_props, pool, pool);
+      err = svn_ra_serf__fetch_node_props(&props, conn,
+                                          path, SVN_INVALID_REVNUM,
+                                          base_props, pool, pool);
       if (! err)
         {
-          *vcc_url =
-              svn_ra_serf__get_ver_prop(props, path,
-                                        SVN_INVALID_REVNUM,
-                                        "DAV:",
+          apr_hash_t *ns_props;
+
+          ns_props = apr_hash_get(props, "DAV:", 4);
+          *vcc_url = svn_prop_get_value(ns_props,
                                         "version-controlled-configuration");
 
-          relative_path = svn_ra_serf__get_ver_prop(props, path,
-                                                    SVN_INVALID_REVNUM,
-                                                    SVN_DAV_PROP_NS_DAV,
-                                                    "baseline-relative-path");
-
-          uuid = svn_ra_serf__get_ver_prop(props, path,
-                                           SVN_INVALID_REVNUM,
-                                           SVN_DAV_PROP_NS_DAV,
-                                           "repository-uuid");
+          ns_props = apr_hash_get(props,
+                                  SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+          relative_path = svn_prop_get_value(ns_props,
+                                             "baseline-relative-path");
+          uuid = svn_prop_get_value(ns_props, "repository-uuid");
           break;
         }
       else
@@ -2161,4 +2317,188 @@ svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
 
   session->shim_callbacks = callbacks;
   return SVN_NO_ERROR;
+}
+
+
+/* Conforms to Expat's XML_StartElementHandler  */
+static void
+expat_start(void *userData, const char *raw_name, const char **attrs)
+{
+  struct expat_ctx_t *ectx = userData;
+
+  if (ectx->inner_error != NULL)
+    return;
+
+  ectx->inner_error = svn_error_trace(
+                        svn_ra_serf__xml_cb_start(ectx->xmlctx,
+                                                  raw_name, attrs));
+
+#ifdef EXPAT_HAS_STOPPARSER
+  if (ectx->inner_error)
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
+#endif
+}
+
+
+/* Conforms to Expat's XML_EndElementHandler  */
+static void
+expat_end(void *userData, const char *raw_name)
+{
+  struct expat_ctx_t *ectx = userData;
+
+  if (ectx->inner_error != NULL)
+    return;
+
+  ectx->inner_error = svn_error_trace(
+                        svn_ra_serf__xml_cb_end(ectx->xmlctx, raw_name));
+
+#ifdef EXPAT_HAS_STOPPARSER
+  if (ectx->inner_error)
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
+#endif
+}
+
+
+/* Conforms to Expat's XML_CharacterDataHandler  */
+static void
+expat_cdata(void *userData, const char *data, int len)
+{
+  struct expat_ctx_t *ectx = userData;
+
+  if (ectx->inner_error != NULL)
+    return;
+
+  ectx->inner_error = svn_error_trace(
+                        svn_ra_serf__xml_cb_cdata(ectx->xmlctx, data, len));
+
+#ifdef EXPAT_HAS_STOPPARSER
+  if (ectx->inner_error)
+    (void) XML_StopParser(ectx->parser, 0 /* resumable */);
+#endif
+}
+
+
+/* Implements svn_ra_serf__response_handler_t */
+static svn_error_t *
+expat_response_handler(serf_request_t *request,
+                       serf_bucket_t *response,
+                       void *baton,
+                       apr_pool_t *scratch_pool)
+{
+  struct expat_ctx_t *ectx = baton;
+
+  if (!ectx->parser)
+    {
+      ectx->parser = XML_ParserCreate(NULL);
+      apr_pool_cleanup_register(ectx->cleanup_pool, &ectx->parser,
+                                xml_parser_cleanup, apr_pool_cleanup_null);
+      XML_SetUserData(ectx->parser, ectx);
+      XML_SetElementHandler(ectx->parser, expat_start, expat_end);
+      XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
+    }
+
+  /* ### should we bail on anything < 200 or >= 300 ??
+     ### actually: < 200 should really be handled by the core.  */
+  if (ectx->handler->sline.code == 404)
+    {
+      /* By deferring to expect_empty_body(), it will make a choice on
+         how to handle the body. Whatever the decision, the core handler
+         will take over, and we will not be called again.  */
+      return svn_error_trace(svn_ra_serf__expect_empty_body(
+                               request, response, ectx->handler,
+                               scratch_pool));
+    }
+
+  while (1)
+    {
+      apr_status_t status;
+      const char *data;
+      apr_size_t len;
+      int expat_status;
+
+      status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
+      if (SERF_BUCKET_READ_ERROR(status))
+        return svn_error_wrap_apr(status, NULL);
+
+#if 0
+      /* ### move restart/skip into the core handler  */
+      ectx->handler->read_size += len;
+#endif
+
+      /* ### move PAUSED behavior to a new response handler that can feed
+         ### an inner handler, or can pause for a while.  */
+
+      /* ### should we have an IGNORE_ERRORS flag like the v1 parser?  */
+
+      expat_status = XML_Parse(ectx->parser, data, (int)len, 0 /* isFinal */);
+
+      /* We need to check INNER_ERROR first. This is an error from the
+         callbacks that has been "dropped off" for us to retrieve. On
+         current Expat parsers, we stop the parser when an error occurs,
+         so we want to ignore EXPAT_STATUS (which reports the stoppage).
+
+         If an error is not present, THEN we go ahead and look for parsing
+         errors.  */
+      if (ectx->inner_error)
+        {
+          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
+                               xml_parser_cleanup);
+          return svn_error_trace(ectx->inner_error);
+        }
+      if (expat_status == XML_STATUS_ERROR)
+        return svn_error_createf(SVN_ERR_XML_MALFORMED,
+                                 ectx->inner_error,
+                                 _("The %s response contains invalid XML"
+                                   " (%d %s)"),
+                                 ectx->handler->method,
+                                 ectx->handler->sline.code,
+                                 ectx->handler->sline.reason);
+
+      /* The parsing went fine. What has the bucket told us?  */
+
+      if (APR_STATUS_IS_EOF(status))
+        {
+          /* Tell expat we've reached the end of the content. Ignore the
+             return status. We just don't care.  */
+          (void) XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
+
+          svn_ra_serf__xml_context_destroy(ectx->xmlctx);
+          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
+                               xml_parser_cleanup);
+
+          /* ### should check XMLCTX to see if it has returned to the
+             ### INITIAL state. we may have ended early...  */
+        }
+
+      if (status && !SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
+    }
+
+  /* NOTREACHED */
+}
+
+
+svn_ra_serf__handler_t *
+svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  apr_pool_t *result_pool)
+{
+  svn_ra_serf__handler_t *handler;
+  struct expat_ctx_t *ectx;
+
+  ectx = apr_pcalloc(result_pool, sizeof(*ectx));
+  ectx->xmlctx = xmlctx;
+  ectx->parser = NULL;
+  ectx->cleanup_pool = result_pool;
+
+
+  handler = apr_pcalloc(result_pool, sizeof(*handler));
+  handler->handler_pool = result_pool;
+  handler->response_handler = expat_response_handler;
+  handler->response_baton = ectx;
+
+  ectx->handler = handler;
+
+  return handler;
 }

@@ -26,7 +26,9 @@
 ######################################################################
 
 # General modules
-import os
+import os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -256,8 +258,8 @@ def check_reversion(files, output):
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    print("Expected output: %s" % expected_output)
-    print("Actual output:   %s" % output)
+    logger.warn("Expected output: %s", expected_output)
+    logger.warn("Actual output:   %s", output)
     raise svntest.Failure
 
 #----------------------------------------------------------------------

@@ -431,7 +431,7 @@ mutable_root_node(dag_node_t **node_p,
                                        trail, pool);
   else
     /* If it's not a transaction root, we can't change its contents.  */
-    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path, pool);
+    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path);
 }
 
 
@@ -769,7 +769,7 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_base__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far, pool),
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far),
                   apr_psprintf(pool, _("Failure opening '%s'"), path));
 
       rest = next;
@@ -2961,7 +2961,7 @@ txn_body_make_dir(void *baton,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path, trail->pool);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
@@ -3227,17 +3227,7 @@ fs_same_p(svn_boolean_t *same_p,
           svn_fs_t *fs2,
           apr_pool_t *pool)
 {
-  const char *uuid1;
-  const char *uuid2;
-
-  /* Random thought: if fetching UUIDs to compare filesystems is too
-     expensive, one solution would be to cache the UUID in each fs
-     object (copying the UUID into fs->pool, of course). */
-
-  SVN_ERR(fs1->vtable->get_uuid(fs1, &uuid1, pool));
-  SVN_ERR(fs2->vtable->get_uuid(fs2, &uuid2, pool));
-
-  *same_p = ! strcmp(uuid1, uuid2);
+  *same_p = ! strcmp(fs1->uuid, fs2->uuid);
   return SVN_NO_ERROR;
 }
 
@@ -3414,7 +3404,7 @@ txn_body_make_file(void *baton,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path, trail->pool);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we

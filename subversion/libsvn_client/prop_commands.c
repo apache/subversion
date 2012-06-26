@@ -790,7 +790,7 @@ recursive_propget_receiver(void *baton,
    Treat DEPTH as in svn_client_propget3().
 */
 static svn_error_t *
-get_prop_from_wc(apr_hash_t *props,
+get_prop_from_wc(apr_hash_t **props,
                  const char *propname,
                  const char *target_abspath,
                  svn_boolean_t pristine,
@@ -811,12 +811,24 @@ get_prop_from_wc(apr_hash_t *props,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  rb.props = props;
+  if (!pristine && depth == svn_depth_infinity
+      && (!changelists || changelists->nelts == 0))
+    {
+      /* Handle this common svn:mergeinfo case more efficient than the target
+         list handling in the recursive retrieval. */
+      SVN_ERR(svn_wc__prop_retrieve_recursive(
+                            props, ctx->wc_ctx, target_abspath, propname,
+                            result_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  *props = apr_hash_make(result_pool);
+  rb.props = *props;
   rb.pool = result_pool;
   rb.wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
-                                      propname, depth, FALSE, pristine,
+                                      propname, depth, pristine,
                                       changelists,
                                       recursive_propget_receiver, &rb,
                                       ctx->cancel_func, ctx->cancel_baton,
@@ -825,6 +837,7 @@ get_prop_from_wc(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
+/* Note: this implementation is very similar to svn_client_proplist. */
 /* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
 svn_client_propget5(apr_hash_t **props,
@@ -851,8 +864,6 @@ svn_client_propget5(apr_hash_t **props,
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
                                                         target);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
-
-  *props = apr_hash_make(result_pool);
 
   local_explicit_props =
     (! svn_path_is_url(target)
@@ -909,7 +920,7 @@ svn_client_propget5(apr_hash_t **props,
                                      scratch_pool, scratch_pool));
         }
 
-      SVN_ERR(get_prop_from_wc(*props, propname, target,
+      SVN_ERR(get_prop_from_wc(props, propname, target,
                                pristine, kind,
                                depth, changelists, ctx, scratch_pool,
                                result_pool));
@@ -918,7 +929,6 @@ svn_client_propget5(apr_hash_t **props,
   if ((inherited_props && !local_iprops)
       || !local_explicit_props)
     {
-      const char *url;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       svn_opt_revision_t new_operative_rev;
@@ -997,21 +1007,24 @@ svn_client_propget5(apr_hash_t **props,
       /* Do we still have anything to ask the repository about? */
       if (!local_explicit_props || !local_iprops)
         {
+          svn_client__pathrev_t *loc;
+
           /* Get an RA plugin for this filesystem object. */
-          SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                                   &url, target, NULL,
-                                                   peg_revision,
-                                                   revision, ctx,
-                                                   scratch_pool));
+          SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                                    target, NULL,
+                                                    peg_revision,
+                                                    revision, ctx,
+                                                    scratch_pool));
 
-          SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind,
+          SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind,
                                     scratch_pool));
-
+          *props = apr_hash_make(result_pool);
           SVN_ERR(remote_propget(!local_explicit_props ? *props : NULL,
                                  !local_iprops ? inherited_props : NULL,
-                                 propname, url, "",
-                                 kind, revnum, ra_session,
+                                 propname, loc->url, "",
+                                 kind, loc->rev, ra_session,
                                  depth, result_pool, scratch_pool));
+          revnum = loc->rev;
         }
     }
 
@@ -1284,7 +1297,6 @@ svn_client_proplist4(const char *path_or_url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  const char *url;
   svn_boolean_t local_explicit_props;
   svn_boolean_t local_iprops;
 
@@ -1348,21 +1360,23 @@ svn_client_proplist4(const char *path_or_url,
             {
               svn_ra_session_t *ra_session;
               svn_node_kind_t kind;
-              svn_revnum_t revnum;
+              svn_client__pathrev_t *pathrev;
               apr_array_header_t *remote_iprops;
               int i;
 
               /* Get an RA session for this URL. */
-              SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                                       &url, path_or_url,
-                                                       NULL, peg_revision,
-                                                       revision, ctx,
-                                                       scratch_pool));
+              SVN_ERR(svn_client__ra_session_from_path2(&ra_session,
+                                                        &pathrev,
+                                                        path_or_url,
+                                                        NULL, peg_revision,
+                                                        revision, ctx,
+                                                        scratch_pool));
 
-              SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind,
+              SVN_ERR(svn_ra_check_path(ra_session, "", pathrev->rev, &kind,
                                         scratch_pool));
               SVN_ERR(svn_ra_get_inherited_props(ra_session, &remote_iprops,
-                                                 "", revnum, result_pool));
+                                                 "", pathrev->rev,
+                                                 result_pool));
               for (i = remote_iprops->nelts - 1; i >= 0; i--)
                 {
                   svn_prop_inherited_item_t *remote_iprop =
@@ -1400,8 +1414,7 @@ svn_client_proplist4(const char *path_or_url,
             }
 
           SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
-                                              depth,
-                                              FALSE, pristine, changelists,
+                                              depth, pristine, changelists,
                                               recursive_proplist_receiver, &rb,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, result_pool));
@@ -1424,9 +1437,9 @@ svn_client_proplist4(const char *path_or_url,
     {
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
-      svn_revnum_t revnum;
       svn_opt_revision_t new_operative_rev;
       svn_opt_revision_t new_peg_rev;
+      svn_client__pathrev_t *loc;
 
       /* Peg or operative revisions may be WC specific for
          PATH_OR_URL's explicit props, but still require us to
@@ -1481,11 +1494,12 @@ svn_client_proplist4(const char *path_or_url,
                     {
                       svn_revnum_t resolved_operative_rev;
 
-                      SVN_ERR(svn_client__get_revision_number(&resolved_operative_rev,
-                                                              NULL, ctx->wc_ctx,
-                                                              local_abspath, NULL,
-                                                              revision,
-                                                              scratch_pool));
+                      SVN_ERR(svn_client__get_revision_number(
+                        &resolved_operative_rev,
+                        NULL, ctx->wc_ctx,
+                        local_abspath, NULL,
+                        revision,
+                        scratch_pool));
                       new_operative_rev.kind = svn_opt_revision_number;
                       new_operative_rev.value.number = resolved_operative_rev;
                       revision = &new_operative_rev;
@@ -1504,14 +1518,15 @@ svn_client_proplist4(const char *path_or_url,
         }
 
       /* Get an RA session for this URL. */
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, path_or_url, NULL,
-                                               peg_revision,
-                                               revision, ctx, result_pool));
+      SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                                path_or_url, NULL,
+                                                peg_revision,
+                                                revision, ctx, result_pool));
 
-      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, result_pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind,
+                                result_pool));
 
-      SVN_ERR(remote_proplist(url, "", kind, revnum, ra_session,
+      SVN_ERR(remote_proplist(loc->url, "", kind, loc->rev, ra_session,
                               !local_explicit_props,
                               (get_target_inherited_props && !local_iprops),
                               depth, receiver, receiver_baton,

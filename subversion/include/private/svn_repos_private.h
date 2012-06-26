@@ -104,6 +104,15 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_repos__replay_ev2(svn_fs_root_t *root,
+                      const char *base_dir,
+                      svn_revnum_t low_water_mark,
+                      svn_editor_t *editor,
+                      svn_repos_authz_func_t authz_read_func,
+                      void *authz_read_baton,
+                      apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

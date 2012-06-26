@@ -34,6 +34,7 @@
 #include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+#include "svn_sorts.h"
 #include "svn_subst.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -72,9 +73,9 @@ print_properties_xml(const char *pname,
                      apr_array_header_t *inherited_props,
                      apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = NULL;
+  apr_array_header_t *sorted_props;
   int i;
+  apr_pool_t *iterpool = NULL;
   svn_stringbuf_t *sb;
 
   if (inherited_props && inherited_props->nelts)
@@ -110,10 +111,12 @@ print_properties_xml(const char *pname,
   if (iterpool == NULL)
     iterpool = svn_pool_create(iterpool);
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  sorted_props = svn_sort__hash(props, svn_sort_compare_items_as_paths, pool);
+  for (i = 0; i < sorted_props->nelts; i++)
     {
-      const char *filename = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *filename = item.key;
+      svn_string_t *propval = item.value;
 
       sb = NULL;
       svn_pool_clear(iterpool);
@@ -239,7 +242,8 @@ print_properties(svn_stream_t *out,
                  svn_boolean_t like_proplist,
                  apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_props;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path_prefix;
 
@@ -265,10 +269,12 @@ print_properties(svn_stream_t *out,
         }
     }
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  sorted_props = svn_sort__hash(props, svn_sort_compare_items_as_paths, pool);
+  for (i = 0; i < sorted_props->nelts; i++)
     {
-      const char *filename = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *filename = item.key;
+      svn_string_t *propval = item.value;
 
       svn_pool_clear(iterpool);
 

@@ -120,6 +120,19 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
                                                           const char *name,
                                                           apr_pool_t *pool);
 
+/** This is a function type which allows the RA layer to fetch the
+ * cached pristine file contents whose checksum is @a checksum, if
+ * any.  @a *contents will be a read stream containing those contents
+ * if they are found; NULL otherwise.
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_ra_get_wc_contents_func_t)(void *baton,
+                                 svn_stream_t **contents,
+                                 const svn_checksum_t *checksum,
+                                 apr_pool_t *pool);
+
 
 /** A function type for retrieving the youngest revision from a repos. */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
@@ -136,6 +149,7 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
 typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
                                                         const char **name,
                                                         apr_pool_t *pool);
+
 
 
 /**
@@ -515,6 +529,11 @@ typedef struct svn_ra_callbacks2_t
    * @since New in 1.5
    */
   svn_ra_get_client_string_func_t get_client_string;
+
+  /** Working copy file content fetching function.
+   * @since New in 1.8.
+   */
+  svn_ra_get_wc_contents_func_t get_wc_contents;
 
 } svn_ra_callbacks2_t;
 
@@ -2094,7 +2113,7 @@ svn_ra_print_ra_libraries(svn_stringbuf_t **descriptions,
  */
 typedef struct svn_ra_plugin_t
 {
-  /** The proper name of the RA library, (like "ra_neon" or "ra_local") */
+  /** The proper name of the RA library, (like "ra_serf" or "ra_local") */
   const char *name;
 
   /** Short doc string printed out by `svn --version` */
@@ -2365,7 +2384,7 @@ typedef svn_error_t *(*svn_ra_init_func_t)(int abi_version,
 
 /* Public RA implementations. */
 
-/** Initialize libsvn_ra_neon.
+/** Initialize libsvn_ra_serf.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API. */
 SVN_DEPRECATED

@@ -306,9 +306,9 @@ struct decode_baton {
 static APR_INLINE void
 decode_group(const unsigned char *in, char *out)
 {
-  out[0] = (in[0] << 2) | (in[1] >> 4);
-  out[1] = ((in[1] & 0xf) << 4) | (in[2] >> 2);
-  out[2] = ((in[2] & 0x3) << 6) | in[3];
+  out[0] = (char)((in[0] << 2) | (in[1] >> 4));
+  out[1] = (char)(((in[1] & 0xf) << 4) | (in[2] >> 2));
+  out[2] = (char)(((in[2] & 0x3) << 6) | in[3]);
 }
 
 /* Lookup table for base64 characters; reverse_base64[ch] gives a
@@ -415,9 +415,9 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
      (*inbuflen+len) is encoded data length
      (*inbuflen+len)/4 is the number of complete 4-bytes sets
      (*inbuflen+len)/4*3 is the number of decoded bytes
-     (*inbuflen+len)/4*3+1 is the number of decoded bytes plus a null
+     svn_stringbuf_ensure will add an additional byte for the terminating 0.
   */
-  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3 + 1);
+  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3);
 
   while ( !*done && p < end )
     {

@@ -23,6 +23,8 @@
 
 #include <assert.h>
 #include <apr_md5.h>
+#include <apr_thread_rwlock.h>
+
 #include "svn_pools.h"
 #include "svn_checksum.h"
 #include "md5.h"
@@ -436,11 +438,13 @@ struct svn_membuffer_t
    */
   apr_uint64_t total_hits;
 
+#if APR_HAS_THREADS
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
-  svn_mutex__t *mutex;
+  apr_thread_rwlock_t *lock;
+#endif
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -450,6 +454,76 @@ struct svn_membuffer_t
 /* Align POINTER value to the next ITEM_ALIGNMENT boundary.
  */
 #define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)(char*)(pointer)))
+
+/* If locking is supported for CACHE, aquire a read lock for it.
+ */
+static svn_error_t *
+read_lock_cache(svn_membuffer_t *cache)
+{
+#if APR_HAS_THREADS
+  if (cache->lock)
+  {
+    apr_status_t status = apr_thread_rwlock_rdlock(cache->lock);
+    if (status)
+      return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
+  }
+#endif
+  return SVN_NO_ERROR;
+}
+
+/* If locking is supported for CACHE, aquire a write lock for it.
+ */
+static svn_error_t *
+write_lock_cache(svn_membuffer_t *cache)
+{
+#if APR_HAS_THREADS
+  if (cache->lock)
+  {
+    apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
+    if (status)
+      return svn_error_wrap_apr(status, _("Can't write-lock cache mutex"));
+  }
+#endif
+  return SVN_NO_ERROR;
+}
+
+/* If locking is supported for CACHE, release the current lock
+ * (read or write).
+ */
+static svn_error_t *
+unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
+{
+#if APR_HAS_THREADS
+  if (cache->lock)
+  {
+    apr_status_t status = apr_thread_rwlock_unlock(cache->lock);
+    if (err)
+      return err;
+
+    if (status)
+      return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
+  }
+#endif
+  return err;
+}
+
+/* If supported, guard the execution of EXPR with a read lock to cache.
+ * Macro has been modelled after SVN_MUTEX__WITH_LOCK.
+ */
+#define WITH_READ_LOCK(cache, expr)         \
+do {                                        \
+  SVN_ERR(read_lock_cache(cache));          \
+  SVN_ERR(unlock_cache(cache, (expr)));     \
+} while (0)
+
+/* If supported, guard the execution of EXPR with a write lock to cache.
+ * Macro has been modelled after SVN_MUTEX__WITH_LOCK.
+ */
+#define WITH_WRITE_LOCK(cache, expr)        \
+do {                                        \
+  SVN_ERR(write_lock_cache(cache));         \
+  SVN_ERR(unlock_cache(cache, (expr)));     \
+} while (0)
 
 /* Resolve a dictionary entry reference, i.e. return the entry
  * for the given IDX.
@@ -626,9 +700,11 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 static APR_INLINE unsigned char
 is_group_initialized(svn_membuffer_t *cache, apr_uint32_t group_index)
 {
-  unsigned char flags = cache->group_initialized
-                          [group_index / (8 * GROUP_INIT_GRANULARITY)];
-  unsigned char bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
+  unsigned char flags
+    = cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)];
+  unsigned char bit_mask
+    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
+
   return flags & bit_mask;
 }
 
@@ -652,7 +728,8 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
         cache->directory[i][j].offset = NO_OFFSET;
 
   /* set the "initialized" bit for these groups */
-  bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
+  bit_mask
+    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
   cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)]
     |= bit_mask;
 }
@@ -1001,11 +1078,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
    * Note, that this limit could only be exceeded in a very
    * theoretical setup with about 1EB of cache.
    */
-  group_count = directory_size / sizeof(entry_group_t);
-  if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
-    {
-      group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
-    }
+  group_count = directory_size / sizeof(entry_group_t)
+                    >= (APR_UINT32_MAX / GROUP_SIZE)
+              ? (APR_UINT32_MAX / GROUP_SIZE) - 1
+              : (apr_uint32_t)(directory_size / sizeof(entry_group_t));
 
   group_init_size = 1 + group_count / (8 * GROUP_INIT_GRANULARITY);
   for (seg = 0; seg < segment_count; ++seg)
@@ -1048,10 +1124,20 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
         }
 
+#if APR_HAS_THREADS
       /* A lock for intra-process synchronization to the cache, or NULL if
        * the cache's creator doesn't feel the cache needs to be
-       * thread-safe. */
-      SVN_ERR(svn_mutex__init(&c[seg].mutex, thread_safe, pool));
+       * thread-safe.
+       */
+      c[seg].lock = NULL;
+      if (thread_safe)
+        {
+          apr_status_t status =
+              apr_thread_rwlock_create(&(c[seg].lock), pool);
+          if (status)
+            return svn_error_wrap_apr(status, _("Can't create cache mutex"));
+        }
+#endif
     }
 
   /* done here
@@ -1156,14 +1242,14 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* The actual cache data access needs to sync'ed
    */
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_set_internal(cache,
-                                                    key,
-                                                    group_index,
-                                                    buffer,
-                                                    size,
-                                                    DEBUG_CACHE_MEMBUFFER_TAG
-                                                    scratch_pool));
+  WITH_WRITE_LOCK(cache,
+                  membuffer_cache_set_internal(cache,
+                                               key,
+                                               group_index,
+                                               buffer,
+                                               size,
+                                               DEBUG_CACHE_MEMBUFFER_TAG
+                                               scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1252,14 +1338,14 @@ membuffer_cache_get(svn_membuffer_t *cache,
   /* find the entry group that will hold the key.
    */
   group_index = get_group_index(&cache, key);
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_get_internal(cache,
-                                                    group_index,
-                                                    key,
-                                                    &buffer,
-                                                    &size,
-                                                    DEBUG_CACHE_MEMBUFFER_TAG
-                                                    result_pool));
+  WITH_READ_LOCK(cache,
+                 membuffer_cache_get_internal(cache,
+                                              group_index,
+                                              key,
+                                              &buffer,
+                                              &size,
+                                              DEBUG_CACHE_MEMBUFFER_TAG
+                                              result_pool));
 
   /* re-construct the original data object from its serialized form.
    */
@@ -1355,11 +1441,11 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 {
   apr_uint32_t group_index = get_group_index(&cache, key);
 
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_get_partial_internal
-                           (cache, group_index, key, item, found,
-                            deserializer, baton, DEBUG_CACHE_MEMBUFFER_TAG
-                            result_pool));
+  WITH_READ_LOCK(cache,
+                 membuffer_cache_get_partial_internal
+                     (cache, group_index, key, item, found,
+                      deserializer, baton, DEBUG_CACHE_MEMBUFFER_TAG
+                      result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1486,11 +1572,11 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
   /* cache item lookup
    */
   apr_uint32_t group_index = get_group_index(&cache, key);
-  SVN_MUTEX__WITH_LOCK(cache->mutex,
-                       membuffer_cache_set_partial_internal
-                           (cache, group_index, key, func, baton,
-                            DEBUG_CACHE_MEMBUFFER_TAG_ARG
-                            scratch_pool));
+  WITH_WRITE_LOCK(cache,
+                  membuffer_cache_set_partial_internal
+                     (cache, group_index, key, func, baton,
+                      DEBUG_CACHE_MEMBUFFER_TAG_ARG
+                      scratch_pool));
 
   /* done here -> unlock the cache
    */
@@ -1825,8 +1911,8 @@ svn_membuffer_cache_get_info(void *cache_void,
   for (i = 0; i < cache->membuffer->segment_count; ++i)
     {
       svn_membuffer_t *segment = cache->membuffer + i;
-      SVN_MUTEX__WITH_LOCK(segment->mutex,
-                           svn_membuffer_get_segment_info(segment, info));
+      WITH_READ_LOCK(segment,
+                     svn_membuffer_get_segment_info(segment, info));
     }
 
   return SVN_NO_ERROR;

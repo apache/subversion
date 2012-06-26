@@ -1573,7 +1573,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
 
         for (cp = parm; (*cp && !svn_ctype_isspace(*cp) && *cp != '='); ++cp)
           {
-            *cp = apr_tolower(*cp);
+            *cp = (char)apr_tolower(*cp);
           }
 
         if (!*cp)
@@ -3043,14 +3043,12 @@ set_headers(request_rec *r, const dav_resource *resource)
   apr_table_setn(r->headers_out, "ETag",
                  dav_svn__getetag(resource, resource->pool));
 
-#if 0
   /* As version resources don't change, encourage caching. */
-  /* ### FIXME: This conditional is wrong -- type is often REGULAR,
-     ### and the resource doesn't seem to be baselined. */
-  if (resource->type == DAV_RESOURCE_TYPE_VERSION)
+  if ((resource->type == DAV_RESOURCE_TYPE_REGULAR
+       && resource->versioned && !resource->collection)
+      || resource->type == DAV_RESOURCE_TYPE_VERSION)
     /* Cache resource for one week (specified in seconds). */
     apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
-#endif
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");

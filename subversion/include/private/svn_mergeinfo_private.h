@@ -185,7 +185,8 @@ svn_mergeinfo__to_formatted_string(svn_string_t **output,
                                    apr_pool_t *pool);
 
 /* Set *YOUNGEST_REV and *OLDEST_REV to the youngest and oldest revisions
-   found in the rangelists within MERGEINFO.  If MERGEINFO is NULL or empty
+   found in the rangelists within MERGEINFO.  Note that *OLDEST_REV is
+   exclusive and *YOUNGEST_REV is inclusive.  If MERGEINFO is NULL or empty
    set *YOUNGEST_REV and *OLDEST_REV to SVN_INVALID_REVNUM. */
 svn_error_t *
 svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
@@ -194,9 +195,9 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 
 /* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in
-   RESULT_POOL, less any rangelists that fall outside of the range
-   OLDEST_REV:YOUNGEST_REV (inclusive) if INCLUDE_RANGE is true, or less
-   any rangelists within the range OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
+   RESULT_POOL, less any revision ranges that fall outside of the range
+   OLDEST_REV:YOUNGEST_REV (exclusive:inclusive) if INCLUDE_RANGE is true,
+   or less any ranges within OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
    is false.  If all the rangelists mapped to a given path are filtered
    then filter that path as well.  If all paths are filtered or MERGEINFO is
    empty or NULL then *FILTERED_MERGEINFO is set to an empty hash.

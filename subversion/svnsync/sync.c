@@ -225,9 +225,7 @@ add_directory(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *b = apr_palloc(pool, sizeof(*b));
 
-  /* if copyfrom_path starts with '/' join rest of copyfrom_path leaving
-   * leading '/' with canonicalized url eb->to_url.
-   */
+  /* if copyfrom_path is an fspath create a proper uri */
   if (copyfrom_path && copyfrom_path[0] == '/')
     copyfrom_path = svn_path_url_add_component2(eb->to_url,
                                                 copyfrom_path + 1, pool);
@@ -276,9 +274,10 @@ add_file(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
 
-  if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                 svn_path_uri_encode(copyfrom_path, pool));
+  /* if copyfrom_path is an fspath create a proper uri */
+  if (copyfrom_path && copyfrom_path[0] == '/')
+    copyfrom_path = svn_path_url_add_component2(eb->to_url,
+                                                copyfrom_path + 1, pool);
 
   SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_node_baton,
                                        copyfrom_path, copyfrom_rev,

@@ -1952,7 +1952,8 @@ def enable_revprop_changes(repo_dir):
   pre-revprop-change hook script and (if appropriate) making it executable."""
 
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
-  main.create_python_hook_script(hook_path, 'import sys; sys.exit(0)')
+  main.create_python_hook_script(hook_path, 'import sys; sys.exit(0)',
+                                 cmd_alternative='@exit 0')
 
 def disable_revprop_changes(repo_dir):
   """Disable revprop changes in the repository at REPO_DIR by creating a
@@ -1962,8 +1963,12 @@ def disable_revprop_changes(repo_dir):
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
-                                 'sys.stderr.write("pre-revprop-change %s" % " ".join(sys.argv[1:6]))\n'
-                                 'sys.exit(1)\n')
+                                 'sys.stderr.write("pre-revprop-change %s" %'
+                                                  ' " ".join(sys.argv[1:]))\n'
+                                 'sys.exit(1)\n',
+                                 cmd_alternative=
+                                       '@echo pre-revprop-change %* 1>&2\n'
+                                       '@exit 1\n')
 
 def create_failing_post_commit_hook(repo_dir):
   """Create a post-commit hook script in the repository at REPO_DIR that always
@@ -1972,7 +1977,10 @@ def create_failing_post_commit_hook(repo_dir):
   hook_path = main.get_post_commit_hook_path(repo_dir)
   main.create_python_hook_script(hook_path, 'import sys\n'
     'sys.stderr.write("Post-commit hook failed")\n'
-    'sys.exit(1)')
+    'sys.exit(1)\n',
+    cmd_alternative=
+            '@echo Post-commit hook failed 1>&2\n'
+            '@exit 1\n')
 
 # set_prop can be used for properties with NULL characters which are not
 # handled correctly when passed to subprocess.Popen() and values like "*"

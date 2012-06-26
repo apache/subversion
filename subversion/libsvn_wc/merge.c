@@ -926,9 +926,12 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
 
 
 /* Attempt a trivial merge of LEFT_ABSPATH and RIGHT_ABSPATH to TARGET_ABSPATH.
- * The merge is trivial if the file at LEFT_ABSPATH equals TARGET_ABSPATH,
- * because in this case the content of RIGHT_ABSPATH can be copied to the
- * target. On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
+ * The merge is trivial if the file at LEFT_ABSPATH equals the detranslated
+ * form of the target at DETRANSLATED_TARGET_ABSPATH, because in this case
+ * the content of RIGHT_ABSPATH can be copied to the target.
+ * Another trivial case is if DETRANSLATED_TARGET_ABSPATH is identical to 
+ * RIGHT_ABSPATH - we can just accept the existing content as merge result.
+ * On success, set *MERGE_OUTCOME to SVN_WC_MERGE_MERGED in case the
  * target was changed, or to SVN_WC_MERGE_UNCHANGED if the target was not
  * changed. Install work queue items allocated in RESULT_POOL in *WORK_ITEMS.
  * On failure, set *MERGE_OUTCOME to SVN_WC_MERGE_NO_MERGE. */
@@ -938,6 +941,7 @@ merge_file_trivial(svn_skel_t **work_items,
                    const char *left_abspath,
                    const char *right_abspath,
                    const char *target_abspath,
+                   const char *detranslated_target_abspath,
                    svn_boolean_t dry_run,
                    svn_wc__db_t *db,
                    apr_pool_t *result_pool,
@@ -960,7 +964,8 @@ merge_file_trivial(svn_skel_t **work_items,
   /* If the LEFT side of the merge is equal to WORKING, then we can
    * copy RIGHT directly. */
   SVN_ERR(svn_io_files_contents_same_p(&same_contents, left_abspath,
-                                       target_abspath, scratch_pool));
+                                       detranslated_target_abspath,
+                                       scratch_pool));
   if (same_contents)
     {
       /* Check whether the left side equals the right side.
@@ -988,6 +993,23 @@ merge_file_trivial(svn_skel_t **work_items,
         }
 
       return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* Check whether the existing version equals the right side. If it 
+       * does, the locally existing, changed file equals the incoming
+       * file, so there is no conflict. For binary files, we historically
+       * conflicted them needlessly, while merge_text_file figured it out 
+       * eventually and returned svn_wc_merge_unchanged for them, which
+       * is what we do here. */
+      SVN_ERR(svn_io_files_contents_same_p(&same_contents,
+                                           detranslated_target_abspath,
+                                           right_abspath, scratch_pool));
+      if (same_contents)
+        {
+          *merge_outcome = svn_wc_merge_unchanged;
+          return SVN_NO_ERROR;
+        }
     }
 
   *merge_outcome = svn_wc_merge_no_merge;
@@ -1418,8 +1440,8 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
   SVN_ERR(merge_file_trivial(work_items, merge_outcome,
                              left_abspath, right_abspath,
-                             target_abspath, dry_run, db,
-                             result_pool, scratch_pool));
+                             target_abspath, detranslated_target_abspath,
+                             dry_run, db, result_pool, scratch_pool));
   if (*merge_outcome == svn_wc_merge_no_merge)
     {
       if (is_binary)
@@ -1476,7 +1498,8 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
 
 svn_error_t *
-svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
+svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
               const char *right_abspath,
@@ -1489,6 +1512,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_boolean_t dry_run,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
               const apr_array_header_t *prop_diff,
               svn_wc_conflict_resolver_func2_t conflict_func,
               void *conflict_baton,
@@ -1497,8 +1521,11 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               apr_pool_t *scratch_pool)
 {
   const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
+  svn_skel_t *prop_items = NULL;
   svn_skel_t *work_items;
-  apr_hash_t *actual_props;
+  apr_hash_t *pristine_props = NULL;
+  apr_hash_t *actual_props = NULL;
+  apr_hash_t *new_actual_props = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(right_abspath));
@@ -1508,37 +1535,86 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
   if (!dry_run)
     SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
 
-  /* Sanity check:  the merge target must be under revision control,
-   * unless the merge target is a copyfrom text, which lives in a
-   * temporary file and does not exist in ACTUAL yet. */
+  /* Sanity check:  the merge target must be a file under revision control */
   {
+    svn_wc__db_status_t status;
     svn_kind_t kind;
-    svn_boolean_t hidden;
-    SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, target_abspath, TRUE,
-                                 scratch_pool));
+    svn_boolean_t had_props;
+    svn_boolean_t props_mod;
 
-    if (kind == svn_kind_unknown)
+    SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, &had_props, &props_mod, NULL, NULL,
+                                 NULL,
+                                 wc_ctx->db, target_abspath,
+                                 scratch_pool, scratch_pool));
+
+    if (kind != svn_kind_file || (status != svn_wc__db_status_normal
+                                  && status != svn_wc__db_status_added))
       {
-        *merge_outcome = svn_wc_merge_no_merge;
+        *merge_content_outcome = svn_wc_merge_no_merge;
+        if (merge_props_outcome)
+          *merge_props_outcome = svn_wc_notify_state_unchanged;
         return SVN_NO_ERROR;
       }
 
-    SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, target_abspath,
-                                   scratch_pool));
-
-    if (hidden)
+    if (merge_props_outcome && had_props)
       {
-        *merge_outcome = svn_wc_merge_no_merge;
-        return SVN_NO_ERROR;
+        SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props,
+                                               wc_ctx->db, target_abspath,
+                                               scratch_pool, scratch_pool));
       }
+    else if (merge_props_outcome)
+      pristine_props = apr_hash_make(scratch_pool);
+
+    if (props_mod)
+      {
+        SVN_ERR(svn_wc__db_read_props(&actual_props,
+                                      wc_ctx->db, target_abspath,
+                                      scratch_pool, scratch_pool));
+      }
+    else if (pristine_props)
+      actual_props = apr_hash_copy(scratch_pool, pristine_props);
+    else
+      actual_props = apr_hash_make(scratch_pool);
   }
 
-  SVN_ERR(svn_wc__db_read_props(&actual_props, wc_ctx->db, target_abspath,
-                                scratch_pool, scratch_pool));
+  if (merge_props_outcome)
+    {
+      int i;
+      apr_hash_t *new_pristine_props;
+      /* The PROPCHANGES may not have non-"normal" properties in it. If entry
+         or wc props were allowed, then the following code would install them
+         into the BASE and/or WORKING properties(!).  */
+      for (i = prop_diff->nelts; i--; )
+        {
+          const svn_prop_t *change = &APR_ARRAY_IDX(prop_diff, i, svn_prop_t);
+
+          if (!svn_wc_is_normal_prop(change->name))
+            return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                                     _("The property '%s' may not be merged "
+                                       "into '%s'."),
+                                     change->name,
+                                     svn_dirent_local_style(target_abspath,
+                                                            scratch_pool));
+        }
+
+      SVN_ERR(svn_wc__merge_props(&prop_items, merge_props_outcome,
+                                  &new_pristine_props, &new_actual_props,
+                                  wc_ctx->db, target_abspath, svn_kind_file,
+                                  left_version, right_version,
+                                  original_props, pristine_props, actual_props,
+                                  prop_diff, FALSE /* base_merge */,
+                                  dry_run,
+                                  conflict_func, conflict_baton,
+                                  cancel_func, cancel_baton,
+                                  scratch_pool, scratch_pool));
+    }
 
   /* Queue all the work.  */
   SVN_ERR(svn_wc__internal_merge(&work_items,
-                                 merge_outcome,
+                                 merge_content_outcome,
                                  wc_ctx->db,
                                  left_abspath, left_version,
                                  right_abspath, right_version,
@@ -1554,16 +1630,24 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
                                  cancel_func, cancel_baton,
                                  scratch_pool, scratch_pool));
 
+  work_items = svn_wc__wq_merge(prop_items, work_items, scratch_pool);
+
   /* If this isn't a dry run, then run the work!  */
   if (!dry_run)
     {
-      SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
-                                scratch_pool));
+      if (new_actual_props)
+        SVN_ERR(svn_wc__db_op_set_props(wc_ctx->db, target_abspath,
+                                        new_actual_props,
+                                        svn_wc__has_magic_property(prop_diff),
+                                        NULL, work_items, scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
+                                  scratch_pool));
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
                              cancel_func, cancel_baton,
                              scratch_pool));
     }
-
+  
   return SVN_NO_ERROR;
 }
 

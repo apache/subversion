@@ -30,7 +30,12 @@
 #   |______________________________________________________________|
 
 ENABLE_PERL_BINDINGS ?= yes
-ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
+THREADING ?= yes
+ifeq ($(THREADING),yes)
+ENABLE_JAVA_BINDINGS ?= yes
+else
+ENABLE_JAVA_BINDINGS ?= no
+endif
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
@@ -60,20 +65,21 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.4.5
+APR_VER		= 1.4.6
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
-APR_UTIL_VER	= 1.3.12
+APR_UTIL_VER	= 1.4.1
 HTTPD_VER	= 2.2.22
 NEON_VER	= 0.29.6
-SERF_VER	= 1.0.3
+SERF_VER	= 1.1.0
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
-SQLITE_VER	= 3071100
+SQLITE_VER	= 3071201
 LIBMAGIC_VER	= 5.11
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.2
+PYTHON_VER	= 2.7.3
+JUNIT_VER	= 4.10
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -86,6 +92,7 @@ LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
 BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
+JUNIT_DIST	= junit-${JUNIT_VER}.jar
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
@@ -97,7 +104,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(LIBMAGIC_DIST) \
 		$(DISTDIR)/$(RUBY_DIST) \
 		$(DISTDIR)/$(BZ2_DIST) \
-		$(DISTDIR)/$(PYTHON_DIST)
+		$(DISTDIR)/$(PYTHON_DIST) \
+		$(DISTDIR)/$(JUNIT_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -117,7 +125,9 @@ CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
-PYTHON_URL	= http://python.org/ftp/python/2.7.2/$(PYTHON_DIST)
+PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
+JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -292,7 +302,7 @@ $(APR_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifdef THREADING
+ifeq ($(THREADING),yes)
 THREADS_FLAG=--enable-threads
 else
 THREADS_FLAG=--disable-threads
@@ -304,11 +314,6 @@ endif
 
 # configure apr
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
-	cp $(APR_SRCDIR)/build/apr_hints.m4 \
-		$(APR_SRCDIR)/build/apr_hints.m4.orig
-	cat $(APR_SRCDIR)/build/apr_hints.m4.orig \
-		| sed -e '/^.*APR_ADDTO(CPPFLAGS, \[-D_POSIX_THREADS\]).*$$/d' \
-			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
@@ -779,7 +784,7 @@ $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
 
-ifdef THREADING
+ifeq ($(THREADING),yes)
 THREADSAFE_FLAG=--enable-threadsafe
 else
 THREADSAFE_FLAG=--disable-threadsafe
@@ -1076,6 +1081,14 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 
 
 #######################################################################
+# junit
+#######################################################################
+
+# fetch distfile for junit
+$(DISTDIR)/$(JUNIT_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(JUNIT_URL)
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1119,12 +1132,20 @@ $(SVN_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifeq ($(BRANCH_MAJOR),1.6)
+ifeq ($(BRANCH_MAJOR),1.7)
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+NEON_FLAG=--with-neon="$(PREFIX)/neon"
+else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
+NEON_FLAG=--with-neon="$(PREFIX)/neon"
 else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
@@ -1132,37 +1153,8 @@ MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.4)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.3)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.2)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.1)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else ifeq ($(BRANCH_MAJOR),1.0)
-BDB_FLAG=$(PREFIX)/bdb
-MOD_DAV_SVN=modules/mod_dav_svn.so
-MOD_AUTHZ_SVN=modules/mod_authz_svn.so
-DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
-W_NO_SYSTEM_HEADERS=-Wno-system-headers
-else
+NEON_FLAG=--with-neon="$(PREFIX)/neon"
+else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
@@ -1172,9 +1164,9 @@ endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	JAVAHL_FLAG=--enable-javahl=yes --with-jdk --with-jikes=no \
-		--with-junit=$(PWD)/junit.jar
+		--with-junit=$(DISTDIR)/$(JUNIT_DIST)
 else
-	JAVAHL_FLAG=--enable-javahl=no
+	JAVAHL_FLAG=--with-jdk=no
 endif
 
 ifdef PROFILE
@@ -1186,13 +1178,7 @@ SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
 endif
 
 # configure svn
-$(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
-	@if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
-		if [ ! -e $(PWD)/junit.jar ]; then \
-			echo "Please provide $(PWD)/junit.jar"; \
-			exit 1; \
-		fi; \
-	fi
+$(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
@@ -1205,7 +1191,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--prefix="$(SVN_PREFIX)" \
 			--with-apr="$(PREFIX)/apr" \
 			--with-apr-util="$(PREFIX)/apr" \
-			--with-neon="$(PREFIX)/neon" \
+			$(NEON_FLAG) \
 			$(SVN_WITH_HTTPD) \
 			$(SVN_WITH_SASL) \
 			$(SERF_FLAG) \
@@ -1423,10 +1409,16 @@ svn-check-prepare-ramdisk:
 			mkdir -p "$(RAMDISK)/tmp"; \
 	fi
 
+ifndef NEON_FLAG
+svn-check-neon:
+	@echo Neon is not supported by this build of Subversion, skipping tests
+	@true
+else
 svn-check-neon: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
+endif
 
 svn-check-serf: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
@@ -1478,7 +1470,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-javahl 2>&1) | \
+			make check-all-javahl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 

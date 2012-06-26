@@ -608,10 +608,8 @@ def replace_symlink_with_dir(sbox):
   expected_output = svntest.wc.State(wc_dir, {
   })
 
-  if svntest.main.is_posix_os():
-    error_re_string = '.*E145001: Entry.*has unexpectedly changed special.*'
-  else:
-    error_re_string = None
+  error_re_string = 'E145001: (Entry|Node).*has.*changed (special|kind)'
+
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, error_re_string, wc_dir)
 

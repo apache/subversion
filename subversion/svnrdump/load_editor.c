@@ -567,7 +567,7 @@ new_revision_record(void **revision_baton,
      several separate operations. It is highly susceptible to race conditions.
      Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
-  rb->rev_offset = (apr_int32_t) (rb->rev) - (head_rev + 1);
+  rb->rev_offset = (apr_int32_t) ((rb->rev) - (head_rev + 1));
 
   /* Stash the oldest (non-zero) dumpstream revision seen. */
   if ((rb->rev > 0) && (!SVN_IS_VALID_REVNUM(pb->oldest_dumpstream_rev)))
@@ -580,6 +580,14 @@ new_revision_record(void **revision_baton,
   rb->revprop_table = apr_hash_make(rb->pool);
 
   *revision_baton = rb;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+magic_header_record(int version,
+            void *parse_baton,
+            apr_pool_t *pool)
+{
   return SVN_NO_ERROR;
 }
 
@@ -1146,7 +1154,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
                            void *cancel_baton,
                            apr_pool_t *pool)
 {
-  svn_repos_parse_fns2_t *parser;
+  svn_repos_parse_fns3_t *parser;
   struct parse_baton *parse_baton;
   const svn_string_t *lock_string;
   svn_boolean_t be_atomic;
@@ -1163,8 +1171,9 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
                                            session_url, pool));
 
   parser = apr_pcalloc(pool, sizeof(*parser));
-  parser->new_revision_record = new_revision_record;
+  parser->magic_header_record = magic_header_record;
   parser->uuid_record = uuid_record;
+  parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
@@ -1185,7 +1194,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
 
-  err = svn_repos_parse_dumpstream2(stream, parser, parse_baton,
+  err = svn_repos_parse_dumpstream3(stream, parser, parse_baton, FALSE,
                                     cancel_func, cancel_baton, pool);
 
   /* If all goes well, or if we're cancelled cleanly, don't leave a

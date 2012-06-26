@@ -888,7 +888,7 @@ static void
 usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
-  const char msg[] =
+  static const char *msg =
     "Multiple URL Command Client (for Subversion)\n"
     "\nUsage: svnmucc [OPTION]... [ACTION]...\n"
     "\nActions:\n"
@@ -902,7 +902,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  propsetf NAME VAL URL set property NAME on URL to value from file VAL\n"
     "  propdel NAME URL      delete property NAME from URL\n"
     "\nOptions:\n"
-    "  -h, --help            display this text\n"
+    "  -h, --help, -?        display this text\n"
     "  -m, --message ARG     use ARG as a log message\n"
     "  -F, --file ARG        read log message from file ARG\n"
     "  -u, --username ARG    commit the changes as username ARG\n"
@@ -963,7 +963,7 @@ main(int argc, const char **argv)
     version_opt,
     with_revprop_opt
   };
-  const apr_getopt_option_t options[] = {
+  static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
     {"username", 'u', 1, ""},
@@ -973,6 +973,7 @@ main(int argc, const char **argv)
     {"with-revprop",  with_revprop_opt, 1, ""},
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
+    {NULL, '?', 0, ""},
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
@@ -1090,6 +1091,7 @@ main(int argc, const char **argv)
           exit(EXIT_SUCCESS);
           break;
         case 'h':
+        case '?':
           usage(pool, EXIT_SUCCESS);
           break;
         }

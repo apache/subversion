@@ -402,14 +402,19 @@ import_children(const char *dir_abspath,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_dirents;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
+  sorted_dirents = svn_sort__hash(dirents, svn_sort_compare_items_lexically,
+                                  scratch_pool);
+  for (i = 0; i < sorted_dirents->nelts; i++)
     {
       const char *this_abspath, *this_edit_path;
-      const char *filename = svn__apr_hash_index_key(hi);
-      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_dirents, i,
+                                            svn_sort__item_t);
+      const char *filename = item.key;
+      const svn_io_dirent2_t *dirent = item.value;
 
       svn_pool_clear(iterpool);
 
@@ -1329,7 +1334,10 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
 {
   int rel_targets_nelts_fixed;
   int i;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
+
+  if (! (include_file_externals || include_dir_externals))
+    return SVN_NO_ERROR;
 
   /* Easy part of applying DEPTH to externals. */
   if (depth == svn_depth_empty)
@@ -1357,11 +1365,10 @@ append_externals_as_explicit_targets(apr_array_header_t *rel_targets,
        * ### not at all. No other effect. So not doing that for now. */
      }
 
-  if (! (include_file_externals || include_dir_externals))
-    return SVN_NO_ERROR;
-
   /* Iterate *and* grow REL_TARGETS at the same time. */
   rel_targets_nelts_fixed = rel_targets->nelts;
+
+  iterpool = svn_pool_create(scratch_pool);
 
   for (i = 0; i < rel_targets_nelts_fixed; i++)
     {

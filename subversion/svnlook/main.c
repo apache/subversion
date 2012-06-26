@@ -900,8 +900,7 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         if (!val_has_eol)
           {
             const char *s = "\\ No newline at end of property" APR_EOL_STR;
-            apr_size_t len = strlen(s);
-            SVN_ERR(svn_stream_write(out, s, &len));
+            SVN_ERR(svn_stream_puts(out, s));
           }
       }
     }

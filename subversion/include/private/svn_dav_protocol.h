@@ -1,7 +1,6 @@
 /*
  * svn_dav_protocol.h: Declarations of the protocol shared by the
- * mod_dav_svn backend for httpd's mod_dav, and its ra_neon and
- * ra_serf RA DAV clients.
+ * mod_dav_svn backend for httpd's mod_dav and its ra_serf RA DAV clients.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

@@ -2903,6 +2903,11 @@ svn_client_blame(const char *path_or_url,
  * will be used.
  * ### Do we need to say more about the format? A reference perhaps?
  *
+ * If @a ignore_properties is TRUE, do not show property differences.
+ * If @a properties_only is TRUE, show only property changes.
+ * The above two options are mutually exclusive. It is an error to set
+ * both to TRUE.
+ *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
@@ -2947,7 +2952,8 @@ svn_client_diff6(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
-                 svn_boolean_t ignore_prop_diff,
+                 svn_boolean_t ignore_properties,
+                 svn_boolean_t properties_only,
                  svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  svn_stream_t *outstream,
@@ -3107,7 +3113,8 @@ svn_client_diff_peg6(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
-                     svn_boolean_t ignore_prop_diff,
+                     svn_boolean_t ignore_properties,
+                     svn_boolean_t properties_only,
                      svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      svn_stream_t *outstream,
@@ -3743,8 +3750,32 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * If the server doesn't support retrieval of mergeinfo, return an
  * #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_client_mergeinfo_log2(svn_boolean_t finding_merged,
+                          const char *target_path_or_url,
+                          const svn_opt_revision_t *target_peg_revision,
+                          const char *source_path_or_url,
+                          const svn_opt_revision_t *source_peg_revision,
+                          const svn_opt_revision_t *source_start_revision,
+                          const svn_opt_revision_t *source_end_revision,
+                          svn_log_entry_receiver_t receiver,
+                          void *receiver_baton,
+                          svn_boolean_t discover_changed_paths,
+                          svn_depth_t depth,
+                          const apr_array_header_t *revprops,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_mergeinfo_log2(), but with @a source_start_revision
+ * and @a source_end_revision always of kind @c svn_opt_revision_unspecified;
+ *
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                          const char *target_path_or_url,

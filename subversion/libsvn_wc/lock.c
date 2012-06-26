@@ -920,7 +920,9 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
   if (associated)
     {
       err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
-                                 local_abspath, TRUE, pool);
+                                 local_abspath,
+                                 TRUE /* allow_missing */,
+                                 FALSE /* show_hidden */, pool);
 
       if (err)
         {
@@ -980,7 +982,9 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
   SVN_ERR_ASSERT(associated != NULL);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__db_read_kind(&kind, associated->db, local_abspath, TRUE, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, associated->db, local_abspath,
+                               TRUE /* allow_missing */, FALSE /* show_hidden*/,
+                               pool));
 
   if (kind == svn_kind_dir)
     dir = path;
@@ -1515,7 +1519,8 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   svn_error_t *err;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
-                               (lock_root_abspath != NULL),
+                               (lock_root_abspath != NULL) /* allow_missing*/,
+                               FALSE /* show_hidden */,
                                scratch_pool));
 
   if (!lock_root_abspath && kind != svn_kind_dir)
@@ -1532,7 +1537,9 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
       SVN_ERR_ASSERT(lock_root_abspath != NULL);
 
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      err = svn_wc__db_read_kind(&parent_kind, db, parent_abspath, TRUE,
+      err = svn_wc__db_read_kind(&parent_kind, db, parent_abspath,
+                                 TRUE /* allow_missing */,
+                                 FALSE /* show_missing */,
                                  scratch_pool);
       if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
         {
@@ -1565,7 +1572,9 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
       /* Can't lock parents that don't exist */
       if (kind == svn_kind_unknown)
         {
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                                       FALSE /* allow_missing */,
+                                       FALSE /* show_hidden */,
                                        scratch_pool));
 
           if (kind != svn_kind_dir)

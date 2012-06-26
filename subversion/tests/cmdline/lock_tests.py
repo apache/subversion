@@ -26,7 +26,9 @@
 ######################################################################
 
 # General modules
-import re, os, stat
+import re, os, stat, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -79,9 +81,8 @@ def lock_file(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_b)
 
   # lock a file as wc_author
-  fname = 'iota'
-  file_path = os.path.join(sbox.wc_dir, fname)
-  file_path_b = os.path.join(wc_b, fname)
+  file_path = sbox.ospath('iota')
+  file_path_b = sbox.ospath('iota', wc_dir=wc_b)
 
   svntest.main.file_append(file_path, "This represents a binary file\n")
   svntest.main.run_svn(None, 'commit',
@@ -133,24 +134,22 @@ def commit_file_keep_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  fname = 'A/mu'
-  file_path = os.path.join(sbox.wc_dir, fname)
-
-  # lock fname as wc_author
+  # lock 'A/mu' as wc_author
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '-m', 'some lock comment', file_path)
+                                     '-m', 'some lock comment',
+                                     sbox.ospath('A/mu'))
 
   # make a change and commit it, holding lock
-  svntest.main.file_append(file_path, "Tweak!\n")
+  sbox.simple_append('A/mu', 'Tweak!\n')
   svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock',
-                       file_path)
+                       sbox.ospath('A/mu'))
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(fname, wc_rev=2)
-  expected_status.tweak(fname, writelocked='K')
+  expected_status.tweak('A/mu', wc_rev=2, writelocked='K')
 
   # Make sure the file is still locked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 def commit_file_unlock(sbox):
   "commit a file and release lock"
@@ -158,20 +157,19 @@ def commit_file_unlock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  fname = 'A/mu'
-  file_path = os.path.join(sbox.wc_dir, fname)
-
-  # lock fname as wc_author
+  # lock A/mu and iota as wc_author
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '-m', 'some lock comment', file_path)
+                                     '-m', 'some lock comment',
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('iota'))
 
   # make a change and commit it, allowing lock to be released
-  svntest.main.file_append(file_path, "Tweak!\n")
-  svntest.main.run_svn(None, 'commit', '-m', '',
-                       file_path)
+  sbox.simple_append('A/mu', 'Tweak!\n')
+  sbox.simple_commit()
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   # Make sure the file is unlocked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -183,20 +181,17 @@ def commit_propchange(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  fname = 'A/mu'
-  file_path = os.path.join(sbox.wc_dir, fname)
-
-  # lock fname as wc_author
+  # lock A/mu as wc_author
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '-m', 'some lock comment', file_path)
+                                     '-m', 'some lock comment',
+                                     sbox.ospath('A/mu'))
 
   # make a property change and commit it, allowing lock to be released
-  svntest.main.run_svn(None, 'propset', 'blue', 'azul', file_path)
-  svntest.main.run_svn(None, 'commit',
-                             '-m', '', file_path)
+  sbox.simple_propset('blue', 'azul', 'A/mu')
+  sbox.simple_commit('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak('A/mu', wc_rev=2)
 
   # Make sure the file is unlocked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -222,9 +217,8 @@ def break_lock(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_b)
 
   # lock a file as wc_author
-  fname = 'iota'
-  file_path = os.path.join(sbox.wc_dir, fname)
-  file_path_b = os.path.join(wc_b, fname)
+  file_path = sbox.ospath('iota')
+  file_path_b = sbox.ospath('iota', wc_dir=wc_b)
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', '', file_path)
@@ -265,9 +259,8 @@ def steal_lock(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_b)
 
   # lock a file as wc_author
-  fname = 'iota'
-  file_path = os.path.join(sbox.wc_dir, fname)
-  file_path_b = os.path.join(wc_b, fname)
+  file_path = sbox.ospath('iota')
+  file_path_b = sbox.ospath('iota', wc_dir=wc_b)
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', '', file_path)
@@ -295,14 +288,9 @@ def examine_lock(sbox):
   "examine the fields of a lockfile for correctness"
 
   sbox.build()
-  wc_dir = sbox.wc_dir
-
-  fname = 'iota'
-  comment = 'This is a lock test.'
-  file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock a file as wc_author
-  svntest.actions.run_and_validate_lock(file_path,
+  svntest.actions.run_and_validate_lock(sbox.ospath('iota'),
                                         svntest.main.wc_author)
 
 #----------------------------------------------------------------------
@@ -315,21 +303,17 @@ def handle_defunct_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-
-  fname = 'iota'
-  file_path = os.path.join(sbox.wc_dir, fname)
-
   # set up our expected status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
   # lock the file
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '-m', '', file_path)
+                                     '-m', '', sbox.ospath('iota'))
 
   # Make a second copy of the working copy
   wc_b = sbox.add_wc_path('_b')
   svntest.actions.duplicate_dir(wc_dir, wc_b)
-  file_path_b = os.path.join(wc_b, fname)
+  file_path_b = sbox.ospath('iota', wc_dir=wc_b)
 
   # --- Meanwhile, in our other working copy... ---
 
@@ -339,7 +323,7 @@ def handle_defunct_lock(sbox):
 
 
   # update the 1st wc, which should clear the lock there
-  svntest.main.run_svn(None, 'update', wc_dir)
+  sbox.simple_update()
 
   # Make sure the file is unlocked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -357,9 +341,9 @@ def enforce_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = sbox.ospath('iota')
+  lambda_path = sbox.ospath('A/B/lambda')
+  mu_path = sbox.ospath('A/mu')
 
   # svn:needs-lock value should be forced to a '*'
   svntest.actions.set_prop('svn:needs-lock', 'foo', iota_path)
@@ -381,8 +365,8 @@ def enforce_lock(sbox):
     if ((os.stat(iota_path)[0] & mode)
         or (os.stat(lambda_path)[0] & mode)
         or (os.stat(mu_path)[0] & mode)):
-      print("Setting 'svn:needs-lock' property on a file failed to set")
-      print("file mode to read-only.")
+      logger.warn("Setting 'svn:needs-lock' property on a file failed to set")
+      logger.warn("file mode to read-only.")
       raise svntest.Failure
 
     # obtain a lock on one of these files...
@@ -391,7 +375,7 @@ def enforce_lock(sbox):
 
     # ...and verify that the write bit gets set...
     if not (os.stat(iota_path)[0] & mode):
-      print("Locking a file with 'svn:needs-lock' failed to set write bit.")
+      logger.warn("Locking a file with 'svn:needs-lock' failed to set write bit.")
       raise svntest.Failure
 
     # ...and unlock it...
@@ -400,13 +384,13 @@ def enforce_lock(sbox):
 
     # ...and verify that the write bit gets unset
     if (os.stat(iota_path)[0] & mode):
-      print("Unlocking a file with 'svn:needs-lock' failed to unset write bit.")
+      logger.warn("Unlocking a file with 'svn:needs-lock' failed to unset write bit.")
       raise svntest.Failure
 
     # Verify that removing the property restores the file to read-write
     svntest.main.run_svn(None, 'propdel', 'svn:needs-lock', iota_path)
     if not (os.stat(iota_path)[0] & mode):
-      print("Deleting 'svn:needs-lock' failed to set write bit.")
+      logger.warn("Deleting 'svn:needs-lock' failed to set write bit.")
       raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -418,30 +402,22 @@ def update_while_needing_lock(sbox):
   "update handles svn:needs-lock correctly"
 
   sbox.build()
-  wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  svntest.main.run_svn(None,
-                       'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None,
-                       'commit', '-m', 'log msg', iota_path)
-  svntest.main.run_svn(None,
-                       'up', wc_dir)
+  sbox.simple_propset('svn:needs-lock', 'foo', 'iota')
+  sbox.simple_commit('iota')
+  sbox.simple_update()
 
   # Lock, modify, commit, unlock, to create r3.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '-m', '', iota_path)
-  svntest.main.file_append(iota_path, "This line added in r2.\n")
-  svntest.main.run_svn(None, 'commit',
-                       '-m', '', iota_path) # auto-unlocks
+                                     '-m', '', sbox.ospath('iota'))
+  sbox.simple_append('iota', 'This line added in r2.\n')
+  sbox.simple_commit('iota') # auto-unlocks
 
   # Backdate to r2.
-  svntest.main.run_svn(None,
-                       'update', '-r2', iota_path)
+  sbox.simple_update(revision=2)
 
   # Try updating forward to r3 again.  This is where the bug happened.
-  svntest.main.run_svn(None,
-                       'update', '-r3', iota_path)
+  sbox.simple_update(revision=3)
 
 
 #----------------------------------------------------------------------
@@ -456,17 +432,16 @@ def defunct_lock(sbox):
   wc_b = sbox.add_wc_path('_b')
   svntest.actions.duplicate_dir(wc_dir, wc_b)
 
-  iota_path = os.path.join(wc_dir, 'iota')
-  iota_path_b = os.path.join(wc_b, 'iota')
+  iota_path = sbox.ospath('iota')
+  iota_path_b = sbox.ospath('iota', wc_dir=wc_b)
 
   mode = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
 
 # Set the prop in wc a
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
+  sbox.simple_propset('svn:needs-lock', 'foo', 'iota')
 
   # commit r2
-  svntest.main.run_svn(None, 'commit',
-                       '-m', '', iota_path)
+  sbox.simple_commit('iota')
 
   # update wc_b
   svntest.main.run_svn(None, 'update', wc_b)
@@ -484,8 +459,8 @@ def defunct_lock(sbox):
 
   # make sure that iota got set to read-only
   if (os.stat(iota_path_b)[0] & mode):
-    print("Upon removal of a defunct lock, a file with 'svn:needs-lock'")
-    print("was not set back to read-only")
+    logger.warn("Upon removal of a defunct lock, a file with 'svn:needs-lock'")
+    logger.warn("was not set back to read-only")
     raise svntest.Failure
 
 
@@ -498,14 +473,13 @@ def deleted_path_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
   iota_url = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', '', iota_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', iota_path)
-
+  sbox.simple_rm('iota')
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--no-unlock',
                                      '-m', '', iota_path)
@@ -524,9 +498,9 @@ def lock_unlock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  pi_path = sbox.ospath('A/D/G/pi')
+  rho_path = sbox.ospath('A/D/G/rho')
+  tau_path = sbox.ospath('A/D/G/tau')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', writelocked='K')
@@ -551,19 +525,17 @@ def deleted_dir_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  parent_dir = os.path.join(wc_dir, 'A', 'D', 'G')
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  pi_path = sbox.ospath('A/D/G/pi')
+  rho_path = sbox.ospath('A/D/G/rho')
+  tau_path = sbox.ospath('A/D/G/tau')
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', '', pi_path, rho_path, tau_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', parent_dir)
-
+  sbox.simple_rm('A/D/G')  # the parent directory
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--no-unlock',
-                                     '-m', '', parent_dir)
+                                     '-m', '', sbox.ospath('A/D/G'))
 
 #----------------------------------------------------------------------
 # III.c : Lock a file and check the output of 'svn stat' from the same
@@ -581,30 +553,27 @@ def lock_status(sbox):
   fname = 'iota'
   file_path = os.path.join(sbox.wc_dir, fname)
 
-  svntest.main.file_append(file_path, "This is a spreadsheet\n")
-  svntest.main.run_svn(None, 'commit',
-                       '-m', '', file_path)
+  sbox.simple_append('iota', "This is a spreadsheet\n")
+  sbox.simple_commit('iota')
 
-  svntest.main.run_svn(None, 'lock',
-                       '-m', '', file_path)
+  svntest.main.run_svn(None, 'lock', '-m', '', sbox.ospath('iota'))
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(fname, wc_rev=2)
-  expected_status.tweak(fname, writelocked='K')
+  expected_status.tweak('iota', wc_rev=2, writelocked='K')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify status again after modifying the file
-  svntest.main.file_append(file_path, "check stat output after mod")
+  sbox.simple_append('iota', 'check stat output after mod')
 
-  expected_status.tweak(fname, status='M ')
+  expected_status.tweak('iota', status='M ')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify status of lock from another working copy
   svntest.main.run_svn(None, 'update', wc_b)
   expected_status = svntest.actions.get_virginal_state(wc_b, 2)
-  expected_status.tweak(fname, writelocked='O')
+  expected_status.tweak('iota', writelocked='O')
 
   svntest.actions.run_and_verify_status(wc_b, expected_status)
 
@@ -705,7 +674,7 @@ def lock_non_existent_file(sbox):
     if line.find(error_msg) != -1:
       break
   else:
-    print("Error: %s : not found in: %s" % (error_msg, error))
+    logger.warn("Error: %s : not found in: %s" % (error_msg, error))
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -744,7 +713,7 @@ def revert_lock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
 
   mode = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
 
@@ -758,8 +727,8 @@ def revert_lock(sbox):
 
   # make sure that iota got set to read-only
   if (os.stat(iota_path)[0] & mode):
-    print("Committing a file with 'svn:needs-lock'")
-    print("did not set the file to read-only")
+    logger.warn("Committing a file with 'svn:needs-lock'")
+    logger.warn("did not set the file to read-only")
     raise svntest.Failure
 
   # verify status is as we expect
@@ -773,8 +742,8 @@ def revert_lock(sbox):
 
   # make sure that iota got read-only-ness removed
   if (os.stat(iota_path)[0] & mode == 0):
-    print("Deleting the 'svn:needs-lock' property ")
-    print("did not remove read-only-ness")
+    logger.warn("Deleting the 'svn:needs-lock' property ")
+    logger.warn("did not remove read-only-ness")
     raise svntest.Failure
 
   # revert the change
@@ -782,8 +751,8 @@ def revert_lock(sbox):
 
   # make sure that iota got set back to read-only
   if (os.stat(iota_path)[0] & mode):
-    print("Reverting a file with 'svn:needs-lock'")
-    print("did not set the file back to read-only")
+    logger.warn("Reverting a file with 'svn:needs-lock'")
+    logger.warn("did not set the file back to read-only")
     raise svntest.Failure
 
   # try propdel and revert from a different directory so
@@ -807,8 +776,8 @@ def revert_lock(sbox):
 
   # make sure it is still writable since we have the lock
   if (os.stat(iota_path)[0] & mode == 0):
-    print("Reverting a 'svn:needs-lock' file (with lock in wc) ")
-    print("did not leave the file writable")
+    logger.warn("Reverting a 'svn:needs-lock' file (with lock in wc) ")
+    logger.warn("did not leave the file writable")
     raise svntest.Failure
 
 
@@ -863,8 +832,8 @@ def lock_switched_files(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  gamma_path = sbox.ospath('A/D/gamma')
+  lambda_path = sbox.ospath('A/B/lambda')
   iota_URL = sbox.repo_url + '/iota'
   alpha_URL = sbox.repo_url + '/A/B/E/alpha'
 
@@ -910,7 +879,7 @@ def lock_uri_encoded(sbox):
 
   # lock a file as wc_author
   fname = 'amazing space'
-  file_path = os.path.join(wc_dir, fname)
+  file_path = sbox.ospath(fname)
 
   svntest.main.file_append(file_path, "This represents a binary file\n")
   svntest.actions.run_and_verify_svn(None, None, [], "add", file_path)
@@ -974,7 +943,7 @@ def lock_and_exebit1(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
@@ -992,8 +961,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Committing a file with 'svn:needs-lock, svn:executable'")
-    print("did not set the file to read-only, executable")
+    logger.warn("Committing a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("did not set the file to read-only, executable")
     raise svntest.Failure
 
   # lock
@@ -1004,8 +973,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Locking a file with 'svn:needs-lock, svn:executable'")
-    print("did not set the file to read-write, executable")
+    logger.warn("Locking a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("did not set the file to read-write, executable")
     raise svntest.Failure
 
   # modify
@@ -1020,8 +989,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Unlocking a file with 'svn:needs-lock, svn:executable'")
-    print("did not set the file to read-only, executable")
+    logger.warn("Unlocking a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("did not set the file to read-only, executable")
     raise svntest.Failure
 
   # ci
@@ -1033,8 +1002,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Commiting a file with 'svn:needs-lock, svn:executable'")
-    print("after unlocking modified file's permissions")
+    logger.warn("Commiting a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("after unlocking modified file's permissions")
     raise svntest.Failure
 
 
@@ -1051,7 +1020,7 @@ def lock_and_exebit2(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
@@ -1069,8 +1038,8 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Committing a file with 'svn:needs-lock, svn:executable'")
-    print("did not set the file to read-only, executable")
+    logger.warn("Committing a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("did not set the file to read-only, executable")
     raise svntest.Failure
 
   # lock
@@ -1081,8 +1050,8 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Locking a file with 'svn:needs-lock, svn:executable'")
-    print("did not set the file to read-write, executable")
+    logger.warn("Locking a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("did not set the file to read-write, executable")
     raise svntest.Failure
 
   # modify
@@ -1097,8 +1066,8 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print("Commiting a file with 'svn:needs-lock, svn:executable'")
-    print("did not set the file to read-only, executable")
+    logger.warn("Commiting a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("did not set the file to read-only, executable")
     raise svntest.Failure
 
 def commit_xml_unsafe_file_unlock(sbox):
@@ -1173,7 +1142,6 @@ def repos_lock_with_info(sbox):
 
 #----------------------------------------------------------------------
 @Issue(4126)
-@Skip(svntest.main.is_ra_type_dav_serf) # Issue 4126 unpredictable result
 def unlock_already_unlocked_files(sbox):
   "(un)lock set of files, one already (un)locked"
 
@@ -1181,10 +1149,10 @@ def unlock_already_unlocked_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Deliberately have no direct child of A as a target
-  iota_path = os.path.join(wc_dir, 'iota')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  iota_path = sbox.ospath('iota')
+  lambda_path = sbox.ospath('A/B/lambda')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  gamma_path = sbox.ospath('A/D/gamma')
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author2,
@@ -1229,8 +1197,8 @@ def info_moved_path(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  fname = os.path.join(wc_dir, "iota")
-  fname2 = os.path.join(wc_dir, "iota2")
+  fname = sbox.ospath("iota")
+  fname2 = sbox.ospath("iota2")
 
   # Move iota, creating r2.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1285,7 +1253,7 @@ def ls_url_encoded(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  dirname = os.path.join(wc_dir, "space dir")
+  dirname = sbox.ospath("space dir")
   fname = os.path.join(dirname, "f")
 
   # Create a dir with a space in its name and a file therein.
@@ -1391,7 +1359,7 @@ def unlocked_lock_of_other_user(sbox):
   wc_dir = sbox.wc_dir
 
   # lock a file with user jrandom
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  pi_path = sbox.ospath('A/D/G/pi')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', writelocked='K')
 
@@ -1439,8 +1407,8 @@ def lock_twice_in_one_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu2_path = os.path.join(wc_dir, 'A', 'B', 'mu')
+  mu_path = sbox.ospath('A/mu')
+  mu2_path = sbox.ospath('A/B/mu')
 
   # Create a needs-lock file
   svntest.actions.set_prop('svn:needs-lock', '*', mu_path)
@@ -1454,7 +1422,7 @@ def lock_twice_in_one_wc(sbox):
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', sbox.repo_url + '/A',
-                                     os.path.join(wc_dir, 'A', 'B'),
+                                     sbox.ospath('A/B'),
                                      '--ignore-ancestry')
 
   # Lock location 1
@@ -1490,8 +1458,8 @@ def lock_path_not_in_head(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  D_path      = os.path.join(wc_dir, 'A', 'D')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  D_path      = sbox.ospath('A/D')
+  lambda_path = sbox.ospath('A/B/lambda')
 
   # Commit deletion of A/D and A/B/lambda as r2, then update the WC
   # back to r1.  Then attempt to lock some paths that no longer exist
@@ -1529,9 +1497,9 @@ def verify_path_escaping(sbox):
 
   # Add test paths using two characters that need escaping in a url, but
   # are within the normal ascii range
-  file1 = os.path.join(wc_dir, 'file #1')
-  file2 = os.path.join(wc_dir, 'file #2')
-  file3 = os.path.join(wc_dir, 'file #3')
+  file1 = sbox.ospath('file #1')
+  file2 = sbox.ospath('file #2')
+  file3 = sbox.ospath('file #3')
 
   svntest.main.file_write(file1, 'File 1')
   svntest.main.file_write(file2, 'File 2')
@@ -1568,9 +1536,9 @@ def replace_and_propset_locked_path(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  rho_path = os.path.join(G_path, 'rho')
+  mu_path = sbox.ospath('A/mu')
+  G_path = sbox.ospath('A/D/G')
+  rho_path = sbox.ospath('A/D/G/rho')
 
   # Lock mu and A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1617,10 +1585,10 @@ def cp_isnt_ro(sbox):
   wc_dir = sbox.wc_dir
 
   mu_URL = sbox.repo_url + '/A/mu'
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu2_path = os.path.join(wc_dir, 'A', 'mu2')
-  mu3_path = os.path.join(wc_dir, 'A', 'mu3')
-  kappa_path = os.path.join(wc_dir, 'kappa')
+  mu_path = sbox.ospath('A/mu')
+  mu2_path = sbox.ospath('A/mu2')
+  mu3_path = sbox.ospath('A/mu3')
+  kappa_path = sbox.ospath('kappa')
   open(kappa_path, 'w').write("This is the file 'kappa'.\n")
 
   ## added file
@@ -1714,7 +1682,7 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.create_failing_hook(repo_dir, "pre-unlock", "error text")
 
   # lock a file.
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  pi_path = sbox.ospath('A/D/G/pi')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', writelocked='K')
 

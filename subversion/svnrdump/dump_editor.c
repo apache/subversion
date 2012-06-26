@@ -31,6 +31,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "svnrdump.h"
 
@@ -248,7 +249,7 @@ do_dump_props(svn_stringbuf_t **propstring,
 
       /* No text is going to be dumped. Write a couple of newlines and
          wait for the next node/ revision. */
-      SVN_ERR(svn_stream_printf(stream, scratch_pool, "\n\n"));
+      SVN_ERR(svn_stream_puts(stream, "\n\n"));
 
       /* Cleanup so that data is never dumped twice. */
       SVN_ERR(svn_hash__clear(props, scratch_pool));
@@ -267,7 +268,7 @@ do_dump_newlines(struct dump_edit_baton *eb,
 {
   if (trigger_var && *trigger_var)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
+      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
       *trigger_var = FALSE;
     }
   return SVN_NO_ERROR;
@@ -321,18 +322,17 @@ dump_node(struct dump_edit_baton *eb,
       /* We are here after a change_file_prop or change_dir_prop. They
          set up whatever dump_props they needed to- nothing to
          do here but print node action information */
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": change\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
       break;
 
     case svn_node_action_replace:
       if (!is_copy)
         {
           /* Node-action: replace */
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": replace\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": replace\n"));
 
           /* Wait for a change_*_prop to be called before dumping
              anything */
@@ -343,9 +343,8 @@ dump_node(struct dump_edit_baton *eb,
          copyfrom_rev are present: delete the original, and then re-add
          it */
 
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": delete\n\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n\n"));
 
       /* Recurse: Print an additional add-with-history record. */
       SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
@@ -356,19 +355,18 @@ dump_node(struct dump_edit_baton *eb,
       break;
 
     case svn_node_action_delete:
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": delete\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
       /* We can leave this routine quietly now. Nothing more to do-
          print a couple of newlines because we're not dumping props or
          text. */
-      SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
+      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
       break;
 
     case svn_node_action_add:
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (!is_copy)
         {
@@ -811,9 +809,9 @@ close_file(void *file_baton,
       apr_status_t err;
 
       /* Text-delta: true */
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_TEXT_DELTA
-                                ": true\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_TEXT_DELTA
+                              ": true\n"));
 
       err = apr_file_info_get(info, APR_FINFO_SIZE, eb->delta_file);
       if (err)
@@ -887,7 +885,7 @@ close_file(void *file_baton,
 
   /* Write a couple of blank lines for matching output with `svnadmin
      dump` */
-  SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
+  SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
 
   return SVN_NO_ERROR;
 }

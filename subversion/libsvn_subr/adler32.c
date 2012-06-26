@@ -61,7 +61,9 @@ svn__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
        * optimized code. Also, new zlib versions will come with
        * SIMD code for x86 and x64.
        */
-      return adler32(checksum, (const Bytef *)data, len);
+      return (apr_uint32_t)adler32(checksum,
+                                   (const Bytef *)data,
+                                   (uInt)len);
     }
   else
     {

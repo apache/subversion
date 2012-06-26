@@ -44,6 +44,7 @@
 #include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_mutex.h"
+#include "private/svn_subr_private.h"
 
 #include "fs-loader.h"
 #include "svn_hash.h"
@@ -336,6 +337,7 @@ fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
   fs->access_ctx = NULL;
   fs->vtable = NULL;
   fs->fsap_data = NULL;
+  fs->uuid = NULL;
   return fs;
 }
 
@@ -1247,7 +1249,9 @@ svn_fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 svn_error_t *
 svn_fs_get_uuid(svn_fs_t *fs, const char **uuid, apr_pool_t *pool)
 {
-  return svn_error_trace(fs->vtable->get_uuid(fs, uuid, pool));
+  /* If you change this, consider changing svn_fs__identifier(). */
+  *uuid = apr_pstrdup(pool, fs->uuid);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

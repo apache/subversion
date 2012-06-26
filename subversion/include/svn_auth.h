@@ -416,8 +416,8 @@ typedef svn_error_t *(*svn_auth_username_prompt_func_t)(
 #define SVN_AUTH_SSL_CNMISMATCH  0x00000004
 /** @brief Certificate authority is unknown (i.e. not trusted) */
 #define SVN_AUTH_SSL_UNKNOWNCA   0x00000008
-/** @brief Other failure. This can happen if neon has introduced a new
- * failure bit that we do not handle yet. */
+/** @brief Other failure. This can happen if an unknown failure occurs
+ * that we do not handle yet. */
 #define SVN_AUTH_SSL_OTHER       0x40000000
 /** @} */
 
