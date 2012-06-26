@@ -573,6 +573,44 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
 
+/* ------------------------------------------------------------------------- */
+
+/* The INHERITABLE_PROPS table describes the properties inherited by any
+   base nodes in the WC which are WC roots (considering switched subtrees
+   as WC roots). 
+
+   Zero or more INHERITABLE_PROPS table rows exist for a given WC root
+   node in the NODES table, one for each repository parent the node
+   inherits from.  If the WC root is also the root of the repository
+   then no row exists.
+ */
+
+-- STMT_INHERITABLE_PROPS
+
+CREATE TABLE INHERITABLE_PROPS (
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+
+  /* ### IPROPS: Will we ever need OP_DEPTH? We are only caching properties
+                 base nodes which have a corresponding repository location,
+                 so OP_DEPTH should always be 0. */
+  op_depth  INTEGER NOT NULL,
+
+  /* The repository parent and revision from which the node inherits. */
+  repos_parent_relpath  TEXT NOT NULL,
+  revision  INTEGER,
+
+  /* Serialized skel of this node's inherited properties from
+     REPOS_PARENT_RELPATH.  May be empty if the node inherits no
+     properties from any repository parent. */
+  inheritable_props  BLOB,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth, repos_parent_relpath),
+  FOREIGN KEY(wc_id, local_relpath, op_depth) REFERENCES NODES (wc_id,
+                                                                local_relpath,
+                                                                op_depth)
+  );
+
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
 -- STMT_UPGRADE_TO_20

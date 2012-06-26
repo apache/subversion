@@ -296,6 +296,10 @@ switch_internal(svn_revnum_t *result_rev,
                                            ctx, pool));
     }
 
+  /* Cache inherited props. */
+  SVN_ERR(svn_client__update_inheritable_props(local_abspath, depth,
+                                               ra_session, ctx, pool));
+
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
   if (sleep_here)
