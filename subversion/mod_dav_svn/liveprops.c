@@ -75,7 +75,8 @@ enum {
   SVN_PROPID_baseline_relative_path = 1,
   SVN_PROPID_md5_checksum,
   SVN_PROPID_repository_uuid,
-  SVN_PROPID_deadprop_count
+  SVN_PROPID_deadprop_count,
+  SVN_PROPID_sha1_checksum
 };
 
 
@@ -106,6 +107,7 @@ static const dav_liveprop_spec props[] =
   SVN_RO_SVN_PROP(md5_checksum, md5-checksum),
   SVN_RO_SVN_PROP(repository_uuid, repository-uuid),
   SVN_RO_SVN_PROP(deadprop_count, deadprop-count),
+  SVN_RO_SVN_PROP(sha1_checksum, sha1-checksum),
 
   { 0 } /* sentinel */
 };
@@ -668,6 +670,7 @@ insert_prop_internal(const dav_resource *resource,
       break;
 
     case SVN_PROPID_md5_checksum:
+    case SVN_PROPID_sha1_checksum:
       if ((! resource->collection)
           && (! resource->baselined)
           && (resource->type == DAV_RESOURCE_TYPE_REGULAR
@@ -676,11 +679,21 @@ insert_prop_internal(const dav_resource *resource,
         {
           svn_node_kind_t kind;
           svn_checksum_t *checksum;
+          svn_checksum_kind_t checksum_kind;
+
+          if (propid == SVN_PROPID_md5_checksum)
+            {
+              checksum_kind = svn_checksum_md5;
+            }
+          else
+            {
+              checksum_kind = svn_checksum_sha1;
+            }
 
           serr = svn_fs_check_path(&kind, resource->info->root.root,
                                    resource->info->repos_path, scratch_pool);
           if (!serr && kind == svn_node_file)
-            serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+            serr = svn_fs_file_checksum(&checksum, checksum_kind,
                                         resource->info->root.root,
                                         resource->info->repos_path, TRUE,
                                         scratch_pool);
@@ -688,8 +701,11 @@ insert_prop_internal(const dav_resource *resource,
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
                             resource->info->r,
-                            "Can't fetch or compute MD5 checksum of '%s': "
+                            "Can't fetch or compute %s checksum of '%s': "
                             "%s",
+                            checksum_kind == svn_checksum_md5
+                              ? "MD5"
+                              : "SHA1",
                             resource->info->repos_path,
                             serr->message);
               svn_error_clear(serr);

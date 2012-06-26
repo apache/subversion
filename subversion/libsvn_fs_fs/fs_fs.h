@@ -131,8 +131,9 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          apr_pool_t *pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
-   by NODEREV in filesystem FS.  The returned object is allocated in
-   RESULT_POOL; SCRATCH_POOL used for temporary allocations. */
+   by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
+   be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
+   used for temporary allocations. */
 svn_error_t *
 svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   svn_fs_t *fs,
@@ -354,12 +355,6 @@ svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
 svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
-
-/* Store the uuid of the repository FS in *UUID.  Allocate space in
-   POOL. */
-svn_error_t *svn_fs_fs__get_uuid(svn_fs_t *fs,
-                                 const char **uuid,
-                                 apr_pool_t *pool);
 
 /* Set the uuid of repository FS to UUID, if UUID is not NULL;
    otherwise, set the uuid of FS to a newly generated UUID.  Perform

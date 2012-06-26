@@ -33,6 +33,7 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_debug.h"
+#include "private/svn_subr_private.h"
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
@@ -252,7 +253,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(pool,
-                                   "fsfs:", ffd->uuid,
+                                   "fsfs:", fs->uuid,
                                    "/", fs->path, ":",
                                    (char *)NULL);
   svn_memcache_t *memcache;
@@ -495,7 +496,7 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
      to start a new transaction later that receives the same id.
      Therefore, throw in a uuid as well - just to be sure. */
   const char *prefix = apr_pstrcat(pool,
-                                   "fsfs:", ffd->uuid,
+                                   "fsfs:", fs->uuid,
                                    "/", fs->path,
                                    ":", txn_id,
                                    ":", svn_uuid_generate(pool), ":",

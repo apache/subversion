@@ -996,6 +996,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 }
 
 
+#if 0
 static svn_error_t *
 ev2_check_authz(const struct ev2_baton *eb,
                 const char *relpath,
@@ -1024,6 +1025,7 @@ ev2_check_authz(const struct ev2_baton *eb,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 /* This implements svn_editor_cb_add_directory_t */
@@ -1098,12 +1100,14 @@ static svn_error_t *
 alter_directory_cb(void *baton,
                    const char *relpath,
                    svn_revnum_t revision,
+                   const apr_array_header_t *children,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_directory(eb->inner, relpath, revision, props));
+  SVN_ERR(svn_editor_alter_directory(eb->inner, relpath, revision,
+                                     children, props));
   return SVN_NO_ERROR;
 }
 

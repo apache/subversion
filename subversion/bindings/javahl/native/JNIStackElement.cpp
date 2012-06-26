@@ -58,20 +58,28 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
             return;
         }
 
-      // This will call java.lang.Object.toString, even when it is
-      // overriden.
-      jobject oStr = env->CallNonvirtualObjectMethod(jthis, jlo, mid);
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
-
-      // Copy the result to a buffer.
-      JNIStringHolder name(reinterpret_cast<jstring>(oStr));
       *m_objectID = 0;
-      strncat(m_objectID, name, JNIUtil::formatBufferSize -1);
+
+      if(jthis == NULL)
+        {
+          strcpy(m_objectID, "<static>");
+        }
+      else
+        {
+          // This will call java.lang.Object.toString, even when it is
+          // overriden.
+          jobject oStr = env->CallNonvirtualObjectMethod(jthis, jlo, mid);
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+
+          // Copy the result to a buffer.
+          JNIStringHolder name(reinterpret_cast<jstring>(oStr));
+          strncat(m_objectID, name, JNIUtil::formatBufferSize -1);
+          env->DeleteLocalRef(oStr);
+        }
 
       // Release the Java string.
       env->DeleteLocalRef(jlo);
-      env->DeleteLocalRef(oStr);
 
       // Remember the parameter for the exit of the method.
       m_clazz = clazz;

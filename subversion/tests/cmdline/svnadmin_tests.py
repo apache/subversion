@@ -103,6 +103,16 @@ def check_hotcopy_fsfs(src, dst):
                                     % (row, rows1[i]))
           continue
 
+        # Special case for revprop-generation: It will always be zero in
+        # the hotcopy destination (i.e. a fresh cache generation)
+        if src_file == 'revprop-generation':
+          f2 = open(dst_path, 'r')
+          revprop_gen = int(f2.read().strip())
+          if revprop_gen != 0:
+              raise svntest.Failure("Hotcopy destination has non-zero " +
+                                    "revprop generation")
+          continue
+
         f1 = open(src_path, 'r')
         f2 = open(dst_path, 'r')
         while True:
@@ -174,11 +184,12 @@ def get_txns(repo_dir):
   return txns
 
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
-                               revs, dump, *varargs):
-  """Load the array of lines passed in 'dump' into the
-  current tests' repository and verify the repository content
-  using the array of wc.States passed in revs. VARARGS are optional
-  arguments passed to the 'load' command"""
+                               revs, check_props, dump, *varargs):
+  """Load the array of lines passed in DUMP into the current tests'
+  repository and verify the repository content using the array of
+  wc.States passed in REVS.  If CHECK_PROPS is True, check properties
+  of each rev's items.  VARARGS are optional arguments passed to the
+  'load' command."""
 
   if isinstance(dump, str):
     dump = [ dump ]
@@ -213,7 +224,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                          "update", "-r%s" % (rev+1),
                                          sbox.wc_dir)
 
-      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
+      wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir, check_props)
       rev_tree = revs[rev].old_tree()
 
       try:
@@ -222,6 +233,10 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
         svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
 
+def load_dumpstream(sbox, dump, *varargs):
+  "Load dump text without verification."
+  return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
+                                    *varargs)
 
 ######################################################################
 # Tests
@@ -298,7 +313,7 @@ def extra_headers(sbox):
   dumpfile[3:3] = \
        [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
 #----------------------------------------------------------------------
@@ -317,7 +332,7 @@ def extra_blockcontent(sbox):
   # Insert the extra content after "PROPS-END\n"
   dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
 #----------------------------------------------------------------------
@@ -331,7 +346,7 @@ def inconsistent_headers(sbox):
   dumpfile[-2] = "Content-length: 30\n\n"
 
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dumpfile)
+                             dumpfile_revisions, False, dumpfile)
 
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
@@ -351,7 +366,7 @@ def empty_date(sbox):
          "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
          ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
 
   # Verify that the revision still lacks the svn:date property.
@@ -798,8 +813,7 @@ def load_with_parent_dir(sbox):
                                      ['\n', 'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample",
                                      "-m", "Create sample dir")
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
-                             '/sample')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', '/sample')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'
   svntest.actions.run_and_verify_svn(None,
@@ -821,8 +835,7 @@ def load_with_parent_dir(sbox):
                                      ['\n', 'Committed revision 11.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample-2",
                                      "-m", "Create sample-2 dir")
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
-                             'sample-2')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', 'sample-2')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'.
   svntest.actions.run_and_verify_svn(None,
@@ -897,11 +910,10 @@ def reflect_dropped_renumbered_revs(sbox):
                                      "-m", "Create toplevel dir")
 
   # Load the dump stream in sbox.repo_url
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile)
+  load_dumpstream(sbox, dumpfile)
 
   # Load the dump stream in toplevel dir
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
-                             '/toplevel')
+  load_dumpstream(sbox, dumpfile, '--parent-dir', '/toplevel')
 
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -1132,7 +1144,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
                                     'svnadmin_tests_data',
                                     'mergeinfo_included_full.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full, '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_full, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -1174,15 +1186,9 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   test_create(sbox)
 
   # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r1_10).read(), '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r11_13).read(), '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r14_15).read(), '--ignore-uuid')
 
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
@@ -1211,13 +1217,11 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
                                         'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full,
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_full, '--parent-dir', 'Projects/Project-X',
+                  '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.  This is exactly the
   # same expected mergeinfo we previously checked, except that the
@@ -1253,22 +1257,15 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   test_create(sbox)
 
   # Load this skeleton repos into the empty target:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r1_10).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r11_13).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
+  load_dumpstream(sbox, open(dump_file_r14_15).read(),
+                  '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
@@ -1392,7 +1389,7 @@ text
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dump_str,
+                             dumpfile_revisions, False, dump_str,
                              '--ignore-uuid')
 
   # Now try it again bypassing prop validation.  (This interface takes
@@ -1413,8 +1410,8 @@ def verify_non_utf8_paths(sbox):
   test_create(sbox)
 
   # Load the dumpstream
-  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, dumpfile,
-                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
+                             dumpfile, '--ignore-uuid')
 
   # Replace the path 'A' in revision 1 with a non-UTF-8 sequence.
   # This has been observed in repositories in the wild, though Subversion
@@ -1580,13 +1577,13 @@ def load_ranges(sbox):
 
   # Load our dumpfile, 2 revisions at a time, verifying that we have
   # the correct youngest revision after each load.
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r0:2')
+  load_dumpstream(sbox, dumpdata, '-r0:2')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['2\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r3:4')
+  load_dumpstream(sbox, dumpdata, '-r3:4')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['4\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_and_verify_dumpstream(sbox, [], [], None, dumpdata, '-r5:6')
+  load_dumpstream(sbox, dumpdata, '-r5:6')
   svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
                                          None, 'youngest', sbox.repo_dir)
 

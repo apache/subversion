@@ -45,6 +45,7 @@
 #include "../dav_svn.h"
 
 
+/* State baton for the overall update process. */
 typedef struct update_ctx_t {
   const dav_resource *resource;
 
@@ -89,22 +90,38 @@ typedef struct update_ctx_t {
 
 } update_ctx_t;
 
+
+/* State baton for a file or directory. */
 typedef struct item_baton_t {
   apr_pool_t *pool;
   update_ctx_t *uc;
-  struct item_baton_t *parent; /* the parent of this item. */
-  const char *name;    /* the single-component name of this item */
-  const char *path;    /* a telescoping extension of uc->anchor */
-  const char *path2;   /* a telescoping extension of uc->dst_path */
-  const char *path3;   /* a telescoping extension of uc->dst_path
-                            without dst_path as prefix. */
 
-  const char *base_checksum;   /* base_checksum (from apply_textdelta) */
+  /* Uplink -- the parent of this item. */
+  struct item_baton_t *parent;
 
-  svn_boolean_t text_changed;        /* Did the file's contents change? */
-  svn_boolean_t added;               /* File added? (Implies text_changed.) */
-  svn_boolean_t copyfrom;            /* File copied? */
-  apr_array_header_t *removed_props; /* array of const char * prop names */
+  /* Single-component name of this item. */
+  const char *name;
+
+  /* Telescoping extension paths ... */
+  const char *path;    /* ... of uc->anchor. */
+  const char *path2;   /* ... of uc->dst_path. */
+  const char *path3;   /* ... uc->dst_path, without dst_path prefix. */
+
+  /* Base_checksum (from apply_textdelta). */
+  const char *base_checksum;   
+
+  /* Did the file's contents change? */
+  svn_boolean_t text_changed; 
+
+  /* File/dir added? (Implies text_changed for files.) */
+  svn_boolean_t added;
+
+  /* File/dir copied? */
+  svn_boolean_t copyfrom;
+
+  /* Array of const char * names of removed properties.  (Used only
+     for copied files/dirs in skelta mode.)  */
+  apr_array_header_t *removed_props;
 
 } item_baton_t;
 
@@ -565,10 +582,10 @@ upd_add_directory(const char *path,
 
 static svn_error_t *
 upd_open_directory(const char *path,
-                                        void *parent_baton,
-                                        svn_revnum_t base_revision,
-                                        apr_pool_t *pool,
-                                        void **child_baton)
+                   void *parent_baton,
+                   svn_revnum_t base_revision,
+                   apr_pool_t *pool,
+                   void **child_baton)
 {
   return open_helper(TRUE /* is_dir */,
                      path, parent_baton, base_revision, pool, child_baton);
@@ -638,16 +655,26 @@ upd_change_xxx_prop(void *baton,
                                           qname));
         }
     }
-  else if (!value) /* This is an addition in 'skelta' mode so there is no
-                      need for an inline response since property fetching
-                      is implied in addition.  We still need to cache
-                      property removals because a copied path might
-                      have removed properties. */
+  else if (!value)
     {
-      if (! b->removed_props)
-        b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
+      /* This is an addition in "skelta" (that is, "not send-all")
+         mode so there is no strict need for an inline response.
+         Clients will assume that added objects need all to have all
+         their properties explicitly fetched from the server. */
 
-      APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
+      /* Now, if the object is actually a copy, we'll still need to
+         cache (and later transmit) property removals, because
+         fetching the object's current property set alone isn't
+         sufficient to communicate the fact that additional properties
+         were, in fact, removed from the copied base object in order
+         to arrive at that set. */
+      if (b->copyfrom)
+        {
+          if (! b->removed_props)
+            b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
+
+          APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
+        }
     }
 
   return SVN_NO_ERROR;

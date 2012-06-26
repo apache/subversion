@@ -3888,7 +3888,6 @@ merge_file(svn_skel_t **work_items,
   struct dir_baton *pb = fb->dir_baton;
   svn_boolean_t is_locally_modified;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  svn_skel_t *work_item;
   const char *working_abspath = fb->moved_to_abspath ? fb->moved_to_abspath
                                                      : fb->local_abspath;
 
@@ -4057,26 +4056,6 @@ merge_file(svn_skel_t **work_items,
               *install_pristine = TRUE;
             }
         }
-    }
-
-  /* Installing from a pristine will handle timestamps and recording.
-     However, if we are NOT creating a new working copy file, then create
-     work items to handle the recording of the timestamp and working-size. */
-  if (!*install_pristine
-      && !is_locally_modified)
-    {
-      apr_time_t set_date = 0;
-
-      if (eb->use_commit_times && last_changed_date != 0)
-        {
-          set_date = last_changed_date;
-        }
-
-      SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
-                                               eb->db, working_abspath,
-                                               set_date,
-                                               result_pool, scratch_pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 
   /* Set the returned content state. */

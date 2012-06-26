@@ -65,6 +65,8 @@ def _usage_exit():
   print("  -t, --test=TEST        : Run the TEST test (all is default); use")
   print("                           TEST#n to run a particular test number,")
   print("                           multiples also accepted e.g. '2,4-7'")
+  print("  --log-level=LEVEL      : Set log level to LEVEL (E.g. DEBUG)")
+  print("  --log-to-stdout        : Write log results to stdout")
 
   print("  --svnserve-args=list   : comma-separated list of arguments for")
   print("                           svnserve")
@@ -93,10 +95,9 @@ def _usage_exit():
   print("  -p, --parallel         : run multiple tests in parallel")
   print("  --server-minor-version : the minor version of the server being")
   print("                           tested")
-  print(" --config-file           : Configuration file for tests")
-  print(" --fsfs-sharding         : Specify shard size (for fsfs)")
-  print(" --fsfs-packing          : Run 'svnadmin pack' automatically")
-  print(" --log-to-stdout         : Write log results to stdout")
+  print("  --config-file          : Configuration file for tests")
+  print("  --fsfs-sharding        : Specify shard size (for fsfs)")
+  print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
 
   sys.exit(0)
 
@@ -130,7 +131,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
-                        'config-file=', 'server-minor-version=',
+                        'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
@@ -146,7 +147,7 @@ svnserve_args = None
 run_httpd = None
 httpd_port = None
 httpd_service = None
-http_library = 'neon'
+http_library = 'serf'
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -163,6 +164,7 @@ config_file = None
 log_to_stdout = None
 mode_filter=None
 tests_to_run = []
+log_level = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -230,6 +232,8 @@ for opt, val in opts:
     config_file = val
   elif opt == '--log-to-stdout':
     log_to_stdout = 1
+  elif opt == '--log-level':
+    log_level = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -530,6 +534,12 @@ class Httpd:
     fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
     fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
 
+    # Don't handle .htaccess, symlinks, etc.
+    fp.write('<Directory />\n')
+    fp.write('AllowOverride None\n')
+    fp.write('Options None\n')
+    fp.write('</Directory>\n\n')
+
     # Define two locations for repositories
     fp.write(self._svn_repo('repositories'))
     fp.write(self._svn_repo('local_tmp'))
@@ -558,9 +568,10 @@ class Httpd:
   def _create_users_file(self):
     "Create users file"
     htpasswd = os.path.join(self.httpd_dir, 'bin', 'htpasswd.exe')
-    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-mbc', self.httpd_users,
+    # Create the cheapest to compare password form for our testsuite
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bcp', self.httpd_users,
                                     'jrandom', 'rayjandom'])
-    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-mb',  self.httpd_users,
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
                                     'jconstant', 'rayjandom'])
 
   def _create_mime_types_file(self):
@@ -656,8 +667,6 @@ if create_dirs:
     baton = copied_execs
     for dirpath, dirs, files in os.walk('subversion'):
       copy_execs(baton, dirpath, dirs + files)
-    for dirpath, dirs, files in os.walk('tools/client-side/svnmucc'):
-      copy_execs(baton, dirpath, dirs + files)
   except:
     os.chdir(old_cwd)
     raise
@@ -736,7 +745,8 @@ if not test_javahl:
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
                              list_tests, svn_bin, mode_filter,
-                             milestone_filter)
+                             milestone_filter,
+                             set_log_level=log_level)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)

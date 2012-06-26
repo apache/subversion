@@ -61,6 +61,8 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
+#define PATH_REVPROP_GENERATION "revprop-generation"
+                                                 /* Current revprop generation*/
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -217,9 +219,6 @@ typedef struct fs_fs_data_t
   /* The maximum number of files to store per directory (for sharded
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
-
-  /* The uuid of this FS. */
-  const char *uuid;
 
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;

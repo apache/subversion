@@ -103,6 +103,10 @@ if [ "$THREADED" != "" ]; then
   SVNSERVE_ARGS="-T"
 fi
 
+if [ ${CACHE_REVPROPS:+set} ]; then
+  SVNSERVE_ARGS="$SVNSERVE_ARGS --cache-revprops on"
+fi
+
 "$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
             --listen-host 127.0.0.1 \
             --listen-port $SVNSERVE_PORT \

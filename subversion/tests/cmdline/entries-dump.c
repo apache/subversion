@@ -30,6 +30,7 @@
 #define SVN_DEPRECATED
 
 #include "svn_types.h"
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
@@ -266,14 +267,15 @@ main(int argc, const char *argv[])
       exit(1);
     }
 
-  if (apr_initialize() != APR_SUCCESS)
+  if (svn_cmdline_init("entries-dump", stderr) != EXIT_SUCCESS)
     {
-      fprintf(stderr, "apr_initialize() failed.\n");
-      exit(1);
+      return EXIT_FAILURE;
     }
 
-  /* set up the global pool */
-  pool = svn_pool_create(NULL);
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   path = svn_dirent_internal_style(argv[argc-1], pool);
 

@@ -124,6 +124,20 @@ run_svn_del() {
   fi
 }
 
+run_svn_del_many() {
+  printf "\n" > files.lst
+  sequence=`get_sequence 2 ${1}`
+  for i in $sequence; do
+    printf "$WC/${1}_c/$i\n" >> files.lst
+  done
+
+  if [ "${VALGRIND}" = "" ] ; then
+    time ${SVN} del -q --targets files.lst > /dev/null
+  else
+    ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.del_many.$1" ${SVN} del -q --targets files.lst > /dev/null
+  fi
+}
+
 run_svn_ci() {
   if [ "${VALGRIND}" = "" ] ; then
     time ${SVN} ci $WC/$1 -m "" -q > /dev/null
@@ -185,12 +199,13 @@ while [ $FILECOUNT -lt $MAXCOUNT ]; do
   run_svn_del ${FILECOUNT} 1
 
   printf "\tDeleting files ... \t"
-  time sh -c "
-  for i in $sequence; do
-    ${SVN} del $WC/${FILECOUNT}_c/\$i -q
-  done "
+  if [ "$FILECOUNT" == "1" ] ; then
+    printf " skipped (0 files to delete)\n"
+  else
+    run_svn_del_many ${FILECOUNT}
+  fi
 
-  printf "\tCommit deletions ...\t"
+  printf "\tCommit deletions ..\t"
   run_svn_ci ${FILECOUNT}_c del
 
   rm -rf $WC

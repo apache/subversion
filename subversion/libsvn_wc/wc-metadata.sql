@@ -169,7 +169,10 @@ CREATE TABLE ACTUAL_NODE (
   /* stsp: This is meant for text conflicts, right? What about property
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
-           conflict_data as well? */
+           conflict_data as well? 
+     rhuijben: Because that won't allow triggers to handle refcounts.
+               We would have to scan all conflict skels before cleaning up the
+               a single file from the pristine stor */
   older_checksum  TEXT REFERENCES PRISTINE (checksum),
   left_checksum  TEXT REFERENCES PRISTINE (checksum),
   right_checksum  TEXT REFERENCES PRISTINE (checksum),
@@ -462,24 +465,22 @@ CREATE TABLE NODES (
      node does not have any dav-cache. */
   dav_cache  BLOB,
 
-  /* The serialized file external information. */
-  /* ### hack.  hack.  hack.
-     ### This information is already stored in properties, but because the
-     ### current working copy implementation is such a pain, we can't
-     ### readily retrieve it, hence this temporary cache column.
-     ### When it is removed, be sure to remove the extra column from
-     ### the db-tests.
-
-     ### Note: This is only here as a hack, and should *NOT* be added
-     ### to any wc_db APIs.  */
-  file_external  TEXT,
-
+  /* Is there a file external in this location. NULL if there
+     is no file external, otherwise '1'  */
+  /* ### Originally we had a wc-1.0 like skel in this place, so we
+     ### check for NULL.
+     ### In Subversion 1.7 we defined this column as TEXT, but Sqlite
+     ### only uses this information for deciding how to optimize
+     ### anyway. */
+  file_external  INTEGER,
 
   PRIMARY KEY (wc_id, local_relpath, op_depth)
 
   );
 
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+/* I_NODES_MOVED is introduced in format 30 */
+CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
 
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the highest (most "current") op_depth.  This view
@@ -497,7 +498,7 @@ CREATE VIEW NODES_CURRENT AS
                         AND n2.local_relpath = n.local_relpath);
 
 /* Many queries have to filter the nodes table to pick only that version
-   of each node with the base (least "current") op_depth.  This view
+   of each node with the BASE ("as checked out") op_depth.  This view
    does the heavy lifting for such queries. */
 CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
@@ -666,6 +667,15 @@ PRAGMA user_version = 20;
 -- STMT_UPGRADE_TO_21
 PRAGMA user_version = 21;
 
+/* For format 21 bump code */
+-- STMT_UPGRADE_21_SELECT_OLD_TREE_CONFLICT
+SELECT wc_id, local_relpath, tree_conflict_data
+FROM actual_node
+WHERE tree_conflict_data IS NOT NULL
+
+/* For format 21 bump code */
+-- STMT_UPGRADE_21_ERASE_OLD_CONFLICTS
+UPDATE actual_node SET tree_conflict_data = NULL
 
 /* ------------------------------------------------------------------------- */
 
@@ -736,6 +746,15 @@ PRAGMA user_version = 26;
 -- STMT_UPGRADE_TO_27
 PRAGMA user_version = 27;
 
+/* For format 27 bump code */
+-- STMT_UPGRADE_27_HAS_ACTUAL_NODES_CONFLICTS
+SELECT 1 FROM actual_node
+WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
+           AND (conflict_new IS NULL) AND (conflict_working IS NULL)
+           AND (tree_conflict_data IS NULL))
+LIMIT 1
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 28 involves no schema changes, it only converts MD5 pristine 
@@ -791,6 +810,18 @@ PRAGMA user_version = 29;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 30 currently just contains some nice to haves that should be included
+   with the next format bump  */
+-- STMT_UPGRADE_TO_30
+CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
+ON NODES (wc_id, moved_to, op_depth);
+
+/* Just to be sure clear out file external skels from pre 1.7.0 development
+   working copies that were never updated by 1.7.0+ style clients */
+UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 
@@ -803,9 +834,9 @@ PRAGMA user_version = 29;
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
-/* TODO: Rename the "absent" presence value to "server-excluded" before
-   the 1.7 release. wc_db.c and this file have references to "absent" which
-   still need to be changed to "server-excluded". */
+/* TODO: Rename the "absent" presence value to "server-excluded". wc_db.c
+   and this file have references to "absent" which still need to be changed
+   to "server-excluded". */
 /* TODO: Un-confuse *_revision column names in the EXTERNALS table to
    "-r<operative> foo@<peg>", as suggested by the patch attached to
    http://svn.haxx.se/dev/archive-2011-09/0478.shtml */

@@ -627,12 +627,16 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc__node_get_commit_base_rev */
+/* Internal version of svn_wc__node_get_commit_base() */
 svn_error_t *
-svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
-                                     svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *scratch_pool);
+svn_wc__internal_get_commit_base(svn_revnum_t *commit_base_revision,
+                                 const char **repos_relpath,
+                                 const char **repos_root_url,
+                                 const char **repos_uuid,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 /* Internal version of svn_wc__node_get_repos_info() */

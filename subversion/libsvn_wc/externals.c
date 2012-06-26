@@ -1134,19 +1134,17 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
                        svn_wc__committable_external_info_t *xinfo,
                        apr_pool_t *scratch_pool)
 {
-  const char *x_repos_relpath;
-  const char *x_repos_root_url;
+  const char *repos_relpath;
+  const char *repos_root_url;
   svn_error_t *err;
 
   *is_rolled_out = FALSE;
 
-  err = svn_wc__node_get_origin(NULL, NULL,
-                                &x_repos_relpath,
-                                &x_repos_root_url,
-                                NULL, NULL,
-                                wc_ctx, xinfo->local_abspath,
-                                FALSE, /* scan_deleted */
-                                scratch_pool, scratch_pool);
+  err = svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                 &repos_root_url, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 wc_ctx->db, xinfo->local_abspath,
+                                 scratch_pool, scratch_pool);
 
   if (err)
     {
@@ -1158,8 +1156,8 @@ is_external_rolled_out(svn_boolean_t *is_rolled_out,
       SVN_ERR(err);
     }
 
-  *is_rolled_out = (strcmp(xinfo->repos_root_url, x_repos_root_url) == 0 &&
-                    strcmp(xinfo->repos_relpath, x_repos_relpath) == 0);
+  *is_rolled_out = (strcmp(xinfo->repos_root_url, repos_root_url) == 0 &&
+                    strcmp(xinfo->repos_relpath, repos_relpath) == 0);
   return SVN_NO_ERROR;
 }
 

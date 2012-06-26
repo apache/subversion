@@ -572,8 +572,7 @@ repos_notify_handler(void *baton,
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      len = strlen(notify->warning_str);
-      svn_error_clear(svn_stream_write(feedback_stream, notify->warning_str, &len));
+      svn_error_clear(svn_stream_puts(feedback_stream, notify->warning_str));
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -776,6 +775,27 @@ fns_from_fns2(const svn_repos_parse_fns2_t *fns2,
   return fns;
 }
 
+static svn_repos_parser_fns2_t *
+fns2_from_fns3(const svn_repos_parse_fns3_t *fns3,
+              apr_pool_t *pool)
+{
+  svn_repos_parser_fns2_t *fns2;
+
+  fns2 = apr_palloc(pool, sizeof(*fns2));
+  fns2->new_revision_record = fns3->new_revision_record;
+  fns2->uuid_record = fns3->uuid_record;
+  fns2->new_node_record = fns3->new_node_record;
+  fns2->set_revision_property = fns3->set_revision_property;
+  fns2->set_node_property = fns3->set_node_property;
+  fns2->remove_node_props = fns3->remove_node_props;
+  fns2->set_fulltext = fns3->set_fulltext;
+  fns2->close_node = fns3->close_node;
+  fns2->close_revision = fns3->close_revision;
+  fns2->delete_node_property = fns3->delete_node_property;
+  fns2->apply_textdelta = fns3->apply_textdelta;
+  return fns2;
+}
+
 static svn_repos_parse_fns2_t *
 fns2_from_fns(const svn_repos_parser_fns_t *fns,
               apr_pool_t *pool)
@@ -795,6 +815,42 @@ fns2_from_fns(const svn_repos_parser_fns_t *fns,
   fns2->delete_node_property = NULL;
   fns2->apply_textdelta = NULL;
   return fns2;
+}
+
+static svn_repos_parse_fns3_t *
+fns3_from_fns2(const svn_repos_parser_fns2_t *fns2,
+               apr_pool_t *pool)
+{
+  svn_repos_parse_fns3_t *fns3;
+
+  fns3 = apr_palloc(pool, sizeof(*fns3));
+  fns3->magic_header_record = NULL;
+  fns3->uuid_record = fns2->uuid_record;
+  fns3->new_revision_record = fns2->new_revision_record;
+  fns3->new_node_record = fns2->new_node_record;
+  fns3->set_revision_property = fns2->set_revision_property;
+  fns3->set_node_property = fns2->set_node_property;
+  fns3->remove_node_props = fns2->remove_node_props;
+  fns3->set_fulltext = fns2->set_fulltext;
+  fns3->close_node = fns2->close_node;
+  fns3->close_revision = fns2->close_revision;
+  fns3->delete_node_property = fns2->delete_node_property;
+  fns3->apply_textdelta = fns2->apply_textdelta;
+  return fns3;
+}
+
+svn_error_t *
+svn_repos_parse_dumpstream2(svn_stream_t *stream,
+                            const svn_repos_parser_fns2_t *parse_fns,
+                            void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool)
+{
+  svn_repos_parse_fns3_t *fns3 = fns3_from_fns2(parse_fns, pool);
+
+  return svn_repos_parse_dumpstream3(stream, fns3, parse_baton, FALSE,
+                                     cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *
@@ -838,11 +894,17 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
                                void *notify_baton,
                                apr_pool_t *pool)
 {
-  return svn_repos_get_fs_build_parser4(callbacks, parse_baton, repos,
-                                        SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
-                                        use_history, validate_props,
-                                        uuid_action, parent_dir,
-                                        notify_func, notify_baton, pool);
+  const svn_repos_parse_fns3_t *fns3;
+
+  SVN_ERR(svn_repos_get_fs_build_parser4(&fns3, parse_baton, repos,
+                                         SVN_INVALID_REVNUM,
+                                         SVN_INVALID_REVNUM,
+                                         use_history, validate_props,
+                                         uuid_action, parent_dir,
+                                         notify_func, notify_baton, pool));
+
+  *callbacks = fns2_from_fns3(fns3, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

@@ -45,37 +45,6 @@ static int hw_thread_count = 0;
  * (will be calibrated to about 1s runtime)*/
 static int suggested_iterations = 0;
 
-/* Return FALSE if we can't create SHMs due to missing privileges
- */
-static svn_boolean_t
-has_sufficient_privileges(void)
-{
-#ifdef _WIN32
-  static svn_tristate_t result = svn_tristate_unknown;
-
-  if (result == svn_tristate_unknown)
-    {
-      HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE,
-                                         NULL,
-                                         PAGE_READONLY,
-                                         0,
-                                         1,
-                                         "Global\\__RandomXZY_svn");
-      if (handle != NULL)
-        {
-          CloseHandle(handle);
-          result = svn_tristate_true;
-        }
-      else
-        result = svn_tristate_false;
-    }
-
-  return result == svn_tristate_true ? TRUE : FALSE;
-#else
-  return TRUE;
-#endif
-}
-
 /* If possible, translate PROC to a global path and set DIRECTORY to
  * the current directory.
  */
@@ -113,7 +82,10 @@ proc_found(const char *proc, apr_pool_t *pool)
 
       /* all processes and their I/O data */
       apr_proc_t process;
-      const char * args[2] = {proc, NULL};
+      const char * args[2];
+
+      args[0] = proc;
+      args[1] = NULL;
       svn_error_clear(adjust_proc_path(&args[0], &directory, pool));
 
       /* try to start the process */
@@ -174,7 +146,7 @@ init_test_shm(apr_pool_t *pool)
     }
 
   /* skip tests if the current user does not have the required privileges */
-  if (!has_sufficient_privileges())
+  if (!svn_named_atomic__is_supported())
     return svn_error_wrap_apr(SVN_ERR_TEST_SKIPPED,
                               "user has insufficient privileges");
 
@@ -338,15 +310,14 @@ run_procs(apr_pool_t *pool, const char *proc, int count, int iterations)
   /* start sub-processes */
   for (i = 0; i < count; ++i)
     {
-      const char * args[6] =
-        {
-          proc,
-          apr_itoa(pool, i),
-          apr_itoa(pool, count),
-          apr_itoa(pool, iterations),
-          name_namespace,
-          NULL
-        };
+      const char * args[6];
+
+      args[0] = proc;
+      args[1] = apr_itoa(pool, i);
+      args[2] = apr_itoa(pool, count);
+      args[3] = apr_itoa(pool, iterations);
+      args[4] = name_namespace;
+      args[5] = NULL;
 
       error = svn_io_start_cmd3(&process[i],
                                 directory,  /* working directory */

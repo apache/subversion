@@ -29,6 +29,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_cache.h"
+#include "private/svn_dep_compat.h"
 
 #include "cache.h"
 
@@ -527,7 +528,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                     svn_config_t *config,
                                     apr_pool_t *pool)
 {
-  apr_uint16_t server_count;
+  int server_count;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   server_count =
@@ -542,12 +543,15 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
       return SVN_NO_ERROR;
     }
 
+  if (server_count > APR_INT16_MAX)
+    return svn_error_create(SVN_ERR_TOO_MANY_MEMCACHED_SERVERS, NULL, NULL);
+
 #ifdef SVN_HAVE_MEMCACHE
   {
     struct ams_baton b;
     svn_memcache_t *memcache = apr_pcalloc(pool, sizeof(*memcache));
     apr_status_t apr_err = apr_memcache_create(pool,
-                                               server_count,
+                                               (apr_uint16_t)server_count,
                                                0, /* flags */
                                                &(memcache->c));
     if (apr_err != APR_SUCCESS)

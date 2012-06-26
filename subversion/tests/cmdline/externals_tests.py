@@ -275,24 +275,24 @@ def checkout_with_externals(sbox):
 
   # Probe the working copy a bit, see if it's as expected.
   expected_existing_paths = [
-    os.path.join(wc_dir, "A", "B", "gamma"),
-    os.path.join(wc_dir, "A", "C", "exdir_G"),
-    os.path.join(wc_dir, "A", "C", "exdir_G", "pi"),
-    os.path.join(wc_dir, "A", "C", "exdir_H"),
-    os.path.join(wc_dir, "A", "C", "exdir_H", "omega"),
-    os.path.join(wc_dir, "A", "D", "x"),
-    os.path.join(wc_dir, "A", "D", "x", "y"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "alpha"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "beta"),
+    sbox.ospath('A/B/gamma'),
+    sbox.ospath('A/C/exdir_G'),
+    sbox.ospath('A/C/exdir_G/pi'),
+    sbox.ospath('A/C/exdir_H'),
+    sbox.ospath('A/C/exdir_H/omega'),
+    sbox.ospath('A/D/x'),
+    sbox.ospath('A/D/x/y'),
+    sbox.ospath('A/D/x/y/z'),
+    sbox.ospath('A/D/x/y/z/blah'),
+    sbox.ospath('A/D/x/y/z/blah/E/alpha'),
+    sbox.ospath('A/D/x/y/z/blah/E/beta'),
     ]
   probe_paths_exist(expected_existing_paths)
 
   # Pick a file at random, make sure it has the expected contents.
-  for path, contents in ((os.path.join(wc_dir, "A", "C", "exdir_H", "omega"),
+  for path, contents in ((sbox.ospath('A/C/exdir_H/omega'),
                           "This is the file 'omega'.\n"),
-                         (os.path.join(wc_dir, "A", "B", "gamma"),
+                         (sbox.ospath('A/B/gamma'),
                           "This is the file 'gamma'.\n")):
     if open(path).read() != contents:
       raise svntest.Failure("Unexpected contents for rev 1 of " + path)
@@ -333,7 +333,7 @@ def update_receive_new_external(sbox):
            "\n"
 
   # Set and commit the property
-  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+  change_external(sbox.ospath('A/D'), new_externals_desc)
 
   # Update the other working copy, see if we get the new item.
   expected_output = svntest.wc.State(other_wc_dir, {
@@ -391,7 +391,7 @@ def update_lose_external(sbox):
            "\n"
 
   # Set and commit the property
-  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+  change_external(sbox.ospath('A/D'), new_externals_desc)
 
   # The code should handle a missing local externals item
   svntest.main.safe_rmtree(os.path.join(other_wc_dir, "A", "D", "exdir_A", \
@@ -455,7 +455,7 @@ def update_change_pristine_external(sbox):
            "\n"
 
   # Set and commit the property
-  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+  change_external(sbox.ospath('A/D'), new_externals_desc)
 
   # Update other working copy, see if get the right change.
   expected_output = svntest.wc.State(other_wc_dir, {
@@ -516,7 +516,7 @@ def update_change_modified_external(sbox):
            "\n"
 
   # Set and commit the property
-  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+  change_external(sbox.ospath('A/D'), new_externals_desc)
 
   # Update other working copy, see if get the right change.
   expected_output = svntest.wc.State(other_wc_dir, {
@@ -584,7 +584,7 @@ def update_receive_change_under_external(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None)
 
-  external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
+  external_gamma_path = sbox.ospath('A/D/exdir_A/D/gamma')
   contents = open(external_gamma_path).read()
   if contents != ("This is the file 'gamma'.\n"
                   "New text in other gamma.\n"):
@@ -612,7 +612,7 @@ def update_receive_change_under_external(sbox):
   svntest.actions.run_and_verify_update(sbox.ospath('A/C'),
                                         expected_output, None, None)
 
-  external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
+  external_rho_path = sbox.ospath('A/C/exdir_G/rho')
   contents = open(external_rho_path).read()
   if contents != ("This is the file 'rho'.\n"
                   "New text in other rho.\n"):
@@ -634,7 +634,7 @@ def modify_and_update_receive_new_external(sbox):
                                      repo_url, wc_dir)
 
   # Add one more external item
-  B_path = os.path.join(wc_dir, "A/B")
+  B_path = sbox.ospath('A/B')
   externals_desc = \
           external_url_for["A/D/exdir_A/G/"] + " exdir_G"     + \
           "\n"                                                + \
@@ -678,11 +678,11 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
                    "'.*' is an absolute path or involves '..'.*"
     change_external_expect_error(path, val, expected_err)
 
-  B_path = os.path.join(wc_dir, 'A', 'B')
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  C_path = os.path.join(wc_dir, 'A', 'C')
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  B_path = sbox.ospath('A/B')
+  G_path = sbox.ospath('A/D/G')
+  H_path = sbox.ospath('A/D/H')
+  C_path = sbox.ospath('A/C')
+  F_path = sbox.ospath('A/B/F')
 
   external_urls = list(external_url_for.values())
 
@@ -745,28 +745,28 @@ def export_with_externals(sbox):
 
   # Probe the working copy a bit, see if it's as expected.
   expected_existing_paths = [
-    os.path.join(wc_dir, "A", "C", "exdir_G"),
-    os.path.join(wc_dir, "A", "C", "exdir_G", "pi"),
-    os.path.join(wc_dir, "A", "C", "exdir_H"),
-    os.path.join(wc_dir, "A", "C", "exdir_H", "omega"),
-    os.path.join(wc_dir, "A", "D", "x"),
-    os.path.join(wc_dir, "A", "D", "x", "y"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "alpha"),
-    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "beta"),
+    sbox.ospath('A/C/exdir_G'),
+    sbox.ospath('A/C/exdir_G/pi'),
+    sbox.ospath('A/C/exdir_H'),
+    sbox.ospath('A/C/exdir_H/omega'),
+    sbox.ospath('A/D/x'),
+    sbox.ospath('A/D/x/y'),
+    sbox.ospath('A/D/x/y/z'),
+    sbox.ospath('A/D/x/y/z/blah'),
+    sbox.ospath('A/D/x/y/z/blah/E/alpha'),
+    sbox.ospath('A/D/x/y/z/blah/E/beta'),
     ]
   probe_paths_exist(expected_existing_paths)
 
   # Pick some files, make sure their contents are as expected.
-  exdir_G_pi_path = os.path.join(wc_dir, "A", "C", "exdir_G", "pi")
+  exdir_G_pi_path = sbox.ospath('A/C/exdir_G/pi')
   contents = open(exdir_G_pi_path).read()
   if contents != ("This is the file 'pi'.\n"
                   "Added to pi in revision 3.\n"):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_G_pi_path)
 
-  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
+  exdir_H_omega_path = sbox.ospath('A/C/exdir_H/omega')
   contents = open(exdir_H_omega_path).read()
   if contents != "This is the file 'omega'.\n":
     raise svntest.Failure("Unexpected contents for rev 1 of " +
@@ -848,7 +848,7 @@ def external_with_peg_and_op_revision(sbox):
            "\n"
 
   # Set and commit the property.
-  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+  change_external(sbox.ospath('A/D'), new_externals_desc)
 
   # Update other working copy, see if we get the right change.
   expected_output = svntest.wc.State(wc_dir, {
@@ -859,7 +859,7 @@ def external_with_peg_and_op_revision(sbox):
                                         expected_output, None, None)
 
 
-  external_chi_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'H', 'chi')
+  external_chi_path = sbox.ospath('A/D/exdir_A/H/chi')
   contents = open(external_chi_path).read()
   if contents != "This is the file 'chi'.\n":
     raise svntest.Failure("Unexpected contents for externally modified " +
@@ -889,7 +889,7 @@ def new_style_externals(sbox):
            "\n"
 
   # Set and commit the property.
-  change_external(os.path.join(wc_dir, "A/C"), new_externals_desc)
+  change_external(sbox.ospath('A/C'), new_externals_desc)
 
   # Update other working copy.
   expected_output = svntest.wc.State(wc_dir, {
@@ -915,7 +915,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -990,7 +990,7 @@ def old_style_externals_ignore_peg_reg(sbox):
   ext = "exdir_G " + external_url_for["A/C/exdir_G"] + "@HEAD\n"
 
   # Set and commit the property.
-  change_external(os.path.join(wc_dir, "A"), ext)
+  change_external(sbox.ospath('A'), ext)
 
   # Update the working copy.  This should succeed (exitcode 0) but
   # should print warnings on the external because the URL with '@HEAD'
@@ -1027,7 +1027,7 @@ def cannot_move_or_remove_file_externals(sbox):
                                      ".*gamma.*; please .* "
                                      "the svn:externals .*",
                                      'rm',
-                                     os.path.join(wc_dir, 'A', 'B', 'gamma'))
+                                     sbox.ospath('A/B/gamma'))
 
   # Should not be able to move the file external.
   svntest.actions.run_and_verify_svn("Able to move file external",
@@ -1036,15 +1036,15 @@ def cannot_move_or_remove_file_externals(sbox):
                                      ".*gamma.*; please .*edit.*"
                                      "svn:externals.*",
                                      'mv',
-                                     os.path.join(wc_dir, 'A', 'B', 'gamma'),
-                                     os.path.join(wc_dir, 'A', 'B', 'gamma1'))
+                                     sbox.ospath('A/B/gamma'),
+                                     sbox.ospath('A/B/gamma1'))
 
   # But the directory that contains it can be deleted.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm',
-                                     os.path.join(wc_dir, "A", "B"))
+                                     sbox.ospath('A/B'))
 
   expected_status.tweak('A/B', status='D ')
   expected_output = svntest.wc.State(wc_dir, {
@@ -1072,7 +1072,7 @@ def cannot_move_or_remove_file_externals(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None)
 
-  open(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
+  open(sbox.ospath('A/D/gamma')).close()
 
 #----------------------------------------------------------------------
 
@@ -1139,8 +1139,8 @@ def external_into_path_with_spaces(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None)
   probe_paths_exist([
-      os.path.join(wc_dir, 'A', 'copy of D'),
-      os.path.join(wc_dir, 'A', 'another copy of D'),
+      sbox.ospath('A/copy of D'),
+      sbox.ospath('A/another copy of D'),
   ])
 
 #----------------------------------------------------------------------
@@ -1155,7 +1155,7 @@ def binary_file_externals(sbox):
 
   # Add a binary file A/theta, write PNG file data into it.
   theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
-  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  theta_path = sbox.ospath('A/theta')
   svntest.main.file_write(theta_path, theta_contents, 'wb')
 
   svntest.main.run_svn(None, 'add', theta_path)
@@ -1175,7 +1175,7 @@ def binary_file_externals(sbox):
 
 
   # Create a file external on the binary file A/theta
-  C = os.path.join(wc_dir, 'A', 'C')
+  C = sbox.ospath('A/C')
   external = os.path.join(C, 'external')
   externals_prop = "^/A/theta external\n"
 
@@ -1226,7 +1226,7 @@ def update_lose_file_external(sbox):
 
 
   # Create a file external in A/C/external on the file A/mu
-  C = os.path.join(wc_dir, 'A', 'C')
+  C = sbox.ospath('A/C')
   external = os.path.join(C, 'external')
   externals_prop = "^/A/mu external\n"
 
@@ -1296,7 +1296,7 @@ def update_lose_file_external(sbox):
                                         None, None, None, None, None,
                                         True)
 
-  probe_paths_missing([os.path.join(wc_dir, 'A', 'C', 'external')])
+  probe_paths_missing([sbox.ospath('A/C/external')])
 
 
 #----------------------------------------------------------------------
@@ -1311,8 +1311,8 @@ def switch_relative_external(sbox):
   repo_url = sbox.repo_url
 
   # Create a relative external in A/D on ../B
-  A_path = os.path.join(wc_dir, 'A')
-  A_copy_path = os.path.join(wc_dir, 'A_copy')
+  A_path = sbox.ospath('A')
+  A_copy_path = sbox.ospath('A_copy')
   A_copy_url = repo_url + '/A_copy'
   D_path = os.path.join(A_path, 'D')
   ext_path = os.path.join(D_path, 'ext')
@@ -1398,7 +1398,7 @@ def relegate_external(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
 
   # setup an external within the same repository
   externals_desc = '^/A/B/E        external'
@@ -1454,7 +1454,7 @@ def wc_repos_file_externals(sbox):
   repo_url = sbox.repo_url
 
   # Add a file A/theta.
-  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  theta_path = sbox.ospath('A/theta')
   svntest.main.file_write(theta_path, 'theta', 'w')
   svntest.main.run_svn(None, 'add', theta_path)
 
@@ -1475,7 +1475,7 @@ def wc_repos_file_externals(sbox):
 
 
   # Create a file external on the file A/theta
-  C = os.path.join(wc_dir, 'A', 'C')
+  C = sbox.ospath('A/C')
   external = os.path.join(C, 'theta')
   externals_prop = "^/A/theta theta\n"
 
@@ -1557,9 +1557,9 @@ def merge_target_with_externals(sbox):
   repo_url = sbox.repo_url
 
   # Some paths we'll care about
-  A_path              = os.path.join(wc_dir, "A")
-  A_branch_path       = os.path.join(wc_dir, "A-branch")
-  A_gamma_branch_path = os.path.join(wc_dir, "A-branch", "D", "gamma")
+  A_path              = sbox.ospath('A')
+  A_branch_path       = sbox.ospath('A-branch')
+  A_gamma_branch_path = sbox.ospath('A-branch/D/gamma')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
@@ -1726,7 +1726,7 @@ def update_external_on_locally_added_dir(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None)
 
-  probe_paths_exist([os.path.join(wc_dir, "A", "foo", "exdir_E")])
+  probe_paths_exist([sbox.ospath('A/foo/exdir_E')])
 
 # Test for issue #2267
 @Issue(2267)
@@ -1775,7 +1775,7 @@ def switch_external_on_locally_added_dir(sbox):
   # Switch the working copy to the branch, see if we get the new item.
   svntest.actions.run_and_verify_svn(None, None, [], 'sw', A_copy_path, wc_dir)
 
-  probe_paths_exist([os.path.join(wc_dir, "foo", "exdir_E")])
+  probe_paths_exist([sbox.ospath('foo/exdir_E')])
 
 @Issue(3819)
 def file_external_in_sibling(sbox):
@@ -1986,7 +1986,7 @@ def copy_file_externals(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  X = os.path.join(wc_dir, 'X')
+  X = sbox.ospath('X')
 
   # svn mkdir X
   expected_stdout = ['A         ' + X + '\n']
@@ -2017,9 +2017,9 @@ def copy_file_externals(sbox):
   #  svn up
   #  ''')
 
-  X = os.path.join(wc_dir, 'X')
-  X_copy = os.path.join(wc_dir, 'X_copy')
-  X_xmu = os.path.join(wc_dir, 'X', 'xmu')
+  X = sbox.ospath('X')
+  X_copy = sbox.ospath('X_copy')
+  X_xmu = sbox.ospath('X/xmu')
 
   # svn ci
   expected_output = svntest.wc.State(wc_dir, {
@@ -2155,12 +2155,12 @@ def include_externals(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
-  X = os.path.join(wc_dir, 'X')
-  X_Y = os.path.join(wc_dir, 'X', 'Y')
-  Xpegged = os.path.join(wc_dir, 'Xpegged')
-  Z = os.path.join(wc_dir, 'Z')
-  Z_zeta = os.path.join(wc_dir, 'Z', 'zeta')
+  A_D_H = sbox.ospath('A/D/H')
+  X = sbox.ospath('X')
+  X_Y = sbox.ospath('X/Y')
+  Xpegged = sbox.ospath('Xpegged')
+  Z = sbox.ospath('Z')
+  Z_zeta = sbox.ospath('Z/zeta')
 
   # mkdir Z
   os.makedirs(Z)
@@ -2291,15 +2291,15 @@ def include_externals(sbox):
   #   svn status
   #   """)
 
-  X = os.path.join(wc_dir, 'X')
-  X_xG = os.path.join(wc_dir, 'X', 'xG')
-  X_xG_pi = os.path.join(wc_dir, 'X', 'xG', 'pi')
-  X_xmu = os.path.join(wc_dir, 'X', 'xmu')
-  X_Y_xH_chi = os.path.join(wc_dir, 'X', 'Y', 'xH', 'chi')
-  X_Y_xH_xZ_zeta = os.path.join(wc_dir, 'X', 'Y', 'xH', 'xZ', 'zeta')
-  X_Y_xlambda = os.path.join(wc_dir, 'X', 'Y', 'xlambda')
-  Xpegged = os.path.join(wc_dir, 'Xpegged')
-  Xpegged_xE_alpha = os.path.join(wc_dir, 'Xpegged', 'xE', 'alpha')
+  X = sbox.ospath('X')
+  X_xG = sbox.ospath('X/xG')
+  X_xG_pi = sbox.ospath('X/xG/pi')
+  X_xmu = sbox.ospath('X/xmu')
+  X_Y_xH_chi = sbox.ospath('X/Y/xH/chi')
+  X_Y_xH_xZ_zeta = sbox.ospath('X/Y/xH/xZ/zeta')
+  X_Y_xlambda = sbox.ospath('X/Y/xlambda')
+  Xpegged = sbox.ospath('Xpegged')
+  Xpegged_xE_alpha = sbox.ospath('Xpegged/xE/alpha')
 
   # svn ci
   expected_output = svntest.wc.State(wc_dir, {
@@ -2579,9 +2579,9 @@ def include_immediate_dir_externals(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  X = os.path.join(wc_dir, 'X')
-  X_XE = os.path.join(wc_dir, 'X', 'XE')
-  X_XE_alpha = os.path.join(wc_dir, 'X', 'XE', 'alpha')
+  X = sbox.ospath('X')
+  X_XE = sbox.ospath('X/XE')
+  X_XE_alpha = sbox.ospath('X/XE/alpha')
 
   # svn mkdir X
   expected_stdout = ['A         ' + X + '\n']
@@ -2701,8 +2701,8 @@ def remap_file_external_with_prop_del(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path  = os.path.join(wc_dir, "A")
-  mu_path = os.path.join(wc_dir, "A", "mu")
+  A_path  = sbox.ospath('A')
+  mu_path = sbox.ospath('A/mu')
 
   # Add a property to A/mu
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -2747,8 +2747,8 @@ def dir_external_with_dash_r_only(sbox):
   wc_dir = sbox.wc_dir
   url = sbox.repo_url
 
-  A_B_E_alpha = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  E_ext = os.path.join(wc_dir, 'E_ext')
+  A_B_E_alpha = sbox.ospath('A/B/E/alpha')
+  E_ext = sbox.ospath('E_ext')
 
   # echo 'newer alpha' > A/B/E/alpha
   main.file_write(A_B_E_alpha, 'newer alpha\n')
@@ -2810,7 +2810,7 @@ def url_to_wc_copy_of_externals(sbox):
   # Create an external A/C/external pointing to ^/A/D/G.
   svntest.actions.run_and_verify_svn(None, None, [], 'ps',
                                      'svn:externals', '^/A/D/G external',
-                                     os.path.join(wc_dir, 'A', 'C'))
+                                     sbox.ospath('A/C'))
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'create an external', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -2840,7 +2840,7 @@ def url_to_wc_copy_of_externals(sbox):
   #   svn-F9E2C0EC' to 'C:\SVN\src-trunk-3\Debug\subversion\tests\cmdline\
   #   svn-test-work\working_copies\externals_tests-41\External-WC-to-URL-Copy':
   #   Access is denied.
-  external_root_path = os.path.join(wc_dir, "External-WC-to-URL-Copy")
+  external_root_path = sbox.ospath('External-WC-to-URL-Copy')
   external_ex_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
                                   "external")
   external_pi_path = os.path.join(wc_dir, "External-WC-to-URL-Copy",
@@ -2862,7 +2862,7 @@ def url_to_wc_copy_of_externals(sbox):
   ])
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'copy', repo_url + '/A/C',
-    os.path.join(wc_dir, 'External-WC-to-URL-Copy'))
+    sbox.ospath('External-WC-to-URL-Copy'))
 
 ########################################################################
 # Run the tests

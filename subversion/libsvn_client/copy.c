@@ -1154,22 +1154,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   iterpool = svn_pool_create(pool);
 
-  /* Verify that all the source paths exist, are versioned, etc.
-     We'll do so by querying the base revisions of those things (which
-     we'll need to know later anyway).
-     ### Should we use the 'origin' revision instead of 'base'?
-    */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__node_get_base(&pair->src_revnum, NULL, NULL, NULL,
-                                    ctx->wc_ctx, pair->src_abspath_or_url,
-                                    iterpool, iterpool));
-    }
-
   /* Determine the longest common ancestor for the destinations, and open an RA
      session to that location. */
   /* ### But why start by getting the _parent_ of the first one? */
@@ -1475,13 +1459,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   if (pair->src_kind == svn_node_dir)
     {
       svn_boolean_t sleep_needed = FALSE;
-      const char *tmp_abspath;
+      const char *tmpdir_abspath, *tmp_abspath;
 
-      /* Find a temporary location in which to check out the copy source.
-       * (This function is deprecated, but we intend to replace this whole
-       * code path with something else.) */
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_abspath, dst_abspath,
-                                      svn_io_file_del_on_close, pool));
+      /* Find a temporary location in which to check out the copy source. */
+      SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
+                                 pool, pool));
+                                 
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
+                                       svn_io_file_del_on_close, pool, pool));
 
       /* Make a new checkout of the requested source. While doing so,
        * resolve pair->src_revnum to an actual revision number in case it

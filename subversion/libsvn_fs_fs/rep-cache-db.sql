@@ -41,25 +41,19 @@ SELECT revision, offset, size, expanded_size
 FROM rep_cache
 WHERE hash = ?1
 
-
 -- STMT_SET_REP
 INSERT OR FAIL INTO rep_cache (hash, revision, offset, size, expanded_size)
 VALUES (?1, ?2, ?3, ?4, ?5)
-
 
 -- STMT_GET_REPS_FOR_RANGE
 SELECT hash, revision, offset, size, expanded_size
 FROM rep_cache
 WHERE revision >= ?1 AND revision <= ?2
 
-
 -- STMT_GET_MAX_REV
 SELECT MAX(revision)
 FROM rep_cache
 
-
 -- STMT_DEL_REPS_YOUNGER_THAN_REV
 DELETE FROM rep_cache
 WHERE revision > ?1
-
-

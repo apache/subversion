@@ -77,8 +77,11 @@ svn_cl__resolve(apr_getopt_t *os,
       conflict_choice = svn_wc_conflict_choose_mine_full;
       break;
     case svn_cl__accept_unspecified:
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("missing --accept option"));
+      if (ctx->conflict_func2 == NULL)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("missing --accept option"));
+      conflict_choice = svn_wc_conflict_choose_unspecified;
+      break;
     default:
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               _("invalid 'accept' ARG"));
@@ -89,10 +92,15 @@ svn_cl__resolve(apr_getopt_t *os,
                                                       ctx, FALSE,
                                                       scratch_pool));
   if (! targets->nelts)
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_empty;
+    {
+      if (opt_state->accept_which == svn_cl__accept_unspecified)
+        opt_state->depth = svn_depth_infinity;
+      else
+        opt_state->depth = svn_depth_empty;
+    }
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 

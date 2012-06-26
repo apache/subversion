@@ -715,6 +715,8 @@ run_file_install(svn_wc__db_t *db,
                                scratch_pool));
 
       /* No need to set exec or read-only flags on special files.  */
+
+      /* ### Shouldn't this record a timestamp and size, etc.? */
       return SVN_NO_ERROR;
     }
 
@@ -781,12 +783,27 @@ run_file_install(svn_wc__db_t *db,
   }
 
   /* Tweak the on-disk file according to its properties.  */
-  if (props
-      && (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
-          || apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)))
+#ifndef WIN32
+  if (props && apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+    SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                       scratch_pool));
+#endif
+
+  /* Note that this explicitly checks the pristine properties, to make sure
+     that when the lock is locally set (=modification) it is not read only */
+  if (props && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
     {
-      SVN_ERR(svn_wc__sync_flags_with_props(NULL, db, local_abspath,
-                                            scratch_pool));
+      svn_wc__db_status_t status;
+      svn_wc__db_lock_t *lock;
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, &lock, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+      if (!lock && status != svn_wc__db_status_added)
+        SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
     }
 
   if (use_commit_times)
@@ -1247,32 +1264,6 @@ run_record_fileinfo(svn_wc__db_t *db,
   return svn_error_trace(get_and_record_fileinfo(db, local_abspath,
                                                  TRUE /* ignore_enoent */,
                                                  scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_time_t set_time,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool)
-{
-  const char *local_relpath;
-  *work_item = svn_skel__make_empty_list(result_pool);
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                local_abspath, result_pool, scratch_pool));
-
-  if (set_time)
-   svn_skel__prepend_int(set_time, *work_item, result_pool);
-
-  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_RECORD_FILEINFO, *work_item, result_pool);
-
-  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------ */

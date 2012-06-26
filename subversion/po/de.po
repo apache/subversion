@@ -50,6 +50,7 @@
 # merge tool   Konflikteditor??? Aktuell: Werkzeug zum Zusammenführen!?
 # note         Hinweis
 # obstruct(ed) behindern / behindert
+# peg revision Fix-Revision
 # property     Eigenschaft
 # PROPNAME     PROPNAME
 # PROPVAL      PROPWERT
@@ -492,7 +493,7 @@ msgstr "Die vorhergehende Operation wurde unterbrochen; Starten Sie »svn cleanu
 
 #: ../include/svn_error_codes.h:518
 msgid "This operation can not be performed with just this depth."
-msgstr ""
+msgstr "Diese Operation kann nicht allein mit dieser Tiefe durch geführt werden."
 
 #: ../include/svn_error_codes.h:524
 msgid "General filesystem error"
@@ -1187,11 +1188,11 @@ msgstr "Nicht unterstütztes Schema in SQLite-Datenbank gefunden"
 
 #: ../include/svn_error_codes.h:1340
 msgid "The SQLite db is busy"
-msgstr ""
+msgstr "Die SQLite-Datenbank ist beschäftigt" 
 
 #: ../include/svn_error_codes.h:1345
 msgid "SQLite busy at transaction rollback; resetting all busy SQLite statements to allow rollback"
-msgstr ""
+msgstr "SQLite ist mit dem Rollback einer Transaktion beschäftigt; Alle SQLite-Anweisungen werden für Rollback zurückgesetzt"
 
 #: ../include/svn_error_codes.h:1352
 msgid "Error parsing arguments"
@@ -1250,7 +1251,7 @@ msgstr "Assert-Anweisung schlug fehl"
 #: ../libsvn_auth_gnome_keyring/gnome_keyring.c:554
 #: ../libsvn_auth_gnome_keyring/gnome_keyring.c:610
 msgid "GNOME Keyring is locked and we are non-interactive"
-msgstr ""
+msgstr "GNOME-Schlüsselring ist gesperrt und wir sind nicht-interaktiv"
 
 #: ../libsvn_client/add.c:488 ../libsvn_wc/adm_ops.c:881
 #: ../libsvn_wc/workqueue.c:1658 ../libsvn_wc/workqueue.c:1740
@@ -1318,7 +1319,7 @@ msgstr "»%s« verweist auf ein Verzeichnis"
 #: ../libsvn_client/cat.c:89
 #, c-format
 msgid "'%s' has no base revision until it is committed"
-msgstr ""
+msgstr "»%s« hat keine Basisrevision, bis es übertragen wurde"
 
 #: ../libsvn_client/cat.c:153 ../libsvn_client/export.c:234
 msgid "(local)"
@@ -1650,11 +1651,9 @@ msgstr "Pfad »%s« hat keine URL"
 msgid "Not all required revisions are specified"
 msgstr "Es sind nicht alle erforderlichen Revisionen angegeben"
 
-# Was soll eine 'pegged diff' sein?
-# Gemeint ist, wenn bei einem svn diff ein @REV angegeben wurde (also die Revision, in der die Datei zuerst gesucht wird)
 #: ../libsvn_client/diff.c:1410
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein"
+msgstr "Bei einem Vergleich mit Fix-Revision muss zumindest eine Revision auf dem Server sein"
 
 #: ../libsvn_client/diff.c:1518 ../libsvn_client/diff.c:1530
 #, c-format
@@ -1899,7 +1898,7 @@ msgstr ""
 
 #: ../libsvn_client/merge.c:5820
 msgid "Merge tracking not allowed with missing subtrees; try restoring these items first:\n"
-msgstr ""
+msgstr "Zusammenführungsverfolgung nicht erlaubt bei fehlenden Unterbäumen; versuchen Sie diese Elemente erst wiederherzustellen:\n"
 
 #: ../libsvn_client/merge.c:8502
 msgid "Use of two URLs is not compatible with mergeinfo modification"
@@ -1967,7 +1966,7 @@ msgstr ""
 
 #: ../libsvn_client/mergeinfo.c:1721
 msgid "Only depths 'infinity' and 'empty' are currently supported"
-msgstr ""
+msgstr "Nur Tiefenangaben von »infinity« und »empty« werden momentan unterstützt"
 
 #: ../libsvn_client/patch.c:243
 #, c-format
@@ -3416,7 +3415,7 @@ msgstr "»%s« in Revision %ld hat keinen Bezug zur Arbeitskopie"
 #: ../libsvn_ra/compat.c:844 ../libsvn_ra/ra_loader.c:1201
 #, c-format
 msgid "Invalid peg revision %ld"
-msgstr "Ungültige Peg-Revision %ld"
+msgstr "Ungültige Fix-Revision %ld"
 
 #: ../libsvn_ra/compat.c:847 ../libsvn_ra/ra_loader.c:1204
 #: ../libsvn_repos/rev_hunt.c:208 ../libsvn_repos/rev_hunt.c:323
@@ -3426,7 +3425,7 @@ msgstr "Ungültige Endrevision %ld"
 
 #: ../libsvn_ra/compat.c:850 ../libsvn_ra/ra_loader.c:1207
 msgid "Peg revision must precede end revision"
-msgstr "Peg-Revision muss vor der Endrevision liegen"
+msgstr "Fix-Revision muss vor der Endrevision liegen"
 
 #: ../libsvn_ra/ra_loader.c:234
 #, c-format
@@ -4027,7 +4026,7 @@ msgstr ""
 
 #: ../libsvn_ra_serf/commit.c:307
 msgid "No Location header received"
-msgstr ""
+msgstr "Kein »Location« Kopf empfangen"
 
 #: ../libsvn_ra_serf/commit.c:438
 #, c-format
@@ -4169,6 +4168,8 @@ msgid ""
 "No more credentials or we tried too many times.\n"
 "Authentication failed"
 msgstr ""
+"Keine weiteren Zugangsdaten oder zu viele Versuche.\n"
+"Anmeldung fehlgeschlagen"
 
 #: ../libsvn_ra_serf/util.c:1421
 msgid "Proxy authentication failed"
@@ -4234,7 +4235,7 @@ msgstr "Kann Tunnel nicht erzeugen"
 
 #: ../libsvn_ra_svn/client.c:525
 msgid "To better debug SSH connection problems, remove the -q option from 'ssh' in the [tunnels] section of your Subversion configuration file."
-msgstr ""
+msgstr "Um Probleme mit der Konfiguration von SSH zu untersuchen, entfernen Sie die Option »-q« von »ssh« im Abschnitt »[tunnels]« Ihrer Konfigurationsdatei für Subversion."
 
 #: ../libsvn_ra_svn/client.c:543
 #, c-format
@@ -4644,12 +4645,16 @@ msgid ""
 "WARNING: The range of revisions dumped contained references to\n"
 "WARNING: copy sources outside that range.\n"
 msgstr ""
+"WARNUNG: Der ausgegebene Revisionsbereich enthält Verweise auf\n"
+"WARNUNG: Quellpfade außerhalb dieses Bereichs.\n"
 
 #: ../libsvn_repos/dump.c:1131
 msgid ""
 "WARNING: The range of revisions dumped contained mergeinfo\n"
 "WARNING: which reference revisions outside that range.\n"
 msgstr ""
+"WARNUNG: Der ausgegebene Revisionsbereich enthält Zusammenführungsinformationen\n"
+"WARNUNG: die auf Revisionen außerhalb dieses Bereichs verweisen.\n"
 
 #: ../libsvn_repos/dump.c:1188
 #, c-format
@@ -5780,7 +5785,7 @@ msgstr "»%s« ist kein gültiger Subversion-Eigenschaftsname"
 #: ../libsvn_subr/opt.c:964
 #, c-format
 msgid "'%s' is just a peg revision. Maybe try '%s@' instead?"
-msgstr ""
+msgstr "»%s« ist nur eine Fix-Revision. Meinten Sie stattdessen »%s@«?"
 
 #: ../libsvn_subr/opt.c:996
 #, c-format
@@ -5812,6 +5817,11 @@ msgid ""
 "Subversion is open source software, see http://subversion.apache.org/\n"
 "\n"
 msgstr ""
+"Copyright (C) 2010 The Apache Software Foundation.\n"
+"Diese Software besteht aus Beiträgen vieler Personen;\n"
+"siehe Datei NOTICE für mehr Informationen.\n"
+"Subversion ist Open Source Software, siehe http://subversion.apache.org/\n"
+"\n"
 
 #: ../libsvn_subr/path.c:958
 #, c-format
@@ -6046,7 +6056,7 @@ msgstr "Erwartete SQLite-Datenbank wurde nicht gefunden: %s"
 #: ../libsvn_subr/sqlite.c:1125
 #, c-format
 msgid "SQLite hotcopy failed for %s"
-msgstr ""
+msgstr "SQLite-Hotcopy fehlgeschlagen für »%s«"
 
 #: ../libsvn_subr/subst.c:1640 ../libsvn_wc/props.c:1950
 #, c-format
@@ -6061,12 +6071,12 @@ msgstr "Konnte »%s« nicht in Zahl umwandeln"
 #: ../libsvn_subr/svn_string.c:712
 #, c-format
 msgid "Number '%s' is out of range '[%llu, %llu]'"
-msgstr ""
+msgstr "Zahl »%s« ist außerhalb des zulässigen Bereichs »[%llu, %llu]«"
 
 #: ../libsvn_subr/svn_string.c:756
 #, c-format
 msgid "Number '%s' is out of range '[%lld, %lld]'"
-msgstr ""
+msgstr "Zahl »%s« ist außerhalb des zulässigen Bereichs »[%lld, %lld]«"
 
 #. Human explanatory part, generated by apr_strftime as "Sat, 01 Jan 2000"
 #: ../libsvn_subr/time.c:85
@@ -6227,17 +6237,17 @@ msgstr "Basisknoten von »%s« ist keine Datei"
 #: ../libsvn_wc/adm_files.c:322
 #, c-format
 msgid "Can only get the pristine contents of files; '%s' is not a file"
-msgstr ""
+msgstr "Kann nur ursprünglichen Inhalt von Dateien holen; »%s« ist keine Datei"
 
 #: ../libsvn_wc/adm_files.c:348
 #, c-format
 msgid "Cannot get the pristine contents of '%s' because its delete is already committed"
-msgstr ""
+msgstr "Kann den ursprünglichen Inhalt von »%s« nicht holen, da sein Löschen schon übertragen wurde"
 
 #: ../libsvn_wc/adm_files.c:356
 #, c-format
 msgid "Cannot get the pristine contents of '%s' because it has an unexpected status"
-msgstr ""
+msgstr "Kann den ursprünglichen Inhalt von »%s« nicht holen, da es einen unerwarteten Status hat"
 
 #: ../libsvn_wc/adm_files.c:639
 #, c-format
@@ -6269,7 +6279,7 @@ msgstr ""
 #: ../libsvn_wc/adm_ops.c:813 ../libsvn_wc/update_editor.c:5614
 #, c-format
 msgid "Can't schedule an addition of '%s' below a not-directory node"
-msgstr ""
+msgstr "Kann »%s« nicht zum Hinzufügen unter einem Knoten vorsehen, der kein Verzeichnis ist"
 
 #: ../libsvn_wc/adm_ops.c:872
 #, c-format
@@ -6284,17 +6294,17 @@ msgstr "Die URL »%s« hat eine andere Projektarchiv-Basis als ihr Vorgänger"
 #: ../libsvn_wc/adm_ops.c:1068
 #, c-format
 msgid "Can't schedule the working copy at '%s' from repository '%s' with uuid '%s' for addition under a working copy from repository '%s' with uuid '%s'."
-msgstr ""
+msgstr "Kann Arbeitkopie »%s« des Projektarchivs »%s« mit UUID »%s« nicht zum Hinzufügen unter einer Arbeitskopie des Projektarchivs »%s« mit UUID »%s« vorsehen."
 
 #: ../libsvn_wc/adm_ops.c:1082
 #, c-format
 msgid "Can't add '%s' with URL '%s', but with the data from '%s'"
-msgstr ""
+msgstr "Kann »%s« mit URL »%s« aber den Daten von »%s« nicht hinzufügen"
 
 #: ../libsvn_wc/adm_ops.c:1313
 #, c-format
 msgid "Can't revert '%s' with this depth, as that requires reverting '%s'."
-msgstr ""
+msgstr "Kann »%s« mit dieser Tiefe nicht zurücksetzen, da dies das Zurücksetzen von »%s« erfordert."
 
 #: ../libsvn_wc/adm_ops.c:1414
 #, c-format
@@ -6333,7 +6343,7 @@ msgstr "»%s« ist kein Verzeichnis einer Arbeitskopie"
 
 #: ../libsvn_wc/cleanup.c:64
 msgid "Log format too old, please use Subversion 1.6 or earlier"
-msgstr ""
+msgstr "Log-Format zu alt, bitte verwenden Sie Subversion 1.6 oder älter"
 
 #: ../libsvn_wc/conflicts.c:299
 msgid "Invalid 'conflict_result' argument"
@@ -6342,7 +6352,7 @@ msgstr "Ungültiger Parameter »conflict_result«"
 #: ../libsvn_wc/conflicts.c:409
 #, c-format
 msgid "Tree conflicts can only be resolved to 'working' state; '%s' not resolved"
-msgstr ""
+msgstr "Baumkonflikte können nur zum Zustand »working« aufgelöst werden; Konflikt in »%s« nicht aufgelöst"
 
 #: ../libsvn_wc/copy.c:78
 #, c-format
@@ -6752,7 +6762,7 @@ msgstr "Datei »%s« hat die MIME-Typ Eigenschaft »binär«"
 #: ../libsvn_wc/props.c:2000
 #, c-format
 msgid "Can't set properties on '%s': invalid status for updating properties."
-msgstr ""
+msgstr "Kann Eigenschaften für »%s« nicht setzen: ungültiger Status beim Aktualisieren von Eigenschaften"
 
 #: ../libsvn_wc/props.c:2063
 msgid "Failed to load current properties"
@@ -6821,7 +6831,7 @@ msgstr "Kann eine einzelne Datei nicht umplatzieren"
 #: ../libsvn_wc/relocate.c:136
 #, c-format
 msgid "Invalid source URL prefix: '%s' (does not overlap target's URL '%s')"
-msgstr ""
+msgstr "Ungültiger Prefix der Quell-URL: »%s« (Keine Überlappung mit Ziel-URL »%s«)"
 
 #: ../libsvn_wc/relocate.c:146 ../libsvn_wc/relocate.c:151
 #, c-format
@@ -6949,26 +6959,26 @@ msgstr "Fehlendes Zeilenende in Datei »wcprops« für »%s«"
 #: ../libsvn_wc/upgrade.c:601
 #, c-format
 msgid "Working copy '%s' can't be upgraded because the repository root is not available and can't be retrieved"
-msgstr ""
+msgstr "Arbeitskopie »%s« kann nicht in ein neueres Format gebracht werden, da die Wurzel des Projektarchivs nicht verfügbar ist und nicht bestimmt werden kann"
 
 #: ../libsvn_wc/upgrade.c:608
 #, c-format
 msgid "Working copy '%s' can't be upgraded because the repository uuid is not available and can't be retrieved"
-msgstr ""
+msgstr "Arbeitskopie »%s« kann nicht in ein neueres Format gebracht werden, da die UUID des Projektarchivs nicht verfügbar ist und nicht bestimmt werden kann"
 
 #: ../libsvn_wc/upgrade.c:615
 #, c-format
 msgid "Working copy '%s' can't be upgraded because it doesn't have a url"
-msgstr ""
+msgstr "Arbeitskopie »%s« kann nicht in ein neueres Format gebracht werden, da sie keine URL hat"
 
 #: ../libsvn_wc/upgrade.c:1127
 msgid "Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion 1.6"
-msgstr ""
+msgstr "Kann die Arbeitskopie nicht in ein neues Format bringen; bitte führen Sie »svn cleanup« mit Subversion 1.6 aus"
 
 #: ../libsvn_wc/upgrade.c:1355
 #, c-format
 msgid "The working copy '%s' is at format 18; use 'tools/dev/wc-ng/bump-to-19.py' to upgrade it"
-msgstr ""
+msgstr "Die Arbeitskopie »%s« hat das Format 18; verwenden Sie »tools/dev/wc-ng/bump-to-19.py« um es in ein neues Format zu bringen"
 
 #: ../libsvn_wc/upgrade.c:1545
 #, c-format
@@ -7018,7 +7028,7 @@ msgstr "Der Ursprungstext mit der Prüfsumme »%s« wurde in der Datenbank oder 
 #: ../libsvn_wc/wc_db.c:3036 ../libsvn_wc/wc_db.c:3258
 #, c-format
 msgid "Cannot copy '%s' excluded by server"
-msgstr ""
+msgstr "Kann vom Server ausgeschlossenes »%s« nicht kopieren"
 
 #: ../libsvn_wc/wc_db.c:3042
 #, c-format
@@ -7038,7 +7048,7 @@ msgstr "Fehlerhafte Daten für »%s«"
 #: ../libsvn_wc/wc_db.c:6603
 #, c-format
 msgid "Could not find node '%s' for recording file information."
-msgstr ""
+msgstr "Knoten »%s« für Aufzeichnung von Dateiinformationen nicht gefunden."
 
 #: ../libsvn_wc/wc_db.c:6863 ../libsvn_wc/wc_db.c:6965
 #, c-format
@@ -7053,7 +7063,7 @@ msgstr "Erwartete, dass Knoten »%s« gelöscht wird."
 #: ../libsvn_wc/wc_db.c:7554
 #, c-format
 msgid "The properties of '%s' are in an indeterminate state and cannot be upgraded. See issue #2530."
-msgstr ""
+msgstr "Die Eigenschaften von »%s« sind in einem unbestimmten Zustand und können nicht in ein neues Format gebreacht werden. Siehe Fehlerbericht #2530."
 
 #: ../libsvn_wc/wc_db.c:7643
 #, c-format
@@ -7107,7 +7117,7 @@ msgstr ""
 
 #: ../libsvn_wc/wc_db_pdh.c:265
 msgid "Cleanup with an older 1.7 client before upgrading with this client"
-msgstr ""
+msgstr "Starten Sie »svn cleanup« mit einem älteren 1.7 Client bevor Sie mit diesem Client operieren"
 
 # CHECKME: What's WCROOT? A variable or short for "working copy root"?
 #: ../libsvn_wc/wc_db_pdh.c:526
@@ -7532,7 +7542,7 @@ msgstr "Name: %s\n"
 #: ../svn/info-cmd.c:265
 #, c-format
 msgid "Working Copy Root Path: %s\n"
-msgstr ""
+msgstr "Wurzelpfad der Arbeitskopie: %s\n"
 
 #: ../svn/info-cmd.c:270
 #, c-format
@@ -7783,7 +7793,7 @@ msgstr "Zusammengeführt mittels:"
 #: ../svn/log-cmd.c:296 ../svn/log-cmd.c:373
 #, c-format
 msgid "\n"
-msgstr ""
+msgstr "\n"
 
 #: ../svn/log-cmd.c:573
 msgid "'with-all-revprops' option only valid in XML mode"
@@ -7809,15 +7819,15 @@ msgstr "»quiet« und »diff« schließen sich gegenseitig aus"
 
 #: ../svn/log-cmd.c:598
 msgid "'diff-cmd' option requires 'diff' option"
-msgstr ""
+msgstr "Option »diff-cmd« erfordert Option »diff«"
 
 #: ../svn/log-cmd.c:602
 msgid "'internal-diff' option requires 'diff' option"
-msgstr ""
+msgstr "Option »internal-diff« erfordert Option »diff«"
 
 #: ../svn/log-cmd.c:606
 msgid "'extensions' option requires 'diff' option"
-msgstr ""
+msgstr "Option »extensions« erfordert Option »diff«"
 
 # TODO: Duplicated message!!!!
 #: ../svn/log-cmd.c:625
@@ -9086,7 +9096,7 @@ msgstr ""
 "      Revisionsmarkern und einer URL bestehen. Die Reihenfolge der drei\n"
 "      Elemente führt zu verschiedenem Verhalten. Subversion 1.4 und älter\n"
 "      unterstützt nur die folgenden Formate und die URLs können keine\n"
-"      Peg-Revisionen haben:\n"
+"      Fix-Revisionen haben:\n"
 "        foo             http://example.org/repos/zig\n"
 "        foo/bar -r 1234 http://example.org/repos/zag\n"
 "      Subversion 1.5 und neuer unterstützt die obigen Formate und die\n"

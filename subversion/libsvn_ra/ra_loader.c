@@ -53,20 +53,6 @@
 #include "svn_private_config.h"
 
 
-/* ### This file maps URL schemes to particular RA libraries.
-   ### Currently, the only pair of RA libraries which support the same
-   ### protocols are neon and serf.  svn_ra_open3 makes the assumption
-   ### that this is the case; that their 'schemes' fields are both
-   ### dav_schemes; and that "neon" is listed first.
-
-   ### Users can choose which dav library to use with the http-library
-   ### preference in .subversion/servers; however, it is ignored by
-   ### any code which uses the pre-1.2 API svn_ra_get_ra_library
-   ### instead of svn_ra_open. */
-
-#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
-#define CHOOSABLE_DAV_MODULE
-#endif
 
 
 /* These are the URI schemes that the respective libraries *may* support.
@@ -87,15 +73,6 @@ static const struct ra_lib_defn {
   svn_ra__init_func_t initfunc;
   svn_ra_init_func_t compat_initfunc;
 } ra_libraries[] = {
-  {
-    "neon",
-    dav_schemes,
-#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_NEON
-    svn_ra_neon__init,
-    svn_ra_dav_init
-#endif
-  },
-
   {
     "svn",
     svn_schemes,
@@ -416,8 +393,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
                                             DEFAULT_HTTP_LIBRARY);
 
-          if (strcmp(http_library, "neon") != 0 &&
-              strcmp(http_library, "serf") != 0)
+          if (strcmp(http_library, "serf") != 0)
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
@@ -1046,6 +1022,8 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
+                 || svn_path_is_single_path_component(diff_target));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,
@@ -1311,6 +1289,17 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
 }
 
 svn_error_t *
+svn_ra__replay_ev2(svn_ra_session_t *session,
+                   svn_revnum_t revision,
+                   svn_revnum_t low_water_mark,
+                   svn_boolean_t send_deltas,
+                   svn_editor_t *editor,
+                   apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
+svn_error_t *
 svn_ra_replay_range(svn_ra_session_t *session,
                     svn_revnum_t start_revision,
                     svn_revnum_t end_revision,
@@ -1363,6 +1352,20 @@ svn_ra_replay_range(svn_ra_session_t *session,
   return err;
 }
 
+svn_error_t *
+svn_ra__replay_range_ev2(svn_ra_session_t *session,
+                         svn_revnum_t start_revision,
+                         svn_revnum_t end_revision,
+                         svn_revnum_t low_water_mark,
+                         svn_boolean_t send_deltas,
+                         svn_ra__replay_revstart_ev2_callback_t revstart_func,
+                         svn_ra__replay_revfinish_ev2_callback_t revfinish_func,
+                         void *replay_baton,
+                         apr_pool_t *scratch_pool)
+{
+  SVN__NOT_IMPLEMENTED();
+}
+
 svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
                                    svn_boolean_t *has,
                                    const char *capability,
@@ -1398,8 +1401,7 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                          end_revision,
                                          revision_deleted,
                                          pool);
-  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE     /* serf */
-              || err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)) /* neon */
+  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
     {
       svn_error_clear(err);
 

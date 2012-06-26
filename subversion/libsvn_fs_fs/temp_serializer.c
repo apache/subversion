@@ -30,6 +30,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_temp_serializer.h"
+#include "private/svn_subr_private.h"
 
 #include "temp_serializer.h"
 
@@ -47,16 +48,16 @@ encode_number(apr_int64_t number, char *key_buffer)
   if (number < 0)
   {
     number = -number;
-    *key_buffer = (number & 63) + ' ' + 65;
+    *key_buffer = (char)((number & 63) + ' ' + 65);
   }
   else
-    *key_buffer = (number & 63) + ' ' + 1;
+    *key_buffer = (char)((number & 63) + ' ' + 1);
   number /= 64;
 
   /* write 7 bits / byte until no significant bits are left */
   while (number)
   {
-    *++key_buffer = (number & 127) + ' ' + 1;
+    *++key_buffer = (char)((number & 127) + ' ' + 1);
     number /= 128;
   }
 
@@ -359,7 +360,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 static apr_hash_t *
 deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
 {
-  apr_hash_t *result = apr_hash_make(pool);
+  apr_hash_t *result = svn_hash__make(pool);
   apr_size_t i;
   apr_size_t count;
   svn_fs_dirent_t *entry;
@@ -678,7 +679,7 @@ svn_fs_fs__deserialize_properties(void **out,
                                   apr_size_t data_len,
                                   apr_pool_t *pool)
 {
-  apr_hash_t *hash = apr_hash_make(pool);
+  apr_hash_t *hash = svn_hash__make(pool);
   properties_data_t *properties = (properties_data_t *)data;
   size_t i;
 
@@ -931,7 +932,7 @@ svn_fs_fs__extract_dir_entry(void **out,
           svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
 
       /* Entries have been serialized one-by-one, each time including all
-       * nestes structures and strings. Therefore, they occupy a single
+       * nested structures and strings. Therefore, they occupy a single
        * block of memory whose end-offset is either the beginning of the
        * next entry or the end of the buffer
        */
