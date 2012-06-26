@@ -239,10 +239,7 @@ switch_internal(svn_revnum_t *result_rev,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    resolve_conflicts_post_switch ?
-                                      NULL : ctx->conflict_func2,
-                                    resolve_conflicts_post_switch ?
-                                      NULL : ctx->conflict_baton2,
+                                    NULL, NULL, /* postpone conflicts */
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
