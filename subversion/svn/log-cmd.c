@@ -303,11 +303,14 @@ log_entry_receiver(void *baton,
   if (! lb->omit_log_message && message == NULL)
     message = "";
 
-  if (lb->search_pattern)
+  if (lb->search_pattern &&
+      ! match_search_pattern(lb->search_pattern, author, message,
+                             log_entry->changed_paths2, pool))
     {
-      if (! match_search_pattern(lb->search_pattern, author, message,
-                                 log_entry->changed_paths2, pool))
-        return SVN_NO_ERROR;
+      if (log_entry->has_children)
+        APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+
+      return SVN_NO_ERROR;
     }
 
   SVN_ERR(svn_cmdline_printf(pool,
@@ -483,12 +486,15 @@ log_entry_receiver_xml(void *baton,
       return SVN_NO_ERROR;
     }
 
-  if (lb->search_pattern)
+  /* Match search pattern before XML-escaping. */
+  if (lb->search_pattern &&
+      ! match_search_pattern(lb->search_pattern, author, message,
+                             log_entry->changed_paths2, pool))
     {
-      /* Match search pattern before XML-escaping. */
-      if (! match_search_pattern(lb->search_pattern, author, message,
-                                 log_entry->changed_paths2, pool))
-        return SVN_NO_ERROR;
+      if (log_entry->has_children)
+        APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+
+      return SVN_NO_ERROR;
     }
 
   if (author)
