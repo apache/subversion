@@ -30,6 +30,17 @@ usage: 1. log [PATH][@REV]
   The --depth option is only valid in combination with the --diff option
   and limits the scope of the displayed diff to the specified depth.
 
+  If the --search option is used, log messages are displayed only if the
+  provided search pattern matches the author, log message text, or, if
+  the --verbose option is also provided, a changed path.
+  The search pattern may include glob syntax wildcards:
+      ?      matches any single character
+      *      matches a sequence of arbitrary characters
+      [...]  matches any of the characters listed inside the brackets
+  If --limit is used in combination with --search, --limit restricts the
+  number of log messages searched, rather than restricting the output
+  to a particular number of matching log messages.
+
   Examples:
 
     Show the latest 5 log messages for the current working copy
@@ -99,6 +110,7 @@ Valid options:
                                    Ignore changes in EOL style.
                                 -p (--show-c-function):
                                    Show C function name in diff output.
+  --search ARG             : use ARG as search pattern (glob syntax)
 
 Global options:
   --username ARG           : specify a username ARG

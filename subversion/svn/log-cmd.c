@@ -24,6 +24,7 @@
 #define APR_WANT_STRFUNC
 #define APR_WANT_STDIO
 #include <apr_want.h>
+#include <apr_fnmatch.h>
 
 #include "svn_client.h"
 #include "svn_compat.h"
@@ -69,6 +70,10 @@ struct log_receiver_baton
 
   /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
   apr_array_header_t *merge_stack;
+
+  /* Log message search pattern. Log entries will only be shown if the author,
+   * the log message, or a changed path matches this pattern. */
+  const char *search_pattern;
 
   /* Pool for persistent allocations. */
   apr_pool_t *pool;
@@ -138,6 +143,47 @@ display_diff(const svn_log_entry_t *log_entry,
                                ctx, pool));
   SVN_ERR(svn_stream_puts(outstream, _("\n")));
   return SVN_NO_ERROR;
+}
+
+
+/* Return TRUE if SEARCH_PATTERN matches the AUTHOR, LOG_MESSAGE, or a path
+ * in the set of keys of the CHANGED_PATHS hash. Else, return FALSE.
+ * LOG_MESSAGE and CHANGED_PATHS are allowed to be NULL. */
+static svn_boolean_t
+match_search_pattern(const char *search_pattern,
+                     const char *author,
+                     const char *log_message,
+                     apr_hash_t *changed_paths,
+                     apr_pool_t *pool)
+{
+  /* Match any substring containing the pattern, like UNIX 'grep' does. */
+  const char *pattern = apr_psprintf(pool, "*%s*", search_pattern);
+
+  /* Does the author match the search pattern? */
+  if (apr_fnmatch(pattern, author, 0) == APR_SUCCESS)
+    return TRUE;
+
+  /* Does the log message the search pattern? */
+  if (log_message && apr_fnmatch(pattern, log_message, 0) == APR_SUCCESS)
+    return TRUE;
+
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+
+      /* Does a changed path match the search pattern? */
+      for (hi = apr_hash_first(pool, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path = svn__apr_hash_index_key(hi);
+
+          if (apr_fnmatch(search_pattern, path, 0) == APR_SUCCESS)
+            return TRUE;
+        }
+    }
+
+  return FALSE;
 }
 
 
@@ -256,6 +302,13 @@ log_entry_receiver(void *baton,
 
   if (! lb->omit_log_message && message == NULL)
     message = "";
+
+  if (lb->search_pattern)
+    {
+      if (! match_search_pattern(lb->search_pattern, author, message,
+                                 log_entry->changed_paths2, pool))
+        return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_cmdline_printf(pool,
                              SEP_STRING "r%ld | %s | %s",
@@ -418,13 +471,6 @@ log_entry_receiver_xml(void *baton,
 
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
 
-  if (author)
-    author = svn_xml_fuzzy_escape(author, pool);
-  if (date)
-    date = svn_xml_fuzzy_escape(date, pool);
-  if (message)
-    message = svn_xml_fuzzy_escape(message, pool);
-
   if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
 
@@ -436,6 +482,21 @@ log_entry_receiver_xml(void *baton,
 
       return SVN_NO_ERROR;
     }
+
+  if (lb->search_pattern)
+    {
+      /* Match search pattern before XML-escaping. */
+      if (! match_search_pattern(lb->search_pattern, author, message,
+                                 log_entry->changed_paths2, pool))
+        return SVN_NO_ERROR;
+    }
+
+  if (author)
+    author = svn_xml_fuzzy_escape(author, pool);
+  if (date)
+    date = svn_xml_fuzzy_escape(date, pool);
+  if (message)
+    message = svn_xml_fuzzy_escape(message, pool);
 
   revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
@@ -654,6 +715,7 @@ svn_cl__log(apr_getopt_t *os,
                                                    : opt_state->depth;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+  lb.search_pattern = opt_state->search_pattern;
   lb.pool = pool;
 
   if (opt_state->xml)

@@ -130,6 +130,7 @@ typedef enum svn_cl__longopt_t {
   opt_allow_mixed_revisions,
   opt_include_externals,
   opt_symmetric,
+  opt_search,
 } svn_cl__longopt_t;
 
 
@@ -375,6 +376,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "fixed revision. (See the svn:externals property)")},
   {"symmetric", opt_symmetric, 0,
                        N_("Symmetric merge")},
+  {"search", opt_search, 1,
+                       N_("use ARG as search pattern (glob syntax)")},
 
   /* Long-opt Aliases
    *
@@ -678,7 +681,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The --depth option is only valid in combination with the --diff option\n"
      "  and limits the scope of the displayed diff to the specified depth.\n"
-
+     "\n"
+     "  If the --search option is used, log messages are displayed only if the\n"
+     "  provided search pattern matches the author, log message text, or, if\n"
+     "  the --verbose option is also provided, a changed path.\n"
+     "  The search pattern may include glob syntax wildcards:\n"
+     "      ?      matches any single character\n"
+     "      *      matches a sequence of arbitrary characters\n"
+     "      [...]  matches any of the characters listed inside the brackets\n"
+     "  If --limit is used in combination with --search, --limit restricts the\n"
+     "  number of log messages searched, rather than restricting the output\n"
+     "  to a particular number of matching log messages.\n"
      "\n"
      "  Examples:\n"
      "\n"
@@ -707,7 +720,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
+     opt_depth, opt_diff, opt_diff_cmd, opt_internal_diff, 'x', opt_search},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -2153,6 +2166,8 @@ main(int argc, const char *argv[])
       case opt_properties_only:
         opt_state.diff.properties_only = TRUE;
         break;
+      case opt_search:
+        opt_state.search_pattern = opt_arg;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
