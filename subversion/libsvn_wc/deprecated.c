@@ -4329,6 +4329,17 @@ svn_wc_merge(const char *left,
 
 /*** From util.c ***/
 
+svn_wc_conflict_version_t *
+svn_wc_conflict_version_create(const char *repos_url,
+                               const char *path_in_repos,
+                               svn_revnum_t peg_rev,
+                               svn_node_kind_t node_kind,
+                               apr_pool_t *pool)
+{
+  return svn_wc_conflict_version_create2(repos_url, NULL, path_in_repos,
+                                         peg_rev, node_kind, pool);
+}
+
 svn_wc_conflict_description_t *
 svn_wc_conflict_description_create_text(const char *path,
                                         svn_wc_adm_access_t *adm_access,
