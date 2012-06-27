@@ -2280,6 +2280,22 @@ def log_diff_moved(sbox):
   compare_diff_output(r2diff, log_chain[1]['diff_lines'])
   compare_diff_output(r1diff, log_chain[2]['diff_lines'])
 
+
+#----------------------------------------------------------------------
+def log_search(sbox):
+  "'svn log --search'"
+
+  guarantee_repos_and_wc(sbox)
+
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+                             None, None, [], 'log', '--search',
+                             'for revision [367]')
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [7, 6, 3])
+
 ########################################################################
 # Run the tests
 
@@ -2323,6 +2339,7 @@ test_list = [ None,
               log_diff,
               log_xml_old,
               log_diff_moved,
+              log_search,
              ]
 
 if __name__ == '__main__':
