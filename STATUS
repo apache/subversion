@@ -161,6 +161,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+* r1354626
+  Fix JavaHL so as not to assert on non-canonical input
+  Justification
+    Regression from 1.6.
+  Votes:
+    +1: philip
+
 Veto-blocked changes:
 =====================
 
