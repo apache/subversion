@@ -87,6 +87,17 @@ combined_status(const svn_client_status_t *status)
   return new_status;
 }
 
+/* Return the combined repository STATUS as shown in 'svn status' based
+   on the repository node status and repository text status */
+static enum svn_wc_status_kind
+combined_repos_status(const svn_client_status_t *status)
+{
+  if (status->repos_node_status == svn_wc_status_modified)
+    return status->repos_text_status;
+
+  return status->repos_node_status;
+}
+
 /* Return the single character representation of the switched column
    status. */
 static char
@@ -509,7 +520,7 @@ svn_cl__print_status_xml(const char *cwd_abspath,
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repos-status",
                             "item",
-                            generate_status_desc(status->repos_text_status),
+                            generate_status_desc(combined_repos_status(status)),
                             "props",
                             generate_status_desc(status->repos_prop_status),
                             NULL);

@@ -204,7 +204,12 @@ public class ConflictDescriptor
         /**
          * Attempting to delete object.
          */
-        delete;
+        delete,
+
+        /**
+         * Attempting to replace object.
+         */
+        replace;
     }
 
     /**
@@ -240,7 +245,12 @@ public class ConflictDescriptor
         /**
          * Object is already added or schedule-add.
          */
-        added;
+        added,
+
+        /**
+         * Object is already replaced.
+         */
+        replaced;
     }
 
     public enum Operation

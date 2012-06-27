@@ -65,7 +65,8 @@ from pydot import Node, Edge
 
 def mergeinfo_to_node_list(mi):
   """Convert a mergeinfo string such as '/foo:1,3-5*' into a list of
-     node names such as ['foo1', 'foo3', 'foo4', 'foo5']."""
+     node names such as ['foo1', 'foo3', 'foo4', 'foo5'].
+  """
   ### Doesn't yet strip the leading slash.
   l = []
   if mi:
@@ -89,7 +90,8 @@ def mergeinfo_to_node_list(mi):
 
 class MergeGraph(pydot.Graph):
   """Base class, not intended for direct use.  Use MergeDot for the main
-     graph and MergeSubgraph for a subgraph."""
+     graph and MergeSubgraph for a subgraph.
+  """
 
   def mk_origin_node(graph, name, label):
     """Add a node to the graph"""
@@ -169,13 +171,15 @@ class MergeGraph(pydot.Graph):
 
   def add_annotation(graph, node, label, color='lightblue'):
     """Add a graph node that serves as an annotation to a normal node.
-       More than one annotation can be added to the same normal node."""
+       More than one annotation can be added to the same normal node.
+    """
     subg_name = node + '_annotations'
 
     def get_subgraph(graph, name):
       """Equivalent to pydot.Graph.get_subgraph() when there is no more than
          one subgraph of the given name, but working aroung a bug in
-         pydot.Graph.get_subgraph()."""
+         pydot.Graph.get_subgraph().
+      """
       for subg in graph.get_subgraph_list():
         if subg.get_name() == name:
           return subg
@@ -298,7 +302,12 @@ class MergeDot(MergeGraph, pydot.Dot):
     """Save this merge graph to the given file format. If filename is None,
        construct a filename from the basename of the original file (as passed
        to the constructor and then stored in graph.basename) and the suffix
-       according to the given format."""
+       according to the given format.
+    """
     if not filename:
       filename = graph.basename + '.' + format
-    pydot.Dot.write(graph, filename, format=format)
+    if format == 'sh':
+      import save_as_sh
+      save_as_sh.write_sh_file(graph, filename)
+    else:
+      pydot.Dot.write(graph, filename, format=format)

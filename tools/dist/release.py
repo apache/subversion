@@ -84,6 +84,7 @@ tool_versions = {
 
 # Some constants
 repos = 'http://svn.apache.org/repos/asf/subversion'
+secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
@@ -416,12 +417,13 @@ def roll_tarballs(args):
             extra_args = '-nightly'
         else:
             extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
-    logging.info('Building UNIX tarballs')
-    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
-                     % (sys.path[0], args.version.base, branch, args.revnum,
-                        extra_args) )
+    # Build Unix last to leave Unix-style svn_version.h for tagging
     logging.info('Buildling Windows tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
+                     % (sys.path[0], args.version.base, branch, args.revnum,
+                        extra_args) )
+    logging.info('Building UNIX tarballs')
+    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
                      % (sys.path[0], args.version.base, branch, args.revnum,
                         extra_args) )
 
@@ -478,11 +480,44 @@ def post_candidates(args):
     'Post candidate artifacts to the dist development directory.'
 
     logging.info('Importing tarballs to %s' % dist_dev_url)
-    proc = subprocess.Popen(['svn', 'import', '-m',
-                             'Add %s candidate release artifacts' 
-                               % args.version.base,
-                            get_deploydir(args.base_dir), dist_dev_url])
+    svn_cmd = ['svn', 'import', '-m',
+               'Add %s candidate release artifacts' % args.version.base,
+               '--auto-props', '--config-option',
+               'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
+               get_deploydir(args.base_dir), dist_dev_url]
+    if (args.username):
+        svn_cmd += ['--username', args.username]
+    proc = subprocess.Popen(svn_cmd)
     (stdout, stderr) = proc.communicate()
+    proc.wait()
+
+#----------------------------------------------------------------------
+# Create tag
+
+def create_tag(args):
+    'Create tag in the repository'
+
+    logging.info('Creating tag for %s' % str(args.version))
+
+    if args.branch:
+        branch = secure_repos + '/' + args.branch
+    else:
+        branch = secure_repos + '/branches/%d.%d.x' % (args.version.major,
+                                                       args.version.minor)
+
+    tag = secure_repos + '/tags/' + str(args.version)
+
+    svnmucc_cmd = ['svnmucc', '-m',
+                   'Tagging release ' + str(args.version)]
+    if (args.username):
+        svnmucc_cmd += ['--username', args.username]
+    svnmucc_cmd += ['cp', str(args.revnum), branch, tag]
+    svnmucc_cmd += ['put', os.path.join(get_deploydir(args.base_dir),
+                                        'svn_version.h.dist'),
+                    tag + '/subversion/include/svn_version.h']
+
+    # don't redirect stdout/stderr since svnmucc might ask for a password
+    proc = subprocess.Popen(svnmucc_cmd)
     proc.wait()
 
 #----------------------------------------------------------------------
@@ -512,6 +547,8 @@ def clean_dist(args):
     svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
                    'They are still available at ' +
                    'http://archive.apache.org/dist/subversion/']
+    if (args.username):
+        svnmucc_cmd += ['--username', args.username]
     for k, g in itertools.groupby(sorted(versions),
                                   lambda x: (x.major, x.minor)):
         releases = list(g)
@@ -547,6 +584,8 @@ def move_to_dist(args):
         filenames.append(entry)
     svnmucc_cmd = ['svnmucc', '-m',
                    'Publish Subversion-%s.' % str(args.version)]
+    if (args.username):
+        svnmucc_cmd += ['--username', args.username]
     svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist']
     for filename in filenames:
         svnmucc_cmd += ['mv', dist_dev_url + '/' + filename,
@@ -676,6 +715,8 @@ def check_sigs(args):
                 good_sigs[verified.key_id[-8:]] = True
             else:
                 sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
+                if verified.key_id:
+                    sys.stderr.write("  key id: %s\n" % verified.key_id)
                 sys.exit(1)
 
     for id in good_sigs.keys():
@@ -758,6 +799,21 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + dist_repos + '''.''')
+
+    # Setup the parser for the create-tag subcommand
+    subparser = subparsers.add_parser('create-tag',
+                    help='''Create the release tag.''')
+    subparser.set_defaults(func=create_tag)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=int,
+                    help='''The revision number to base the release on.''')
+    subparser.add_argument('--branch',
+                    help='''The branch to base the release on.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + secure_repos + '''.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -766,6 +822,8 @@ def main():
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + dist_repos + '''.''')
 
     # The move-to-dist subcommand
     subparser = subparsers.add_parser('move-to-dist',
@@ -775,6 +833,8 @@ def main():
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + dist_repos + '''.''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',

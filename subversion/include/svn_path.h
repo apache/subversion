@@ -296,6 +296,10 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool);
 
 /** Return an integer greater than, equal to, or less than 0, according
  * as @a path1 is greater than, equal to, or less than @a path2.
+ *
+ * This function works like strcmp() except that it orders children in
+ * subdirectories directly after their parents. This allows using the
+ * given ordering for a depth first walk.
  */
 int
 svn_path_compare_paths(const char *path1, const char *path2);

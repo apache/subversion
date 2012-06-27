@@ -712,7 +712,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
       SVN_ERR(svn_mergeinfo_to_string(&info2_starting, info2, pool));
 
       SVN_ERR(svn_mergeinfo_merge(info1, info2, pool));
-      if (mergeinfo[i].expected_paths != apr_hash_count(info1))
+      if (mergeinfo[i].expected_paths != (int)apr_hash_count(info1))
         return fail(pool, "Wrong number of paths in merged mergeinfo");
 
       /* Check that info2 remained unchanged. */

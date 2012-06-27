@@ -163,7 +163,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_unlock;
 
   const char *message;           /* log message */
-  const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
@@ -183,16 +182,24 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
+  struct
+    {
+  const char *diff_cmd;          /* the external diff command to use */
+  svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
-  svn_boolean_t ignore_props;    /* ignore properties */
   svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
+  svn_boolean_t summarize;       /* create a summary of a diff */
+  svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
+  svn_boolean_t ignore_properties; /* ignore properties */
+  svn_boolean_t properties_only;   /* Show properties only */
+  svn_boolean_t patch_compatible; /* Output compatible with GNU patch */
+    } diff;
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
   svn_boolean_t ignore_externals;/* ignore externals definitions */
   svn_boolean_t stop_on_copy;    /* don't cross copies during processing */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
-  const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
   const char *editor_cmd;        /* the external editor command to use */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
@@ -205,7 +212,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
-  svn_boolean_t summarize;       /* create a summary of a diff */
   svn_boolean_t remove;          /* deassociate a changelist */
   apr_array_header_t *changelists; /* changelist filters */
   const char *changelist;        /* operate on this changelist
@@ -229,9 +235,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when
                                       patching */
   svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
-  svn_boolean_t internal_diff;    /* override diff_cmd in config file */
-  svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
-  svn_boolean_t use_patch_diff_format; /* Output compatible with GNU patch */
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
 } svn_cl__opt_state_t;
@@ -333,13 +336,15 @@ typedef struct svn_cl__conflict_baton_t {
   const char *editor_cmd;
   svn_boolean_t external_failed;
   svn_cmdline_prompt_baton_t *pb;
+  const char *path_prefix;
 } svn_cl__conflict_baton_t;
 
-/* Create and return a conflict baton, allocated from POOL, with the values
-   ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named fields
-   of the baton, and its 'external_failed' field initialised to FALSE. */
-svn_cl__conflict_baton_t *
-svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
+/* Create and return a conflict baton in *B, allocated from POOL, with the
+ * values ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named
+ * fields of the baton, and its 'external_failed' field initialised to FALSE. */
+svn_error_t *
+svn_cl__conflict_baton_make(svn_cl__conflict_baton_t **b,
+                            svn_cl__accept_t accept_which,
                             apr_hash_t *config,
                             const char *editor_cmd,
                             svn_cmdline_prompt_baton_t *pb,
@@ -351,9 +356,10 @@ svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
    Implements @c svn_wc_conflict_resolver_func_t. */
 svn_error_t *
 svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
-                         const svn_wc_conflict_description_t *desc,
+                         const svn_wc_conflict_description2_t *desc,
                          void *baton,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 

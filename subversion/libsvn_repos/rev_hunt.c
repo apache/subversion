@@ -155,7 +155,7 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
                              apr_pool_t *pool)
 {
   apr_hash_t *revprops;
-  
+
   svn_fs_t *fs = svn_fs_root_fs(root);
 
   /* ### It might be simpler just to declare that revision

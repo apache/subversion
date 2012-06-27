@@ -692,11 +692,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       return SVN_NO_ERROR;
     }
 
-  if (! repos_relpath)
-    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
   if (target_depth == svn_depth_unknown)
     target_depth = svn_depth_infinity;
 
@@ -1211,7 +1206,10 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
   apr_array_header_t *propmods;
   svn_kind_t kind;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, iterpool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                               FALSE /* allow_missing */,
+                               FALSE /* show_hidden */,
+                               iterpool));
 
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,

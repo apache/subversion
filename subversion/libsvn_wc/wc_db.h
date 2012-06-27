@@ -687,9 +687,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
      UPDATE_ROOT        FALSE
 
-   If the STATUS is normal, and the REPOS_* values are NULL, then the
-   caller should use svn_wc__db_scan_base_repos() to scan up the BASE
-   tree for the repository information.
+   If the STATUS is normal, the REPOS_* values will be non-NULL.
 
    If DEPTH is requested, and the node is NOT a directory, then the
    value will be set to svn_depth_unknown. If LOCAL_ABSPATH is a link,
@@ -942,6 +940,18 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+
+/* If necessary transfers the PRISTINE file of SRC_LOCAL_ABSPATH to the
+   working copy identified by DST_WRI_ABSPATH. If CHECKSUM is not NULL, use
+   CHECKSUM to identify which pristine file to transfer. */
+svn_error_t *
+svn_wc__db_pristine_transfer(svn_wc__db_t *db,
+                             const char *src_local_abspath,
+                             const svn_checksum_t *checksum,
+                             const char *dst_wri_abspath,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool);
 
 /* Remove the pristine text with SHA-1 checksum SHA1_CHECKSUM from the
  * pristine store, iff it is not referenced by any of the (other) WC DB
@@ -1509,6 +1519,7 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             svn_boolean_t resolved_text,
                             svn_boolean_t resolved_props,
                             svn_boolean_t resolved_tree,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
@@ -2023,9 +2034,6 @@ svn_wc__db_read_props(apr_hash_t **props,
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  *
- * If BASE_PROPS is TRUE, read the properties from the BASE layer (op_depth=0),
- * without local modifications.
- *
  * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
  * op_depth).
  *
@@ -2036,7 +2044,6 @@ svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 svn_depth_t depth,
-                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 const apr_array_header_t *changelists,
                                 svn_wc__proplist_receiver_t receiver_func,
@@ -2063,6 +2070,22 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
+
+
+/** Obtain a mapping of const char * local_abspaths to const svn_string_t*
+ * property values in *VALUES, of all PROPNAME properties on LOCAL_ABSPATH
+ * and its descendants.
+ *
+ * Allocate the result in RESULT_POOL, and perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *propname,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /* Set *CHILDREN to a new array of the (const char *) basenames of the
    immediate children of the working node at LOCAL_ABSPATH in DB.
@@ -2123,7 +2146,6 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
    Allocate *MARKER_FILES in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL */
-/* ### This function will probably be removed. */
 svn_error_t *
 svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
                                      svn_wc__db_t *db,
@@ -2155,12 +2177,16 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
    If the node is missing and ALLOW_MISSING is FALSE, then it will return
    SVN_ERR_WC_PATH_NOT_FOUND.
 
+   If SHOW_HIDDEN is FALSE and the status of LOCAL_ABSPATH is NOT_PRESENT or
+   EXCLUDED, set KIND to svn_kind_none.
+
    Uses SCRATCH_POOL for temporary allocations.  */
 svn_error_t *
 svn_wc__db_read_kind(svn_kind_t *kind,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t allow_missing,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
 
 
@@ -2439,6 +2465,10 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
+
+   ### Either delete this function and use _base_get_info instead, or
+   ### add a 'revision' output to make a complete repository node location
+   ### and rename to not say 'scan', because it doesn't.
 */
 svn_error_t *
 svn_wc__db_scan_base_repos(const char **repos_relpath,
@@ -2955,7 +2985,8 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
-apr_int64_t svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+int
+svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
 /* Set *HAVE_WORK TRUE if there is a working layer below the top layer and
    *HAVE_BASE if there is a base layer. Set *STATUS to the status of the
@@ -3059,19 +3090,19 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                  const char *trail_url,
                                  apr_pool_t *scratch_pool);
 
-/* Set @a *server_excluded_subtrees to a hash mapping <tt>const char *</tt>
+/* Set @a *excluded_subtrees to a hash mapping <tt>const char *</tt>
  * local absolute paths to <tt>const char *</tt> local absolute paths for
- * every path at or under @a local_abspath in @a db which are excluded by
- * the server (e.g. due to authz).  If no such paths are found then
+ * every path under @a local_abspath in @a db which are excluded by
+ * the server (e.g. due to authz), or user.  If no such paths are found then
  * @a *server_excluded_subtrees is set to @c NULL.
  * Allocate the hash and all items therein from @a result_pool.
  */
 svn_error_t *
-svn_wc__db_get_server_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
-                                        svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
+svn_wc__db_get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.
@@ -3095,6 +3126,23 @@ svn_wc__db_verify(svn_wc__db_t *db,
                   const char *wri_abspath,
                   apr_pool_t *scratch_pool);
 
+
+/* Possibly need two structures, one with relpaths and with abspaths?
+ * Only exposed for testing at present. */
+struct svn_wc__db_moved_to_t {
+  const char *local_relpath;  /* moved-to destination */
+  int op_depth;       /* op-root of source */
+};
+
+/* Set *FINAL_ABSPATH to an array of svn_wc__db_moved_to_t for
+ * LOCAL_ABSPATH after following any and all nested moves.
+ * Only exposed for testing at present. */
+svn_error_t *
+svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* @} */
 

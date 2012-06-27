@@ -792,7 +792,7 @@ migrate_tree_conflict_data(svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
      all of them into the new schema.  */
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_OLD_TREE_CONFLICT));
+                                    STMT_UPGRADE_21_SELECT_OLD_TREE_CONFLICT));
 
   /* Get all the existing tree conflict data. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -819,7 +819,8 @@ migrate_tree_conflict_data(svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Erase all the old tree conflict data.  */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_ERASE_OLD_CONFLICTS));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_UPGRADE_21_ERASE_OLD_CONFLICTS));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   svn_pool_destroy(iterpool);
@@ -1211,7 +1212,7 @@ bump_to_27(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_HAS_ACTUAL_NODES_CONFLICTS));
+                                  STMT_UPGRADE_27_HAS_ACTUAL_NODES_CONFLICTS));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
@@ -1544,7 +1545,9 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool)
 {
-  struct bump_baton bb = { wcroot_abspath };
+  struct bump_baton bb;
+
+  bb.wcroot_abspath = wcroot_abspath;
 
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,

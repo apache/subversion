@@ -26,10 +26,10 @@
 
 /* Test for APR crypto and RNG support */
 #undef SVN_HAVE_CRYPTO
-#include <apr.h> /* for APR_HAS_RANDOM */
-#include <apu.h> /* for APU_HAVE_CRYPTO */
+#include <apr.h>
+#include <apu.h>
 #if APR_HAS_RANDOM
-#if APU_HAVE_CRYPTO
+#if defined(APU_HAVE_CRYPTO) && APU_HAVE_CRYPTO
 #define SVN_HAVE_CRYPTO
 #endif
 #endif

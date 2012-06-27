@@ -185,16 +185,17 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
+                svn_wc_conflict_resolver_func2_t conflict_func2,
+                void *conflict_baton2,
                 apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *anchor_url;
   const char *corrected_url;
   const char *target;
-  const char *repos_root;
+  svn_client__pathrev_t *anchor_loc;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
@@ -207,7 +208,7 @@ update_internal(svn_revnum_t *result_rev,
   apr_array_header_t *preserved_exts;
   struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
-  svn_boolean_t tree_conflicted;
+  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -221,39 +222,34 @@ update_internal(svn_revnum_t *result_rev,
   else
     target = "";
 
-  /* Get full URL from the ANCHOR. */
-  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
-                               pool, pool));
-  if (! anchor_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(anchor_abspath, pool));
+  /* Check if our anchor exists in BASE. If it doesn't we can't update. */
+  SVN_ERR(svn_client__wc_node_get_base(&anchor_loc, anchor_abspath,
+                                       ctx->wc_ctx, pool, pool));
 
-  /* Check if our anchor exists in BASE. If it doesn't we can't update.
-     ### For performance reasons this should be handled with the same query
-     ### as retrieving the anchor url. */
-  SVN_ERR(svn_wc__node_get_base_rev(&revnum, ctx->wc_ctx, anchor_abspath,
-                                    pool));
-
-  /* It does not make sense to update tree-conflict victims. */
-  err = svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
+  /* It does not make sense to update conflict victims. */
+  err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                             &tree_conflicted,
                              ctx->wc_ctx, local_abspath, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
+      text_conflicted = FALSE;
+      prop_conflicted = FALSE;
       tree_conflicted = FALSE;
     }
   else
     SVN_ERR(err);
 
-  if (!SVN_IS_VALID_REVNUM(revnum) || tree_conflicted)
+  if (! anchor_loc
+      || text_conflicted || prop_conflicted || tree_conflicted)
     {
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *nt;
 
           nt = svn_wc_create_notify(local_abspath,
-                                    tree_conflicted
+                                    (text_conflicted || prop_conflicted
+                                                     || tree_conflicted)
                                       ? svn_wc_notify_skip_conflicted
                                       : svn_wc_notify_update_skip_working_only,
                                     pool);
@@ -330,29 +326,30 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               anchor_url,
+                                               anchor_loc->url,
                                                anchor_abspath, NULL, TRUE,
                                                TRUE, ctx, pool));
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
   if (corrected_url)
     {
-      const char *current_repos_root;
-      const char *current_uuid;
+      const char *new_repos_root_url;
 
       /* To relocate everything inside our repository we need the old and new
-         repos root. ### And we should only perform relocates on the wcroot */
-      SVN_ERR(svn_wc__node_get_repos_info(&current_repos_root, &current_uuid,
-                                          ctx->wc_ctx, anchor_abspath,
-                                          pool, pool));
+         repos root. */
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &new_repos_root_url, pool));
 
-      /* ### Check uuid here before calling relocate? */
-      SVN_ERR(svn_client_relocate2(anchor_abspath, current_repos_root,
-                                   repos_root, ignore_externals, ctx, pool));
-      anchor_url = corrected_url;
+      /* svn_client_relocate2() will check the uuid */
+      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_loc->url,
+                                   new_repos_root_url, ignore_externals,
+                                   ctx, pool));
+
+      /* Store updated repository root for externals */
+      anchor_loc->repos_root_url = new_repos_root_url;
+      /* ### We should update anchor_loc->repos_uuid too, although currently
+       * we don't use it. */
+      anchor_loc->url = corrected_url;
     }
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
@@ -366,7 +363,7 @@ update_internal(svn_revnum_t *result_rev,
 
   dfb.ra_session = ra_session;
   dfb.target_revision = revnum;
-  dfb.anchor_url = anchor_url;
+  dfb.anchor_url = anchor_loc->url;
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
@@ -379,7 +376,7 @@ update_internal(svn_revnum_t *result_rev,
                                     clean_checkout,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
-                                    ctx->conflict_func2, ctx->conflict_baton2,
+                                    conflict_func2, conflict_baton2,
                                     NULL, NULL,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
@@ -428,7 +425,7 @@ update_internal(svn_revnum_t *result_rev,
 
       SVN_ERR(svn_client__handle_externals(new_externals,
                                            new_depths,
-                                           repos_root, local_abspath,
+                                           anchor_loc->repos_root_url, local_abspath,
                                            depth, use_sleep,
                                            ctx, pool));
     }
@@ -470,6 +467,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t innerupdate,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
+                            svn_wc_conflict_resolver_func2_t conflict_func2,
+                            void *conflict_baton2,
                             apr_pool_t *pool)
 {
   const char *anchor_abspath, *lockroot_abspath;
@@ -519,7 +518,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification, timestamp_sleep,
-                                FALSE, ctx, pool);
+                                FALSE, ctx, conflict_func2, conflict_baton2,
+                                pool);
           if (err)
             goto cleanup;
           anchor_abspath = missing_parent;
@@ -543,7 +543,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification, timestamp_sleep,
-                        TRUE, ctx, pool);
+                        TRUE, ctx, conflict_func2, conflict_baton2, pool);
  cleanup:
   err = svn_error_compose_create(
             err,
@@ -567,7 +567,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
 
@@ -590,12 +590,12 @@ svn_client_update4(apr_array_header_t **result_revs,
       const char *local_abspath;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
       err = svn_client__update_internal(&result_rev, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
@@ -603,7 +603,9 @@ svn_client_update4(apr_array_header_t **result_revs,
                                         adds_as_modification,
                                         make_parents,
                                         FALSE, &sleep,
-                                        ctx, subpool);
+                                        ctx,
+                                        NULL, NULL, /* postpone conflicts */
+                                        iterpool);
 
       if (err)
         {
@@ -620,17 +622,51 @@ svn_client_update4(apr_array_header_t **result_revs,
               svn_wc_notify_t *notify;
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_skip,
-                                            subpool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+                                            iterpool);
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
         }
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
 
-  svn_pool_destroy(subpool);
   if (sleep)
     svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
+
+  if (ctx->conflict_func2)
+    {
+      for (i = 0; i < paths->nelts; ++i)
+        {
+          svn_error_t *err = SVN_NO_ERROR;
+          const char *local_abspath;
+
+          svn_pool_clear(iterpool);
+          path = APR_ARRAY_IDX(paths, i, const char *);
+
+          /* Resolve conflicts within the updated subtree. */
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
+          err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath, depth,
+                                          TRUE /* resolve_text */,
+                                          "" /* resolve_prop (ALL props) */,
+                                          TRUE /* resolve_tree */,
+                                          svn_wc_conflict_choose_unspecified,
+                                          ctx->conflict_func2,
+                                          ctx->conflict_baton2,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          ctx->notify_func2, ctx->notify_baton2,
+                                          iterpool);
+          if (err)
+            {
+              if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+                  && (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
+                return svn_error_trace(err);
+
+              svn_error_clear(err);
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

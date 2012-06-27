@@ -120,6 +120,10 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
+    dnl Swig-generated code results in a number of shadowed variables, so
+    dnl ignore those warnings when compiling swig-py
+    SWIG_PY_COMPILE=`echo "$SWIG_PY_COMPILE" | $SED -e 's/-Wshadow //'`
+
     AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
       ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
     ])
@@ -187,7 +191,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
                     rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
-      rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
+      rbconfig_tmp=`$rbconfig "print RbConfig::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
     done
 

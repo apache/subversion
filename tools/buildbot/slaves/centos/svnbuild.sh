@@ -23,6 +23,7 @@
 set -x
 
 export MAKEFLAGS=-j4
+export PYTHON=/usr/local/python25/bin/python
 
 echo "========= autogen.sh"
 ./autogen.sh || exit $?
@@ -30,15 +31,17 @@ echo "========= autogen.sh"
 echo "========= configure"
 #            --with-junit=/usr/share/java/junit.jar
 #            --with-jdk=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64 \
+#            --without-berkeley-db \
 ./configure --enable-javahl --enable-maintainer-mode \
             --with-neon=/usr \
+            --with-serf=/usr/local \
             --with-apxs=/usr/sbin/apxs \
-            --without-berkeley-db \
+            --with-berkeley-db \
             --with-apr=/usr \
             --with-apr-util=/usr \
             --with-jdk=/opt/java/jdk1.6.0_15 \
 	    --with-junit=/home/bt/junit-4.4.jar \
-	    --with-sqlite=/home/bt/sqlite-3.6.17/sqlite3.c \
+	    --with-sqlite=/home/bt/packages/sqlite-amalgamation-dir/sqlite3.c \
             || exit $?
 
 echo "========= make"

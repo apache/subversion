@@ -95,6 +95,7 @@ typedef struct dir_conf_t {
   const char *activities_db;         /* path to activities database(s) */
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
+  enum conf_flag revprop_cache;      /* whether to enable revprop caching */
   apr_hash_t *hooks_env;             /* environment for hook scripts */
 } dir_conf_t;
 
@@ -224,6 +225,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
+  newconf->revprop_cache = INHERIT_VALUE(parent, child, revprop_cache);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
 
@@ -471,6 +473,19 @@ SVNCacheFullTexts_cmd(cmd_parms *cmd, void *config, int arg)
     conf->fulltext_cache = CONF_FLAG_ON;
   else
     conf->fulltext_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheRevProps_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->revprop_cache = CONF_FLAG_ON;
+  else
+    conf->revprop_cache = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -847,6 +862,16 @@ dav_svn__get_fulltext_cache_flag(request_rec *r)
 }
 
 
+svn_boolean_t
+dav_svn__get_revprop_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->revprop_cache == CONF_FLAG_ON;
+}
+
+
 int
 dav_svn__get_compression_level(void)
 {
@@ -1081,6 +1106,14 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "speeds up data access by caching full file content "
                "if sufficient in-memory cache is available "
+               "(default is Off)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheRevProps", SVNCacheRevProps_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up 'svn ls -v', export and checkout operations"
+               "but should only be enabled under the conditions described"
+               "in the documentation"
                "(default is Off)."),
 
   /* per server */

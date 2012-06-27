@@ -35,6 +35,8 @@ import optparse
 import xml
 import urllib
 import logging
+import hashlib
+from urlparse import urlparse
 
 try:
   # Python >=3.0
@@ -78,20 +80,8 @@ SVN_VER_MINOR = 8
 
 default_num_threads = 5
 
-# This enables both a time stamp prefix on all log lines and a
-# '<TIME = 0.042552>' line after running every external command.
-log_with_timestamps = True
-
-# Set up logging
-logger = logging.getLogger()
-handler = logging.StreamHandler(sys.stdout)
-if log_with_timestamps:
-  formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s',
-                                '%Y-%m-%d %H:%M:%S')
-else:
-  formatter = logging.Formatter('[%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+# Don't try to use this before calling execute_tests()
+logger = None
 
 
 class SVNProcessTerminatedBySignal(Failure):
@@ -160,13 +150,12 @@ svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
+svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
-svnmucc_binary=os.path.abspath('../../../tools/client-side/svnmucc/svnmucc' + \
-                               _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -234,7 +223,7 @@ greek_state = svntest.wc.State('', {
 
 ######################################################################
 # Utilities shared by the tests
-def wrap_ex(func):
+def wrap_ex(func, output):
   "Wrap a function, catch, print and ignore exceptions"
   def w(*args, **kwds):
     try:
@@ -243,9 +232,9 @@ def wrap_ex(func):
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
+          logger.warn('EXCEPTION: %s: %s', ex.__class__.__name__, ex_args)
         else:
-          print('EXCEPTION: %s' % ex.__class__.__name__)
+          logger.warn('EXCEPTION: %s', ex.__class__.__name__)
   return w
 
 def setup_development_mode():
@@ -511,9 +500,26 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  if log_with_timestamps:
-    stop = time.time()
-    logger.info('<TIME = %.6f>' % (stop - start))
+  def _line_contains_repos_diskpath(line):
+    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### or the diskpath isn't realpath()'d somewhere on the way from
+    # ### the server's configuration and the client's stderr.  We could
+    # ### check for both the symlinked path and the realpath.
+    return \
+         os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
+      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+
+  for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
+    if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
+      break
+    # Does the server leak the repository on-disk path?
+    # (prop_tests-12 installs a hook script that does that intentionally)
+    if any(map(_line_contains_repos_diskpath, lines)) \
+       and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
+      raise Failure("Repository diskpath in %s: %r" % (name, lines))
+
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
     logger.info(x.rstrip())
   for x in stderr_lines:
@@ -528,7 +534,8 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
          [line for line in stdout_lines if not line.startswith("DBG:")], \
          stderr_lines
 
-def create_config_dir(cfgdir, config_contents=None, server_contents=None):
+def create_config_dir(cfgdir, config_contents=None, server_contents=None,
+                      ssl_cert=None, ssl_url=None):
   "Create config directories and files"
 
   # config file names
@@ -565,6 +572,56 @@ store-passwords=yes
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
+
+  if (ssl_cert and ssl_url):
+    trust_ssl_cert(cfgdir, ssl_cert, ssl_url)
+  elif cfgdir != default_config_dir:
+    copy_trust(cfgdir, default_config_dir)
+
+
+def trust_ssl_cert(cfgdir, ssl_cert, ssl_url):
+  """Setup config dir to trust the given ssl_cert for the given ssl_url
+  """
+
+  cert_rep = ''
+  fp = open(ssl_cert, 'r')
+  for line in fp.readlines()[1:-1]:
+    cert_rep = cert_rep + line.strip()
+
+  parsed_url = urlparse(ssl_url)
+  netloc_url = '%s://%s' % (parsed_url.scheme, parsed_url.netloc)
+  ssl_dir = os.path.join(cfgdir, 'auth', 'svn.ssl.server')
+  if not os.path.isdir(ssl_dir):
+    os.makedirs(ssl_dir)
+  md5_name = hashlib.md5(netloc_url).hexdigest()
+  md5_file = os.path.join(ssl_dir, md5_name)
+  md5_file_contents = """K 10
+ascii_cert
+V %d
+%s
+K 8
+failures
+V 1
+8
+K 15
+svn:realmstring
+V %d
+%s
+END
+""" % (len(cert_rep), cert_rep, len(netloc_url), netloc_url)
+
+  file_write(md5_file, md5_file_contents)
+
+def copy_trust(dst_cfgdir, src_cfgdir):
+  """Copy svn.ssl.server files from one config dir to another.
+  """
+
+  src_ssl_dir = os.path.join(src_cfgdir, 'auth', 'svn.ssl.server')
+  dst_ssl_dir = os.path.join(dst_cfgdir, 'auth', 'svn.ssl.server')
+  if not os.path.isdir(dst_ssl_dir):
+    os.makedirs(dst_ssl_dir)
+  for f in os.listdir(src_ssl_dir):
+    shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
 def _with_config_dir(args):
   if '--config-dir' in args:
@@ -672,7 +729,7 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False,
                      url, revision, propname, skel,
-                     options.http_library, want_error and 1 or 0)
+                     want_error and 1 or 0, default_config_dir)
 
 def run_wc_lock_tester(recursive, path):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
@@ -885,9 +942,8 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   load_out.close()
   load_err.close()
 
-  if log_with_timestamps:
-    stop = time.time()
-    logger.info('<TIME = %.6f>' % (stop - start))
+  stop = time.time()
+  logger.info('<TIME = %.6f>' % (stop - start))
 
   if saved_quiet is None:
     del os.environ['SVN_DBG_QUIET']
@@ -899,11 +955,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
   for dump_line in dump_stderr:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      print('ERROR:  dump failed: %s' % dump_line.strip())
+      logger.warn('ERROR:  dump failed: %s', dump_line.strip())
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
-    print('ERROR:  dump failed; did not see revision %s' % head_revision)
+    logger.warn('ERROR:  dump failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
@@ -912,11 +968,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        print('ERROR:  load failed: %s' % load_line.strip())
+        logger.warn('ERROR:  load failed: %s', load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
-    print('ERROR:  load failed; did not see revision %s' % head_revision)
+    logger.warn('ERROR:  load failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
 
@@ -931,18 +987,23 @@ def canonicalize_url(input):
     return input
 
 
-def create_python_hook_script(hook_path, hook_script_code):
+def create_python_hook_script(hook_path, hook_script_code,
+                              cmd_alternative=None):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
   if windows:
-    # Use an absolute path since the working directory is not guaranteed
-    hook_path = os.path.abspath(hook_path)
-    # Fill the python file.
-    file_write("%s.py" % hook_path, hook_script_code)
-    # Fill the batch wrapper file.
-    file_append("%s.bat" % hook_path,
-                "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
+    if cmd_alternative is not None:
+      file_write("%s.bat" % hook_path,
+                  cmd_alternative)
+    else:
+      # Use an absolute path since the working directory is not guaranteed
+      hook_path = os.path.abspath(hook_path)
+      # Fill the python file.
+      file_write("%s.py" % hook_path, hook_script_code)
+      # Fill the batch wrapper file.
+      file_write("%s.bat" % hook_path,
+                 "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
@@ -1207,6 +1268,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--mode-filter=' + options.mode_filter)
     if options.milestone_filter:
       args.append('--milestone-filter=' + options.milestone_filter)
+    if options.ssl_cert:
+      args.append('--ssl-cert=' + options.ssl_cert)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1481,9 +1544,11 @@ def _create_parser():
   """Return a parser for our test suite."""
   def set_log_level(option, opt, value, parser, level=None):
     if level:
+      # called from --verbose
       logger.setLevel(level)
     else:
-      logger.setLevel(value)
+      # called from --set-log-level
+      logger.setLevel(getattr(logging, value, None) or int(value))
 
   # set up the parser
   _default_http_library = 'serf'
@@ -1535,7 +1600,12 @@ def _create_parser():
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
-                    callback=set_log_level)
+                    callback=set_log_level,
+                    help="Set log level (numerically or symbolically). " +
+                         "Symbolic levels are: CRITICAL, ERROR, WARNING, " +
+                         "INFO, DEBUG")
+  parser.add_option('--log-with-timestamps', action='store_true',
+                    help="Show timestamps in test log.")
   parser.add_option('--keep-local-tmp', action='store_true',
                     help="Don't remove svn-test-work/local_tmp after test " +
                          "run is complete.  Useful for debugging failures.")
@@ -1546,6 +1616,8 @@ def _create_parser():
                          'useful during test development!')
   parser.add_option('--srcdir', action='store', dest='srcdir',
                     help='Source directory.')
+  parser.add_option('--ssl-cert', action='store',
+                    help='Path to SSL server certificate.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1636,6 +1708,28 @@ def get_target_milestones_for_issues(issue_numbers):
 
   return issue_dict
 
+
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
+
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
+
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
+
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -1646,6 +1740,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
+  global logger
   global pristine_url
   global pristine_greek_repos_url
   global svn_binary
@@ -1662,12 +1757,41 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = _parse_options()
     test_selection = args
   else:
     parser = _create_parser()
+
+  # If there are no handlers registered yet, then install our own with
+  # our custom formatter. (anything currently installed *is* our handler
+  # as tested above)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
@@ -1731,7 +1855,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
-    svnversion_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
+    svnmucc_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
@@ -1794,7 +1918,9 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   if not options.is_child_process:
     # Build out the default configuration directory
-    create_config_dir(default_config_dir)
+    create_config_dir(default_config_dir,
+                      ssl_cert=options.ssl_cert,
+                      ssl_url=options.test_area_url)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

@@ -201,6 +201,99 @@ svn_stream__from_spillbuf(apr_size_t blocksize,
 
 /** @} */
 
+/**
+ * Internal function for creating a MD5 checksum from a binary digest.
+ *
+ * @since New in 1.8
+ */
+svn_checksum_t *
+svn_checksum__from_digest_md5(const unsigned char *digest,
+                              apr_pool_t *result_pool);
+
+/**
+ * Internal function for creating a SHA1 checksum from a binary
+ * digest.
+ *
+ * @since New in 1.8
+ */
+svn_checksum_t *
+svn_checksum__from_digest_sha1(const unsigned char *digest,
+                               apr_pool_t *result_pool);
+
+
+/**
+ * @defgroup svn_hash_support Hash table serialization support
+ * @{
+ */
+
+/*----------------------------------------------------*/
+
+/**
+ * @defgroup svn_hash_misc Miscellaneous hash APIs
+ * @{
+ */
+
+/**
+ * Clear any key/value pairs in the hash table.  A wrapper for a
+ * apr_hash_clear(), which isn't available until APR 1.3.0.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
+
+/** @} */
+
+
+/**
+ * @defgroup svn_hash_getters Specialized getter APIs for hashes
+ * @{
+ */
+
+/** Find the value of a @a key in @a hash, return the value.
+ *
+ * If @a hash is @c NULL or if the @a key cannot be found, the
+ * @a default_value will be returned.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_hash__get_cstring(apr_hash_t *hash,
+                      const char *key,
+                      const char *default_value);
+
+/** Like svn_hash_get_cstring(), but for boolean values.
+ *
+ * Parses the value as a boolean value. The recognized representations
+ * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
+ * matter.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_hash__get_bool(apr_hash_t *hash,
+                   const char *key,
+                   svn_boolean_t default_value);
+
+/** @} */
+
+/**
+ * @defgroup svn_hash_create Create optimized APR hash tables
+ * @{
+ */
+
+/** Returns a hash table, allocated in @a pool, with the same ordering of
+ * elements as APR 1.4.5 or earlier (using apr_hashfunc_default) but uses
+ * a faster hash function implementation.
+ *
+ * @since New in 1.8.
+ */
+apr_hash_t *
+svn_hash__make(apr_pool_t *pool);
+
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

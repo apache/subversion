@@ -31,15 +31,29 @@ usage: 1. log [PATH][@REV]
   and limits the scope of the displayed diff to the specified depth.
 
   Examples:
-    svn log
-    svn log foo.c
-    svn log bar.c@42
-    svn log http://www.example.com/repo/project/foo.c
-    svn log http://www.example.com/repo/project foo.c bar.c
-    svn log http://www.example.com/repo/project@50 foo.c bar.c
 
-    This command shows the log entry for the revision the branch
-    ^/branches/foo was created in:
+    Show the latest 5 log messages for the current working copy
+    directory and display paths changed in each commit:
+      svn log -l 5 -v
+
+    Show the log for bar.c as of revision 42:
+      svn log bar.c@42
+
+    Show log messages and diffs for each commit to foo.c:
+      svn log --diff http://www.example.com/repo/project/foo.c
+    (Because the above command uses a full URL it does not require
+     a working copy.)
+
+    Show log messages for the children foo.c and bar.c of the directory
+    '/trunk' as it appeared in revision 50, using the ^/ URL shortcut:
+      svn log ^/trunk@50 foo.c bar.c
+
+    Show the log messages for any incoming changes to foo.c during the
+    next 'svn update':
+      svn log -r BASE:HEAD foo.c
+
+    Show the log message for the revision in which /branches/foo
+    was created:
       svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo
 
 Valid options:

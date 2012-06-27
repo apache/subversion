@@ -24,9 +24,6 @@
 
 
 #include <apr_uri.h>
-
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
@@ -40,6 +37,7 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -49,8 +47,8 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum log_state_e {
-  NONE = 0,
+enum {
+  INITIAL = 0,
   REPORT,
   ITEM,
   VERSION,
@@ -64,26 +62,7 @@ typedef enum log_state_e {
   DELETED_PATH,
   MODIFIED_PATH,
   SUBTRACTIVE_MERGE
-} log_state_e;
-
-typedef struct log_info_t {
-  apr_pool_t *pool;
-
-  /* The currently collected value as we build it up, and its wire
-   * encoding (if any).
-   */
-  svn_stringbuf_t *tmp;
-  const char *tmp_encoding;
-
-  /* Temporary change path - ultimately inserted into changed_paths hash. */
-  svn_log_changed_path2_t *tmp_path;
-
-  /* Log information */
-  svn_log_entry_t *log_entry;
-
-  /* Place to hold revprop name. */
-  const char *revprop_name;
-} log_info_t;
+};
 
 typedef struct log_context_t {
   apr_pool_t *pool;
@@ -100,9 +79,11 @@ typedef struct log_context_t {
   int nest_level; /* used to track mergeinfo nesting levels */
   int count; /* only incremented when nest_level == 0 */
 
-  /* are we done? */
-  svn_boolean_t done;
-  int status_code;
+  /* Collect information for storage into a log entry. Most of the entry
+     members are collected by individual states. revprops and paths are
+     N datapoints per entry.  */
+  apr_hash_t *collect_revprops;
+  apr_hash_t *collect_paths;
 
   /* log receiver function and baton */
   svn_log_entry_receiver_t receiver;
@@ -114,410 +95,314 @@ typedef struct log_context_t {
   svn_boolean_t want_message;
 } log_context_t;
 
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t log_ttable[] = {
+  { INITIAL, S_, "log-report", REPORT,
+    FALSE, { NULL }, FALSE },
+
+  /* Note that we have an opener here. We need to construct a new LOG_ENTRY
+     to record multiple paths.  */
+  { REPORT, S_, "log-item", ITEM,
+    FALSE, { NULL }, TRUE },
+
+  { ITEM, D_, SVN_DAV__VERSION_NAME, VERSION,
+    TRUE, { NULL }, TRUE },
+
+  { ITEM, D_, "creator-displayname", CREATOR,
+    TRUE, { "?encoding", NULL }, TRUE },
+
+  { ITEM, S_, "date", DATE,
+    TRUE, { "?encoding", NULL }, TRUE },
+
+  { ITEM, D_, "comment", COMMENT,
+    TRUE, { "?encoding", NULL }, TRUE },
+
+  { ITEM, S_, "revprop", REVPROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { ITEM, S_, "has-children", HAS_CHILDREN,
+    FALSE, { NULL }, TRUE },
+
+  { ITEM, S_, "subtractive-merge", SUBTRACTIVE_MERGE,
+    FALSE, { NULL }, TRUE },
+
+  { ITEM, S_, "added-path", ADDED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ITEM, S_, "replaced-path", REPLACED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ITEM, S_, "deleted-path", DELETED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, TRUE },
+
+  { ITEM, S_, "modified-path", MODIFIED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, TRUE },
+
+  { 0 }
+};
+
 
-static log_info_t *
-push_state(svn_ra_serf__xml_parser_t *parser,
-           log_context_t *log_ctx,
-           log_state_e state,
-           const char **attrs)
-{
-  svn_ra_serf__xml_push_state(parser, state);
+/* Store CDATA into REVPROPS, associated with PROPNAME. If ENCODING is not
+   NULL, then it must base "base64" and CDATA will be decoded first.
 
-  if (state == ITEM)
-    {
-      log_info_t *info;
-      apr_pool_t *info_pool = svn_pool_create(parser->state->pool);
-
-      info = apr_pcalloc(info_pool, sizeof(*info));
-      info->pool = info_pool;
-      info->tmp = svn_stringbuf_create_empty(info_pool);
-      info->log_entry = svn_log_entry_create(info_pool);
-
-      info->log_entry->revision = SVN_INVALID_REVNUM;
-
-      parser->state->private = info;
-    }
-
-  if (state == ADDED_PATH || state == REPLACED_PATH ||
-      state == DELETED_PATH || state == MODIFIED_PATH)
-    {
-      log_info_t *info = parser->state->private;
-
-      if (!info->log_entry->changed_paths2)
-        {
-          info->log_entry->changed_paths2 = apr_hash_make(info->pool);
-          info->log_entry->changed_paths = info->log_entry->changed_paths2;
-        }
-
-      info->tmp_path = svn_log_changed_path2_create(info->pool);
-      info->tmp_path->copyfrom_rev = SVN_INVALID_REVNUM;
-    }
-
-  if (state == CREATOR || state == DATE || state == COMMENT
-      || state == REVPROP)
-    {
-      log_info_t *info = parser->state->private;
-
-      info->tmp_encoding = svn_xml_get_attr_value("encoding", attrs);
-      if (info->tmp_encoding)
-        info->tmp_encoding = apr_pstrdup(info->pool, info->tmp_encoding);
-
-      if (!info->log_entry->revprops)
-        {
-          info->log_entry->revprops = apr_hash_make(info->pool);
-        }
-    }
-
-  return parser->state->private;
-}
-
-/* Helper function to parse the common arguments availabe in ATTRS into CHANGE. */
+   NOTE: PROPNAME must live longer than REVPROPS.  */
 static svn_error_t *
-read_changed_path_attributes(svn_log_changed_path2_t *change, const char **attrs)
+collect_revprop(apr_hash_t *revprops,
+                const char *propname,
+                const svn_string_t *cdata,
+                const char *encoding)
 {
-  /* All these arguments are optional. The *_from_word() functions can handle
-     them for us */
+  apr_pool_t *result_pool = apr_hash_pool_get(revprops);
+  const svn_string_t *decoded;
 
-  change->node_kind = svn_node_kind_from_word(
-                           svn_xml_get_attr_value("node-kind", attrs));
-  change->text_modified = svn_tristate__from_word(
-                           svn_xml_get_attr_value("text-mods", attrs));
-  change->props_modified = svn_tristate__from_word(
-                           svn_xml_get_attr_value("prop-mods", attrs));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-start_log(svn_ra_serf__xml_parser_t *parser,
-          svn_ra_serf__dav_props_t name,
-          const char **attrs,
-          apr_pool_t *scratch_pool)
-{
-  log_context_t *log_ctx = parser->user_data;
-  log_state_e state;
-
-  state = parser->state->current_state;
-
-  if (state == NONE &&
-      strcmp(name.name, "log-report") == 0)
+  if (encoding)
     {
-      push_state(parser, log_ctx, REPORT, attrs);
-    }
-  else if (state == REPORT &&
-           strcmp(name.name, "log-item") == 0)
-    {
-      push_state(parser, log_ctx, ITEM, attrs);
-    }
-  else if (state == ITEM)
-    {
-      log_info_t *info;
-
-      if (strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
-        {
-          push_state(parser, log_ctx, VERSION, attrs);
-        }
-      else if (strcmp(name.name, "creator-displayname") == 0)
-        {
-          push_state(parser, log_ctx, CREATOR, attrs);
-        }
-      else if (strcmp(name.name, "date") == 0)
-        {
-          push_state(parser, log_ctx, DATE, attrs);
-        }
-      else if (strcmp(name.name, "comment") == 0)
-        {
-          push_state(parser, log_ctx, COMMENT, attrs);
-        }
-      else if (strcmp(name.name, "revprop") == 0)
-        {
-          const char *revprop_name =
-            svn_xml_get_attr_value("name", attrs);
-          if (revprop_name == NULL)
-            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                     _("Missing name attr in revprop element"));
-          info = push_state(parser, log_ctx, REVPROP, attrs);
-          info->revprop_name = apr_pstrdup(info->pool, revprop_name);
-        }
-      else if (strcmp(name.name, "has-children") == 0)
-        {
-          push_state(parser, log_ctx, HAS_CHILDREN, attrs);
-        }
-      else if (strcmp(name.name, "subtractive-merge") == 0)
-        {
-          push_state(parser, log_ctx, SUBTRACTIVE_MERGE, attrs);
-        }
-      else if (strcmp(name.name, "added-path") == 0)
-        {
-          const char *copy_path, *copy_rev_str;
-
-          info = push_state(parser, log_ctx, ADDED_PATH, attrs);
-          info->tmp_path->action = 'A';
-
-          copy_path = svn_xml_get_attr_value("copyfrom-path", attrs);
-          copy_rev_str = svn_xml_get_attr_value("copyfrom-rev", attrs);
-          if (copy_path && copy_rev_str)
-            {
-              svn_revnum_t copy_rev;
-
-              copy_rev = SVN_STR_TO_REV(copy_rev_str);
-              if (SVN_IS_VALID_REVNUM(copy_rev))
-                {
-                  info->tmp_path->copyfrom_path = apr_pstrdup(info->pool,
-                                                              copy_path);
-                  info->tmp_path->copyfrom_rev = copy_rev;
-                }
-            }
-
-          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
-        }
-      else if (strcmp(name.name, "replaced-path") == 0)
-        {
-          const char *copy_path, *copy_rev_str;
-
-          info = push_state(parser, log_ctx, REPLACED_PATH, attrs);
-          info->tmp_path->action = 'R';
-
-          copy_path = svn_xml_get_attr_value("copyfrom-path", attrs);
-          copy_rev_str = svn_xml_get_attr_value("copyfrom-rev", attrs);
-          if (copy_path && copy_rev_str)
-            {
-              svn_revnum_t copy_rev;
-
-              copy_rev = SVN_STR_TO_REV(copy_rev_str);
-              if (SVN_IS_VALID_REVNUM(copy_rev))
-                {
-                  info->tmp_path->copyfrom_path = apr_pstrdup(info->pool,
-                                                              copy_path);
-                  info->tmp_path->copyfrom_rev = copy_rev;
-                }
-            }
-
-          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
-        }
-      else if (strcmp(name.name, "deleted-path") == 0)
-        {
-          info = push_state(parser, log_ctx, DELETED_PATH, attrs);
-          info->tmp_path->action = 'D';
-
-          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
-        }
-      else if (strcmp(name.name, "modified-path") == 0)
-        {
-          info = push_state(parser, log_ctx, MODIFIED_PATH, attrs);
-          info->tmp_path->action = 'M';
-
-          SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/*
- * Set *DECODED_CDATA to a copy of current CDATA being tracked in INFO,
- * decoded as necessary, and allocated from INFO->pool..
- */
-static svn_error_t *
-maybe_decode_log_cdata(const svn_string_t **decoded_cdata,
-                       log_info_t *info)
-{
-
-  if (info->tmp_encoding)
-    {
-      svn_string_t tmp;
-
-      /* Don't use morph_info_string cuz we need info->tmp to
-         remain usable.  */
-      tmp.data = info->tmp->data;
-      tmp.len = info->tmp->len;
-
       /* Check for a known encoding type.  This is easy -- there's
          only one.  */
-      if (strcmp(info->tmp_encoding, "base64") != 0)
+      if (strcmp(encoding, "base64") != 0)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                    _("Unsupported encoding '%s'"),
-                                   info->tmp_encoding);
+                                   encoding);
         }
 
-      *decoded_cdata = svn_base64_decode_string(&tmp, info->pool);
+      decoded = svn_base64_decode_string(cdata, result_pool);
     }
   else
     {
-      *decoded_cdata = svn_string_create_from_buf(info->tmp, info->pool);
+      decoded = svn_string_dup(cdata, result_pool);
     }
+
+  /* Caller has ensured PROPNAME has sufficient lifetime.  */
+  apr_hash_set(revprops, propname, APR_HASH_KEY_STRING, decoded);
+
   return SVN_NO_ERROR;
 }
 
+
+/* Record ACTION on the path in CDATA into PATHS. Other properties about
+   the action are pulled from ATTRS.  */
 static svn_error_t *
-end_log(svn_ra_serf__xml_parser_t *parser,
-        svn_ra_serf__dav_props_t name,
-        apr_pool_t *scratch_pool)
+collect_path(apr_hash_t *paths,
+             char action,
+             const svn_string_t *cdata,
+             apr_hash_t *attrs)
 {
-  log_context_t *log_ctx = parser->user_data;
-  log_state_e state;
-  log_info_t *info;
+  apr_pool_t *result_pool = apr_hash_pool_get(paths);
+  svn_log_changed_path2_t *lcp;
+  const char *copyfrom_path;
+  const char *copyfrom_rev;
+  const char *path;
 
-  state = parser->state->current_state;
-  info = parser->state->private;
+  lcp = svn_log_changed_path2_create(result_pool);
+  lcp->action = action;
+  lcp->copyfrom_rev = SVN_INVALID_REVNUM;
 
-  if (state == REPORT &&
-      strcmp(name.name, "log-report") == 0)
+  /* COPYFROM_* are only recorded for ADDED_PATH and REPLACED_PATH.  */
+  copyfrom_path = apr_hash_get(attrs, "copyfrom-path", APR_HASH_KEY_STRING);
+  copyfrom_rev = apr_hash_get(attrs, "copyfrom-rev", APR_HASH_KEY_STRING);
+  if (copyfrom_path && copyfrom_rev)
     {
-      svn_ra_serf__xml_pop_state(parser);
+      svn_revnum_t rev = SVN_STR_TO_REV(copyfrom_rev);
+
+      if (SVN_IS_VALID_REVNUM(rev))
+        {
+          lcp->copyfrom_path = apr_pstrdup(result_pool, copyfrom_path);
+          lcp->copyfrom_rev = rev;
+        }
     }
-  else if (state == ITEM &&
-           strcmp(name.name, "log-item") == 0)
+
+  lcp->node_kind = svn_node_kind_from_word(apr_hash_get(
+                                             attrs, "node-kind",
+                                             APR_HASH_KEY_STRING));
+  lcp->text_modified = svn_tristate__from_word(apr_hash_get(
+                                                 attrs, "text-mods",
+                                                 APR_HASH_KEY_STRING));
+  lcp->props_modified = svn_tristate__from_word(apr_hash_get(
+                                                  attrs, "prop-mods",
+                                                  APR_HASH_KEY_STRING));
+
+  path = apr_pstrmemdup(result_pool, cdata->data, cdata->len);
+  apr_hash_set(paths, path, APR_HASH_KEY_STRING, lcp);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Conforms to svn_ra_serf__xml_opened_t  */
+static svn_error_t *
+log_opened(svn_ra_serf__xml_estate_t *xes,
+           void *baton,
+           int entered_state,
+           const svn_ra_serf__dav_props_t *tag,
+           apr_pool_t *scratch_pool)
+{
+  log_context_t *log_ctx = baton;
+
+  if (entered_state == ITEM)
     {
+      apr_pool_t *state_pool = svn_ra_serf__xml_state_pool(xes);
+
+      log_ctx->collect_revprops = apr_hash_make(state_pool);
+      log_ctx->collect_paths = apr_hash_make(state_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Conforms to svn_ra_serf__xml_closed_t  */
+static svn_error_t *
+log_closed(svn_ra_serf__xml_estate_t *xes,
+           void *baton,
+           int leaving_state,
+           const svn_string_t *cdata,
+           apr_hash_t *attrs,
+           apr_pool_t *scratch_pool)
+{
+  log_context_t *log_ctx = baton;
+
+  if (leaving_state == ITEM)
+    {
+      svn_log_entry_t *log_entry;
+      const char *rev_str;
+
       if (log_ctx->limit && (log_ctx->nest_level == 0)
           && (++log_ctx->count > log_ctx->limit))
         {
           return SVN_NO_ERROR;
         }
 
+      log_entry = svn_log_entry_create(scratch_pool);
+
+      /* Pick up the paths from the context. These have the same lifetime
+         as this state. That is long enough for us to pass the paths to
+         the receiver callback.  */
+      if (apr_hash_count(log_ctx->collect_paths) > 0)
+        {
+          log_entry->changed_paths = log_ctx->collect_paths;
+          log_entry->changed_paths2 = log_ctx->collect_paths;
+        }
+
+      /* ... and same story for the collected revprops.  */
+      log_entry->revprops = log_ctx->collect_revprops;
+
+      log_entry->has_children = svn_hash__get_bool(attrs,
+                                                   "has-children",
+                                                   FALSE);
+      log_entry->subtractive_merge = svn_hash__get_bool(attrs,
+                                                        "subtractive-merge",
+                                                        FALSE);
+
+      rev_str = apr_hash_get(attrs, "revision", APR_HASH_KEY_STRING);
+      if (rev_str)
+        log_entry->revision = SVN_STR_TO_REV(rev_str);
+      else
+        log_entry->revision = SVN_INVALID_REVNUM;
+
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
-                                info->log_entry,
-                                info->pool));
+                                log_entry,
+                                scratch_pool));
 
-      if (info->log_entry->has_children)
+      if (log_entry->has_children)
         {
           log_ctx->nest_level++;
         }
-      if (! SVN_IS_VALID_REVNUM(info->log_entry->revision))
+      if (! SVN_IS_VALID_REVNUM(log_entry->revision))
         {
           SVN_ERR_ASSERT(log_ctx->nest_level);
           log_ctx->nest_level--;
         }
 
-      svn_pool_destroy(info->pool);
-      svn_ra_serf__xml_pop_state(parser);
+      /* These hash tables are going to be unusable once this state's
+         pool is destroyed. But let's not leave stale pointers in
+         structures that have a longer life.  */
+      log_ctx->collect_revprops = NULL;
+      log_ctx->collect_paths = NULL;
     }
-  else if (state == VERSION &&
-           strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
+  else if (leaving_state == VERSION)
     {
-      info->log_entry->revision = SVN_STR_TO_REV(info->tmp->data);
-      svn_stringbuf_setempty(info->tmp);
-      svn_ra_serf__xml_pop_state(parser);
+      svn_ra_serf__xml_note(xes, ITEM, "revision", cdata->data);
     }
-  else if (state == CREATOR &&
-           strcmp(name.name, "creator-displayname") == 0)
+  else if (leaving_state == CREATOR)
     {
       if (log_ctx->want_author)
         {
-          const svn_string_t *decoded_cdata;
-          SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, info));
-          apr_hash_set(info->log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                       APR_HASH_KEY_STRING, decoded_cdata);
+          SVN_ERR(collect_revprop(log_ctx->collect_revprops,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  cdata,
+                                  apr_hash_get(attrs, "encoding",
+                                               APR_HASH_KEY_STRING)));
         }
-      svn_stringbuf_setempty(info->tmp);
-      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == DATE &&
-           strcmp(name.name, "date") == 0)
+  else if (leaving_state == DATE)
     {
       if (log_ctx->want_date)
         {
-          const svn_string_t *decoded_cdata;
-          SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, info));
-          apr_hash_set(info->log_entry->revprops, SVN_PROP_REVISION_DATE,
-                       APR_HASH_KEY_STRING, decoded_cdata);
+          SVN_ERR(collect_revprop(log_ctx->collect_revprops,
+                                  SVN_PROP_REVISION_DATE,
+                                  cdata,
+                                  apr_hash_get(attrs, "encoding",
+                                               APR_HASH_KEY_STRING)));
         }
-      svn_stringbuf_setempty(info->tmp);
-      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == COMMENT &&
-           strcmp(name.name, "comment") == 0)
+  else if (leaving_state == COMMENT)
     {
       if (log_ctx->want_message)
         {
-          const svn_string_t *decoded_cdata;
-          SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, info));
-          apr_hash_set(info->log_entry->revprops, SVN_PROP_REVISION_LOG,
-                       APR_HASH_KEY_STRING, decoded_cdata);
+          SVN_ERR(collect_revprop(log_ctx->collect_revprops,
+                                  SVN_PROP_REVISION_LOG,
+                                  cdata,
+                                  apr_hash_get(attrs, "encoding",
+                                               APR_HASH_KEY_STRING)));
         }
-      svn_stringbuf_setempty(info->tmp);
-      svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == REVPROP)
+  else if (leaving_state == REVPROP)
     {
-      const svn_string_t *decoded_cdata;
-      SVN_ERR(maybe_decode_log_cdata(&decoded_cdata, info));
-      apr_hash_set(info->log_entry->revprops, info->revprop_name,
-                   APR_HASH_KEY_STRING, decoded_cdata);
-      svn_stringbuf_setempty(info->tmp);
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == HAS_CHILDREN &&
-           strcmp(name.name, "has-children") == 0)
-    {
-      info->log_entry->has_children = TRUE;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if (state == SUBTRACTIVE_MERGE &&
-           strcmp(name.name, "subtractive-merge") == 0)
-    {
-      info->log_entry->subtractive_merge = TRUE;
-      svn_ra_serf__xml_pop_state(parser);
-    }
-  else if ((state == ADDED_PATH &&
-            strcmp(name.name, "added-path") == 0) ||
-           (state == DELETED_PATH &&
-            strcmp(name.name, "deleted-path") == 0) ||
-           (state == MODIFIED_PATH &&
-            strcmp(name.name, "modified-path") == 0) ||
-           (state == REPLACED_PATH &&
-            strcmp(name.name, "replaced-path") == 0))
-    {
-      char *path;
+      apr_pool_t *result_pool = apr_hash_pool_get(log_ctx->collect_revprops);
 
-      path = apr_pstrmemdup(info->pool, info->tmp->data, info->tmp->len);
-      svn_stringbuf_setempty(info->tmp);
+      SVN_ERR(collect_revprop(
+                log_ctx->collect_revprops,
+                apr_pstrdup(result_pool,
+                            apr_hash_get(attrs, "name", APR_HASH_KEY_STRING)),
+                cdata,
+                apr_hash_get(attrs, "encoding", APR_HASH_KEY_STRING)
+                ));
+    }
+  else if (leaving_state == HAS_CHILDREN)
+    {
+      svn_ra_serf__xml_note(xes, ITEM, "has-children", "yes");
+    }
+  else if (leaving_state == SUBTRACTIVE_MERGE)
+    {
+      svn_ra_serf__xml_note(xes, ITEM, "subtractive-merge", "yes");
+    }
+  else
+    {
+      char action;
 
-      apr_hash_set(info->log_entry->changed_paths2, path, APR_HASH_KEY_STRING,
-                   info->tmp_path);
-      svn_ra_serf__xml_pop_state(parser);
+      if (leaving_state == ADDED_PATH)
+        action = 'A';
+      else if (leaving_state == REPLACED_PATH)
+        action = 'R';
+      else if (leaving_state == DELETED_PATH)
+        action = 'D';
+      else
+        {
+          SVN_ERR_ASSERT(leaving_state == MODIFIED_PATH);
+          action = 'M';
+        }
+
+      SVN_ERR(collect_path(log_ctx->collect_paths, action, cdata, attrs));
     }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-cdata_log(svn_ra_serf__xml_parser_t *parser,
-          const char *data,
-          apr_size_t len,
-          apr_pool_t *scratch_pool)
-{
-  log_context_t *log_ctx = parser->user_data;
-  log_state_e state;
-  log_info_t *info;
-
-  UNUSED_CTX(log_ctx);
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  switch (state)
-    {
-      case VERSION:
-      case CREATOR:
-      case DATE:
-      case COMMENT:
-      case REVPROP:
-      case ADDED_PATH:
-      case REPLACED_PATH:
-      case DELETED_PATH:
-      case MODIFIED_PATH:
-        svn_stringbuf_appendbytes(info->tmp, data, len);
-        break;
-
-      default:
-        break;
-    }
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 create_log_body(serf_bucket_t **body_bkt,
@@ -636,11 +521,11 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_context_t *log_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_ra_serf__xml_context_t *xmlctx;
   svn_boolean_t want_custom_revprops;
   svn_revnum_t peg_rev;
   svn_error_t *err;
-  const char *relative_url, *basecoll_url, *req_url;
+  const char *req_url;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
   log_ctx->pool = pool;
@@ -655,7 +540,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->include_merged_revisions = include_merged_revisions;
   log_ctx->revprops = revprops;
   log_ctx->nest_level = 0;
-  log_ctx->done = FALSE;
 
   want_custom_revprops = FALSE;
   if (revprops)
@@ -695,12 +579,16 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                         NULL, NULL, peg_rev, NULL, pool));
+  SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                      session, NULL /* conn */,
+                                      NULL /* url */, peg_rev,
+                                      pool, pool));
 
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
-
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  xmlctx = svn_ra_serf__xml_context_create(log_ttable,
+                                           log_opened, log_closed, NULL,
+                                           log_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -710,27 +598,12 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = log_ctx;
-  parser_ctx->start = start_log;
-  parser_ctx->end = end_log;
-  parser_ctx->cdata = cdata_log;
-  parser_ctx->done = &log_ctx->done;
-  parser_ctx->status_code = &log_ctx->status_code;
-
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
-  handler->response_baton = parser_ctx;
-
-  svn_ra_serf__request_create(handler);
-
-  err = svn_ra_serf__context_run_wait(&log_ctx->done, session, pool);
+  err = svn_ra_serf__context_run_one(handler, pool);
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(log_ctx->status_code,
+              svn_ra_serf__error_on_status(handler->sline.code,
                                            req_url,
-                                           parser_ctx->location),
+                                           handler->location),
               err));
 
   return SVN_NO_ERROR;

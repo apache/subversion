@@ -59,7 +59,7 @@
 #include "svn_private_config.h"
 #include "private/svn_io_private.h"
 #include "private/svn_wc_private.h"
-
+#include "private/svn_subr_private.h"
 
 
 struct svn_wc_committed_queue_t
@@ -264,7 +264,10 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 
   /* Only check kind after processing the node itself. The node might
      have been deleted */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                               TRUE /* allow_missing */,
+                               TRUE /* show_hidden */,
+                               scratch_pool));
 
   if (recurse && kind == svn_kind_dir)
     {
@@ -1805,25 +1808,30 @@ revert_restore(svn_wc__db_t *db,
                 }
               else
                 {
-                  svn_boolean_t read_only;
-                  svn_string_t *needs_lock_prop;
-
-                  SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
-                                                     scratch_pool));
-
-                  needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
-                                                 APR_HASH_KEY_STRING);
-                  if (needs_lock_prop && !read_only)
+                  if (status == svn_wc__db_status_normal)
                     {
-                      SVN_ERR(svn_io_set_file_read_only(local_abspath,
-                                                        FALSE, scratch_pool));
-                      notify_required = TRUE;
-                    }
-                  else if (!needs_lock_prop && read_only)
-                    {
-                      SVN_ERR(svn_io_set_file_read_write(local_abspath,
-                                                         FALSE, scratch_pool));
-                      notify_required = TRUE;
+                      svn_boolean_t read_only;
+                      svn_string_t *needs_lock_prop;
+
+                      SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
+                                                         scratch_pool));
+
+                      needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
+                                                     APR_HASH_KEY_STRING);
+                      if (needs_lock_prop && !read_only)
+                        {
+                          SVN_ERR(svn_io_set_file_read_only(local_abspath,
+                                                            FALSE,
+                                                            scratch_pool));
+                          notify_required = TRUE;
+                        }
+                      else if (!needs_lock_prop && read_only)
+                        {
+                          SVN_ERR(svn_io_set_file_read_write(local_abspath,
+                                                             FALSE,
+                                                             scratch_pool));
+                          notify_required = TRUE;
+                        }
                     }
 
 #if !defined(WIN32) && !defined(__OS2__)
@@ -2119,7 +2127,9 @@ revert_partial(svn_wc__db_t *db,
         {
           svn_kind_t kind;
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
+                                       FALSE /* allow_missing */,
+                                       FALSE /* show_hidden */,
                                        iterpool));
           if (kind != svn_kind_file)
             continue;
@@ -2250,6 +2260,71 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                                                        scratch_pool));
 }
 
+
+typedef struct get_pristine_lazyopen_baton_t
+{
+  svn_wc_context_t *wc_ctx;
+  const char *wri_abspath;
+  const svn_checksum_t *checksum;
+
+} get_pristine_lazyopen_baton_t;
+
+
+/* Implements svn_stream_lazyopen_func_t */
+static svn_error_t *
+get_pristine_lazyopen_func(svn_stream_t **stream,
+                           void *baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  get_pristine_lazyopen_baton_t *b = baton;
+  const svn_checksum_t *sha1_checksum;
+
+  /* svn_wc__db_pristine_read() wants a SHA1, so if we have an MD5,
+     we'll use it to lookup the SHA1. */
+  if (b->checksum->kind == svn_checksum_sha1)
+    sha1_checksum = b->checksum;
+  else
+    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, b->wc_ctx->db,
+                                         b->wri_abspath, b->checksum,
+                                         scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, b->wc_ctx->db,
+                                   b->wri_abspath, sha1_checksum,
+                                   result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
+                                          svn_wc_context_t *wc_ctx,
+                                          const char *wri_abspath,
+                                          const svn_checksum_t *checksum,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_boolean_t present;
+  
+  *contents = NULL;
+
+  SVN_ERR(svn_wc__db_pristine_check(&present, wc_ctx->db, wri_abspath,
+                                    checksum, scratch_pool));
+
+  if (present)
+    {
+      get_pristine_lazyopen_baton_t *gpl_baton;
+
+      gpl_baton = apr_pcalloc(result_pool, sizeof(*gpl_baton));
+      gpl_baton->wc_ctx = wc_ctx;
+      gpl_baton->wri_abspath = wri_abspath;
+      gpl_baton->checksum = checksum;
+      
+      *contents = svn_stream_lazyopen_create(get_pristine_lazyopen_func,
+                                             gpl_baton, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
@@ -2631,8 +2706,12 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  struct get_cl_fn_baton gnb = { wc_ctx->db, NULL,
-                                 callback_func, callback_baton };
+  struct get_cl_fn_baton gnb;
+
+  gnb.db = wc_ctx->db;
+  gnb.clhash = NULL;
+  gnb.callback_func = callback_func;
+  gnb.callback_baton = callback_baton;
 
   if (changelist_filter)
     SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelist_filter,

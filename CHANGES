@@ -19,9 +19,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * new SVNUseUTF8 configuration option for mod_dav_svn (issue #2487)
     * new SVNHooksEnv configuration option for mod_dav_svn (r1239966)
     * new --ignore-properties option for 'svn diff' (r1239553. -617)
+    * new --properties-only option for 'svn diff' (r1336110)
     * new --patch-compatible option for 'svn diff' (r1239561)
     * new SvnPubSub distributed commit hooks (tools/server-side/svnpubsub)
     * 'svn diff' can compare arbitrary files and directories (r1310291, et al)
+    * ra_serf avoids re-downloading content present in pristine store (r1333936)
+    * 'svn mergeinfo' now honors the --revision (-r) option (issue #4199)
 
   - Client-side bugfixes:
     *
@@ -30,7 +33,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     *
 
   - Other tool improvements and bugfixes:
-    *
+    * 'svnmucc' promoted to first-class supported utility (issue #3308)
   
  Developer-visible changes:
   - General:
@@ -44,21 +47,54 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.5
-(26 Apr 2012, from /branches/1.7.x)
+(17 May 2012, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.5
 
-  User-visible changes:
-    * avoid potential segfault when canonicalizing properties (r1296369)
-    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
-    * improve memory and file-handle management with externals (issue #4130)
-    * ra_serf: convert assertions to errors: MERGE fails (r1302417)
-    * mod_dav_svn: error on MERGE of non-existent resource (r1298343)
-    * fix undefined behaviour during multi-segment reverse merges (issue #4144)
-    * fix potential pool lifetime problem in the diff code (r1311935)
+ User-visible changes:
+  - Client- and server-side bugfixes:
+    * http: report deleted-revision upon delete during update (r1327474)
 
-  Developer-visible changes:
+  - Client-side bugfixes:
+    * avoid potential segfault when canonicalizing properties (r1296369)
+    * improve memory and file-handle management with externals (issue #4130)
+    * serf: convert assertions to "MERGE failed" errors (r1302417)
+    * fix undefined behaviour during multi-segment reverse merges (issue #4144)
+    * fix potential use of already freed memory during diff operation (r1311935)
+    * improve performance of scan for the working copy root (r1306334)
+    * cmdline: fix segfault during 'svn diff' argument processing (r1311702)
+    * fix regression from 1.6 in update with --depth option (issue #4136)
+    * propset: avoid undefined behaviour in error path (r1325361)
+    * reset sqlite statements, partly for sqlite-3.7.11 compat (r1328846, et al)
+    * fix assertion during 'svn diff -r BASE:HEAD ^/trunk' (issue #4161)
+    * notify upon 'update' just removing locks on files (r1329876)
+    * neon: fix potential use of freed memory during commits (r1329388)
+    * 'status --xml' doesn't show repository deletes correctly (issue #4167)
+    * fix assert on svn:externals with drive letter on Windows (issue #4073)
+    * fix 'svn update --depth=empty' against 1.4 servers (issue #4046)
+    * handle missing svn:date reported by svnserve gracefully (r1306111)
+    * fix merges which first add a subtree and then delete it (issue #4166)
+    * fix a regression with checkout of file externals (issue #4087)
+    * don't add spurious mergeinfo to subtrees in edge-case merge (issue #4169)
+    * improve performance of status on large working copies (issue #4178)
+
+  - Server-side bugfixes:
+    * fix non-fatal FSFS corruption bug with concurrent commits (issue #4129)
+    * mod_dav_svn: raise an error on MERGE of non-existent resource (r1298343)
+    * mod_dav_svn: support compiling/running under httpd-2.4 (r1232267)
+    * mod_dav_svn: forbid BDB repositories under httpd's event MPM (issue #4157)
+
+  - Other tool improvements and bugfixes:
+    * emacs support: updates to dsvn.el and vc-svn.el (r1200896, et al)
+
+ Developer-visible changes:
+  - General:
+    * windows example distribution scripts: include svnrdump (r1295007)
+    * fix running the test suite with jsvn (r1335555)
+
+  - Bindings:
     * swig-py tests: avoid FAILs on APR hash order (r1296137, r1292248)
     * swig-rb tests: avoid FAILs on APR hash order (r1310535, r1310594)
+    * swig-pl: Improved perl detection in gen-make.py (r1291797, r1291810)
 
 
 Version 1.7.4

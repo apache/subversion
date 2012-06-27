@@ -374,11 +374,9 @@ svn_error_t *
 svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
-                        svn_boolean_t force_comparison,
+                        svn_boolean_t unused,
                         apr_pool_t *scratch_pool)
 {
-  /* ### We ignore FORCE_COMPARISON, but we also fixed its only
-         remaining use-case */
   return svn_wc__internal_file_modified_p(modified_p, wc_ctx->db,
                                           local_abspath, FALSE, scratch_pool);
 }
@@ -398,6 +396,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   const apr_array_header_t *conflicts;
   int i;
   svn_boolean_t conflicted;
+  svn_boolean_t resolved_text = FALSE;
+  svn_boolean_t resolved_props = FALSE;
 
   if (text_conflicted_p)
     *text_conflicted_p = FALSE;
@@ -466,7 +466,12 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                                           scratch_pool));
 
                 *text_conflicted_p = (kind == svn_node_file);
+
+                if (*text_conflicted_p)
+                  break;
               }
+
+            resolved_text = TRUE; /* Remove in-db conflict marker */
             break;
 
           case svn_wc_conflict_kind_property:
@@ -479,8 +484,11 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                                           scratch_pool));
 
                 *prop_conflicted_p = (kind == svn_node_file);
-              }
 
+                if (*prop_conflicted_p)
+                  break;
+              }
+            resolved_props = TRUE; /* Remove in-db conflict marker */
             break;
 
           case svn_wc_conflict_kind_tree:
@@ -494,6 +502,23 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
             break;
         }
     }
+
+  if (resolved_text || resolved_props)
+    {
+      svn_boolean_t own_lock;
+
+      /* The marker files are missing, so "repair" wc.db if we can */
+      SVN_ERR(svn_wc__db_wclock_owns_lock(&own_lock, db, local_abspath, FALSE,
+                                          scratch_pool));
+      if (own_lock)
+        SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
+                                            resolved_text,
+                                            resolved_props,
+                                            FALSE /* resolved_tree */,
+                                            NULL /* work_items */,
+                                            scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 

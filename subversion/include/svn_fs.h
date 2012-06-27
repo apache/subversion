@@ -39,6 +39,7 @@
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
+#include "svn_editor.h"
 
 
 #ifdef __cplusplus
@@ -84,6 +85,12 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.7.
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS      "fsfs-cache-fulltexts"
+
+/** Enable / disable revprop caching for a FSFS repository.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_REVPROPS       "fsfs-cache-revprops"
 
 /* See also svn_fs_type(). */
 /** @since New in 1.1. */
@@ -801,6 +808,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
 /** @} */
 
 /**
@@ -857,7 +865,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
- * the conflict in @a txn, with the same lifetime as @a txn;
+ * the conflict in @a txn, allocated within @a pool;
  * otherwise, set @a *conflict_p to NULL.
  *
  * If the commit succeeds, @a txn is invalid.
@@ -872,6 +880,25 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
  * something else went wrong in post commit FS processing.
+ *
+ * @note See api-errata/1.8/fs001.txt for information on how this
+ * function was documented in versions prior to 1.8.
+ *
+ * ### need to document this better. there are four combinations of
+ * ### return values:
+ * ### 1) err=NULL. conflict=NULL. new_rev is valid
+ * ### 2) err=SVN_ERR_FS_CONFLICT. conflict is set. new_rev=SVN_INVALID_REVNUM
+ * ### 3) err=!NULL. conflict=NULL. new_rev is valid
+ * ### 4) err=!NULL. conflict=NULL. new_rev=SVN_INVALID_REVNUM
+ * ###
+ * ### some invariants:
+ * ###   *conflict_p will be non-NULL IFF SVN_ERR_FS_CONFLICT
+ * ###   if *conflict_p is set (and SVN_ERR_FS_CONFLICT), then new_rev
+ * ###     will always be SVN_INVALID_REVNUM
+ * ###   *conflict_p will always be initialized to NULL, or to a valid
+ * ###     conflict string
+ * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
+ * ###     to a valid, committed revision number
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
@@ -995,6 +1022,118 @@ svn_error_t *
 svn_fs_change_txn_props(svn_fs_txn_t *txn,
                         const apr_array_header_t *props,
                         apr_pool_t *pool);
+
+/** @} */
+
+
+/** Editors
+ *
+ * ### docco
+ *
+ * @defgroup svn_fs_editor Transaction editors
+ * @{
+ */
+
+/**
+ * Create a new filesystem transaction, based on based on the youngest
+ * revision of @a fs, and return its name @a *txn_name and an @a *editor
+ * that can be used to make changes into it.
+ *
+ * @a flags determines transaction enforcement behaviors, and is composed
+ * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
+ * property of the underlying transaction, and will not change if multiple
+ * editors are used to refer to that transaction (see @a autocommit, below).
+ * 
+ * @note If you're building a txn for committing, you probably don't want
+ * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
+ * honors the repository's hook configurations.
+ *
+ * When svn_editor_complete() is called for @a editor, internal resources
+ * will be cleaned and nothing more will happen. If you wish to commit the
+ * transaction, call svn_fs_editor_commit() instead. It is illegal to call
+ * both; the second call will return #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION.
+ *
+ * @see svn_fs_commit_txn()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_create(svn_editor_t **editor,
+                     const char **txn_name,
+                     svn_fs_t *fs,
+                     apr_uint32_t flags,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+
+/**
+ * Like svn_fs_editor_create(), but open an existing transaction
+ * @a txn_name and continue editing it.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_create_for(svn_editor_t **editor,
+                         svn_fs_t *fs,
+                         const char *txn_name,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/**
+ * Commit the transaction represented by @a editor.
+ *
+ * If the commit to the filesystem succeeds, then @a *revision will be set
+ * to the resulting revision number. Note that further errors may occur,
+ * as described below. If the commit process does not succeed, for whatever
+ * reason, then @a *revision will be set to #SVN_INVALID_REVNUM.
+ *
+ * If a conflict occurs during the commit, then @a *conflict_path will
+ * be set to a path that caused the conflict. #SVN_NO_ERROR will be returned.
+ * Callers may want to construct an #SVN_ERR_FS_CONFLICT error with a
+ * message that incorporates @a *conflict_path.
+ *
+ * If a non-conflict error occurs during the commit, then that error will
+ * be returned.
+ * As is standard with any Subversion API, @a revision, @a post_commit_err,
+ * and @a conflict_path (the OUT parameters) have an indeterminate value if
+ * an error is returned.
+ *
+ * If the commit completes (and a revision is returned in @a *revision), then
+ * it is still possible for an error to occur during the cleanup process.
+ * Any such error will be returned in @a *post_commit_err. The caller must
+ * properly use or clear that error.
+ *
+ * If svn_editor_complete() has already been called on @a editor, then
+ * #SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION will be returned.
+ *
+ * @note After calling this function, @a editor will be marked as completed
+ * and no further operations may be performed on it. The underlying
+ * transaction will either be committed or aborted once this function is
+ * called. It cannot be recovered for additional work.
+ *
+ * @a result_pool will be used to allocate space for @a conflict_path.
+ * @a scratch_pool will be used for all temporary allocations.
+ *
+ * @note To summarize, there are three possible outcomes of this function:
+ * successful commit (with or without an associated @a *post_commit_err);
+ * failed commit due to a conflict (reported via @a *conflict_path); and
+ * failed commit for some other reason (reported via the returned error.)
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_fs_editor_commit(svn_revnum_t *revision,
+                     svn_error_t **post_commit_err,
+                     const char **conflict_path,
+                     svn_editor_t *editor,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
 
 /** @} */
 
@@ -1500,13 +1639,15 @@ svn_fs_copied_from(svn_revnum_t *rev_p,
 /** Set @a *root_p and @a *path_p to the revision root and path of the
  * destination of the most recent copy event that caused @a path to
  * exist where it does in @a root, or to NULL if no such copy exists.
- * When non-NULL, allocate @a *root_p and @a *path_p in @a pool.
  *
  * @a *path_p might be a parent of @a path, rather than @a path
  * itself.  However, it will always be the deepest relevant path.
  * That is, if a copy occurs underneath another copy in the same txn,
  * this function makes sure to set @a *path_p to the longest copy
  * destination path that is still a parent of or equal to @a path.
+ *
+ * Values returned in @a *root_p and @a *path_p will be allocated
+ * from @a pool.
  *
  * @since New in 1.3.
  */

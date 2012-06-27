@@ -1208,6 +1208,17 @@ def revert_permissions_only(sbox):
                                        'revert', sbox.ospath('A/B/E/beta'))
     is_executable(sbox.ospath('A/B/E/beta'))
 
+  # copied file is always writeable
+  sbox.simple_update()
+  expected_output = ["A         %s\n" % sbox.ospath('A/B/E2')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'copy',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
+  is_writable(sbox.ospath('A/B/E2/alpha'))
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'revert', sbox.ospath('A/B/E2/alpha'))
+  is_writable(sbox.ospath('A/B/E2/alpha'))
+
 @XFail()
 @Issue(3851)
 def revert_copy_depth_files(sbox):
@@ -1600,6 +1611,12 @@ def revert_with_unversioned_targets(sbox):
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
+def revert_nonexistent(sbox):
+  'svn revert -R nonexistent'
+  sbox.build(read_only=True)
+  svntest.actions.run_and_verify_svn(None, 'Skipped.*nonexistent', [],
+                                     'revert', '-R', sbox.ospath('nonexistent'))
+
 ########################################################################
 # Run the tests
 
@@ -1638,6 +1655,7 @@ test_list = [ None,
               revert_no_text_change_conflict,
               revert_no_text_change_conflict_recursive,
               revert_with_unversioned_targets,
+              revert_nonexistent,
              ]
 
 if __name__ == '__main__':

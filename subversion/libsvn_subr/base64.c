@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_base64.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 /* When asked to format the the base64-encoded output as multiple lines,
    we put this many chars in each line (plus one new line char) unless
@@ -305,9 +306,9 @@ struct decode_baton {
 static APR_INLINE void
 decode_group(const unsigned char *in, char *out)
 {
-  out[0] = (in[0] << 2) | (in[1] >> 4);
-  out[1] = ((in[1] & 0xf) << 4) | (in[2] >> 2);
-  out[2] = ((in[2] & 0x3) << 6) | in[3];
+  out[0] = (char)((in[0] << 2) | (in[1] >> 4));
+  out[1] = (char)(((in[1] & 0xf) << 4) | (in[2] >> 2));
+  out[2] = (char)(((in[2] & 0x3) << 6) | in[3]);
 }
 
 /* Lookup table for base64 characters; reverse_base64[ch] gives a
@@ -414,9 +415,9 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
      (*inbuflen+len) is encoded data length
      (*inbuflen+len)/4 is the number of complete 4-bytes sets
      (*inbuflen+len)/4*3 is the number of decoded bytes
-     (*inbuflen+len)/4*3+1 is the number of decoded bytes plus a null
+     svn_stringbuf_ensure will add an additional byte for the terminating 0.
   */
-  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3 + 1);
+  svn_stringbuf_ensure(str, str->len + ((*inbuflen + len) / 4) * 3);
 
   while ( !*done && p < end )
     {
@@ -560,7 +561,7 @@ svn_stringbuf_t *
 svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
 {
   svn_checksum_t *checksum
-    = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+    = svn_checksum__from_digest_md5(digest, pool);
 
   return base64_from_checksum(checksum, pool);
 }

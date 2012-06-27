@@ -57,8 +57,8 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                void *baton);
 
 /* The size of our per-connection read and write buffers. */
-#define SVN_RA_SVN__READBUF_SIZE 4096
-#define SVN_RA_SVN__WRITEBUF_SIZE 4096
+#define SVN_RA_SVN__READBUF_SIZE (4*4096)
+#define SVN_RA_SVN__WRITEBUF_SIZE (4*4096)
 
 /* Create forward reference */
 typedef struct svn_ra_svn__session_baton_t svn_ra_svn__session_baton_t;
@@ -79,7 +79,7 @@ struct svn_ra_svn_conn_st {
   char *read_ptr;
   char *read_end;
   char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
-  int write_pos;
+  apr_size_t write_pos;
   const char *uuid;
   const char *repos_root;
   ra_svn_block_handler_t block_handler;

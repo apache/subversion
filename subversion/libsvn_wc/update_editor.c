@@ -50,6 +50,7 @@
 #include "translate.h"
 #include "workqueue.h"
 
+#include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
@@ -961,8 +962,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* Tell the file baton about the new text base's checksums. */
       fb->new_text_base_md5_checksum =
-        svn_checksum__from_digest(hb->new_text_base_md5_digest,
-                                  svn_checksum_md5, fb->pool);
+        svn_checksum__from_digest_md5(hb->new_text_base_md5_digest, fb->pool);
       fb->new_text_base_sha1_checksum =
         svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
 
@@ -1302,6 +1302,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                      apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *repos_root_url = NULL;
+  const char *repos_uuid = NULL;
   const char *left_repos_relpath;
   svn_revnum_t left_revision;
   svn_node_kind_t left_kind;
@@ -1348,7 +1349,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
                                        &added_repos_relpath,
                                        &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &repos_uuid,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        NULL, eb->db, local_abspath,
                                        result_pool, scratch_pool));
 
@@ -1365,6 +1367,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       left_revision = SVN_INVALID_REVNUM;
       left_repos_relpath = NULL;
       repos_root_url = eb->repos_root;
+      repos_uuid = eb->repos_uuid;
     }
   else
     {
@@ -1384,12 +1387,11 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                        &left_revision,
                                        &left_repos_relpath,
                                        &repos_root_url,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &repos_uuid,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       eb->db,
-                                       local_abspath,
-                                       result_pool,
-                                       scratch_pool));
+                                       eb->db, local_abspath,
+                                       result_pool, scratch_pool));
       /* Translate the node kind. */
       if (base_kind == svn_kind_file
           || base_kind == svn_kind_symlink)
@@ -1441,17 +1443,19 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
      * Send an 'empty' left revision. */
     src_left_version = NULL;
   else
-    src_left_version = svn_wc_conflict_version_create(repos_root_url,
-                                                      left_repos_relpath,
-                                                      left_revision,
-                                                      left_kind,
-                                                      result_pool);
+    src_left_version = svn_wc_conflict_version_create2(repos_root_url,
+                                                       repos_uuid,
+                                                       left_repos_relpath,
+                                                       left_revision,
+                                                       left_kind,
+                                                       result_pool);
 
-  src_right_version = svn_wc_conflict_version_create(repos_root_url,
-                                                     right_repos_relpath,
-                                                     *eb->target_revision,
-                                                     their_node_kind,
-                                                     result_pool);
+  src_right_version = svn_wc_conflict_version_create2(repos_root_url,
+                                                      repos_uuid,
+                                                      right_repos_relpath,
+                                                      *eb->target_revision,
+                                                      their_node_kind,
+                                                      result_pool);
 
   *pconflict = svn_wc_conflict_description_create_tree2(
                    local_abspath, conflict_node_kind,
@@ -3888,7 +3892,6 @@ merge_file(svn_skel_t **work_items,
   struct dir_baton *pb = fb->dir_baton;
   svn_boolean_t is_locally_modified;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  svn_skel_t *work_item;
   const char *working_abspath = fb->moved_to_abspath ? fb->moved_to_abspath
                                                      : fb->local_abspath;
 
@@ -4057,26 +4060,6 @@ merge_file(svn_skel_t **work_items,
               *install_pristine = TRUE;
             }
         }
-    }
-
-  /* Installing from a pristine will handle timestamps and recording.
-     However, if we are NOT creating a new working copy file, then create
-     work items to handle the recording of the timestamp and working-size. */
-  if (!*install_pristine
-      && !is_locally_modified)
-    {
-      apr_time_t set_date = 0;
-
-      if (eb->use_commit_times && last_changed_date != 0)
-        {
-          set_date = last_changed_date;
-        }
-
-      SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
-                                               eb->db, working_abspath,
-                                               set_date,
-                                               result_pool, scratch_pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 
   /* Set the returned content state. */
@@ -4560,23 +4543,32 @@ close_file(void *file_baton,
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
-  if (eb->notify_func && !fb->already_notified && fb->edited)
+  if (eb->notify_func && !fb->already_notified
+      && (fb->edited || lock_state == svn_wc_notify_lock_state_unlocked))
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->shadowed)
-        action = fb->adding_file
-                        ? svn_wc_notify_update_shadowed_add
-                        : svn_wc_notify_update_shadowed_update;
-      else if (fb->obstruction_found || fb->add_existed)
+      if (fb->edited)
         {
-          if (content_state != svn_wc_notify_state_conflicted)
-            action = svn_wc_notify_exists;
+          if (fb->shadowed)
+            action = fb->adding_file
+                            ? svn_wc_notify_update_shadowed_add
+                            : svn_wc_notify_update_shadowed_update;
+          else if (fb->obstruction_found || fb->add_existed)
+            {
+              if (content_state != svn_wc_notify_state_conflicted)
+                action = svn_wc_notify_exists;
+            }
+          else if (fb->adding_file)
+            {
+              action = svn_wc_notify_update_add;
+            }
         }
-      else if (fb->adding_file)
+      else
         {
-          action = svn_wc_notify_update_add;
+          SVN_ERR_ASSERT(lock_state == svn_wc_notify_lock_state_unlocked);
+          action = svn_wc_notify_update_broken_lock;
         }
 
       /* If the file was moved-away, notify for the moved-away node.

@@ -399,8 +399,8 @@ svn_path_compare_paths(const char *path1,
   apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
   apr_size_t i = 0;
 
-  assert(is_canonical(path1, strlen(path1)));
-  assert(is_canonical(path2, strlen(path2)));
+  assert(is_canonical(path1, path1_len));
+  assert(is_canonical(path2, path2_len));
 
   /* Skip past common prefix. */
   while (i < min_len && path1[i] == path2[i])
@@ -1102,15 +1102,19 @@ svn_path_cstring_from_utf8(const char **path_apr,
                            const char *path_utf8,
                            apr_pool_t *pool)
 {
+#if !defined(WIN32) && !defined(DARWIN)
   svn_boolean_t path_is_utf8;
   SVN_ERR(get_path_encoding(&path_is_utf8, pool));
   if (path_is_utf8)
+#endif
     {
       *path_apr = apr_pstrdup(pool, path_utf8);
       return SVN_NO_ERROR;
     }
+#if !defined(WIN32) && !defined(DARWIN)
   else
     return svn_utf_cstring_from_utf8(path_apr, path_utf8, pool);
+#endif
 }
 
 
@@ -1119,15 +1123,19 @@ svn_path_cstring_to_utf8(const char **path_utf8,
                          const char *path_apr,
                          apr_pool_t *pool)
 {
+#if !defined(WIN32) && !defined(DARWIN)
   svn_boolean_t path_is_utf8;
   SVN_ERR(get_path_encoding(&path_is_utf8, pool));
   if (path_is_utf8)
+#endif
     {
       *path_utf8 = apr_pstrdup(pool, path_apr);
       return SVN_NO_ERROR;
     }
+#if !defined(WIN32) && !defined(DARWIN)
   else
     return svn_utf_cstring_to_utf8(path_utf8, path_apr, pool);
+#endif
 }
 
 
@@ -1160,8 +1168,8 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
         svn_stringbuf_appendbytes(retstr, path + copied,
                                   i - copied);
 
-      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' null */
-      svn_stringbuf_ensure(retstr, retstr->len + 5);
+      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
+      svn_stringbuf_ensure(retstr, retstr->len + 4);
       /*### The backslash separator doesn't work too great with Windows,
          but it's what we'll use for consistency with invalid utf8
          formatting (until someone has a better idea) */

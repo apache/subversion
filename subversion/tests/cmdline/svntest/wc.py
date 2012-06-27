@@ -98,7 +98,7 @@ _re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
-_re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
+_re_parse_checkout = re.compile('^([RMAGCUDE_ B][MAGCUDE_ ])'
                                 '([B ])'
                                 '([CAUD ])\s+'
                                 '(.+)')

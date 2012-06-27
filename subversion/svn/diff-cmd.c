@@ -172,9 +172,9 @@ svn_cl__diff(apr_getopt_t *os,
   apr_pool_t *iterpool;
   svn_boolean_t pegged_diff = FALSE;
   svn_boolean_t show_copies_as_adds =
-    opt_state->use_patch_diff_format ? TRUE : opt_state->show_copies_as_adds;
-  svn_boolean_t ignore_prop_diff =
-    opt_state->use_patch_diff_format ? TRUE : opt_state->ignore_props;
+    opt_state->diff.patch_compatible || opt_state->diff.show_copies_as_adds;
+  svn_boolean_t ignore_properties =
+    opt_state->diff.patch_compatible || opt_state->diff.ignore_properties;
   int i;
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
@@ -194,7 +194,7 @@ svn_cl__diff(apr_getopt_t *os,
       svn_stringbuf_t *sb;
 
       /* Check that the --summarize is passed as well. */
-      if (!opt_state->summarize)
+      if (!opt_state->diff.summarize)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'--xml' option only valid with "
                                   "'--summarize' option"));
@@ -349,14 +349,14 @@ svn_cl__diff(apr_getopt_t *os,
           else
             target2 = svn_dirent_join(new_target, path, iterpool);
 
-          if (opt_state->summarize)
+          if (opt_state->diff.summarize)
             SVN_ERR(svn_client_diff_summarize2
                     (target1,
                      &opt_state->start_revision,
                      target2,
                      &opt_state->end_revision,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
+                     ! opt_state->diff.notice_ancestry,
                      opt_state->changelists,
                      summarize_func, &target1,
                      ctx, iterpool));
@@ -369,12 +369,13 @@ svn_cl__diff(apr_getopt_t *os,
                      &(opt_state->end_revision),
                      NULL,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
-                     opt_state->no_diff_deleted,
+                     ! opt_state->diff.notice_ancestry,
+                     opt_state->diff.no_diff_deleted,
                      show_copies_as_adds,
                      opt_state->force,
-                     ignore_prop_diff,
-                     opt_state->use_git_diff_format,
+                     ignore_properties,
+                     opt_state->diff.properties_only,
+                     opt_state->diff.use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outstream,
                      errstream,
@@ -395,14 +396,14 @@ svn_cl__diff(apr_getopt_t *os,
             peg_revision.kind = svn_path_is_url(path)
               ? svn_opt_revision_head : svn_opt_revision_working;
 
-          if (opt_state->summarize)
+          if (opt_state->diff.summarize)
             SVN_ERR(svn_client_diff_summarize_peg2
                     (truepath,
                      &peg_revision,
                      &opt_state->start_revision,
                      &opt_state->end_revision,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
+                     ! opt_state->diff.notice_ancestry,
                      opt_state->changelists,
                      summarize_func, &truepath,
                      ctx, iterpool));
@@ -415,12 +416,13 @@ svn_cl__diff(apr_getopt_t *os,
                      &opt_state->end_revision,
                      NULL,
                      opt_state->depth,
-                     ! opt_state->notice_ancestry,
-                     opt_state->no_diff_deleted,
+                     ! opt_state->diff.notice_ancestry,
+                     opt_state->diff.no_diff_deleted,
                      show_copies_as_adds,
                      opt_state->force,
-                     ignore_prop_diff,
-                     opt_state->use_git_diff_format,
+                     ignore_properties,
+                     opt_state->diff.properties_only,
+                     opt_state->diff.use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outstream,
                      errstream,

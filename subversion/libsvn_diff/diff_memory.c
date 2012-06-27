@@ -123,7 +123,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   diff_mem_baton_t *mem_baton = baton;
   source_tokens_t *src = &(mem_baton->sources[datasource_to_index(datasource)]);
 
-  if (src->tokens->nelts > src->next_token)
+  if ((apr_size_t)src->tokens->nelts > src->next_token)
     {
       /* There are actually tokens to be returned */
       char *buf = mem_baton->normalization_buf[0];
@@ -808,15 +808,13 @@ output_merge_token_range(apr_size_t *lines_printed_p,
 static svn_error_t *
 output_marker_eol(merge_output_baton_t *btn)
 {
-  apr_size_t len = strlen(btn->marker_eol);
-  return svn_stream_write(btn->output_stream, btn->marker_eol, &len);
+  return svn_stream_puts(btn->output_stream, btn->marker_eol);
 }
 
 static svn_error_t *
 output_merge_marker(merge_output_baton_t *btn, int idx)
 {
-  apr_size_t len = strlen(btn->markers[idx]);
-  SVN_ERR(svn_stream_write(btn->output_stream, btn->markers[idx], &len));
+  SVN_ERR(svn_stream_puts(btn->output_stream, btn->markers[idx]));
   return output_marker_eol(btn);
 }
 
@@ -924,7 +922,7 @@ output_conflict_with_context(void *baton,
   if (btn->output_stream == btn->context_saver->stream)
     {
       if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
-        SVN_ERR(svn_stream_printf(btn->real_output_stream, btn->pool, "@@\n"));
+        SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
 

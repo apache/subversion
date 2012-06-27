@@ -30,6 +30,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_temp_serializer.h"
+#include "private/svn_subr_private.h"
 
 #include "temp_serializer.h"
 
@@ -47,16 +48,16 @@ encode_number(apr_int64_t number, char *key_buffer)
   if (number < 0)
   {
     number = -number;
-    *key_buffer = (number & 63) + ' ' + 65;
+    *key_buffer = (char)((number & 63) + ' ' + 65);
   }
   else
-    *key_buffer = (number & 63) + ' ' + 1;
+    *key_buffer = (char)((number & 63) + ' ' + 1);
   number /= 64;
 
   /* write 7 bits / byte until no significant bits are left */
   while (number)
   {
-    *++key_buffer = (number & 127) + ' ' + 1;
+    *++key_buffer = (char)((number & 127) + ' ' + 1);
     number /= 128;
   }
 
@@ -64,10 +65,6 @@ encode_number(apr_int64_t number, char *key_buffer)
   return key_buffer;
 }
 
-/* Prepend the NUMBER to the STRING in a space efficient way that no other
- * (number,string) combination can produce the same result.
- * Allocate temporaries as well as the result from POOL.
- */
 const char*
 svn_fs_fs__combine_number_and_string(apr_int64_t number,
                                      const char *string,
@@ -91,10 +88,6 @@ svn_fs_fs__combine_number_and_string(apr_int64_t number,
   return key;
 }
 
-/* Combine the numbers A and B a space efficient way that no other
- * combination of numbers can produce the same result.
- * Allocate temporaries as well as the result from POOL.
- */
 const char*
 svn_fs_fs__combine_two_numbers(apr_int64_t a,
                                apr_int64_t b,
@@ -367,7 +360,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 static apr_hash_t *
 deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
 {
-  apr_hash_t *result = apr_hash_make(pool);
+  apr_hash_t *result = svn_hash__make(pool);
   apr_size_t i;
   apr_size_t count;
   svn_fs_dirent_t *entry;
@@ -602,7 +595,7 @@ serialize_cstring_array(svn_temp_serializer__context_t *context,
 {
   apr_size_t i;
   const char **entries = *strings;
-  
+
   /* serialize COUNT entries pointers (the array) */
   svn_temp_serializer__push(context,
                             (const void * const *)strings,
@@ -623,7 +616,7 @@ serialize_svn_string_array(svn_temp_serializer__context_t *context,
 {
   apr_size_t i;
   const svn_string_t **entries = *strings;
-  
+
   /* serialize COUNT entries pointers (the array) */
   svn_temp_serializer__push(context,
                             (const void * const *)strings,
@@ -653,14 +646,14 @@ svn_fs_fs__serialize_properties(void **data,
   properties.count = apr_hash_count(hash);
   properties.keys = apr_palloc(pool, sizeof(const char*) * (properties.count + 1));
   properties.values = apr_palloc(pool, sizeof(const char*) * properties.count);
-  
+
   /* populate it with the hash entries */
   for (hi = apr_hash_first(pool, hash), i=0; hi; hi = apr_hash_next(hi), ++i)
     {
       properties.keys[i] = svn__apr_hash_index_key(hi);
       properties.values[i] = svn__apr_hash_index_val(hi);
     }
-  
+
   /* serialize it */
   context = svn_temp_serializer__init(&properties,
                                       sizeof(properties),
@@ -686,26 +679,26 @@ svn_fs_fs__deserialize_properties(void **out,
                                   apr_size_t data_len,
                                   apr_pool_t *pool)
 {
-  apr_hash_t *hash = apr_hash_make(pool);
+  apr_hash_t *hash = svn_hash__make(pool);
   properties_data_t *properties = (properties_data_t *)data;
   size_t i;
 
   /* de-serialize our auxilliary data structure */
   svn_temp_deserializer__resolve(properties, (void**)&properties->keys);
   svn_temp_deserializer__resolve(properties, (void**)&properties->values);
-  
+
   /* de-serialize each entry and put it into the hash */
   for (i = 0; i < properties->count; ++i)
     {
       apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
-      svn_temp_deserializer__resolve(properties->keys, 
+      svn_temp_deserializer__resolve((void*)properties->keys,
                                      (void**)&properties->keys[i]);
-      
-      deserialize_svn_string(properties->values, 
+
+      deserialize_svn_string((void*)properties->values,
                              (svn_string_t **)&properties->values[i]);
-      
-      apr_hash_set(hash, 
-                   properties->keys[i], len, 
+
+      apr_hash_set(hash,
+                   properties->keys[i], len,
                    properties->values[i]);
     }
 
@@ -939,7 +932,7 @@ svn_fs_fs__extract_dir_entry(void **out,
           svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
 
       /* Entries have been serialized one-by-one, each time including all
-       * nestes structures and strings. Therefore, they occupy a single
+       * nested structures and strings. Therefore, they occupy a single
        * block of memory whose end-offset is either the beginning of the
        * next entry or the end of the buffer
        */

@@ -33,8 +33,10 @@ import tempfile
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 
-# Get some helper routines from svnadmin_tests
-from svnadmin_tests import load_and_verify_dumpstream, test_create
+# Get some helper routines
+from svnadmin_tests import (load_and_verify_dumpstream, load_dumpstream,
+                            test_create)
+from svntest.main import run_svn, run_svnadmin
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -103,8 +105,7 @@ def reflect_dropped_renumbered_revs(sbox):
       "--drop-empty-revs",
       "--renumber-revs", "--quiet")
 
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
-                             "--ignore-uuid")
+  load_dumpstream(sbox, filtered_out, "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -124,8 +125,7 @@ def reflect_dropped_renumbered_revs(sbox):
       "--drop-empty-revs",
       "--renumber-revs", "--quiet")
 
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
-                             "--ignore-uuid")
+  load_dumpstream(sbox, filtered_out, "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
   expected_output = svntest.verify.UnorderedOutput([
@@ -151,7 +151,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
                                                         "trunk", "branch1",
                                                         "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+  load_dumpstream(sbox, filtered_out)
 
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
@@ -174,8 +174,7 @@ def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
                                                            *dumpargs)
 
   # Setup our expectations
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_output, '--ignore-uuid')
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha')
   expected_disk.remove('A/B/E/beta')
@@ -349,8 +348,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
       "include", "trunk", "branches",
       "--skip-missing-merge-sources",
       "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_dumpfile2, '--ignore-uuid')
   # Check the resulting mergeinfo.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([
@@ -377,8 +375,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   skeleton_dumpfile = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
                                         'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, skeleton_dumpfile,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, skeleton_dumpfile, '--ignore-uuid')
   partial_dump2 = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
@@ -480,9 +477,8 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
 
   # Now actually load the filtered dump into the skeleton repository
   # and then check the resulting mergeinfo.
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
-                             '--parent-dir', '/Projects/Project-X',
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_dumpfile2,
+                  '--parent-dir', '/Projects/Project-X', '--ignore-uuid')
 
   url = sbox.repo_url + "/Projects/Project-X/branches"
   expected_output = svntest.verify.UnorderedOutput([
@@ -568,8 +564,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
       "--skip-missing-merge-sources", "--drop-empty-revs")
 
   # Now load the filtered dump into an empty repository.
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile,
-                             '--ignore-uuid')
+  load_dumpstream(sbox, filtered_dumpfile, '--ignore-uuid')
 
   # The mergeinfo in the newly loaded repos should have no references to the
   # dropped branch and the remaining merge source revs should be remapped to
@@ -622,8 +617,7 @@ def match_empty_prefix(sbox):
 
     # Load the filtered dump into a repo and check the result
     test_create(sbox)
-    load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
-                               '--ignore-uuid')
+    load_dumpstream(sbox, filtered_output, '--ignore-uuid')
     svntest.actions.run_and_verify_update(sbox.wc_dir,
                                           expected_output,
                                           expected_disk,
@@ -651,6 +645,40 @@ def match_empty_prefix(sbox):
   # doesn't seem to be a consistent way to quote such an argument to
   # prevent expansion.
 
+@Issue(2760)
+def accepts_deltas(sbox):
+  "accepts deltas in the input"
+  # Accept format v3 (as created by 'svnadmin --deltas' or svnrdump).
+
+  test_create(sbox)
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'simple_v3.dump')
+  dump_in = open(dumpfile_location).read()
+
+  dump_out, err = filter_and_return_output(dump_in, 0, "include",
+                                                        "trunk", "--quiet")
+
+  expected_revs = [
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'soup': 'No soup for you!'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'soup': 'No soup for you!'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    svntest.wc.State('', {
+      'trunk'     : svntest.wc.StateItem(props={'story': 'Yada yada yada...'}),
+      'trunk/foo' : svntest.wc.StateItem("This is file 'foo'.\n"),
+      }),
+    ]
+
+  load_and_verify_dumpstream(sbox, [], [], expected_revs, True, dump_out,
+                             '--ignore-uuid')
+
+  
+
 ########################################################################
 # Run the tests
 
@@ -664,6 +692,7 @@ test_list = [ None,
               filter_mergeinfo_revs_outside_of_dump_stream,
               dropped_but_not_renumbered_empty_revs,
               match_empty_prefix,
+              accepts_deltas,
               ]
 
 if __name__ == '__main__':

@@ -57,6 +57,7 @@
 #include "tree.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "temp_serializer.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
@@ -154,8 +155,8 @@ locate_cache(svn_cache__t **cache,
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
       if (cache) *cache = ffd->rev_node_cache;
-      if (key && path) *key = apr_psprintf(pool, "%ld%s",
-                                           root->rev, path);
+      if (key && path) *key
+        = svn_fs_fs__combine_number_and_string(root->rev, path, pool);
     }
 }
 
@@ -358,7 +359,7 @@ mutable_root_node(dag_node_t **node_p,
     return svn_fs_fs__dag_clone_root(node_p, root->fs, root->txn, pool);
   else
     /* If it's not a transaction root, we can't change its contents.  */
-    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path, pool);
+    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path);
 }
 
 
@@ -695,7 +696,7 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far, iterpool),
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far),
                   apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
@@ -1197,6 +1198,7 @@ merge(svn_stringbuf_t *conflict_p,
   svn_fs_t *fs;
   apr_pool_t *iterpool;
   apr_int64_t mergeinfo_increment = 0;
+  svn_boolean_t fs_supports_mergeinfo;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_fs__dag_get_fs(ancestor);
@@ -1344,6 +1346,8 @@ merge(svn_stringbuf_t *conflict_p,
   SVN_ERR(svn_fs_fs__dag_dir_entries(&t_entries, target, pool));
   SVN_ERR(svn_fs_fs__dag_dir_entries(&a_entries, ancestor, pool));
 
+  fs_supports_mergeinfo = svn_fs_fs__fs_supports_mergeinfo(fs);
+
   /* for each entry E in a_entries... */
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, a_entries);
@@ -1375,7 +1379,7 @@ merge(svn_stringbuf_t *conflict_p,
           dag_node_t *t_ent_node;
           SVN_ERR(svn_fs_fs__dag_get_node(&t_ent_node, fs,
                                           t_entry->id, iterpool));
-          if (svn_fs_fs__fs_supports_mergeinfo(fs))
+          if (fs_supports_mergeinfo)
             {
               apr_int64_t mergeinfo_start;
               SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_start,
@@ -1389,7 +1393,7 @@ merge(svn_stringbuf_t *conflict_p,
               SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                               s_entry->id, iterpool));
 
-              if (svn_fs_fs__fs_supports_mergeinfo(fs))
+              if (fs_supports_mergeinfo)
                 {
                   apr_int64_t mergeinfo_end;
                   SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_end,
@@ -1466,7 +1470,7 @@ merge(svn_stringbuf_t *conflict_p,
                         txn_id,
                         &sub_mergeinfo_increment,
                         iterpool));
-          if (svn_fs_fs__fs_supports_mergeinfo(fs))
+          if (fs_supports_mergeinfo)
             mergeinfo_increment += sub_mergeinfo_increment;
         }
 
@@ -1502,7 +1506,7 @@ merge(svn_stringbuf_t *conflict_p,
 
       SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                       s_entry->id, iterpool));
-      if (svn_fs_fs__fs_supports_mergeinfo(fs))
+      if (fs_supports_mergeinfo)
         {
           apr_int64_t mergeinfo_s;
           SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_s,
@@ -1518,7 +1522,7 @@ merge(svn_stringbuf_t *conflict_p,
 
   SVN_ERR(svn_fs_fs__dag_update_ancestry(target, source, pool));
 
-  if (svn_fs_fs__fs_supports_mergeinfo(fs))
+  if (fs_supports_mergeinfo)
     SVN_ERR(svn_fs_fs__dag_increment_mergeinfo_count(target,
                                                      mergeinfo_increment,
                                                      pool));
@@ -1833,7 +1837,7 @@ fs_make_dir(svn_fs_root_t *root,
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path, pool);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Create the subdirectory.  */
   SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
@@ -1921,17 +1925,7 @@ fs_same_p(svn_boolean_t *same_p,
           svn_fs_t *fs2,
           apr_pool_t *pool)
 {
-  const char *uuid1;
-  const char *uuid2;
-
-  /* Random thought: if fetching UUIDs to compare filesystems is too
-     expensive, one solution would be to cache the UUID in each fs
-     object (copying the UUID into fs->pool, of course). */
-
-  SVN_ERR(fs1->vtable->get_uuid(fs1, &uuid1, pool));
-  SVN_ERR(fs2->vtable->get_uuid(fs2, &uuid2, pool));
-
-  *same_p = ! strcmp(uuid1, uuid2);
+  *same_p = ! strcmp(fs1->uuid, fs2->uuid);
   return SVN_NO_ERROR;
 }
 
@@ -2178,7 +2172,7 @@ fs_make_file(svn_fs_root_t *root,
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
-    return SVN_FS__ALREADY_EXISTS(root, path, pool);
+    return SVN_FS__ALREADY_EXISTS(root, path);
 
   /* Check (non-recursively) to see if path is locked;  if so, check
      that we can use it. */
@@ -2464,17 +2458,8 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
-
-  if (base_checksum)
-    tb->base_checksum = svn_checksum_dup(base_checksum, pool);
-  else
-    tb->base_checksum = NULL;
-
-  if (result_checksum)
-    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
-  else
-    tb->result_checksum = NULL;
-
+  tb->base_checksum = svn_checksum_dup(base_checksum, pool);
+  tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
   SVN_ERR(apply_textdelta(tb, pool));
 
@@ -2606,11 +2591,7 @@ fs_apply_text(svn_stream_t **contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
-
-  if (result_checksum)
-    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
-  else
-    tb->result_checksum = NULL;
+  tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
   SVN_ERR(apply_text(tb, pool));
 
@@ -3745,7 +3726,8 @@ make_txn_root(svn_fs_root_t **root_p,
                                       svn_fs_fs__dag_deserialize,
                                       APR_HASH_KEY_STRING,
                                       32, 20, FALSE,
-                                      apr_pstrcat(pool, txn, ":TXN", (char *)NULL),
+                                      apr_pstrcat(pool, txn, ":TXN",
+                                                  (char *)NULL),
                                       root->pool));
 
   /* Initialize transaction-local caches in FS.
@@ -3812,8 +3794,9 @@ verify_node(dag_node_t *node,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  "Predecessor count mismatch: "
                                  "%s has %d, but %s has %d",
-                                 stringify_node(node, iterpool), pred_count, 
-                                 stringify_node(pred, iterpool), pred_pred_count);
+                                 stringify_node(node, iterpool), pred_count,
+                                 stringify_node(pred, iterpool),
+                                 pred_pred_count);
     }
 
   /* Kind-dependent verifications. */

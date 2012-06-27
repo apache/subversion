@@ -91,9 +91,9 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         if (svn_path_is_url(local_abspath))
           goto invalid_rev_arg;
 
-        err = svn_wc__node_get_commit_base_rev(revnum, wc_ctx,
-                                               local_abspath,
-                                               scratch_pool);
+        err = svn_wc__node_get_commit_base(revnum, NULL, NULL, NULL,
+                                           wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool);
 
         /* Return the same error as older code did (before and at r935091).
            At least svn_client_proplist3 promises SVN_ERR_ENTRY_NOT_FOUND. */

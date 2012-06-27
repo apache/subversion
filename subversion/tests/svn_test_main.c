@@ -345,7 +345,6 @@ main(int argc, const char *argv[])
   const char *prog_name;
   int i;
   svn_boolean_t got_error = FALSE;
-  apr_allocator_t *allocator;
   apr_pool_t *pool, *test_pool;
   svn_boolean_t ran_a_test = FALSE;
   svn_boolean_t list_mode = FALSE;
@@ -368,16 +367,10 @@ main(int argc, const char *argv[])
       exit(1);
     }
 
-  /* set up the global pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
+  /* set up the global pool.  Use a separate allocator to limit memory
+   * usage but make it thread-safe to allow for multi-threaded tests.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(TRUE));
 
   /* Remember the command line */
   test_argc = argc;

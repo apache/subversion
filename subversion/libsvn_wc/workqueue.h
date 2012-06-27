@@ -122,7 +122,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* Set *WORK_ITEM to a new work item that describes a moves of
+/* Set *WORK_ITEM to a new work item that describes a move of
    a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
    storing in the working copy managing DST_ABSPATH.
 
@@ -181,22 +181,6 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
-
-/* Set *WORK_ITEM to a new work item that will record file information of
-   LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
-   the svn_wc__db_global_record_fileinfo() function.
-
-   If SET_TIME is not 0, set LOCAL_ABSPATH's last modified time to this
-   time and after that record the actual file time.
-
-   ### it is unclear whether this should survive.  */
-svn_error_t *
-svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_time_t set_time,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
 
 /* Set *WORK_ITEM to a new work item that will remove all the data of
    the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping

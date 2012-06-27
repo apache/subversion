@@ -110,6 +110,8 @@ class WorkingCopy(object):
             logging.info("autopopulate %s from %s" % (self.path, self.url))
             subprocess.check_call([svnbin, 'co', '-q',
                                    '--non-interactive',
+                                   '--config-option',
+                                   'config:miscellany:use-commit-times=on',
                                    '--', self.url, self.path],
                                   env=env)
 
@@ -242,6 +244,8 @@ class BackgroundWorker(threading.Thread):
                 '--non-interactive',
                 '--trust-server-cert',
                 '--ignore-externals',
+                '--config-option',
+                'config:miscellany:use-commit-times=on',
                 wc.path]
         subprocess.check_call(args, env=self.env)
 
@@ -257,6 +261,8 @@ class BackgroundWorker(threading.Thread):
         args = [self.svnbin, 'cleanup',
                 '--non-interactive',
                 '--trust-server-cert',
+                '--config-option',
+                'config:miscellany:use-commit-times=on',
                 wc.path]
         subprocess.check_call(args, env=self.env)
 

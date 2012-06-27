@@ -115,29 +115,7 @@ AC_SUBST(SVN_LT_SOVERSION)
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
-# Either a space-separated list of allowable Neon versions, or "any" to
-# mean allow anything.
-NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28 0\.29"
-NEON_RECOMMENDED_VER="0.29.6"
-NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
-dnl You can skip the neon version check only if you know what you are doing 
-AC_ARG_ENABLE(neon-version-check,
-  AS_HELP_STRING([--disable-neon-version-check],
-                 [do not check the Neon version]),
-  [
-    if test "$enableval" = "no" ; then
-      NEON_ALLOWED_LIST="any"
-    fi
-  ],
-  [])
-SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
-
-if test "$svn_lib_neon" = "yes"; then
-  AC_DEFINE([SVN_HAVE_NEON], 1,
-            [Defined if support for Neon is enabled])
-fi
-
-dnl Search for serf as an alternative to neon
+dnl Search for serf
 SVN_LIB_SERF(1,0,0)
 
 if test "$svn_lib_serf" = "yes"; then
@@ -166,8 +144,8 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_MINIMUM_VER="3.6.18"
-SQLITE_RECOMMENDED_VER="3.7.6.3"
+SQLITE_MINIMUM_VER="3.7.12"
+SQLITE_RECOMMENDED_VER="3.7.12"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -182,6 +160,12 @@ if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
                           [sqlite_compat_ver_num])
   CFLAGS="-DSVN_SQLITE_MIN_VERSION='\"$sqlite_compat_ver\"' $CFLAGS"
   CFLAGS="-DSVN_SQLITE_MIN_VERSION_NUMBER=$sqlite_compat_ver_num $CFLAGS"
+fi
+
+SVN_CHECK_FOR_ATOMIC_BUILTINS
+
+if test "$svn_cv_atomic_builtins" = "yes"; then
+    AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi
 
 dnl Set up a number of directories ---------------------
@@ -388,6 +372,11 @@ AC_ARG_WITH(expat,
                  [Specify location of Expat]),
                  [svn_lib_expat="$withval"],
                  [svn_lib_expat="::expat"])
+
+# APR-util accepts "builtin" as an argument to this option so if the user
+# passed "builtin" pretend the user didn't specify the --with-expat option
+# at all. Expat will (hopefully) be found in apr-util.
+test "_$svn_lib_expat" = "_builtin" && svn_lib_expat="::expat"
 
 AC_MSG_CHECKING([for Expat])
 if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
@@ -825,7 +814,7 @@ dnl Build and install rules -------------------
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
-BUILD_RULES="fsmod-lib ramod-lib lib bin test $BUILD_APACHE_RULE tools"
+BUILD_RULES="fsmod-lib ramod-lib lib bin test sub-test $BUILD_APACHE_RULE tools"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
@@ -833,12 +822,6 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
-fi
-  
-if test "$svn_lib_neon" = "yes"; then
-  BUILD_RULES="$BUILD_RULES neon-lib"
-  INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-ramod-lib/install-ramod-lib install-neon-lib/'`"
-  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-neon-lib"
 fi
 
 if test "$svn_lib_serf" = "yes"; then
@@ -918,10 +901,7 @@ AS_HELP_STRING([--with-openssl],
                 process where to locate the OpenSSL library when (and only when)
                 building Serf as an integrated part of the Subversion build
                 process. When linking to a previously installed version of Serf
-                instead, you do not need to use this option. (Note that
-                Subversion may also or alternatively be configured to use the
-                Neon library for http:// and https:// access; see the
-                --with-neon and --with-ssl options.)]),
+                instead, you do not need to use this option.]),
 [])
 
 AC_ARG_ENABLE(debug,
@@ -990,7 +970,6 @@ AC_SUBST([libsvn_fs_fs_LDFLAGS])
 AC_SUBST([libsvn_fs_util_LDFLAGS])
 AC_SUBST([libsvn_ra_LDFLAGS])
 AC_SUBST([libsvn_ra_local_LDFLAGS])
-AC_SUBST([libsvn_ra_neon_LDFLAGS])
 AC_SUBST([libsvn_ra_serf_LDFLAGS])
 AC_SUBST([libsvn_ra_svn_LDFLAGS])
 AC_SUBST([libsvn_repos_LDFLAGS])
@@ -1178,12 +1157,12 @@ if test "$RUBY" != "none"; then
       AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
-    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
+    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
     ])
     RUBY_MAJOR="$svn_cv_ruby_major"
 
     AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
-    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MINOR))'`"
+    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MINOR))'`"
     ])
     RUBY_MINOR="$svn_cv_ruby_minor"
 
@@ -1226,11 +1205,6 @@ AS_HELP_STRING([--enable-runtime-module-search],
 ])
 
 if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
-  ### We want ra_local first to handle the following scenario:
-  ### user has neon and db3 in /usr/local, and db4 in
-  ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 
-  ### libsvn_fs.la then libtool ends up linking libsvn_fs to the db3
-  ### in /usr/local/lib
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
       [Defined if libsvn_client should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
@@ -1241,14 +1215,6 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
       [Defined if libsvn_client should link against libsvn_ra_svn])
   svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
   svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
-
-  if test "$svn_lib_neon" = "yes"; then
-    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_NEON, 1,
-          [Defined if libsvn_client should link against libsvn_ra_neon])
-    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_NEON_DEPS)"
-    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-neon-lib"
-    svn_ra_lib_link="$svn_ra_lib_link \$(RA_NEON_LINK)"
-  fi
 
   if test "$svn_lib_serf" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SERF, 1,
@@ -1360,6 +1326,17 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 
+# Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
+### I think we get this flag from APR, so the fix probably belongs there
+if test "$CC" = "clang"; then
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-no-cpp-precomp //'`
+fi
+
+# Clang also doesn't (yet) support the '-ansi' flag
+if test "$CC" = "clang"; then
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-ansi //'`
+fi
+
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
         [Defined to be the path separator used on your local filesystem])
@@ -1425,9 +1402,12 @@ if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
 
 
 You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created Makefile which will build
+installed and linked to APR-UTIL.  We have created a Makefile which will build
 Subversion without support for the Berkeley DB back-end.  You can find the
 latest version of Berkeley DB here:
-  http://www.oracle.com/technology/software/products/berkeley-db/index.html
+
+  http://www.oracle.com/technetwork/products/berkeleydb/downloads/index.html
+
+or explicitly specify --without-berkeley-db to silence this warning.
 ])
 fi

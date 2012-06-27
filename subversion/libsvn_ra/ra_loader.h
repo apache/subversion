@@ -32,6 +32,8 @@
 
 #include "svn_ra.h"
 
+#include "private/svn_ra_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -293,8 +295,28 @@ typedef struct svn_ra__vtable_t {
                                   svn_revnum_t end_revision,
                                   svn_revnum_t *revision_deleted,
                                   apr_pool_t *pool);
+
+  /* See svn_ra__register_editor_shim_callbacks() */
   svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
+
+  /* See svn_ra__get_commit_ev2()  */
+  svn_error_t *(*get_commit_ev2)(
+    svn_editor_t **editor,
+    svn_ra_session_t *session,
+    apr_hash_t *revprop_table,
+    svn_commit_callback2_t callback,
+    void *callback_baton,
+    apr_hash_t *lock_tokens,
+    svn_boolean_t keep_locks,
+    svn_ra__provide_base_cb_t provide_base_cb,
+    svn_ra__provide_props_cb_t provide_props_cb,
+    svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+    void *cb_baton,
+    svn_cancel_func_t cancel_func,
+    void *cancel_baton,
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool);
 
 } svn_ra__vtable_t;
 
@@ -329,9 +351,6 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable,
                                 apr_pool_t *pool);
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
-                              const svn_ra__vtable_t **vtable,
-                              apr_pool_t *pool);
-svn_error_t *svn_ra_neon__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
 svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,
@@ -452,6 +471,29 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                                  svn_revnum_t end_revision,
                                  svn_revnum_t *revision_deleted,
                                  apr_pool_t *pool);
+
+
+/* Utility function to provide a shim between a returned Ev2 and an RA
+   provider's Ev1-based commit editor.
+
+   See svn_ra__get_commit_ev2() for parameter semantics.  */
+svn_error_t *
+svn_ra__use_commit_shim(svn_editor_t **editor,
+                        svn_ra_session_t *session,
+                        apr_hash_t *revprop_table,
+                        svn_commit_callback2_t callback,
+                        void *callback_baton,
+                        apr_hash_t *lock_tokens,
+                        svn_boolean_t keep_locks,
+                        svn_ra__provide_base_cb_t provide_base_cb,
+                        svn_ra__provide_props_cb_t provide_props_cb,
+                        svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
+                        void *cb_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

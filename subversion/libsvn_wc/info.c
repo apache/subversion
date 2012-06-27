@@ -41,8 +41,7 @@ svn_wc_info_dup(const svn_wc_info_t *info,
 
   if (info->changelist)
     new_info->changelist = apr_pstrdup(pool, info->changelist);
-  if (info->checksum)
-    new_info->checksum = svn_checksum_dup(info->checksum, pool);
+  new_info->checksum = svn_checksum_dup(info->checksum, pool);
   if (info->conflicts)
     {
       int i;

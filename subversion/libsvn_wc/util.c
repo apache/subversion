@@ -285,24 +285,27 @@ svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict
 }
 
 svn_wc_conflict_version_t *
-svn_wc_conflict_version_create(const char *repos_url,
-                               const char *path_in_repos,
-                               svn_revnum_t peg_rev,
-                               svn_node_kind_t node_kind,
-                               apr_pool_t *pool)
+svn_wc_conflict_version_create2(const char *repos_url,
+                                const char *repos_uuid,
+                                const char *repos_relpath,
+                                svn_revnum_t revision,
+                                svn_node_kind_t kind,
+                                apr_pool_t *result_pool)
 {
   svn_wc_conflict_version_t *version;
 
-  version = apr_pcalloc(pool, sizeof(*version));
+  version = apr_pcalloc(result_pool, sizeof(*version));
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, pool) &&
-                           svn_relpath_is_canonical(path_in_repos) &&
-                           SVN_IS_VALID_REVNUM(peg_rev));
+    SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, result_pool)
+                             && svn_relpath_is_canonical(repos_relpath)
+                             && SVN_IS_VALID_REVNUM(revision)
+                             /* ### repos_uuid can be NULL :( */);
 
   version->repos_url = repos_url;
-  version->peg_rev = peg_rev;
-  version->path_in_repos = path_in_repos;
-  version->node_kind = node_kind;
+  version->peg_rev = revision;
+  version->path_in_repos = repos_relpath;
+  version->node_kind = kind;
+  version->repos_uuid = repos_uuid;
 
   return version;
 }
@@ -310,7 +313,7 @@ svn_wc_conflict_version_create(const char *repos_url,
 
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
 
   svn_wc_conflict_version_t *new_version;
@@ -318,16 +321,20 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
   if (version == NULL)
     return NULL;
 
-  new_version = apr_pcalloc(pool, sizeof(*new_version));
+  new_version = apr_pcalloc(result_pool, sizeof(*new_version));
 
   /* Shallow copy all members. */
   *new_version = *version;
 
   if (version->repos_url)
-    new_version->repos_url = apr_pstrdup(pool, version->repos_url);
+    new_version->repos_url = apr_pstrdup(result_pool, version->repos_url);
 
   if (version->path_in_repos)
-    new_version->path_in_repos = apr_pstrdup(pool, version->path_in_repos);
+    new_version->path_in_repos = apr_pstrdup(result_pool,
+                                             version->path_in_repos);
+
+  if (version->repos_uuid)
+    new_version->repos_uuid = apr_pstrdup(result_pool, version->repos_uuid);
 
   return new_version;
 }
@@ -546,7 +553,9 @@ svn_wc__fetch_kind_func(svn_kind_t *kind,
   const char *local_abspath = svn_dirent_join(sfb->base_abspath, path,
                                               scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_kind(kind, sfb->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__db_read_kind(kind, sfb->db, local_abspath,
+                               FALSE /* allow_missing */,
+                               FALSE /* show_hidden */,
                                scratch_pool));
 
   return SVN_NO_ERROR;

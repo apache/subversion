@@ -153,7 +153,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
     {
       SVN_ERR(svn_fs_bdb__lock_delete(fs, lock_token, trail, pool));
-      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock_token, pool);
+      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock_token);
     }
 
   *lock_p = lock;

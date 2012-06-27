@@ -615,7 +615,7 @@ static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *scratch_pool)
 {
-  const char *pathname;
+  const char *pathname = "";
   apr_array_header_t *existing_rangelist;
   apr_array_header_t *rangelist = apr_array_make(scratch_pool, 1,
                                                  sizeof(svn_merge_range_t *));

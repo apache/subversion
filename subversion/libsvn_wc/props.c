@@ -79,14 +79,12 @@ append_prop_conflict(svn_stream_t *stream,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   const svn_string_t *conflict_desc;
-  apr_size_t len;
   const char *native_text;
 
   SVN_ERR(prop_conflict_from_skel(&conflict_desc, prop_skel, pool, pool));
   native_text = svn_utf_cstring_from_utf8_fuzzy(conflict_desc->data, pool);
 
-  len = strlen(native_text);
-  return svn_stream_write(stream, native_text, &len);
+  return svn_stream_puts(stream, native_text);
 }
 
 
@@ -1844,7 +1842,6 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             const char *propname,
                             svn_depth_t depth,
-                            svn_boolean_t base_props,
                             svn_boolean_t pristine,
                             const apr_array_header_t *changelists,
                             svn_wc__proplist_receiver_t receiver_func,
@@ -1855,8 +1852,11 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
 {
   svn_wc__proplist_receiver_t receiver = receiver_func;
   void *baton = receiver_baton;
-  struct propname_filter_baton_t pfb = { receiver_func, receiver_baton,
-                                         propname };
+  struct propname_filter_baton_t pfb;
+
+  pfb.receiver_func = receiver_func;
+  pfb.receiver_baton = receiver_baton;
+  pfb.propname = propname;
 
   SVN_ERR_ASSERT(receiver_func);
 
@@ -1898,7 +1898,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
     case svn_depth_infinity:
       {
         SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
-                                                depth, base_props, pristine,
+                                                depth, pristine,
                                                 changelists, receiver, baton,
                                                 cancel_func, cancel_baton,
                                                 scratch_pool));
@@ -1909,6 +1909,22 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__prop_retrieve_recursive(apr_hash_t **values,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                const char *propname,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_wc__db_prop_retrieve_recursive(values,
+                                               wc_ctx->db,
+                                               local_abspath,
+                                               propname,
+                                               result_pool, scratch_pool));
 }
 
 svn_error_t *
@@ -2210,31 +2226,10 @@ do_propset(svn_wc__db_t *db,
 {
   apr_hash_t *prophash;
   svn_wc_notify_action_t notify_action;
-  svn_wc__db_status_t status;
   svn_skel_t *work_item = NULL;
   svn_boolean_t clear_recorded_info = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* Get the node status for this path. */
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (status != svn_wc__db_status_normal
-      && status != svn_wc__db_status_added
-      && status != svn_wc__db_status_incomplete)
-    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-                             _("Can't set properties on '%s':"
-                               " invalid status for updating properties."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  /* Else, handle a regular property: */
-
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
@@ -2320,7 +2315,7 @@ do_propset(svn_wc__db_t *db,
     }
   else if (kind == svn_node_file && strcmp(name, SVN_PROP_EOL_STYLE) == 0)
     {
-      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_KEYWORDS,
+      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_EOL_STYLE,
                                              APR_HASH_KEY_STRING);
 
       if (((value == NULL) != (old_value == NULL))
@@ -2430,6 +2425,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind2(name);
+  svn_wc__db_status_t status;
   svn_kind_t kind;
   const char *dir_abspath;
 
@@ -2451,8 +2447,22 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
      backward we never call this API with depth > empty, so we only need
      to do the write check once per call, here (and not for every node in
      the node walker). */
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
-                               scratch_pool));
+    /* Get the node status for this path. */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                             _("Can't set properties on '%s':"
+                               " invalid status for updating properties."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   if (kind == svn_kind_dir)
     dir_abspath = local_abspath;
@@ -2461,7 +2471,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
 
-  if (depth == svn_depth_empty)
+  if (depth == svn_depth_empty || kind != svn_kind_dir)
     {
       apr_hash_t *changelist_hash = NULL;
 
@@ -2482,8 +2492,14 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      struct propset_walk_baton wb = { name, value, wc_ctx->db, skip_checks,
-                                       notify_func, notify_baton };
+      struct propset_walk_baton wb;
+
+      wb.propname = name;
+      wb.propval = value;
+      wb.db = wc_ctx->db;
+      wb.force = skip_checks;
+      wb.notify_func = notify_func;
+      wb.notify_baton = notify_baton;
 
       SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath,
                                              FALSE, changelist_filter,

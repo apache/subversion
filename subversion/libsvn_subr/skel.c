@@ -24,6 +24,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "private/svn_skel.h"
+#include "private/svn_string_private.h"
 
 
 /* Parsing skeletons.  */
@@ -133,41 +134,6 @@ getsize(const char *data, apr_size_t len,
       *endptr = data + i;
       return value;
     }
-}
-
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-static apr_size_t
-putsize(char *data, apr_size_t len, apr_size_t value)
-{
-  apr_size_t i = 0;
-
-  /* Generate the digits, least-significant first.  */
-  do
-    {
-      if (i >= len)
-        return 0;
-
-      data[i] = (value % 10) + '0';
-      value /= 10;
-      i++;
-    }
-  while (value > 0);
-
-  /* Put the digits in most-significant-first order.  */
-  {
-    apr_size_t left, right;
-
-    for (left = 0, right = i-1; left < right; left++, right--)
-      {
-        char t = data[left];
-        data[left] = data[right];
-        data[right] = t;
-      }
-  }
-
-  return i;
 }
 
 
@@ -433,7 +399,7 @@ estimate_unparsed_size(const svn_skel_t *skel)
     }
   else
     {
-      int total_len;
+      apr_size_t total_len;
       svn_skel_t *child;
 
       /* Allow space for opening and closing parens, and a space
@@ -490,17 +456,18 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str)
         svn_stringbuf_appendbytes(str, skel->data, skel->len);
       else
         {
-          /* Append the length to STR.  */
-          char buf[200];
+          /* Append the length to STR.  Ensure enough space for at least
+           * one 64 bit int. */
+          char buf[200 + SVN_INT64_BUFFER_SIZE];
           apr_size_t length_len;
 
-          length_len = putsize(buf, sizeof(buf), skel->len);
+          length_len = svn__ui64toa(buf, skel->len);
 
           SVN_ERR_ASSERT_NO_RETURN(length_len > 0);
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len + 1);
+          svn_stringbuf_ensure(str, str->len + length_len + 1 + skel->len);
           svn_stringbuf_appendbytes(str, buf, length_len);
           svn_stringbuf_appendbyte(str, ' ');
           svn_stringbuf_appendbytes(str, skel->data, skel->len);
@@ -582,9 +549,10 @@ void svn_skel__prepend_int(apr_int64_t value,
                            svn_skel_t *skel,
                            apr_pool_t *result_pool)
 {
-  const char *str = apr_psprintf(result_pool, "%" APR_INT64_T_FMT, value);
+  char *val_string = apr_palloc(result_pool, SVN_INT64_BUFFER_SIZE);
+  svn__i64toa(val_string, value);
 
-  svn_skel__prepend_str(str, skel, result_pool);
+  svn_skel__prepend_str(val_string, skel, result_pool);
 }
 
 

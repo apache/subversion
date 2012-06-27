@@ -442,11 +442,12 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
             {
               svn_version_func_t version_function
                 = version_function_symbol;
-              const svn_version_checklist_t check_list[] =
-                {
-                  { library_label, version_function },
-                  { NULL, NULL }
-                };
+              svn_version_checklist_t check_list[2];
+
+              check_list[0].label = library_label;
+              check_list[0].version_query = version_function;
+              check_list[1].label = NULL;
+              check_list[1].version_query = NULL;
               SVN_ERR(svn_ver_check_list(svn_subr_version(), check_list));
             }
           if (apr_dso_sym(&provider_function_symbol,

@@ -211,10 +211,10 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      File('%(blddir)s/svnversion/svnversion.pdb'),
                      File('%(blddir)s/svnrdump/svnrdump.exe'),
                      File('%(blddir)s/svnrdump/svnrdump.pdb'),
+                     File('%(blddir)s/svnmucc/svnmucc.exe'),
+                     File('%(blddir)s/svnmucc/svnmucc.pdb'),
                      File('%(blddir)s/../contrib/client-side/svn-push/svn-push.exe'),
                      File('%(blddir)s/../contrib/client-side/svn-push/svn-push.pdb'),
-                     File('%(blddir)s/../tools/client-side/svnmucc/svnmucc.exe'),
-                     File('%(blddir)s/../tools/client-side/svnmucc/svnmucc.pdb'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.exe'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.pdb'),
                      File('%(blddir)s/../tools/server-side/svn-populate-node-origins-index.exe'),
@@ -273,9 +273,6 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                               File('%(@apr-util)s/%(aprxml)s/xml.lib'),
                               File('%(@apr-util)s/%(aprxml)s/xml.pdb'),
                               ),
-             'lib/neon': (File('%(@neon)s/libneon.lib'),
-                          OptFile('%(@zlib)s/zlibstat.lib'),
-                          ),
 
              'lib/serf': (File('%(@serf)s/Release/serf.lib'),
                           ),
@@ -286,7 +283,6 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
              'licenses': None,
              'licenses/bdb': File('%(@berkeley-db)s/LICENSE'),
-             'licenses/neon': File('%(@neon)s/src/COPYING.LIB'),
              'licenses/serf': File('%(@serf)s/LICENSE'),
              'licenses/zlib': File('%(@zlib)s/README'),
              'licenses/apr-util': (File('%(@apr-util)s/LICENSE'),
@@ -381,8 +377,6 @@ def _read_config():
                    os.path.abspath(os.path.join(_srcdir, 'apr-iconv')),
                    '@apr-util':
                    os.path.abspath(os.path.join(_srcdir, 'apr-util')),
-                   '@neon':
-                   os.path.abspath(os.path.join(_srcdir, 'neon')),
                    }
 
   cfg = configparser.ConfigParser(path_defaults)
