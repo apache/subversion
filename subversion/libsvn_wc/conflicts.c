@@ -246,7 +246,7 @@ svn_wc__conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
                                      result_pool, scratch_pool));
 
   svn_skel__prepend(origins, why);
-  svn_skel__prepend_str(SVN_WC__CONFLICT_OP_UPDATE, why, result_pool);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_OP_MERGE, why, result_pool);
 
   return SVN_NO_ERROR;
 }
