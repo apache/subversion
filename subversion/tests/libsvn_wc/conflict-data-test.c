@@ -344,7 +344,15 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
   SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
   SVN_TEST_ASSERT(!complete); /* Misses operation */
 
-  /* TODO: Set operation and verify complete */
+  SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                        conflict_skel,
+                        svn_wc_conflict_version_create2("http://my-repos/svn",
+                                                        "uuid", "trunk", 12,
+                                                        svn_node_dir, pool),
+                        pool, pool));
+
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_TEST_ASSERT(complete); /* Everything available */
 
   {
     apr_hash_t *old;
