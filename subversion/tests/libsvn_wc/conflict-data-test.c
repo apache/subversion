@@ -20,7 +20,7 @@
  */
 
 /*
- * tree-conflict-data-test.c -- test the storage of tree conflict data
+ * conflict-data-test.c -- test the storage of tree conflict data
  */
 
 #include <stdio.h>
@@ -38,6 +38,7 @@
 #include "../../libsvn_wc/tree_conflicts.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
+#include "../../libsvn_wc/conflicts.h"
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -291,6 +292,96 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_serialize_prop_conflict(const svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  svn_test__sandbox_t sbox;
+  svn_skel_t *conflict_skel;
+  svn_boolean_t complete;
+
+  SVN_ERR(svn_test__sandbox_create(&sbox, "test_serialize_prop_conflict", opts, pool));
+
+  conflict_skel = svn_wc__conflict_skel_create(pool);
+
+  SVN_TEST_ASSERT(conflict_skel != NULL);
+  SVN_TEST_ASSERT(svn_skel__list_length(conflict_skel) == 2);
+
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_TEST_ASSERT(!complete); /* Nothing set */
+
+  {
+    apr_hash_t *old = apr_hash_make(pool);
+    apr_hash_t *mine = apr_hash_make(pool);
+    apr_hash_t *theirs = apr_hash_make(pool);
+    apr_hash_t *conflicts = apr_hash_make(pool);
+    const char *marker_abspath;
+
+    apr_hash_set(old, "prop", APR_HASH_KEY_STRING,
+                 svn_string_create("Old", pool));
+
+    apr_hash_set(mine, "prop", APR_HASH_KEY_STRING,
+                 svn_string_create("Mine", pool));
+
+    apr_hash_set(theirs, "prop", APR_HASH_KEY_STRING,
+                 svn_string_create("Theirs", pool));
+
+    apr_hash_set(conflicts, "prop", APR_HASH_KEY_STRING, "");
+
+    SVN_ERR(svn_io_open_unique_file3(NULL, &marker_abspath, sbox.wc_abspath,
+                                     svn_io_file_del_on_pool_cleanup, pool,
+                                     pool));
+
+    SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel,
+                                                    sbox.wc_ctx->db,
+                                                    sbox.wc_abspath,
+                                                    marker_abspath,
+                                                    old, mine, theirs,
+                                                    conflicts,
+                                                    pool, pool));
+  }
+
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_TEST_ASSERT(!complete); /* Misses operation */
+
+  /* TODO: Set operation and verify complete */
+
+  {
+    apr_hash_t *old;
+    apr_hash_t *mine;
+    apr_hash_t *theirs;
+    apr_hash_t *conflicts;
+    const char *marker_abspath;
+    svn_string_t *v;
+
+    SVN_ERR(svn_wc__conflict_read_prop_conflict(&marker_abspath,
+                                                &old,
+                                                &mine,
+                                                &theirs,
+                                                &conflicts,
+                                                sbox.wc_ctx->db,
+                                                sbox.wc_abspath,
+                                                conflict_skel,
+                                                pool, pool));
+
+    SVN_TEST_ASSERT(svn_dirent_is_ancestor(sbox.wc_abspath, marker_abspath));
+
+    v = apr_hash_get(old, "prop", APR_HASH_KEY_STRING);
+    SVN_TEST_STRING_ASSERT(v->data, "Old");
+
+    v = apr_hash_get(mine, "prop", APR_HASH_KEY_STRING);
+    SVN_TEST_STRING_ASSERT(v->data, "Mine");
+
+    v = apr_hash_get(theirs, "prop", APR_HASH_KEY_STRING);
+    SVN_TEST_STRING_ASSERT(v->data, "Theirs");
+
+    SVN_TEST_ASSERT(apr_hash_count(conflicts) == 1);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -302,6 +393,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "serialize tree conflict"),
     SVN_TEST_OPTS_PASS(test_read_write_tree_conflicts,
                        "read and write tree conflicts"),
+    SVN_TEST_OPTS_PASS(test_serialize_prop_conflict,
+                       "read and write a property conflict"),
     SVN_TEST_NULL
   };
 
