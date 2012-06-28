@@ -117,6 +117,12 @@ Candidate changes:
    Votes:
      +1: stsp, gstein
 
+ * r1341060
+   Sort output of 'svn import'
+   Notes: Needs a backport branch, noted here for completeness.
+   Votes:
+     +0: stsp (pending a proper conflict-free backport)
+   
  * r1348822, r1349215
    Fix "svn status -u --depth empty FILE"
    Justification:
