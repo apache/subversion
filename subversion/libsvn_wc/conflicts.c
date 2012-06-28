@@ -122,6 +122,8 @@ conflict__prepend_location(svn_skel_t *skel,
 
   if (!location->repos_uuid) /* Can theoretically be NULL */
     svn_skel__prepend(svn_skel__make_empty_list(result_pool), loc);
+  else
+    svn_skel__prepend_str(location->repos_uuid, loc, result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, location->repos_url), loc,
                         result_pool);
@@ -240,9 +242,7 @@ conflict__get_conflict(svn_skel_t **conflict,
       c;
       c = c->next)
     {
-      if (c->children->is_atom
-          && c->children->len == len
-          && memcmp(c->children->data, conflict_type, len) == 0)
+      if (svn_skel__matches_atom(c->children, conflict_type))
         {
           *conflict = c;
           return SVN_NO_ERROR;
@@ -466,8 +466,9 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
 
 /* --------------------------------------------------------------------
  */
-svn_skel_t *
-svn_wc__prop_conflict_skel_new(apr_pool_t *result_pool)
+/* Helper for svn_wc__conflict_create_markers */
+static svn_skel_t *
+prop_conflict_skel_new(apr_pool_t *result_pool)
 {
   svn_skel_t *operation = svn_skel__make_empty_list(result_pool);
   svn_skel_t *result = svn_skel__make_empty_list(result_pool);
@@ -477,6 +478,7 @@ svn_wc__prop_conflict_skel_new(apr_pool_t *result_pool)
 }
 
 
+/* Helper for prop_conflict_skel_add */
 static void
 prepend_prop_value(const svn_string_t *value,
                    svn_skel_t *skel,
@@ -496,8 +498,9 @@ prepend_prop_value(const svn_string_t *value,
 }
 
 
-svn_error_t *
-svn_wc__prop_conflict_skel_add(
+/* Helper for svn_wc__conflict_create_markers */
+static svn_error_t *
+prop_conflict_skel_add(
   svn_skel_t *skel,
   const char *prop_name,
   const svn_string_t *original_value,
@@ -622,7 +625,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                                                     scratch_pool,
                                                     scratch_pool));
 
-        prop_data = svn_wc__prop_conflict_skel_new(result_pool);
+        prop_data = prop_conflict_skel_new(result_pool);
 
         for (hi = apr_hash_first(scratch_pool, conflicted_props);
              hi;
@@ -630,7 +633,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
           {
             const char *propname = svn__apr_hash_index_key(hi);
 
-            svn_wc__prop_conflict_skel_add(
+            prop_conflict_skel_add(
                             prop_data, propname,
                             old_props
                                     ? apr_hash_get(old_props, propname,
