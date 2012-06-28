@@ -254,6 +254,89 @@ conflict__get_conflict(svn_skel_t **conflict,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
+                                        svn_wc__db_t *db,
+                                        const char *wri_abspath,
+                                        const char *original_abspath,
+                                        const char *mine_abspath,
+                                        const char *their_original_abspath,
+                                        const char *their_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_skel_t *text_conflict;
+  svn_skel_t *markers;
+
+  SVN_ERR(conflict__get_conflict(&text_conflict, conflict_skel,
+                                 SVN_WC__CONFLICT_KIND_TEXT));
+
+  SVN_ERR_ASSERT(!text_conflict); /* ### Use proper error? */
+
+  /* Current skel format
+     ("text"
+      (OLD MINE OLD-THEIRS THEIRS)) */
+
+  text_conflict = svn_skel__make_empty_list(result_pool);
+  markers = svn_skel__make_empty_list(result_pool);
+
+if (their_abspath)
+    {
+      const char *their_relpath;
+
+      SVN_ERR(svn_wc__db_to_relpath(&their_relpath,
+                                    db, wri_abspath, their_abspath,
+                                    result_pool, scratch_pool));
+      svn_skel__prepend_str(their_relpath, markers, result_pool);
+    }
+  else
+    svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
+
+if (their_original_abspath)
+    {
+      const char *their_original_relpath;
+
+      SVN_ERR(svn_wc__db_to_relpath(&their_original_relpath,
+                                    db, wri_abspath, their_original_abspath,
+                                    result_pool, scratch_pool));
+      svn_skel__prepend_str(their_original_relpath, markers, result_pool);
+    }
+  else
+    svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
+
+  if (mine_abspath)
+    {
+      const char *mine_relpath;
+
+      SVN_ERR(svn_wc__db_to_relpath(&mine_relpath,
+                                    db, wri_abspath, mine_abspath,
+                                    result_pool, scratch_pool));
+      svn_skel__prepend_str(mine_relpath, markers, result_pool);
+    }
+  else
+    svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
+
+  if (original_abspath)
+    {
+      const char *original_relpath;
+
+      SVN_ERR(svn_wc__db_to_relpath(&original_relpath,
+                                    db, wri_abspath, original_abspath,
+                                    result_pool, scratch_pool));
+      svn_skel__prepend_str(original_relpath, markers, result_pool);
+    }
+  else
+    svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
+
+  svn_skel__prepend(markers, text_conflict);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_KIND_TEXT, text_conflict,
+                        result_pool);
+
+  /* And add it to the conflict skel */
+  svn_skel__prepend(text_conflict, conflict_skel->children->next);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
@@ -356,6 +439,95 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
 
   /* And add it to the conflict skel */
   svn_skel__prepend(prop_conflict, conflict_skel->children->next);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_read_text_conflict(const char **original_abspath,
+                                    const char **mine_abspath,
+                                    const char **their_original_abspath,
+                                    const char **their_abspath,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    svn_skel_t *conflict_skel,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *text_conflict;
+  svn_skel_t *m;
+
+  SVN_ERR(conflict__get_conflict(&text_conflict, conflict_skel,
+                                 SVN_WC__CONFLICT_KIND_TEXT));
+
+  if (!text_conflict)
+    return svn_error_create(SVN_ERR_WC_MISSING, NULL, _("Conflict not set"));
+
+  m = text_conflict->children->next->children;
+
+  if (original_abspath)
+    {
+      if (m->is_atom)
+        {
+          const char *original_relpath;
+
+          original_relpath = apr_pstrndup(scratch_pool, m->data, m->len);
+          SVN_ERR(svn_wc__db_from_relpath(original_abspath,
+                                          db, wri_abspath, original_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *original_abspath = NULL;
+    }
+  m = m->next;
+
+  if (mine_abspath)
+    {
+      if (m->is_atom)
+        {
+          const char *mine_relpath;
+
+          mine_relpath = apr_pstrndup(scratch_pool, m->data, m->len);
+          SVN_ERR(svn_wc__db_from_relpath(mine_abspath,
+                                          db, wri_abspath, mine_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *mine_abspath = NULL;
+    }
+  m = m->next;
+
+  if (their_original_abspath)
+    {
+      if (m->is_atom)
+        {
+          const char *their_original_relpath;
+
+          their_original_relpath = apr_pstrndup(scratch_pool, m->data, m->len);
+          SVN_ERR(svn_wc__db_from_relpath(their_original_abspath,
+                                          db, wri_abspath,
+                                          their_original_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *their_original_abspath = NULL;
+    }
+  m = m->next;
+
+  if (their_abspath)
+    {
+      if (m->is_atom)
+        {
+          const char *their_relpath;
+
+          their_relpath = apr_pstrndup(scratch_pool, m->data, m->len);
+          SVN_ERR(svn_wc__db_from_relpath(their_abspath,
+                                          db, wri_abspath, their_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *their_abspath = NULL;
+    }
 
   return SVN_NO_ERROR;
 }

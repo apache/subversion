@@ -153,6 +153,7 @@ svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
                                         const char *wri_abspath,
                                         const char *original_abspath,
                                         const char *mine_abspath,
+                                        const char *their_original_abspath,
                                         const char *their_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
@@ -220,6 +221,27 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
  * Reading conflict skels. Maybe this can be made private later
  * -----------------------------------------------------------
  */
+
+/* Reads back the original data stored by svn_wc__conflict_add_text_conflict()
+ * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
+ *
+ * Values as documented for svn_wc__conflict_add_text_conflict().
+ *
+ * Output arguments can be NULL if the value is not necessary.
+ *
+ * Allocate the result in RESULT_POOL. Perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__conflict_read_text_conflict(const char **original_abspath,
+                                    const char **mine_abspath,
+                                    const char **their_original_abspath,
+                                    const char **their_abspath,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    svn_skel_t *conflict_skel,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 /* Reads back the original data stored by svn_wc__conflict_add_prop_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
