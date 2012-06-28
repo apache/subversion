@@ -1199,7 +1199,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 {
   apr_pool_t *iterpool;
   int i;
-  svn_boolean_t is_dir;
   apr_hash_t *conflict_props = NULL;
   apr_hash_t *old_pristine_props;
   apr_hash_t *old_actual_props;
@@ -1215,8 +1214,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
   *new_pristine_props = NULL;
   *new_actual_props = NULL;
-
-  is_dir = (kind == svn_kind_dir);
 
   if (!server_baseprops)
     server_baseprops = pristine_props;
