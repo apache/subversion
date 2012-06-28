@@ -51,6 +51,269 @@
 
 #include "svn_private_config.h"
 
+/* --------------------------------------------------------------------
+ * Conflict skel management
+ */
+
+svn_skel_t *
+svn_wc__conflict_skel_create(apr_pool_t *result_pool)
+{
+  svn_skel_t *conflict_skel = svn_skel__make_empty_list(result_pool);
+
+  /* Add empty CONFLICTS list */
+  svn_skel__prepend(svn_skel__make_empty_list(result_pool), conflict_skel);
+
+  /* Add empty WHY list */
+  svn_skel__prepend(svn_skel__make_empty_list(result_pool), conflict_skel);
+
+  return conflict_skel;
+}
+
+svn_error_t *
+svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
+                                  svn_skel_t *conflict_skel,
+                                  apr_pool_t *scratch_pool)
+{
+  *complete = FALSE;
+
+  if (svn_skel__list_length(conflict_skel) < 2)
+    return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                            _("Not a conflict skel"));
+
+  if (svn_skel__list_length(conflict_skel->children) < 2)
+    return SVN_NO_ERROR; /* WHY is not set */
+
+  if (svn_skel__list_length(conflict_skel->children->next) == 0)
+    return SVN_NO_ERROR; /* No conflict set */
+
+  *complete = TRUE;
+  return SVN_NO_ERROR;
+}
+
+/* Gets the conflict data of the specified type CONFLICT_TYPE from
+   CONFLICT_SKEL, or NULL if no such conflict is recorded */
+static svn_error_t *
+conflict__get_conflict(svn_skel_t **conflict,
+                       svn_skel_t *conflict_skel,
+                       const char *conflict_type)
+{
+  svn_skel_t *c;
+  apr_size_t len;
+  SVN_ERR_ASSERT(conflict_skel
+                 && conflict_skel->children
+                 && conflict_skel->children->next
+                 && !conflict_skel->children->next->is_atom);
+
+  len = strlen(conflict_type);
+
+  for(c = conflict_skel->children->next->children;
+      c;
+      c = c->next)
+    {
+      if (c->children->is_atom
+          && c->children->len == len
+          && memcmp(c->children->data, conflict_type, len) == 0)
+        {
+          *conflict = c;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *conflict = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
+                                        svn_wc__db_t *db,
+                                        const char *wri_abspath,
+                                        const char *marker_abspath,
+                                        apr_hash_t *original_props,
+                                        apr_hash_t *mine_props,
+                                        apr_hash_t *their_props,
+                                        apr_hash_t *conflicted_prop_names,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_skel_t *prop_conflict;
+  svn_skel_t *props;
+  svn_skel_t *conflict_names;
+  svn_skel_t *markers;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(conflict__get_conflict(&prop_conflict, conflict_skel,
+                                 SVN_WC__CONFLICT_KIND_PROP));
+
+  SVN_ERR_ASSERT(!prop_conflict); /* ### Use proper error? */
+
+  /* This function currently implements:
+  /* ("prop"
+      ("marker_relpath")
+      prop-conflicted_prop_names
+      original-props
+      mine-props
+      their-props)
+     NULL lists are recorded as "" */
+
+  prop_conflict = svn_skel__make_empty_list(result_pool);
+
+  if (their_props)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, their_props, result_pool));
+      svn_skel__prepend(props, prop_conflict);
+    }
+  else
+    svn_skel__prepend_str("", prop_conflict, result_pool); /* No their_props */
+
+  if (mine_props)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, mine_props, result_pool));
+      svn_skel__prepend(props, prop_conflict);
+    }
+  else
+    svn_skel__prepend_str("", prop_conflict, result_pool); /* No mine_props */
+
+  if (original_props)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, original_props, result_pool));
+      svn_skel__prepend(props, prop_conflict);
+    }
+  else
+    svn_skel__prepend_str("", prop_conflict, result_pool); /* No old_props */
+
+  conflict_names = svn_skel__make_empty_list(result_pool);
+  for (hi = apr_hash_first(scratch_pool, conflicted_prop_names);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_skel__prepend_str(apr_pstrdup(result_pool,
+                                        svn__apr_hash_index_key(hi)),
+                            conflict_names,
+                            result_pool);
+    }
+  svn_skel__prepend(conflict_names, prop_conflict);
+
+  markers = svn_skel__make_empty_list(result_pool);
+
+  if (marker_abspath)
+    {
+      const char *marker_relpath;
+      SVN_ERR(svn_wc__db_to_relpath(&marker_relpath, db, wri_abspath,
+                                    marker_abspath,
+                                    result_pool, scratch_pool));
+
+      svn_skel__prepend_str(marker_relpath, markers, result_pool);
+    }
+  else
+    svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
+
+  svn_skel__prepend(markers, prop_conflict);
+
+  svn_skel__prepend_str(SVN_WC__CONFLICT_KIND_PROP, prop_conflict, result_pool);
+
+  /* And add it to the conflict skel */
+  svn_skel__prepend(prop_conflict, conflict_skel->children->next);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
+                                    apr_hash_t **original_props,
+                                    apr_hash_t **mine_props,
+                                    apr_hash_t **their_props,
+                                    apr_hash_t **conflicted_prop_names,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    svn_skel_t *conflict_skel,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *prop_conflict;
+  svn_skel_t *c;
+
+  SVN_ERR(conflict__get_conflict(&prop_conflict, conflict_skel,
+                                 SVN_WC__CONFLICT_KIND_PROP));
+
+  if (!prop_conflict)
+    return svn_error_create(SVN_ERR_WC_MISSING, NULL, _("Conflict not set"));
+
+  c = prop_conflict->children;
+
+  c = c->next; /* Skip "prop" */
+
+  /* Get marker file */
+  if (marker_abspath)
+    {
+      const char *marker_relpath;
+
+      if (c->children && c->children->is_atom)
+        {
+          marker_relpath = apr_pstrndup(result_pool, c->children->data,
+                                        c->children->len);
+
+          SVN_ERR(svn_wc__db_from_relpath(marker_abspath, db, wri_abspath,
+                                          marker_relpath,
+                                          result_pool, scratch_pool));
+        }
+      else
+        *marker_abspath = NULL;
+    }
+  c = c->next;
+
+  /* Get conflicted properties */
+  if (conflicted_prop_names)
+    {
+      svn_skel_t *name;
+      *conflicted_prop_names = apr_hash_make(result_pool);
+
+      for (name = c->children; name; name = name->next)
+        {
+          apr_hash_set(*conflicted_prop_names,
+                       apr_pstrndup(result_pool, name->data, name->len),
+                       APR_HASH_KEY_STRING,
+                       "");
+        }
+    }
+  c = c->next;
+
+  /* Get original properties */
+  if (original_props)
+    {
+      if (c->is_atom)
+        *original_props = apr_hash_make(result_pool);
+      else
+        SVN_ERR(svn_skel__parse_proplist(original_props, c, result_pool));
+    }
+  c = c->next;
+
+  /* Get mine properties */
+  if (mine_props)
+    {
+      if (c->is_atom)
+        *mine_props = apr_hash_make(result_pool);
+      else
+        SVN_ERR(svn_skel__parse_proplist(mine_props, c, result_pool));
+    }
+  c = c->next;
+
+  /* Get their properties */
+  if (their_props)
+    {
+      if (c->is_atom)
+        *their_props = apr_hash_make(result_pool);
+      else
+        SVN_ERR(svn_skel__parse_proplist(their_props, c, result_pool));
+    }
+  c = c->next;
+
+  return SVN_NO_ERROR;
+}
+
+/* --------------------------------------------------------------------
+ */
 svn_skel_t *
 svn_wc__prop_conflict_skel_new(apr_pool_t *result_pool)
 {

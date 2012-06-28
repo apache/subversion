@@ -59,7 +59,7 @@ extern "C" {
    with the result of its operation in the working copy database.
 */
 svn_skel_t *
-svn_wc__conflict_skel_new(apr_pool_t *result_pool);
+svn_wc__conflict_skel_create(apr_pool_t *result_pool);
 
 /* Return a boolean in *COMPLETE indicating whether CONFLICT_SKEL contains
    everything needed for installing in the working copy database.
