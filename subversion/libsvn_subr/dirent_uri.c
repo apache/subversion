@@ -1554,6 +1554,13 @@ svn_dirent_get_absolute(const char **pabsolute,
 
   SVN_ERR_ASSERT(! svn_path_is_url(relative));
 
+  /* If the input is already absolute, just copy it to the result pool. */
+  if (svn_dirent_is_absolute(relative))
+    {
+      *pabsolute = apr_pstrdup(pool, relative);
+      return SVN_NO_ERROR;
+    }
+
   /* Merge the current working directory with the relative dirent. */
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, relative, pool));
 
