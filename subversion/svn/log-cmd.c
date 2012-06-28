@@ -149,7 +149,7 @@ display_diff(const svn_log_entry_t *log_entry,
 
 /* Return TRUE if SEARCH_PATTERN matches the AUTHOR, LOG_MESSAGE, or a path
  * in the set of keys of the CHANGED_PATHS hash. Else, return FALSE.
- * LOG_MESSAGE and CHANGED_PATHS are allowed to be NULL. */
+ * Any of AUTHOR, LOG_MESSAGE and CHANGED_PATHS are allowed to be NULL. */
 static svn_boolean_t
 match_search_pattern(const char *search_pattern,
                      const char *author,
@@ -163,7 +163,7 @@ match_search_pattern(const char *search_pattern,
   int flags = (case_insensitive_search ? APR_FNM_CASE_BLIND : 0);
 
   /* Does the author match the search pattern? */
-  if (apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
+  if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
     return TRUE;
 
   /* Does the log message the search pattern? */
