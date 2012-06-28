@@ -159,6 +159,13 @@ independently once this is implemented.
 The --accept options already provide a lot of additional value and the
 WHY model would allow access to the specific sets by URL.
 
+### gs: there are FOUR values of interest w.r.t property conflicts.
+###     and each of these may be missing to designate the property
+###     does not exist. see 'conflict-storage'.
+
+### gs: the property name needs to be stored. again, see 'conflict-storage'
+
+
 Tree Conflicts
 --------------
 
@@ -176,3 +183,7 @@ where it applies to the WHY parts.
 
 It would be nice if some other --accept values would be accepted, but that
 is outside the scope of this design.
+
+### gs: is LOCAL-STATE defined the same as in 'conflict-storage' ?
+
+### gs: what is the definition of INCOMING-ACTION ?
