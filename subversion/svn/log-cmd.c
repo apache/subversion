@@ -181,7 +181,7 @@ match_search_pattern(const char *search_pattern,
         {
           const char *path = svn__apr_hash_index_key(hi);
 
-          if (apr_fnmatch(search_pattern, path, flags) == APR_SUCCESS)
+          if (apr_fnmatch(pattern, path, flags) == APR_SUCCESS)
             return TRUE;
         }
     }
