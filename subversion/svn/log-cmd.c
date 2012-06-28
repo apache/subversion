@@ -185,8 +185,17 @@ match_search_pattern(const char *search_pattern,
            hi = apr_hash_next(hi))
         {
           const char *path = svn__apr_hash_index_key(hi);
+          svn_log_changed_path2_t *log_item;
 
           if (apr_fnmatch(pattern, path, flags) == APR_SUCCESS)
+            return TRUE;
+
+          /* Match copy-from paths, too. */
+          log_item = svn__apr_hash_index_val(hi);
+          if (log_item->copyfrom_path
+              && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev)
+              && apr_fnmatch(pattern,
+                             log_item->copyfrom_path, flags) == APR_SUCCESS)
             return TRUE;
         }
     }
