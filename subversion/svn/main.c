@@ -2168,6 +2168,7 @@ main(int argc, const char *argv[])
         break;
       case opt_search:
         opt_state.search_pattern = opt_arg;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
