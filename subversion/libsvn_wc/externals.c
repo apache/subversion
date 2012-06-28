@@ -735,6 +735,7 @@ close_file(void *file_baton,
                 enum svn_wc_merge_outcome_t merge_outcome;
                 /* Ok, we have to do some work to merge a local change */
                 SVN_ERR(svn_wc__perform_file_merge(&work_item,
+                                                   &conflict_skel,
                                                    &merge_outcome,
                                                    eb->db,
                                                    eb->local_abspath,
@@ -747,8 +748,6 @@ close_file(void *file_baton,
                                                    *eb->target_revision,
                                                    eb->propchanges,
                                                    eb->diff3cmd,
-                                                   eb->conflict_func,
-                                                   eb->conflict_baton,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    pool, pool));

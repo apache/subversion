@@ -3025,6 +3025,7 @@ close_directory(void *dir_baton,
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
                                              conflict_skel,
+                                             NULL /* merge_options */,
                                              eb->conflict_func,
                                              eb->conflict_baton,
                                              scratch_pool));
@@ -3796,6 +3797,7 @@ change_file_prop(void *file_baton,
  */
 svn_error_t *
 svn_wc__perform_file_merge(svn_skel_t **work_items,
+                           svn_skel_t **conflict_skel,
                            enum svn_wc_merge_outcome_t *merge_outcome,
                            svn_wc__db_t *db,
                            const char *local_abspath,
@@ -3808,8 +3810,6 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
-                           svn_wc_conflict_resolver_func2_t conflict_func,
-                           void *conflict_baton,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
@@ -3877,17 +3877,17 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
      Remember that this function wants full paths! */
   /* ### TODO: Pass version info here. */
   SVN_ERR(svn_wc__internal_merge(&work_item,
+                                 conflict_skel,
                                  merge_outcome,
                                  db,
-                                 merge_left, NULL,
-                                 new_text_base_tmp_abspath, NULL,
+                                 merge_left,
+                                 new_text_base_tmp_abspath,
                                  local_abspath,
                                  wri_abspath,
                                  oldrev_str, newrev_str, mine_str,
                                  actual_props,
                                  FALSE /* dry_run */,
                                  diff3_cmd, NULL, propchanges,
-                                 conflict_func, conflict_baton,
                                  cancel_func, cancel_baton,
                                  result_pool, scratch_pool));
 
@@ -3929,6 +3929,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
  */
 static svn_error_t *
 merge_file(svn_skel_t **work_items,
+           svn_skel_t **conflict_skel,
            svn_boolean_t *install_pristine,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
@@ -4030,6 +4031,7 @@ merge_file(svn_skel_t **work_items,
          Now we need to let loose svn_wc__merge_internal() to merge
          the textual changes into the working file. */
       SVN_ERR(svn_wc__perform_file_merge(work_items,
+                                         conflict_skel,
                                          &merge_outcome,
                                          eb->db,
                                          working_abspath,
@@ -4044,7 +4046,6 @@ merge_file(svn_skel_t **work_items,
                                          *eb->target_revision,
                                          fb->propchanges,
                                          eb->diff3_cmd,
-                                         eb->conflict_func, eb->conflict_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          result_pool, scratch_pool));
     } /* end: working file exists and has mods */
@@ -4378,7 +4379,8 @@ close_file(void *file_baton,
       if (!fb->obstruction_found)
         {
           svn_error_t *err;
-          err = merge_file(&work_item, &install_pristine, &install_from,
+          err = merge_file(&work_item, &conflict_skel,
+                           &install_pristine, &install_from,
                            &content_state, fb, current_actual_props,
                            fb->changed_date, scratch_pool, scratch_pool);
 
