@@ -1659,16 +1659,16 @@ svn_wc__merge_props(svn_skel_t **work_items,
             continue;   /* skip to next incoming change */
 
           if (conflict_skel == NULL)
-            conflict_skel = svn_wc__conflict_skel_new(result_pool);
+            conflict_skel = svn_wc__prop_conflict_skel_new(result_pool);
 
-          SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel,
-                                                          propname,
-                                                          base_val,
-                                                          mine_val,
-                                                          to_val,
-                                                          from_val,
-                                                          result_pool,
-                                                          iterpool));
+          SVN_ERR(svn_wc__prop_conflict_skel_add(conflict_skel,
+                                                 propname,
+                                                 base_val,
+                                                 mine_val,
+                                                 to_val,
+                                                 from_val,
+                                                 result_pool,
+                                                 iterpool));
         }
 
     }  /* foreach propchange ... */

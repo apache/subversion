@@ -52,7 +52,7 @@
 #include "svn_private_config.h"
 
 svn_skel_t *
-svn_wc__conflict_skel_new(apr_pool_t *result_pool)
+svn_wc__prop_conflict_skel_new(apr_pool_t *result_pool)
 {
   svn_skel_t *operation = svn_skel__make_empty_list(result_pool);
   svn_skel_t *result = svn_skel__make_empty_list(result_pool);
@@ -82,7 +82,7 @@ prepend_prop_value(const svn_string_t *value,
 
 
 svn_error_t *
-svn_wc__conflict_skel_add_prop_conflict(
+svn_wc__prop_conflict_skel_add(
   svn_skel_t *skel,
   const char *prop_name,
   const svn_string_t *original_value,
