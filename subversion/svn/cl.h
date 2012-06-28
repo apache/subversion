@@ -238,6 +238,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   const char *search_pattern;     /* pattern argument for --search */
+  svn_boolean_t case_insensitive_search; /* perform case-insensitive search */
 } svn_cl__opt_state_t;
 
 

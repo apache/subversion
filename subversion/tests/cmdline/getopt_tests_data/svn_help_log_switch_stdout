@@ -111,6 +111,7 @@ Valid options:
                                 -p (--show-c-function):
                                    Show C function name in diff output.
   --search ARG             : use ARG as search pattern (glob syntax)
+  --isearch ARG            : like --search, but case-insensitive
 
 Global options:
   --username ARG           : specify a username ARG
