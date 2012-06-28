@@ -145,7 +145,7 @@ Candidate changes:
    Justification:
      Incomplete API in JavaHL bindings. Requested by SVNKit developers.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1352068
    Do not use non-constant initializers in struct variables, since this
@@ -167,12 +167,12 @@ Candidate changes:
    Votes:
      +1: stsp
 
-* r1354626, r1354652
-  Fix JavaHL so as not to assert on non-canonical input
-  Justification
-    Regression from 1.6.
-  Votes:
-    +1: philip
+ * r1354626, r1354652
+   Fix JavaHL so as not to assert on non-canonical input
+   Justification
+     Regression from 1.6.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
