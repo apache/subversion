@@ -1554,13 +1554,6 @@ svn_dirent_get_absolute(const char **pabsolute,
 
   SVN_ERR_ASSERT(! svn_path_is_url(relative));
 
-  /* If the input is already absolute, just copy it to the result pool. */
-  if (svn_dirent_is_absolute(relative))
-    {
-      *pabsolute = apr_pstrdup(pool, relative);
-      return SVN_NO_ERROR;
-    }
-
   /* Merge the current working directory with the relative dirent. */
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, relative, pool));
 
@@ -1569,10 +1562,31 @@ svn_dirent_get_absolute(const char **pabsolute,
                                APR_FILEPATH_NOTRELATIVE,
                                pool);
   if (apr_err)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME,
-                             svn_error_create(apr_err, NULL, NULL),
-                             _("Couldn't determine absolute path of '%s'"),
-                             svn_dirent_local_style(relative, pool));
+    {
+      /* In some cases when the passed path or its ancestor(s) do not exist
+         or no longer exist apr returns an error.
+
+         In many of these cases we would like to return a path anyway, when the
+         passed path was already a safe absolute path. So check for that now to
+         avoid an error.
+
+         svn_dirent_is_absolute() doesn't perform the necessary checks to see
+         if the path doesn't need post processing to be in the canonical absolute
+         format.
+         */
+
+      if (svn_dirent_is_absolute(relative)
+          && svn_dirent_is_canonical(relative, pool)
+          && !svn_path_is_backpath_present(relative))
+        {
+          *pabsolute = apr_pstrdup(pool, relative);
+        }
+
+      return svn_error_createf(SVN_ERR_BAD_FILENAME,
+                               svn_error_create(apr_err, NULL, NULL),
+                               _("Couldn't determine absolute path of '%s'"),
+                               svn_dirent_local_style(relative, pool));
+    }
 
   SVN_ERR(svn_path_cstring_to_utf8(pabsolute, buffer, pool));
   *pabsolute = svn_dirent_canonicalize(*pabsolute, pool);
