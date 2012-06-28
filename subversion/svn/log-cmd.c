@@ -147,12 +147,13 @@ display_diff(const svn_log_entry_t *log_entry,
 }
 
 
-/* Return TRUE if SEARCH_PATTERN matches the AUTHOR, LOG_MESSAGE, or a path
- * in the set of keys of the CHANGED_PATHS hash. Else, return FALSE.
- * Any of AUTHOR, LOG_MESSAGE and CHANGED_PATHS are allowed to be NULL. */
+/* Return TRUE if SEARCH_PATTERN matches the AUTHOR, DATE, LOG_MESSAGE,
+ * or a path in the set of keys of the CHANGED_PATHS hash. Else, return FALSE.
+ * Any of AUTHOR, DATE, LOG_MESSAGE, and CHANGED_PATHS may be NULL. */
 static svn_boolean_t
 match_search_pattern(const char *search_pattern,
                      const char *author,
+                     const char *date,
                      const char *log_message,
                      apr_hash_t *changed_paths,
                      svn_boolean_t case_insensitive_search,
@@ -164,6 +165,10 @@ match_search_pattern(const char *search_pattern,
 
   /* Does the author match the search pattern? */
   if (author && apr_fnmatch(pattern, author, flags) == APR_SUCCESS)
+    return TRUE;
+
+  /* Does the date the search pattern? */
+  if (date && apr_fnmatch(pattern, date, flags) == APR_SUCCESS)
     return TRUE;
 
   /* Does the log message the search pattern? */
@@ -307,7 +312,7 @@ log_entry_receiver(void *baton,
     message = "";
 
   if (lb->search_pattern &&
-      ! match_search_pattern(lb->search_pattern, author, message,
+      ! match_search_pattern(lb->search_pattern, author, date, message,
                              log_entry->changed_paths2,
                              lb->case_insensitive_search, pool))
     {
@@ -492,7 +497,7 @@ log_entry_receiver_xml(void *baton,
 
   /* Match search pattern before XML-escaping. */
   if (lb->search_pattern &&
-      ! match_search_pattern(lb->search_pattern, author, message,
+      ! match_search_pattern(lb->search_pattern, author, date, message,
                              log_entry->changed_paths2,
                              lb->case_insensitive_search, pool))
     {
