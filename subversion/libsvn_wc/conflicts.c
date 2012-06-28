@@ -134,6 +134,26 @@ conflict__prepend_location(svn_skel_t *skel,
   return SVN_NO_ERROR;
 }
 
+/* Get the operation part of CONFLICT_SKELL or NULL if no operation is set
+   at this time */
+static svn_error_t *
+conflict__get_operation(svn_skel_t **why,
+                        svn_skel_t *conflict_skel)
+{
+  SVN_ERR_ASSERT(conflict_skel
+                 && conflict_skel->children
+                 && conflict_skel->children->next
+                 && !conflict_skel->children->next->is_atom);
+
+  *why = conflict_skel->children;
+
+  if (!(*why)->children)
+    *why = NULL; /* Operation is not set yet */
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
                                     const svn_wc_conflict_version_t *original,
@@ -148,6 +168,9 @@ svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
                  && conflict_skel->children->next
                  && !conflict_skel->children->next->is_atom);
 
+  SVN_ERR(conflict__get_operation(&why, conflict_skel));
+
+  SVN_ERR_ASSERT(why == NULL); /* No operation set */
 
   why = conflict_skel->children;
 
@@ -176,6 +199,9 @@ svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
                  && conflict_skel->children->next
                  && !conflict_skel->children->next->is_atom);
 
+  SVN_ERR(conflict__get_operation(&why, conflict_skel));
+
+  SVN_ERR_ASSERT(why == NULL); /* No operation set */
 
   why = conflict_skel->children;
 
@@ -205,6 +231,9 @@ svn_wc__conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
                  && conflict_skel->children->next
                  && !conflict_skel->children->next->is_atom);
 
+  SVN_ERR(conflict__get_operation(&why, conflict_skel));
+
+  SVN_ERR_ASSERT(why == NULL); /* No operation set */
 
   why = conflict_skel->children;
 
