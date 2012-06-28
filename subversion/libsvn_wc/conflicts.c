@@ -90,6 +90,134 @@ svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
   return SVN_NO_ERROR;
 }
 
+/* Serialize a svn_wc_conflict_version_t before the existing data in skel */
+static svn_error_t *
+conflict__prepend_location(svn_skel_t *skel,
+                           const svn_wc_conflict_version_t *location,
+                           svn_boolean_t allow_NULL,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_skel_t *loc;
+  SVN_ERR_ASSERT(location || allow_NULL);
+
+  if (!location)
+    {
+      svn_skel__prepend(svn_skel__make_empty_list(result_pool), skel);
+      return SVN_NO_ERROR;
+    }
+
+  /* ("subversion" repos_root_url repos_uuid repos_relpath rev kind) */
+  loc = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_str(svn_node_kind_to_word(location->node_kind),
+                        loc, result_pool);
+
+  svn_skel__prepend_int(location->peg_rev, loc, result_pool);
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, location->path_in_repos), loc,
+                        result_pool);
+
+  if (!location->repos_uuid) /* Can theoretically be NULL */
+    svn_skel__prepend(svn_skel__make_empty_list(result_pool), loc);
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, location->repos_url), loc,
+                        result_pool);
+
+  svn_skel__prepend_str(SVN_WC__CONFLICT_SRC_SUBVERSION, loc, result_pool);
+
+  svn_skel__prepend(loc, skel);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
+                                    const svn_wc_conflict_version_t *original,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *why;
+  svn_skel_t *origins;
+
+  SVN_ERR_ASSERT(conflict_skel
+                 && conflict_skel->children
+                 && conflict_skel->children->next
+                 && !conflict_skel->children->next->is_atom);
+
+
+  why = conflict_skel->children;
+
+  origins = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(conflict__prepend_location(origins, original, FALSE,
+                                     result_pool, scratch_pool));
+
+  svn_skel__prepend(origins, why);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_OP_UPDATE, why, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
+                                    const svn_wc_conflict_version_t *original,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *why;
+  svn_skel_t *origins;
+
+  SVN_ERR_ASSERT(conflict_skel
+                 && conflict_skel->children
+                 && conflict_skel->children->next
+                 && !conflict_skel->children->next->is_atom);
+
+
+  why = conflict_skel->children;
+
+  origins = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(conflict__prepend_location(origins, original, FALSE,
+                                     result_pool, scratch_pool));
+
+  svn_skel__prepend(origins, why);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_OP_SWITCH, why, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
+                                   const svn_wc_conflict_version_t *left,
+                                   const svn_wc_conflict_version_t *right,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_skel_t *why;
+  svn_skel_t *origins;
+
+  SVN_ERR_ASSERT(conflict_skel
+                 && conflict_skel->children
+                 && conflict_skel->children->next
+                 && !conflict_skel->children->next->is_atom);
+
+
+  why = conflict_skel->children;
+
+  origins = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(conflict__prepend_location(origins, right, TRUE,
+                                     result_pool, scratch_pool));
+
+  SVN_ERR(conflict__prepend_location(origins, left, TRUE,
+                                     result_pool, scratch_pool));
+
+  svn_skel__prepend(origins, why);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_OP_UPDATE, why, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Gets the conflict data of the specified type CONFLICT_TYPE from
    CONFLICT_SKEL, or NULL if no such conflict is recorded */
 static svn_error_t *

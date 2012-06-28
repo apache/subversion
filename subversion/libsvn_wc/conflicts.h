@@ -49,6 +49,8 @@ extern "C" {
 #define SVN_WC__CONFLICT_KIND_REJECT "reject"
 #define SVN_WC__CONFLICT_KIND_OBSTRUCTED "obstructed"
 
+#define SVN_WC__CONFLICT_SRC_SUBVERSION "subversion"
+
 /* Return a new conflict skel, allocated in RESULT_POOL.
 
    Typically creating a conflict starts with calling this function and then
@@ -87,7 +89,7 @@ svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
    completely stored in RESULT-POOL. */
 svn_error_t *
 svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
-                                    svn_wc_conflict_version_t *original,
+                                    const svn_wc_conflict_version_t *original,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -103,7 +105,7 @@ svn_wc__conflict_skel_set_op_update(svn_skel_t *conflict_skel,
    Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
-                                    svn_wc_conflict_version_t *original,
+                                    const svn_wc_conflict_version_t *original,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -120,8 +122,8 @@ svn_wc__conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
    Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
-                                   svn_wc_conflict_version_t *left,
-                                   svn_wc_conflict_version_t *right,
+                                   const svn_wc_conflict_version_t *left,
+                                   const svn_wc_conflict_version_t *right,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
