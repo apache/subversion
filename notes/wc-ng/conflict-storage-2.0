@@ -79,7 +79,8 @@ this format in a future version if we want to keep the conflicts valid.
 
 "update" and "switch" will have 1 PATH_REV item, containing the original BASE
 path from before the update/switch. The new location is already available in
-BASE so doesn't have to be duplicated.
+BASE so doesn't have to be duplicated. If the node is an addition the empty
+list is used.
 
 Merge will have 2 items: the left and right paths. These can come from a
 different repository.
@@ -139,7 +140,11 @@ Property Conflicts
 ------------------
   
 Property conflicts are initially described as
-  ("prop" MARKERS (PROPS-OLD PROPS-NEW PROPS_WORKING) ...)
+  ("prop" MARKERS PROP-NAMES
+   ORIGINAL-PROPS MINE-PROPS ORIGINAL-THEIRS THEIRS ...)
+
+PROP-NAMES is a list of conflicted/not-resolved properties.
+*-PROPS are (key value) property mapping lists.
 
 This simple model extends the wc-1.0 model to allow the same conflict
 resolving as for text conflicts. All the options 'base', 'working',
@@ -158,12 +163,6 @@ independently once this is implemented.
 
 The --accept options already provide a lot of additional value and the
 WHY model would allow access to the specific sets by URL.
-
-### gs: there are FOUR values of interest w.r.t property conflicts.
-###     and each of these may be missing to designate the property
-###     does not exist. see 'conflict-storage'.
-
-### gs: the property name needs to be stored. again, see 'conflict-storage'
 
 
 Tree Conflicts
