@@ -46,6 +46,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "entries.h"
 #include "translate.h"
 #include "workqueue.h"
@@ -297,6 +298,9 @@ struct dir_baton
 
   /* The revision of the directory before updating */
   svn_revnum_t old_revision;
+
+  /* The repos_relpath before updating/switching */
+  const char *old_repos_relpath;
 
   /* The global edit baton. */
   struct edit_baton *edit_baton;
@@ -720,6 +724,9 @@ struct file_baton
   /* The revision of the file before updating */
   svn_revnum_t old_revision;
 
+  /* The repos_relpath before updating/switching */
+  const char *old_repos_relpath;
+
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -1131,7 +1138,8 @@ open_root(void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
 
       /* Read the depth from the entry. */
-      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, &db->old_revision,
+                                       &db->old_repos_relpath, NULL, NULL,
                                        &db->changed_rev, &db->changed_date,
                                        &db->changed_author, &db->ambient_depth,
                                        NULL, NULL, NULL, NULL, NULL,
@@ -2430,8 +2438,9 @@ open_directory(const char *path,
   /* We should have a write lock on every directory touched.  */
   SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
 
-  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision, NULL,
-                               NULL, NULL, &db->changed_rev, &db->changed_date,
+  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision,
+                               &db->old_repos_relpath, NULL, NULL,
+                               &db->changed_rev, &db->changed_date,
                                &db->changed_author, &db->ambient_depth,
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2444,10 +2453,10 @@ open_directory(const char *path,
     base_status = status;
   else
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
-                                     NULL, NULL, NULL, &db->changed_rev,
-                                     &db->changed_date, &db->changed_author,
-                                     &db->ambient_depth, NULL, NULL, NULL,
-                                     NULL, NULL,
+                                     &db->old_repos_relpath, NULL, NULL,
+                                     &db->changed_rev, &db->changed_date,
+                                     &db->changed_author, &db->ambient_depth,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      eb->db, db->local_abspath,
                                      db->pool, pool));
 
@@ -2592,6 +2601,7 @@ close_directory(void *dir_baton,
   const char *new_changed_author = NULL;
   apr_pool_t *scratch_pool = db->pool;
   svn_skel_t *all_work_items = NULL;
+  svn_skel_t *conflict_skel = NULL;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
@@ -2674,8 +2684,6 @@ close_directory(void *dir_baton,
      to deal with them. */
   if (regular_prop_changes->nelts)
     {
-      svn_skel_t *work_item;
-
       /* If recording traversal info, then see if the
          SVN_PROP_EXTERNALS property on this directory changed,
          and record before and after for the change. */
@@ -2723,23 +2731,19 @@ close_directory(void *dir_baton,
 
       /* Merge pending properties into temporary files (ignoring
          conflicts). */
-      SVN_ERR_W(svn_wc__merge_props(&work_item,
+      SVN_ERR_W(svn_wc__merge_props(&conflict_skel,
                                     &prop_state,
                                     &new_base_props,
                                     &new_actual_props,
                                     eb->db,
                                     db->local_abspath,
                                     svn_kind_dir,
-                                    NULL, /* left_version */
-                                    NULL, /* right_version */
                                     NULL /* use baseprops */,
                                     base_props,
                                     actual_props,
                                     regular_prop_changes,
                                     TRUE /* base_merge */,
                                     FALSE /* dry_run */,
-                                    eb->conflict_func,
-                                    eb->conflict_baton,
                                     eb->cancel_func,
                                     eb->cancel_baton,
                                     db->pool,
@@ -2747,8 +2751,6 @@ close_directory(void *dir_baton,
                 _("Couldn't do property merge"));
       /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
     }
 
   SVN_ERR(accumulate_last_change(&new_changed_rev, &new_changed_date,
@@ -2919,6 +2921,45 @@ close_directory(void *dir_baton,
       if (props == NULL)
         props = base_props;
 
+      if (conflict_skel)
+        {
+          svn_skel_t *work_item;
+          if (eb->switch_relpath)
+            SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                        conflict_skel,
+                        db->adding_dir
+                            ? NULL
+                            : svn_wc_conflict_version_create2(
+                                            eb->repos_root,
+                                            eb->repos_uuid,
+                                            db->old_repos_relpath,
+                                            db->old_revision,
+                                            svn_node_dir,
+                                            scratch_pool),
+                        db->pool, db->pool));
+          else
+            SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                        conflict_skel,
+                        db->adding_dir
+                            ? NULL
+                            : svn_wc_conflict_version_create2(
+                                            eb->repos_root,
+                                            eb->repos_uuid,
+                                            db->old_repos_relpath,
+                                            db->old_revision,
+                                            svn_node_dir,
+                                            scratch_pool),
+                        db->pool, db->pool));
+
+          SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                                  eb->db, db->local_abspath,
+                                                  conflict_skel,
+                                                  scratch_pool, scratch_pool));
+
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
+        }
+
       /* Update the BASE data for the directory and mark the directory
          complete */
       SVN_ERR(svn_wc__db_base_add_directory(
@@ -2980,6 +3021,13 @@ close_directory(void *dir_baton,
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          scratch_pool));
+
+  if (conflict_skel && eb->conflict_func)
+    SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                             conflict_skel,
+                                             eb->conflict_func,
+                                             eb->conflict_baton,
+                                             scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
      it's an added or skipped directory, because notification has already
@@ -3493,8 +3541,9 @@ open_file(const char *path,
   /* Sanity check. */
 
   /* If replacing, make sure the .svn entry already exists. */
-  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision, NULL,
-                               NULL, NULL, &fb->changed_rev, &fb->changed_date,
+  SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision,
+                               &fb->old_repos_relpath, NULL, NULL,
+                               &fb->changed_rev, &fb->changed_date,
                                &fb->changed_author, NULL,
                                &fb->original_checksum, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -3505,9 +3554,10 @@ open_file(const char *path,
 
   if (have_work)
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &fb->old_revision,
-                                     NULL, NULL, NULL, &fb->changed_rev,
-                                     &fb->changed_date, &fb->changed_author,
-                                     NULL, &fb->original_checksum, NULL, NULL,
+                                     &fb->old_repos_relpath, NULL, NULL,
+                                     &fb->changed_rev, &fb->changed_date,
+                                     &fb->changed_author, NULL,
+                                     &fb->original_checksum, NULL, NULL,
                                      NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
@@ -4108,6 +4158,7 @@ close_file(void *file_baton,
   apr_hash_t *current_actual_props = NULL;
   apr_hash_t *local_actual_props = NULL;
   svn_skel_t *all_work_items = NULL;
+  svn_skel_t *conflict_skel = NULL;
   svn_skel_t *work_item;
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
@@ -4304,29 +4355,24 @@ close_file(void *file_baton,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR(svn_wc__merge_props(&work_item,
+      SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
                                   &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   working_abspath,
                                   svn_kind_file,
-                                  NULL /* left_version */,
-                                  NULL /* right_version */,
                                   NULL /* server_baseprops (update, not merge)  */,
                                   current_base_props,
                                   current_actual_props,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
-                                  eb->conflict_func, eb->conflict_baton,
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge). */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
 
       /* Merge the text. This will queue some additional work.  */
       if (!fb->obstruction_found)
@@ -4443,28 +4489,22 @@ close_file(void *file_baton,
 
       /* Store the incoming props (sent as propchanges) in new_base_props
          and create a set of new actual props to use for notifications */
-      SVN_ERR(svn_wc__merge_props(&work_item,
+      SVN_ERR(svn_wc__merge_props(&conflict_skel,
                                   &prop_state,
                                   &new_base_props,
                                   &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
                                   svn_kind_file,
-                                  NULL /* left_version */,
-                                  NULL /* right_version */,
                                   NULL /* server_baseprops (not merging) */,
                                   current_base_props /* pristine_props */,
                                   fake_actual_props /* actual_props */,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
-                                  NULL, NULL, /* No conflict handling */
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
-
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
 
       if (fb->new_text_base_sha1_checksum)
         content_state = svn_wc_notify_state_changed;
@@ -4483,6 +4523,44 @@ close_file(void *file_baton,
      Just carry over the old checksum.  */
   if (new_checksum == NULL)
     new_checksum = fb->original_checksum;
+
+  if (conflict_skel)
+    {
+      svn_skel_t *work_item;
+
+      if (eb->switch_relpath)
+        SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                    conflict_skel,
+                    fb->adding_file
+                      ? NULL
+                      : svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        fb->old_repos_relpath,
+                                                        fb->old_revision,
+                                                        svn_node_file,
+                                                        fb->pool),
+                    fb->pool, fb->pool));
+      else
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(
+                    conflict_skel,
+                    fb->adding_file
+                      ? NULL
+                      : svn_wc_conflict_version_create2(eb->repos_root,
+                                                        eb->repos_uuid,
+                                                        fb->old_repos_relpath,
+                                                        fb->old_revision,
+                                                        svn_node_file,
+                                                        fb->pool),
+                    fb->pool, fb->pool));
+
+      SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                              eb->db, fb->local_abspath,
+                                              conflict_skel,
+                                              scratch_pool, scratch_pool));
+
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
+    }
 
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,

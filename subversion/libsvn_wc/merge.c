@@ -29,6 +29,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "translate.h"
 #include "workqueue.h"
 
@@ -1521,8 +1522,8 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               apr_pool_t *scratch_pool)
 {
   const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
-  svn_skel_t *prop_items = NULL;
   svn_skel_t *work_items;
+  svn_skel_t *conflict_skel = NULL;
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *actual_props = NULL;
   apr_hash_t *new_actual_props = NULL;
@@ -1600,14 +1601,13 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                                             scratch_pool));
         }
 
-      SVN_ERR(svn_wc__merge_props(&prop_items, merge_props_outcome,
+      SVN_ERR(svn_wc__merge_props(&conflict_skel,
+                                  merge_props_outcome,
                                   &new_pristine_props, &new_actual_props,
                                   wc_ctx->db, target_abspath, svn_kind_file,
-                                  left_version, right_version,
                                   original_props, pristine_props, actual_props,
                                   prop_diff, FALSE /* base_merge */,
                                   dry_run,
-                                  conflict_func, conflict_baton,
                                   cancel_func, cancel_baton,
                                   scratch_pool, scratch_pool));
     }
@@ -1630,11 +1630,27 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                  cancel_func, cancel_baton,
                                  scratch_pool, scratch_pool));
 
-  work_items = svn_wc__wq_merge(prop_items, work_items, scratch_pool);
-
   /* If this isn't a dry run, then run the work!  */
   if (!dry_run)
     {
+      if (conflict_skel)
+        {
+          svn_skel_t *work_item;
+
+          SVN_ERR(svn_wc__conflict_skel_set_op_merge(conflict_skel,
+                                                     left_version,
+                                                     right_version,
+                                                     scratch_pool,
+                                                     scratch_pool));
+
+          SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                                  wc_ctx->db, target_abspath,
+                                                  conflict_skel,
+                                                  scratch_pool, scratch_pool));
+
+          work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+        }
+
       if (new_actual_props)
         SVN_ERR(svn_wc__db_op_set_props(wc_ctx->db, target_abspath,
                                         new_actual_props,
@@ -1646,6 +1662,12 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
                              cancel_func, cancel_baton,
                              scratch_pool));
+
+      if (conflict_skel && conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(wc_ctx->db, target_abspath,
+                                                 conflict_skel,
+                                                 conflict_func, conflict_baton,
+                                                 scratch_pool));
     }
   
   return SVN_NO_ERROR;

@@ -600,10 +600,11 @@ close_file(void *file_baton,
       eb->new_pristine_abspath = NULL;
     }
 
-  /* ### TODO: Merge the changes */
+  /* Merge the changes */
 
   {
     svn_skel_t *all_work_items = NULL;
+    svn_skel_t *conflict_skel = NULL;
     svn_skel_t *work_item;
     apr_hash_t *base_props = NULL;
     apr_hash_t *actual_props = NULL;
@@ -675,26 +676,20 @@ close_file(void *file_baton,
 
       if (regular_prop_changes->nelts > 0)
         {
-          SVN_ERR(svn_wc__merge_props(&work_item, &prop_state,
+          SVN_ERR(svn_wc__merge_props(&conflict_skel,
+                                      &prop_state,
                                       &new_pristine_props,
                                       &new_actual_props,
                                       eb->db, eb->local_abspath,
                                       svn_kind_file,
-                                      NULL, NULL,
                                       NULL /* server_baseprops*/,
                                       base_props,
                                       actual_props,
                                       regular_prop_changes,
                                       TRUE /* base_merge */,
                                       FALSE /* dry_run */,
-                                      eb->conflict_func,
-                                      eb->conflict_baton,
                                       eb->cancel_func, eb->cancel_baton,
                                       pool, pool));
-
-          if (work_item)
-            all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                              pool);
         }
       else
         {
@@ -782,6 +777,29 @@ close_file(void *file_baton,
       {
         content_state = svn_wc_notify_state_unchanged;
         /* ### Retranslate on magic property changes, etc. */
+      }
+
+    if (conflict_skel)
+      {
+        SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                            conflict_skel,
+                            svn_wc_conflict_version_create2(
+                                    eb->repos_root_url,
+                                    eb->repos_uuid,
+                                    repos_relpath,
+                                    eb->original_revision,
+                                    svn_node_file,
+                                    pool),
+                            pool, pool));
+
+
+        SVN_ERR(svn_wc__conflict_create_markers(&work_item,
+                                                eb->db, eb->local_abspath,
+                                                conflict_skel,
+                                                pool, pool));
+
+        all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                          pool);
       }
 
     SVN_ERR(svn_wc__db_external_add_file(

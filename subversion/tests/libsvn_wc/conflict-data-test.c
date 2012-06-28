@@ -313,6 +313,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
   {
     apr_hash_t *old = apr_hash_make(pool);
     apr_hash_t *mine = apr_hash_make(pool);
+    apr_hash_t *their_old = apr_hash_make(pool);
     apr_hash_t *theirs = apr_hash_make(pool);
     apr_hash_t *conflicts = apr_hash_make(pool);
     const char *marker_abspath;
@@ -322,6 +323,9 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
 
     apr_hash_set(mine, "prop", APR_HASH_KEY_STRING,
                  svn_string_create("Mine", pool));
+
+    apr_hash_set(their_old, "prop", APR_HASH_KEY_STRING,
+                 svn_string_create("Their-Old", pool));
 
     apr_hash_set(theirs, "prop", APR_HASH_KEY_STRING,
                  svn_string_create("Theirs", pool));
@@ -336,8 +340,8 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
                                                     sbox.wc_ctx->db,
                                                     sbox.wc_abspath,
                                                     marker_abspath,
-                                                    old, mine, theirs,
-                                                    conflicts,
+                                                    old, mine, their_old,
+                                                    theirs, conflicts,
                                                     pool, pool));
   }
 
@@ -357,6 +361,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
   {
     apr_hash_t *old;
     apr_hash_t *mine;
+    apr_hash_t *their_old;
     apr_hash_t *theirs;
     apr_hash_t *conflicts;
     const char *marker_abspath;
@@ -365,6 +370,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
     SVN_ERR(svn_wc__conflict_read_prop_conflict(&marker_abspath,
                                                 &old,
                                                 &mine,
+                                                &their_old,
                                                 &theirs,
                                                 &conflicts,
                                                 sbox.wc_ctx->db,
@@ -379,6 +385,9 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
 
     v = apr_hash_get(mine, "prop", APR_HASH_KEY_STRING);
     SVN_TEST_STRING_ASSERT(v->data, "Mine");
+
+    v = apr_hash_get(their_old, "prop", APR_HASH_KEY_STRING);
+    SVN_TEST_STRING_ASSERT(v->data, "Their-Old");
 
     v = apr_hash_get(theirs, "prop", APR_HASH_KEY_STRING);
     SVN_TEST_STRING_ASSERT(v->data, "Theirs");

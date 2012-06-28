@@ -187,6 +187,7 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
                                         const char *marker_abspath,
                                         apr_hash_t *original_props,
                                         apr_hash_t *mine_props,
+                                        apr_hash_t *their_original_props,
                                         apr_hash_t *their_props,
                                         apr_hash_t *conflicted_prop_names,
                                         apr_pool_t *result_pool,
@@ -233,6 +234,7 @@ svn_error_t *
 svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_hash_t **original_props,
                                     apr_hash_t **mine_props,
+                                    apr_hash_t **their_original_props,
                                     apr_hash_t **their_props,
                                     apr_hash_t **conflicted_prop_names,
                                     svn_wc__db_t *db,
@@ -241,53 +243,24 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/* (Temporary) helper to create the (intermediate) data necessary for the
-   property marker workqueue data from the conflict skel */
-svn_error_t *
-svn_wc__conflict_create_property_marker_skel(svn_skel_t **marker_skel,
-                                             svn_skel_t *conflict_skel,
-                                             apr_pool_t *result_pool,
-                                             apr_pool_t *scratch_pool);
 
-/* -----------------------------------------
- * Intermediate property conflict skel store
+/* Create the necessary marker files for the conflicts stored in
+ * CONFLICT_SKEL and return the work items to fill the markers from
+ * the work queue.
+ *
+ * Currently only used for property conflicts as text conflict markers
+ * are just in-wc files.
+ *
+ * Allocate the result in RESULT_POOL. Perform temporary allocations in
+ * SCRATCH_POOL.
  */
-/* Return a new prop_conflict skel, allocated in RESULT_POOL. */
-svn_skel_t *
-svn_wc__prop_conflict_skel_new(apr_pool_t *result_pool);
-
-/* Add a property conflict to SKEL.
-
-   PROP_NAME is the name of the conflicted property.
-
-   ORIGINAL_VALUE is the property's value at the BASE revision. MINE_VALUE
-   is the property's value in WORKING (BASE + local modifications).
-   INCOMING_VALUE is the incoming property value brought in by the
-   operation. When merging, INCOMING_BASE_VALUE is the base value against
-   which INCOMING_VALUE ws being applied. For updates, INCOMING_BASE_VALUE
-   should be the same as ORIGINAL_VALUE.
-
-   *_VALUE may be NULL, indicating no value was present.
-
-   It is an error (### which one?) if no conflicting operation has been
-   set on CONFLICT_SKEL before calling this function.
-   It is an error (### which one?) if CONFLICT_SKEL already cotains
-   a propery conflict for PROP_NAME.
-
-   The conflict recorded in SKEL will be allocated from RESULT_POOL. Do
-   temporary allocations in SCRATCH_POOL.
-*/
 svn_error_t *
-svn_wc__prop_conflict_skel_add(
-  svn_skel_t *skel,
-  const char *prop_name,
-  const svn_string_t *original_value,
-  const svn_string_t *mine_value,
-  const svn_string_t *incoming_value,
-  const svn_string_t *incoming_base_value,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
-
+svn_wc__conflict_create_markers(svn_skel_t **work_item,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_skel_t *conflict_skel,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /* Call the interactive conflict resolver RESOLVER_FUNC with RESOLVER_BATON to
    allow resolving the conflicts on LOCAL_ABSPATH.
@@ -300,7 +273,7 @@ svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_skel_t *conflict_skel,
-                                 svn_wc_conflict_resolver_func2_t *resolver_func,
+                                 svn_wc_conflict_resolver_func2_t resolver_func,
                                  void *resolver_baton,
                                  apr_pool_t *scratch_pool);
 
