@@ -106,8 +106,8 @@ typedef struct report_baton_t
   svn_boolean_t is_switch;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_repos_authz_func_t authz_read_func;
-  void *authz_read_baton;
+  svn_repos_access_func_t access_func;
+  void *access_baton;
 
   /* The temporary file in which we are stashing the report. */
   apr_file_t *tempfile;
@@ -589,9 +589,9 @@ static svn_error_t *
 check_auth(report_baton_t *b, svn_boolean_t *allowed, const char *path,
            apr_pool_t *pool)
 {
-  if (b->authz_read_func)
-    return b->authz_read_func(allowed, b->t_root, path,
-                              b->authz_read_baton, pool);
+  if (b->access_func)
+    return b->access_func(allowed, b->t_root, path, svn_repos_access_read,
+                          svn_depth_empty, b->access_baton, pool);
   *allowed = TRUE;
   return SVN_NO_ERROR;
 }
@@ -698,15 +698,18 @@ add_file_smartly(report_baton_t *b,
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
                                          pool));
-              if (b->authz_read_func)
+              if (b->access_func)
                 {
                   svn_boolean_t allowed;
                   svn_fs_root_t *copyfrom_root;
                   SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
                                                *copyfrom_rev, pool));
-                  SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
-                                             *copyfrom_path, b->authz_read_baton,
-                                             pool));
+                  SVN_ERR(b->access_func(&allowed,
+                                         copyfrom_root,
+                                         *copyfrom_path,
+                                         svn_repos_access_read,
+                                         svn_depth_empty,
+                                         b->access_baton, pool));
                   if (! allowed)
                     {
                       *copyfrom_path = NULL;
@@ -1368,7 +1371,7 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_repos_begin_report2(void **report_baton,
+svn_repos_begin_report3(void **report_baton,
                         svn_revnum_t revnum,
                         svn_repos_t *repos,
                         const char *fs_base,
@@ -1380,8 +1383,8 @@ svn_repos_begin_report2(void **report_baton,
                         svn_boolean_t send_copyfrom_args,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_authz_func_t authz_read_func,
-                        void *authz_read_baton,
+                        svn_repos_access_func_t access_func,
+                        void *access_baton,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
@@ -1406,8 +1409,8 @@ svn_repos_begin_report2(void **report_baton,
   b->is_switch = (switch_path != NULL);
   b->editor = editor;
   b->edit_baton = edit_baton;
-  b->authz_read_func = authz_read_func;
-  b->authz_read_baton = authz_read_baton;
+  b->access_func = access_func;
+  b->access_baton = access_baton;
 
   SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
                                    svn_io_file_del_on_pool_cleanup,

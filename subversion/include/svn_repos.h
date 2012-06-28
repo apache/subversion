@@ -57,44 +57,54 @@ svn_repos_version(void);
 
 
 
-/** Bitflags used (by svn_repos_authz_func2_t's callers and implementers) 
- * to query (and queries about) path-based authorization.
+/** Path access values used by svn_repos_authz_func2_t's callers and
+ * implementers).  These are designed to be numerically comparable.
  *
  * @since New in 1.Y.
  */
-#define SVN_REPOS_AUTHZ_ACCESS_READ                 1  /* read access */
-#define SVN_REPOS_AUTHZ_ACCESS_READ_RECURSIVE       2
-#define SVN_REPOS_AUTHZ_ACCESS_WRITE                4  /* write access */
-#define SVN_REPOS_AUTHZ_ACCESS_WRITE_RECURSIVE      8
-#define SVN_REPOS_AUTHZ_ACCESS_EXIST               16  /* exist-check access */
-#define SVN_REPOS_AUTHZ_ACCESS_EXIST_RECURSIVE     32
+typedef enum
+{
+  /** No access. */
+  svn_repos_access_none = 0,
+
+  /** Path can be known to exist.  This access level is typically not 
+      granted explicitly, but is inferred by virtue of the user
+      havine this or a higher-level access on some child of the
+      tested path.  */
+  svn_repos_access_list,
+
+  /** Path can be read (implies _list) . */
+  svn_repos_access_read,
+
+  /** Path can be altered (implies _list and _read). */
+  svn_repos_access_readwrite
+
+} svn_repos_access_t;
 
 
 /** Callback type for checking authorization on repository paths.
  *
- * Set @a *access to a collection of bitflags (of the @c
- * SVN_REPOS_AUTHZ_ACCESS_* variety) indicating that one or more
- * operations are authorized for @a path in @a root.  @a query is
- * another bitflag collection of the same variety, used to specify for
- * which types of operations the caller wishes to authorize.
- * Implementors are required only to answer the authorization question
- * for the operation types represented in @a query, but may answer
- * additional questions if they see fit.
+ * Set @a *allowed to TRUE iff the @a required access privileges are
+ * granted for @a path to @a depth in @a root.
  *
  * As a special case, if @a path is @c NULL, interpret the query as a
  * global check for authorization of the operation type(s).  (For
- * example, "Is 'write' allowed for anything in the repository?")
+ * example, "Is 'write' allowed for anything in the repository?")  In
+ * such situations, @a root may be @c NULL, too.
  *
- * Do not assume @a pool has any lifetime beyond this call.
- *
+ * Currently, @a depth may only be @c svn_depth_empty or 
+ * @c svn_depth_infinity.
+ * 
  * @since New in 1.Y.
  */
-typedef svn_error_t *(*svn_repos_authz_func2_t)(apr_uint64_t *allowed,
+typedef svn_error_t *(*svn_repos_access_func_t)(svn_boolean_t *allowed,
                                                 svn_fs_root_t *root,
                                                 const char *path,
-                                                apr_uint64_t query,
+                                                svn_repos_access_t required,
+                                                svn_depth_t depth,
                                                 void *baton,
-                                                apr_pool_t *pool);
+                                                apr_pool_t *scratch_pool);
+
 
 /** Similar to the #svn_repos_authz_func2_t() callback type, but
  * with some significant differences.  First, the queried access type
@@ -623,11 +633,11 @@ svn_repos_begin_report3(void **report_baton,
                         svn_boolean_t send_copyfrom_args,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_authz_func2_t authz_func,
-                        void *authz_baton,
+                        svn_repos_access_func_t access_func,
+                        void *access_baton,
                         apr_pool_t *pool);
 
-/** Similar to svn_repos_begin_report3, but uses a #svn_repos_authz_func2_t
+/** Similar to svn_repos_begin_report3, but uses a #svn_repos_access_func_t
  * callback/baton pair instead of an #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -945,15 +955,15 @@ svn_repos_dir_delta3(svn_fs_root_t *src_root,
                      const char *tgt_path,
                      const svn_delta_editor_t *editor,
                      void *edit_baton,
-                     svn_repos_authz_func2_t authz_func,
-                     void *authz_baton,
+                     svn_repos_access_func_t access_func,
+                     void *access_baton,
                      svn_boolean_t text_deltas,
                      svn_depth_t depth,
                      svn_boolean_t entry_props,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool);
 
-/** Similar to svn_repos_dir_delta3, but uses a #svn_repos_authz_func2_t
+/** Similar to svn_repos_dir_delta3, but uses a #svn_repos_access_func_t
  * callback/baton pair instead of an #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -1040,11 +1050,11 @@ svn_repos_replay3(svn_fs_root_t *root,
                   svn_boolean_t send_deltas,
                   const svn_delta_editor_t *editor,
                   void *edit_baton,
-                  svn_repos_authz_func2_t authz_func,
-                  void *authz_baton,
+                  svn_repos_access_func_t access_func,
+                  void *access_baton,
                   apr_pool_t *pool);
 
-/** Similar to svn_repos_replay3, but uses a #svn_repos_authz_func2_t
+/** Similar to svn_repos_replay3, but uses a #svn_repos_access_func_t
  * callback/baton pair instead of an #svn_repos_authz_func_t one.
  *
  * @since New in 1.4.
@@ -1134,12 +1144,12 @@ svn_repos_get_commit_editor6(const svn_delta_editor_t **editor,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t callback,
                              void *callback_baton,
-                             svn_repos_authz_func2_t authz_func,
-                             void *authz_baton,
+                             svn_repos_access_func_t access_func,
+                             void *access_baton,
                              apr_pool_t *pool);
 
 /** Similar to svn_repos_get_commit_editor6, but uses an @c
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -1361,15 +1371,15 @@ svn_repos_history3(svn_fs_t *fs,
                    const char *path,
                    svn_repos_history_func_t history_func,
                    void *history_baton,
-                   svn_repos_authz_func2_t authz_func,
-                   void *authz_baton,
+                   svn_repos_access_func_t access_func,
+                   void *access_baton,
                    svn_revnum_t start,
                    svn_revnum_t end,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool);
 
 /** Similar to svn_repos_history3, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.1.
@@ -1432,12 +1442,12 @@ svn_repos_trace_node_locations2(svn_fs_t *fs,
                                 const char *fs_path,
                                 svn_revnum_t peg_revision,
                                 apr_array_header_t *location_revisions,
-                                svn_repos_authz_func2_t authz_func,
-                                void *authz_baton,
+                                svn_repos_access_func_t access_func,
+                                void *access_baton,
                                 apr_pool_t *pool);
 
 /** Similar to svn_repos_trace_node_locations2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.1.
@@ -1491,12 +1501,12 @@ svn_repos_node_location_segments2(svn_repos_t *repos,
                                   svn_revnum_t end_rev,
                                   svn_location_segment_receiver_t receiver,
                                   void *receiver_baton,
-                                  svn_repos_authz_func2_t authz_func,
-                                  void *authz_baton,
+                                  svn_repos_access_func_t access_func,
+                                  void *access_baton,
                                   apr_pool_t *pool);
 
 /** Similar to svn_repos_node_location_segments2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -1595,14 +1605,14 @@ svn_repos_get_logs5(svn_repos_t *repos,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
                     const apr_array_header_t *revprops,
-                    svn_repos_authz_func2_t authz_func,
-                    void *authz_baton,
+                    svn_repos_access_func_t access_func,
+                    void *access_baton,
                     svn_log_entry_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool);
 
 /** Similar to svn_repos_get_logs5, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -1727,12 +1737,12 @@ svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
                             svn_boolean_t include_descendants,
-                            svn_repos_authz_func2_t authz_func,
-                            void *authz_baton,
+                            svn_repos_access_func_t access_func,
+                            void *access_baton,
                             apr_pool_t *pool);
 
 /** Similar to svn_repos_fs_get_mergeinfo2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -1810,14 +1820,14 @@ svn_repos_get_file_revs3(svn_repos_t *repos,
                          svn_revnum_t start,
                          svn_revnum_t end,
                          svn_boolean_t include_merged_revisions,
-                         svn_repos_authz_func2_t authz_func,
-                         void *authz_baton,
+                         svn_repos_access_func_t access_func,
+                         void *access_baton,
                          svn_file_rev_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool);
 
 /** Similar to svn_repos_get_file_revs3, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -2008,12 +2018,12 @@ svn_error_t *
 svn_repos_fs_get_locks2(apr_hash_t **locks,
                         svn_repos_t *repos,
                         const char *path,
-                        svn_repos_authz_func2_t authz_func,
-                        void *authz_baton,
+                        svn_repos_access_func_t access_func,
+                        void *access_baton,
                         apr_pool_t *pool);
 
 /** Similar to svn_repos_fs_get_locks2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.2.
@@ -2061,12 +2071,12 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
                               const svn_string_t *new_value,
                               svn_boolean_t use_pre_revprop_change_hook,
                               svn_boolean_t use_post_revprop_change_hook,
-                              svn_repos_authz_func2_t authz_func,
-                              void *authz_baton,
+                              svn_repos_access_func_t access_func,
+                              void *access_baton,
                               apr_pool_t *pool);
 
 /** Similar to svn_repos_fs_change_rev_prop4, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.
@@ -2141,12 +2151,12 @@ svn_repos_fs_revision_prop2(svn_string_t **value_p,
                             svn_repos_t *repos,
                             svn_revnum_t rev,
                             const char *propname,
-                            svn_repos_authz_func2_t authz_func,
-                            void *authz_baton,
+                            svn_repos_access_func_t access_func,
+                            void *access_baton,
                             apr_pool_t *pool);
 
 /** Similar to svn_repos_fs_revision_prop2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.1.
@@ -2183,12 +2193,12 @@ svn_error_t *
 svn_repos_fs_revision_proplist2(apr_hash_t **table_p,
                                 svn_repos_t *repos,
                                 svn_revnum_t rev,
-                                svn_repos_authz_func2_t authz_func,
-                                void *authz_baton,
+                                svn_repos_access_func_t access_func,
+                                void *access_baton,
                                 apr_pool_t *pool);
 
 /** Similar to svn_repos_fs_revision_proplist2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.1.
@@ -2953,12 +2963,12 @@ svn_error_t *
 svn_repos_check_revision_access2(svn_repos_revision_access_level_t *access_level,
                                  svn_repos_t *repos,
                                  svn_revnum_t revision,
-                                 svn_repos_authz_func2_t authz_func,
-                                 void *authz_baton,
+                                 svn_repos_access_func_t access_func,
+                                 void *access_baton,
                                  apr_pool_t *pool);
 
 /** Similar to svn_repos_check_revision_access2, but uses an
- * #svn_repos_authz_func2_t callback/baton pair instead of an 
+ * #svn_repos_access_func_t callback/baton pair instead of an 
  * #svn_repos_authz_func_t one.
  *
  * @since New in 1.5.

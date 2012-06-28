@@ -33,6 +33,7 @@
 #include "svn_repos.h"
 #include "svn_config.h"
 #include "svn_ctype.h"
+#include "repos.h"
 
 
 /*** Structures. ***/
@@ -781,3 +782,94 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Wrappers around old-style authz callbacks. ***/
+
+static svn_error_t *
+upgrade_authz_func_wrapper(svn_boolean_t *allowed,
+                           svn_fs_root_t *root,
+                           const char *path,
+                           svn_repos_access_t required,
+                           svn_depth_t depth,
+                           void *baton,
+                           apr_pool_t *scratch_pool)
+{
+  svn_repos__upgrade_authz_baton_t *b = baton;
+
+  /* Callers shouldn't be asking about write permission via this
+     interface. */
+  SVN_ERR_ASSERT(required && (required < svn_repos_access_readwrite));
+  SVN_ERR_ASSERT(b->authz_callback);
+
+  return svn_error_return(b->authz_func(allowed, root, path,
+                                        b->authz_func_baton, scratch_pool));
+}
+
+
+svn_error_t *
+svn_repos__upgrade_authz_func(svn_repos_access_func_t *access_func,
+                              void **access_baton,
+                              svn_repos_authz_func_t authz_read_func,
+                              void *authz_baton,
+                              apr_pool_t *pool)
+{
+  svn_repos__upgrade_authz_baton_t *new_baton =
+    apr_pcalloc(pool, sizeof(*new_baton));
+
+  new_baton->authz_func = authz_read_func;
+  new_baton->authz_func_baton = authz_baton;
+  *access_func = upgrade_authz_func_wrapper;
+  *access_baton = new_baton;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+upgrade_authz_callback_wrapper(svn_boolean_t *allowed,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               svn_repos_access_t required,
+                               svn_depth_t depth,
+                               void *baton,
+                               apr_pool_t *scratch_pool)
+{
+  svn_repos__upgrade_authz_baton_t *b = baton;
+  svn_repos_authz_access_t authz_required;
+
+  SVN_ERR_ASSERT(required);
+  SVN_ERR_ASSERT((depth == svn_depth_empty) || (depth == svn_depth_infinity));
+  SVN_ERR_ASSERT(b->authz_callback);
+
+  if (required == svn_repos_access_readwrite)
+    authz_required = svn_authz_write;
+  else if (required <= svn_repos_access_read)
+    authz_required = svn_authz_read;
+
+  if (depth == svn_depth_infinity)
+    authz_required |= svn_authz_recursive;
+
+  return svn_error_return(b->authz_callback(authz_required, allowed, root,
+                                            path, b->authz_callback_baton,
+                                            scratch_pool));
+}
+
+
+svn_error_t *
+svn_repos__upgrade_authz_callback(svn_repos_access_func_t *access_func,
+                                  void **access_baton,
+                                  svn_repos_authz_callback_t authz_callback,
+                                  void *authz_baton,
+                                  apr_pool_t *pool)
+{
+  svn_repos__upgrade_authz_baton_t *new_baton =
+    apr_pcalloc(pool, sizeof(*new_baton));
+
+  new_baton->authz_callback = authz_callback;
+  new_baton->authz_callback_baton = authz_baton;
+  *access_func = upgrade_authz_callback_wrapper;
+  *access_baton = new_baton;
+  return SVN_NO_ERROR;
+}
+

@@ -32,6 +32,8 @@
 
 #include "svn_private_config.h"
 
+#include "repos.h"
+
 
 
 
@@ -158,6 +160,36 @@ svn_repos_recover(const char *path,
 }
 
 /*** From reporter.c ***/
+svn_error_t *
+svn_repos_begin_report2(void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *s_operand,
+                        const char *switch_path,
+                        svn_boolean_t text_deltas,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t send_copyfrom_args,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool)
+{
+  svn_repos_access_func_t access_func;
+  void *access_baton;
+
+  SVN_ERR(svn_repos__upgrade_authz_func(&access_func, &access_baton,
+                                        authz_read_func, authz_read_baton,
+                                        pool));
+  return svn_repos_begin_report3(report_baton, revnum, repos, fs_base,
+                                 s_operand, switch_path, text_deltas,
+                                 depth, ignore_ancestry, send_copyfrom_args,
+                                 editor, edit_baton, access_func,
+                                 access_baton, pool);
+}
+
 svn_error_t *
 svn_repos_begin_report(void **report_baton,
                        svn_revnum_t revnum,

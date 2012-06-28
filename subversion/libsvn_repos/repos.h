@@ -355,6 +355,41 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
                          const char *path,
                          apr_pool_t *pool);
 
+
+/*** Compatibility Wrappers ***/
+
+typedef struct svn_repos__upgrade_authz_baton_t 
+{
+  svn_repos_authz_func_t authz_func;
+  void *authz_func_baton;
+
+  svn_repos_authz_callback_t authz_callback;
+  void *authz_callback_baton;
+
+} svn_repos__upgrade_authz_baton_t;
+
+
+/* Set *access_func and **access_baton to a function/baton pair which
+   wrap the functionality of authz_read_func/authz_baton with the new
+   svn_repos_access_func_t behavior. */
+svn_error_t *
+svn_repos__upgrade_authz_func(svn_repos_access_func_t *access_func,
+                              void **access_baton,
+                              svn_repos_authz_func_t authz_read_func,
+                              void *authz_baton,
+                              apr_pool_t *pool);
+
+
+/* Set *access_func and **access_baton to a function/baton pair which
+   wrap the functionality of authz_callback/authz_baton with the new
+   svn_repos_access_func_t behavior. */
+svn_error_t *
+svn_repos__upgrade_authz_callback(svn_repos_access_func_t *access_func,
+                                  void **access_baton,
+                                  svn_repos_authz_callback_t authz_callback,
+                                  void *authz_baton,
+                                  apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
