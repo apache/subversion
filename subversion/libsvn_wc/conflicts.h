@@ -295,6 +295,7 @@ svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_skel_t *conflict_skel,
+                                 const apr_array_header_t *merge_options,
                                  svn_wc_conflict_resolver_func2_t resolver_func,
                                  void *resolver_baton,
                                  apr_pool_t *scratch_pool);

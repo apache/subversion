@@ -373,6 +373,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
   if (conflict_skel && conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
+                                             NULL /* merge_options */,
                                              conflict_func, conflict_baton,
                                              scratch_pool));
 
