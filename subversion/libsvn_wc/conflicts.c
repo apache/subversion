@@ -285,6 +285,7 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
       prop-conflicted_prop_names
       original-props
       mine-props
+      original-their-props
       their-props)
      NULL lists are recorded as "" */
 
