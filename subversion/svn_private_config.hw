@@ -30,9 +30,9 @@
 #define SVN_PRIVATE_CONFIG_HW
 
 /* The minimal version of Berkeley DB we want */
-#define SVN_FS_WANT_DB_MAJOR	4
-#define SVN_FS_WANT_DB_MINOR	0
-#define SVN_FS_WANT_DB_PATCH	14
+#define SVN_FS_WANT_DB_MAJOR    4
+#define SVN_FS_WANT_DB_MINOR    0
+#define SVN_FS_WANT_DB_PATCH    14
 
 
 /* Path separator for local filesystem */
@@ -58,6 +58,8 @@
 /* The default FS back-end type */
 #define DEFAULT_FS_TYPE "fsfs"
 
+/* The default HTTP library to use */
+#define DEFAULT_HTTP_LIBRARY "serf"
 
 /* Define to the Python/C API format character suitable for apr_int64_t */
 #if defined(_WIN64)
@@ -90,13 +92,4 @@
 #ifdef SVN_WANT_BDB
 #define APU_WANT_DB
 #include <apu_want.h>
-#endif
-
-/*
- * Subversion developers may want to use some additional debugging facilities
- * while working on the code. We'll pull that in here, so individual source
- * files don't have to include this header manually.
- */
-#ifdef SVN_DEBUG
-#include "private/svn_debug.h"
 #endif

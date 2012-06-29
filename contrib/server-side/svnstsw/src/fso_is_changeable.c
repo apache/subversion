@@ -40,7 +40,7 @@
 
 #include <svnstsw/fso_is_changeable.h>
 
-typedef struct {
+typedef struct search_replace_t {
     const char* search;
     _Bool match_end;
     _Bool match_previous_slash;

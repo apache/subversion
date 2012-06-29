@@ -25,8 +25,12 @@
  */
 
 #include "JNIUtil.h"
+#include "Array.h"
+
 #include <sstream>
+#include <vector>
 #include <locale.h>
+
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
@@ -60,7 +64,6 @@ apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
-JNIMutex *JNIUtil::g_globalPoolMutext = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
@@ -123,39 +126,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 
   apr_status_t status;
 
-  /* C programs default to the "C" locale. But because svn is supposed
-     to be i18n-aware, it should inherit the default locale of its
-     environment.  */
-  if (!setlocale(LC_ALL, ""))
-    {
-      if (stderr)
-        {
-          const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
-          const char **env_var = &env_vars[0], *env_val = NULL;
-          while (*env_var)
-            {
-              env_val = getenv(*env_var);
-              if (env_val && env_val[0])
-                break;
-              ++env_var;
-            }
 
-          if (!*env_var)
-            {
-              /* Unlikely. Can setlocale fail if no env vars are set? */
-              --env_var;
-              env_val = "not set";
-            }
-
-          fprintf(stderr,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is "
-                  "correct\n",
-                  "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
-        }
-      return FALSE;
-    }
 
   /* Initialize the APR subsystem, and register an atexit() function
    * to Uninitialize that subsystem at program exit. */
@@ -192,6 +163,19 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
+  /* Create our top-level pool. */
+  g_pool = svn_pool_create(NULL);
+
+  apr_allocator_t* allocator = apr_pool_allocator_get(g_pool);
+
+  if (allocator)
+    {
+      /* Keep a maximum of 1 free block, to release memory back to the JVM
+         (and other modules). */
+      apr_allocator_max_free_set(allocator, 1);
+    }
+
+
 #ifdef ENABLE_NLS
 #ifdef WIN32
   {
@@ -203,7 +187,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     apr_size_t inwords, outbytes;
     unsigned int outlength;
 
-    apr_pool_create(&pool, 0);
+    pool = svn_pool_create(g_pool);
     /* get dll name - our locale info will be in '../share/locale' */
     inwords = sizeof(ucs2_path) / sizeof(ucs2_path[0]);
     HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
@@ -222,24 +206,21 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
         return FALSE;
       }
     utf8_path[outlength - outbytes] = '\0';
-    internal_path = svn_path_internal_style(utf8_path, pool);
+    internal_path = svn_dirent_internal_style(utf8_path, pool);
     /* get base path name */
-    internal_path = svn_path_dirname(internal_path, pool);
-    internal_path = svn_path_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
+    internal_path = svn_dirent_dirname(internal_path, pool);
+    internal_path = svn_dirent_join(internal_path, SVN_LOCALE_RELATIVE_PATH,
                                   pool);
     bindtextdomain(PACKAGE_NAME, internal_path);
-    apr_pool_destroy(pool);
+    svn_pool_destroy(pool);
   }
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
 #endif
 #endif
 
-  /* Create our top-level pool. */
-  g_pool = svn_pool_create(NULL);
-
 #if defined(WIN32) || defined(__CYGWIN__)
-  /* See http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt */
+  /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
   /* ### This code really only needs to be invoked by consumers of
      ### the libsvn_wc library, which basically means SVNClient. */
   if (getenv ("SVN_ASP_DOT_NET_HACK"))
@@ -268,10 +249,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
-  g_globalPoolMutext = new JNIMutex(g_pool);
-  if (isExceptionThrown())
-    return false;
-
   // initialized the thread local storage
   if (!JNIThreadData::initThreadData())
     return false;
@@ -292,15 +269,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 apr_pool_t *JNIUtil::getPool()
 {
   return g_pool;
-}
-
-/**
- * Return the mutex securing the global pool.
- * @return the mutex for the global pool
- */
-JNIMutex *JNIUtil::getGlobalPoolMutex()
-{
-  return g_globalPoolMutext;
 }
 
 void JNIUtil::raiseThrowable(const char *name, const char *message)
@@ -338,6 +306,11 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
   JNIEnv *env = getEnv();
   jclass clazz = env->FindClass(className);
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   if (getLogLevel() >= exceptionLog)
     {
       JNICriticalSection cs(*g_logMutex);
@@ -350,45 +323,89 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
       g_logStream << std::endl;
     }
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
 
   jstring jmessage = makeJString(msg);
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
   jstring jsource = makeJString(source);
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;Ljava/lang/String;I)V");
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
                                            static_cast<jint>(aprErr));
   if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+}
+
+void
+JNIUtil::putErrorsInTrace(svn_error_t *err,
+                          std::vector<jobject> &stackTrace)
+{
+  if (!err)
     return;
 
-  env->DeleteLocalRef(clazz);
+  JNIEnv *env = getEnv();
+
+  // First, put all our child errors in the stack trace
+  putErrorsInTrace(err->child, stackTrace);
+
+  // Now, put our own error in the stack trace
+  jclass stClazz = env->FindClass("java/lang/StackTraceElement");
   if (isJavaExceptionThrown())
     return;
 
-  env->DeleteLocalRef(jmessage);
+  static jmethodID ctor_mid = 0;
+  if (ctor_mid == 0)
+    {
+      ctor_mid = env->GetMethodID(stClazz, "<init>",
+                                  "(Ljava/lang/String;Ljava/lang/String;"
+                                  "Ljava/lang/String;I)V");
+      if (isJavaExceptionThrown())
+        return;
+    }
+
+  jstring jdeclClass = makeJString("native");
   if (isJavaExceptionThrown())
     return;
 
-  env->DeleteLocalRef(jsource);
+  char *tmp_path;
+  char *path = svn_relpath_dirname(err->file, err->pool);
+  while (tmp_path = strchr(path, '/'))
+    *tmp_path = '.';
+
+  jstring jmethodName = makeJString(path);
   if (isJavaExceptionThrown())
     return;
 
-  env->Throw(static_cast<jthrowable>(nativeException));
+  jstring jfileName = makeJString(svn_relpath_basename(err->file, err->pool));
+  if (isJavaExceptionThrown())
+    return;
+
+  jobject jelement = env->NewObject(stClazz, ctor_mid, jdeclClass, jmethodName,
+                                    jfileName, (jint) err->line);
+
+  stackTrace.push_back(jelement);
+
+  env->DeleteLocalRef(stClazz);
+  env->DeleteLocalRef(jdeclClass);
+  env->DeleteLocalRef(jmethodName);
+  env->DeleteLocalRef(jfileName);
 }
 
 void JNIUtil::handleSVNError(svn_error_t *err)
 {
   std::string msg;
-  assembleErrorMessage(err, 0, APR_SUCCESS, msg);
+  assembleErrorMessage(svn_error_purge_tracing(err), 0, APR_SUCCESS, msg);
   const char *source = NULL;
 #ifdef SVN_DEBUG
+#ifndef SVN_ERR__TRACING
   if (err->file)
     {
       std::ostringstream buf;
@@ -398,8 +415,113 @@ void JNIUtil::handleSVNError(svn_error_t *err)
       source = buf.str().c_str();
     }
 #endif
-  throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
-                       source, err->apr_err);
+#endif
+
+  // Much of the following is stolen from throwNativeException().  As much as
+  // we'd like to call that function, we need to do some manual stack
+  // unrolling, so it isn't feasible.
+
+  JNIEnv *env = getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/ClientException");
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  if (getLogLevel() >= exceptionLog)
+    {
+      JNICriticalSection cs(*g_logMutex);
+      g_logStream << "Subversion JavaHL exception thrown, message:<";
+      g_logStream << msg << ">";
+      if (source)
+        g_logStream << " source:<" << source << ">";
+      if (err->apr_err != -1)
+        g_logStream << " apr-err:<" << err->apr_err << ">";
+      g_logStream << std::endl;
+    }
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  jstring jmessage = makeJString(msg.c_str());
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+  jstring jsource = makeJString(source);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  jmethodID mid = env->GetMethodID(clazz, "<init>",
+                                   "(Ljava/lang/String;Ljava/lang/String;I)V");
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+  jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
+                                           static_cast<jint>(err->apr_err));
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+#ifdef SVN_ERR__TRACING
+  // Add all the C error stack trace information to the Java Exception
+
+  // Get the standard stack trace, and vectorize it using the Array class.
+  static jmethodID mid_gst = 0;
+  if (mid_gst == 0)
+    {
+      mid_gst = env->GetMethodID(clazz, "getStackTrace",
+                                 "()[Ljava/lang/StackTraceElement;");
+      if (isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+  Array stackTraceArray((jobjectArray) env->CallObjectMethod(nativeException,
+                                                             mid_gst));
+  std::vector<jobject> oldStackTrace = stackTraceArray.vector();
+
+  // Build the new stack trace elements from the chained errors.
+  std::vector<jobject> newStackTrace;
+  putErrorsInTrace(err, newStackTrace);
+
+  // Join the new elements with the old ones
+  for (std::vector<jobject>::const_iterator it = oldStackTrace.begin();
+            it < oldStackTrace.end(); ++it)
+    {
+      newStackTrace.push_back(*it);
+    }
+
+  jclass stClazz = env->FindClass("java/lang/StackTraceElement");
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  jobjectArray jStackTrace = env->NewObjectArray(newStackTrace.size(), stClazz,
+                                                 NULL);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  int i = 0;
+  for (std::vector<jobject>::const_iterator it = newStackTrace.begin();
+       it < newStackTrace.end(); ++it)
+    {
+      env->SetObjectArrayElement(jStackTrace, i, *it);
+      ++i;
+    }
+
+  // And put the entire trace back into the exception
+  static jmethodID mid_sst = 0;
+  if (mid_sst == 0)
+    {
+      mid_sst = env->GetMethodID(clazz, "setStackTrace",
+                                 "([Ljava/lang/StackTraceElement;)V");
+      if (isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+  env->CallVoidMethod(nativeException, mid_sst, jStackTrace);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+#endif
+
+  env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+
   svn_error_clear(err);
 }
 
@@ -497,7 +619,7 @@ bool JNIUtil::isJavaExceptionThrown()
 }
 
 const char *
-JNIUtil::thrownExceptionToCString()
+JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
 {
   const char *msg;
   JNIEnv *env = getEnv();
@@ -514,7 +636,7 @@ JNIUtil::thrownExceptionToCString()
         }
       jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
       JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(getRequestPool()->pool());
+      msg = tmp.pstrdup(in_pool.getPool());
       // ### Conditionally add t.printStackTrace() to msg?
     }
   else
@@ -645,29 +767,8 @@ jobject JNIUtil::createDate(apr_time_t time)
     return NULL;
 
   env->DeleteLocalRef(clazz);
-  if (isJavaExceptionThrown())
-    return NULL;
 
   return ret;
-}
-
-/**
- * Return the request pool. The request pool will be destroyed after each
- * request (call).
- * @return the pool to be used for this request
- */
-SVN::Pool *JNIUtil::getRequestPool()
-{
-  return JNIThreadData::getThreadData()->m_requestPool;
-}
-
-/**
- * Set the request pool in thread local storage.
- * @param pool  the request pool
- */
-void JNIUtil::setRequestPool(SVN::Pool *pool)
-{
-  JNIThreadData::getThreadData()->m_requestPool = pool;
 }
 
 /**
@@ -792,6 +893,9 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  _("URL '%s' contains a '..' element"),
                                  path);
+
+      /* strip any trailing '/' */
+      path = svn_uri_canonicalize(path, pool);
     }
   else  /* not a url, so treat as a path */
     {
@@ -813,13 +917,11 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
          the performance penalty.
        */
 
-      path = svn_path_internal_style(path, pool);
+      path = svn_dirent_internal_style(path, pool);
 
       /* For kicks and giggles, let's absolutize it. */
       SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
     }
-    /* strip any trailing '/' */
-    path = svn_path_canonicalize(path, pool);
 
   return NULL;
 }

@@ -31,6 +31,7 @@
 #include "svn_cmdline.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_sorts.h"
 #include "svn_subst.h"
 #include "svn_props.h"
 #include "svn_string.h"
@@ -47,7 +48,7 @@
 
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
-                        apr_array_header_t *targets,
+                        const apr_array_header_t *targets,
                         const char **URL,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
@@ -82,16 +83,21 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
 
 svn_error_t *
-svn_cl__print_prop_hash(apr_hash_t *prop_hash,
+svn_cl__print_prop_hash(svn_stream_t *out,
+                        apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_props;
+  int i;
 
-  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
+  sorted_props = svn_sort__hash(prop_hash, svn_sort_compare_items_lexically,
+                                pool);
+  for (i = 0; i < sorted_props->nelts; i++)
     {
-      const char *pname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *pname = item.key;
+      svn_string_t *propval = item.value;
       const char *pname_stdout;
 
       if (svn_prop_needs_translation(pname))
@@ -100,18 +106,43 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
 
       SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
 
-      /* ### We leave these printfs for now, since if propval wasn't translated
-       * above, we don't know anything about its encoding.  In fact, it
-       * might be binary data... */
-      printf("  %s\n", pname_stdout);
+      if (out)
+        {
+          pname_stdout = apr_psprintf(pool, "  %s\n", pname_stdout);
+          SVN_ERR(svn_subst_translate_cstring2(pname_stdout, &pname_stdout,
+                                              APR_EOL_STR,  /* 'native' eol */
+                                              FALSE, /* no repair */
+                                              NULL,  /* no keywords */
+                                              FALSE, /* no expansion */
+                                              pool));
+
+          SVN_ERR(svn_stream_puts(out, pname_stdout));
+        }
+      else
+        {
+          /* ### We leave these printfs for now, since if propval wasn't
+             translated above, we don't know anything about its encoding.
+             In fact, it might be binary data... */
+          printf("  %s\n", pname_stdout);
+        }
+
       if (!names_only)
         {
           /* Add an extra newline to the value before indenting, so that
            * every line of output has the indentation whether the value
            * already ended in a newline or not. */
           const char *newval = apr_psprintf(pool, "%s\n", propval->data);
-
-          printf("%s", svn_cl__indent_string(newval, "    ", pool));
+          const char *indented_newval = svn_cl__indent_string(newval,
+                                                              "    ",
+                                                              pool);
+          if (out)
+            {
+              SVN_ERR(svn_stream_puts(out, indented_newval));
+            }
+          else
+            {
+              printf("%s", indented_newval);
+            }
         }
     }
 
@@ -124,15 +155,19 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
                             svn_boolean_t names_only,
                             apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_props;
+  int i;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
-  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
+  sorted_props = svn_sort__hash(prop_hash, svn_sort_compare_items_lexically,
+                                pool);
+  for (i = 0; i < sorted_props->nelts; i++)
     {
-      const char *pname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *pname = item.key;
+      svn_string_t *propval = item.value;
 
       if (names_only)
         {

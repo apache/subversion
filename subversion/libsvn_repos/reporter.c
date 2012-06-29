@@ -33,14 +33,18 @@
 #include "repos.h"
 #include "svn_private_config.h"
 
+#include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
+
 #define NUM_CACHED_SOURCE_ROOTS 4
 
-/* Theory of operation: we write report operations out to a temporary
-   file as we receive them.  When the report is finished, we read the
+/* Theory of operation: we write report operations out to a spill-buffer
+   as we receive them.  When the report is finished, we read the
    operations back out again, using them to guide the progression of
    the delta between the source and target revs.
 
-   Temporary file format: we use a simple ad-hoc format to store the
+   Spill-buffer content format: we use a simple ad-hoc format to store the
    report operations.  Each report operation is the concatention of
    the following ("+/-" indicates the single character '+' or '-';
    <length> and <revnum> are written out as decimal strings):
@@ -83,14 +87,25 @@ typedef struct path_info_t
   apr_pool_t *pool;            /* Container pool */
 } path_info_t;
 
+/* Describes the standard revision properties that are relevant for
+   reports.  Since a particular revision will often show up more than
+   once in the report, we cache these properties for the time of the
+   report generation. */
+typedef struct revision_info_t
+{
+  svn_revnum_t rev;            /* revision number */
+  svn_string_t* date;          /* revision timestamp */
+  svn_string_t* author;        /* name of the revisions' author */
+} revision_info_t;
+
 /* A structure used by the routines within the `reporter' vtable,
    driven by the client as it describes its working copy revisions. */
 typedef struct report_baton_t
 {
   /* Parameters remembered from svn_repos_begin_report2 */
   svn_repos_t *repos;
-  const char *fs_base;         /* FS path corresponding to wc anchor */
-  const char *s_operand;       /* Anchor-relative wc target (may be empty) */
+  const char *fs_base;         /* fspath corresponding to wc anchor */
+  const char *s_operand;       /* anchor-relative wc target (may be empty) */
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
@@ -106,17 +121,22 @@ typedef struct report_baton_t
   svn_boolean_t is_switch;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_repos_access_func_t access_func;
-  void *access_baton;
+  svn_repos_authz_func_t authz_read_func;
+  void *authz_read_baton;
 
-  /* The temporary file in which we are stashing the report. */
-  apr_file_t *tempfile;
+  /* The spill-buffer holding the report. */
+  svn_spillbuf_reader_t *reader;
 
   /* For the actual editor drive, we'll need a lookahead path info
      entry, a cache of FS roots, and a pool to store them. */
   path_info_t *lookahead;
   svn_fs_root_t *t_root;
   svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
+
+  /* Cache for revision properties. This is used to eliminate redundant
+     revprop fetching. */
+  apr_hash_t* revision_infos;
+
   apr_pool_t *pool;
 } report_baton_t;
 
@@ -140,14 +160,14 @@ static svn_error_t *delta_dirs(report_baton_t *b, svn_revnum_t s_rev,
 /* --- READING PREVIOUSLY STORED REPORT INFORMATION --- */
 
 static svn_error_t *
-read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
+read_number(apr_uint64_t *num, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
 {
   char c;
 
   *num = 0;
   while (1)
     {
-      SVN_ERR(svn_io_file_getc(&c, temp, pool));
+      SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
       if (c == ':')
         break;
       *num = *num * 10 + (c - '0');
@@ -155,19 +175,15 @@ read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#ifndef APR_SIZE_MAX
-/* APR 0.9 doesn't define APR_SIZE_MAX */
-#define APR_SIZE_MAX    (~((apr_size_t)0))
-#endif
-
 static svn_error_t *
-read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
+read_string(const char **str, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
 {
   apr_uint64_t len;
   apr_size_t size;
+  apr_size_t amt;
   char *buf;
 
-  SVN_ERR(read_number(&len, temp, pool));
+  SVN_ERR(read_number(&len, reader, pool));
 
   /* Len can never be less than zero.  But could len be so large that
      len + 1 wraps around and we end up passing 0 to apr_palloc(),
@@ -188,22 +204,26 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
 
   size = (apr_size_t)len;
   buf = apr_palloc(pool, size+1);
-  SVN_ERR(svn_io_file_read_full(temp, buf, size, NULL, pool));
+  if (size > 0)
+    {
+      SVN_ERR(svn_spillbuf__reader_read(&amt, reader, buf, size, pool));
+      SVN_ERR_ASSERT(amt == size);
+    }
   buf[len] = 0;
   *str = buf;
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
+read_rev(svn_revnum_t *rev, svn_spillbuf_reader_t *reader, apr_pool_t *pool)
 {
   char c;
   apr_uint64_t num;
 
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
     {
-      SVN_ERR(read_number(&num, temp, pool));
+      SVN_ERR(read_number(&num, reader, pool));
       *rev = (svn_revnum_t) num;
     }
   else
@@ -212,15 +232,15 @@ read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
 }
 
 /* Read a single character to set *DEPTH (having already read '+')
-   from TEMP.  PATH is the path to which the depth applies, and is
+   from READER.  PATH is the path to which the depth applies, and is
    used for error reporting only. */
 static svn_error_t *
-read_depth(svn_depth_t *depth, apr_file_t *temp, const char *path,
+read_depth(svn_depth_t *depth, svn_spillbuf_reader_t *reader, const char *path,
            apr_pool_t *pool)
 {
   char c;
 
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   switch (c)
     {
     case 'X':
@@ -247,14 +267,16 @@ read_depth(svn_depth_t *depth, apr_file_t *temp, const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Read a report operation *PI out of TEMP.  Set *PI to NULL if we
+/* Read a report operation *PI out of READER.  Set *PI to NULL if we
    have reached the end of the report. */
 static svn_error_t *
-read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
+read_path_info(path_info_t **pi,
+               svn_spillbuf_reader_t *reader,
+               apr_pool_t *pool)
 {
   char c;
 
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '-')
     {
       *pi = NULL;
@@ -262,23 +284,23 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
     }
 
   *pi = apr_palloc(pool, sizeof(**pi));
-  SVN_ERR(read_string(&(*pi)->path, temp, pool));
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(read_string(&(*pi)->path, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
-    SVN_ERR(read_string(&(*pi)->link_path, temp, pool));
+    SVN_ERR(read_string(&(*pi)->link_path, reader, pool));
   else
     (*pi)->link_path = NULL;
-  SVN_ERR(read_rev(&(*pi)->rev, temp, pool));
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(read_rev(&(*pi)->rev, reader, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
-    SVN_ERR(read_depth(&((*pi)->depth), temp, (*pi)->path, pool));
+    SVN_ERR(read_depth(&((*pi)->depth), reader, (*pi)->path, pool));
   else
     (*pi)->depth = svn_depth_infinity;
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   (*pi)->start_empty = (c == '+');
-  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  SVN_ERR(svn_spillbuf__reader_getc(&c, reader, pool));
   if (c == '+')
-    SVN_ERR(read_string(&(*pi)->lock_token, temp, pool));
+    SVN_ERR(read_string(&(*pi)->lock_token, reader, pool));
   else
     (*pi)->lock_token = NULL;
   (*pi)->pool = pool;
@@ -293,7 +315,7 @@ relevant(path_info_t *pi, const char *prefix, apr_size_t plen)
           (!*prefix || pi->path[plen] == '/'));
 }
 
-/* Fetch the next pathinfo from B->tempfile for a descendant of
+/* Fetch the next pathinfo from B->reader for a descendant of
    PREFIX.  If the next pathinfo is for an immediate child of PREFIX,
    set *ENTRY to the path component of the report information and
    *INFO to the path information for that entry.  If the next pathinfo
@@ -340,7 +362,7 @@ fetch_path_info(report_baton_t *b, const char **entry, path_info_t **info,
           *entry = relpath;
           *info = b->lookahead;
           subpool = svn_pool_create(b->pool);
-          SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+          SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
         }
     }
   return SVN_NO_ERROR;
@@ -358,7 +380,7 @@ skip_path_info(report_baton_t *b, const char *prefix)
     {
       svn_pool_destroy(b->lookahead->pool);
       subpool = svn_pool_create(b->pool);
-      SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+      SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
     }
   return SVN_NO_ERROR;
 }
@@ -432,6 +454,53 @@ change_file_prop(report_baton_t *b, void *file_baton, const char *name,
   return b->editor->change_file_prop(file_baton, name, value, pool);
 }
 
+/* For the report B, return the relevant revprop data of revision REV in
+   REVISION_INFO. The revision info will be allocated in b->pool.
+   Temporaries get allocated on SCRATCH_POOL. */
+static  svn_error_t *
+get_revision_info(report_baton_t *b,
+                  svn_revnum_t rev,
+                  revision_info_t** revision_info,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_t *r_props;
+  svn_string_t *cdate, *author;
+  revision_info_t* info;
+
+  /* Try to find the info in the report's cache */
+  info = apr_hash_get(b->revision_infos, &rev, sizeof(rev));
+  if (!info)
+    {
+      /* Info is not available, yet.
+         Get all revprops. */
+      SVN_ERR(svn_fs_revision_proplist(&r_props,
+                                       b->repos->fs,
+                                       rev,
+                                       scratch_pool));
+
+      /* Extract the committed-date. */
+      cdate = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
+                           APR_HASH_KEY_STRING);
+
+      /* Extract the last-author. */
+      author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
+                            APR_HASH_KEY_STRING);
+
+      /* Create a result object */
+      info = apr_palloc(b->pool, sizeof(*info));
+      info->rev = rev;
+      info->date = cdate ? svn_string_dup(cdate, b->pool) : NULL;
+      info->author = author ? svn_string_dup(author, b->pool) : NULL;
+
+      /* Cache it */
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
+    }
+
+  *revision_info = info;
+  return SVN_NO_ERROR;
+}
+
+
 /* Generate the appropriate property editing calls to turn the
    properties of S_REV/S_PATH into those of B->t_root/T_PATH.  If
    S_PATH is NULL, this is an add, so assume the target starts with no
@@ -444,12 +513,13 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                 void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
-  apr_hash_t *s_props, *t_props, *r_props;
+  apr_hash_t *s_props, *t_props;
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
   const char *uuid;
-  svn_string_t *cr_str, *cdate, *last_author;
+  svn_string_t *cr_str;
+  revision_info_t* revision_info;
   svn_boolean_t changed;
   const svn_prop_t *pc;
   svn_lock_t *lock;
@@ -463,21 +533,17 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(change_fn(b, object,
                         SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
 
-      SVN_ERR(svn_fs_revision_proplist(&r_props, b->repos->fs, crev, pool));
+      SVN_ERR(get_revision_info(b, crev, &revision_info, pool));
 
       /* Transmit the committed-date. */
-      cdate = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
-                           APR_HASH_KEY_STRING);
-      if (cdate || s_path)
+      if (revision_info->date || s_path)
         SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_COMMITTED_DATE,
-                          cdate, pool));
+                          revision_info->date, pool));
 
       /* Transmit the last-author. */
-      last_author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
-                                 APR_HASH_KEY_STRING);
-      if (last_author || s_path)
+      if (revision_info->author || s_path)
         SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_LAST_AUTHOR,
-                          last_author, pool));
+                          revision_info->author, pool));
 
       /* Transmit the UUID. */
       SVN_ERR(svn_fs_get_uuid(b->repos->fs, &uuid, pool));
@@ -574,14 +640,20 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
   /* Send the delta stream if desired, or just a NULL window if not. */
   SVN_ERR(b->editor->apply_textdelta(file_baton, s_hex_digest, pool,
                                      &dhandler, &dbaton));
-  if (b->text_deltas)
+
+  if (dhandler != svn_delta_noop_window_handler)
     {
-      SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
-                                           b->t_root, t_path, pool));
-      return svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool);
+      if (b->text_deltas)
+        {
+          SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
+                                               b->t_root, t_path, pool));
+          SVN_ERR(svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool));
+        }
+      else
+        SVN_ERR(dhandler(NULL, dbaton));
     }
-  else
-    return dhandler(NULL, dbaton);
+
+  return SVN_NO_ERROR;
 }
 
 /* Determine if the user is authorized to view B->t_root/PATH. */
@@ -589,9 +661,9 @@ static svn_error_t *
 check_auth(report_baton_t *b, svn_boolean_t *allowed, const char *path,
            apr_pool_t *pool)
 {
-  if (b->access_func)
-    return b->access_func(allowed, b->t_root, path, svn_repos_access_read,
-                          svn_depth_empty, b->access_baton, pool);
+  if (b->authz_read_func)
+    return b->authz_read_func(allowed, b->t_root, path,
+                              b->authz_read_baton, pool);
   *allowed = TRUE;
   return SVN_NO_ERROR;
 }
@@ -614,7 +686,7 @@ fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
       ent = apr_palloc(pool, sizeof(**entry));
       /* ### All callers should be updated to pass just one of these
              formats */
-      ent->name = (*path == '/') ? svn_uri_basename(path, pool)
+      ent->name = (*path == '/') ? svn_fspath__basename(path, pool)
                                  : svn_relpath_basename(path, pool);
       SVN_ERR(svn_fs_node_id(&ent->id, root, path, pool));
       ent->kind = kind;
@@ -684,7 +756,7 @@ add_file_smartly(report_baton_t *b,
          starting with '/', so make sure o_path always starts with a '/'
          too. */
       if (*o_path != '/')
-        o_path = apr_pstrcat(pool, "/", o_path, NULL);
+        o_path = apr_pstrcat(pool, "/", o_path, (char *)NULL);
 
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));
@@ -698,18 +770,15 @@ add_file_smartly(report_baton_t *b,
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
                                          pool));
-              if (b->access_func)
+              if (b->authz_read_func)
                 {
                   svn_boolean_t allowed;
                   svn_fs_root_t *copyfrom_root;
                   SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
                                                *copyfrom_rev, pool));
-                  SVN_ERR(b->access_func(&allowed,
-                                         copyfrom_root,
-                                         *copyfrom_path,
-                                         svn_repos_access_read,
-                                         svn_depth_empty,
-                                         b->access_baton, pool));
+                  SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
+                                             *copyfrom_path, b->authz_read_baton,
+                                             pool));
                   if (! allowed)
                     {
                       *copyfrom_path = NULL;
@@ -767,7 +836,6 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   void *new_baton;
   svn_checksum_t *checksum;
   const char *hex_digest;
-  int distance;
 
   /* For non-switch operations, follow link_path in the target. */
   if (info && info->link_path && !b->is_switch)
@@ -805,13 +873,27 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   related = FALSE;
   if (s_entry && t_entry && s_entry->kind == t_entry->kind)
     {
-      distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
+      int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
       if (distance == 0 && !any_path_info(b, e_path)
-          && (!info || (!info->start_empty && !info->lock_token))
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
-        return SVN_NO_ERROR;
-      else if (distance != -1 || b->ignore_ancestry)
-        related = TRUE;
+        {
+          if (!info)
+            return SVN_NO_ERROR;
+
+          if (!info->start_empty)
+            {
+              svn_lock_t *lock;
+
+              if (!info->lock_token)
+                return SVN_NO_ERROR;
+
+              SVN_ERR(svn_fs_get_lock(&lock, b->repos->fs, t_path, pool));
+              if (lock && (strcmp(lock->token, info->lock_token) == 0))
+                return SVN_NO_ERROR;
+            }
+        }
+
+      related = (distance != -1 || b->ignore_ancestry);
     }
 
   /* If there's a source and it's not related to the target, nuke it. */
@@ -822,6 +904,21 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root), t_path,
                                     s_rev, b->t_rev, &deleted_rev,
                                     pool));
+
+      if (!SVN_IS_VALID_REVNUM(deleted_rev))
+        {
+          /* Two possibilities: either the thing doesn't exist in S_REV; or
+             it wasn't deleted between S_REV and B->T_REV.  In the first case,
+             I think we should leave DELETED_REV as SVN_INVALID_REVNUM, but
+             in the second, it should be set to B->T_REV-1 for the call to
+             delete_entry() below. */
+          svn_node_kind_t kind;
+
+          SVN_ERR(svn_fs_check_path(&kind, b->t_root, t_path, pool));
+          if (kind != svn_node_none)
+            deleted_rev = b->t_rev - 1;
+        }
+
       SVN_ERR(b->editor->delete_entry(e_path, deleted_rev, dir_baton,
                                       pool));
       s_path = NULL;
@@ -1009,10 +1106,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               continue;
             }
 
-          e_fullpath = svn_path_join(e_path, name, subpool);
-          t_fullpath = svn_path_join(t_path, name, subpool);
+          e_fullpath = svn_relpath_join(e_path, name, subpool);
+          t_fullpath = svn_fspath__join(t_path, name, subpool);
           t_entry = apr_hash_get(t_entries, name, APR_HASH_KEY_STRING);
-          s_fullpath = s_path ? svn_path_join(s_path, name, subpool) : NULL;
+          s_fullpath = s_path ? svn_fspath__join(s_path, name, subpool) : NULL;
           s_entry = s_entries ?
             apr_hash_get(s_entries, name, APR_HASH_KEY_STRING) : NULL;
 
@@ -1059,7 +1156,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               const svn_fs_dirent_t *s_entry;
 
               svn_pool_clear(subpool);
-              s_entry = svn_apr_hash_index_val(hi);
+              s_entry = svn__apr_hash_index_val(hi);
 
               if (apr_hash_get(t_entries, s_entry->name,
                                APR_HASH_KEY_STRING) == NULL)
@@ -1076,11 +1173,11 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                     continue;
 
                   /* There is no corresponding target entry, so delete. */
-                  e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
+                  e_fullpath = svn_relpath_join(e_path, s_entry->name, subpool);
                   SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
-                                                svn_path_join(t_path,
-                                                              s_entry->name,
-                                                              subpool),
+                                                svn_fspath__join(t_path,
+                                                                 s_entry->name,
+                                                                 subpool),
                                                 s_rev, b->t_rev,
                                                 &deleted_rev, subpool));
 
@@ -1097,7 +1194,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           const svn_fs_dirent_t *s_entry, *t_entry;
 
           svn_pool_clear(subpool);
-          t_entry = svn_apr_hash_index_val(hi);
+          t_entry = svn__apr_hash_index_val(hi);
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {
@@ -1124,12 +1221,12 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                   apr_hash_get(s_entries, t_entry->name, APR_HASH_KEY_STRING)
                   : NULL;
               s_fullpath = s_entry ?
-                  svn_path_join(s_path, t_entry->name, subpool) : NULL;
+                  svn_fspath__join(s_path, t_entry->name, subpool) : NULL;
             }
 
           /* Compose the report, editor, and target paths for this entry. */
-          e_fullpath = svn_path_join(e_path, t_entry->name, subpool);
-          t_fullpath = svn_path_join(t_path, t_entry->name, subpool);
+          e_fullpath = svn_relpath_join(e_path, t_entry->name, subpool);
+          t_fullpath = svn_fspath__join(t_path, t_entry->name, subpool);
 
           SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                t_entry, dir_baton, e_fullpath, NULL,
@@ -1157,7 +1254,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Compute the target path corresponding to the working copy anchor,
      and check its authorization. */
-  t_anchor = *b->s_operand ? svn_dirent_dirname(b->t_path, pool) : b->t_path;
+  t_anchor = *b->s_operand ? svn_fspath__dirname(b->t_path, pool) : b->t_path;
   SVN_ERR(check_auth(b, &allowed, t_anchor, pool));
   if (!allowed)
     return svn_error_create
@@ -1165,7 +1262,9 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
        _("Not authorized to open root of edit operation"));
 
   /* Collect information about the source and target nodes. */
-  s_fullpath = svn_path_join(b->fs_base, b->s_operand, pool);
+  s_fullpath = svn_fspath__join(b->fs_base, b->s_operand, pool);
+  /* ### Weird: When I have a file external defined as "^/A/a X/xa",
+   * ### S_FULLPATH becomes "/A/a/xa" here, which is complete nonsense. */
   SVN_ERR(get_source_root(b, &s_root, s_rev));
   SVN_ERR(fake_dirent(&s_entry, s_root, s_fullpath, pool));
   SVN_ERR(fake_dirent(&t_entry, b->t_root, b->t_path, pool));
@@ -1210,7 +1309,6 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 static svn_error_t *
 finish_report(report_baton_t *b, apr_pool_t *pool)
 {
-  apr_off_t offset;
   path_info_t *info;
   apr_pool_t *subpool;
   svn_revnum_t s_rev;
@@ -1219,14 +1317,12 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   /* Save our pool to manage the lookahead and fs_root cache with. */
   b->pool = pool;
 
-  /* Add an end marker and rewind the temporary file. */
-  SVN_ERR(svn_io_file_write_full(b->tempfile, "-", 1, NULL, pool));
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(b->tempfile, APR_SET, &offset, pool));
+  /* Add the end marker. */
+  SVN_ERR(svn_spillbuf__reader_write(b->reader, "-", 1, pool));
 
   /* Read the first pathinfo from the report and verify that it is a top-level
      set_path entry. */
-  SVN_ERR(read_path_info(&info, b->tempfile, pool));
+  SVN_ERR(read_path_info(&info, b->reader, pool));
   if (!info || strcmp(info->path, b->s_operand) != 0
       || info->link_path || !SVN_IS_VALID_REVNUM(info->rev))
     return svn_error_create(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
@@ -1235,7 +1331,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
 
   /* Initialize the lookahead pathinfo. */
   subpool = svn_pool_create(pool);
-  SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+  SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
 
   if (b->lookahead && strcmp(b->lookahead->path, b->s_operand) == 0)
     {
@@ -1253,7 +1349,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
           b->lookahead->depth = info->depth;
         }
       info = b->lookahead;
-      SVN_ERR(read_path_info(&b->lookahead, b->tempfile, subpool));
+      SVN_ERR(read_path_info(&b->lookahead, b->reader, subpool));
     }
 
   /* Open the target root and initialize the source root cache. */
@@ -1264,15 +1360,18 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   {
     svn_error_t *err = drive(b, s_rev, info, pool);
     if (err == SVN_NO_ERROR)
-      return b->editor->close_edit(b->edit_baton, pool);
-    svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return svn_error_return(err);
+      return svn_error_trace(b->editor->close_edit(b->edit_baton, pool));
+
+    return svn_error_trace(
+                svn_error_compose_create(err,
+                                         b->editor->abort_edit(b->edit_baton,
+                                                               pool)));
   }
 }
 
 /* --- COLLECTING THE REPORT INFORMATION --- */
 
-/* Record a report operation into the temporary file.  Return an error
+/* Record a report operation into the spill buffer.  Return an error
    if DEPTH is svn_depth_unknown. */
 static svn_error_t *
 write_path_info(report_baton_t *b, const char *path, const char *lpath,
@@ -1284,7 +1383,7 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
-  path = svn_path_join(b->s_operand, path, pool);
+  path = svn_relpath_join(b->s_operand, path, pool);
 
   lrep = lpath ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                               strlen(lpath), lpath) : "-";
@@ -1311,7 +1410,7 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
                      strlen(path), path, lrep, rrep, drep,
                      start_empty ? '+' : '-', ltrep);
-  return svn_io_file_write_full(b->tempfile, rep, strlen(rep), NULL, pool);
+  return svn_spillbuf__reader_write(b->reader, rep, strlen(rep), pool);
 }
 
 svn_error_t *
@@ -1350,28 +1449,21 @@ svn_error_t *
 svn_repos_finish_report(void *baton, apr_pool_t *pool)
 {
   report_baton_t *b = baton;
-  svn_error_t *finish_err, *close_err;
 
-  finish_err = finish_report(b, pool);
-  close_err = svn_io_file_close(b->tempfile, pool);
-  if (finish_err)
-    svn_error_clear(close_err);
-  return finish_err ? finish_err : close_err;
+  return svn_error_trace(finish_report(b, pool));
 }
 
 svn_error_t *
 svn_repos_abort_report(void *baton, apr_pool_t *pool)
 {
-  report_baton_t *b = baton;
-
-  return svn_io_file_close(b->tempfile, pool);
+  return SVN_NO_ERROR;
 }
 
 /* --- BEGINNING THE REPORT --- */
 
 
 svn_error_t *
-svn_repos_begin_report3(void **report_baton,
+svn_repos_begin_report2(void **report_baton,
                         svn_revnum_t revnum,
                         svn_repos_t *repos,
                         const char *fs_base,
@@ -1383,8 +1475,8 @@ svn_repos_begin_report3(void **report_baton,
                         svn_boolean_t send_copyfrom_args,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_access_func_t access_func,
-                        void *access_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
                         apr_pool_t *pool)
 {
   report_baton_t *b;
@@ -1397,11 +1489,11 @@ svn_repos_begin_report3(void **report_baton,
      keep track of them. */
   b = apr_palloc(pool, sizeof(*b));
   b->repos = repos;
-  b->fs_base = apr_pstrdup(pool, fs_base);
+  b->fs_base = svn_fspath__canonicalize(fs_base, pool);
   b->s_operand = apr_pstrdup(pool, s_operand);
   b->t_rev = revnum;
-  b->t_path = switch_path ? switch_path
-    : svn_path_join(fs_base, s_operand, pool);
+  b->t_path = switch_path ? svn_fspath__canonicalize(switch_path, pool)
+                          : svn_fspath__join(b->fs_base, s_operand, pool);
   b->text_deltas = text_deltas;
   b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;
@@ -1409,12 +1501,13 @@ svn_repos_begin_report3(void **report_baton,
   b->is_switch = (switch_path != NULL);
   b->editor = editor;
   b->edit_baton = edit_baton;
-  b->access_func = access_func;
-  b->access_baton = access_baton;
-
-  SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   pool, pool));
+  b->authz_read_func = authz_read_func;
+  b->authz_read_baton = authz_read_baton;
+  b->revision_infos = apr_hash_make(pool);
+  b->pool = pool;
+  b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
+                                          1000000 /* maxsize */,
+                                          pool);
 
   /* Hand reporter back to client. */
   *report_baton = b;

@@ -48,62 +48,58 @@ const char *svn_wc__adm_child(const char *path,
                               apr_pool_t *result_pool);
 
 /* Return TRUE if the administrative area exists for this directory. */
-svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
+svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
                                       apr_pool_t *pool);
 
 
-/* Atomically rename a temporary text-base file to its canonical
-   location.  The tmp file should be closed already. */
-svn_error_t *
-svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
-
-
-/* Return an absolute path to LOCAL_ABSPATH's text-base file.
-   If TMP is set, return a path to the tmp text-base file. */
-svn_error_t *
-svn_wc__text_base_path(const char **result_path,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       svn_boolean_t tmp,
-                       apr_pool_t *pool);
-
-/* Return a readonly stream on the LOCAL_ABSPATH's base file. */
+/* Set *CONTENTS to a readonly stream on the pristine text of the working
+ * version of the file LOCAL_ABSPATH in DB.  If the file is locally copied
+ * or moved to this path, this means the pristine text of the copy source,
+ * even if the file replaces a previously existing base node at this path.
+ *
+ * Set *CONTENTS to NULL if there is no pristine text because the file is
+ * locally added (even if it replaces an existing base node).  Return an
+ * error if there is no pristine text for any other reason.
+ *
+ * If SIZE is not NULL, set *SIZE to the length of the pristine stream in
+ * BYTES or to SVN_INVALID_FILESIZE if no pristine is available for this
+ * file.
+ *
+ * For more detail, see the description of svn_wc_get_pristine_contents2().
+ */
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_filesize_t *size,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+/* Set *RESULT_ABSPATH to the absolute path to a readable file containing
+   the WC-1 "normal text-base" of LOCAL_ABSPATH in DB.
 
+   "Normal text-base" means the same as in svn_wc__text_base_path().
+   ### May want to check the callers' exact requirements and replace this
+       definition with something easier to comprehend.
 
-/* Return a readonly stream on the LOCAL_ABSPATH's revert file. */
+   What the callers want:
+     A path to a file that will remain available and unchanged as long as
+     the caller wants it - such as for the lifetime of RESULT_POOL.
+
+   What the current implementation provides:
+     A path to the file in the pristine store.  This file will be removed or
+     replaced the next time this or another Subversion client updates the WC.
+
+   If the node LOCAL_ABSPATH has no such pristine text, return an error of
+   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
+
+   Allocate *RESULT_PATH in RESULT_POOL.  */
 svn_error_t *
-svn_wc__get_revert_contents(svn_stream_t **contents,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-
-/* Retrieve an absolute path to LOCAL_ABSPATH's revert file.
-   If TMP is set, return a path to the tmp revert file. */
-svn_error_t *
-svn_wc__text_revert_path(const char **result_abspath,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *pool);
-
-/* Set *PROP_PATH to PATH's PROPS_KIND properties file.
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for NODE_KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_path(const char **prop_path,
-                               const char *path,
-                               svn_wc__db_kind_t kind,
-                               svn_wc__props_kind_t props_kind,
-                               apr_pool_t *pool);
-
+svn_wc__text_base_path_to_read(const char **result_abspath,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 
 /*** Opening all kinds of adm files ***/
@@ -116,24 +112,37 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
                                      apr_pool_t *scratch_pool);
 
 
-/* Open the normal or revert text base, associated with PATH, for writing.
-   The selection is based on NEED_REVERT_BASE. The opened stream will be
-   returned in STREAM and the selected path will be returned in,
-   TEMP_BASE_PATH, and both will be allocated in RESULT_POOL. Any temporary
-   allocations will be performed in SCRATCH_POOL. */
+/* Open a writable stream to a temporary (normal or revert) text base,
+   associated with the versioned file LOCAL_ABSPATH in DB.  Set *STREAM to
+   the opened stream and *TEMP_BASE_ABSPATH to the path to the temporary
+   file.  The temporary file will have an arbitrary unique name, in contrast
+   to the deterministic name that svn_wc__text_base_deterministic_tmp_path()
+   returns.
+
+   Arrange that, on stream closure, *MD5_CHECKSUM and *SHA1_CHECKSUM will be
+   set to the MD-5 and SHA-1 checksums respectively of that file.
+   MD5_CHECKSUM and/or SHA1_CHECKSUM may be NULL if not wanted.
+
+   Allocate the new stream, path and checksums in RESULT_POOL.
+ */
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
-                           const char **temp_base_path,
-                           const char *path,
-                           svn_boolean_t need_revert_base,
+                           const char **temp_base_abspath,
+                           svn_checksum_t **md5_checksum,
+                           svn_checksum_t **sha1_checksum,
+                           svn_wc__db_t *db,
+                           const char *wri_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with the access baton
-   ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
-   again, after calling this function. */
-svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
+/* Blow away the admistrative directory associated with DIR_ABSPATH.
+   For single-db this doesn't perform actual work unless the wcroot is passed.
+ */
+svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
+                                 const char *dir_abspath,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *scratch_pool);
 
 

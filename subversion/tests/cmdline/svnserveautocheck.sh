@@ -1,4 +1,24 @@
-#!/bin/bash
+#!/bin/sh
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 # -*- mode: shell-script; -*-
 
 # This script simplifies the preparation of the environment for a Subversion client
@@ -12,30 +32,36 @@
 # svnserveautocheck".  Like "make check", you can specify further options
 # like "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
 
+PYTHON=${PYTHON:-python}
+
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
 set +e
 
-trap trap_cleanup SIGHUP SIGTERM SIGINT
+trap trap_cleanup HUP TERM INT
 
-function really_cleanup() {
+# Ensure the server uses a known locale.
+LC_ALL=C
+export LC_ALL
+
+really_cleanup() {
     if [ -e  "$SVNSERVE_PID" ]; then
         kill $(cat "$SVNSERVE_PID")
         rm -f $SVNSERVE_PID
     fi
 }
 
-function trap_cleanup() {
+trap_cleanup() {
     really_cleanup
     exit 1
 }
 
-function say() {
+say() {
   echo "$SCRIPT: $*"
 }
 
-function fail() {
+fail() {
   say $*
   exit 1
 }
@@ -43,9 +69,9 @@ function fail() {
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
 elif [ -x $SCRIPTDIR/../../svn/svn ]; then
-  pushd $SCRIPTDIR/../../../ >/dev/null
+  cd $SCRIPTDIR/../../../
   ABS_BUILDDIR=$(pwd)
-  popd >/dev/null
+  cd - >/dev/null
 else
   fail "Run this script from the root of Subversion's build tree!"
 fi
@@ -60,27 +86,44 @@ SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
 
-SVNSERVE_PORT=$(($RANDOM+1024))
+random_port() {
+  if [ -n "$BASH_VERSION" ]; then
+    echo $(($RANDOM+1024))
+  else
+    $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
+  fi
+}
+
+SVNSERVE_PORT=$(random_port)
 while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
-  SVNSERVE_PORT=$(($RANDOM+1024))
+  SVNSERVE_PORT=$(random_port)
 done
+
+if [ "$THREADED" != "" ]; then
+  SVNSERVE_ARGS="-T"
+fi
+
+if [ ${CACHE_REVPROPS:+set} ]; then
+  SVNSERVE_ARGS="$SVNSERVE_ARGS --cache-revprops on"
+fi
 
 "$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
             --listen-host 127.0.0.1 \
             --listen-port $SVNSERVE_PORT \
-            --pid-file $SVNSERVE_PID &
+            --pid-file $SVNSERVE_PID \
+            $SVNSERVE_ARGS &
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
-if [ $# == 0 ]; then
+if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
   r=$?
 else
-  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
+  cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
   time "./${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
-  popd >/dev/null
+  cd - > /dev/null
 fi
 
 really_cleanup

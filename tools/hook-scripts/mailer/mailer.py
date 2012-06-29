@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 # mailer.py: send email describing a commit
 #
 # $HeadURL$
@@ -328,10 +347,12 @@ class Commit(Messenger):
 
     self.changelist = sorted(editor.get_changes().items())
 
+    log = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''
+
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
-      for (group, params) in self.cfg.which_groups(path):
+      for (group, params) in self.cfg.which_groups(path, log):
         # turn the params into a hashable object and stash it away
         param_list = sorted(params.items())
         # collect the set of paths belonging to this group
@@ -402,7 +423,7 @@ class PropChange(Messenger):
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
-    for (group, params) in self.cfg.which_groups(''):
+    for (group, params) in self.cfg.which_groups('', None):
       # turn the params into a hashable object and stash it away
       param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
@@ -492,7 +513,7 @@ class Lock(Messenger):
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path in self.dirlist:
-      for (group, params) in self.cfg.which_groups(path):
+      for (group, params) in self.cfg.which_groups(path, None):
         # turn the params into a hashable object and stash it away
         param_list = sorted(params.items())
         # collect the set of paths belonging to this group
@@ -845,12 +866,16 @@ class DiffGenerator:
           content = src_fname = dst_fname = None
         else:
           src_fname, dst_fname = diff.get_files()
-          content = DiffContent(self.cfg.get_diff_cmd(self.group, {
-            'label_from' : label1,
-            'label_to' : label2,
-            'from' : src_fname,
-            'to' : dst_fname,
-            }))
+          try:
+            content = DiffContent(self.cfg.get_diff_cmd(self.group, {
+              'label_from' : label1,
+              'label_to' : label2,
+              'from' : src_fname,
+              'to' : dst_fname,
+              }))
+          except OSError:
+            # diff command does not exist, try difflib.unified_diff()
+            content = DifflibDiffContent(label1, label2, src_fname, dst_fname)
 
       # return a data item for this diff
       return _data(
@@ -868,6 +893,33 @@ class DiffGenerator:
         singular=singular,
         content=content,
         )
+
+def _classify_diff_line(line, seen_change):
+  # classify the type of line.
+  first = line[:1]
+  ltype = ''
+  if first == '@':
+    seen_change = True
+    ltype = 'H'
+  elif first == '-':
+    if seen_change:
+      ltype = 'D'
+    else:
+      ltype = 'F'
+  elif first == '+':
+    if seen_change:
+      ltype = 'A'
+    else:
+      ltype = 'T'
+  elif first == ' ':
+    ltype = 'C'
+  else:
+    ltype = 'U'
+
+  if line[-2] == '\r':
+    line=line[0:-2] + '\n' # remove carriage return
+
+  return line, ltype, seen_change
 
 
 class DiffContent:
@@ -896,35 +948,41 @@ class DiffContent:
       self.pipe = None
       raise IndexError
 
-    # classify the type of line.
-    first = line[:1]
-    if first == '@':
-      self.seen_change = True
-      ltype = 'H'
-    elif first == '-':
-      if self.seen_change:
-        ltype = 'D'
-      else:
-        ltype = 'F'
-    elif first == '+':
-      if self.seen_change:
-        ltype = 'A'
-      else:
-        ltype = 'T'
-    elif first == ' ':
-      ltype = 'C'
-    else:
-      ltype = 'U'
-
-    if line[-2] == '\r':
-      line=line[0:-2] + '\n' # remove carriage return
-
+    line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
     return _data(
       raw=line,
       text=line[1:-1],  # remove indicator and newline
       type=ltype,
       )
 
+class DifflibDiffContent():
+  "This is a generator-like object returning annotated lines of a diff."
+
+  def __init__(self, label_from, label_to, from_file, to_file):
+    import difflib
+    self.seen_change = False
+    fromlines = open(from_file, 'U').readlines()
+    tolines = open(to_file, 'U').readlines()
+    self.diff = difflib.unified_diff(fromlines, tolines,
+                                     label_from, label_to)
+
+  def __nonzero__(self):
+    # we always have some items
+    return True
+
+  def __getitem__(self, idx):
+
+    try:
+      line = self.diff.next()
+    except StopIteration:
+      raise IndexError
+
+    line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
+    return _data(
+      raw=line,
+      text=line[1:-1],  # remove indicator and newline
+      type=ltype,
+      )
 
 class TextCommitRenderer:
   "This class will render the commit mail in plain text."
@@ -1243,32 +1301,56 @@ class Config:
       else:
         exclude_paths_re = None
 
-      self._group_re.append((group, re.compile(for_paths),
-                             exclude_paths_re, params))
+      # check search_logmsg re
+      search_logmsg = getattr(sub, 'search_logmsg', None)
+      if search_logmsg is not None:
+        search_logmsg_re = re.compile(search_logmsg)
+      else:
+        search_logmsg_re = None
+
+      self._group_re.append((group,
+                             re.compile(for_paths),
+                             exclude_paths_re,
+                             params,
+                             search_logmsg_re))
 
     # after all the groups are done, add in the default group
     try:
       self._group_re.append((None,
                              re.compile(self.defaults.for_paths),
                              None,
-                             self._default_params))
+                             self._default_params,
+                             None))
     except AttributeError:
       # there is no self.defaults.for_paths
       pass
 
-  def which_groups(self, path):
+  def which_groups(self, path, logmsg):
     "Return the path's associated groups."
     groups = []
-    for group, pattern, exclude_pattern, repos_params in self._group_re:
+    for group, pattern, exclude_pattern, repos_params, search_logmsg_re in self._group_re:
       match = pattern.match(path)
       if match:
         if exclude_pattern and exclude_pattern.match(path):
           continue
         params = repos_params.copy()
         params.update(match.groupdict())
-        groups.append((group, params))
+
+        if search_logmsg_re is None:
+          groups.append((group, params))
+        else:
+          if logmsg is None:
+            logmsg = ''
+
+          for match in search_logmsg_re.finditer(logmsg):
+            # Add captured variables to (a copy of) params
+            msg_params = params.copy()
+            msg_params.update(match.groupdict())
+            groups.append((group, msg_params))
+
     if not groups:
       groups.append((None, self._default_params))
+
     return groups
 
 

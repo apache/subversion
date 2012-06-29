@@ -24,7 +24,7 @@
 package org.tigris.subversion.javahl;
 
 /**
- * This class describes a item which will be commited.
+ * This class describes a item which will be committed.
  */
 public class CommitItem implements java.io.Serializable
 {
@@ -48,7 +48,7 @@ public class CommitItem implements java.io.Serializable
     int nodeKind;
 
     /**
-     * the kind of change to be commited (See CommitItemStateFlages)
+     * the kind of change to be committed (See CommitItemStateFlages)
      */
     int stateFlags;
 
@@ -84,6 +84,16 @@ public class CommitItem implements java.io.Serializable
         url = u;
         copyUrl = cu;
         revision = r;
+    }
+
+    /**
+     * A backward-compat constructor.
+     */
+    public CommitItem(org.apache.subversion.javahl.CommitItem aItem)
+    {
+        this(aItem.getPath(), NodeKind.fromApache(aItem.getNodeKind()),
+             aItem.getStateFlags(), aItem.getUrl(), aItem.getCopyUrl(),
+             aItem.getRevision());
     }
 
     /**

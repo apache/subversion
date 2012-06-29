@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# Where are the svn binaries you want to benchmark?
+SVN_A_NAME="1.7.x"
+SVN_A="$HOME/pat/bench/prefix/bin/svn"
+SVN_B_NAME="trunk"
+SVN_B="$HOME/pat/trunk/prefix/bin/svn"
+
+benchmark="$PWD/benchmark.py"
+
+parent="$(date +"%Y%m%d-%H%M%S")"
+inital_workdir="$PWD"
+mkdir "$parent"
+cd "$parent"
+pwd
+
+
+batch(){
+  levels="$1"
+  spread="$2"
+  N="$3"
+  pre="${levels}x${spread}_"
+  "$benchmark" "--svn=$SVN_A" run "${pre}$SVN_A_NAME" $levels $spread $N >/dev/null
+  "$benchmark" "--svn=$SVN_B" run "${pre}$SVN_B_NAME" $levels $spread $N >/dev/null
+}
+
+N=6
+al=5
+as=5
+bl=100
+bs=1
+cl=1
+cs=100
+
+##DEBUG
+#N=1
+#al=1
+#as=1
+#bl=2
+#bs=1
+#cl=1
+#cs=2
+##DEBUG
+
+
+{
+started="$(date)"
+echo "Started at $started"
+
+echo "
+*Disclaimer:* this tests only file://-URL access on a GNU/Linux VM.
+This is intended to measure changes in performance of the local working
+copy layer, *only*. These results are *not* generally true for everyone."
+
+batch $al $as $N
+batch $bl $bs $N
+batch $cl $cs $N
+
+"$benchmark" combine "total_$SVN_A_NAME" *x*"_$SVN_A_NAME" >/dev/null
+"$benchmark" combine "total_$SVN_B_NAME" *x*"_$SVN_B_NAME" >/dev/null
+
+echo ""
+echo "Averaged-total results across all runs:"
+echo "---------------------------------------"
+echo ""
+"$benchmark" compare "total_$SVN_A_NAME" "total_$SVN_B_NAME"
+
+echo ""
+echo ""
+echo "Above totals split into separate <dir-levels>x<dir-spread> runs:"
+echo "----------------------------------------------------------------"
+echo ""
+
+for pre in "${al}x${as}_" "${bl}x${bs}_" "${cl}x${cs}_"; do
+  "$benchmark" compare "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
+  echo ""
+done
+
+echo ""
+echo ""
+echo "More detail:"
+echo "------------"
+echo ""
+
+for pre in "${al}x${as}_" "${bl}x${bs}_" "${cl}x${cs}_" "total_"; do
+  "$benchmark" compare -v "${pre}$SVN_A_NAME" "${pre}$SVN_B_NAME"
+  echo ""
+  echo ""
+done
+
+echo ""
+echo "Had started at $started,"
+echo "       done at $(date)"
+pwd
+} 2>&1 | tee results.txt
+
+cd "$inital_workdir"
+if [ -f "$parent/total_trunk" ]; then
+  rm -rf "$parent"
+fi

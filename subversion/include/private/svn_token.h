@@ -36,7 +36,7 @@ extern "C" {
  *
  * Maps are an array of these, terminated with a struct where STR == NULL.
  */
-typedef struct
+typedef struct svn_token_map_t
 {
   const char *str;
   int val;

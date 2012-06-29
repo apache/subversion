@@ -161,7 +161,7 @@ class _item:
 class SvnCLBrowse(wx.App):
   def __init__(self, wc_dir):
     svn.core.svn_config_ensure(None)
-    self.svn_ctx = svn.client.ctx_t()
+    self.svn_ctx = svn.client.svn_client_create_context()
     self.svn_ctx.config = svn.core.svn_config_get_config(None)
     if wc_dir is not None:
       self.wc_dir = svn.core.svn_path_canonicalize(wc_dir)

@@ -1,5 +1,5 @@
 /*
- * replay.c :  routines for replaying revisions
+ * replay.c: mod_dav_svn REPORT handler for replaying revisions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -42,7 +42,7 @@
 #include "../dav_svn.h"
 
 
-typedef struct {
+typedef struct edit_baton_t {
   apr_bucket_brigade *bb;
   ap_filter_t *output;
   svn_boolean_t started;
@@ -320,12 +320,13 @@ apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, ">"));
 
-  svn_txdelta_to_svndiff2(handler,
+  svn_txdelta_to_svndiff3(handler,
                           handler_baton,
                           dav_svn__make_base64_output_stream(eb->bb,
                                                              eb->output,
                                                              pool),
                           0,
+                          dav_svn__get_compression_level(),
                           pool);
 
   eb->sending_textdelta = TRUE;
@@ -402,7 +403,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                             "The request's '", tagname,
                                             "' element is malformed; there "
                                             "is a problem with the client.",
-                                            NULL),
+                                            (char *)NULL),
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
 
@@ -466,10 +467,18 @@ dav_svn__replay_report(const dav_resource *resource,
             }
           else if (strcmp(child->name, "send-deltas") == 0)
             {
+              apr_int64_t parsed_val;
+
               cdata = dav_xml_get_cdata(child, resource->pool, 1);
               if (! cdata)
                 return malformed_element_error("send-deltas", resource->pool);
-              send_deltas = atoi(cdata);
+              err = svn_cstring_strtoi64(&parsed_val, cdata, 0, 1, 10);
+              if (err)
+                {
+                  svn_error_clear(err);
+                  return malformed_element_error("send-deltas", resource->pool);
+                }
+              send_deltas = parsed_val ? TRUE : FALSE;
             }
         }
     }

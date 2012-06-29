@@ -20,9 +20,12 @@
 # ====================================================================
 
 """\
-Usage: 1. __SCRIPTNAME__ VIEWSPEC-FILE TARGET-DIR
-       2. __SCRIPTNAME__ VIEWSPEC-FILE --dump-tree
-       3. __SCRIPTNAME__ --help
+__SCRIPTNAME__: checkout utility for sparse Subversion working copies
+
+Usage: 1. __SCRIPTNAME__ checkout VIEWSPEC-FILE TARGET-DIR
+       2. __SCRIPTNAME__ examine VIEWSPEC-FILE
+       3. __SCRIPTNAME__ help
+       4. __SCRIPTNAME__ help-format
 
 VIEWSPEC-FILE is the path of a file whose contents describe a
 Subversion sparse checkouts layout, or '-' if that description should
@@ -37,6 +40,11 @@ by this script as it checks out the specified layout.
 
 3. Show this usage message.
 
+4. Show information about the file format this program expects.
+
+"""
+
+FORMAT_HELP = """\
 Viewspec File Format
 ====================
 
@@ -78,7 +86,7 @@ Examples
 Here's a sample viewspec file:
 
     Format: 1
-    Url: http://svn.collab.net/repos/svn
+    Url: http://svn.apache.org/repos/asf/subversion
     Revision: 36366
 
     trunk/**
@@ -93,7 +101,7 @@ script in conjunction with 'svn cat' to fetch, parse, and act on a
 versioned viewspec file:
 
     $ svn cat http://svn.example.com/specs/dev-spec.txt |
-         __SCRIPTNAME__ - /path/to/target/directory
+         __SCRIPTNAME__ checkout - /path/to/target/directory
 
 """
 
@@ -294,32 +302,47 @@ def checkout_spec(viewspec, target_dir):
                   viewspec.tree,
                   target_dir)
 
-def main():
-    if len(sys.argv) < 3 or '--help' in sys.argv:
-        msg = __doc__.replace("__SCRIPTNAME__", os.path.basename(sys.argv[0]))
-        sys.stderr.write(msg)
-        sys.exit(1)
-    if sys.argv[1] == '-':
-        fp = sys.stdin
-    else:
-        fp = open(sys.argv[1], 'r')
-    if sys.argv[2] == '--dump-tree':
-        target_dir = None
-    else:
-        target_dir = sys.argv[2]
+def usage_and_exit(errmsg=None):
+    stream = errmsg and sys.stderr or sys.stdout
+    msg = __doc__.replace("__SCRIPTNAME__", os.path.basename(sys.argv[0]))
+    stream.write(msg)
+    if errmsg:
+        stream.write("ERROR: %s\n" % (errmsg))
+    sys.exit(errmsg and 1 or 0)
 
-    viewspec = parse_viewspec(fp)
-    if target_dir is None:
-        sys.stderr.write("Url: %s\n" % (viewspec.base_url))
+def main():
+    argc = len(sys.argv)
+    if argc < 2:
+        usage_and_exit('Not enough arguments.')
+    subcommand = sys.argv[1]
+    if subcommand == 'help':
+        usage_and_exit()
+    elif subcommand == 'help-format':
+        msg = FORMAT_HELP.replace("__SCRIPTNAME__",
+                                  os.path.basename(sys.argv[0]))
+        sys.stdout.write(msg)
+    elif subcommand == 'examine':
+        if argc < 3:
+            usage_and_exit('No viewspec file specified.')
+        fp = (sys.argv[2] == '-') and sys.stdin or open(sys.argv[2], 'r')
+        viewspec = parse_viewspec(fp)
+        sys.stdout.write("Url: %s\n" % (viewspec.base_url))
         revision = viewspec.revision
         if revision != -1:
-            sys.stderr.write("Revision: %s\n" % (revision))
+            sys.stdout.write("Revision: %s\n" % (revision))
         else:
-            sys.stderr.write("Revision: HEAD\n")
-        sys.stderr.write("\n")
+            sys.stdout.write("Revision: HEAD\n")
+        sys.stdout.write("\n")
         viewspec.tree.dump(True)
+    elif subcommand == 'checkout':
+        if argc < 3:
+            usage_and_exit('No viewspec file specified.')
+        if argc < 4:
+            usage_and_exit('No target directory specified.')
+        fp = (sys.argv[2] == '-') and sys.stdin or open(sys.argv[2], 'r')
+        checkout_spec(parse_viewspec(fp), sys.argv[3])
     else:
-        checkout_spec(viewspec, target_dir)
+        usage_and_exit('Unknown subcommand "%s".' % (subcommand))
 
 if __name__ == "__main__":
     main()

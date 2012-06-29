@@ -3,7 +3,7 @@
 #  basic_tests.py:  testing working-copy interactions with ra_local
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,16 +25,25 @@
 ######################################################################
 
 # General modules
-import shutil, stat, re, os
+import shutil, stat, re, os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
+
+# Generic UUID-matching regular expression
+uuid_regex = re.compile(r"[a-fA-F0-9]{8}(-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}")
 
 ######################################################################
 # Tests
@@ -58,11 +67,11 @@ def basic_checkout(sbox):
                                      wc_dir)
 
   # Make some changes to the working copy
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
   svntest.main.file_append(mu_path, 'appended mu text')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  lambda_path = sbox.ospath('A/B/lambda')
   os.remove(lambda_path)
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  G_path = sbox.ospath('A/D/G')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', G_path)
 
@@ -101,7 +110,7 @@ def basic_status(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, output)
 
-  os.chdir(os.path.join(wc_dir, 'A'))
+  os.chdir(sbox.ospath('A'))
   output = svntest.actions.get_virginal_state("..", 1)
   svntest.actions.run_and_verify_status("..", output)
 
@@ -114,8 +123,8 @@ def basic_commit(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a couple of local mods to files
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  mu_path = sbox.ospath('A/mu')
+  rho_path = sbox.ospath('A/D/G/rho')
   svntest.main.file_append(mu_path, 'appended mu text')
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
@@ -150,8 +159,8 @@ def basic_update(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  mu_path = sbox.ospath('A/mu')
+  rho_path = sbox.ospath('A/D/G/rho')
   svntest.main.file_append(mu_path, 'appended mu text')
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
@@ -196,7 +205,7 @@ def basic_update(sbox):
 
   # Unversioned paths, those that are not immediate children of a versioned
   # path, are skipped and do not raise an error
-  xx_path = os.path.join(wc_dir, 'xx', 'xx')
+  xx_path = sbox.ospath('xx/xx')
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx",
     ["Skipped '"+xx_path+"'\n",
@@ -205,16 +214,6 @@ def basic_update(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx", [], [],
     'update', '--quiet', xx_path)
-
-  # URL's are also skipped.
-  urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
-  for url in urls:
-    exit_code, out, err = svntest.actions.run_and_verify_svn(
-      "update " + url,
-      ["Skipped '"+url+"'\n",
-      "Summary of conflicts:\n",
-      "  Skipped paths: 1\n"], [],
-      'update', url)
 
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
@@ -256,20 +255,28 @@ def basic_mkdir_url_with_parents(sbox):
 
   sbox.build()
 
+  X_url = sbox.repo_url + '/X'
   X_Y_Z_url = sbox.repo_url + '/X/Y/Z'
   X_Y_Z2_url = sbox.repo_url + '/X/Y/Z2'
   X_T_C_url = sbox.repo_url + '/X/T/C'
+  U_url = sbox.repo_url + '/U'
   U_V_url = sbox.repo_url + '/U/V'
+  U_V_W_url = sbox.repo_url + '/U/V/W'
   svntest.actions.run_and_verify_svn("erroneous mkdir sans --parents",
                                      [],
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
-                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
+
+  svntest.actions.run_and_verify_svn("mkdir",
+                                     ["\n", "Committed revision 2.\n"], [],
+                                     'mkdir', '-m', 'log_msg',
+                                     X_url, U_url)
 
   svntest.actions.run_and_verify_svn("mkdir --parents",
-                                     ["\n", "Committed revision 2.\n"], [],
+                                     ["\n", "Committed revision 3.\n"], [],
                                      'mkdir', '-m', 'log_msg', '--parents',
-                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
   expected_output = wc.State(sbox.wc_dir, {
     'X'      : Item(status='A '),
@@ -280,6 +287,7 @@ def basic_mkdir_url_with_parents(sbox):
     'X/T/C'  : Item(status='A '),
     'U'      : Item(status='A '),
     'U/V'    : Item(status='A '),
+    'U/V/W'  : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -291,17 +299,19 @@ def basic_mkdir_url_with_parents(sbox):
     'X/T/C'  : Item(),
     'U'      : Item(),
     'U/V'    : Item(),
+    'U/V/W'  : Item(),
     })
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 3)
   expected_status.add({
-    'X'      : Item(status='  ', wc_rev=2),
-    'X/Y'    : Item(status='  ', wc_rev=2),
-    'X/Y/Z'  : Item(status='  ', wc_rev=2),
-    'X/Y/Z2' : Item(status='  ', wc_rev=2),
-    'X/T'    : Item(status='  ', wc_rev=2),
-    'X/T/C'  : Item(status='  ', wc_rev=2),
-    'U'      : Item(status='  ', wc_rev=2),
-    'U/V'    : Item(status='  ', wc_rev=2),
+    'X'      : Item(status='  ', wc_rev=3),
+    'X/Y'    : Item(status='  ', wc_rev=3),
+    'X/Y/Z'  : Item(status='  ', wc_rev=3),
+    'X/Y/Z2' : Item(status='  ', wc_rev=3),
+    'X/T'    : Item(status='  ', wc_rev=3),
+    'X/T/C'  : Item(status='  ', wc_rev=3),
+    'U'      : Item(status='  ', wc_rev=3),
+    'U/V'    : Item(status='  ', wc_rev=3),
+    'U/V/W'  : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
@@ -316,7 +326,7 @@ def basic_mkdir_wc_with_parents(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  Y_Z_path = os.path.join(wc_dir, 'Y', 'Z')
+  Y_Z_path = sbox.ospath('Y/Z')
 
   svntest.actions.run_and_verify_svn("erroneous mkdir dir/subdir", [],
                                      ".*Try 'svn mkdir --parents' instead.*",
@@ -325,10 +335,19 @@ def basic_mkdir_wc_with_parents(sbox):
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
                                      'mkdir', '--parents', Y_Z_path)
 
+  # Verify the WC status, because there was a regression in which parts of
+  # the WC were left locked.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    'Y/Z'    : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #----------------------------------------------------------------------
-def basic_corruption(sbox):
-  "basic corruption detection"
+def basic_commit_corruption(sbox):
+  "basic corruption detection on commit"
 
   ## I always wanted a test named "basic_corruption". :-)
   ## Here's how it works:
@@ -339,21 +358,14 @@ def basic_corruption(sbox):
   ##    3. Intentionally corrupt `first/A/.svn/text-base/mu.svn-base'.
   ##    4. Try to commit, expect a failure.
   ##    5. Repair the text-base, commit again, expect success.
-  ##    6. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
-  ##    7. Try to update `second', expect failure.
-  ##    8. Repair the text-base, update again, expect success.
   ##
   ## Here we go...
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make the "other" working copy
-  other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
-
   # Make a local mod to mu
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
   svntest.main.file_append(mu_path, 'appended mu text')
 
   # Created expected output tree for 'svn ci'
@@ -368,9 +380,8 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to commit.
-  tb_dir_path = os.path.join(wc_dir, 'A',
-                             svntest.main.get_admin_name(), 'text-base')
-  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
+  mu_tb_path = svntest.wc.text_base_path(mu_path)
+  tb_dir_path = os.path.dirname(mu_tb_path)
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
@@ -383,7 +394,8 @@ def basic_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, "svn: Checksum",
+                                        expected_status,
+                                        "svn: E200014: Checksum",
                                         wc_dir)
 
   # Restore the uncorrupted text base.
@@ -393,6 +405,48 @@ def basic_corruption(sbox):
   os.rename(mu_saved_tb_path, mu_tb_path)
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
+
+  # This commit should succeed.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+#----------------------------------------------------------------------
+def basic_update_corruption(sbox):
+  "basic corruption detection on update"
+
+  ## I always wanted a test named "basic_corruption". :-)
+  ## Here's how it works:
+  ##
+  ##    1. Make a working copy at rev 1, duplicate it.  Now we have
+  ##        two working copies at rev 1.  Call them first and second.
+  ##    2. Make a local mod to `first/A/mu'.
+  ##    3. Repair the text-base, commit again, expect success.
+  ##    4. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
+  ##    5. Try to update `second', expect failure.
+  ##    6. Repair the text-base, update again, expect success.
+  ##
+  ## Here we go...
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make the "other" working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Make a local mod to mu
+  mu_path = sbox.ospath('A/mu')
+  svntest.main.file_append(mu_path, 'appended mu text')
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -414,9 +468,9 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to update.
-  tb_dir_path = os.path.join(other_wc, 'A',
-                             svntest.main.get_admin_name(), 'text-base')
-  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
+  other_mu_path = os.path.join(other_wc, 'A', 'mu')
+  mu_tb_path = svntest.wc.text_base_path(other_mu_path)
+  tb_dir_path = os.path.dirname(mu_tb_path)
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
@@ -432,7 +486,7 @@ def basic_corruption(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        "svn: Checksum", other_wc)
+                                        "svn: E155017: Checksum", other_wc)
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -457,8 +511,8 @@ def basic_merging_update(sbox):
   wc_dir = sbox.wc_dir
 
   # First change the greek tree to make two files 10 lines long
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  mu_path = sbox.ospath('A/mu')
+  rho_path = sbox.ospath('A/D/G/rho')
   mu_text = ""
   rho_text = ""
   for x in range(2,11):
@@ -563,8 +617,8 @@ def basic_conflict(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files which will be committed
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  mu_path = sbox.ospath('A/mu')
+  rho_path = sbox.ospath('A/D/G/rho')
   svntest.main.file_append(mu_path, 'Original appended text for mu\n')
   svntest.main.file_append(rho_path, 'Original appended text for rho\n')
 
@@ -642,8 +696,8 @@ def basic_conflict(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # logger.warn("Not all extra reject files have been accounted for:")
+    # logger.warn(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -670,9 +724,9 @@ def basic_cleanup(sbox):
   wc_dir = sbox.wc_dir
 
   # Lock some directories.
-  B_path = os.path.join(wc_dir, 'A', 'B')
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  C_path = os.path.join(wc_dir, 'A', 'C')
+  B_path = sbox.ospath('A/B')
+  G_path = sbox.ospath('A/D/G')
+  C_path = sbox.ospath('A/C')
   svntest.actions.lock_admin_dir(B_path)
   svntest.actions.lock_admin_dir(G_path)
   svntest.actions.lock_admin_dir(C_path)
@@ -683,8 +737,11 @@ def basic_cleanup(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
-  # corrupted/non-existing temporary directory should be restored
-  svntest.actions.remove_admin_tmp_dir(B_path)
+  # corrupted/non-existing temporary directory should be restored while
+  # we are not at single-db (where this tmp dir will be gone)
+  tmp_path = os.path.join(B_path, svntest.main.get_admin_name(), 'tmp')
+  if os.path.exists(tmp_path):
+    svntest.main.safe_rmtree(tmp_path)
 
   # Run cleanup (### todo: cleanup doesn't currently print anything)
   svntest.actions.run_and_verify_svn("Cleanup command", None, [],
@@ -705,11 +762,11 @@ def basic_revert(sbox):
   wc_dir = sbox.wc_dir
 
   # Modify some files and props.
-  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  iota_path = os.path.join(wc_dir, 'iota')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  zeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'zeta')
+  beta_path = sbox.ospath('A/B/E/beta')
+  gamma_path = sbox.ospath('A/D/gamma')
+  iota_path = sbox.ospath('iota')
+  rho_path = sbox.ospath('A/D/G/rho')
+  zeta_path = sbox.ospath('A/D/H/zeta')
   svntest.main.file_append(beta_path, "Added some text to 'beta'.\n")
   svntest.main.file_append(iota_path, "Added some text to 'iota'.\n")
   svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
@@ -760,17 +817,17 @@ def basic_revert(sbox):
   fp = open(beta_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(iota_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(rho_path, 'r')
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n")):
-    print("Revert failed to restore original text.")
+    logger.warn("Revert failed to restore original text.")
     raise svntest.Failure
   fp = open(zeta_path, 'r')
   lines = fp.readlines()
@@ -786,7 +843,7 @@ def basic_revert(sbox):
 
   # Check that a directory scheduled to be added, but physically
   # removed, can be reverted.
-  X_path = os.path.join(wc_dir, 'X')
+  X_path = sbox.ospath('X')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', X_path)
 
@@ -804,7 +861,7 @@ def basic_revert(sbox):
 
   # Check that a directory scheduled for deletion, but physically
   # removed, can be reverted.
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  E_path = sbox.ospath('A/B/E')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
   ### Most of the rest of this test is ineffective, due to the
@@ -870,7 +927,7 @@ def basic_switch(sbox):
   ### Switch the file `iota' to `A/D/gamma'.
 
   # Construct some paths for convenience
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
   gamma_url = sbox.repo_url + '/A/D/gamma'
 
   # Create expected output tree
@@ -887,16 +944,24 @@ def basic_switch(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', switched='S')
 
-  # Do the switch and check the results in three ways.
+  # First, try the switch without the --ignore-ancestry flag,
+  # expecting failure.
+  expected_error = "svn: E195012: .*no common ancestry.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'switch', gamma_url, iota_path)
+
+  # Now ignore ancestry so we can ge through this switch.
   svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
   ### Switch the directory `A/D/H' to `A/D/G'.
 
   # Construct some paths for convenience
-  ADH_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  ADH_path = sbox.ospath('A/D/H')
   chi_path = os.path.join(ADH_path, 'chi')
   omega_path = os.path.join(ADH_path, 'omega')
   psi_path = os.path.join(ADH_path, 'psi')
@@ -939,11 +1004,19 @@ def basic_switch(sbox):
     })
   expected_status.tweak('iota', 'A/D/H', switched='S')
 
+  # First, try the switch without the --ignore-ancestry flag,
+  # expecting failure.
+  expected_error = "svn: E195012: .*no common ancestry.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'switch', ADG_url, ADH_path)
+
   # Do the switch and check the results in three ways.
   svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 
@@ -953,9 +1026,9 @@ def verify_file_deleted(message, path):
   except IOError:
     return
   if message is not None:
-    print(message)
+    logger.warn(message)
   ###TODO We should raise a less generic error here. which?
-  raise Failure
+  raise svntest.Failure
 
 def verify_dir_deleted(path):
   if not os.path.isdir(path):
@@ -963,6 +1036,7 @@ def verify_dir_deleted(path):
 
   return 1
 
+@Issue(687,4074)
 def basic_delete(sbox):
   "basic delete command"
 
@@ -970,22 +1044,22 @@ def basic_delete(sbox):
   wc_dir = sbox.wc_dir
 
   # modify text of chi
-  chi_parent_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_parent_path = sbox.ospath('A/D/H')
   chi_path = os.path.join(chi_parent_path, 'chi')
   svntest.main.file_append(chi_path, 'added to chi')
 
   # modify props of rho (file)
-  rho_parent_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_parent_path = sbox.ospath('A/D/G')
   rho_path = os.path.join(rho_parent_path, 'rho')
   svntest.main.run_svn(None, 'ps', 'abc', 'def', rho_path)
 
   # modify props of F (dir)
-  F_parent_path = os.path.join(wc_dir, 'A', 'B')
+  F_parent_path = sbox.ospath('A/B')
   F_path = os.path.join(F_parent_path, 'F')
   svntest.main.run_svn(None, 'ps', 'abc', 'def', F_path)
 
   # unversioned file
-  sigma_parent_path = os.path.join(wc_dir, 'A', 'C')
+  sigma_parent_path = sbox.ospath('A/C')
   sigma_path = os.path.join(sigma_parent_path, 'sigma')
   svntest.main.file_append(sigma_path, 'unversioned sigma')
 
@@ -995,13 +1069,13 @@ def basic_delete(sbox):
   os.mkdir(Q_path)
 
   # added directory hierarchies
-  X_parent_path =  os.path.join(wc_dir, 'A', 'B')
+  X_parent_path =  sbox.ospath('A/B')
   X_path = os.path.join(X_parent_path, 'X')
   svntest.main.run_svn(None, 'mkdir', X_path)
   X_child_path = os.path.join(X_path, 'xi')
   svntest.main.file_append(X_child_path, 'added xi')
   svntest.main.run_svn(None, 'add', X_child_path)
-  Y_parent_path = os.path.join(wc_dir, 'A', 'D')
+  Y_parent_path = sbox.ospath('A/D')
   Y_path = os.path.join(Y_parent_path, 'Y')
   svntest.main.run_svn(None, 'mkdir', Y_path)
 
@@ -1050,7 +1124,7 @@ def basic_delete(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # 'svn rm' that should work
-  E_path =  os.path.join(wc_dir, 'A', 'B', 'E')
+  E_path =  sbox.ospath('A/B/E')
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
 
   # 'svn rm --force' that should work
@@ -1070,13 +1144,13 @@ def basic_delete(sbox):
                                      'rm', '--force', X_path)
 
   # Deleting already removed from wc versioned item with --force
-  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path = sbox.ospath('iota')
   os.remove(iota_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--force', iota_path)
 
   # and without --force
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
   os.remove(gamma_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', gamma_path)
 
@@ -1125,34 +1199,40 @@ def basic_delete(sbox):
 
   # check versioned dir is not removed
   if not verify_dir_deleted(F_path):
-    print("Removed versioned dir")
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
+    # If we are not running in single-db, this is an error
+    if os.path.isdir(os.path.join(F_path, '../' + svntest.main.get_admin_name())):
+      raise svntest.Failure("Removed administrative area")
 
   # check unversioned and added dirs has been removed
   if verify_dir_deleted(Q_path):
-    print("Failed to remove unversioned dir")
+    logger.warn("Failed to remove unversioned dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
   if verify_dir_deleted(X_path):
-    print("Failed to remove added dir")
+    logger.warn("Failed to remove added dir")
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
   # Deleting unversioned file explicitly
-  foo_path = os.path.join(wc_dir, 'foo')
+  foo_path = sbox.ospath('foo')
   svntest.main.file_append(foo_path, 'unversioned foo')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
-  # At one stage deleting an URL dumped core
+  # At one stage deleting a URL dumped core
   iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
                                      ["\n", "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      iota_URL)
+
+  # Issue 4074, deleting a root url SEGV.
+  expected_error = 'svn: E170000: .*not within a repository'
+  svntest.actions.run_and_verify_svn(None, [], expected_error,
+                                     'rm', sbox.repo_url,
+                                     '--message', 'delete root')
 
 #----------------------------------------------------------------------
 
@@ -1163,7 +1243,7 @@ def basic_checkout_deleted(sbox):
   wc_dir = sbox.wc_dir
 
   # Delete A/D and commit.
-  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path = sbox.ospath('A/D')
   svntest.actions.run_and_verify_svn("error scheduling A/D for deletion",
                                      None, [], 'rm', '--force', D_path)
 
@@ -1182,16 +1262,16 @@ def basic_checkout_deleted(sbox):
 
   # Now try to checkout revision 1 of A/D.
   url = sbox.repo_url + '/A/D'
-  wc2 = os.path.join(sbox.wc_dir, 'new_D')
+  wc2 = sbox.ospath('new_D')
   svntest.actions.run_and_verify_svn("error checking out r1 of A/D",
                                      None, [], 'co', '-r', '1',
                                      url + "@1", wc2)
 
 #----------------------------------------------------------------------
 
-# Issue 846, changing a deleted file to an added directory is not
-# supported.
-
+# Issue 846, changing a deleted file to an added directory was not
+# supported before WC-NG. But we can handle it.
+@Issue(846)
 def basic_node_kind_change(sbox):
   "attempt to change node kind"
 
@@ -1199,7 +1279,7 @@ def basic_node_kind_change(sbox):
   wc_dir = sbox.wc_dir
 
   # Schedule a file for deletion
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  gamma_path = sbox.ospath('A/D/gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
 
   # Status shows deleted file
@@ -1208,25 +1288,24 @@ def basic_node_kind_change(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Try and fail to create a directory (file scheduled for deletion)
-  svntest.actions.run_and_verify_svn('Cannot change node kind',
-                                     None, svntest.verify.AnyOutput,
-                                     'mkdir', gamma_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', gamma_path)
 
-  # Status is unchanged
+  # Status is replaced
+  expected_status.tweak('A/D/gamma', status='R ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Commit file deletion
   expected_output = wc.State(wc_dir, {
-    'A/D/gamma' : Item(verb='Deleting'),
+    'A/D/gamma' : Item(verb='Replacing'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/D/gamma')
+  expected_status.tweak('A/D/gamma', status='  ', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
                                         None, wc_dir)
 
   # Try and fail to create a directory (file deleted)
-  svntest.actions.run_and_verify_svn('Cannot change node kind',
+  svntest.actions.run_and_verify_svn(None,
                                      None, svntest.verify.AnyOutput,
                                      'mkdir', gamma_path)
 
@@ -1237,11 +1316,12 @@ def basic_node_kind_change(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # mkdir should succeed
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', gamma_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', gamma_path)
 
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/D/gamma' : Item(status='A ', wc_rev=0),
+    'A/D/gamma' : Item(status='R ', wc_rev=2),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1254,7 +1334,7 @@ def basic_import(sbox):
   wc_dir = sbox.wc_dir
 
   # create a new directory with files of various permissions
-  new_path = os.path.join(wc_dir, 'new_file')
+  new_path = sbox.ospath('new_file')
 
   svntest.main.file_append(new_path, "some text")
 
@@ -1312,7 +1392,7 @@ def basic_cat(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_path = sbox.ospath('A/mu')
 
   # Get repository text even if wc is modified
   svntest.main.file_append(mu_path, "some text")
@@ -1348,22 +1428,22 @@ def basic_ls(sbox):
   svntest.actions.run_and_verify_svn('ls a working copy directory',
                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
                                      [], 'ls',
-                                     os.path.join(wc_dir, 'A'))
+                                     sbox.ospath('A'))
 
   svntest.actions.run_and_verify_svn('ls working copy directory with -r BASE',
                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
                                      [], 'ls', '-r', 'BASE',
-                                     os.path.join(wc_dir, 'A'))
+                                     sbox.ospath('A'))
 
   svntest.actions.run_and_verify_svn('ls a single file',
                                      ['mu\n'],
                                      [], 'ls',
-                                     os.path.join(wc_dir, 'A', 'mu'))
+                                     sbox.ospath('A/mu'))
 
   svntest.actions.run_and_verify_svn('recursive ls',
                                      ['E/\n', 'E/alpha\n', 'E/beta\n', 'F/\n',
                                       'lambda\n' ], [], 'ls', '-R',
-                                     os.path.join(wc_dir, 'A', 'B'))
+                                     sbox.ospath('A/B'))
 
 
 #----------------------------------------------------------------------
@@ -1410,6 +1490,7 @@ def nonexistent_repository(sbox):
 #----------------------------------------------------------------------
 # Issue 1064. This test is only useful if running over a non-local RA
 # with authentication enabled, otherwise it will pass trivially.
+@Issue(1064)
 def basic_auth_cache(sbox):
   "basic auth caching"
 
@@ -1428,16 +1509,16 @@ def basic_auth_cache(sbox):
                                      repo_url, wc_dir)
 
   # Failed with "not locked" error on missing directory
-  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'E'))
+  svntest.main.safe_rmtree(sbox.ospath('A/B/E'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'status', '-u',
-                                     os.path.join(wc_dir, 'A', 'B'))
+                                     sbox.ospath('A/B'))
 
   # Failed with "already locked" error on new dir
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy',
                                      repo_url + '/A/B/E',
-                                     os.path.join(wc_dir, 'A', 'D', 'G'))
+                                     sbox.ospath('A/D/G'))
 
 
 #----------------------------------------------------------------------
@@ -1454,7 +1535,7 @@ def basic_add_ignores(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  dir_path = os.path.join(wc_dir, 'dir')
+  dir_path = sbox.ospath('dir')
   foo_c_path = os.path.join(dir_path, 'foo.c')
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
@@ -1475,6 +1556,7 @@ def basic_add_ignores(sbox):
 
 
 #----------------------------------------------------------------------
+@Issue(2243)
 def basic_add_local_ignores(sbox):
   'ignore files matching local ignores in added dirs'
 
@@ -1483,7 +1565,7 @@ def basic_add_local_ignores(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  dir_path = os.path.join(wc_dir, 'dir')
+  dir_path = sbox.ospath('dir')
   file_path = os.path.join(dir_path, 'app.lock')
 
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
@@ -1501,7 +1583,7 @@ def basic_add_no_ignores(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  dir_path = os.path.join(wc_dir, 'dir')
+  dir_path = sbox.ospath('dir')
   foo_c_path = os.path.join(dir_path, 'foo.c')
   # add a few files that match the default ignore patterns
   foo_o_path = os.path.join(dir_path, 'foo.o')
@@ -1530,7 +1612,7 @@ def basic_add_parents(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  X_path = os.path.join(wc_dir, 'X')
+  X_path = sbox.ospath('X')
   Y_path = os.path.join(X_path, 'Y')
   Z_path = os.path.join(Y_path, 'Z')
   zeta_path = os.path.join(Z_path, 'zeta')
@@ -1575,6 +1657,12 @@ def basic_add_parents(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', X_path, '--keep-local')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', '--parents', zeta_path)
 
 #----------------------------------------------------------------------
 def uri_syntax(sbox):
@@ -1622,8 +1710,8 @@ def basic_info(sbox):
       if line.startswith('Path: '):
         paths.append(line[6:].rstrip())
     if paths != expected_paths:
-      print("Reported paths: %s" % paths)
-      print("Expected paths: %s" % expected_paths)
+      logger.warn("Reported paths: %s" % paths)
+      logger.warn("Expected paths: %s" % expected_paths)
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1646,7 +1734,7 @@ def repos_root(sbox):
       if line == "Repository Root: " + sbox.repo_url + "\n":
         break
     else:
-      print("Bad or missing repository root")
+      logger.warn("Bad or missing repository root")
       raise svntest.Failure
 
   sbox.build(read_only = True)
@@ -1684,9 +1772,9 @@ def basic_peg_revision(sbox):
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', wc_file)
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
+    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
@@ -1725,7 +1813,7 @@ def info_nonhead(sbox):
 
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
-  fname = os.path.join(wc_dir, 'iota')
+  fname = sbox.ospath('iota')
   furl = repo_url + "/iota"
 
   # Remove iota and commit.
@@ -1750,6 +1838,7 @@ def info_nonhead(sbox):
 
 #----------------------------------------------------------------------
 # Issue #2442.
+@Issue(2442)
 def ls_nonhead(sbox):
   "ls a path no longer in HEAD"
 
@@ -1757,7 +1846,7 @@ def ls_nonhead(sbox):
   wc_dir = sbox.wc_dir
 
   # Delete A/D/rho and commit.
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  G_path = sbox.ospath('A/D/G')
   svntest.actions.run_and_verify_svn("error scheduling A/D/G for deletion",
                                      None, [], 'rm', G_path)
 
@@ -1780,12 +1869,13 @@ def ls_nonhead(sbox):
 
 #----------------------------------------------------------------------
 # Issue #2315.
+@Issue(2315)
 def cat_added_PREV(sbox):
   "cat added file using -rPREV"
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  f_path = os.path.join(wc_dir, 'f')
+  f_path = sbox.ospath('f')
 
   # Create and add a file.
   svntest.main.file_append(f_path, 'new text')
@@ -1798,6 +1888,7 @@ def cat_added_PREV(sbox):
                                      'cat', '-rPREV', f_path)
 
 # Issue #2612.
+@Issue(2612)
 def ls_space_in_repo_name(sbox):
   'basic ls of repos with space in name'
 
@@ -1815,8 +1906,8 @@ def delete_keep_local(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  iota_path = os.path.join(wc_dir, 'iota')
-  C_path = os.path.join(wc_dir, 'A', 'C')
+  iota_path = sbox.ospath('iota')
+  C_path = sbox.ospath('A/C')
 
   # Remove file iota
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local',
@@ -1858,7 +1949,7 @@ def delete_keep_local_twice(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  dir = os.path.join(wc_dir, 'dir')
+  dir = sbox.ospath('dir')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
 
@@ -1866,7 +1957,7 @@ def delete_keep_local_twice(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
 
   if not os.path.isdir(dir):
-    print('Directory was really deleted')
+    logger.warn('Directory was really deleted')
     raise svntest.Failure
 
 def windows_paths_in_repos(sbox):
@@ -1942,6 +2033,8 @@ def basic_rm_urls_one_repo(sbox):
                                         expected_disk,
                                         expected_status)
 
+# Test for issue #1199
+@Issue(1199)
 def basic_rm_urls_multi_repos(sbox):
   "remotely remove directories from two repositories"
 
@@ -2008,11 +2101,11 @@ def automatic_conflict_resolution(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files which will be committed
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  mu_path = sbox.ospath('A/mu')
+  lambda_path = sbox.ospath('A/B/lambda')
+  rho_path = sbox.ospath('A/D/G/rho')
+  tau_path = sbox.ospath('A/D/G/tau')
+  omega_path = sbox.ospath('A/D/H/omega')
   svntest.main.file_append(mu_path, 'Original appended text for mu\n')
   svntest.main.file_append(lambda_path, 'Original appended text for lambda\n')
   svntest.main.file_append(rho_path, 'Original appended text for rho\n')
@@ -2138,8 +2231,8 @@ def automatic_conflict_resolution(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # logger.warn("Not all extra reject files have been accounted for:")
+    # logger.warn(extra_files)
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -2242,7 +2335,8 @@ def info_nonexisting_file(sbox):
 
   # Check for the correct error message
   for line in errput:
-    if re.match(".*\(Not a valid URL\).*", line):
+    if re.match(".*" + idonotexist_url + ".*non-existent in revision 1.*",
+                line):
       return
 
   # Else never matched the expected error output, so the test failed.
@@ -2260,7 +2354,7 @@ def basic_relative_url_using_current_dir(sbox):
   sbox.build()
 
   # First, make a new revision of iota.
-  iota = os.path.join(sbox.wc_dir, 'iota')
+  iota = sbox.ospath('iota')
   svntest.main.file_append(iota, "New contents for iota\n")
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
@@ -2285,13 +2379,13 @@ def basic_relative_url_using_other_targets(sbox):
   sbox.build()
 
   # First, make a new revision of iota.
-  iota = os.path.join(sbox.wc_dir, 'iota')
+  iota = sbox.ospath('iota')
   svntest.main.file_append(iota, "New contents for iota\n")
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
 
   # Now, make a new revision of A/mu .
-  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu = sbox.ospath('A/mu')
   mu_url = sbox.repo_url + '/A/mu'
 
   svntest.main.file_append(mu, "New contents for mu\n")
@@ -2363,7 +2457,7 @@ def basic_relative_url_with_peg_revisions(sbox):
   sbox.build()
 
   # First, make a new revision of iota.
-  iota = os.path.join(sbox.wc_dir, 'iota')
+  iota = sbox.ospath('iota')
   svntest.main.file_append(iota, "New contents for iota\n")
   svntest.main.run_svn(None, 'ci',
                        '-m', '', iota)
@@ -2371,7 +2465,7 @@ def basic_relative_url_with_peg_revisions(sbox):
   iota_url = sbox.repo_url + '/iota'
 
   # Now, make a new revision of A/mu .
-  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu = sbox.ospath('A/mu')
   mu_url = sbox.repo_url + '/A/mu'
 
   svntest.main.file_append(mu, "New contents for mu\n")
@@ -2400,6 +2494,7 @@ def basic_relative_url_with_peg_revisions(sbox):
 
 
 # Issue 2242, auth cache picking up password from wrong username entry
+@Issue(2242)
 def basic_auth_test(sbox):
   "basic auth test"
 
@@ -2445,7 +2540,7 @@ def basic_add_svn_format_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  entries_path = os.path.join(wc_dir, '.svn', 'format')
+  entries_path = os.path.join(wc_dir, svntest.main.get_admin_name(), 'format')
 
   output = svntest.actions.get_virginal_state(wc_dir, 1)
 
@@ -2458,17 +2553,435 @@ def basic_add_svn_format_file(sbox):
   svntest.actions.run_and_verify_status(wc_dir, output)
 
 # Issue 2586, Unhelpful error message: Unrecognized URL scheme for ''
+# See also input_validation_tests.py:invalid_mkdir_targets(), which tests
+# the same thing the other way around.
+@Issue(2586)
 def basic_mkdir_mix_targets(sbox):
   "mkdir mix url and local path should error"
 
   sbox.build()
   Y_url = sbox.repo_url + '/Y'
-  expected_error = ".*Illegal repository URL 'subdir'"
+  expected_error = "svn: E200009: Cannot mix repository and working copy targets"
 
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'mkdir', '-m', 'log_msg', Y_url, 'subdir')
 
+def delete_from_url_with_spaces(sbox):
+  "delete a directory with ' ' using its url"
+
+  sbox.build()
+  sbox.simple_mkdir('Dir With Spaces')
+  sbox.simple_mkdir('Dir With')
+  sbox.simple_mkdir('Dir With/Spaces')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'ci', sbox.wc_dir, '-m', 'Added dir')
+
+  # This fails on 1.6.11 with an escaping error.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/Dir%20With%20Spaces',
+                                      '-m', 'Deleted')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/Dir%20With/Spaces',
+                                      '-m', 'Deleted')
+
+@SkipUnless(svntest.main.is_ra_type_dav)
+def meta_correct_library_being_used(sbox):
+  "verify that neon/serf are compiled if tested"
+  expected_re = (r'^\* ra_%s :' % svntest.main.options.http_library)
+  expected_output = svntest.verify.RegexOutput(expected_re, match_all=False)
+  svntest.actions.run_and_verify_svn("is $http_library available",
+                                     expected_output, [], '--version')
+
+def delete_and_add_same_file(sbox):
+  "commit deletes a file and adds one with same text"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  iota = sbox.ospath('iota')
+  iota2 = sbox.ospath('iota2')
+
+  shutil.copyfile(iota, iota2)
+
+  svntest.main.run_svn(None, 'rm', iota)
+  svntest.main.run_svn(None, 'add', iota2)
+
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(verb='Deleting'),
+    'iota2' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('iota')
+  expected_status.add({ 'iota2':  Item(status='  ', wc_rev='2')})
+
+  # At one time the commit post-processing used to fail with "Pristine text
+  # not found".
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+def delete_child_parent_update(sbox):
+  "rm child, commit, rm parent"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E/alpha'))
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E/alpha')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+
+  # This produced a tree-conflict until we fixed issue #3533
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        [],
+                                        expected_disk,
+                                        expected_status)
+
+
+
 #----------------------------------------------------------------------
+
+def basic_relocate(sbox):
+  "basic relocate of a wc"
+  sbox.build(read_only = True)
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+
+  def _verify_url(wc_path, url):
+    name = os.path.basename(wc_path)
+    expected = {'Path' : re.escape(wc_path),
+                'URL' : url,
+                'Repository Root' : '.*',
+                'Revision' : '.*',
+                'Node Kind' : 'directory',
+                'Repository UUID' : uuid_regex,
+              }
+    svntest.actions.run_and_verify_info([expected], wc_path)
+
+  # No-op relocation of just the scheme.
+  scheme = repo_url[:repo_url.index('://')+3]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     scheme, scheme, wc_dir)
+  _verify_url(wc_dir, repo_url)
+
+  # No-op relocation of a bit more of the URL.
+  substring = repo_url[:repo_url.index('://')+7]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     substring, substring, wc_dir)
+  _verify_url(wc_dir, repo_url)
+
+  # Real relocation to OTHER_REPO_URL.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+  _verify_url(wc_dir, other_repo_url)
+
+  # ... and back again, using the newer 'svn relocate' subcommand.
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     other_repo_url, repo_url, wc_dir)
+  _verify_url(wc_dir, repo_url)
+
+  # To OTHER_REPO_URL again, this time with the single-URL form of
+  # 'svn relocate'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     other_repo_url, wc_dir)
+  _verify_url(wc_dir, other_repo_url)
+
+  ### TODO: When testing ra_dav or ra_svn, do relocations between
+  ### those and ra_local URLs.
+
+#----------------------------------------------------------------------
+
+def delete_urls_with_spaces(sbox):
+  "delete multiple targets with spaces"
+  sbox.build(create_wc = False)
+
+  # Create three directories with a space in their name
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                     sbox.repo_url + '/A spaced',
+                                     sbox.repo_url + '/B spaced',
+                                     sbox.repo_url + '/C spaced',
+                                     '-m', 'Created dirs')
+
+  # Try to delete the first
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     sbox.repo_url + '/A spaced',
+                                     '-m', 'Deleted A')
+
+  # And then two at once
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     sbox.repo_url + '/B spaced',
+                                     sbox.repo_url + '/C spaced',
+                                     '-m', 'Deleted B and C')
+
+def ls_url_special_characters(sbox):
+  """special characters in svn ls URL"""
+  sbox.build(create_wc = False)
+
+  special_urls = [sbox.repo_url + '/A' + '/%2E',
+                  sbox.repo_url + '%2F' + 'A']
+
+  for url in special_urls:
+    svntest.actions.run_and_verify_svn('ls URL with special characters',
+                                       ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+                                       [], 'ls',
+                                       url)
+
+def ls_multiple_and_non_existent_targets(sbox):
+  "ls multiple and non-existent targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  def non_existent_wc_target():
+    "non-existent wc target"
+    non_existent_path = sbox.ospath('non-existent')
+
+    expected_err = ".*W155010.*"
+    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                        1, 'ls', non_existent_path)
+
+  def non_existent_url_target():
+    "non-existent url target"
+    non_existent_url = sbox.repo_url + '/non-existent'
+    expected_err = ".*W160013.*"
+
+    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                        1, 'ls', non_existent_url)
+  def multiple_wc_targets():
+    "multiple wc targets"
+
+    alpha = sbox.ospath('A/B/E/alpha')
+    beta = sbox.ospath('A/B/E/beta')
+    non_existent_path = sbox.ospath('non-existent')
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'ls', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W155010.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha,
+                                                    non_existent_path, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('ls failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    alpha = sbox.repo_url +  '/A/B/E/alpha'
+    beta = sbox.repo_url +  '/A/B/E/beta'
+    non_existent_url = sbox.repo_url +  '/non-existent'
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'ls', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W160013.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha,
+                                                    non_existent_url, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('ls failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+  # Test one by one
+  non_existent_wc_target()
+  non_existent_url_target()
+  multiple_wc_targets()
+  multiple_url_targets()
+
+def add_multiple_targets(sbox):
+  "add multiple targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  file1 = sbox.ospath('file1')
+  file2 = sbox.ospath('file2')
+  non_existent_path = sbox.ospath('non-existent')
+
+  svntest.main.file_write(file1, "file1 contents", 'w+')
+  svntest.main.file_write(file2, "file2 contents", 'w+')
+
+  # One non-existing target
+  expected_err = ".*W155010.*\n.*E200009.*"
+  expected_err_re = re.compile(expected_err, re.DOTALL)
+
+  # Build expected state
+  expected_output = wc.State(wc_dir, {
+      'file1' : Item(verb='Adding'),
+      'file2' : Item(verb='Adding'),
+    })
+
+  exit_code, output, error = svntest.main.run_svn(1, 'add', file1,
+                                                  non_existent_path, file2)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('add failed: expected error "%s", but received '
+                          '"%s"' % (expected_err, "".join(error)))
+
+  # Verify status
+  expected_status = svntest.verify.UnorderedOutput(
+        ['A       ' + file1 + '\n',
+         'A       ' + file2 + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected_status, [],
+                                     'status', wc_dir)
+
+
+def quiet_commits(sbox):
+  "commits with --quiet"
+
+  sbox.build()
+
+  svntest.main.file_append(sbox.ospath('A/mu'), 'xxx')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'commit', sbox.wc_dir,
+                                     '--message', 'commit', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'mkdir', sbox.repo_url + '/X',
+                                     '--message', 'mkdir URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'import', sbox.ospath('A/mu'),
+                                     sbox.repo_url + '/f',
+                                     '--message', 'import', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'rm', sbox.repo_url + '/f',
+                                     '--message', 'rm URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'copy', sbox.repo_url + '/X',
+                                     sbox.repo_url + '/Y',
+                                     '--message', 'cp URL URL', '--quiet')
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'move', sbox.repo_url + '/Y',
+                                     sbox.repo_url + '/Z',
+                                     '--message', 'mv URL URL', '--quiet')
+
+  # Not fully testing each command, just that they all commit and
+  # produce no output.
+  expected_output = wc.State(sbox.wc_dir, {
+    'X' : Item(status='A '),
+    'Z' : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 7)
+  expected_status.add({
+      'X'   : Item(status='  ', wc_rev=7),
+      'Z'   : Item(status='  ', wc_rev=7),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'xxx')
+  expected_disk.add({
+    'X' : Item(),
+    'Z' : Item()
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+# Regression test for issue #4023: on Windows, 'svn rm' incorrectly deletes
+# on-disk file if it is case-clashing with intended (non-on-disk) target.
+@Issue(4023)
+@XFail(svntest.main.is_fs_case_insensitive)
+def rm_missing_with_case_clashing_ondisk_item(sbox):
+  """rm missing item with case-clashing ondisk item"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  IOTA_path = sbox.ospath('IOTA')
+
+  # Out-of-svn move, to make iota missing, while IOTA appears as unversioned.
+  os.rename(iota_path, IOTA_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota'              : Item(status='! ', wc_rev='1'),
+    'IOTA'              : Item(status='? '),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # 'svn rm' iota, should leave IOTA alone.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', iota_path)
+
+  # Test status: the unversioned IOTA should still be there.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota'              : Item(status='D ', wc_rev='1'),
+    'IOTA'              : Item(status='? '),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+
+def delete_conflicts_one_of_many(sbox):
+  """delete multiple targets one conflict"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'new rho')
+  sbox.simple_commit()
+  svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'conflict rho')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r1', '--accept', 'postpone',
+                                     wc_dir)
+
+  if not os.path.exists(sbox.ospath('A/D/G/rho.mine')):
+    raise svntest.Failure("conflict file rho.mine missing")
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--force',
+                                     sbox.ospath('A/D/G/rho'),
+                                     sbox.ospath('A/D/G/tau'))
+
+  verify_file_deleted("failed to remove conflict file",
+                      sbox.ospath('A/D/G/rho.mine'))
 
 ########################################################################
 # Run the tests
@@ -2482,7 +2995,8 @@ test_list = [ None,
               basic_mkdir_url,
               basic_mkdir_url_with_parents,
               basic_mkdir_wc_with_parents,
-              basic_corruption,
+              basic_commit_corruption,
+              basic_update_corruption,
               basic_merging_update,
               basic_conflict,
               basic_cleanup,
@@ -2513,7 +3027,7 @@ test_list = [ None,
               delete_keep_local_twice,
               windows_paths_in_repos,
               basic_rm_urls_one_repo,
-              XFail(basic_rm_urls_multi_repos),
+              basic_rm_urls_multi_repos,
               automatic_conflict_resolution,
               info_nonexisting_file,
               basic_relative_url_using_current_dir,
@@ -2524,6 +3038,18 @@ test_list = [ None,
               basic_auth_test,
               basic_add_svn_format_file,
               basic_mkdir_mix_targets,
+              delete_from_url_with_spaces,
+              meta_correct_library_being_used,
+              delete_and_add_same_file,
+              delete_child_parent_update,
+              basic_relocate,
+              delete_urls_with_spaces,
+              ls_url_special_characters,
+              ls_multiple_and_non_existent_targets,
+              add_multiple_targets,
+              quiet_commits,
+              rm_missing_with_case_clashing_ondisk_item,
+              delete_conflicts_one_of_many,
              ]
 
 if __name__ == '__main__':

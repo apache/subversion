@@ -115,7 +115,7 @@ xml_escape_cdata(svn_stringbuf_t **outstr,
   const char *p = data, *q;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
   while (1)
     {
@@ -277,7 +277,7 @@ svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
   if (q == end)
     return string;
 
-  outstr = svn_stringbuf_create("", pool);
+  outstr = svn_stringbuf_create_empty(pool);
   while (1)
     {
       q = p;
@@ -301,7 +301,8 @@ svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
          ### should probably share code, even though they escape
          ### different characters.
       */
-      sprintf(escaped_char, "?\\%03u", (unsigned char) *q);
+      apr_snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
+                   (unsigned char) *q);
       svn_stringbuf_appendcstr(outstr, escaped_char);
 
       p = q + 1;
@@ -454,7 +455,7 @@ void svn_xml_signal_bailout(svn_error_t *error,
 /*** Attribute walking. ***/
 
 const char *
-svn_xml_get_attr_value(const char *name, const char **atts)
+svn_xml_get_attr_value(const char *name, const char *const *atts)
 {
   while (atts && (*atts))
     {
@@ -473,12 +474,19 @@ svn_xml_get_attr_value(const char *name, const char **atts)
 /*** Printing XML ***/
 
 void
-svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
+svn_xml_make_header2(svn_stringbuf_t **str, const char *encoding,
+                     apr_pool_t *pool)
 {
+
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
-  svn_stringbuf_appendcstr(*str,
-                           "<?xml version=\"1.0\"?>\n");
+    *str = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_appendcstr(*str, "<?xml version=\"1.0\"");
+  if (encoding)
+    {
+      encoding = apr_psprintf(pool, " encoding=\"%s\"", encoding);
+      svn_stringbuf_appendcstr(*str, encoding);
+    }
+  svn_stringbuf_appendcstr(*str, "?>\n");
 }
 
 
@@ -638,7 +646,7 @@ void svn_xml_make_close_tag(svn_stringbuf_t **str,
                             const char *tagname)
 {
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
+    *str = svn_stringbuf_create_empty(pool);
 
   svn_stringbuf_appendcstr(*str, "</");
   svn_stringbuf_appendcstr(*str, tagname);

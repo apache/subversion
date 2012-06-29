@@ -71,7 +71,7 @@ Example:
     use SVN::Core;
     use SVN::Repos;
 
-    my $repos = SVN::Repos::open ('/repo/sandbox');
+    my $repos = SVN::Repos::open('/repo/sandbox');
 
     open my $fh, ">/tmp/tmp.dump" or die "Cannot open file: $!\n";
 
@@ -124,7 +124,7 @@ Example:
     use SVN::Core;
     use SVN::Repos;
 
-    my $repos = SVN::Repos::open ('/repo/test_repo');
+    my $repos = SVN::Repos::open('/repo/test_repo');
 
     open my $fh, "/repo/sandbox.dump" or die "Cannot open file: $!\n";
 

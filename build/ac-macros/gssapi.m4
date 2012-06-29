@@ -1,3 +1,21 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
 dnl
 dnl  SVN_LIB_GSSAPI
 dnl
@@ -40,10 +58,10 @@ AC_DEFUN(SVN_LIB_RA_SERF_GSSAPI,
       CPPFLAGS="$CPPFLAGS $SVN_GSSAPI_INCLUDES"
       CFLAGS="$old_CFLAGS"
       LIBS="$LIBS $SVN_GSSAPI_LIBS"
-      AC_LINK_IFELSE([
+      AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <gssapi.h>
 int main()
-{gss_init_sec_context(NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);}],
+{gss_init_sec_context(NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL);}]])],
         svn_lib_gssapi="yes", svn_lib_gssapi="no")
       if test "$svn_lib_gssapi" = "yes"; then
         AC_MSG_RESULT([yes])

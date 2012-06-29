@@ -254,10 +254,10 @@ class build(_build):
           sys.exit(2)
 
     if not self.dry_run:
+      r = re.compile(r"(\s+\w+)\.restype = POINTER\(svn_error_t\)")
       out = open("svn_all2.py", "w")
       for line in open("svn_all.py"):
-        line = line.replace("restype = POINTER(svn_error_t)",
-                            "restype = SVN_ERR")
+        line = r.sub("\\1.restype = POINTER(svn_error_t)\n\\1.errcheck = _svn_errcheck", line)
 
         if not line.startswith("FILE ="):
           out.write(line)
@@ -470,9 +470,10 @@ setup(cmdclass={'build': build, 'clean': clean},
       version='0.1',
       description='Python bindings for the Subversion version control system.',
       author='The Subversion Team',
-      author_email='dev@subversion.tigris.org',
-      url='http://subversion.tigris.org',
+      author_email='dev@subversion.apache.org',
+      url='http://subversion.apache.org',
       packages=['csvn', 'csvn.core', 'csvn.ext'],
+      license='Apache License, Version 2.0',
      )
 
 # TODO: We need to create our own bdist_rpm implementation so that we can pass

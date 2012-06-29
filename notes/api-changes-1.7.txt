@@ -1,0 +1,614 @@
+This is a summary of all new and changed public symbols in public headers,
+between 1.6.17 and trunk at the revision stated below.
+
+The kind of change is indicated with "+" for a new symbol; "-" for a removal
+or deprecation; "!" for a change in syntax or semantics.  Where a symbol
+marked with "+" includes a version number, the deprecation of the previous
+version is implied, and only listed if there is more to say about it.
+Public symbols should not be removed but sometimes they are moved from one
+header to another, and that is marked with "-" and "+".
+
+Observations are marked with "#".
+
+HEADERS REVIEWED
+
+  r1136085 mod_authz_svn.h - no change
+  r1136085 mod_dav_svn.h - no change
+  r1136085 svn_auth.h
+  r1136085 svn_base64.h - no change
+  r1136085 svn_cache_config.h - new header
+  r1136085 svn_checksum.h
+  r1136085 svn_client.h
+  r1136085 svn_cmdline.h - no change
+  r1136085 svn_compat.h - no change
+  r1136085 svn_config.h
+  r1136085 svn_ctype.h - no change
+  r1136085 svn_dav.h
+  r1136085 svn_delta.h
+  r1136085 svn_diff.h
+  r1136085 svn_dirent_uri.h
+  r1136085 svn_dso.h - no change
+  r1136085 svn_error.h
+  r1136085 svn_error_codes.h
+  r1136085 svn_fs.h
+  r1136085 svn_hash.h
+  r1136085 svn_io.h
+  r1136085 svn_iter.h - no change except doc clarification
+  r1136085 svn_md5.h - no change
+  r1136085 svn_mergeinfo.h
+  r1136085 svn_nls.h - no change
+  r1136085 svn_opt.h
+  r1136085 svn_path.h
+  r1136085 svn_pools.h - no change
+  r1136085 svn_props.h
+  r1136085 svn_quoprint.h - no change
+  r1136085 svn_ra.h
+  r1136085 svn_ra_svn.h
+  r1136085 svn_repos.h
+  r1136085 svn_sorts.h - no change
+  r1136085 svn_string.h
+  r1136085 svn_subst.h
+  r1136085 svn_time.h - no change
+  r1136085 svn_types.h
+  r1136085 svn_user.h - no change
+  r1136085 svn_utf.h - no change
+  r1136085 svn_version.h
+  r1136085 svn_wc.h
+  r1136085 svn_xml.h
+
+NEW AND CHANGED SYMBOLS
+
+svn_auth.h
+  - removed svn_version.h
+  ! svn_auth_open() - gets 'const' on an array input
+
+svn_cache_config.h
+  + New header.
+  + svn_cache_config_t
+  + svn_cache_config_get()
+  + svn_cache_config_set()
+
+svn_checksum.h
+  ! svn_checksum_kind_t - gets an enum tag name to match typedef
+  ! svn_checksum_to_cstring() - new behaviour for null input
+  + svn_checksum_serialize()
+  + svn_checksum_deserialize()
+  + svn_checksum_mismatch_err()
+
+svn_client.h
+  - removed svn_version.h
+  ! svn_client_commit_item3_t - new field 'session_relpath'
+    # Doc: the path of what relative to what?
+  + svn_client_blame_receiver3_t - adds local changes and all revprops
+  ! svn_client_ctx_t - new fields: conflict cb, wc_ctx
+  + svn_client_args_to_target_array2()
+  + svn_client_update4() - adds 'adds_as_mods', 'make_parents'
+  + svn_client_switch3() - adds 'ignore_ancestry'
+  + svn_client_mkdir4() - uses commit cb
+  + svn_client_delete4() - uses commit cb
+  + svn_client_import4() - uses commit cb
+  + svn_client_commit5() - uses commit cb; adds 'commit_as_ops'; new notif's
+  + svn_client_status_t
+  + svn_client_status_dup()
+  + svn_client_status_func_t
+    # See '###' comment: 'could totally disappear ...'.
+  + svn_client_status5() - adds 'depth_as_sticky'
+  + svn_client_blame5()
+  + svn_client_diff5() - adds 'git' format, 'show_copies_as_adds'
+  + svn_client_diff_peg5() - adds 'git' format, 'show_copies_as_adds'
+  + svn_client_merge4() - adds 'allow_mixed_rev'
+  - svn_client_merge3() - deprecated
+  + svn_client_merge_peg4() - adds 'allow_mixed_rev'
+  - svn_client_merge_peg3() - deprecated
+  + svn_client_mergeinfo_log() - adds 'finding_merged'; supports depth
+  - svn_client_mergeinfo_log_merged() - deprecated
+  - svn_client_mergeinfo_log_eligible() - deprecated
+  + svn_client_upgrade()
+  + svn_client_relocate2() - adds 'ignore_externals'
+  ! svn_client_relocate() - deprecated; behaviour change: whole WC only
+    # Doc should refer to 'notes/api-errata/1.7/...'.
+  + svn_client_copy6() - uses commit cb
+  ! svn_client_copy5() - deprecated; gets 'const' on array input
+  ! svn_client_copy4() - gets 'const' on array input
+  + svn_client_move6() - uses commit cb
+  + svn_client_propset_remote()
+  + svn_client_propset_local()
+  - svn_client_propset3() - deprecated
+  + svn_client_propget4()
+  + svn_client_export5()
+  - svn_changelist_receiver_t - moved from here to svn_wc.h
+  - svn_info_t - deprecated
+  - svn_info_receiver_t - deprecated
+  - svn_info_dup() - deprecated
+  + svn_client_info2_t
+  + svn_client_info2_dup()
+  + svn_client_info_receiver2_t
+  + svn_client_info3()
+  + svn_client_patch_func_t
+  + svn_client_patch()
+  + svn_client_url_from_path2()
+  + svn_client_uuid_from_path2()
+    # Better to unify svn_client_{root_url,uuid}_from_{path,url} APIs?
+
+svn_config.h
+  + SVN_CONFIG_OPTION_DIFF_EXTENSIONS      "diff-extensions"
+  + SVN_CONFIG_OPTION_FORCE_USERNAME_CASE  "force-username-case"
+  + svn_config_create()
+  + svn_config_read2()
+
+svn_dav.h
+  + SVN_SKEL_MIME_TYPE "application/vnd.svn-skel"
+  + SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
+  + SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
+  + SVN_DAV_ME_RESOURCE_HEADER "SVN-Me-Resource"
+  + SVN_DAV_ROOT_URI_HEADER "SVN-Repository-Root"
+  + SVN_DAV_REV_STUB_HEADER "SVN-Rev-Stub"
+  + SVN_DAV_REV_ROOT_STUB_HEADER "SVN-Rev-Root-Stub"
+  + SVN_DAV_TXN_STUB_HEADER "SVN-Txn-Stub"
+  + SVN_DAV_VTXN_STUB_HEADER "SVN-VTxn-Stub"
+  + SVN_DAV_TXN_ROOT_STUB_HEADER "SVN-Txn-Root-Stub"
+  + SVN_DAV_VTXN_ROOT_STUB_HEADER "SVN-VTxn-Root-Stub"
+  + SVN_DAV_TXN_NAME_HEADER "SVN-Txn-Name"
+  + SVN_DAV_VTXN_NAME_HEADER "SVN-VTxn-Name"
+
+svn_delta.h
+  - removed svn_version.h
+  + SVN_DELTA_COMPRESSION_LEVEL_NONE 0
+  + SVN_DELTA_COMPRESSION_LEVEL_MAX 9
+  + SVN_DELTA_COMPRESSION_LEVEL_DEFAULT 5
+  + svn_txdelta_to_svndiff3()
+  ! svn_delta_path_driver() - gets 'const' on its paths array input
+
+svn_diff.h
+  - removed svn_version.h
+  + svn_diff_fns2_t
+  + svn_diff_diff_2()
+  + svn_diff_diff3_2()
+  + svn_diff_diff4_2()
+  + svn_diff_mem_string_output_unified2()
+  + svn_diff_operation_kind_t
+  + svn_diff_hunk_t
+  + svn_diff_hunk_readline_diff_text()
+  + svn_diff_hunk_readline_original_text()
+  + svn_diff_hunk_readline_modified_text()
+  + svn_diff_hunk_reset_diff_text()
+  + svn_diff_hunk_reset_original_text()
+  + svn_diff_hunk_reset_modified_text()
+  + svn_diff_hunk_get_original_start()
+  + svn_diff_hunk_get_original_length()
+  + svn_diff_hunk_get_modified_start()
+  + svn_diff_hunk_get_modified_length()
+  + svn_diff_hunk_get_leading_context()
+  + svn_diff_hunk_get_trailing_context()
+  + svn_prop_patch_t
+  + svn_patch_t
+  + svn_patch_file_t
+  + svn_diff_open_patch_file()
+  + svn_diff_parse_next_patch()
+  + svn_diff_close_patch_file()
+
+svn_dirent_uri.h
+  + svn_relpath_join()
+  + svn_dirent_basename()
+  + svn_dirent_split()
+  + svn_relpath_split()
+  + svn_relpath_basename()
+  + svn_relpath_dirname()
+  + svn_uri_split()
+  + svn_uri_basename()
+  + svn_uri_dirname()
+  + svn_uri_is_root()
+    # Document what "is root" means: "can't split into dir/basename"?
+  + svn_relpath_canonicalize()
+  + svn_uri_canonicalize()
+  + svn_relpath_is_canonical()
+  + svn_uri_is_canonical()
+  + svn_relpath_get_longest_ancestor()
+  + svn_uri_get_longest_ancestor()
+  + svn_uri_is_child()
+    # Make private.
+  = svn_dirent_is_child()
+    # Deprecate.
+  + svn_relpath_is_child()
+    # Make private.
+  = svn_dirent_is_ancestor()
+    # Deprecate.
+  + svn_relpath_is_ancestor()
+    # Make private.
+  + svn_uri_is_ancestor()
+    # Make private.
+  + svn_dirent_skip_ancestor()
+    # See ### comment: shouldn't return child.
+  + svn_relpath_skip_ancestor()
+  + svn_uri_skip_ancestor()
+  + svn_dirent_condense_targets()
+  + svn_uri_condense_targets()
+  + svn_dirent_is_under_root()
+  + svn_uri_get_dirent_from_file_url()
+  + svn_uri_get_file_url_from_dirent()
+
+svn_error.h
+  + svn_error_find_cause()
+  + svn_error_return()
+  + svn_error_purge_tracing()
+  + SVN_ERROR_IN_CATEGORY()
+
+svn_error_codes.h
+  + SVN_ERR_BAD_TOKEN
+  + SVN_ERR_BAD_CHANGELIST_NAME
+  + SVN_ERR_IO_PIPE_WRITE_ERROR
+  + SVN_ERR_STREAM_SEEK_NOT_SUPPORTED
+  + SVN_ERR_WC_NOT_WORKING_COPY - new name for SVN_ERR_WC_NOT_DIRECTORY
+  - SVN_ERR_WC_CHANGELIST_MOVE - deprecated
+  + SVN_ERR_WC_DB_ERROR
+  + SVN_ERR_WC_MISSING
+  + SVN_ERR_WC_NOT_SYMLINK
+  + SVN_ERR_WC_PATH_UNEXPECTED_STATUS
+  + SVN_ERR_WC_UPGRADE_REQUIRED
+  + SVN_ERR_WC_CLEANUP_REQUIRED
+  + SVN_ERR_WC_INVALID_OPERATION_DEPTH
+  + SVN_ERR_FS_PROP_BASEVALUE_MISMATCH
+  + SVN_ERR_RA_SESSION_URL_MISMATCH
+  + SVN_ERR_RA_DAV_CONN_TIMEOUT
+  + SVN_ERR_RA_SVN_EDIT_ABORTED
+  + SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED
+  + SVN_ERR_RA_SERF_WRAPPED_ERROR
+  + SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT
+  + SVN_ERR_CLIENT_CYCLE_DETECTED
+  + SVN_ERR_CLIENT_MERGE_UPDATE_REQUIRED
+  + SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING
+  + SVN_ERR_SQLITE_BUSY
+  + SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK
+  + SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS
+  + SVN_ERR_ASSERTION_ONLY_TRACING_LINKS
+
+svn_fs.h
+  + SVN_FS_CONFIG_FSFS_CACHE_DELTAS     "fsfs-cache-deltas"
+  + SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS  "fsfs-cache-fulltexts"
+  + SVN_FS_CONFIG_PRE_1_7_COMPATIBLE
+  ! svn_fs_change_txn_props() - gets 'const' on its 'props' array input
+  ! svn_fs_path_change_kind_t - gets an enum tag name to match typedef
+  + svn_fs_get_mergeinfo2()
+  + svn_fs_validate_mergeinfo()
+  + svn_fs_change_rev_prop2()
+  + svn_fs_get_locks2()
+  ! svn_fs_pack_notify_action_t - gets an enum tag name to match typedef
+  + svn_fs_pack_notify_start_revprop
+  + svn_fs_pack_notify_end_revprop
+
+svn_hash.h
+  + svn_hash_get_cstring()
+  + svn_hash_get_bool()
+    # Rename and move to svn_config_hash_get(), svn_config_hash_get_bool().
+
+svn_io.h
+  + svn_io_dirent2_t
+  + svn_io_dirent2_create()
+  + svn_io_dirent2_dup()
+  ! svn_stream_t - added reset/mark/seek/skip support
+  + svn_stream_skip_fn_t
+  + svn_stream_mark_t
+  + svn_stream_mark_fn_t
+  + svn_stream_seek_fn_t
+  + svn_stream_set_skip()
+  + svn_stream_set_mark()
+  + svn_stream_set_seek()
+  + svn_stream_for_stdin()
+  + svn_stream_for_stderr()
+  + svn_stream_skip()
+  + svn_stream_reset()
+  + svn_stream_supports_mark()
+  + svn_stream_mark()
+  + svn_stream_seek()
+  + svn_stream_tee()
+  + svn_stream_contents_same2()
+  + svn_io_remove_file2()
+  - svn_io_get_dir_filenames() - deprecated
+    # Should say why/what its replacement is.
+  + svn_io_get_dirents3()
+  + svn_io_stat_dirent()
+  + svn_io_dir_walk2()
+  + svn_io_start_cmd2()
+  + svn_io_is_binary_data()
+  + svn_io_file_putc()
+  + svn_io_file_read_full2()
+  + svn_io_dir_close()
+  + svn_io_file_name_get()
+
+svn_mergeinfo.h
+  + svn_mergeinfo_catalog_merge()
+  + svn_mergeinfo_remove2()
+  ! svn_rangelist_diff() - gets 'const' on its array inputs
+  ! svn_rangelist_merge() - gets 'const' on its array input
+  ! svn_rangelist_remove() - gets 'const' on its array inputs
+  + svn_mergeinfo_intersect2()
+  ! svn_rangelist_intersect() - gets 'const' on its array inputs
+  + svn_rangelist_inheritable2()
+  + svn_mergeinfo_inheritable2()
+  ! svn_rangelist_dup() - gets 'const' on its array input
+  ! svn_mergeinfo_inheritance_t - gets an enum tag name to match typedef
+
+svn_opt.h
+  ! svn_opt_subcommand_help3() - new behaviour: shows aliases
+  ! svn_opt_args_to_target_array3() - gets 'const' on its array input
+  ! svn_opt_args_to_target_array2() - gets 'const' on its array input
+  ! svn_opt_args_to_target_array() - gets 'const' on its array input
+
+svn_path.h
+  - svn_path_internal_style() - deprecated; see dirent_uri.h
+  - svn_path_local_style() - deprecated; see dirent_uri.h
+  - svn_path_join() - deprecated; see dirent_uri.h
+  - svn_path_join_many() - deprecated; see dirent_uri.h
+  - svn_path_basename() - deprecated; see dirent_uri.h
+  - svn_path_dirname() - deprecated; see dirent_uri.h
+  - svn_path_split() - deprecated; see dirent_uri.h
+  - svn_path_canonicalize() - deprecated; see dirent_uri.h
+  - svn_path_is_canonical() - deprecated; see dirent_uri.h
+  - svn_path_get_longest_ancestor() - deprecated; see dirent_uri.h
+  - svn_path_get_absolute() - deprecated; see dirent_uri.h
+  - svn_path_split_if_file() - deprecated
+  - svn_path_condense_targets() - deprecated; see dirent_uri.h
+  - svn_path_is_child() - deprecated; see dirent_uri.h
+  - svn_path_is_ancestor() - deprecated; see dirent_uri.h
+
+svn_props.h
+  + svn_prop_array_to_hash()
+  + svn_prop_get_value()
+
+svn_ra.h
+  svn_ra_get_wc_prop_func_t - 'relpath' param renamed 'path'
+  + svn_ra_open4() - supports redirection
+  + svn_ra_get_path_relative_to_session()
+  + svn_ra_get_path_relative_to_root()
+  + svn_ra_change_rev_prop2() - supports 'atomic' revprop changes
+  + svn_ra_get_mergeinfo2() - can validate inherited mergeinfo
+  ! svn_ra_get_locations() - gets 'const' on its array input
+  + svn_ra_get_locks2() - supports depth
+  + SVN_RA_CAPABILITY_ATOMIC_REVPROPS
+
+svn_ra_svn.h
+  + SVN_RA_SVN_CAP_ATOMIC_REVPROPS
+  + svn_ra_svn_create_conn2() - can specify compression level
+  ! svn_ra_svn_set_capabilities() - gets 'const' on its array input
+  + svn_ra_svn_compression_level()
+    # Better name: svn_ra_svn_[conn_][get_]compression_level()?
+  ! svn_ra_svn_parse_tuple() - gets 'const' on its array input
+  ! svn_ra_svn_parse_proplist() - gets 'const' on its array input
+
+svn_repos.h
+  - removed svn_version.h
+  ! svn_repos_authz_access_t - gets an enum tag name to match typedef
+  + svn_repos_notify_action_t
+  + svn_repos_notify_warning_t
+    # Doc: see '###' comment re making a Doxygen link.
+  + svn_repos_notify_t
+  + svn_repos_notify_func_t
+  + svn_repos_notify_create()
+  + svn_repos_open2() - takes an fs_config hash input
+  + svn_repos_upgrade2() - uses the new repos notification system
+  + svn_repos_fs_pack2() - uses the new repos notification system
+  + svn_repos_recover4() - uses the new repos notification system
+  ! svn_repos_trace_node_locations() - gets 'const' on its array input
+  + svn_repos_fs_get_mergeinfo2() - can validate inherited mergeinfo
+  + svn_repos_fs_get_locks2() - supports depth
+  + svn_repos_fs_change_rev_prop4() - supports 'atomic' rev prop change
+  ! svn_repos_fs_change_txn_props() - gets 'const' on its array input
+  + svn_repos_verify_fs2() - uses the new repos notification system
+  + svn_repos_dump_fs3() - uses the new repos notification system
+  + svn_repos_load_fs3() - can validate svn props; uses new notifications
+  + svn_repos_get_fs_build_parser3() - can validate svn props; uses new
+    notifications
+  ! svn_repos_revision_access_level_t - gets an enum tag name to match typedef
+  ! svn_repos_remember_client_capabilities() - gets 'const' on its array input
+
+svn_string.h
+  + svn_stringbuf_appendbyte()
+  ! svn_cstring_match_glob_list() - gets 'const' on its array input
+  + svn_cstring_match_list()
+  + svn_cstring_strtoi64()
+  + svn_cstring_atoi64()
+  + svn_cstring_atoi()
+  + svn_cstring_strtoui64()
+  + svn_cstring_atoui64()
+  + svn_cstring_atoui()
+    # These numeric conversion funcs should define the valid input format.
+
+svn_subst.h
+  + svn_subst_copy_and_translate4() - supports cancellation
+  + svn_subst_translate_string2() - can repair EOL; says if translated
+  - svn_subst_translate_string() - deprecated
+    # Doesn't mention the inability to control repair of EOL.
+
+svn_types.h
+  + SVN_UNALIGNED_ACCESS_IS_OK
+  + svn_version_t - moved to here from svn_version.h
+  ! svn_node_kind_t - gets an enum tag name to match typedef
+  + svn_tristate_t
+  + svn_tristate_to_word()
+    # Are the strings localized or fixed?
+    # Make private.
+  + svn_tristate_from_word()
+    # Are the strings localized or fixed?
+    # Make private. Stop using it for option parsing (svnserve).
+  ! svn_depth_t - gets an enum tag name to match typedef
+  ! svn_commit_info_t - gets a 'repos_root' field
+    # Should be named 'repos_root_url'?
+    # Should also get a 'repos_uuid' field?
+  ! svn_log_changed_path2_t - gets 'text_modified' and 'props_modified' fields
+    # Do these new fields make sense in general logs?
+  ! svn_log_entry_t - gets 'non_inheritable' and 'subtractive_merge' fields
+  ! svn_log_entry_dup() - gets 'const' on its input
+  ! svn_merge_range_dup() - gets 'const' on its input
+  ! svn_merge_range_contains_rev() - gets 'const' on its input
+  ! svn_location_segment_dup() - gets 'const' on its input
+  + svn_linenum_t
+  + SVN_LINENUM_MAX_VALUE
+
+svn_version.h
+  ! SVN_VER_MINOR - changed to 7
+  ! SVN_VER_PATCH - changed to 0
+  - svn_version_t - moved from here to svn_types.h
+
+svn_wc.h
+  - removed svn_version.h
+
+  + svn_wc_context_t
+  + svn_wc_context_create()
+  + svn_wc_context_destroy()
+  - svn_wc_adm_open3() - deprecated
+  - svn_wc_adm_probe_open3() - deprecated
+  - svn_wc_adm_open_anchor() - deprecated
+  - svn_wc_adm_retrieve() - deprecated
+  - svn_wc_adm_probe_retrieve() - deprecated
+  - svn_wc_adm_probe_try3() - deprecated
+  - svn_wc_adm_close2() - deprecated
+  - svn_wc_adm_access_path() - deprecated
+  - svn_wc_adm_access_pool() - deprecated
+  - svn_wc_adm_locked() - deprecated
+  + svn_wc_locked2()
+
+  + svn_wc_external_update_t
+  - svn_wc_traversal_info_t - deprecated
+  - svn_wc_init_traversal_info() - deprecated
+  - svn_wc_edited_externals() - deprecated
+  - svn_wc_traversed_depths() - deprecated
+
+  ! svn_wc_notify_action_t - gets many new values and one deprecated
+  ! svn_wc_notify_state_t - gets a new value 'source_missing'
+  ! svn_wc_notify_t - gets 'old_revision' and some info for patching
+
+  ! svn_wc_conflict_action_t - gets a new value: 'replace'
+  ! svn_wc_conflict_reason_t - gets a new value: 'replaced'
+  + svn_wc_conflict_description2_t
+    # See '###' comment.
+  + svn_wc_conflict_description_create_text2()
+  + svn_wc_conflict_description_create_prop2()
+  + svn_wc_conflict_description_create_tree2()
+  + svn_wc_conflict_resolver_func2_t
+
+  + svn_wc_diff_callbacks4_t - adds 'file_opened' and copyfrom info
+    # Should have 'file_closed' too?
+    # Deprecation comment doesn't mention 'file_opened'.
+    # Copyfrom info should include which repository?
+
+  + svn_wc_check_wc2()
+
+  - svn_wc_has_binary_prop() - deprecated
+
+  + svn_wc_text_modified_p2()
+  + svn_wc_props_modified_p2()
+
+  - svn_wc_schedule_t - deprecated
+  - SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN - deprecated
+  - svn_wc_entry_t - deprecated
+  - SVN_WC_ENTRY_THIS_DIR - deprecated
+  - svn_wc_entry() - deprecated
+  - svn_wc_entries_read() - deprecated
+  - svn_wc_entry_dup() - deprecated
+
+  + svn_wc_info_t
+    # See '###' comment.
+  + svn_wc_info_dup()
+
+  + svn_wc_conflicted_p3()
+  - svn_wc_get_ancestry() - deprecated
+    # Should say what is the replacement for this functionality.
+  - svn_wc_walk_entries3() - deprecated
+    # Should say what is the replacement for this functionality.
+  - svn_wc_mark_missing_deleted() - deprecated
+    # Should say what is the replacement for this functionality.
+  + svn_wc_ensure_adm4()
+  ! svn_wc_ensure_adm3() - deprecated; behaviour change re passing null
+  - svn_wc_maybe_set_repos_root() - deprecated
+
+  + svn_wc_status3_t
+  ! svn_wc_status2_t - deprecated; gets 'const' on 'entry' field
+    # See '###' comment: 'All diffs are not yet known'.
+  ! svn_wc_status_t - gets 'const' on 'entry' field
+  + svn_wc_dup_status3()
+  + svn_wc_status3()
+  + svn_wc_status_func4_t
+    # See '###' comment.
+  + svn_wc_walk_status()
+  + svn_wc_get_status_editor5() - can omit depth filtering
+    # '@a statushash' - unknown argument
+  ! svn_wc_get_status_editor3() - gets 'const' on an array input
+
+  + svn_wc_copy3()
+  + svn_wc_move()
+  + svn_wc_delete4()
+    # See '###' comment.
+  + svn_wc_add_from_disk()
+    # See '###' comments.
+  + svn_wc_add4()
+    # See notes in doc string; remove cases 1 and 2a?
+  + svn_wc_add_repos_file4()
+  + svn_wc_remove_from_revision_control2()
+    # Should be private?
+    # Update doc string re. single-db admin areas.
+  + svn_wc_resolved_conflict5()
+
+  + svn_wc_queue_committed3()
+    # See '###' comments.
+  ! svn_wc_queue_committed2() - deprecated; gets 'const' on inputs
+  ! svn_wc_queue_committed() - gets 'const' on an array input
+  + svn_wc_process_committed_queue2()
+  ! svn_wc_process_committed4() - gets 'const' on an array input
+  ! svn_wc_process_committed3() - gets 'const' on an array input
+  ! svn_wc_process_committed2() - gets 'const' on an array input
+  ! svn_wc_process_committed() - gets 'const' on an array input
+
+  + svn_wc_crawl_revisions5() - adds cancellation
+  + svn_wc_is_wc_root2()
+  + svn_wc_get_wc_root()
+  + svn_wc_get_actual_target2()
+  + svn_wc_dirents_func_t
+    # Doc string: move mention of #3569 to a note.
+  + svn_wc_get_update_editor4()
+  ! svn_wc_get_update_editor3() - deprecated; gets 'const' on an array input
+  + svn_wc_get_switch_editor4()
+  ! svn_wc_get_switch_editor3() - deprecated; gets 'const' on an array input
+  + svn_wc_prop_list2()
+  + svn_wc_get_pristine_props()
+  + svn_wc_prop_get2()
+  + svn_wc_prop_set4() - adds depth, changelist, cancellation
+  + svn_wc_get_diff_editor6() - adds git format, etc.
+  + svn_wc_diff6() - adds git format, etc.
+  + svn_wc_get_prop_diffs2()
+  + svn_wc_merge4()
+  + svn_wc_merge_props3()
+  + svn_wc_get_pristine_contents2()
+  + svn_wc_cleanup3()
+  + svn_wc_upgrade_get_repos_info_t
+  + svn_wc_upgrade()
+  + svn_wc_relocate4()
+  ! svn_wc_relocate3() - behaviour change: must be WC root and recursive
+    # Doc should refer to 'notes/api-errata/1.7/...'.
+  + svn_wc_revert4()
+  + svn_wc_restore()
+    # Should have a 'recursive' or 'depth' param? Or is not recursive?
+  - svn_wc_create_tmp_file2() - deprecated
+    # Should say why/what the replacement is.
+  - svn_wc_translated_file2() - deprecated
+    # Should say why/what the replacement is.
+  - svn_wc_translated_stream() - deprecated
+      # Should say why/what the replacement is.
+  + svn_wc_transmit_text_deltas3()
+  + svn_wc_transmit_prop_deltas2()
+  + svn_wc_get_ignores2()
+  ! svn_wc_match_ignore_list() - gets 'const' on its array input
+  + svn_wc_add_lock2()
+  + svn_wc_remove_lock2()
+  + svn_wc_revision_status2()
+  + svn_wc_set_changelist2()
+  + svn_changelist_receiver_t - moved from svn_client.h to here
+  + svn_wc_get_changelists()
+  + svn_wc_crop_tree2()
+  + svn_wc_exclude()
+  + svn_wc_read_kind()
+    # See '###' comments re 'hidden'.
+
+svn_xml.h
+  + svn_xml_make_header2()
+    # Deprecated version needs '@deprecated' and parens after old func name.
+

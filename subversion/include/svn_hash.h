@@ -240,15 +240,6 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
-/**
- * Clear any key/value pairs in the hash table.  A wrapper for a
- * apr_hash_clear(), which isn't available until APR 1.3.0.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
-
 /** @} */
 
 /** @} */

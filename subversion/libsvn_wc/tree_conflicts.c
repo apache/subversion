@@ -27,9 +27,6 @@
 #include "svn_pools.h"
 
 #include "tree_conflicts.h"
-#include "log.h"
-#include "entries.h"
-#include "lock.h"
 #include "wc.h"
 
 #include "private/svn_skel.h"
@@ -37,38 +34,6 @@
 #include "private/svn_token.h"
 
 #include "svn_private_config.h"
-
-
-/* OVERVIEW
- *
- * This file handles the storage and retrieval of tree conflict descriptions
- * (svn_wc_conflict_description_t) in the WC.
- *
- * Data Format
- *
- * All tree conflicts descriptions for the current tree conflict victims in
- * one parent directory are stored in a single "tree_conflict_data" text
- * field in that parent's THIS_DIR entry.
- *
- *   tree_conflict_data: zero or more conflicts (one per victim path),
- *     separated by the SVN_WC__TREE_CONFLICT_DESC_SEPARATOR character.
- *
- *   a description entry: a fixed sequence of text fields, some of which
- *     may be empty, corresponding to the pertinent fields of
- *     svn_wc_conflict_description_t, separated by
- *     SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR.
- *
- *   a field: a string within which any separator or escape characters are
- *     escaped with the escape character SVN_WC__TREE_CONFLICT_ESCAPE_CHAR.
- *
- * Error Handling
- *
- * On reading from the WC entry, errors of malformed data are handled by
- * raising an svn_error_t, as these can occur from WC corruption. On
- * writing, errors in the internal data consistency before it is written are
- * handled more severely because any such errors must be due to a bug.
- */
-
 
 /* ### this should move to a more general location...  */
 /* A map for svn_node_kind_t values. */
@@ -111,10 +76,14 @@ const svn_token_map_t svn_wc__conflict_reason_map[] =
   { "added",       svn_wc_conflict_reason_added },
   { "replaced",    svn_wc_conflict_reason_replaced },
   { "unversioned", svn_wc_conflict_reason_unversioned },
+  { "moved-away", svn_wc_conflict_reason_moved_away },
+  { "moved-away-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
+  { "moved-here", svn_wc_conflict_reason_moved_here },
   { NULL }
 };
 
 
+/* */
 static svn_boolean_t
 is_valid_version_info_skel(const svn_skel_t *skel)
 {
@@ -127,6 +96,7 @@ is_valid_version_info_skel(const svn_skel_t *skel)
 }
 
 
+/* */
 static svn_boolean_t
 is_valid_conflict_skel(const svn_skel_t *skel)
 {
@@ -147,6 +117,7 @@ is_valid_conflict_skel(const svn_skel_t *skel)
           && is_valid_version_info_skel(skel->next));
 }
 
+
 /* Parse the enumeration value in VALUE into a plain
  * 'int', using MAP to convert from strings to enumeration values.
  * In MAP, a null .str field marks the end of the map.
@@ -164,8 +135,10 @@ read_enum_field(int *result,
                               "description"));
 
   *result = value;
+
   return SVN_NO_ERROR;
 }
+
 
 /* Parse the conflict info fields from SKEL into *VERSION_INFO. */
 static svn_error_t *
@@ -185,14 +158,17 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
                             _("Invalid version info in tree conflict "
                               "description"));
 
-  repos_root = apr_pstrmemdup(result_pool,
-                                           skel->children->next->data,
-                                           skel->children->next->len);
+  repos_root = apr_pstrmemdup(scratch_pool,
+                              skel->children->next->data,
+                              skel->children->next->len);
   if (*repos_root == '\0')
     {
       *version_info = NULL;
       return SVN_NO_ERROR;
     }
+
+  /* Apply the Subversion 1.7+ url canonicalization rules to a pre 1.7 url */
+  repos_root = svn_uri_canonicalize(repos_root, result_pool);
 
   peg_rev = SVN_STR_TO_REV(apr_pstrmemdup(scratch_pool,
                                           skel->children->next->next->data,
@@ -215,13 +191,7 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
   return SVN_NO_ERROR;
 }
 
-/* Parse a newly allocated svn_wc_conflict_description2_t object from the
- * character string pointed to by *START. Return the result in *CONFLICT.
- * Don't read further than END. Set *START to point to the next character
- * after the description that was read.
- * DIR_PATH is the path to the WC directory whose conflicts are being read.
- * Do all allocations in pool.
- */
+
 svn_error_t *
 svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
                              const svn_skel_t *skel,
@@ -241,9 +211,11 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
   svn_wc_conflict_description2_t *new_conflict;
 
   if (!is_valid_conflict_skel(skel))
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid conflict info in tree conflict "
-                              "description"));
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Invalid conflict info '%s' in tree conflict "
+                               "description"),
+                             skel ? svn_skel__unparse(skel, scratch_pool)->data
+                                  : "(null)");
 
   /* victim basename */
   victim_basename = apr_pstrmemdup(scratch_pool,
@@ -298,54 +270,14 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
   new_conflict->reason = reason;
 
   *conflict = new_conflict;
-  return SVN_NO_ERROR;
-}
-
-
-/* ### this is BAD. the CONFLICTS structure should not be dependent upon
-   ### DIR_PATH. each conflict should be labeled with an entry name, not
-   ### a whole path. (and a path which happens to vary based upon invocation
-   ### of the user client and these APIs)  */
-svn_error_t *
-svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
-                            const char *conflict_data,
-                            const char *dir_path,
-                            apr_pool_t *pool)
-{
-  const svn_skel_t *skel;
-  apr_pool_t *iterpool;
-
-  *conflicts = apr_hash_make(pool);
-
-  if (conflict_data == NULL)
-    return SVN_NO_ERROR;
-
-  skel = svn_skel__parse(conflict_data, strlen(conflict_data), pool);
-  if (skel == NULL)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Error parsing tree conflict skel"));
-
-  iterpool = svn_pool_create(pool);
-  for (skel = skel->children; skel != NULL; skel = skel->next)
-    {
-      const svn_wc_conflict_description2_t *conflict;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, dir_path,
-                                           pool, iterpool));
-      if (conflict != NULL)
-        apr_hash_set(*conflicts, svn_dirent_basename(conflict->local_abspath,
-                                                     pool),
-                     APR_HASH_KEY_STRING, conflict);
-    }
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
+
 
 /* Prepend to SKEL the string corresponding to enumeration value N, as found
  * in MAP. */
-static svn_error_t *
+static void
 skel_prepend_enum(svn_skel_t *skel,
                   const svn_token_map_t *map,
                   int n,
@@ -353,8 +285,8 @@ skel_prepend_enum(svn_skel_t *skel,
 {
   svn_skel__prepend(svn_skel__str_atom(svn_token__to_word(map, n),
                                        result_pool), skel);
-  return SVN_NO_ERROR;
 }
+
 
 /* Prepend to PARENT_SKEL the several fields that represent VERSION_INFO, */
 static svn_error_t *
@@ -365,8 +297,7 @@ prepend_version_info_skel(svn_skel_t *parent_skel,
   svn_skel_t *skel = svn_skel__make_empty_list(pool);
 
   /* node_kind */
-  SVN_ERR(skel_prepend_enum(skel, node_kind_map, version_info->node_kind,
-                            pool));
+  skel_prepend_enum(skel, node_kind_map, version_info->node_kind, pool);
 
   /* path_in_repos */
   svn_skel__prepend(svn_skel__str_atom(version_info->path_in_repos
@@ -420,26 +351,25 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
     SVN_ERR(prepend_version_info_skel(c_skel, &null_version, result_pool));
 
   /* reason */
-  SVN_ERR(skel_prepend_enum(c_skel, svn_wc__conflict_reason_map,
-                            conflict->reason, result_pool));
+  skel_prepend_enum(c_skel, svn_wc__conflict_reason_map, conflict->reason,
+                    result_pool);
 
   /* action */
-  SVN_ERR(skel_prepend_enum(c_skel, svn_wc__conflict_action_map,
-                            conflict->action, result_pool));
+  skel_prepend_enum(c_skel, svn_wc__conflict_action_map, conflict->action,
+                    result_pool);
 
   /* operation */
-  SVN_ERR(skel_prepend_enum(c_skel, svn_wc__operation_map,
-                            conflict->operation, result_pool));
+  skel_prepend_enum(c_skel, svn_wc__operation_map, conflict->operation,
+                    result_pool);
 
   /* node_kind */
   SVN_ERR_ASSERT(conflict->node_kind == svn_node_dir
                  || conflict->node_kind == svn_node_file);
-  SVN_ERR(skel_prepend_enum(c_skel, node_kind_map, conflict->node_kind,
-                            result_pool));
+  skel_prepend_enum(c_skel, node_kind_map, conflict->node_kind, result_pool);
 
   /* Victim path (escaping separator chars). */
   victim_basename = svn_dirent_basename(conflict->local_abspath, result_pool);
-  SVN_ERR_ASSERT(strlen(victim_basename) > 0);
+  SVN_ERR_ASSERT(victim_basename[0]);
   svn_skel__prepend(svn_skel__str_atom(victim_basename, result_pool), c_skel);
 
   svn_skel__prepend(svn_skel__str_atom("conflict", result_pool), c_skel);
@@ -447,33 +377,6 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
   SVN_ERR_ASSERT(is_valid_conflict_skel(c_skel));
 
   *skel = c_skel;
-  return SVN_NO_ERROR;
-}
-
-
-/*
- * This function could be static, but we need to link to it
- * in a unit test in tests/libsvn_wc/, so it isn't.
- * (and we use it to serialize tree conflicts in log.c :( )
- */
-svn_error_t *
-svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_hash_t *conflicts,
-                             apr_pool_t *pool)
-{
-  svn_skel_t *skel = svn_skel__make_empty_list(pool);
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
-    {
-      svn_skel_t *c_skel;
-
-      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn_apr_hash_index_val(hi),
-                                         pool, pool));
-      svn_skel__prepend(c_skel, skel);
-    }
-
-  *conflict_data = svn_skel__unparse(skel, pool)->data;
 
   return SVN_NO_ERROR;
 }
@@ -489,8 +392,8 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
                                           NULL, scratch_pool));
 
-  return SVN_NO_ERROR;
-}
+   return SVN_NO_ERROR;
+ }
 
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
@@ -510,7 +413,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__db_op_set_tree_conflict(wc_ctx->db, conflict->local_abspath,
                                           conflict, scratch_pool));
 }
@@ -525,7 +428,38 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  return svn_error_return(
+  return svn_error_trace(
     svn_wc__db_op_read_tree_conflict(tree_conflict, wc_ctx->db, victim_abspath,
-                                     scratch_pool, scratch_pool));
+                                     result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  apr_hash_t *conflicts;
+  apr_hash_index_t *hi;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(&conflicts, wc_ctx->db,
+                                                local_abspath,
+                                                result_pool, scratch_pool));
+  *tree_conflicts = apr_hash_make(result_pool);
+  /* Convert from basenames as keys to abspaths as keys. */
+  for (hi = apr_hash_first(scratch_pool, conflicts); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_conflict_description2_t *conflict
+        = svn__apr_hash_index_val(hi);
+      const char *abspath = svn_dirent_join(local_abspath, name, scratch_pool);
+
+      apr_hash_set(*tree_conflicts, abspath, APR_HASH_KEY_STRING, conflict);
+    }
+
+  return SVN_NO_ERROR;
 }

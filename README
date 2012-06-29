@@ -18,7 +18,7 @@ I.    A FEW POINTERS
 
       For an overview of the Subversion project, visit
 
-         http://subversion.tigris.org/
+         http://subversion.apache.org/
 
       Once you have a Subversion client you can get the latest version
       of the code with the command:
@@ -36,7 +36,7 @@ II.   DOCUMENTATION
 
       It is written in DocBook XML, and the sources can be found at:
 
-         http://svn.red-bean.com/svnbook/
+         http://svnbook.googlecode.com/svn/trunk/
          
       If you wish to build the documentation from source, read the
       src/en/README file within the book source.
@@ -45,12 +45,13 @@ II.   DOCUMENTATION
 
 III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
 
-      First, read www/hacking.html!  It describes Subversion coding and
-      log message standards, as well as how to join discussion lists.
+      First, read http://subversion.apache.org/docs/community-guide/
+      It describes Subversion coding and log message standards, as well
+      as how to join discussion lists.
 
       Talk on IRC with developers:  irc.freenode.net, channel #svn-dev.
 
-      Read the FAQ:  http://subversion.tigris.org/faq.html
+      Read the FAQ:  http://subversion.apache.org/faq.html
 
 
 

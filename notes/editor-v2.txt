@@ -1,3 +1,11 @@
+###
+###
+### THIS FILE IS HISTORICAL ONLY. FOR CURRENT INFORMATION, PLEASE SEE:
+###     include/svn_editor.h
+###
+###
+
+
 NOTES on a revamped editor interface
 
 -- all paths are relpaths
@@ -184,8 +192,6 @@ EDITORS IN USE TODAY
 - commit_util.c: debug editor
 - mergeinfo.c: appears to use an editor as a kludge to collect
                directory names
-- patch.c: has one to describe a patch. unshipped code. we can revamp.
-- repos_diff.c: another one for svnpatch?  ### investigate
 - repos_diff.c: some kind of "diff editor"  ### need to look more
 - repos_diff_summarize.c: another "diff editor" thing
 - cancel.c: cancellation editor. now built-in
@@ -197,7 +203,6 @@ EDITORS IN USE TODAY
 - ra_svn/editorp.c: RA commit editor
 - repos/commit.c: commit editor to drive changes into FS
 - dump.c: generate an svn dump
-- diff.c: Yet Another svnpatch editor  ### investigate
 - diff.c: some kind of "diff editor"  ### need to look more
 - status.c: editor for driving status callbacks
 - update_editor.c: passed to RA in order to edit the working copy

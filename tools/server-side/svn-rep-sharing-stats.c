@@ -27,6 +27,7 @@
 #include "svn_repos.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 
 #include "../../subversion/libsvn_fs_fs/fs.h"
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
@@ -92,7 +93,7 @@ check_lib_versions(void)
     };
 
   SVN_VERSION_DEFINE(my_version);
-  return svn_error_return(svn_ver_check_list(&my_version, checklist));
+  return svn_error_trace(svn_ver_check_list(&my_version, checklist));
 }
 
 
@@ -275,8 +276,8 @@ process_one_revision(svn_fs_t *fs,
 
       node_revision_t *node_rev;
 
-      path = svn_apr_hash_index_key(hi);
-      change = svn_apr_hash_index_val(hi);
+      path = svn__apr_hash_index_key(hi);
+      change = svn__apr_hash_index_val(hi);
       if (! quiet)
         SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                                     "processing r%ld:%s\n", revnum, path));
@@ -329,13 +330,11 @@ pretty_print(const char *name,
   for (hi = apr_hash_first(scratch_pool, reps_ref_counts);
        hi; hi = apr_hash_next(hi))
     {
-      const struct key_t *key;
       struct value_t *value;
 
       SVN_ERR(cancel_func(NULL));
 
-      key = svn_apr_hash_index_key(hi);
-      value = svn_apr_hash_index_val(hi);
+      value = svn__apr_hash_index_val(hi);
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,
                                  svn_checksum_to_cstring_display(
@@ -391,7 +390,7 @@ static svn_error_t *process(const char *repos_path,
     both_reps = apr_hash_make(scratch_pool);
 
   /* Open the FS. */
-  SVN_ERR(svn_repos_open(&repos, repos_path, scratch_pool));
+  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, scratch_pool));
   fs = svn_repos_fs(repos);
 
   SVN_ERR(is_fs_fsfs(fs, scratch_pool));
@@ -422,7 +421,6 @@ int
 main(int argc, const char *argv[])
 {
   const char *repos_path;
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   svn_boolean_t prop = FALSE, data = FALSE;
   svn_boolean_t quiet = FALSE;
@@ -447,13 +445,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();

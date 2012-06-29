@@ -22,24 +22,25 @@
  */
 
 /*
- * the KIND column in these tables has one of the following values:
+ * the KIND column in these tables has one of the following values
+ * (documented in the corresponding C type #svn_kind_t):
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
- *   "subdir"
  *
- * the PRESENCE column in these tables has one of the following values:
+ * the PRESENCE column in these tables has one of the following values
+ * (see also the C type #svn_wc__db_status_t):
  *   "normal"
  *   "absent" -- server has declared it "absent" (ie. authz failure)
- *   "excluded" -- administratively excluded
+ *   "excluded" -- administratively excluded (ie. sparse WC)
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
-/* All the SQL below is for format 12: SVN_WC__WC_NG_VERSION  */
--- format: 12
+/* One big list of statements to create our (current) schema.  */
+-- STMT_CREATE_SCHEMA
 
 /* ------------------------------------------------------------------------- */
 
@@ -74,235 +75,58 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 /* ------------------------------------------------------------------------- */
 
-CREATE TABLE BASE_NODE (
-  /* specifies the location of this node in the local filesystem. wc_id
-     implies an absolute path, and local_relpath is relative to that
-     location (meaning it will be "" for the wcroot). */
-  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
-  local_relpath  TEXT NOT NULL,
+/* The PRISTINE table keeps track of pristine texts.  Each row describes a
+   single pristine text.  The text itself is stored in a file whose name is
+   derived from the 'checksum' column.  Each pristine text is referenced by
+   any number of rows in the NODES and ACTUAL_NODE tables.
 
-  /* the repository this node is part of, and the relative path [to its
-     root] within that repository.  these may be NULL, implying it should
-     be derived from the parent and local_relpath.  non-NULL typically
-     indicates a switched node.
-
-     Note: they must both be NULL, or both non-NULL. */
-  repos_id  INTEGER REFERENCES REPOSITORY (id),
-  repos_relpath  TEXT,
-
-  /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. NULL if this is the
-     wcroot node. */
-  parent_relpath  TEXT,
-
-  /* Is this node "present" or has it been excluded for some reason?
-     The "base-deleted" presence value is not allowed.  */
-  presence  TEXT NOT NULL,
-
-  /* what kind of node is this? may be "unknown" if the node is not present */
-  kind  TEXT NOT NULL,
-
-  /* this could be NULL for non-present nodes -- no info. */
-  revnum  INTEGER,
-
-  /* if this node is a file, then the checksum and its translated size
-     (given the properties on this file) are specified by the following
-     two fields. translated_size may be NULL if the size has not (yet)
-     been computed. The kind of checksum (e.g. SHA-1, MD5) is stored in the
-     value */
-  checksum  TEXT,
-  translated_size  INTEGER,
-
-  /* Information about the last change to this node. changed_rev must be
-     not-null if this node has presence=="normal". changed_date and
-     changed_author may be null if the corresponding revprops are missing.
-
-     All three values may be null for non-present nodes.  */
-  changed_rev  INTEGER,
-  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
-  changed_author  TEXT,
-
-  /* NULL depth means "default" (typically svn_depth_infinity) */
-  depth  TEXT,
-
-  /* for kind==symlink, this specifies the target. */
-  symlink_target  TEXT,
-
-  /* ### Do we need this?  We've currently got various mod time APIs
-     ### internal to libsvn_wc, but those might be used in answering some
-     ### question which is better answered some other way. */
-  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
-
-  /* serialized skel of this node's properties. could be NULL if we
-     have no information about the properties (a non-present node). */
-  properties  BLOB,
-
-  /* serialized skel of this node's dav-cache.  could be NULL if the
-     node does not have any dav-cache. */
-  dav_cache  BLOB,
-
-  /* ### this column is removed in format 13. it will always be NULL.  */
-  incomplete_children  INTEGER,
-
-  /* The serialized file external information. */
-  /* ### hack.  hack.  hack.
-     ### This information is already stored in properties, but because the
-     ### current working copy implementation is such a pain, we can't
-     ### readily retrieve it, hence this temporary cache column.
-     ### When it is removed, be sure to remove the extra column from
-     ### the db-tests.
-
-     ### Note: This is only here as a hack, and should *NOT* be added
-     ### to any wc_db APIs.  */
-  file_external  TEXT,
-
-  PRIMARY KEY (wc_id, local_relpath)
-  );
-
-CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
-
-
-/* ------------------------------------------------------------------------- */
-/* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
-           Pristine store? If that key is SHA-1 we might need an alternative
-           MD5 checksum column on this table to use with the current delta
-           editors that don't understand SHA-1. */
+   In future, the pristine text file may be compressed.
+ */
 CREATE TABLE PRISTINE (
-  /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
+  /* The SHA-1 checksum of the pristine text. This is a unique key. The
+     SHA-1 checksum of a pristine text is assumed to be unique among all
+     pristine texts referenced from this database. */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
-  /* ### enumerated values specifying type of compression. NULL implies
-     ### that no compression has been applied. */
+  /* Enumerated values specifying type of compression. The only value
+     supported so far is NULL, meaning that no compression has been applied
+     and the pristine text is stored verbatim in the file. */
   compression  INTEGER,
 
-  /* ### used to verify the pristine file is "proper". NULL if unknown,
-     ### and (thus) the pristine copy is incomplete/unusable. */
-  size  INTEGER,
+  /* The size in bytes of the file in which the pristine text is stored.
+     Used to verify the pristine file is "proper". */
+  size  INTEGER NOT NULL,
 
-  /* ### this will probably go away, in favor of counting references
-     ### that exist in BASE_NODE and WORKING_NODE. */
-  refcount  INTEGER NOT NULL
+  /* The number of rows in the NODES table that have a 'checksum' column
+     value that refers to this row.  (References in other places, such as
+     in the ACTUAL_NODE table, are not counted.) */
+  refcount  INTEGER NOT NULL,
+
+  /* Alternative MD5 checksum used for communicating with older
+     repositories. Not strictly guaranteed to be unique among table rows. */
+  md5_checksum  TEXT NOT NULL
   );
 
-
+CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+  
 /* ------------------------------------------------------------------------- */
 
-CREATE TABLE WORKING_NODE (
-  /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
-  local_relpath  TEXT NOT NULL,
+/* The ACTUAL_NODE table describes text changes and property changes
+   on each node in the WC, relative to the NODES table row for the
+   same path. (A NODES row must exist if this node exists, but an
+   ACTUAL_NODE row can exist on its own if it is just recording info
+   on a non-present node - a tree conflict or a changelist, for
+   example.)
 
-  /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. NULL if this is the
-     wcroot node. */
-  parent_relpath  TEXT,
+   The ACTUAL_NODE table row for a given path exists if the node at that
+   path is known to have text or property changes relative to its
+   NODES row. ("Is known" because a text change on disk may not yet
+   have been discovered and recorded here.)
 
-  /* Is this node "present" or has it been excluded for some reason?
-     Only allowed values: normal, not-present, incomplete, base-deleted.
-     (the others do not make sense for the WORKING tree)
-
-     normal: this node has been added/copied/moved-here. There may be an
-       underlying BASE node at this location, implying this is a replace.
-       Scan upwards from here looking for copyfrom or moved_here values
-       to detect the type of operation constructing this node.
-
-     not-present: the node (or parent) was originally copied or moved-here.
-       A subtree of that source has since been deleted. There may be
-       underlying BASE node to replace. For an add-without-history, the
-       records are simply removed rather than switched to not-present.
-       Note this reflects a deletion only. It is not possible move-away
-       nodes from the WORKING tree. The purported destination would receive
-       a copy from the original source of a copy-here/move-here, or if the
-       nodes were plain adds, those nodes would be shifted to that target
-       for addition.
-
-     incomplete: nodes are being added into the WORKING tree, and the full
-       information about this node is not (yet) present.
-
-     base-delete: the underlying BASE node has been marked for deletion due
-       to a delete or a move-away (see the moved_to column to determine).  */
-  presence  TEXT NOT NULL,
-
-  /* the kind of the new node. may be "unknown" if the node is not present. */
-  kind  TEXT NOT NULL,
-
-  /* if this node was added-with-history AND is a file, then the checksum
-     and its translated size (given the properties on this file) are
-     specified by the following two fields. translated_size may be NULL
-     if the size has not (yet) been computed. */
-  checksum  TEXT,
-  translated_size  INTEGER,
-
-  /* If this node was added-with-history, then the following fields may
-     have information about their source node. See BASE_NODE.changed_* for
-     more information.
-
-     For added or not-present nodes, these may be null.  */
-  changed_rev  INTEGER,
-  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
-  changed_author  TEXT,
-
-  /* NULL depth means "default" (typically svn_depth_infinity) */
-  /* ### depth on WORKING? seems this is a BASE-only concept. how do
-     ### you do "files" on an added-directory? can't really ignore
-     ### the subdirs! */
-  /* ### maybe a WC-to-WC copy can retain a depth?  */
-  depth  TEXT,
-
-  /* for kind==symlink, this specifies the target. */
-  symlink_target  TEXT,
-
-  /* Where this node was copied/moved from. Set only on the root of the
-     operation, and implied for all children. */
-  copyfrom_repos_id  INTEGER REFERENCES REPOSITORY (id),
-  /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
-     ### to match the other repository paths used in sqlite and to make it easier
-     ### to join these paths? */
-  copyfrom_repos_path  TEXT,
-  copyfrom_revnum  INTEGER,
-
-  /* Boolean value, specifying if this node was moved here (rather than just
-     copied). The source of the move is specified in copyfrom_*.  */
-  moved_here  INTEGER,
-
-  /* If the underlying node was moved (rather than just deleted), this
-     specifies the local_relpath of where the BASE node was moved to.
-     This is set only on the root of a move, and implied for all children.
-     The whole moved subtree is marked with presence=base-deleted
-
-     Note that moved_to never refers to *this* node. It always refers
-     to the "underlying" node, whether that is BASE or a child node
-     implied from a parent's move/copy.  */
-  moved_to  TEXT,
-
-  /* ### Do we need this?  We've currently got various mod time APIs
-     ### internal to libsvn_wc, but those might be used in answering some
-     ### question which is better answered some other way. */
-  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
-
-  /* serialized skel of this node's properties. could be NULL if we
-     have no information about the properties (a non-present node). */
-  properties  BLOB,
-
-  /* should the node on disk be kept after a schedule delete?
-
-     ### Bert points out that this can disappear once we get centralized 
-     ### with our metadata.  The entire reason for this flag to exist is
-     ### so that the admin area can exist for the commit of a the delete,
-     ### and so the post-commit cleanup knows not to actually delete the dir
-     ### from disk (which is why the flag is only ever set on the this_dir
-     ### entry in WC-OLD.)  In the New World, we don't need to keep the old
-     ### admin area around, so this flag can disappear. */
-  keep_local  INTEGER,
-
-  PRIMARY KEY (wc_id, local_relpath)
-  );
-
-CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
-
-
-/* ------------------------------------------------------------------------- */
-
+   The ACTUAL_NODE table row for a given path may also exist in other cases,
+   including if the "changelist" or any of the conflict columns have a
+   non-null value.
+ */
 CREATE TABLE ACTUAL_NODE (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
@@ -317,25 +141,12 @@ CREATE TABLE ACTUAL_NODE (
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
-  /* basenames of the conflict files. */
-  /* ### do we want to record the revnums which caused this?  
-     ### BH: Yes, probably urls too if it is caused by a merge. Preferably
-     ###     the same info as currently passed to the interactive conflict
-     ###     handler. I would like url@rev for left, right and original, but
-     ###     some of those are available in other ways. Refer to repository
-     ###     table instead of full urls? .*/
-  /* ### also, shouldn't these be local_relpaths too?
-     ### they aren't currently, but that would be more consistent with other
-     ### columns. (though it would require a format bump). */
-  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table? */
-  /* ### HKW: I think so.  These columns pre-date that table, and are just
-     ###      a mapping from svn_wc_entry_t.  I haven't thought about how the
-     ###      CONFLICT_VICTIM table would need to be extended for this, though.
-     ###      (may want do to that before the f13 bump, if possible) */
+  /* relpaths of the conflict files. */
+  /* ### These columns will eventually be merged into conflict_data below. */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
-  prop_reject  TEXT,  /* ### is this right? */
+  prop_reject  TEXT,
 
   /* if not NULL, this node is part of a changelist. */
   changelist  TEXT,
@@ -346,8 +157,26 @@ CREATE TABLE ACTUAL_NODE (
   text_mod  TEXT,
 
   /* if a directory, serialized data for all of tree conflicts therein.
-     removed in format 13, in favor of the CONFLICT_VICTIM table*/
+     ### This column will eventually be merged into the conflict_data column,
+     ### but within the ACTUAL node of the tree conflict victim itself, rather
+     ### than the node of the tree conflict victim's parent directory. */
   tree_conflict_data  TEXT,
+
+  /* A skel containing the conflict details.  */
+  conflict_data  BLOB,
+
+  /* Three columns containing the checksums of older, left and right conflict
+     texts.  Stored in a column to allow storing them in the pristine store  */
+  /* stsp: This is meant for text conflicts, right? What about property
+           conflicts? Why do we need these in a column to refer to the
+           pristine store? Can't we just parse the checksums from
+           conflict_data as well? 
+     rhuijben: Because that won't allow triggers to handle refcounts.
+               We would have to scan all conflict skels before cleaning up the
+               a single file from the pristine stor */
+  older_checksum  TEXT REFERENCES PRISTINE (checksum),
+  left_checksum  TEXT REFERENCES PRISTINE (checksum),
+  right_checksum  TEXT REFERENCES PRISTINE (checksum),
 
   PRIMARY KEY (wc_id, local_relpath)
   );
@@ -358,15 +187,11 @@ CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 /* ------------------------------------------------------------------------- */
 
+/* This table is a cache of information about repository locks. */
 CREATE TABLE LOCK (
   /* what repository location is locked */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
   repos_relpath  TEXT NOT NULL,
-  /* ### BH: Shouldn't this refer to an working copy location? You can have a
-         single relpath checked out multiple times in one (switch) or more
-         working copies. */
-  /* ### HKW: No, afaik.  This table is just a cache of what's in the
-         repository, so these should be repos_relpaths. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
@@ -382,9 +207,6 @@ CREATE TABLE LOCK (
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 13 introduces the work queue, and erases a few columns from the
-   original schema.  */
--- format: 13
 CREATE TABLE WORK_QUEUE (
   /* Work items are identified by this value.  */
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -393,71 +215,580 @@ CREATE TABLE WORK_QUEUE (
   work  BLOB NOT NULL
   );
 
-/* The contents of dav_cache are suspect in format 12, so it is best to just
-   erase anything there.  */
-UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 14 introduces a table for storing wc locks, and additional columns
-   for storing conflict data in ACTUAL. */
--- format: 14
-
-/* The existence of a row in this table implies a write lock. */
 CREATE TABLE WC_LOCK (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
   local_dir_relpath  TEXT NOT NULL,
- 
+
+  locked_levels  INTEGER NOT NULL DEFAULT -1,
+
   PRIMARY KEY (wc_id, local_dir_relpath)
  );
 
-/* A skel containing the conflict details. */
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN conflict_data  BLOB;
 
-/* Three columns containing the checksums of older, left and right conflict
-   texts.  Stored in a column to allow storing them in the pristine store */
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN older_checksum  TEXT;
+PRAGMA user_version =
+-- define: SVN_WC__VERSION
+;
 
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN left_checksum  TEXT;
-
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN right_checksum  TEXT;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 15 introduces new handling for excluded nodes.  */
--- format: 15
+/* The NODES table describes the way WORKING nodes are layered on top of
+   BASE nodes and on top of other WORKING nodes, due to nested tree structure
+   changes. The layers are modelled using the "op_depth" column.
 
-UPDATE base_node
-SET
-  presence = 'excluded',
-  checksum = NULL, translated_size = NULL, changed_rev = NULL,
-  changed_date = NULL, changed_author = NULL, depth = NULL,
-  symlink_target = NULL, last_mod_time = NULL, properties = NULL,
-  incomplete_children = NULL, file_external = NULL
-WHERE depth = 'exclude';
+   An 'operation depth' refers to the number of directory levels down from
+   the WC root at which a tree-change operation (delete, add?, copy, move)
+   was performed.  A row's 'op_depth' does NOT refer to the depth of its own
+   'local_relpath', but rather to the depth of the nearest tree change that
+   affects that node.
 
-/* We don't support cropping working nodes, but we might see them
-   via a copy from a sparse tree. Convert them anyway to make sure
-   we never see depth exclude in our database */
-UPDATE working_node
-SET
-  presence = 'excluded',
-  checksum = NULL, translated_size = NULL, changed_rev = NULL,
-  changed_date = NULL, changed_author = NULL, depth = NULL,
-  symlink_target = NULL, copyfrom_repos_id = NULL, copyfrom_repos_path = NULL,
-  copyfrom_revnum = NULL, moved_here = NULL, moved_to = NULL,
-  last_mod_time = NULL, properties = NULL, keep_local = NULL
-WHERE depth = 'exclude';
+   The row with op_depth=0 for any given local relpath represents the "base"
+   node that is created and updated by checkout, update, switch and commit
+   post-processing.  The row with the highest op_depth for a particular
+   local_relpath represents the working version.  Any rows with intermediate
+   op_depth values are not normally visible to the user but may become
+   visible after reverting local changes.
+
+   ### The following text needs revision
+
+   Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
+   row in WORKING_NODE has one or more associated rows in NODE_DATA.
+
+   This table contains full node descriptions for nodes in either the BASE
+   or WORKING trees as described in notes/wc-ng/design. Fields relate
+   both to BASE and WORKING trees, unless documented otherwise.
+
+   ### This table is to be integrated into the SCHEMA statement as soon
+       the experimental status of NODES is lifted.
+   ### This table superseeds NODE_DATA
+
+   For illustration, with a scenario like this:
+
+     # (0)
+     svn rm foo
+     svn cp ^/moo foo   # (1)
+     svn rm foo/bar
+     touch foo/bar
+     svn add foo/bar    # (2)
+
+   , these are the NODES for the path foo/bar (before single-db, the
+   numbering of op_depth is still a bit different):
+
+   (0)  BASE_NODE ----->  NODES (op_depth == 0)
+   (1)                    NODES (op_depth == 1) ( <----_ )
+   (2)                    NODES (op_depth == 2)   <----- WORKING_NODE
+
+   0 is the original data for foo/bar before 'svn rm foo' (if it existed).
+   1 is the data for foo/bar copied in from ^/moo/bar.
+   2 is the to-be-committed data for foo/bar, created by 'svn add foo/bar'.
+
+   An 'svn revert foo/bar' would remove the NODES of (2).
+
+ */
+-- STMT_CREATE_NODES
+CREATE TABLE NODES (
+  /* Working copy location related fields */
+
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
+  local_relpath  TEXT NOT NULL,
+
+  /* Contains the depth (= number of path segments) of the operation
+     modifying the working copy tree structure. All nodes below the root
+     of the operation (aka operation root, aka oproot) affected by the
+     operation will be assigned the same op_depth.
+
+     op_depth == 0 designates the initial checkout; the BASE tree.
+
+   */
+  op_depth INTEGER NOT NULL,
+
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot.  Since a wcroot will
+     never have a WORKING node the parent_relpath will never be null,
+     except when op_depth == 0 and the node is a wcroot. */
+  parent_relpath  TEXT,
+
+
+  /* Repository location fields */
+
+  /* When op_depth == 0, these fields refer to the repository location of the
+     BASE node, the location of the initial checkout.
+
+     When op_depth != 0, they indicate where this node was copied/moved from.
+     In this case, the fields are set for the root of the operation and for all
+     children. */
+  repos_id  INTEGER REFERENCES REPOSITORY (id),
+  repos_path  TEXT,
+  revision  INTEGER,
+
+
+  /* WC state fields */
+
+  /* The tree state of the node.
+
+     In case 'op_depth' is equal to 0, this node is part of the 'BASE'
+     tree.  The 'BASE' represents pristine nodes that are in the
+     repository; it is obtained and modified by commands such as
+     checkout/update/switch.
+
+     In case 'op_depth' is greater than 0, this node is part of a
+     layer of working nodes.  The 'WORKING' tree is obtained and
+     modified by commands like delete/copy/revert.
+
+     The 'BASE' and 'WORKING' trees use the same literal values for
+     the 'presence' but the meaning of each value can vary depending
+     on the tree.
+
+     normal: in the 'BASE' tree this is an ordinary node for which we
+       have full information.  In the 'WORKING' tree it's an added or
+       copied node for which we have full information.
+
+     not-present: in the 'BASE' tree this is a node that is implied to
+       exist by the parent node, but is not present in the working
+       copy.  Typically obtained by delete/commit, or by update to
+       revision in which the node does not exist.  In the 'WORKING'
+       tree this is a copy of a 'not-present' node from the 'BASE'
+       tree, and it will be deleted on commit.  Such a node cannot be
+       copied directly, but can be copied as a descendant.
+
+     incomplete: in the 'BASE' tree this is an ordinary node for which
+       we do not have full information.  Only the name is guaranteed;
+       we may not have all its children, we may not have its checksum,
+       etc.  In the 'WORKING' tree this is a copied node for which we
+       do not have the full information.  This state is generally
+       obtained when an operation was interrupted.
+
+     base-deleted: not valid in 'BASE' tree.  In the 'WORKING' tree
+       this represents a node that is deleted from the tree below the
+       current 'op_depth'.  This state is badly named, it should be
+       something like 'deleted'.
+
+     absent: in the 'BASE' tree this is a node that is excluded by
+       authz.  The name of the node is known from the parent, but no
+       other information is available.  Not valid in the 'WORKING'
+       tree as there is no way to commit such a node.
+
+     excluded: in the 'BASE' tree this node is administratively
+       excluded by the user (sparse WC).  In the 'WORKING' tree this
+       is a copy of an excluded node from the 'BASE' tree.  Such a
+       node cannot be copied directly but can be copied as a
+       descendant. */
+
+  presence  TEXT NOT NULL,
+
+  /* ### JF: For an old-style move, "copyfrom" info stores its source, but a
+     new WC-NG "move" is intended to be a "true rename" so its copyfrom
+     revision is implicit, being in effect (new head - 1) at commit time.
+     For a (new) move, we need to store or deduce the copyfrom local-relpath;
+     perhaps add a column called "moved_from". */
+
+  /* Boolean value, specifying if this node was moved here (rather than just
+     copied). This is set on all the nodes in the moved tree.  The source of
+     the move is implied by a different node with a moved_to column pointing
+     at the root node of the moved tree. */
+  moved_here  INTEGER,
+
+  /* If the underlying node was moved away (rather than just deleted), this
+     specifies the local_relpath of where the node was moved to.
+     This is set only on the root of a move, and is NULL for all children.
+
+     The op-depth of the moved-to node is not recorded. A moved_to path
+     always points at a node within the highest op-depth layer at the
+     destination. This invariant must be maintained by operations which
+     change existing move information. */
+  moved_to  TEXT,
+
+
+  /* Content fields */
+
+  /* the kind of the new node. may be "unknown" if the node is not present. */
+  kind  TEXT NOT NULL,
+
+  /* serialized skel of this node's properties. NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  /* ### depth on WORKING? seems this is a BASE-only concept. how do
+     ### you do "files" on an added-directory? can't really ignore
+     ### the subdirs! */
+  /* ### maybe a WC-to-WC copy can retain a depth?  */
+  depth  TEXT,
+
+  /* The SHA-1 checksum of the pristine text, if this node is a file and was
+     moved here or copied here, else NULL. */
+  checksum  TEXT REFERENCES PRISTINE (checksum),
+
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
+
+
+  /* Last-Change fields */
+
+  /* If this node was moved here or copied here, then the following fields may
+     have information about their source node.  changed_rev must be not-null
+     if this node has presence=="normal". changed_date and changed_author may
+     be null if the corresponding revprops are missing.
+
+     For an added or not-present node, these are null.  */
+  changed_revision  INTEGER,
+  changed_date      INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author    TEXT,
+
+
+  /* Various cache fields */
+
+  /* The size in bytes of the working file when it had no local text
+     modifications. This means the size of the text when translated from
+     repository-normal format to working copy format with EOL style
+     translated and keywords expanded according to the properties in the
+     "properties" column of this row.
+
+     NULL if this node is not a file or if the size has not (yet) been
+     computed. */
+  translated_size  INTEGER,
+
+  /* The mod-time of the working file when it was last determined to be
+     logically unmodified relative to its base, taking account of keywords
+     and EOL style. This value is used in the change detection heuristic
+     used by the status command.
+
+     NULL if this node is not a file or if this info has not yet been
+     determined.
+   */
+  last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
+
+  /* serialized skel of this node's dav-cache.  could be NULL if the
+     node does not have any dav-cache. */
+  dav_cache  BLOB,
+
+  /* Is there a file external in this location. NULL if there
+     is no file external, otherwise '1'  */
+  /* ### Originally we had a wc-1.0 like skel in this place, so we
+     ### check for NULL.
+     ### In Subversion 1.7 we defined this column as TEXT, but Sqlite
+     ### only uses this information for deciding how to optimize
+     ### anyway. */
+  file_external  INTEGER,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth)
+
+  );
+
+CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
+/* I_NODES_MOVED is introduced in format 30 */
+CREATE UNIQUE INDEX I_NODES_MOVED ON NODES (wc_id, moved_to, op_depth);
+
+/* Many queries have to filter the nodes table to pick only that version
+   of each node with the highest (most "current") op_depth.  This view
+   does the heavy lifting for such queries.
+
+   Note that this view includes a row for each and every path that is known
+   in the WC, including, for example, paths that were children of a base- or
+   lower-op-depth directory that has been replaced by something else in the
+   current view.
+ */
+CREATE VIEW NODES_CURRENT AS
+  SELECT * FROM nodes AS n
+    WHERE op_depth = (SELECT MAX(op_depth) FROM nodes AS n2
+                      WHERE n2.wc_id = n.wc_id
+                        AND n2.local_relpath = n.local_relpath);
+
+/* Many queries have to filter the nodes table to pick only that version
+   of each node with the BASE ("as checked out") op_depth.  This view
+   does the heavy lifting for such queries. */
+CREATE VIEW NODES_BASE AS
+  SELECT * FROM nodes
+  WHERE op_depth = 0;
+
+-- STMT_CREATE_NODES_TRIGGERS
+
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+-- STMT_CREATE_EXTERNALS
+
+CREATE TABLE EXTERNALS (
+  /* Working copy location related fields (like NODES)*/
+
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
+  local_relpath  TEXT NOT NULL,
+
+  /* The working copy root can't be recorded as an external in itself
+     so this will never be NULL. ### ATM only inserted, never queried */
+  parent_relpath  TEXT NOT NULL,
+
+  /* Repository location fields */
+  repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
+
+  /* Either 'normal' or 'excluded' */
+  presence  TEXT NOT NULL,
+
+  /* the kind of the external. */
+  kind  TEXT NOT NULL,
+
+  /* The local relpath of the directory NODE defining this external 
+     (Defaults to the parent directory of the file external after upgrade) */
+  def_local_relpath         TEXT NOT NULL,
+
+  /* The url of the external as used in the definition */
+  def_repos_relpath         TEXT NOT NULL,
+
+  /* The operational (peg) and node revision if this is a revision fixed
+     external; otherwise NULL. (Usually these will both have the same value) */
+  def_operational_revision  TEXT,
+  def_revision              TEXT,
+
+  PRIMARY KEY (wc_id, local_relpath)
+);
+
+CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
+CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
+                                                      def_local_relpath,
+                                                      local_relpath);
+
+/* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
+
+-- STMT_UPGRADE_TO_20
+
+UPDATE BASE_NODE SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=BASE_NODE.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=BASE_NODE.checksum);
+
+UPDATE WORKING_NODE SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=WORKING_NODE.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=WORKING_NODE.checksum);
+
+INSERT INTO NODES (
+       wc_id, local_relpath, op_depth, parent_relpath,
+       repos_id, repos_path, revision,
+       presence, depth, moved_here, moved_to, kind,
+       changed_revision, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       dav_cache, symlink_target, file_external )
+SELECT wc_id, local_relpath, 0 /*op_depth*/, parent_relpath,
+       repos_id, repos_relpath, revnum,
+       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
+       changed_rev, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       dav_cache, symlink_target, file_external
+FROM BASE_NODE;
+INSERT INTO NODES (
+       wc_id, local_relpath, op_depth, parent_relpath,
+       repos_id, repos_path, revision,
+       presence, depth, moved_here, moved_to, kind,
+       changed_revision, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       dav_cache, symlink_target, file_external )
+SELECT wc_id, local_relpath, 2 /*op_depth*/, parent_relpath,
+       copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
+       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
+       changed_rev, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       NULL /*dav_cache*/, symlink_target, NULL /*file_external*/
+FROM WORKING_NODE;
+
+DROP TABLE BASE_NODE;
+DROP TABLE WORKING_NODE;
+
+PRAGMA user_version = 20;
+
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 16 introduces new handling for conflict information.  */
--- format: 16
+/* Format 21 involves no schema changes, it moves the tree conflict victim
+   information to victime nodes, rather than parents. */
+
+-- STMT_UPGRADE_TO_21
+PRAGMA user_version = 21;
+
+/* For format 21 bump code */
+-- STMT_UPGRADE_21_SELECT_OLD_TREE_CONFLICT
+SELECT wc_id, local_relpath, tree_conflict_data
+FROM actual_node
+WHERE tree_conflict_data IS NOT NULL
+
+/* For format 21 bump code */
+-- STMT_UPGRADE_21_ERASE_OLD_CONFLICTS
+UPDATE actual_node SET tree_conflict_data = NULL
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 22 simply moves the tree conflict information from the conflict_data
+   column to the tree_conflict_data column. */
+
+-- STMT_UPGRADE_TO_22
+UPDATE actual_node SET tree_conflict_data = conflict_data;
+UPDATE actual_node SET conflict_data = NULL;
+
+PRAGMA user_version = 22;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 23 involves no schema changes, it introduces multi-layer
+   op-depth processing for NODES. */
+
+-- STMT_UPGRADE_TO_23
+PRAGMA user_version = 23;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 24 involves no schema changes; it starts using the pristine
+   table's refcount column correctly. */
+
+-- STMT_UPGRADE_TO_24
+UPDATE pristine SET refcount =
+  (SELECT COUNT(*) FROM nodes
+   WHERE checksum = pristine.checksum /*OR checksum = pristine.md5_checksum*/);
+
+PRAGMA user_version = 24;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 25 introduces the NODES_CURRENT view. */
+
+-- STMT_UPGRADE_TO_25
+DROP VIEW IF EXISTS NODES_CURRENT;
+CREATE VIEW NODES_CURRENT AS
+  SELECT * FROM nodes
+    JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
+          GROUP BY wc_id, local_relpath) AS filter
+    ON nodes.wc_id = filter.wc_id
+      AND nodes.local_relpath = filter.local_relpath
+      AND nodes.op_depth = filter.op_depth;
+
+PRAGMA user_version = 25;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 26 introduces the NODES_BASE view. */
+
+-- STMT_UPGRADE_TO_26
+DROP VIEW IF EXISTS NODES_BASE;
+CREATE VIEW NODES_BASE AS
+  SELECT * FROM nodes
+  WHERE op_depth = 0;
+
+PRAGMA user_version = 26;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 27 involves no schema changes, it introduces stores
+   conflict files as relpaths rather than names in ACTUAL_NODE. */
+
+-- STMT_UPGRADE_TO_27
+PRAGMA user_version = 27;
+
+/* For format 27 bump code */
+-- STMT_UPGRADE_27_HAS_ACTUAL_NODES_CONFLICTS
+SELECT 1 FROM actual_node
+WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
+           AND (conflict_new IS NULL) AND (conflict_working IS NULL)
+           AND (tree_conflict_data IS NULL))
+LIMIT 1
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 28 involves no schema changes, it only converts MD5 pristine 
+   references to SHA1. */
+
+-- STMT_UPGRADE_TO_28
+
+UPDATE NODES SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=nodes.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
+
+PRAGMA user_version = 28;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 29 introduces the EXTERNALS table (See STMT_CREATE_TRIGGERS) and
+   optimizes a few trigger definitions. ... */
+
+-- STMT_UPGRADE_TO_29
+
+DROP TRIGGER IF EXISTS nodes_update_checksum_trigger;
+DROP TRIGGER IF EXISTS nodes_insert_trigger;
+DROP TRIGGER IF EXISTS nodes_delete_trigger;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+PRAGMA user_version = 29;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 30 currently just contains some nice to haves that should be included
+   with the next format bump  */
+-- STMT_UPGRADE_TO_30
+CREATE UNIQUE INDEX IF NOT EXISTS I_NODES_MOVED
+ON NODES (wc_id, moved_to, op_depth);
+
+CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+
+/* Just to be sure clear out file external skels from pre 1.7.0 development
+   working copies that were never updated by 1.7.0+ style clients */
+UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format YYY introduces new handling for conflict information.  */
+-- format: YYY
 
 
 /* ------------------------------------------------------------------------- */
@@ -468,80 +799,15 @@ WHERE depth = 'exclude';
    number will be, however, so we're just marking it as 99 for now.  */
 -- format: 99
 
-/* We cannot directly remove columns, so we use a temporary table instead. */
-/* First create the temporary table without the undesired column(s). */
-CREATE TEMPORARY TABLE BASE_NODE_BACKUP(
-  wc_id  INTEGER NOT NULL,
-  local_relpath  TEXT NOT NULL,
-  repos_id  INTEGER,
-  repos_relpath  TEXT,
-  parent_relpath  TEXT,
-  presence  TEXT NOT NULL,
-  kind  TEXT NOT NULL,
-  revnum  INTEGER,
-  checksum  TEXT,
-  translated_size  INTEGER,
-  changed_rev  INTEGER,
-  changed_date  INTEGER,
-  changed_author  TEXT,
-  depth  TEXT,
-  symlink_target  TEXT,
-  last_mod_time  INTEGER,
-  properties  BLOB,
-  dav_cache  BLOB,
-  file_external  TEXT
-);
-
-/* Copy everything into the temporary table. */
-INSERT INTO BASE_NODE_BACKUP SELECT
-  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
-  kind, revnum, checksum, translated_size, changed_rev, changed_date,
-  changed_author, depth, symlink_target, last_mod_time, properties, dav_cache,
-  file_external
-FROM BASE_NODE;
-
-/* Drop the original table. */
-DROP TABLE BASE_NODE;
-
-/* Recreate the original table, this time less the temporary columns.
-   Column descriptions are same as BASE_NODE in format 12 */
-CREATE TABLE BASE_NODE(
-  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
-  local_relpath  TEXT NOT NULL,
-  repos_id  INTEGER REFERENCES REPOSITORY (id),
-  repos_relpath  TEXT,
-  parent_relpath  TEXT,
-  presence  TEXT NOT NULL,
-  kind  TEXT NOT NULL,
-  revnum  INTEGER,
-  checksum  TEXT,
-  translated_size  INTEGER,
-  changed_rev  INTEGER,
-  changed_date  INTEGER,
-  changed_author  TEXT,
-  depth  TEXT,
-  symlink_target  TEXT,
-  last_mod_time  INTEGER,
-  properties  BLOB,
-  dav_cache  BLOB,
-  file_external  TEXT,
-
-  PRIMARY KEY (wc_id, local_relpath)
-  );
-
-/* Recreate the index. */
-CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
-
-/* Copy everything back into the original table. */
-INSERT INTO BASE_NODE SELECT
-  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
-  kind, revnum, checksum, translated_size, changed_rev, changed_date,
-  changed_author, depth, symlink_target, last_mod_time, properties, dav_cache,
-  file_external
-FROM BASE_NODE_BACKUP;
-
-/* Drop the temporary table. */
-DROP TABLE BASE_NODE_BACKUP;
+/* TODO: Rename the "absent" presence value to "server-excluded". wc_db.c
+   and this file have references to "absent" which still need to be changed
+   to "server-excluded". */
+/* TODO: Un-confuse *_revision column names in the EXTERNALS table to
+   "-r<operative> foo@<peg>", as suggested by the patch attached to
+   http://svn.haxx.se/dev/archive-2011-09/0478.shtml */
+/* TODO: Remove column parent_relpath from EXTERNALS. We're not using it and
+   never will. It's not interesting like in the NODES table: the external's
+   parent path may be *anything*: unversioned, "behind" a another WC... */
 
 /* Now "drop" the tree_conflict_data column from actual_node. */
 CREATE TABLE ACTUAL_NODE_BACKUP (
@@ -588,3 +854,21 @@ INSERT INTO ACTUAL_NODE SELECT
 FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
+
+/* Note: Other differences between the schemas of an upgraded and a
+ * fresh WC.
+ *
+ * While format 22 was current, "NOT NULL" was added to the
+ * columns PRISTINE.size and PRISTINE.md5_checksum.  The format was not
+ * bumped because it is a forward- and backward-compatible change.
+ *
+ * While format 23 was current, "REFERENCES PRISTINE" was added to the
+ * columns ACTUAL_NODE.older_checksum, ACTUAL_NODE.left_checksum,
+ * ACTUAL_NODE.right_checksum, NODES.checksum.
+ *
+ * The "NODES_BASE" view was originally implemented with a more complex (but
+ * functionally equivalent) statement using a 'JOIN'.  WCs that were created
+ * at or upgraded to format 26 before it was changed will still have the old
+ * version.
+ */
+

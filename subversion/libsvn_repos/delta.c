@@ -233,11 +233,15 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   const char *authz_root_path;
 
   /* SRC_PARENT_DIR must be valid. */
-  if (! src_parent_dir)
+  if (src_parent_dir)
+    src_parent_dir = svn_relpath_canonicalize(src_parent_dir, pool);
+  else
     return not_a_dir_error("source parent", src_parent_dir);
 
   /* TGT_FULLPATH must be valid. */
-  if (! tgt_fullpath)
+  if (tgt_fullpath)
+    tgt_fullpath = svn_relpath_canonicalize(tgt_fullpath, pool);
+  else
     return svn_error_create(SVN_ERR_FS_PATH_SYNTAX, 0,
                             _("Invalid target path"));
 
@@ -248,12 +252,12 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
   if (*src_entry)
-    authz_root_path = svn_dirent_dirname(tgt_fullpath, pool);
+    authz_root_path = svn_relpath_dirname(tgt_fullpath, pool);
   else
     authz_root_path = tgt_fullpath;
 
   /* Construct the full path of the source item. */
-  src_fullpath = svn_path_join(src_parent_dir, src_entry, pool);
+  src_fullpath = svn_relpath_join(src_parent_dir, src_entry, pool);
 
   /* Get the node kinds for the source and target paths.  */
   SVN_ERR(svn_fs_check_path(&tgt_kind, tgt_root, tgt_fullpath, pool));
@@ -656,7 +660,7 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   SVN_ERR(svn_fs_file_contents(&stream1, root1, path1, pool));
   SVN_ERR(svn_fs_file_contents(&stream2, root2, path2, pool));
 
-  SVN_ERR(svn_stream_contents_same(&same, stream1, stream2, pool));
+  SVN_ERR(svn_stream_contents_same2(&same, stream1, stream2, pool));
 
   *changed_p = !same;
 
@@ -958,17 +962,16 @@ delta_dirs(struct context *c,
       apr_hash_this(hi, &key, &klen, &val);
       t_entry = val;
       tgt_kind = t_entry->kind;
-      t_fullpath = svn_path_join(target_path, t_entry->name, subpool);
-      e_fullpath = svn_path_join(edit_path, t_entry->name, subpool);
+      t_fullpath = svn_relpath_join(target_path, t_entry->name, subpool);
+      e_fullpath = svn_relpath_join(edit_path, t_entry->name, subpool);
 
       /* Can we find something with the same name in the source
          entries hash? */
       if (s_entries && ((s_entry = apr_hash_get(s_entries, key, klen)) != 0))
         {
-          int distance;
           svn_node_kind_t src_kind;
 
-          s_fullpath = svn_path_join(source_path, t_entry->name, subpool);
+          s_fullpath = svn_relpath_join(source_path, t_entry->name, subpool);
           src_kind = s_entry->kind;
 
           if (depth == svn_depth_infinity
@@ -984,7 +987,7 @@ delta_dirs(struct context *c,
                        old one and add the new one.
                     1: means the nodes are related through ancestry, so go
                        ahead and do the replace directly.  */
-              distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
+              int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
               if (distance == 0)
                 {
                   /* no-op */
@@ -1044,7 +1047,7 @@ delta_dirs(struct context *c,
           apr_hash_this(hi, NULL, NULL, &val);
           s_entry = val;
           src_kind = s_entry->kind;
-          e_fullpath = svn_path_join(edit_path, s_entry->name, subpool);
+          e_fullpath = svn_relpath_join(edit_path, s_entry->name, subpool);
 
           /* Do we actually want to delete the dir if we're non-recursive? */
           if (depth == svn_depth_infinity

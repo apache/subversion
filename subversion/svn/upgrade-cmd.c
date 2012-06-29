@@ -31,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "cl.h"
 #include "svn_private_config.h"
 
@@ -52,16 +53,15 @@ svn_cl__upgrade(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)

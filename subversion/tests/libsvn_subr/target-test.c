@@ -31,6 +31,8 @@
 #include <unistd.h> /* for getcwd() */
 #endif
 
+#define SVN_DEPRECATED
+
 #include "svn_pools.h"
 #include "svn_path.h"
 
@@ -64,7 +66,8 @@ condense_targets_tests_helper(const char* title,
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   const char *common_path, *common_path2, *curdir;
-  char *token, *iter, *exp_common_abs = (char*)exp_common;
+  char *token, *iter;
+  const char *exp_common_abs = exp_common;
   int i;
   char buf[8192];
 
@@ -88,7 +91,7 @@ condense_targets_tests_helper(const char* title,
 
   /* Verify the common part with the expected (prefix with cwd). */
   if (*exp_common == '%')
-    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, NULL);
+    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, (char *)NULL);
 
   if (strcmp(common_path, exp_common_abs) != 0)
     {
@@ -105,7 +108,7 @@ condense_targets_tests_helper(const char* title,
     {
       const char * target = APR_ARRAY_IDX(condensed_targets, i, const char*);
       if (token && (*token == '%'))
-        token = apr_pstrcat(pool, curdir, token + 1, NULL);
+        token = apr_pstrcat(pool, curdir, token + 1, (char *)NULL);
       if (! token ||
           (target && (strcmp(target, token) != 0)))
         {

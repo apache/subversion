@@ -389,11 +389,11 @@ case "$1" in
   *);;
 esac
 
-[ "$ACTION" =  "pre" ] && pre_checkin $@
+[ "$ACTION" =  "pre" ] && pre_checkin "$@"
 
-$SVN $@
+$SVN "$@"
 
-[ $? = 0 -a "$ACTION" = "post" ] && post_checkout $@
+[ $? = 0 -a "$ACTION" = "post" ] && post_checkout "$@"
 
 cleanup
 #

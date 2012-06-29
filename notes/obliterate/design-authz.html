@@ -46,6 +46,26 @@
 
 <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 
+<div class="h2" id="introduction" title="#introduction">
+  <h2>Introduction</h2>
+
+  <p>Authorization is by a pre-obliterate hook which can base its decision on
+    the user name and the details of the attempted obliteration.</p>
+
+  <p>A post-obliterate hook will be available for reporting or other purposes,
+    analogous to the post-commit hook. This is not involved in authorization.
+    </p>
+
+  <p>Before a normal commit, two hooks are invoked: start-commit and
+    pre-commit, with only the list of files available to the first one and
+    the entire content of the change available to the second one. As
+    obliteration does not involve transmitting file contents, there is no
+    reason to have separate start-obliterate and pre-obliterate hooks.</p>
+
+</div>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
 <div class="h2" id="pre-obliterate" title="#pre-obliterate">
   <h2>Pre-obliterate hook</h2>
 

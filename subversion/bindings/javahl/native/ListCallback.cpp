@@ -75,52 +75,45 @@ ListCallback::doList(const char *path,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ListCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ListCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doEntry",
-                             "(L"JAVA_PACKAGE"/DirEntry;"
-                             "L"JAVA_PACKAGE"/Lock;)V");
+                             "(L"JAVA_PACKAGE"/types/DirEntry;"
+                             "L"JAVA_PACKAGE"/types/Lock;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // convert the parameters to their Java relatives
   jobject jdirentry = createJavaDirEntry(path, abs_path, dirent);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
-  jobject jlock;
+  jobject jlock = NULL;
   if (lock != NULL)
     {
       jlock = CreateJ::Lock(lock);
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-    }
-  else
-    {
-      jlock = NULL;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jdirentry, jlock);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  // cleanup the temporary Java objects
-  env->DeleteLocalRef(jdirentry);
   // No need to check for exception here, because we'll just return anyway
 
+  env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
 }
 
@@ -132,57 +125,52 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
                                  const svn_dirent_t *dirent)
 {
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    return SVN_NO_ERROR;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/DirEntry");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   static jmethodID mid = 0;
   if (mid == 0)
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "IJZJJLjava/lang/String;)V");
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
+                             "JZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
     }
 
   jstring jPath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jstring jAbsPath = JNIUtil::makeJString(absPath);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  jint jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
+  jobject jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jlong jSize = dirent->size;
   jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
   jlong jLastChangedRevision = dirent->created_rev;
   jlong jLastChanged = dirent->time;
   jstring jLastAuthor = JNIUtil::makeJString(dirent->last_author);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jobject ret = env->NewObject(clazz, mid, jPath, jAbsPath, jNodeKind,
                                jSize, jHasProps, jLastChangedRevision,
                                jLastChanged, jLastAuthor);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  env->DeleteLocalRef(jPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  if (jLastAuthor != NULL)
-    {
-      env->DeleteLocalRef(jLastAuthor);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  return ret;
+  return env->PopLocalFrame(ret);
 }

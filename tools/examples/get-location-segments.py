@@ -1,6 +1,27 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 import sys
 import os
+import getpass
 from svn import client, ra, core
 
 def printer(segment, pool):
@@ -51,6 +72,42 @@ def parse_args(args):
   return url, peg_revision, start_revision, end_revision
 
 
+def prompt_func_ssl_unknown_cert(realm, failures, cert_info, may_save, pool):
+  print "The certficate details are as follows:"
+  print "--------------------------------------"
+  print "Issuer     : " + str(cert_info.issuer_dname)
+  print "Hostname   : " + str(cert_info.hostname)
+  print "ValidFrom  : " + str(cert_info.valid_from)
+  print "ValidUpto  : " + str(cert_info.valid_until)
+  print "Fingerprint: " + str(cert_info.fingerprint)
+  print ""
+  ssl_trust = core.svn_auth_cred_ssl_server_trust_t()
+  if may_save:
+    choice = raw_input( "accept (t)temporarily   (p)permanently: ")
+  else:
+    choice = raw_input( "(r)Reject or accept (t)temporarily: ")
+  if choice[0] == "t" or choice[0] == "T":
+    ssl_trust.may_save = False
+    ssl_trust.accepted_failures = failures
+  elif choice[0] == "p" or choice[0] == "P":
+    ssl_trust.may_save = True
+    ssl_trust.accepted_failures = failures
+  else:
+    ssl_trust = None
+  return ssl_trust
+
+def prompt_func_simple_prompt(realm, username, may_save, pool):
+  username = raw_input("username: ")
+  password = getpass.getpass(prompt="password: ")
+  simple_cred = core.svn_auth_cred_simple_t()
+  simple_cred.username = username
+  simple_cred.password = password
+  simple_cred.may_save = False
+  return simple_cred
+
+def prompt_func_gnome_keyring_prompt(keyring, pool):
+  return getpass.getpass(prompt="Password for '%s' GNOME keyring: " % keyring)
+
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
@@ -70,16 +127,27 @@ ERROR: %s
     sys.exit(1)
 
   core.svn_config_ensure(None)
-  ctx = client.ctx_t()
-  providers = [
+  ctx = client.svn_client_create_context()
+  ctx.config = core.svn_config_get_config(None)
+
+  # Make sure that these are at the start of the list, so passwords from
+  # gnome-keyring / kwallet are checked before asking for new passwords.
+  providers = core.svn_auth_get_platform_specific_client_providers(ctx.config['config'], None)
+  providers.extend([
     client.get_simple_provider(),
+    core.svn_auth_get_ssl_server_trust_file_provider(),
+    core.svn_auth_get_simple_prompt_provider(prompt_func_simple_prompt, 2),
+    core.svn_auth_get_ssl_server_trust_prompt_provider(prompt_func_ssl_unknown_cert),
     client.get_username_provider(),
     client.get_ssl_server_trust_file_provider(),
     client.get_ssl_client_cert_file_provider(),
     client.get_ssl_client_cert_pw_file_provider(),
-    ]
+  ])
+
   ctx.auth_baton = core.svn_auth_open(providers)
-  ctx.config = core.svn_config_get_config(None)
+
+  if hasattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func'):
+    core.svn_auth_set_gnome_keyring_unlock_prompt_func(ctx.auth_baton, prompt_func_gnome_keyring_prompt)
 
   ra_callbacks = ra.callbacks_t()
   ra_callbacks.auth_baton = ctx.auth_baton

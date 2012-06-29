@@ -31,8 +31,6 @@
 #include "Pool.h"
 
 struct apr_hash_t;
-struct svn_error_t;
-class SVN::Pool;
 
 #include "Path.h"
 #include <map>

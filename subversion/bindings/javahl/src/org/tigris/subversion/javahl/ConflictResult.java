@@ -92,6 +92,13 @@ public class ConflictResult
       this.mergedPath = mergedPath;
     }
 
+    public org.apache.subversion.javahl.ConflictResult toApache()
+    {
+        return new org.apache.subversion.javahl.ConflictResult(
+            org.apache.subversion.javahl.ConflictResult.Choice.values()[choice],
+            mergedPath);
+    }
+
     /**
      * @return A value corresponding to the
      * <code>svn_wc_conflict_choice_t</code> enum.

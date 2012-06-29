@@ -1,3 +1,23 @@
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 import os
 import sys
 import shutil
@@ -189,10 +209,12 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      File('%(blddir)s/svnserve/svnserve.pdb'),
                      File('%(blddir)s/svnversion/svnversion.exe'),
                      File('%(blddir)s/svnversion/svnversion.pdb'),
+                     File('%(blddir)s/svnrdump/svnrdump.exe'),
+                     File('%(blddir)s/svnrdump/svnrdump.pdb'),
+                     File('%(blddir)s/svnmucc/svnmucc.exe'),
+                     File('%(blddir)s/svnmucc/svnmucc.pdb'),
                      File('%(blddir)s/../contrib/client-side/svn-push/svn-push.exe'),
                      File('%(blddir)s/../contrib/client-side/svn-push/svn-push.pdb'),
-                     File('%(blddir)s/../tools/client-side/svnmucc/svnmucc.exe'),
-                     File('%(blddir)s/../tools/client-side/svnmucc/svnmucc.pdb'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.exe'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.pdb'),
                      File('%(blddir)s/../tools/server-side/svn-populate-node-origins-index.exe'),
@@ -251,9 +273,6 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                               File('%(@apr-util)s/%(aprxml)s/xml.lib'),
                               File('%(@apr-util)s/%(aprxml)s/xml.pdb'),
                               ),
-             'lib/neon': (File('%(@neon)s/libneon.lib'),
-                          OptFile('%(@zlib)s/zlibstat.lib'),
-                          ),
 
              'lib/serf': (File('%(@serf)s/Release/serf.lib'),
                           ),
@@ -264,7 +283,6 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
              'licenses': None,
              'licenses/bdb': File('%(@berkeley-db)s/LICENSE'),
-             'licenses/neon': File('%(@neon)s/src/COPYING.LIB'),
              'licenses/serf': File('%(@serf)s/LICENSE'),
              'licenses/zlib': File('%(@zlib)s/README'),
              'licenses/apr-util': (File('%(@apr-util)s/LICENSE'),
@@ -359,8 +377,6 @@ def _read_config():
                    os.path.abspath(os.path.join(_srcdir, 'apr-iconv')),
                    '@apr-util':
                    os.path.abspath(os.path.join(_srcdir, 'apr-util')),
-                   '@neon':
-                   os.path.abspath(os.path.join(_srcdir, 'neon')),
                    }
 
   cfg = configparser.ConfigParser(path_defaults)

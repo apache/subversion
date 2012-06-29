@@ -32,6 +32,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
 const char *
@@ -39,7 +40,7 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 {
   char *newpath;
   size_t path_len;
-  int path_i = 0, newpath_i = 0;
+  size_t path_i = 0, newpath_i = 0;
   svn_boolean_t eating_slashes = FALSE;
 
   /* No PATH?  No problem. */
@@ -148,4 +149,25 @@ svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
   change->change_kind = change_kind;
 
   return change;
+}
+
+svn_error_t *
+svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
+                               svn_mergeinfo_t input,
+                               const char *rel_path,
+                               apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *output = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+
+      apr_hash_set(*output, svn_fspath__join(path, rel_path, pool),
+                   APR_HASH_KEY_STRING, svn_rangelist_dup(rangelist, pool));
+    }
+
+  return SVN_NO_ERROR;
 }

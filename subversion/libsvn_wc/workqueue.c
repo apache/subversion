@@ -28,975 +28,303 @@
 #include "svn_dirent_uri.h"
 #include "svn_subst.h"
 #include "svn_hash.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "wc_db.h"
 #include "workqueue.h"
-#include "entries.h"
-#include "props.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "translate.h"
-#include "log.h"
-#include "lock.h"  /* for svn_wc__adm_available  */
 
 #include "svn_private_config.h"
 #include "private/svn_skel.h"
 
 
-#define NOT_IMPLEMENTED() \
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
-
-
 /* Workqueue operation names.  */
-#define OP_REVERT "revert"
-#define OP_PREPARE_REVERT_FILES "prep-rev-files"
-#define OP_KILLME "killme"
-#define OP_LOGGY "loggy"
-#define OP_DELETION_POSTCOMMIT "deletion-postcommit"
-#define OP_POSTCOMMIT "postcommit"
-#define OP_INSTALL_PROPERTIES "install-properties"
+#define OP_BASE_REMOVE "base-remove"
+#define OP_FILE_COMMIT "file-commit"
+#define OP_FILE_INSTALL "file-install"
+#define OP_FILE_REMOVE "file-remove"
+#define OP_FILE_MOVE "file-move"
+#define OP_FILE_COPY_TRANSLATED "file-translate"
+#define OP_SYNC_FILE_FLAGS "sync-file-flags"
+#define OP_PREJ_INSTALL "prej-install"
+#define OP_RECORD_FILEINFO "record-fileinfo"
+#define OP_TMP_SET_TEXT_CONFLICT_MARKERS "tmp-set-text-conflict-markers"
+#define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
+#define OP_POSTUPGRADE "postupgrade"
+
+/* For work queue debugging. Generates output about its operation.  */
+/* #define SVN_DEBUG_WORK_QUEUE */
 
 
 struct work_item_dispatch {
   const char *name;
   svn_error_t *(*func)(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
+                       const char *wri_abspath,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
 };
 
 
-/* Ripped from the old loggy cp_and_translate operation.
-
-   SOURCE_ABSPATH specifies the source which is translated for
-   installation as the working file.
-
-   DEST_ABSPATH specifies the destination of the copy (typically the
-   working file).
-
-   VERSIONED_ABSPATH specifies the versioned file holding the properties
-   which specify the translation parameters.  */
 static svn_error_t *
-copy_and_translate(svn_wc__db_t *db,
-                   const char *source_abspath,
-                   const char *dest_abspath,
-                   const char *versioned_abspath,
-                   apr_pool_t *scratch_pool)
-{
-  svn_subst_eol_style_t style;
-  const char *eol;
-  apr_hash_t *keywords;
-  svn_boolean_t special;
-
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
-                                scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
-                               scratch_pool, scratch_pool));
-
-  /* ### eventually, we will not be called for special files...  */
-  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath,
-                              scratch_pool));
-
-  SVN_ERR(svn_subst_copy_and_translate3(
-            source_abspath, dest_abspath,
-            eol, TRUE,
-            keywords, TRUE,
-            special,
-            scratch_pool));
-
-  /* ### this is a problem. DEST_ABSPATH is not necessarily versioned.  */
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
-                                      scratch_pool));
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, dest_abspath,
-                                       scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-move_if_present(const char *source_abspath,
-                const char *dest_abspath,
-                apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_io_file_rename(source_abspath, dest_abspath, scratch_pool);
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-
-      /* Not there. Maybe the node was moved in a prior run.  */
-      svn_error_clear(err);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_REVERT  */
-
-
-/* Remove the file at join(PARENT_ABSPATH, BASE_NAME) if it is not the
-   working file defined by LOCAL_ABSPATH. If BASE_NAME is NULL, then
-   nothing is done. All temp allocations are made within SCRATCH_POOL.  */
-static svn_error_t *
-maybe_remove_conflict(const char *parent_abspath,
-                      const char *base_name,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
-{
-  if (base_name != NULL)
-    {
-      const char *conflict_abspath = svn_dirent_join(parent_abspath,
-                                                     base_name,
-                                                     scratch_pool);
-
-      if (strcmp(conflict_abspath, local_abspath) != 0)
-        SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
-                                    scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-run_revert(svn_wc__db_t *db,
-           const svn_skel_t *work_item,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *local_abspath;
-  svn_boolean_t replaced;
-  svn_wc__db_kind_t kind;
-  svn_node_kind_t node_kind;
-  const char *working_props_path;
-  const char *parent_abspath;
-  svn_boolean_t conflicted;
-  apr_uint64_t modify_flags = 0;
-  svn_wc_entry_t tmp_entry;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  replaced = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
-  /* magic_changed is extracted further below.  */
-  /* use_commit_times is extracted further below.  */
-
-  /* NOTE: we can read KIND here since uncommitted kind changes are not
-     (yet) allowed. If we read any conflict files, then we (obviously) have
-     not removed them from the metadata (yet).  */
-  SVN_ERR(svn_wc__db_read_info(
-            NULL, &kind, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            &conflicted, NULL,
-            db, local_abspath,
-            scratch_pool, scratch_pool));
-
-  /* Move the "revert" props over/on the "base" props.  */
-  if (replaced)
-    {
-      const char *revert_props_path;
-      const char *base_props_path;
-
-      SVN_ERR(svn_wc__prop_path(&revert_props_path, local_abspath,
-                                kind, svn_wc__props_revert, scratch_pool));
-      SVN_ERR(svn_wc__prop_path(&base_props_path, local_abspath,
-                                kind, svn_wc__props_base, scratch_pool));
-
-      SVN_ERR(move_if_present(revert_props_path, base_props_path,
-                              scratch_pool));
-
-      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, NULL,
-                                                    TRUE, scratch_pool));
-    }
-
-  /* The "working" props contain changes. Nuke 'em from orbit.  */
-  SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
-                            kind, svn_wc__props_working, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
-
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, scratch_pool));
-
-  /* Deal with the working file, as needed.  */
-  if (kind == svn_wc__db_kind_file)
-    {
-      svn_boolean_t magic_changed;
-      svn_boolean_t reinstall_working;
-      const char *text_base_path;
-
-      SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
-                                     FALSE, scratch_pool));
-
-      magic_changed = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
-
-      /* If there was a magic property change, then we'll reinstall the
-         working-file to pick up any/all appropriate changes. If there was
-         a replacement, then we definitely want to reinstall the working-file
-         using the original base.  */
-      reinstall_working = magic_changed || replaced;
-
-      if (replaced)
-        {
-          const char *revert_base_path;
-          svn_checksum_t *checksum;
-
-          SVN_ERR(svn_wc__text_revert_path(&revert_base_path, db,
-                                           local_abspath, scratch_pool));
-          SVN_ERR(move_if_present(revert_base_path, text_base_path,
-                                  scratch_pool));
-
-          /* At this point, the regular text base has been restored (just
-             now, or on a prior run). We need to recompute the checksum
-             from that.
-
-             ### in wc-1, this recompute only happened for add-with-history.
-             ### need to investigate, but maybe the checksum was not touched
-             ### for a simple replacing add? regardless, this recompute is
-             ### always okay to do.  */
-          SVN_ERR(svn_io_file_checksum2(&checksum, text_base_path,
-                                        svn_checksum_md5, scratch_pool));
-          tmp_entry.checksum = svn_checksum_to_cstring(checksum, scratch_pool);
-          modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-        }
-      else if (!reinstall_working)
-        {
-          svn_node_kind_t check_kind;
-
-          /* If the working file is missing, we need to reinstall it.  */
-          SVN_ERR(svn_io_check_path(local_abspath, &check_kind,
-                                    scratch_pool));
-          reinstall_working = (check_kind == svn_node_none);
-
-          if (!reinstall_working)
-            {
-              /* ### can we optimize this call? we already fetched some
-                 ### info about the node. and *definitely* never want a
-                 ### full file-scan.  */
-
-              /* ### for now, just always reinstall. without some extra work,
-                 ### we could end up in a situation where the file is copied
-                 ### from the base, but then something fails immediately
-                 ### after that. on the second time through here, we would
-                 ### see the file is "the same" and fail to complete those
-                 ### follow-on actions. in some future work, examine the
-                 ### points of failure, and possibly precompue the
-                 ### "reinstall_working" flag, or maybe do some follow-on
-                 ### actions unconditionally.  */
-#if 1
-              reinstall_working = TRUE;
-#endif
-#if 0
-              SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
-                                                       db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
-#endif
-            }
-        }
-
-      if (reinstall_working)
-        {
-          svn_boolean_t use_commit_times;
-          apr_finfo_t finfo;
-
-          /* Copy from the text base to the working file. The working file
-             specifies the params for translation.  */
-          SVN_ERR(copy_and_translate(db, text_base_path, local_abspath,
-                                     local_abspath, scratch_pool));
-
-          use_commit_times = svn_skel__parse_int(arg1->next->next->next,
-                                                 scratch_pool) != 0;
-
-          /* Possibly set the timestamp to last-commit-time, rather
-             than the 'now' time that already exists. */
-          if (use_commit_times)
-            {
-              apr_time_t changed_date;
-
-              /* Note: OP_REVERT is not used for a pure addition. There will
-                 always be a BASE node.  */
-              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               NULL, &changed_date, NULL,
-                                               NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
-              if (changed_date)
-                {
-                  svn_boolean_t special;
-
-                  /* ### skip this test once db_kind_symlink is in use.  */
-                  SVN_ERR(svn_wc__get_special(&special, db, local_abspath,
-                                              scratch_pool));
-                  if (!special)
-                    SVN_ERR(svn_io_set_file_affected_time(changed_date,
-                                                          local_abspath,
-                                                          scratch_pool));
-                }
-            }
-
-          /* loggy_set_entry_timestamp_from_wc()  */
-          SVN_ERR(svn_io_file_affected_time(&tmp_entry.text_time,
-                                            local_abspath,
-                                            scratch_pool));
-          modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
-
-          /* loggy_set_entry_working_size_from_wc()  */
-          SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                              APR_FINFO_MIN | APR_FINFO_LINK,
-                              scratch_pool));
-          tmp_entry.working_size = finfo.size;
-          modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
-        }
-    }
-  else if (kind == svn_wc__db_kind_symlink)
-    {
-      NOT_IMPLEMENTED();
-    }
-
-  if (kind == svn_wc__db_kind_dir)
-    parent_abspath = local_abspath;
-  else
-    parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  /* ### in wc-ng: the following block clears ACTUAL_NODE.  */
-  if (conflicted)
-    {
-      const apr_array_header_t *conflicts;
-      int i;
-
-      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          const svn_wc_conflict_description2_t *cd;
-
-          cd = APR_ARRAY_IDX(conflicts, i,
-                             const svn_wc_conflict_description2_t *);
-
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->base_file,
-                                        local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->their_file,
-                                        local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->my_file,
-                                        local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->merged_file,
-                                        local_abspath, scratch_pool));
-        }
-
-      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
-                                          TRUE, TRUE, FALSE,
-                                          scratch_pool));
-    }
-
-  /* Clean up the copied state for all replacements.  */
-  if (replaced)
-    {
-      modify_flags |= (SVN_WC__ENTRY_MODIFY_COPIED
-                       | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                       | SVN_WC__ENTRY_MODIFY_COPYFROM_REV);
-      tmp_entry.copied = FALSE;
-      tmp_entry.copyfrom_url = NULL;
-      tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
-    }
-
-  /* Reset schedule attribute to svn_wc_schedule_normal. It could already be
-     "normal", but no biggy if this is a no-op.  */
-  modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-  tmp_entry.schedule = svn_wc_schedule_normal;
-
-  /* We need the old school KIND...  */
-  if (kind == svn_wc__db_kind_dir)
-    {
-      node_kind = svn_node_dir;
-    }
-  else
-    {
-      SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
-                     || kind == svn_wc__db_kind_symlink);
-      node_kind = svn_node_file;
-    }
-
-  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, node_kind, FALSE,
-                                &tmp_entry, modify_flags,
-                                scratch_pool));
-
-  /* ### need to revert some bits in the parent stub. sigh.  */
-  if (kind == svn_wc__db_kind_dir)
-    {
-      svn_boolean_t is_wc_root, is_switched;
-
-      /* There is no parent stub if we're at the root.  */
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, &is_switched,
-                                    db, local_abspath, scratch_pool));
-      if (!is_wc_root && !is_switched)
-        {
-          modify_flags = (SVN_WC__ENTRY_MODIFY_COPIED
-                          | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                          | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                          | SVN_WC__ENTRY_MODIFY_SCHEDULE);
-          tmp_entry.copied = FALSE;
-          tmp_entry.copyfrom_url = NULL;
-          tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
-          tmp_entry.schedule = svn_wc_schedule_normal;
-          SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir, TRUE,
-                                        &tmp_entry, modify_flags,
-                                        scratch_pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* For issue #2101, we need to deliver this error. When the wc-ng pristine
-   handling comes into play, the issue should be fixed, and this code can
-   go away.  */
-static svn_error_t *
-verify_pristine_present(svn_wc__db_t *db,
+get_and_record_fileinfo(svn_wc__db_t *db,
                         const char *local_abspath,
+                        svn_boolean_t ignore_enoent,
                         apr_pool_t *scratch_pool)
 {
-  const char *base_abspath;
-  svn_node_kind_t check_kind;
+  const svn_io_dirent2_t *dirent;
 
-  /* Verify that one of the two text bases are present.  */
-  SVN_ERR(svn_wc__text_base_path(&base_abspath, db, local_abspath, FALSE,
-                                 scratch_pool));
-  SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
-  if (check_kind == svn_node_file)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, ignore_enoent,
+                             scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__text_revert_path(&base_abspath, db, local_abspath,
-                                   scratch_pool));
-  SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
-  if (check_kind == svn_node_file)
-    return SVN_NO_ERROR;
-
-  /* A real file must have either a regular or a revert text-base.
-     If it has neither, we could be looking at the situation described
-     in issue #2101, in which case all we can do is deliver the expected
-     error.  */
-  return svn_error_createf(APR_ENOENT, NULL,
-                           _("Error restoring text for '%s'"),
-                           svn_dirent_local_style(local_abspath,
-                                                  scratch_pool));
-}
-
-
-/* Record a work item to revert LOCAL_ABSPATH.  */
-svn_error_t *
-svn_wc__wq_add_revert(svn_boolean_t *will_revert,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      svn_boolean_t use_commit_times,
-                      apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
-  svn_boolean_t replaced;
-  svn_boolean_t magic_changed = FALSE;
-
-  SVN_ERR(svn_wc__db_read_info(
-            &status, &kind, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL,
-            db, local_abspath,
-            scratch_pool, scratch_pool));
-
-  /* Special handling for issue #2101.  */
-  if (kind == svn_wc__db_kind_file)
-    SVN_ERR(verify_pristine_present(db, local_abspath, scratch_pool));
-
-  /* Gather a few items *before* the revert work-item has a chance to run.
-     During its operation, this data could/will change, which means that a
-     potential re-run of the work-item may gather incorrect values.  */
-
-  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
-                                       scratch_pool));
-
-  /* If a replacement has occurred, then a revert definitely happens.  */
-  *will_revert = replaced;
-
-  if (!replaced)
+  if (dirent->kind == svn_node_none)
     {
-      apr_hash_t *base_props;
-      apr_hash_t *working_props;
-      apr_array_header_t *prop_diffs;
-
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props,
-                                 db, local_abspath,
-                                 scratch_pool, scratch_pool));
-      SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
-                             scratch_pool));
-      magic_changed = svn_wc__has_magic_property(prop_diffs);
-
-      if (prop_diffs->nelts > 0)
-        {
-          /* Property changes cause a revert to occur.  */
-          *will_revert = TRUE;
-        }
-      else
-        {
-          /* There is nothing to do for NORMAL or ADDED nodes. Typically,
-             we won't even be called for added nodes (since a revert
-             simply removes it from version control), but it is possible
-             that a parent replacement was turned from a replaced copy
-             into a normal node, and the (broken) old ENTRY->COPIED logic
-             then turns the copied children into typical ADDED nodes.
-             Since the recursion has already started, these children are
-             visited (unlike most added nodes).  */
-          if (status != svn_wc__db_status_normal
-              && status != svn_wc__db_status_added)
-            {
-              *will_revert = TRUE;
-            }
-
-          /* We may need to restore a missing working file.  */
-          if (! *will_revert)
-            {
-              svn_node_kind_t on_disk;
-
-              SVN_ERR(svn_io_check_path(local_abspath, &on_disk,
-                                        scratch_pool));
-              *will_revert = on_disk == svn_node_none;
-            }
-
-          if (! *will_revert)
-            {
-              /* ### there may be ways to simplify this test, rather than
-                 ### doing file comparisons and junk... */
-              SVN_ERR(svn_wc__internal_text_modified_p(will_revert,
-                                                       db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
-            }
-        }
+      /* Skip file not found if ignore_enoent */
+      return SVN_NO_ERROR;
     }
 
-  /* Don't even bother to queue a work item if there is nothing to do.  */
-  if (*will_revert)
-    {
-      svn_skel_t *work_item;
-
-      work_item = svn_skel__make_empty_list(scratch_pool);
-
-      /* These skel atoms hold references to very transitory state, but
-         we only need the work_item to survive for the duration of wq_add.  */
-      svn_skel__prepend_int(use_commit_times, work_item, scratch_pool);
-      svn_skel__prepend_int(magic_changed, work_item, scratch_pool);
-      svn_skel__prepend_int(replaced, work_item, scratch_pool);
-      svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-      svn_skel__prepend_str(OP_REVERT, work_item, scratch_pool);
-
-      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_wc__db_global_record_fileinfo(
+                           db, local_abspath,
+                           dirent->filesize, dirent->mtime,
+                           scratch_pool));
 }
 
 
 /* ------------------------------------------------------------------------ */
+/* OP_REMOVE_BASE  */
 
-/* OP_PREPARE_REVERT_FILES  */
+/* Removes a BASE_NODE and all it's data, leaving any adds and copies as is.
+   Do this as a depth first traversal to make sure than any parent still exists
+   on error conditions.
 
-
+   ### This function needs review for 4th tree behavior.*/
 static svn_error_t *
-run_prepare_revert_files(svn_wc__db_t *db,
-                         const svn_skel_t *work_item,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *scratch_pool)
+remove_base_node(svn_wc__db_t *db,
+                 const char *local_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
 {
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *local_abspath;
-  svn_wc__db_kind_t kind;
-  const char *revert_prop_abspath;
-  const char *base_prop_abspath;
-  svn_node_kind_t on_disk;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-
-  /* Rename the original text base over to the revert text base.  */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-  if (kind == svn_wc__db_kind_file)
-    {
-      const char *text_base;
-      const char *text_revert;
-
-      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
-                                     scratch_pool));
-      SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
-                                       scratch_pool));
-
-      SVN_ERR(move_if_present(text_base, text_revert, scratch_pool));
-    }
-
-  /* Set up the revert props.  */
-
-  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
-                            svn_wc__props_revert, scratch_pool));
-  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
-                            svn_wc__props_base, scratch_pool));
-
-  /* First: try to move any base properties to the revert location.  */
-  SVN_ERR(move_if_present(base_prop_abspath, revert_prop_abspath,
-                          scratch_pool));
-
-  /* If no props exist at the revert location, then drop a set of empty
-     props there. They are expected to be present.  */
-  SVN_ERR(svn_io_check_path(revert_prop_abspath, &on_disk, scratch_pool));
-  if (on_disk == svn_node_none)
-    {
-      svn_stream_t *stream;
-
-      /* A set of empty props is just an empty file. */
-      SVN_ERR(svn_stream_open_writable(&stream, revert_prop_abspath,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
-      SVN_ERR(svn_io_set_file_read_only(revert_prop_abspath, FALSE,
-                                        scratch_pool));
-    }
-
-  /* Stop intheriting BASE_NODE properties */
-  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
-                                                apr_hash_make(scratch_pool),
-                                                TRUE, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  /* These skel atoms hold references to very transitory state, but
-     we only need the work_item to survive for the duration of wq_add.  */
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_PREPARE_REVERT_FILES, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_KILLME  */
-
-static svn_error_t *
-run_killme(svn_wc__db_t *db,
-           const svn_skel_t *work_item,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *dir_abspath;
-  svn_boolean_t adm_only;
-  svn_wc__db_status_t status;
-  svn_revnum_t original_revision;
-  svn_revnum_t parent_revision;
-  const char *repos_relpath;
-  const char *repos_root_url;
-  const char *repos_uuid;
+  svn_wc__db_status_t base_status, wrk_status;
+  svn_kind_t base_kind, wrk_kind;
+  svn_boolean_t have_base, have_work;
   svn_error_t *err;
 
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  dir_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  adm_only = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
-  err = svn_wc__db_base_get_info(&status, NULL, &original_revision,
-                                 NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, dir_abspath,
-                                 scratch_pool, scratch_pool);
-  if (err)
+  err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL,
+                             &have_base, NULL, &have_work,
+                             db, local_abspath, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
-
-      /* The administrative area in the subdir is gone, and the subdir
-         is also removed from its parent's record.  */
+      /* No node to delete, this can happen when the wq item is rerun. */
       svn_error_clear(err);
-
-      /* When we removed the directory, if ADM_ONLY was TRUE, then that
-         has definitely been done and there is nothing left to do.
-
-         If ADM_ONLY was FALSE, then the subdir and its contents were
-         removed *before* the administrative was removed. Anything that
-         may be left are unversioned nodes. We don't want to do anything
-         to those, so we're done for this case, too.  */
       return SVN_NO_ERROR;
     }
-  if (status == svn_wc__db_status_obstructed)
+
+  if(! have_base)
+    /* No base node to delete, this can happen when the wq item is rerun. */
+    return SVN_NO_ERROR;
+
+  if (wrk_status == svn_wc__db_status_normal
+      || wrk_status == svn_wc__db_status_not_present
+      || wrk_status == svn_wc__db_status_server_excluded)
     {
-      /* The subdir's administrative area has already been removed, but
-         there was still an entry in the parent. Whatever is in that
-         record, it doesn't matter. The subdir has been handled already.  */
-      return SVN_NO_ERROR;
+      base_status = wrk_status;
+      base_kind = wrk_kind;
     }
-
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision,
-                               NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, svn_dirent_dirname(dir_abspath,
-                                                      scratch_pool),
-                               scratch_pool, scratch_pool));
-
-  /* Remember the repository this node is associated with.  */
-  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                     &repos_uuid,
-                                     db, dir_abspath,
+  else
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     db, local_abspath,
                                      scratch_pool, scratch_pool));
 
-  /* Blow away the administrative directories, and possibly the working
-     copy tree too. */
-  err = svn_wc__internal_remove_from_revision_control(
-          db, dir_abspath,
-          !adm_only /* destroy_wf */, FALSE /* instant_error */,
-          cancel_func, cancel_baton,
-          scratch_pool);
-  if (err && err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD)
-    return svn_error_return(err);
-  svn_error_clear(err);
-
-  /* If revnum of this dir is greater than parent's revnum, then
-     recreate 'deleted' entry in parent. */
-  if (original_revision > parent_revision)
+  /* Children first */
+  if (base_kind == svn_kind_dir
+      && (base_status == svn_wc__db_status_normal
+          || base_status == svn_wc__db_status_incomplete))
     {
-      SVN_ERR(svn_wc__db_base_add_absent_node(
-                db, dir_abspath,
-                repos_relpath, repos_root_url, repos_uuid,
-                original_revision, svn_wc__db_kind_dir,
-                svn_wc__db_status_not_present,
-                scratch_pool));
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
+                                           scratch_pool, iterpool));
+
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child_name = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
+
+          SVN_ERR(remove_base_node(db, child_abspath, cancel_func, cancel_baton,
+                                   iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
     }
 
+  if (base_status == svn_wc__db_status_normal
+      && wrk_status != svn_wc__db_status_added
+      && wrk_status != svn_wc__db_status_excluded)
+    {
+      if (wrk_status != svn_wc__db_status_deleted
+          && (base_kind == svn_kind_file
+              || base_kind == svn_kind_symlink))
+        {
+          SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+        }
+      else if (base_kind == svn_kind_dir
+               && wrk_status != svn_wc__db_status_deleted)
+        {
+          err = svn_io_dir_remove_nonrecursive(local_abspath, scratch_pool);
+          if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+                      || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)
+                      || APR_STATUS_IS_ENOTEMPTY(err->apr_err)))
+            svn_error_clear(err);
+          else
+            SVN_ERR(err);
+        }
+    }
+
+  SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_wc__wq_add_killme(svn_wc__db_t *db,
-                      const char *dir_abspath,
-                      svn_boolean_t adm_only,
-                      apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  /* The skel still points at DIR_ABSPATH, but the skel will be serialized
-     just below in the wq_add call.  */
-  svn_skel__prepend_int(adm_only, work_item, scratch_pool);
-  svn_skel__prepend_str(dir_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_KILLME, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_LOGGY  */
-
+/* Process the OP_REMOVE_BASE work item WORK_ITEM.
+ * See svn_wc__wq_build_remove_base() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
-run_loggy(svn_wc__db_t *db,
-          const svn_skel_t *work_item,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
-          apr_pool_t *scratch_pool)
+run_base_remove(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
 {
   const svn_skel_t *arg1 = work_item->children->next;
-  const char *adm_abspath;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  adm_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-
-  return svn_error_return(svn_wc__run_xml_log(
-                            db, adm_abspath,
-                            arg1->next->data, arg1->next->len,
-                            scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__wq_add_loggy(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const svn_stringbuf_t *log_content,
-                     apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  /* The skel still points at ADM_ABSPATH and LOG_CONTENT, but the skel will
-     be serialized just below in the wq_add call.  */
-  svn_skel__prepend_str(log_content->data, work_item, scratch_pool);
-  svn_skel__prepend_str(adm_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_LOGGY, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_DELETION_POSTCOMMIT  */
-
-static svn_error_t *
-run_deletion_postcommit(svn_wc__db_t *db,
-                        const svn_skel_t *work_item,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
   const char *local_abspath;
-  svn_revnum_t new_revision;
-  svn_boolean_t no_unlock;
-  svn_wc__db_kind_t kind;
+  svn_revnum_t not_present_rev = SVN_INVALID_REVNUM;
+  svn_kind_t not_present_kind;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  apr_int64_t val;
 
-  /* ### warning: this code has not been vetted for running multiple times  */
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
 
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
-  no_unlock = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-
-  /* ### the section below was ripped out of log.c::log_do_committed().
-     ### it needs to be rewritten into wc-ng terms.  */
-
+  if (arg1->next->next)
     {
-      const char *repos_relpath;
-      const char *repos_root_url;
-      const char *repos_uuid;
-      const svn_wc_entry_t *parent_entry;
+      not_present_rev = (svn_revnum_t)val;
 
-      /* If we are suppose to delete "this dir", drop a 'killme' file
-         into my own administrative dir as a signal for svn_wc__run_log()
-         to blow away the administrative area after it is finished
-         processing this logfile.  */
-      if (kind == svn_wc__db_kind_dir)
+      SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+      not_present_kind = (svn_kind_t)val;
+
+      if (SVN_IS_VALID_REVNUM(not_present_rev))
         {
-          const svn_wc_entry_t *orig_entry;
-          svn_wc_entry_t tmp_entry;
+          const char *dir_abspath, *name;
 
-          /* Bump the revision number of this_dir anyway, so that it
-             might be higher than its parent's revnum.  If it's
-             higher, then the process that sees KILLME and destroys
-             the directory can also place a 'deleted' dir entry in the
-             parent. */
-          tmp_entry.revision = new_revision;
-          SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                        svn_node_dir, FALSE,
-                                        &tmp_entry,
-                                        SVN_WC__ENTRY_MODIFY_REVISION,
-                                        scratch_pool));
+          /* This wq operation is restartable, so we can't assume the node
+             to be here. But we can assume that the parent is still there */
+          svn_dirent_split(&dir_abspath, &name, local_abspath, scratch_pool);
 
-          SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
-                                    svn_node_unknown, FALSE,
-                                    scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                             &repos_uuid,
+                                             db, dir_abspath,
+                                             scratch_pool, scratch_pool));
 
-          /* Ensure the directory is deleted later.  */
-          return svn_error_return(svn_wc__wq_add_killme(
-                                    db, local_abspath,
-                                    orig_entry->keep_local /* adm_only */,
-                                    scratch_pool));
+          repos_relpath = svn_relpath_join(repos_relpath, name, scratch_pool);
         }
+    }
+  else
+    {
+      svn_boolean_t keep_not_present;
 
-      /* Remember the repository this node is associated with.  */
-      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                         &repos_uuid,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(SVN_WC__VERSION <= 28); /* Case unused in later versions*/
 
-      /* Else, we're deleting a file, and we can safely remove files
-         from revision control without screwing something else up.  */
-      SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                db, local_abspath,
-                FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
+      keep_not_present = (val != 0);
 
-      /* If the parent entry's working rev 'lags' behind new_rev... */
-      SVN_ERR(svn_wc__get_entry(&parent_entry, db,
-                                svn_dirent_dirname(local_abspath,
-                                                   scratch_pool),
-                                FALSE, svn_node_dir, FALSE,
-                                scratch_pool, scratch_pool));
-      if (new_revision > parent_entry->revision)
+      if (keep_not_present)
         {
-          /* ...then the parent's revision is now officially a
-             lie;  therefore, it must remember the file as being
-             'deleted' for a while.  Create a new, uninteresting
-             ghost entry:  */
-          SVN_ERR(svn_wc__db_base_add_absent_node(
-                    db, local_abspath,
-                    repos_relpath, repos_root_url, repos_uuid,
-                    new_revision, svn_wc__db_kind_file,
-                    svn_wc__db_status_not_present,
-                    scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, &not_present_kind,
+                                           &not_present_rev, &repos_relpath,
+                                           &repos_root_url, &repos_uuid, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
         }
+    }
+
+  SVN_ERR(remove_base_node(db, local_abspath,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
+
+  if (SVN_IS_VALID_REVNUM(not_present_rev))
+    {
+      SVN_ERR(svn_wc__db_base_add_not_present_node(db, local_abspath,
+                                                   repos_relpath,
+                                                   repos_root_url,
+                                                   repos_uuid,
+                                                   not_present_rev,
+                                                   not_present_kind,
+                                                   NULL,
+                                                   NULL,
+                                                   scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
-svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_revnum_t new_revision,
-                                   svn_boolean_t no_unlock,
-                                   apr_pool_t *scratch_pool)
+svn_wc__wq_build_base_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_revnum_t not_present_revision,
+                             svn_kind_t not_present_kind,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
 
-  /* The skel still points at LOCAL_ABSPATH, but the skel will be
-     serialized just below in the wq_add call.  */
-  svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
-  svn_skel__prepend_int(new_revision, work_item, scratch_pool);
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_DELETION_POSTCOMMIT, work_item, scratch_pool);
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+  svn_skel__prepend_int(not_present_kind, *work_item, result_pool);
+  svn_skel__prepend_int(not_present_revision, *work_item, result_pool);
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_BASE_REMOVE, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------------ */
 
-/* OP_POSTCOMMIT  */
+/* OP_FILE_COMMIT  */
 
 
-/* If new text was committed, then replace the text base for
- * newly-committed file NAME in directory PATH with the new
- * post-commit text base, which is waiting in the adm tmp area in
- * detranslated form.
+/* FILE_ABSPATH is the new text base of the newly-committed versioned file,
+ * in repository-normal form (aka "detranslated" form).  Adjust the working
+ * file accordingly.
  *
  * If eol and/or keyword translation would cause the working file to
  * change, then overwrite the working file with a translated copy of
@@ -1004,10 +332,14 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
  * current working file -- if they are the same, do nothing, to avoid
  * clobbering timestamps unnecessarily).
  *
- * If the executable property is set, the set working file's
- * executable.
+ * Set the working file's executability according to its svn:executable
+ * property.
  *
- * If the working file was re-translated or had executability set,
+ * Set the working file's read-only attribute according to its properties
+ * and lock status (see svn_wc__maybe_set_read_only()).
+ *
+ * If the working file was re-translated or had its executability or
+ * read-only state changed,
  * then set OVERWROTE_WORKING to TRUE.  If the working file isn't
  * touched at all, then set to FALSE.
  *
@@ -1016,29 +348,24 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 static svn_error_t *
 install_committed_file(svn_boolean_t *overwrote_working,
                        svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const char *name,
-                       svn_boolean_t remove_executable,
-                       svn_boolean_t remove_read_only,
+                       const char *file_abspath,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  const char *tmp_text_base;
-  svn_node_kind_t kind;
-  svn_boolean_t same, did_set;
+  svn_boolean_t same;
   const char *tmp_wfile;
   svn_boolean_t special;
-  const char *file_abspath;
 
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
-
-  file_abspath = svn_dirent_join(adm_abspath, name, scratch_pool);
 
   /* In the commit, newlines and keywords may have been
    * canonicalized and/or contracted... Or they may not have
    * been.  It's kind of hard to know.  Here's how we find out:
    *
-   *    1. Make a translated tmp copy of the committed text base.
+   *    1. Make a translated tmp copy of the committed text base,
+   *       translated according to the versioned file's properties.
    *       Or, if no committed text base exists (the commit must have
    *       been a propchange only), make a translated tmp copy of the
    *       working file.
@@ -1051,17 +378,25 @@ install_committed_file(svn_boolean_t *overwrote_working,
    * reread the file if they don't really need to.
    */
 
-  /* Is there a tmp_text_base that needs to be installed?  */
-  SVN_ERR(svn_wc__text_base_path(&tmp_text_base, db, file_abspath, TRUE,
-                                 scratch_pool));
-  SVN_ERR(svn_io_check_path(tmp_text_base, &kind, scratch_pool));
-
+  /* Copy and translate the new base-to-be file (if found, else the working
+   * file) from repository-normal form to working form, writing a new
+   * temporary file if any translation was actually done.  Set TMP_WFILE to
+   * the translated file's path, which may be the source file's path if no
+   * translation was done.  Set SAME to indicate whether the new working
+   * text is the same as the old working text (or TRUE if it's a special
+   * file). */
   {
-    const char *tmp = (kind == svn_node_file) ? tmp_text_base : file_abspath;
+    const char *tmp = file_abspath;
 
+    /* Copy and translate, if necessary. The output file will be deleted at
+     * scratch_pool cleanup.
+     * ### That's not quite safe: we might rename the file and then maybe
+     * its path will get re-used for another temp file before pool clean-up.
+     * Instead, we should take responsibility for deleting it. */
     SVN_ERR(svn_wc__internal_translated_file(&tmp_wfile, tmp, db,
                                              file_abspath,
                                              SVN_WC_TRANSLATE_FROM_NF,
+                                             cancel_func, cancel_baton,
                                              scratch_pool, scratch_pool));
 
     /* If the translation is a no-op, the text base and the working copy
@@ -1072,7 +407,12 @@ install_committed_file(svn_boolean_t *overwrote_working,
      * it has the right executable and read_write attributes set.
      */
 
-    SVN_ERR(svn_wc__get_special(&special, db, file_abspath, scratch_pool));
+    SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
+                                       NULL,
+                                       &special,
+                                       db, file_abspath, NULL, FALSE,
+                                       scratch_pool, scratch_pool));
+    /* Translated file returns the exact pointer if not translated. */
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
                                            file_abspath, scratch_pool));
@@ -1086,579 +426,437 @@ install_committed_file(svn_boolean_t *overwrote_working,
       *overwrote_working = TRUE;
     }
 
-  if (remove_executable)
-    {
-      /* No need to chmod -x on a new file: new files don't have it. */
-      if (same)
-        SVN_ERR(svn_io_set_file_executable(file_abspath,
-                                           FALSE, /* chmod -x */
-                                           FALSE, scratch_pool));
-      *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
-    }
-  else
-    {
-      /* Set the working file's execute bit if props dictate. */
-      SVN_ERR(svn_wc__maybe_set_executable(&did_set, db, file_abspath,
-                                           scratch_pool));
-      if (did_set)
-        /* okay, so we didn't -overwrite- the working file, but we changed
-           its timestamp, which is the point of returning this flag. :-) */
-        *overwrote_working = TRUE;
-    }
+  /* ### should be using OP_SYNC_FILE_FLAGS, or an internal version of
+     ### that here. do we need to set *OVERWROTE_WORKING? */
 
-  if (remove_read_only)
-    {
-      /* No need to make a new file read_write: new files already are. */
-      if (same)
-        SVN_ERR(svn_io_set_file_read_write(file_abspath, FALSE,
-                                           scratch_pool));
-      *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
-    }
-  else
-    {
-      SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, file_abspath,
-                                          scratch_pool));
-      if (did_set)
-        /* okay, so we didn't -overwrite- the working file, but we changed
-           its timestamp, which is the point of returning this flag. :-) */
-        *overwrote_working = TRUE;
-    }
-
-  /* Install the new text base if one is waiting. */
-  if (kind == svn_node_file)  /* tmp_text_base exists */
-    SVN_ERR(svn_wc__sync_text_base(file_abspath, scratch_pool));
+  /* ### Re: OVERWROTE_WORKING, the following function is rather liberal
+     ### with setting that flag, so we should probably decide if we really
+     ### care about it when syncing flags. */
+  SVN_ERR(svn_wc__sync_flags_with_props(overwrote_working, db, file_abspath,
+                                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *
-log_do_committed(svn_wc__db_t *db,
-                 const char *local_abspath,
-                 svn_revnum_t new_revision,
-                 apr_time_t new_date,
-                 const char *new_author,
-                 const svn_checksum_t *new_checksum,
-                 apr_hash_t *new_dav_cache,
-                 svn_boolean_t keep_changelist,
-                 apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  apr_pool_t *pool = scratch_pool;
-  int is_this_dir;
-  svn_boolean_t remove_executable = FALSE;
-  svn_boolean_t set_read_write = FALSE;
-  const svn_wc_entry_t *orig_entry;
-  svn_boolean_t prop_mods;
-  svn_wc_entry_t tmp_entry;
-
-  /*** Perform sanity checking operations ***/
-
-  /* Read the entry for the affected item.  If we can't find the
-     entry, or if the entry states that our item is not either "this
-     dir" or a file kind, perhaps this isn't really the entry our log
-     creator was expecting.  */
-  SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE, pool, pool));
-
-  /* We should never be running a commit on a DELETED node, so if we see
-     this, then it (probably) means that a prior run has deleted this node.
-     There isn't anything more to do.  */
-  if (orig_entry->schedule == svn_wc_schedule_normal && orig_entry->deleted)
-    return SVN_NO_ERROR;
-
-  is_this_dir = orig_entry->kind == svn_node_dir;
-
-  /* We shouldn't be in this function for schedule-delete nodes.  */
-  SVN_ERR_ASSERT(orig_entry->schedule != svn_wc_schedule_delete);
-
-
-  /*** Mark the committed item committed-to-date ***/
-
-  /* If "this dir" has been replaced (delete + add), all its
-     immmediate children *must* be either scheduled for deletion (they
-     were children of "this dir" during the "delete" phase of its
-     replacement), added (they are new children of the replaced dir),
-     or replaced (they are new children of the replace dir that have
-     the same names as children that were present during the "delete"
-     phase of the replacement).
-
-     Children which are added or replaced will have been reported as
-     individual commit targets, and thus will be re-visited by
-     log_do_committed().  Children which were marked for deletion,
-     however, need to be outright removed from revision control.  */
-  if ((orig_entry->schedule == svn_wc_schedule_replace) && is_this_dir)
-    {
-      /* Loop over all children entries, look for items scheduled for
-         deletion. */
-      const apr_array_header_t *children;
-      int i;
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                       pool, pool));
-
-      for(i = 0; i < children->nelts; i++)
-        {
-          const char *child_name = APR_ARRAY_IDX(children, i, const char*);
-          const char *child_abspath;
-          svn_wc__db_kind_t kind;
-          svn_boolean_t is_file;
-          const svn_wc_entry_t *child_entry;
-
-          apr_pool_clear(iterpool);
-          child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
-
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
-                                       iterpool));
-
-          is_file = (kind == svn_wc__db_kind_file ||
-                     kind == svn_wc__db_kind_symlink);
-
-          SVN_ERR(svn_wc__get_entry(&child_entry, db, child_abspath,
-                                    FALSE,
-                                    is_file ? svn_node_file : svn_node_dir,
-                                    !is_file, iterpool, iterpool));
-
-          if (child_entry->schedule != svn_wc_schedule_delete)
-            continue;
-
-          /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
-             ### If they were available, it would be nice to use them. */
-          SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                                    db, child_abspath,
-                                    FALSE, FALSE,
-                                    NULL, NULL, iterpool));
-        }
-    }
-
-  SVN_ERR(svn_wc__props_modified(&prop_mods, db, local_abspath, pool));
-  if (prop_mods)
-    {
-      if (orig_entry->kind == svn_node_file)
-        {
-          /* Examine propchanges here before installing the new
-             propbase.  If the executable prop was -deleted-, then
-             tell install_committed_file() so.
-
-             The same applies to the needs-lock property. */
-          int i;
-          apr_array_header_t *propchanges;
-
-
-          SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, db,
-                                            local_abspath, pool, pool));
-          for (i = 0; i < propchanges->nelts; i++)
-            {
-              svn_prop_t *propchange
-                = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-              if ((! strcmp(propchange->name, SVN_PROP_EXECUTABLE))
-                  && (propchange->value == NULL))
-                remove_executable = TRUE;
-              else if ((! strcmp(propchange->name, SVN_PROP_NEEDS_LOCK))
-                       && (propchange->value == NULL))
-                set_read_write = TRUE;
-            }
-        }
-
-      SVN_ERR(svn_wc__working_props_committed(db, local_abspath, pool));
-  }
-
-  if (orig_entry->kind == svn_node_file)
-    {
-      svn_boolean_t overwrote_working;
-      apr_finfo_t finfo;
-      const char *name = svn_dirent_basename(local_abspath, scratch_pool);
-
-      SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
-                                       new_revision, new_date, new_author,
-                                       new_checksum,
-                                       NULL /* new_children */,
-                                       new_dav_cache,
-                                       keep_changelist,
-                                       pool));
-
-      /* Install the new file, which may involve expanding keywords.
-         A copy of this file should have been dropped into our `tmp/text-base'
-         directory during the commit process.  Part of this process
-         involves setting the textual timestamp for this entry.  We'd like
-         to just use the timestamp of the working file, but it is possible
-         that at some point during the commit, the real working file might
-         have changed again.  If that has happened, we'll use the
-         timestamp of the copy of this file in `tmp/text-base' (which
-         by then will have moved to `text-base'. */
-
-      if ((err = install_committed_file(&overwrote_working, db,
-                                        svn_dirent_dirname(local_abspath,
-                                                           pool),
-                                        name,
-                                        remove_executable, set_read_write,
-                                        pool)))
-        return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, err,
-           _("Error replacing text-base of '%s'"), name);
-
-      if ((err = svn_io_stat(&finfo, local_abspath,
-                             APR_FINFO_MIN | APR_FINFO_LINK, pool)))
-        return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                                 _("Error getting 'affected time' of '%s'"),
-                                 svn_dirent_local_style(local_abspath, pool));
-
-      /* We will compute and modify the size and timestamp */
-
-      tmp_entry.working_size = finfo.size;
-
-      /* ### svn_wc__db_op_set_last_mod_time()  */
-
-      if (overwrote_working)
-        tmp_entry.text_time = finfo.mtime;
-      else
-        {
-          /* The working copy file hasn't been overwritten, meaning
-             we need to decide which timestamp to use. */
-
-          const char *basef;
-          apr_finfo_t basef_finfo;
-
-          /* If the working file was overwritten (due to re-translation)
-             or touched (due to +x / -x), then use *that* textual
-             timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path(&basef, db,
-                                         local_abspath, FALSE, pool));
-          err = svn_io_stat(&basef_finfo, basef, APR_FINFO_MIN | APR_FINFO_LINK,
-                            pool);
-          if (err)
-            return svn_error_createf
-              (SVN_ERR_WC_BAD_ADM_LOG, err,
-               _("Error getting 'affected time' for '%s'"),
-               svn_dirent_local_style(basef, pool));
-          else
-            {
-              svn_boolean_t modified;
-              const char *base_abspath;
-
-              SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
-
-              /* Verify that the working file is the same as the base file
-                 by comparing file sizes, then timestamps and the contents
-                 after that. */
-
-              /*###FIXME: if the file needs translation, don't compare
-                file-sizes, just compare timestamps and do the rest of the
-                hokey pokey. */
-              modified = finfo.size != basef_finfo.size;
-              if (finfo.mtime != basef_finfo.mtime && ! modified)
-                {
-                  err = svn_wc__internal_versioned_file_modcheck(&modified,
-                                                                 db,
-                                                                 local_abspath,
-                                                                 base_abspath,
-                                                                 FALSE, pool);
-                  if (err)
-                    return svn_error_createf
-                      (SVN_ERR_WC_BAD_ADM_LOG, err,
-                       _("Error comparing '%s' and '%s'"),
-                       svn_dirent_local_style(local_abspath, pool),
-                       svn_dirent_local_style(basef, pool));
-                }
-              /* If they are the same, use the working file's timestamp,
-                 else use the base file's timestamp. */
-              tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
-            }
-        }
-
-      return svn_error_return(svn_wc__entry_modify2(
-                                db, local_abspath,
-                                svn_node_unknown, FALSE,
-                                &tmp_entry,
-                                SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                                | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                                pool));
-    }
-
-  SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
-                                   new_revision, new_date, new_author,
-                                   NULL /* new_checksum */,
-                                   NULL /* new_children */,
-                                   new_dav_cache,
-                                   keep_changelist,
-                                   pool));
-
-  /* For directories, we also have to reset the state in the parent's
-     entry for this directory, unless the current directory is a `WC
-     root' (meaning, our parent directory on disk is not our parent in
-     Version Control Land), in which case we're all finished here. */
-  {
-    svn_boolean_t is_root;
-    svn_boolean_t is_switched;
-
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
-                                  db, local_abspath, pool));
-    if (is_root || is_switched)
-      return SVN_NO_ERROR;
-  }
-
-  /* Make sure our entry exists in the parent. */
-  {
-    const svn_wc_entry_t *dir_entry;
-
-    /* Check if we have a valid record in our parent */
-    SVN_ERR(svn_wc__get_entry(&dir_entry, db, local_abspath,
-                              FALSE, svn_node_dir, TRUE, pool, pool));
-
-    tmp_entry.schedule = svn_wc_schedule_normal;
-    tmp_entry.copied = FALSE;
-    tmp_entry.deleted = FALSE;
-    /* ### We assume we have the right lock to modify the parent record.
-
-           If this fails for you in the transition to one DB phase, please
-           run svn cleanup one level higher. */
-    err = svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
-                                TRUE, &tmp_entry,
-                                (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                 | SVN_WC__ENTRY_MODIFY_COPIED
-                                 | SVN_WC__ENTRY_MODIFY_DELETED
-                                 | SVN_WC__ENTRY_MODIFY_FORCE),
-                                pool);
-    if (err != NULL)
-      return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                               _("Error modifying entry of '%s'"), "");
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-run_postcommit(svn_wc__db_t *db,
-               const svn_skel_t *work_item,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const svn_skel_t *arg5 = work_item->children->next->next->next->next->next;
-  const char *local_abspath;
-  svn_revnum_t new_revision;
-  apr_time_t new_date;
-  const char *new_author;
-  const svn_checksum_t *new_checksum;
-  apr_hash_t *new_dav_cache;
-  svn_boolean_t keep_changelist;
-
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
-  new_date = svn_skel__parse_int(arg1->next->next, scratch_pool);
-  if (arg1->next->next->next->len == 0)
-    new_author = NULL;
-  else
-    new_author = apr_pstrmemdup(scratch_pool,
-                                arg1->next->next->next->data,
-                                arg1->next->next->next->len);
-  if (arg5->len == 0)
-    {
-      new_checksum = NULL;
-    }
-  else
-    {
-      const char *data = apr_pstrmemdup(scratch_pool, arg5->data, arg5->len);
-      SVN_ERR(svn_checksum_deserialize(&new_checksum, data,
-                                       scratch_pool, scratch_pool));
-    }
-  if (arg5->next->is_atom)
-    new_dav_cache = NULL;
-  else
-    SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next,
-                                     scratch_pool));
-  keep_changelist = svn_skel__parse_int(arg5->next->next, scratch_pool) != 0;
-
-  SVN_ERR(log_do_committed(db, local_abspath, new_revision, new_date,
-                           new_author, new_checksum, new_dav_cache,
-                           keep_changelist,
-                           scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__wq_add_postcommit(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_revnum_t new_revision,
-                          apr_time_t new_date,
-                          const char *new_author,
-                          const svn_checksum_t *new_checksum,
-                          apr_hash_t *new_dav_cache,
-                          svn_boolean_t keep_changelist,
-                          apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  svn_skel__prepend_int(keep_changelist, work_item, scratch_pool);
-  if (new_dav_cache == NULL || apr_hash_count(new_dav_cache) == 0)
-    {
-      svn_skel__prepend_str("", work_item, scratch_pool);
-    }
-  else
-    {
-      svn_skel_t *props_skel;
-
-      SVN_ERR(svn_skel__unparse_proplist(&props_skel, new_dav_cache,
-                                         scratch_pool));
-      svn_skel__prepend(props_skel, work_item);
-    }
-  svn_skel__prepend_str(new_checksum
-                          ? svn_checksum_serialize(new_checksum,
-                                                   scratch_pool, scratch_pool)
-                          : "",
-                        work_item, scratch_pool);
-  svn_skel__prepend_str(new_author ? new_author : "", work_item, scratch_pool);
-  svn_skel__prepend_int(new_date, work_item, scratch_pool);
-  svn_skel__prepend_int(new_revision, work_item, scratch_pool);
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_POSTCOMMIT, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_INSTALL_PROPERTIES */
-
-static svn_error_t *
-run_install_properties(svn_wc__db_t *db,
-                       const svn_skel_t *work_item,
+process_commit_file_install(svn_wc__db_t *db,
+                       const char *local_abspath,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  const svn_skel_t *arg = work_item->children->next;
-  const char *local_abspath;
-  apr_hash_t *base_props;
-  apr_hash_t *actual_props;
-  svn_wc__db_kind_t kind;
-  const char *prop_abspath;
-  svn_boolean_t force_base_install;
+  svn_boolean_t overwrote_working;
 
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+  /* Install the new file, which may involve expanding keywords.
+     A copy of this file should have been dropped into our `tmp/text-base'
+     directory during the commit process.  Part of this process
+     involves recording the textual timestamp for this entry.  We'd like
+     to just use the timestamp of the working file, but it is possible
+     that at some point during the commit, the real working file might
+     have changed again.
+   */
 
-  arg = arg->next;
-  if (arg->is_atom)
-    base_props = NULL;
-  else
-    SVN_ERR(svn_skel__parse_proplist(&base_props, arg, scratch_pool));
+  SVN_ERR(install_committed_file(&overwrote_working, db,
+                                 local_abspath,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
 
-  arg = arg->next;
-  if (arg->is_atom)
-    actual_props = NULL;
-  else
-    SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
-
-  arg = arg->next;
-  force_base_install = arg && svn_skel__parse_int(arg, scratch_pool);
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-  if (base_props != NULL)
+  /* We will compute and modify the size and timestamp */
+  if (overwrote_working)
     {
-      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                                svn_wc__props_base, scratch_pool));
+      apr_finfo_t finfo;
 
-      SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
+      SVN_ERR(svn_io_stat(&finfo, local_abspath,
+                          APR_FINFO_MIN | APR_FINFO_LINK, scratch_pool));
+      SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                finfo.size, finfo.mtime,
+                                                scratch_pool));
+    }
+  else
+    {
+      svn_boolean_t modified;
 
-      if (apr_hash_count(base_props) > 0)
-        {
-          svn_stream_t *propfile;
+      /* The working copy file hasn't been overwritten.  We just
+         removed the recorded size and modification time from the nodes
+         record by calling svn_wc__db_global_commit().
 
-          SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
+         Now we have some file in our working copy that might be what
+         we just committed, but we are not certain at this point.
+
+         We still have a write lock here, so we check if the file is
+         what we expect it to be and if it is the right file we update
+         the recorded information. (If it isn't we keep the null data).
+
+         Instead of reimplementing all this here, we just call a function
+         that already does implement this when it notices that we have the
+         right kind of lock (and we ignore the result)
+       */
+      SVN_ERR(svn_wc__internal_file_modified_p(&modified,
+                                               db, local_abspath, FALSE,
+                                               scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+run_file_commit(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  /* We don't both parsing the other two values in the skel. */
+
+  return svn_error_trace(
+                process_commit_file_install(db, local_abspath,
+                                            cancel_func, cancel_baton,
+                                            scratch_pool));
+}
+
+svn_error_t *
+svn_wc__wq_build_file_commit(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t props_mod,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+
+  /* This are currently ignored, they are here for compat. */
+  svn_skel__prepend_int(FALSE, *work_item, result_pool);
+  svn_skel__prepend_int(FALSE, *work_item, result_pool);
+
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+/* OP_POSTUPGRADE  */
+
+static svn_error_t *
+run_postupgrade(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  const char *entries_path;
+  const char *format_path;
+  const char *wcroot_abspath;
+  const char *adm_path;
+  const char *temp_path;
+  svn_error_t *err;
+
+  err = svn_wc__wipe_postupgrade(wri_abspath, FALSE,
+                                 cancel_func, cancel_baton, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+    /* No entry, this can happen when the wq item is rerun. */
+    svn_error_clear(err);
+
+  SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
+                                scratch_pool, scratch_pool));
+
+  adm_path = svn_wc__adm_child(wcroot_abspath, NULL, scratch_pool);
+  entries_path = svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_ENTRIES,
+                                   scratch_pool);
+  format_path = svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_FORMAT,
+                                   scratch_pool);
+
+  /* Write the 'format' and 'entries' files.
+
+     ### The order may matter for some sufficiently old clients.. but
+     ### this code only runs during upgrade after the files had been
+     ### removed earlier during the upgrade. */
+  SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
+                              sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
+                              svn_io_file_del_none, scratch_pool));
+  SVN_ERR(svn_io_file_rename(temp_path, format_path, scratch_pool));
+
+  SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
+                              sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
+                              svn_io_file_del_none, scratch_pool));
+  SVN_ERR(svn_io_file_rename(temp_path, entries_path, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_build_postupgrade(svn_skel_t **work_item,
+                             apr_pool_t *result_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_str(OP_POSTUPGRADE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_INSTALL */
+
+/* Process the OP_FILE_INSTALL work item WORK_ITEM.
+ * See svn_wc__wq_build_file_install() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_install(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 const char *wri_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const svn_skel_t *arg4 = arg1->next->next->next;
+  const char *local_relpath;
+  const char *local_abspath;
+  svn_boolean_t use_commit_times;
+  svn_boolean_t record_fileinfo;
+  svn_boolean_t special;
+  svn_stream_t *src_stream;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  const char *temp_dir_abspath;
+  svn_stream_t *dst_stream;
+  const char *dst_abspath;
+  apr_int64_t val;
+  const char *wcroot_abspath;
+  const char *source_abspath;
+  const svn_checksum_t *checksum;
+  apr_hash_t *props;
+  apr_time_t changed_date;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  use_commit_times = (val != 0);
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+  record_fileinfo = (val != 0);
+
+  SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath,
+                                            &checksum, &props,
+                                            &changed_date,
+                                            db, local_abspath, wri_abspath,
+                                            scratch_pool, scratch_pool));
+
+  if (arg4 != NULL)
+    {
+      /* Use the provided path for the source.  */
+      local_relpath = apr_pstrmemdup(scratch_pool, arg4->data, arg4->len);
+      SVN_ERR(svn_wc__db_from_relpath(&source_abspath, db, wri_abspath,
+                                      local_relpath,
+                                      scratch_pool, scratch_pool));
+    }
+  else if (! checksum)
+    {
+      /* This error replaces a previous assertion. Reporting an error from here
+         leaves the workingqueue operation in place, so the working copy is
+         still broken!
+
+         But when we report this error the user at least knows what node has
+         this specific problem, so maybe we can find out why users see this
+         error */
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                               _("Can't install '%s' from pristine store, "
+                                 "because no checksum is recorded for this "
+                                 "file"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__db_pristine_get_future_path(&source_abspath,
+                                                  wcroot_abspath,
+                                                  checksum,
+                                                  scratch_pool, scratch_pool));
+    }
+
+  SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                   scratch_pool, scratch_pool));
+
+  /* Fetch all the translation bits.  */
+  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                     &keywords,
+                                     &special, db, local_abspath,
+                                     props, FALSE,
+                                     scratch_pool, scratch_pool));
+  if (special)
+    {
+      /* When this stream is closed, the resulting special file will
+         atomically be created/moved into place at LOCAL_ABSPATH.  */
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, local_abspath,
                                            scratch_pool, scratch_pool));
 
-          SVN_ERR(svn_hash_write2(base_props, propfile, SVN_HASH_TERMINATOR,
-                                  scratch_pool));
+      /* Copy the "repository normal" form of the special file into the
+         special stream.  */
+      SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
-          SVN_ERR(svn_stream_close(propfile));
+      /* No need to set exec or read-only flags on special files.  */
 
-          SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
-        }
-
-      {
-        svn_boolean_t in_working;
-
-        if (force_base_install)
-          in_working = FALSE;
-        else
-          SVN_ERR(svn_wc__prop_pristine_is_working(&in_working, db,
-                                                   local_abspath, scratch_pool));
-
-        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
-                                                      base_props, in_working,
-                                                      scratch_pool));
-      }
+      /* ### Shouldn't this record a timestamp and size, etc.? */
+      return SVN_NO_ERROR;
     }
 
-
-  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                            svn_wc__props_working, scratch_pool));
-
-  SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
-
-  if (actual_props != NULL)
+  if (svn_subst_translation_required(style, eol, keywords,
+                                     FALSE /* special */,
+                                     TRUE /* force_eol_check */))
     {
-      svn_stream_t *propfile;
-
-      SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
-                                       scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_hash_write2(actual_props, propfile, SVN_HASH_TERMINATOR,
-                              scratch_pool));
-
-      SVN_ERR(svn_stream_close(propfile));
-      SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
+      /* Wrap it in a translating (expanding) stream.  */
+      src_stream = svn_subst_stream_translated(src_stream, eol,
+                                               TRUE /* repair */,
+                                               keywords,
+                                               TRUE /* expand */,
+                                               scratch_pool);
     }
 
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
-                                  scratch_pool));
+  /* Where is the Right Place to put a temp file in this working copy?  */
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
+                                         db, wcroot_abspath,
+                                         scratch_pool, scratch_pool));
+
+  /* Translate to a temporary file. We don't want the user seeing a partial
+     file, nor let them muck with it while we translate. We may also need to
+     get its TRANSLATED_SIZE before the user can monkey it.  */
+  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_abspath,
+                                 temp_dir_abspath,
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
+
+  /* Copy from the source to the dest, translating as we go. This will also
+     close both streams.  */
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
+
+  /* All done. Move the file into place.  */
+
+  {
+    svn_error_t *err;
+
+    err = svn_io_file_rename(dst_abspath, local_abspath, scratch_pool);
+
+    /* With a single db we might want to install files in a missing directory.
+       Simply trying this scenario on error won't do any harm and at least
+       one user reported this problem on IRC. */
+    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      {
+        svn_error_t *err2;
+
+        err2 = svn_io_make_dir_recursively(svn_dirent_dirname(local_abspath,
+                                                              scratch_pool),
+                                           scratch_pool);
+
+        if (err2)
+          /* Creating directory didn't work: Return all errors */
+          return svn_error_trace(svn_error_compose_create(err, err2));
+        else
+          /* We could create a directory: retry install */
+          svn_error_clear(err);
+
+        SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
+      }
+    else
+      SVN_ERR(err);
+  }
+
+  /* Tweak the on-disk file according to its properties.  */
+#ifndef WIN32
+  if (props && apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+    SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                       scratch_pool));
+#endif
+
+  /* Note that this explicitly checks the pristine properties, to make sure
+     that when the lock is locally set (=modification) it is not read only */
+  if (props && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+    {
+      svn_wc__db_status_t status;
+      svn_wc__db_lock_t *lock;
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, &lock, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+      if (!lock && status != svn_wc__db_status_added)
+        SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
+    }
+
+  if (use_commit_times)
+    {
+      if (changed_date)
+        SVN_ERR(svn_io_set_file_affected_time(changed_date,
+                                              local_abspath,
+                                              scratch_pool));
+    }
+
+  /* ### this should happen before we rename the file into place.  */
+  if (record_fileinfo)
+    {
+      SVN_ERR(get_and_record_fileinfo(db, local_abspath,
+                                      FALSE /* ignore_enoent */,
+                                      scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__wq_add_install_properties(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_hash_t *base_props,
-                                  apr_hash_t *actual_props,
-                                  svn_boolean_t force_base_install,
-                                  apr_pool_t *scratch_pool)
+svn_wc__wq_build_file_install(svn_skel_t **work_item,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const char *source_abspath,
+                              svn_boolean_t use_commit_times,
+                              svn_boolean_t record_fileinfo,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-  svn_skel_t *props;
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
 
-  svn_skel__prepend_int(force_base_install, work_item, scratch_pool);
-
-  if (actual_props != NULL)
+  /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
+     value is not provided, then the file's pristine contents will be used.  */
+  if (source_abspath != NULL)
     {
-      SVN_ERR(svn_skel__unparse_proplist(&props, actual_props, scratch_pool));
-      svn_skel__prepend(props, work_item);
+      SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                    source_abspath, result_pool, scratch_pool));
+
+      svn_skel__prepend_str(local_relpath, *work_item, result_pool);
     }
-  else
-    svn_skel__prepend_str("", work_item, scratch_pool);
 
-  if (base_props != NULL)
-    {
-      SVN_ERR(svn_skel__unparse_proplist(&props, base_props, scratch_pool));
-      svn_skel__prepend(props, work_item);
-    }
-  else
-    svn_skel__prepend_str("", work_item, scratch_pool);
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
 
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_INSTALL_PROPERTIES, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+  svn_skel__prepend_int(record_fileinfo, *work_item, result_pool);
+  svn_skel__prepend_int(use_commit_times, *work_item, result_pool);
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_INSTALL, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1666,18 +864,766 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_FILE_REMOVE  */
+
+/* Process the OP_FILE_REMOVE work item WORK_ITEM.
+ * See svn_wc__wq_build_file_remove() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_remove(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 const char *wri_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  /* Remove the path, no worrying if it isn't there.  */
+  return svn_error_trace(svn_io_remove_file2(local_abspath, TRUE,
+                                             scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_REMOVE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_MOVE  */
+
+/* Process the OP_FILE_MOVE work item WORK_ITEM.
+ * See svn_wc__wq_build_file_move() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_move(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 const char *wri_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *src_abspath, *dst_abspath;
+  const char *local_relpath;
+  svn_error_t *err;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&src_abspath, db, wri_abspath, local_relpath,
+                                  scratch_pool, scratch_pool));
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->next->data,
+                                 arg1->next->len);
+  SVN_ERR(svn_wc__db_from_relpath(&dst_abspath, db, wri_abspath, local_relpath,
+                                  scratch_pool, scratch_pool));
+
+  /* Use svn_io_file_move() instead of svn_io_file_rename() to allow cross
+     device copies. We should not fail in the workqueue. */
+
+  err = svn_io_file_move(src_abspath, dst_abspath, scratch_pool);
+
+  /* If the source is not found, we assume the wq op is already handled */
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_move(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
+                           const char *wri_abspath,
+                           const char *src_abspath,
+                           const char *dst_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* File must exist */
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(src_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath, dst_abspath,
+                                result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath, src_abspath,
+                                result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  svn_skel__prepend_str(OP_FILE_MOVE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_COPY_TRANSLATED */
+
+/* Process the OP_FILE_COPY_TRANSLATED work item WORK_ITEM.
+ * See run_file_copy_translated() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_copy_translated(svn_wc__db_t *db,
+                         const svn_skel_t *work_item,
+                         const char *wri_abspath,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath, *src_abspath, *dst_abspath;
+  const char *local_relpath;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->next->data,
+                               arg1->next->len);
+  SVN_ERR(svn_wc__db_from_relpath(&src_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->next->next->data,
+                                arg1->next->next->len);
+  SVN_ERR(svn_wc__db_from_relpath(&dst_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                     &keywords,
+                                     &special,
+                                     db, local_abspath, NULL, FALSE,
+                                     scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_subst_copy_and_translate4(src_abspath, dst_abspath,
+                                        eol, TRUE /* repair */,
+                                        keywords, TRUE /* expand */,
+                                        special,
+                                        cancel_func, cancel_baton,
+                                        scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const char *src_abspath,
+                                      const char *dst_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  const char *local_relpath;
+
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* File must exist */
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(src_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath, dst_abspath,
+                                result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath, src_abspath,
+                                result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  svn_skel__prepend_str(OP_FILE_COPY_TRANSLATED, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_SYNC_FILE_FLAGS  */
+
+/* Process the OP_SYNC_FILE_FLAGS work item WORK_ITEM.
+ * See svn_wc__wq_build_sync_file_flags() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_sync_file_flags(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    const char *wri_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  return svn_error_trace(svn_wc__sync_flags_with_props(NULL, db,
+                                            local_abspath, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_SYNC_FILE_FLAGS, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_PREJ_INSTALL  */
+
+static svn_error_t *
+run_prej_install(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 const char *wri_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+  const svn_skel_t *conflict_skel;
+  const char *tmp_prejfile_abspath;
+  const char *prejfile_abspath;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+  if (arg1->next != NULL)
+    conflict_skel = arg1->next;
+  else
+    SVN_ERR_MALFUNCTION();  /* ### wc_db can't provide it ... yet.  */
+
+  /* Construct a property reject file in the temporary area.  */
+  SVN_ERR(svn_wc__create_prejfile(&tmp_prejfile_abspath,
+                                  db, local_abspath,
+                                  conflict_skel,
+                                  scratch_pool, scratch_pool));
+
+  /* Get the (stored) name of where it should go.  */
+  SVN_ERR(svn_wc__get_prejfile_abspath(&prejfile_abspath, db, local_abspath,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(prejfile_abspath != NULL);
+
+  /* ... and atomically move it into place.  */
+  SVN_ERR(svn_io_file_rename(tmp_prejfile_abspath,
+                             prejfile_abspath,
+                             scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_prej_install(svn_skel_t **work_item,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  /* ### gotta have this, today  */
+  SVN_ERR_ASSERT(conflict_skel != NULL);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+
+  if (conflict_skel != NULL)
+    svn_skel__prepend(conflict_skel, *work_item);
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_PREJ_INSTALL, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_RECORD_FILEINFO  */
+
+
+static svn_error_t *
+run_record_fileinfo(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    const char *wri_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+  apr_time_t set_time = 0;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  if (arg1->next)
+    {
+      apr_int64_t val;
+
+      SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+      set_time = (apr_time_t)val;
+    }
+
+  if (set_time != 0)
+    {
+      svn_node_kind_t kind;
+      svn_boolean_t is_special;
+
+      /* Do not set the timestamp on special files. */
+      SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
+                                        scratch_pool));
+
+      /* Don't set affected time when local_abspath does not exist or is
+         a special file */
+      if (kind == svn_node_file && !is_special)
+        SVN_ERR(svn_io_set_file_affected_time(set_time, local_abspath,
+                                              scratch_pool));
+
+      /* Note that we can't use the value we get here for recording as the
+         filesystem might have a different timestamp granularity */
+    }
+
+
+  return svn_error_trace(get_and_record_fileinfo(db, local_abspath,
+                                                 TRUE /* ignore_enoent */,
+                                                 scratch_pool));
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_TMP_SET_TEXT_CONFLICT_MARKERS  */
+
+
+static svn_error_t *
+run_set_text_conflict_markers(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    const char *wri_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+  const char *old_abspath = NULL;
+  const char *new_abspath = NULL;
+  const char *wrk_abspath = NULL;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  arg = arg->next;
+  local_relpath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                           : NULL;
+
+  if (local_relpath)
+    {
+      SVN_ERR(svn_wc__db_from_relpath(&old_abspath, db, wri_abspath,
+                                      local_relpath,
+                                      scratch_pool, scratch_pool));
+    }
+
+  arg = arg->next;
+  local_relpath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                           : NULL;
+  if (local_relpath)
+    {
+      SVN_ERR(svn_wc__db_from_relpath(&new_abspath, db, wri_abspath,
+                                      local_relpath,
+                                      scratch_pool, scratch_pool));
+    }
+
+  arg = arg->next;
+  local_relpath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                           : NULL;
+
+  if (local_relpath)
+    {
+      SVN_ERR(svn_wc__db_from_relpath(&wrk_abspath, db, wri_abspath,
+                                      local_relpath,
+                                      scratch_pool, scratch_pool));
+    }
+
+  /* Upgrade scenario: We have a workqueue item that describes how to install a
+     non skel conflict. Fetch all the information we can to create a new style
+     conflict. */
+  /* ### Before format 30 this is/was a common code path as we didn't install
+     ### the conflict directly in the db. It just calls the wc_db code
+     ### to set the right fields. */
+
+  {
+    /* Check if we also have a property conflict... */
+    const apr_array_header_t *conflicts;
+    svn_skel_t *conflict_skel;
+    int i;
+
+    conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
+
+    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+
+    if (conflicts)
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          svn_wc_conflict_description2_t *desc =
+                APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
+          apr_hash_t *prop_names;
+
+          if (desc->kind != svn_wc_conflict_kind_property)
+            continue;
+
+          prop_names = apr_hash_make(scratch_pool);
+
+          /* Add the absolute minimal property conflict */
+          SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel, db,
+                                                          local_abspath,
+                                                          desc->their_abspath,
+                                                          NULL, NULL, NULL,
+                                                          prop_names,
+                                                          scratch_pool,
+                                                          scratch_pool));
+
+          break;
+        }
+
+    SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflict_skel, db,
+                                                    local_abspath,
+                                                    wrk_abspath,
+                                                    old_abspath,
+                                                    new_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+
+    /* ### Set some 'none' operation? */
+    SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
+                                                scratch_pool,
+                                                scratch_pool));
+
+    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
+                                        scratch_pool));
+  }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
+                                               svn_wc__db_t *db,
+                                               const char *local_abspath,
+                                               const char *old_abspath,
+                                               const char *new_abspath,
+                                               const char *wrk_abspath,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool)
+{
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Abspaths in the workqueue won't work if the WC is moved. */
+  if (wrk_abspath)
+    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                  wrk_abspath, result_pool, scratch_pool));
+
+  svn_skel__prepend_str(wrk_abspath ? local_relpath : "",
+                        *work_item, result_pool);
+
+  if (new_abspath)
+    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                  new_abspath, result_pool, scratch_pool));
+  svn_skel__prepend_str(new_abspath ? local_relpath : "",
+                        *work_item, result_pool);
+
+  if (old_abspath)
+    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                  old_abspath, result_pool, scratch_pool));
+  svn_skel__prepend_str(old_abspath ? local_relpath : "",
+                        *work_item, result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_TMP_SET_TEXT_CONFLICT_MARKERS, *work_item,
+                        result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_TMP_SET_PROPERTY_CONFLICT_MARKER  */
+
+static svn_error_t *
+run_set_property_conflict_marker(svn_wc__db_t *db,
+                                 const svn_skel_t *work_item,
+                                 const char *wri_abspath,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+  const char *prej_abspath = NULL;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+
+  arg = arg->next;
+  local_relpath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                          : NULL;
+
+  if (local_relpath)
+    SVN_ERR(svn_wc__db_from_relpath(&prej_abspath, db, wri_abspath,
+                                    local_relpath,
+                                    scratch_pool, scratch_pool));
+
+  {
+    /* Check if we also have a property conflict... */
+    const apr_array_header_t *conflicts;
+    svn_skel_t *conflict_skel;
+    int i;
+    apr_hash_t *prop_names;
+
+    conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
+
+    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+
+    if (conflicts)
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          svn_wc_conflict_description2_t *desc =
+                APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
+
+          if (desc->kind != svn_wc_conflict_kind_text)
+            continue;
+
+          /* Add the existing text conflict */
+          SVN_ERR(svn_wc__conflict_skel_add_text_conflict(
+                                                conflict_skel, db,
+                                                local_abspath,
+                                                desc->my_abspath,
+                                                desc->base_abspath,
+                                                desc->their_abspath,
+                                                scratch_pool,
+                                                scratch_pool));
+
+          break;
+        }
+
+    prop_names = apr_hash_make(scratch_pool);
+    SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel, db,
+                                                    local_abspath,
+                                                    prej_abspath,
+                                                    NULL, NULL, NULL,
+                                                    prop_names,
+                                                    scratch_pool,
+                                                    scratch_pool));
+
+    /* ### Set some 'none' operation? */
+    SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
+                                                scratch_pool,
+                                                scratch_pool));
+
+    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
+                                        scratch_pool));
+  }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
+                                                  svn_wc__db_t *db,
+                                                  const char *local_abspath,
+                                                  const char *prej_abspath,
+                                                  apr_pool_t *result_pool,
+                                                  apr_pool_t *scratch_pool)
+{
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (prej_abspath)
+    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                  prej_abspath, result_pool, scratch_pool));
+
+  svn_skel__prepend_str(prej_abspath ? local_relpath : "",
+                        *work_item, result_pool);
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                local_abspath, result_pool, scratch_pool));
+
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_TMP_SET_PROPERTY_CONFLICT_MARKER, *work_item,
+                        result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
-  { OP_REVERT, run_revert },
-  { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
-  { OP_KILLME, run_killme },
-  { OP_LOGGY, run_loggy },
-  { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
-  { OP_POSTCOMMIT, run_postcommit },
-  { OP_INSTALL_PROPERTIES, run_install_properties },
+  { OP_FILE_COMMIT, run_file_commit },
+  { OP_FILE_INSTALL, run_file_install },
+  { OP_FILE_REMOVE, run_file_remove },
+  { OP_FILE_MOVE, run_file_move },
+  { OP_FILE_COPY_TRANSLATED, run_file_copy_translated },
+  { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
+  { OP_PREJ_INSTALL, run_prej_install },
+  { OP_RECORD_FILEINFO, run_record_fileinfo },
+  { OP_BASE_REMOVE, run_base_remove },
+  { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
+  { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
+
+  /* Upgrade steps */
+  { OP_POSTUPGRADE, run_postupgrade },
 
   /* Sentinel.  */
   { NULL }
 };
+
+
+static svn_error_t *
+dispatch_work_item(svn_wc__db_t *db,
+                   const char *wri_abspath,
+                   const svn_skel_t *work_item,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool)
+{
+  const struct work_item_dispatch *scan;
+
+  /* Scan the dispatch table for a function to handle this work item.  */
+  for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
+    {
+      if (svn_skel__matches_atom(work_item->children, scan->name))
+        {
+
+#ifdef SVN_DEBUG_WORK_QUEUE
+          SVN_DBG(("dispatch: operation='%s'\n", scan->name));
+#endif
+          SVN_ERR((*scan->func)(db, work_item, wri_abspath,
+                                cancel_func, cancel_baton,
+                                scratch_pool));
+
+#ifdef SVN_RUN_WORK_QUEUE_TWICE
+#ifdef SVN_DEBUG_WORK_QUEUE
+          SVN_DBG(("dispatch: operation='%s'\n", scan->name));
+#endif
+          /* Being able to run every workqueue item twice is one
+             requirement for workqueues to be restartable. */
+          SVN_ERR((*scan->func)(db, work_item, wri_abspath,
+                                cancel_func, cancel_baton,
+                                scratch_pool));
+#endif
+
+          break;
+        }
+    }
+
+  if (scan->name == NULL)
+    {
+      /* We should know about ALL possible work items here. If we do not,
+         then something is wrong. Most likely, some kind of format/code
+         skew. There is nothing more we can do. Erasing or ignoring this
+         work item could leave the WC in an even more broken state.
+
+         Contrary to issue #1581, we cannot simply remove work items and
+         continue, so bail out with an error.  */
+      return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
+                               _("Unrecognized work item in the queue "
+                                 "associated with '%s'"),
+                               svn_dirent_local_style(wri_abspath,
+                                                      scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
@@ -1688,65 +1634,98 @@ svn_wc__wq_run(svn_wc__db_t *db,
                apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_uint64_t last_id = 0;
+
+#ifdef SVN_DEBUG_WORK_QUEUE
+  SVN_DBG(("wq_run: wri='%s'\n", wri_abspath));
+  {
+    static int count = 0;
+    const char *count_env_var = getenv("SVN_DEBUG_WORK_QUEUE");
+
+    if (count_env_var && ++count == atoi(count_env_var))
+      return svn_error_create(SVN_ERR_CANCELLED, NULL, "fake cancel");
+  }
+#endif
 
   while (TRUE)
     {
-      svn_wc__db_kind_t kind;
       apr_uint64_t id;
       svn_skel_t *work_item;
-      const struct work_item_dispatch *scan;
-
-      /* Stop work queue processing, if requested. A future 'svn cleanup'
-         should be able to continue the processing.  */
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
 
       svn_pool_clear(iterpool);
 
-      /* ### right now, we expect WRI_ABSPATH to exist. this section should
-         ### disappear in single-db. also, note that db_wq_fetch() will
-         ### watch out for missing/obstructed subdirs (ie. wq is gone)  */
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, wri_abspath, TRUE,
-                                   scratch_pool));
-      if (kind == svn_wc__db_kind_unknown)
-        break;
+      /* Make sure to do this *early* in the loop iteration. There may
+         be a LAST_ID that needs to be marked as completed, *before* we
+         start worrying about anything else.  */
+      SVN_ERR(svn_wc__db_wq_fetch_next(&id, &work_item, db, wri_abspath,
+                                       last_id, iterpool, iterpool));
 
-      SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
-                                  iterpool, iterpool));
+      /* Stop work queue processing, if requested. A future 'svn cleanup'
+         should be able to continue the processing. Note that we may
+         have WORK_ITEM, but we'll just skip its processing for now.  */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      /* If we have a WORK_ITEM, then process the sucker. Otherwise,
+         we're done.  */
       if (work_item == NULL)
         break;
+      SVN_ERR(dispatch_work_item(db, wri_abspath, work_item,
+                                 cancel_func, cancel_baton, iterpool));
 
-      /* Scan the dispatch table for a function to handle this work item.  */
-      for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
-        {
-          if (svn_skel__matches_atom(work_item->children, scan->name))
-            {
-              SVN_ERR((*scan->func)(db, work_item,
-                                    cancel_func, cancel_baton,
-                                    iterpool));
-              break;
-            }
-        }
-
-      if (scan->name == NULL)
-        {
-          /* We should know about ALL possible work items here. If we do not,
-             then something is wrong. Most likely, some kind of format/code
-             skew. There is nothing more we can do. Erasing or ignoring this
-             work item could leave the WC in an even more broken state.
-
-             Contrary to issue #1581, we cannot simply remove work items and
-             continue, so bail out with an error.  */
-          return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                                   _("Unrecognized work item in the queue "
-                                     "associated with '%s'"),
-                                   svn_dirent_local_style(wri_abspath,
-                                                          iterpool));
-        }
-
-      SVN_ERR(svn_wc__db_wq_completed(db, wri_abspath, id, iterpool));
+      /* The work item finished without error. Mark it completed
+         in the next loop.  */
+      last_id = id;
     }
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+
+svn_skel_t *
+svn_wc__wq_merge(svn_skel_t *work_item1,
+                 svn_skel_t *work_item2,
+                 apr_pool_t *result_pool)
+{
+  /* If either argument is NULL, then just return the other.  */
+  if (work_item1 == NULL)
+    return work_item2;
+  if (work_item2 == NULL)
+    return work_item1;
+
+  /* We have two items. Figure out how to join them.  */
+  if (SVN_WC__SINGLE_WORK_ITEM(work_item1))
+    {
+      if (SVN_WC__SINGLE_WORK_ITEM(work_item2))
+        {
+          /* Both are singular work items. Construct a list, then put
+             both work items into it (in the proper order).  */
+
+          svn_skel_t *result = svn_skel__make_empty_list(result_pool);
+
+          svn_skel__prepend(work_item2, result);
+          svn_skel__prepend(work_item1, result);
+          return result;
+        }
+
+      /* WORK_ITEM2 is a list of work items. We can simply shove WORK_ITEM1
+         in the front to keep the ordering.  */
+      svn_skel__prepend(work_item1, work_item2);
+      return work_item2;
+    }
+  /* WORK_ITEM1 is a list of work items.  */
+
+  if (SVN_WC__SINGLE_WORK_ITEM(work_item2))
+    {
+      /* Put WORK_ITEM2 onto the end of the WORK_ITEM1 list.  */
+      svn_skel__append(work_item1, work_item2);
+      return work_item1;
+    }
+
+  /* We have two lists of work items. We need to chain all of the work
+     items into one big list. We will leave behind the WORK_ITEM2 skel,
+     as we only want its children.  */
+  svn_skel__append(work_item1, work_item2->children);
+  return work_item1;
 }

@@ -66,7 +66,7 @@ typedef svn_error_t *(*svn_iter_apr_hash_cb_t)(void *baton,
  * If @a func returns an error other than @c SVN_ERR_ITER_BREAK, that
  * error is returned.  When @a func returns @c SVN_ERR_ITER_BREAK,
  * iteration is interrupted, but no error is returned and @a *completed is
- * set to @c FALSE.
+ * set to @c FALSE (even if this iteration was the last one).
  *
  * @since New in 1.5.
  */
@@ -102,7 +102,7 @@ typedef svn_error_t *(*svn_iter_apr_array_cb_t)(void *baton,
  * If @a func returns an error other than @c SVN_ERR_ITER_BREAK, that
  * error is returned.  When @a func returns @c SVN_ERR_ITER_BREAK,
  * iteration is interrupted, but no error is returned and @a *completed is
- * set to @c FALSE.
+ * set to @c FALSE (even if this iteration was the last one).
  *
  * @since New in 1.5.
  */

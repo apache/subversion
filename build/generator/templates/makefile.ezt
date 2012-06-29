@@ -1,4 +1,25 @@
-# DO NOT EDIT -- AUTOMATICALLY GENERATED
+[define COPYRIGHT]
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+[end]# DO NOT EDIT -- AUTOMATICALLY GENERATED
 
 ########################################
 # Section 1: Global make variables
@@ -16,6 +37,8 @@ BDB_TEST_PROGRAMS =[for bdb_test_progs] [bdb_test_progs][end]
 TEST_DEPS =[for test_deps] [test_deps][end]
 
 TEST_PROGRAMS =[for test_progs] [test_progs][end]
+
+check-deps test-deps: [for test_helpers] [test_helpers][end]
 
 MANPAGES =[for manpages] [manpages][end]
 
@@ -52,8 +75,17 @@ autogen-swig: autogen-swig-[swig_langs.short]
 # Section 4: Rules to build SWIG .c files from .i files
 ########################################
 [for swig_c]
-[swig_c.c_file]:[for swig_c.deps] [swig_c.deps][end]
+[swig_c.c_file]: .swig_checked [for swig_c.deps] [swig_c.deps][end]
 	$(SWIG) $(SWIG_INCLUDES) [swig_c.opts] -o $@ $(top_srcdir)/[swig_c.source][end]
+
+# This needs to be here, rather than in Makefile.in, else
+# './autogen.sh --release' doesn't find it.
+.swig_checked:
+	@if [ "$(SWIG)" = "none" ]; then \
+	  echo "SWIG disabled at configure time" >&2; \
+	  exit 1; \
+	fi
+	@touch .swig_checked
 
 
 ########################################
@@ -96,11 +128,12 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 [for areas]
 [is areas.type "apache-mod"]install-mods-shared:[for areas.files] [areas.files.fullname][end][for areas.files]
 	cd [areas.files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.files.name] [areas.files.filename][end]
-[else]install-[areas.type]: [for areas.files][if-index areas.files first][else] [end][areas.files.fullname][end]
+[else]install-[areas.type]: [for areas.files][if-index areas.files first][else] [end][areas.files.fullname][end] [for areas.apache_files] [areas.apache_files.fullname][end]
 	$(MKDIR) $(DESTDIR)$([areas.varname]dir)[for areas.files][is areas.type "locale"]
 	$(MKDIR) [areas.files.installdir]
 	cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] [areas.files.installdir]/$(PACKAGE_NAME)[areas.files.objext][else]
-	cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][end][end]
+	cd [areas.files.dirname] ; $(INSTALL_[areas.uppervar]) [areas.files.filename] $(DESTDIR)[areas.files.install_fname][end][end][for areas.apache_files]
+	cd [areas.apache_files.dirname] ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n [areas.apache_files.name] [areas.apache_files.filename][end]
 [if-any areas.extra_install]	$(INSTALL_EXTRA_[areas.uppervar])
 [end][end][end]
 

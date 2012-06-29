@@ -1,6 +1,26 @@
-import unittest, os, setup_path
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+import unittest, setup_path
 
-from svn import core, repos, fs, delta, client, ra
+from svn import core, repos, fs, delta, ra
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -9,8 +29,7 @@ else:
   # Python <3.0
   from StringIO import StringIO
 
-from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH, REPOS_URL
+import utils
 
 class SubversionRepositoryAccessTestCase(unittest.TestCase):
   """Test cases for the Subversion repository layer"""
@@ -18,24 +37,23 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
-    # Isolate each test from the others with a fresh repository.
-    # Eventually, we should move this into a shared TestCase base
-    # class that all test cases in this directory can use.
-    SubversionRepositoryTestSetup().setUp()
-
     ra.initialize()
+    self.temper = utils.Temper()
+    # Isolate each test from the others with a fresh repository.
 
     # Open repository directly for cross-checking
-    self.repos = repos.open(REPOS_PATH)
+    (self.repos, _, self.repos_uri) = self.temper.alloc_known_repo(
+      'trac/versioncontrol/tests/svnrepos.dump', suffix='-ra')
     self.fs = repos.fs(self.repos)
 
     self.callbacks = ra.Callbacks()
-    self.ra_ctx = ra.open2(REPOS_URL, self.callbacks, None, None)
+    self.ra_ctx = ra.open2(self.repos_uri, self.callbacks, {})
 
   def tearDown(self):
     self.ra_ctx = None
     self.fs = None
     self.repos = None
+    self.temper.cleanup()
 
   def test_get_file(self):
     # Test getting the properties of a file
@@ -53,7 +71,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
   def test_get_repos_root(self):
     root = ra.get_repos_root(self.ra_ctx)
-    self.assertEqual(root,REPOS_URL)
+    self.assertEqual(root,self.repos_uri)
 
   def test_get_uuid(self):
     ra_uuid = ra.get_uuid(self.ra_ctx)
@@ -63,10 +81,10 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def test_get_latest_revnum(self):
     ra_revnum = ra.get_latest_revnum(self.ra_ctx)
     fs_revnum = fs.youngest_rev(self.fs)
-    self.assertEqual(ra_revnum,fs_revnum)
+    self.assertEqual(ra_revnum, fs_revnum)
 
   def test_get_dir2(self):
-    (dirents,_,props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
+    (dirents, _, props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
     self.assert_('trunk' in dirents)
     self.assert_('branches' in dirents)
     self.assert_('tags' in dirents)
@@ -76,14 +94,15 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assert_(core.SVN_PROP_ENTRY_UUID in props)
     self.assert_(core.SVN_PROP_ENTRY_LAST_AUTHOR in props)
 
-    (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
+    (dirents, _, _) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
 
     self.assertEqual(dirents, {})
 
-    (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 10, core.SVN_DIRENT_KIND)
+    (dirents, _, _) = ra.get_dir2(self.ra_ctx, 'trunk', 10,
+                                  core.SVN_DIRENT_KIND)
 
     self.assert_('README2.txt' in dirents)
-    self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
+    self.assertEqual(dirents['README2.txt'].kind, core.svn_node_file)
 
   def test_commit3(self):
     commit_info = []
@@ -218,7 +237,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         def __init__(self):
             self.textdeltas = []
 
-        def apply_textdelta(self, file_baton, base_checksum):
+        def apply_textdelta(self, file_baton, base_checksum, pool=None):
             def textdelta_handler(textdelta):
                 if textdelta is not None:
                     self.textdeltas.append(textdelta)
@@ -232,10 +251,11 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     sess_url = ra.get_session_url(self.ra_ctx)
     try:
-        ra.reparent(self.ra_ctx, REPOS_URL+"/trunk")
+        ra.reparent(self.ra_ctx, self.repos_uri+"/trunk")
         reporter, reporter_baton = ra.do_diff2(self.ra_ctx, fs_revnum,
                                                "README.txt", 0, 0, 1,
-                                               REPOS_URL+"/trunk/README.txt",
+                                               self.repos_uri
+                                                 +"/trunk/README.txt",
                                                e_ptr, e_baton)
         reporter.set_path(reporter_baton, "", 0, True, None)
         reporter.finish_report(reporter_baton)
@@ -246,7 +266,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assertEqual(1, len(editor.textdeltas))
 
   def test_get_locations(self):
-    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, list(range(1,5)))
+    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, list(range(1, 5)))
     self.assertEqual(locations, {
         2: '/trunk/README.txt',
         3: '/trunk/README.txt',
@@ -356,17 +376,18 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
   def test_namestring(self):
     # Only ra-{neon,serf} support this right now.
-    if REPOS_URL.startswith('http'):
+    if self.repos_uri.startswith('http'):
       called = [False]
       def cb(pool):
         called[0] = True
         return 'namestring_test'
       self.callbacks.get_client_string = cb
-      svn.ra.stat(self.ra_ctx, "", 1)
+      ra.stat(self.ra_ctx, "", 1)
       self.assert_(called[0])
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionRepositoryAccessTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

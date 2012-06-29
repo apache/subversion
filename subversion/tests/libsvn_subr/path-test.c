@@ -44,6 +44,12 @@
    representations */
 #define SVN_EMPTY_PATH ""
 
+/* This check must match the check on top of dirent_uri.c and
+   dirent_uri-tests.c */
+#if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
+#define SVN_USE_DOS_PATHS
+#endif
+
 static svn_error_t *
 test_path_is_child(apr_pool_t *pool)
 {
@@ -168,7 +174,7 @@ test_path_is_url(apr_pool_t *pool)
     { "//blah/blah",                      FALSE },
     { "://blah/blah",                     FALSE },
     { "a:abb://boo/",                     FALSE },
-    { "http://svn.collab.net/repos/svn",  TRUE  },
+    { "http://svn.apache.org/repos/asf/subversion",  TRUE  },
     { "scheme/with",                      FALSE },
     { "scheme/with:",                     FALSE },
     { "scheme/with:/",                    FALSE },
@@ -179,7 +185,7 @@ test_path_is_url(apr_pool_t *pool)
     { "file:/",                           FALSE },
     { "file:",                            FALSE },
     { "file",                             FALSE },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/foo",        FALSE },
     { "X:foo",         FALSE },
     { "X:",            FALSE },
@@ -436,7 +442,7 @@ test_path_join(apr_pool_t *pool)
     { "file:///X:", "bar", "file:///X:/bar" },
     { "file:///X:foo", "bar", "file:///X:foo/bar" },
     { "http://svn.dm.net", "repos", "http://svn.dm.net/repos" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
 /* These will fail, see issue #2028
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
     { "//srv",         "shr/fld", "//srv/shr/fld" },
@@ -524,7 +530,7 @@ test_path_join(apr_pool_t *pool)
   TEST_MANY((pool, SVN_EMPTY_PATH, "/", SVN_EMPTY_PATH, NULL), "/");
   TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "/", NULL), "/");
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
 /* These will fail, see issue #2028
   TEST_MANY((pool, "X:", "def", "ghi", NULL), "X:def/ghi");
   TEST_MANY((pool, "X:", SVN_EMPTY_PATH, "ghi", NULL), "X:ghi");
@@ -594,8 +600,7 @@ test_path_basename(apr_pool_t *pool)
     { "X:/abc", "abc" },
     { "X:", "X:" },
 
-#if defined(WIN32) || defined(__CYGWIN__)
-
+#ifdef SVN_USE_DOS_PATHS
 /* These will fail, see issue #2028
     { "X:/", "X:/" },
     { "X:abc", "abc" },
@@ -646,7 +651,7 @@ test_path_dirname(apr_pool_t *pool)
     { "/", "/" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "X:abc/def", "X:abc" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "//srv/shr/fld",  "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" },
 
@@ -794,7 +799,7 @@ test_path_canonicalize(apr_pool_t *pool)
     { "X:/foo",               "X:/foo" },
     { "X:",                   "X:" },
     { "X:foo",                "X:foo" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
@@ -807,9 +812,7 @@ test_path_canonicalize(apr_pool_t *pool)
     { "//server/share/",      "//server/share" },
     { "//server/SHare/",      "//server/SHare" },
     { "//SERVER/SHare/",      "//server/SHare" },
-/* These will fail, see issue #2028
     { "X:/",                  "X:/" },
-*/
 #else /* WIN32 or Cygwin */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
@@ -848,7 +851,7 @@ test_path_remove_component(apr_pool_t *pool)
     { "foo/bar",              "foo" },
     { "/foo/bar",             "/foo" },
     { "/foo",                 "/" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/foo/bar",           "X:/foo" },
     { "//srv/shr/fld",        "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" },
@@ -868,7 +871,7 @@ test_path_remove_component(apr_pool_t *pool)
   int i;
   svn_stringbuf_t *buf;
 
-  buf = svn_stringbuf_create("", pool);
+  buf = svn_stringbuf_create_empty(pool);
 
   i = 0;
   while (tests[i].path)
@@ -966,7 +969,7 @@ test_path_is_ancestor(apr_pool_t *pool)
     { "http://",        "http://test",     FALSE},
 */
     { "X:foo",           "X:bar",         FALSE},
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "//srv/shr",       "//srv",         FALSE},
     { "//srv/shr",       "//srv/shr/fld", TRUE },
     { "//srv",           "//srv/shr/fld", TRUE },
@@ -1066,7 +1069,7 @@ test_compare_paths(apr_pool_t *pool)
     { "X:foo",        "X:foo",         0},
     { "X:",           "X:foo",         -1},
     { "X:foo",        "X:",            1},
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "//srv/shr",    "//srv",         1},
     { "//srv/shr",    "//srv/shr/fld", -1 },
     { "//srv/shr/fld", "//srv/shr",    1 },
@@ -1124,12 +1127,12 @@ test_path_get_longest_ancestor(apr_pool_t *pool)
     { "http://test",    "http://taste",    ""},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", ""},
-    { "http://test",    "http://testF",    ""},
+    { "http://test",    "http://tests",    ""},
     { "http://",        "http://test",     ""},
     { "file:///A/C",    "file:///B/D",     ""},
     { "file:///A/C",    "file:///A/D",     "file:///A"},
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/",            "X:/",             "X:/"},
     { "X:/foo/bar/A/D/H/psi", "X:/foo/bar/A/B", "X:/foo/bar/A" },
     { "X:/foo/bar/boo", "X:/foo/bar/baz/boz", "X:/foo/bar"},
@@ -1341,7 +1344,7 @@ test_path_is_canonical(apr_pool_t *pool)
     { "fILe:///Users/jrandom/wc", FALSE },
     { "fiLE:///",              FALSE },
     { "fiLE://",               FALSE },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
     { "file:///C:/temp/REPOS", TRUE },
@@ -1386,18 +1389,17 @@ test_path_local_style(apr_pool_t *pool)
     { "",                     "." },
     { ".",                    "." },
     { "http://host/dir",      "http://host/dir" }, /* Not with local separator */
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "a:/",                 "A:\\" },
-    { "a:/file",             "A:\\file" },
+#ifdef SVN_USE_DOS_PATHS
+    { "A:/",                 "A:\\" },
+    { "a:/",                 "a:\\" },
+    { "A:/file",             "A:\\file" },
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
 #else
-    { "a:/",                 "a:" },
     { "a:/file",             "a:/file" },
     { "dir/file",            "dir/file" },
     { "/",                   "/" },
-    { "//server/share/dir",  "/server/share/dir" },
 #endif
     { NULL, NULL }
   };
@@ -1429,7 +1431,7 @@ test_path_internal_style(apr_pool_t *pool)
     { ".",                    "" },
     { "http://host/dir",      "http://host/dir" },
     { "/",                    "/" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "a:\\",                 "A:/" },
     { "a:\\file",             "A:/file" },
     { "dir\\file",            "dir/file" },
@@ -1464,7 +1466,7 @@ test_path_internal_style(apr_pool_t *pool)
 
 
 /* local define to support XFail-ing tests on Windows/Cygwin only */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
 #define WINDOWS_OR_CYGWIN TRUE
 #else
 #define WINDOWS_OR_CYGWIN FALSE

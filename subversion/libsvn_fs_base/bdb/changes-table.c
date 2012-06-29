@@ -39,6 +39,7 @@
 #include "changes-table.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 
@@ -167,6 +168,15 @@ fold_change(apr_hash_t *changes,
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
            _("Invalid change ordering: non-add change on deleted path"));
+
+      /* Sanity check: an add can't follow anything except
+         a delete or reset.  */
+      if ((change->kind == svn_fs_path_change_add)
+          && (old_change->change_kind != svn_fs_path_change_delete)
+          && (old_change->change_kind != svn_fs_path_change_reset))
+        return svn_error_create
+          (SVN_ERR_FS_CORRUPT, NULL,
+           _("Invalid change ordering: add change on preexisting path"));
 
       /* Now, merge that change in. */
       switch (change->kind)
@@ -315,14 +325,14 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
               /* KEY is the path. */
               const void *hashkey;
               apr_ssize_t klen;
+              const char *child_relpath;
+
               apr_hash_this(hi, &hashkey, &klen, NULL);
 
-              /* If we come across our own path, ignore it. */
-              if (strcmp(change->path, hashkey) == 0)
-                continue;
-
-              /* If we come across a child of our path, remove it. */
-              if (svn_uri_is_child(change->path, hashkey, subpool))
+              /* If we come across our own path, ignore it.
+                 If we come across a child of our path, remove it. */
+              child_relpath = svn_fspath__skip_ancestor(change->path, hashkey);
+              if (child_relpath && *child_relpath)
                 apr_hash_set(changes, hashkey, klen, NULL);
             }
         }
@@ -350,7 +360,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */
@@ -433,7 +443,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */

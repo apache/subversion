@@ -40,7 +40,7 @@
 HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
 /* Email address where the crash reports should be sent too. */
-#define CRASHREPORT_EMAIL "svn-breakage@subversion.tigris.org"
+#define CRASHREPORT_EMAIL "users@subversion.apache.org"
 
 #define DBGHELP_DLL "dbghelp.dll"
 
@@ -257,10 +257,10 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
   switch(length)
     {
       case 1:
-        sprintf(buf, "%x", *(unsigned char *)address);
+        sprintf(buf, "0x%02x", (int)*(unsigned char *)address);
         break;
       case 2:
-        sprintf(buf, "%x", *(unsigned short *)address);
+        sprintf(buf, "0x%04x", (int)*(unsigned short *)address);
         break;
       case 4:
         switch(basic_type)
@@ -270,7 +270,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
                 if (!IsBadStringPtr(*(PSTR*)address, 32))
                   sprintf(buf, "\"%.31s\"", *(unsigned long *)address);
                 else
-                  sprintf(buf, "%x", *(unsigned long *)address);
+                  sprintf(buf, "0x%08x", (int)*(unsigned long *)address);
               }
             case 6:  /* btInt */
               sprintf(buf, "%d", *(int *)address);
@@ -279,7 +279,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
               sprintf(buf, "%f", *(float *)address);
               break;
             default:
-              sprintf(buf, "%x", *(unsigned long *)address);
+              sprintf(buf, "0x%08x", *(unsigned long *)address);
               break;
           }
         break;
@@ -287,7 +287,10 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
         if (basic_type == 8) /* btFloat */
           sprintf(buf, "%lf", *(double *)address);
         else
-          sprintf(buf, "%I64X", *(unsigned __int64 *)address);
+          sprintf(buf, "0x%016I64X", *(unsigned __int64 *)address);
+        break;
+      default:
+        sprintf(buf, "[unhandled type 0x%08x of length 0x%08x]", basic_type, length);
         break;
     }
 }
@@ -297,7 +300,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
 static void
 format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
 {
-  DWORD tag;
+  DWORD tag = 0;
   int ptr = 0;
   HANDLE proc = GetCurrentProcess();
 
@@ -332,10 +335,12 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
                         type_name, *(DWORD *)value_addr);
               else
                 sprintf(value_str, "(%s **) 0x%08x",
-                        type_name, (DWORD *)value_addr);
+                        type_name, *(DWORD *)value_addr);
 
               free(type_name);
             }
+          else
+            sprintf(value_str, "[no symbol tag]");
         }
         break;
       case 16: /* SymTagBaseType */
@@ -349,17 +354,14 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
             {
               sprintf(value_str, "0x%08x \"%s\"",
                       *(DWORD *)value_addr, (char *)*(DWORD*)value_addr);
-              break;
             }
-          if (ptr >= 1)
+          else if (ptr >= 1)
             {
               sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
-              break;
             }
-          if (SymGetTypeInfo_(proc, mod_base, type, TI_GET_BASETYPE, &bt))
+          else if (SymGetTypeInfo_(proc, mod_base, type, TI_GET_BASETYPE, &bt))
             {
               format_basic_type(value_str, bt, length, value_addr);
-              break;
             }
         }
         break;
@@ -369,13 +371,15 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
       case 13: /* SymTagFunctionType */
           sprintf(value_str, "0x%08x", *(DWORD *)value_addr);
           break;
-      default: break;
+      default:
+          sprintf(value_str, "[unhandled tag: %d]", tag);
+          break;
     }
 }
 
 /* Internal structure used to pass some data to the enumerate symbols
  * callback */
-typedef struct {
+typedef struct symbols_baton_t {
   STACKFRAME64 *stack_frame;
   FILE *log_file;
   int nr_of_frame;

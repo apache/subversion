@@ -182,7 +182,7 @@ svn_auth_get_ssl_server_trust_file_provider
 
 /* Baton type for prompting to verify server ssl creds.
    There is no iteration baton type. */
-typedef struct
+typedef struct ssl_server_trust_prompt_provider_baton_t
 {
   svn_auth_ssl_server_trust_prompt_func_t prompt_func;
   void *prompt_baton;
@@ -208,11 +208,12 @@ ssl_server_trust_prompt_first_cred(void **credentials_p,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                  APR_HASH_KEY_STRING);
+  svn_boolean_t may_save = (!no_auth_cache
+                            && !(*failures & SVN_AUTH_SSL_OTHER));
 
-  SVN_ERR(pb->prompt_func((svn_auth_cred_ssl_server_trust_t **)
-                          credentials_p, pb->prompt_baton, realmstring,
-                          *failures, cert_info, ! no_auth_cache &&
-                          ! (*failures & SVN_AUTH_SSL_OTHER), pool));
+  SVN_ERR(pb->prompt_func((svn_auth_cred_ssl_server_trust_t **)credentials_p,
+                          pb->prompt_baton, realmstring, *failures, cert_info,
+                          may_save, pool));
 
   *iter_baton = NULL;
   return SVN_NO_ERROR;

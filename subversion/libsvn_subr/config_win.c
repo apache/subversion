@@ -130,12 +130,12 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
         {
           DWORD value_len = value->blocksize;
           err = RegQueryValueEx(hkey, option->data, NULL, NULL,
-                                value->data, &value_len);
+                                (LPBYTE)value->data, &value_len);
           if (err == ERROR_MORE_DATA)
             {
               svn_stringbuf_ensure(value, value_len);
               err = RegQueryValueEx(hkey, option->data, NULL, NULL,
-                                    value->data, &value_len);
+                                    (LPBYTE)value->data, &value_len);
             }
           if (err != ERROR_SUCCESS)
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
@@ -177,7 +177,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                "Unrecognised registry path '%s'",
-                               svn_path_local_style(file, pool));
+                               svn_dirent_local_style(file, pool));
     }
 
   err = RegOpenKeyEx(base_hkey, file, 0,
@@ -189,20 +189,20 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
       if (!is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  "Can't open registry key '%s'",
-                                 svn_path_local_style(file, pool));
+                                 svn_dirent_local_style(file, pool));
       else if (must_exist && is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  "Can't find registry key '%s'",
-                                 svn_path_local_style(file, pool));
+                                 svn_dirent_local_style(file, pool));
       else
         return SVN_NO_ERROR;
     }
 
 
   subpool = svn_pool_create(pool);
-  section = svn_stringbuf_create("", subpool);
-  option = svn_stringbuf_create("", subpool);
-  value = svn_stringbuf_create("", subpool);
+  section = svn_stringbuf_create_empty(subpool);
+  option = svn_stringbuf_create_empty(subpool);
+  value = svn_stringbuf_create_empty(subpool);
 
   /* The top-level values belong to the [DEFAULT] section */
   svn_err = parse_section(cfg, hkey, SVN_CONFIG__DEFAULT_SECTION,

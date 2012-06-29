@@ -121,4 +121,47 @@ public final class Depth
     {
         return (recurse ? unknown : immediates);
     }
+
+    public static org.apache.subversion.javahl.types.Depth toADepth(int depth)
+    {
+       switch(depth)
+       {
+            case infinity:
+                return org.apache.subversion.javahl.types.Depth.infinity;
+            case immediates:
+                return org.apache.subversion.javahl.types.Depth.immediates;
+            case files:
+                return org.apache.subversion.javahl.types.Depth.files;
+            case empty:
+                return org.apache.subversion.javahl.types.Depth.empty;
+            case exclude:
+                return org.apache.subversion.javahl.types.Depth.exclude;
+            case unknown:
+            default:
+                return org.apache.subversion.javahl.types.Depth.unknown;
+       }
+    }
+
+    public static int fromADepth(org.apache.subversion.javahl.types.Depth aDepth)
+    {
+        if (aDepth == null)
+          return unknown;
+
+        switch(aDepth)
+        {
+            case infinity:
+                return infinity;
+            case immediates:
+                return immediates;
+            case files:
+                return files;
+            case empty:
+                return empty;
+            case exclude:
+                return exclude;
+            case unknown:
+            default:
+                return unknown;
+        }
+    }
 }

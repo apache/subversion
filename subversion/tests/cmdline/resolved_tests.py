@@ -3,7 +3,7 @@
 #  resolved_tests.py:  testing "resolved" cases.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -32,13 +32,15 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
-  server_has_mergeinfo
+from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
 
 ######################################################################
 # Tests
@@ -112,6 +114,8 @@ def resolved_on_wc_root(sbox):
                        'A/B/lambda',
                        'A/B/E/alpha', 'A/B/E/beta',
                        'A/D/gamma')
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('A/B/E', 'A/B/F', 'A/B')
 
   expected_status = svntest.actions.get_virginal_state(wc, 2)
   expected_status.tweak('iota', 'A/B', 'A/D/gamma',
@@ -274,7 +278,11 @@ def resolved_on_deleted_item(sbox):
       'B'                 : Item(status='  ', treeconflict='C'),
       'D/gamma'           : Item(status='  ', treeconflict='C'),
     })
-
+  expected_mergeinfo_output = svntest.wc.State(A2, {
+      '' : Item(status=' U')
+    })
+  expected_elision_output = svntest.wc.State(A2, {
+    })
   expected_disk = svntest.wc.State('', {
       'mu'                : Item(contents="This is the file 'mu'.\n"),
       'D'                 : Item(),
@@ -310,11 +318,12 @@ def resolved_on_deleted_item(sbox):
     'C'                 : Item(status='  ', wc_rev='2'),
   })
 
-  svntest.actions.run_and_verify_merge(
-                       A2, None, None, A_url,
-                       expected_output, expected_disk, None, expected_skip,
-                       None,
-                       dry_run = False)
+  svntest.actions.run_and_verify_merge(A2, None, None, A_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk, None, expected_skip,
+                                       None, dry_run = False)
   svntest.actions.run_and_verify_unquiet_status(A2, expected_status)
 
 

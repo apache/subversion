@@ -78,7 +78,7 @@ int JNIByteArray::getLength()
  * Returns the bytes of the byte array.
  * @return the bytes
  */
-const signed char *JNIByteArray::getBytes()
+const signed char *JNIByteArray::getBytes() const
 {
   return m_data;
 }
@@ -87,7 +87,7 @@ const signed char *JNIByteArray::getBytes()
  * Returns if the byte array was not set.
  * @return if the byte array was not set
  */
-bool JNIByteArray::isNull()
+bool JNIByteArray::isNull() const
 {
   return m_data == NULL;
 }

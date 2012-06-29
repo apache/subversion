@@ -25,7 +25,7 @@
  */
 
 #include "BlameCallback.h"
-#include "ProplistCallback.h"
+#include "CreateJ.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 /**
@@ -45,8 +45,11 @@ BlameCallback::~BlameCallback()
   // in parameter to the Java SVNClient.blame method.
 }
 
+/* implements svn_client_blame_receiver3_t */
 svn_error_t *
 BlameCallback::callback(void *baton,
+                        svn_revnum_t start_revnum,
+                        svn_revnum_t end_revnum,
                         apr_int64_t line_no,
                         svn_revnum_t revision,
                         apr_hash_t *rev_props,
@@ -58,7 +61,8 @@ BlameCallback::callback(void *baton,
                         apr_pool_t *pool)
 {
   if (baton)
-    return ((BlameCallback *)baton)->singleLine(line_no, revision, rev_props,
+    return ((BlameCallback *)baton)->singleLine(start_revnum, end_revnum,
+                                                line_no, revision, rev_props,
                                                 merged_revision,
                                                 merged_rev_props, merged_path,
                                                 line, local_change, pool);
@@ -71,7 +75,8 @@ BlameCallback::callback(void *baton,
  * information was requested.  See the Java-doc for more information.
  */
 svn_error_t *
-BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
+BlameCallback::singleLine(svn_revnum_t start_revnum, svn_revnum_t end_revnum,
+                          apr_int64_t line_no, svn_revnum_t revision,
                           apr_hash_t *revProps, svn_revnum_t mergedRevision,
                           apr_hash_t *mergedRevProps, const char *mergedPath,
                           const char *line, svn_boolean_t localChange,
@@ -79,69 +84,54 @@ BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback3");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/BlameCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "singleLine",
                              "(JJLjava/util/Map;JLjava/util/Map;"
                              "Ljava/lang/String;Ljava/lang/String;Z)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // convert the parameters to their Java relatives
-  jobject jrevProps = ProplistCallback::makeMapFromHash(revProps, pool);
+  jobject jrevProps = CreateJ::PropertyMap(revProps);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   jobject jmergedRevProps = NULL;
   if (mergedRevProps != NULL)
     {
-      jmergedRevProps = ProplistCallback::makeMapFromHash(mergedRevProps, pool);
+      jmergedRevProps = CreateJ::PropertyMap(mergedRevProps);
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   jstring jmergedPath = JNIUtil::makeJString(mergedPath);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   jstring jline = JNIUtil::makeJString(line);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, (jlong)line_no, (jlong)revision,
                       jrevProps, (jlong)mergedRevision, jmergedRevProps,
                       jmergedPath, jline, (jboolean)localChange);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  // cleanup the temporary Java objects
-  env->DeleteLocalRef(jrevProps);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmergedRevProps);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmergedPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jline);
   // No need to check for an exception here, because we return anyway.
 
+  env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
 }

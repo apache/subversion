@@ -35,7 +35,7 @@ public class Path
      */
     static
     {
-        NativeResources.loadNativeLibrary();
+        org.apache.subversion.javahl.NativeResources.loadNativeLibrary();
     }
 
     /**
@@ -43,7 +43,24 @@ public class Path
      *
      * @return Whether Subversion can store the path in a repository.
      */
-    public static native boolean isValid(String path);
+    public static boolean isValid(String path)
+    {
+        try {
+            byte[] bytes = path.getBytes("UTF-8");
+
+            for (byte b : bytes)
+            {
+                if (b < 0x20)
+                    return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
+    }
 
     /**
      * Whether a URL is valid. Implementation may behave differently

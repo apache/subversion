@@ -31,11 +31,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#else
+#include <crtdbg.h>
 #endif
 
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
-#include <apr_atomic.h>         /* for apr_atomic_init */
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
 
@@ -48,7 +49,6 @@
 #include "svn_nls.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
-#include "svn_version.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_config.h"
@@ -73,6 +73,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   apr_status_t status;
   apr_pool_t *pool;
   svn_error_t *err;
+  char prefix_buf[64];  /* 64 is probably bigger than most program names */
 
 #ifndef WIN32
   {
@@ -124,7 +125,27 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #ifdef SVN_USE_WIN32_CRASHHANDLER
   /* Attach (but don't load) the crash handler */
   SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
-#endif
+
+#if _MSC_VER >= 1400
+  /* ### This should work for VC++ 2002 (=1300) and later */
+  /* Show the abort message on STDERR instead of a dialog to allow
+     scripts (e.g. our testsuite) to continue after an abort without
+     user intervention. Allow overriding for easier debugging. */
+  if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
+    {
+      /* In release mode: Redirect abort() errors to stderr */
+      _set_error_mode(_OUT_TO_STDERR);
+
+      /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
+         (Ignored in releas builds) */
+      _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
+      _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+      _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+      _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+    }
+#endif /* _MSC_VER >= 1400 */
+
+#endif /* SVN_USE_WIN32_CRASHHANDLER */
 
 #endif /* WIN32 */
 
@@ -177,11 +198,17 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       return EXIT_FAILURE;
     }
 
-  /* This has to happen before any pools are created. */
+  strncpy(prefix_buf, progname, sizeof(prefix_buf) - 3);
+  prefix_buf[sizeof(prefix_buf) - 3] = '\0';
+  strcat(prefix_buf, ": ");
+
+  /* DSO pool must be created before any other pools used by the
+     application so that pool cleanup doesn't unload DSOs too
+     early. See docstring of svn_dso_initialize2(). */
   if ((err = svn_dso_initialize2()))
     {
-      if (error_stream && err->message)
-        fprintf(error_stream, "%s", err->message);
+      if (error_stream)
+        svn_handle_error2(err, error_stream, TRUE, prefix_buf);
 
       svn_error_clear(err);
       return EXIT_FAILURE;
@@ -199,12 +226,12 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* Create a pool for use by the UTF-8 routines.  It will be cleaned
      up by APR at exit time. */
   pool = svn_pool_create(NULL);
-  svn_utf_initialize(pool);
+  svn_utf_initialize2(pool, FALSE);
 
   if ((err = svn_nls_init()))
     {
-      if (error_stream && err->message)
-        fprintf(error_stream, "%s", err->message);
+      if (error_stream)
+        svn_handle_error2(err, error_stream, TRUE, prefix_buf);
 
       svn_error_clear(err);
       return EXIT_FAILURE;
@@ -315,11 +342,17 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
 
   if (fputs(out, stream) == EOF)
     {
-      if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+      if (apr_get_os_error()) /* is errno on POSIX */
+        {
+          /* ### Issue #3014: Return a specific error for broken pipes,
+           * ### with a single element in the error chain. */
+          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+            return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
+          else
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
+        }
       else
-        return svn_error_create
-          (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+        return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -332,8 +365,15 @@ svn_cmdline_fflush(FILE *stream)
   errno = 0;
   if (fflush(stream) == EOF)
     {
-      if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+      if (apr_get_os_error()) /* is errno on POSIX */
+        {
+          /* ### Issue #3014: Return a specific error for broken pipes,
+           * ### with a single element in the error chain. */
+          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+            return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
+          else
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
+        }
       else
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }
@@ -354,7 +394,15 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
                               apr_pool_t *pool,
                               const char *prefix)
 {
-  svn_handle_error2(err, stderr, FALSE, prefix);
+  /* Issue #3014:
+   * Don't print anything on broken pipes. The pipe was likely
+   * closed by the process at the other end. We expect that
+   * process to perform error reporting as necessary.
+   *
+   * ### This assumes that there is only one error in a chain for
+   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+  if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+    svn_handle_error2(err, stderr, FALSE, prefix);
   svn_error_clear(err);
   if (pool)
     svn_pool_destroy(pool);
@@ -417,8 +465,8 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   apr_array_header_t *providers;
 
   /* Populate the registered providers with the platform-specific providers */
-  SVN_ERR(svn_auth_get_platform_specific_client_providers
-            (&providers, cfg, pool));
+  SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
+                                                          cfg, pool));
 
   /* If we have a cancellation function, cram it and the stuff it
      needs into the prompt baton. */
@@ -589,7 +637,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   const char *encoding = NULL;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
   if (svn_xml_is_xml_safe(propval->data, propval->len))
     {
@@ -661,7 +709,7 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
 
 svn_error_t *
 svn_cmdline__apply_config_options(apr_hash_t *config,
-                                  apr_array_header_t *config_options,
+                                  const apr_array_header_t *config_options,
                                   const char *prefix,
                                   const char *argument_name)
 {

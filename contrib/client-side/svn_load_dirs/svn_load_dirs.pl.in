@@ -1039,17 +1039,16 @@ while (defined (my $load_dir = &get_next_load_dir))
                     last if $property->{control} eq 'break';
                   }
               }
-          }
-
-        # Add svn:executable to files that have their executable bit
-        # set.
-        if ($source_is_exe and !$opt_no_auto_exe)
-          {
-            print "Adding to '$source_path' property 'svn:executable' with ",
-                  "value '*'.\n";
-            my $property = {name => 'svn:executable', value => '*'};
-            push (@{$add_files{$source_path}{properties}},
-                  $property);
+            # Add svn:executable to files that have their executable
+            # bit set.
+            if ($source_is_exe and !$opt_no_auto_exe)
+              {
+                print "Adding to '$source_path' property 'svn:executable' ",
+                      "with value '*'.\n";
+                my $property = {name => 'svn:executable', value => '*'};
+                push (@{$add_files{$source_path}{properties}},
+                      $property);
+              }
           }
 
         # Now make sure the file or directory in the source directory
@@ -1416,7 +1415,7 @@ sub make_targets_file
 
   foreach my $file (@_)
     {
-      print TARGETS "$file\n";
+      print TARGETS "$file\@\n";
     }
 
   close(TARGETS)

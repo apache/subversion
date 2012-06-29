@@ -31,6 +31,8 @@
 
 #include "client.h"
 
+#include "private/svn_fspath.h"
+#include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
 /* Get the directory entries of DIR at REV (relative to the root of
@@ -63,14 +65,23 @@ get_dir_contents(apr_uint32_t dirent_fields,
   apr_hash_t *tmpdirents;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *array;
+  svn_error_t *err;
   int i;
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
 
-  /* Get the directory's entries, but not its props. */
-  SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
-                          dir, rev, dirent_fields, pool));
+  /* Get the directory's entries, but not its props.  Ignore any
+     not-authorized errors.  */
+  err = svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
+                        dir, rev, dirent_fields, pool);
+  if (err && ((err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED) ||
+              (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -81,7 +92,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
     {
       svn_sort__item_t *item = &APR_ARRAY_IDX(array, i, svn_sort__item_t);
       const char *path;
-      svn_dirent_t *the_ent = apr_hash_get(tmpdirents, item->key, item->klen);
+      svn_dirent_t *the_ent = item->value;
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);
@@ -90,7 +101,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
       if (locks)
         {
-          const char *abs_path = svn_uri_join(fs_path, path, iterpool);
+          const char *abs_path = svn_fspath__join(fs_path, path, iterpool);
           lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
         }
       else
@@ -111,42 +122,21 @@ get_dir_contents(apr_uint32_t dirent_fields,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_list2(const char *path_or_url,
-                 const svn_opt_revision_t *peg_revision,
-                 const svn_opt_revision_t *revision,
-                 svn_depth_t depth,
-                 apr_uint32_t dirent_fields,
-                 svn_boolean_t fetch_locks,
-                 svn_client_list_func_t list_func,
-                 void *baton,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+/* Like svn_ra_stat() but with a compatibility hack for pre-1.2 svnserve. */
+static svn_error_t *
+ra_stat_compatible(svn_ra_session_t *ra_session,
+                   svn_revnum_t rev,
+                   svn_dirent_t **dirent_p,
+                   apr_uint32_t dirent_fields,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
-  svn_dirent_t *dirent;
-  const char *url;
-  const char *repos_root;
-  const char *fs_path;
+  const char *repos_root, *url;
   svn_error_t *err;
-  apr_hash_t *locks;
-
-  /* We use the kind field to determine if we should recurse, so we
-     always need it. */
-  dirent_fields |= SVN_DIRENT_KIND;
-
-  /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
-                                           peg_revision,
-                                           revision, ctx, pool));
+  svn_dirent_t *dirent;
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
-
-  SVN_ERR(svn_client__path_relative_to_root(&fs_path, ctx->wc_ctx, url,
-                                            repos_root, TRUE, ra_session,
-                                            pool, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &url, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 
@@ -170,16 +160,11 @@ svn_client_list2(const char *path_or_url,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_uri_split(url, &parent_url, &base_name, pool);
-
-              /* 'base_name' is now the last component of an URL, but we want
-                 to use it as a plain file name. Therefore, we must URI-decode
-                 it. */
-              base_name = svn_path_uri_decode(base_name, pool);
+              svn_uri_split(&parent_url, &base_name, url, pool);
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
-                                                           parent_url, NULL,
-                                                           NULL, FALSE,
+                                                           NULL, parent_url,
+                                                           NULL, NULL, FALSE,
                                                            TRUE, ctx, pool));
 
               /* Get all parent's entries, no props. */
@@ -233,19 +218,56 @@ svn_client_list2(const char *path_or_url,
         dirent = NULL;
     }
   else if (err)
-    return svn_error_return(err);
+    return svn_error_trace(err);
 
+  *dirent_p = dirent;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_list2(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_client_list_func_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_client__pathrev_t *loc;
+  svn_dirent_t *dirent;
+  const char *fs_path;
+  svn_error_t *err;
+  apr_hash_t *locks;
+
+  /* We use the kind field to determine if we should recurse, so we
+     always need it. */
+  dirent_fields |= SVN_DIRENT_KIND;
+
+  /* Get an RA plugin for this filesystem object. */
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            path_or_url, NULL,
+                                            peg_revision,
+                                            revision, ctx, pool));
+
+  fs_path = svn_client__pathrev_fspath(loc, pool);
+
+  SVN_ERR(ra_stat_compatible(ra_session, loc->rev, &dirent, dirent_fields,
+                             ctx, pool));
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("URL '%s' non-existent in that revision"),
-                             url);
+                             _("URL '%s' non-existent in revision %ld"),
+                             loc->url, loc->rev);
 
   /* Maybe get all locks under url. */
   if (fetch_locks)
     {
       /* IMPORTANT: If locks are stored in a more temporary pool, we need
          to fix store_dirent below to duplicate the locks. */
-      err = svn_ra_get_locks(ra_session, &locks, "", pool);
+      err = svn_ra_get_locks2(ra_session, &locks, "", depth, pool);
 
       if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
         {
@@ -253,7 +275,7 @@ svn_client_list2(const char *path_or_url,
           locks = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
   else
     locks = NULL;
@@ -268,7 +290,7 @@ svn_client_list2(const char *path_or_url,
       && (depth == svn_depth_files
           || depth == svn_depth_immediates
           || depth == svn_depth_infinity))
-    SVN_ERR(get_dir_contents(dirent_fields, "", rev, ra_session, locks,
+    SVN_ERR(get_dir_contents(dirent_fields, "", loc->rev, ra_session, locks,
                              fs_path, depth, ctx, list_func, baton, pool));
 
   return SVN_NO_ERROR;

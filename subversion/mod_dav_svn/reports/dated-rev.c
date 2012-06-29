@@ -1,5 +1,5 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * dated-rev.c: mod_dav_svn REPORT handler for mapping a date to a revision
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -80,9 +80,9 @@ dav_svn__dated_rev_report(const dav_resource *resource,
 
   if (tm == (apr_time_t) -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain a valid "
-                           "'DAV:" SVN_DAV__CREATIONDATE "' element.");
+      return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                                "The request does not contain a valid "
+                                "'DAV:" SVN_DAV__CREATIONDATE "' element.");
     }
 
   /* Do the actual work of finding the revision by date. */
@@ -90,8 +90,8 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                                       resource->pool)) != SVN_NO_ERROR)
     {
       svn_error_clear(err);
-      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           "Could not access revision times.");
+      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                "Could not access revision times.");
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);

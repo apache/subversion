@@ -1,5 +1,5 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * get-locks.c: mod_dav_svn REPORT handler for querying filesystem locks
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -41,7 +41,7 @@
 #include "../dav_svn.h"
 
 /* Respond to a get-locks-report request.  See description of this
-   report in libsvn_ra_dav/fetch.c.  */
+   report in libsvn_ra_neon/get_locks.c.  */
 
 
 #define SVN_APR_ERR(expr)                       \
@@ -186,23 +186,46 @@ dav_svn__get_locks_report(const dav_resource *resource,
   apr_status_t apr_err;
   apr_hash_t *locks;
   dav_svn__authz_read_baton arb;
+  svn_depth_t depth = svn_depth_unknown;
+  apr_xml_attr *this_attr;
 
   /* The request URI should be a public one representing an fs path. */
   if ((! resource->info->repos_path)
       || (! resource->info->repos->repos))
-    return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                         "get-locks-report run on resource which doesn't "
-                         "represent a path within a repository.");
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                              "get-locks-report run on resource which doesn't "
+                              "represent a path within a repository.");
 
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
+  /* See if the client provided additional information for this request. */
+  for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
+    {
+      if (strcmp(this_attr->name, "depth") == 0)
+        {
+          depth = svn_depth_from_word(this_attr->value);
+          if ((depth != svn_depth_empty) &&
+              (depth != svn_depth_files) &&
+              (depth != svn_depth_immediates) &&
+              (depth != svn_depth_infinity))
+            return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                                      "Invalid 'depth' specified in "
+                                      "get-locks-report request.");
+          continue;
+        }
+    }
+
+  /* For compatibility, our default depth is infinity. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   /* Fetch the locks, but allow authz_read checks to happen on each. */
-  if ((err = svn_repos_fs_get_locks(&locks,
-                                    resource->info->repos->repos,
-                                    resource->info->repos_path,
-                                    dav_svn__authz_read_func(&arb), &arb,
-                                    resource->pool)) != SVN_NO_ERROR)
+  if ((err = svn_repos_fs_get_locks2(&locks,
+                                     resource->info->repos->repos,
+                                     resource->info->repos_path, depth,
+                                     dav_svn__authz_read_func(&arb), &arb,
+                                     resource->pool)) != SVN_NO_ERROR)
     return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                 err->message, resource->pool);
 

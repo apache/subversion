@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "my-assertions"
 require "util"
 
@@ -112,7 +131,7 @@ class SvnCoreTest < Test::Unit::TestCase
     ver_num = vers.collect {|ver| ver.to_s}.join(".")
     assert_equal(ver_num, Svn::Core::VER_NUM)
     assert_equal("#{ver_num}#{Svn::Core::VER_NUMTAG}", Svn::Core::VER_NUMBER)
-    assert_equal("#{ver_num}#{Svn::Core::VER_TAG}", Svn::Core::VERSION)
+    assert_equal("#{Svn::Core::VER_NUMBER}#{Svn::Core::VER_TAG}", Svn::Core::VERSION)
   end
 
   def test_auth_parameter
@@ -774,55 +793,55 @@ EOM
   end
 
   def test_range_list_diff
-    range_list1 = Svn::Core::RangeList.new([5, 5, true], [9, 13, true])
+    range_list1 = Svn::Core::RangeList.new([4, 5, true], [9, 13, true])
     range_list2 = Svn::Core::RangeList.new([7, 11, true])
 
     deleted, added = range_list1.diff(range_list2)
     assert_equal([[7, 9, true]], added.collect {|range| range.to_a})
-    assert_equal([[5, 5, true], [11, 13, true]],
+    assert_equal([[4, 5, true], [11, 13, true]],
                  deleted.collect {|range| range.to_a})
   end
 
   def test_range_list_merge
-    range_list1 = Svn::Core::RangeList.new([5, 5, true],
-                                           [7, 7, true], [9, 13, true])
+    range_list1 = Svn::Core::RangeList.new([4, 5, true],
+                                           [7, 8, true], [9, 13, true])
     range_list2 = Svn::Core::RangeList.new([5, 9, true])
 
     merged = range_list1.merge(range_list2)
-    assert_equal([[5, 13, true]], merged.collect {|range| range.to_a})
+    assert_equal([[4, 13, true]], merged.collect {|range| range.to_a})
   end
 
   def test_range_list_remove
-    range_list1 = Svn::Core::RangeList.new([5, 5, true],
-                                           [7, 7, true], [9, 13, true])
-    range_list2 = Svn::Core::RangeList.new([5, 9, true])
+    range_list1 = Svn::Core::RangeList.new([4, 5, true],
+                                           [7, 8, true], [10, 13, true])
+    range_list2 = Svn::Core::RangeList.new([4, 9, true])
 
     removed = range_list1.remove(range_list2)
-    assert_equal([[9, 13, true]], removed.collect {|range| range.to_a})
+    assert_equal([[10, 13, true]], removed.collect {|range| range.to_a})
   end
 
   def test_range_list_intersect
-    range_list1 = Svn::Core::RangeList.new([5, 9, true])
-    range_list2 = Svn::Core::RangeList.new([5, 5, true],
-                                           [7, 7, true], [9, 13, true])
+    range_list1 = Svn::Core::RangeList.new([4, 9, true])
+    range_list2 = Svn::Core::RangeList.new([4, 5, true],
+                                           [7, 8, true], [9, 13, true])
 
     intersected = range_list1.intersect(range_list2)
-    assert_equal([[5, 5, true], [7, 7, true]],
+    assert_equal([[4, 5, true], [7, 8, true]],
                  intersected.collect {|range| range.to_a})
   end
 
   def test_range_list_reverse
-    range_list = Svn::Core::RangeList.new([5, 5, true],
-                                          [7, 7, true], [9, 13, true])
+    range_list = Svn::Core::RangeList.new([4, 5, true],
+                                          [7, 8, true], [10, 13, true])
 
     reversed = range_list.reverse
-    assert_equal([[13, 9, true], [7, 7, true], [5, 5, true]],
+    assert_equal([[13, 10, true], [8, 7, true], [5, 4, true]],
                  reversed.collect {|range| range.to_a})
   end
 
   def test_range_list_to_s
-    range_list = Svn::Core::RangeList.new([5, 5, true],
-                                          [7, 7, true], [9, 13, true])
+    range_list = Svn::Core::RangeList.new([4, 6, true],
+                                          [6, 8, true], [9, 13, true])
     expectation = "5-6,7-8,10-13"
     assert_equal(expectation, range_list.to_s)
     assert_not_equal(expectation, range_list.inspect)

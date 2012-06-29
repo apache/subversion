@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "util"
 
 require "svn/info"
@@ -19,15 +38,16 @@ class SvnInfoTest < Test::Unit::TestCase
     log = "test commit\nnew line"
     FileUtils.touch(path)
 
-    commit_info = make_context(log) do |ctx|
+    date, revision = make_context(log) do |ctx|
       ctx.add(path)
       commit_info = ctx.commit([@wc_path])
+      [commit_info.date, commit_info.revision]
     end
 
-    info = make_info(commit_info.revision)
+    info = make_info(revision)
     assert_equal(@author, info.author)
-    assert_equal(commit_info.date, info.date)
-    assert_equal(commit_info.revision, info.revision)
+    assert_equal(date, info.date)
+    assert_equal(revision, info.revision)
     assert_equal(log, info.log)
   end
 
@@ -38,16 +58,16 @@ class SvnInfoTest < Test::Unit::TestCase
     file_path = File.join(dir_path, file)
     log = "added dir"
 
-    commit_info = make_context(log) do |ctx|
+    revision = make_context(log) do |ctx|
       ctx.mkdir(dir_path)
       FileUtils.touch(file_path)
       ctx.add(file_path)
-      commit_info = ctx.commit(@wc_path)
+      ctx.commit(@wc_path).revision
     end
 
-    info = make_info(commit_info.revision)
+    info = make_info(revision)
     assert_equal(["/", "#{dir}/"], info.changed_dirs)
-    assert_equal(commit_info.revision, info.revision)
+    assert_equal(revision, info.revision)
     assert_equal(log, info.log)
   end
 
@@ -113,14 +133,13 @@ class SvnInfoTest < Test::Unit::TestCase
       assert_equal([].sort, info.deleted_dirs)
       assert_equal(["#{dir_svn_path}/", "#{tmp_dir_svn_path}/"].sort,
                    info.added_dirs)
-
-      File.open(file1_path, "w") {|f| f.puts "changed"}
-      File.open(file2_path, "w") {|f| f.puts "changed"}
-      File.open(file3_path, "w") {|f| f.puts "changed"}
     end
 
     log = "changed 3 files\ndeleted 2 files\nadded 3 files"
     make_context(log) do |ctx|
+      File.open(file1_path, "w") {|f| f.puts "changed"}
+      File.open(file2_path, "w") {|f| f.puts "changed"}
+      File.open(file3_path, "w") {|f| f.puts "changed"}
       ctx.rm_f([file4_path, file5_path])
       FileUtils.touch(file6_path)
       FileUtils.touch(file7_path)

@@ -38,6 +38,13 @@ svn_subr_version(void)
 svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
                                  const svn_version_t *lib_version)
 {
+  /* With normal development builds the matching rules are strict, to
+     avoid inadvertantly using the wrong libraries.  For backward
+     compatibility testing use --disable-full-version-match to
+     configure 1.7 and then the libraries that get built can be used
+     to replace those in 1.6 or earlier builds.  */
+
+#ifndef SVN_DISABLE_FULL_VERSION_MATCH
   if (lib_version->tag[0] != '\0')
     /* Development library; require exact match. */
     return svn_ver_equal(my_version, lib_version);
@@ -47,10 +54,11 @@ svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
     return (my_version->major == lib_version->major
             && my_version->minor == lib_version->minor
             && my_version->patch > lib_version->patch);
-  else
-    /* General compatibility rules for released versions. */
-    return (my_version->major == lib_version->major
-            && my_version->minor <= lib_version->minor);
+#endif
+
+  /* General compatibility rules for released versions. */
+  return (my_version->major == lib_version->major
+          && my_version->minor <= lib_version->minor);
 }
 
 

@@ -1,5 +1,6 @@
 /*
- * get-locations.c:  generate the 'get locations' report response.
+ * get-locations.c: mod_dav_svn REPORT handler for finding repos locations
+ *                  (path/revision pairs) in an object's history.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -37,6 +38,8 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -89,8 +92,7 @@ dav_svn__get_locations_report(const dav_resource *resource,
   dav_svn__authz_read_baton arb;
 
   /* The parameters to do the operation on. */
-  const char *relative_path = NULL;
-  const char *abs_path;
+  const char *abs_path = NULL;
   svn_revnum_t peg_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *location_revisions;
 
@@ -133,26 +135,26 @@ dav_svn__get_locations_report(const dav_resource *resource,
         }
       else if (strcmp(child->name, "path") == 0)
         {
-          relative_path = dav_xml_get_cdata(child, resource->pool, 0);
-          if ((derr = dav_svn__test_canonical(relative_path, resource->pool)))
+          const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an absolute
+             repository path. */
+          abs_path = svn_fspath__join(resource->info->repos_path, rel_path,
+                                      resource->pool);
         }
     }
 
-  /* Now we should have the parameters ready - let's
-     check if they are all present. */
-  if (! (relative_path && SVN_IS_VALID_REVNUM(peg_revision)))
-    {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                                    "Not all parameters passed.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
-    }
-
-  /* Append the relative path to the base FS path to get an absolute
-     repository path. */
-  abs_path = svn_path_join(resource->info->repos_path, relative_path,
-                           resource->pool);
+  /* Check that all parameters are present and valid. */
+  if (! (abs_path && SVN_IS_VALID_REVNUM(peg_revision)))
+    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                  "Not all parameters passed.",
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
 
   /* Build an authz read baton */
   arb.r = resource->info->r;

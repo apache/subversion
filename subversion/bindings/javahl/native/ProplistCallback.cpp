@@ -26,6 +26,7 @@
 
 #include "ProplistCallback.h"
 #include "JNIUtil.h"
+#include "CreateJ.h"
 #include "svn_time.h"
 
 /**
@@ -70,114 +71,40 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ProplistCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ProplistCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
       mid = env->GetMethodID(clazz, "singlePath",
                              "(Ljava/lang/String;Ljava/util/Map;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // convert the parameters to their Java relatives
   jstring jpath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
-  jobject jmap = NULL;
-  jmap = makeMapFromHash(prop_hash, pool);
+  jobject jmap = CreateJ::PropertyMap(prop_hash);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jpath, jmap);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  // cleanup the temporary Java objects
-  env->DeleteLocalRef(jpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmap);
   // We return whether an exception was thrown or not.
 
+  env->PopLocalFrame(NULL);
+
   return SVN_NO_ERROR;
-}
-
-jobject ProplistCallback::makeMapFromHash(apr_hash_t *prop_hash,
-                                          apr_pool_t *pool)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass("java/util/HashMap");
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  static jmethodID init_mid = 0;
-  if (init_mid == 0)
-    {
-      init_mid = env->GetMethodID(clazz, "<init>", "()V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  static jmethodID put_mid = 0;
-  if (put_mid == 0)
-    {
-      put_mid = env->GetMethodID(clazz, "put",
-                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
-                                 "Ljava/lang/Object;");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  jobject map = env->NewObject(clazz, init_mid);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  apr_hash_index_t *hi;
-  int i = 0;
-  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), ++i)
-    {
-      const char *key;
-      svn_string_t *val;
-
-      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
-
-      jstring jpropName = JNIUtil::makeJString(key);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      jstring jpropVal = JNIUtil::makeJString(val->data);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->CallObjectMethod(map, put_mid, jpropName, jpropVal);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jpropName);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jpropVal);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return map;
 }

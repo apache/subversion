@@ -34,25 +34,9 @@
 
 #include "../svn_test.h"
 
-/* Implements svn_cache__dup_func_t */
-static svn_error_t *
-dup_revnum(void **out,
-           const void *in,
-           apr_pool_t *pool)
-{
-  const svn_revnum_t *in_rn = in;
-  svn_revnum_t *duped = apr_palloc(pool, sizeof(*duped));
-
-  *duped = *in_rn;
-
-  *out = duped;
-
-  return SVN_NO_ERROR;
-}
-
 /* Implements svn_cache__serialize_func_t */
 static svn_error_t *
-serialize_revnum(char **data,
+serialize_revnum(void **data,
                  apr_size_t *data_len,
                  void *in,
                  apr_pool_t *pool)
@@ -67,15 +51,16 @@ serialize_revnum(char **data,
 /* Implements svn_cache__deserialize_func_t */
 static svn_error_t *
 deserialize_revnum(void **out,
-                   const char *data,
+                   void *data,
                    apr_size_t data_len,
                    apr_pool_t *pool)
 {
-  svn_revnum_t *in_rev, *out_rev;
+  const svn_revnum_t *in_rev = (const svn_revnum_t *) data;
+  svn_revnum_t *out_rev;
+
   if (data_len != sizeof(*in_rev))
     return svn_error_create(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                             _("Bad size for revision number in cache"));
-  in_rev = (svn_revnum_t *) data;
   out_rev = apr_palloc(pool, sizeof(*out_rev));
   *out_rev = *in_rev;
   *out = out_rev;
@@ -145,12 +130,14 @@ test_inprocess_cache_basic(apr_pool_t *pool)
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_inprocess(&cache,
-                                     dup_revnum,
-                                     APR_HASH_KEY_STRING,
-                                     1,
-                                     1,
-                                     TRUE,
-                                     pool));
+                                      serialize_revnum,
+                                      deserialize_revnum,
+                                      APR_HASH_KEY_STRING,
+                                      1,
+                                      1,
+                                      TRUE,
+                                      "",
+                                      pool));
 
   return basic_cache_test(cache, TRUE, pool);
 }
@@ -168,7 +155,8 @@ test_memcache_basic(const svn_test_opts_t *opts,
 
   if (opts->config_file)
     {
-      SVN_ERR(svn_config_read(&config, opts->config_file, TRUE, pool));
+      SVN_ERR(svn_config_read2(&config, opts->config_file,
+                               TRUE, FALSE, pool));
       SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
     }
 
@@ -189,6 +177,27 @@ test_memcache_basic(const svn_test_opts_t *opts,
   return basic_cache_test(cache, FALSE, pool);
 }
 
+static svn_error_t *
+test_membuffer_cache_basic(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1,
+                                            TRUE, pool));
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache,
+                                            membuffer,
+                                            serialize_revnum,
+                                            deserialize_revnum,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            FALSE,
+                                            pool));
+
+  return basic_cache_test(cache, FALSE, pool);
+}
 
 
 static svn_error_t *
@@ -214,7 +223,8 @@ test_memcache_long_key(const svn_test_opts_t *opts,
 
   if (opts->config_file)
     {
-      SVN_ERR(svn_config_read(&config, opts->config_file, TRUE, pool));
+      SVN_ERR(svn_config_read2(&config, opts->config_file,
+                               TRUE, FALSE, pool));
       SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
     }
 
@@ -257,5 +267,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "basic memcache svn_cache test"),
     SVN_TEST_OPTS_PASS(test_memcache_long_key,
                        "memcache svn_cache with very long keys"),
+    SVN_TEST_PASS2(test_membuffer_cache_basic,
+                   "basic membuffer svn_cache test"),
     SVN_TEST_NULL
   };

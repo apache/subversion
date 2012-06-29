@@ -37,22 +37,25 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Given an apache request R, a URI, and a ROOT_PATH to the svn
-   location block, process URI and return many things, allocated in
-   r->pool:
+/**
+   Given an apache request @a r, a @a uri, and a @a root_path to the svn
+   location block, process @a uri and return many things, allocated in
+   @a r->pool:
 
-   * CLEANED_URI:     The uri with duplicate and trailing slashes removed.
+   - @a cleaned_uri:    The uri with duplicate and trailing slashes removed.
 
-   * TRAILING_SLASH:  Whether the uri had a trailing slash on it.
+   - @a trailing_slash: Whether the uri had a trailing slash on it.
 
    Three special substrings of the uri are returned for convenience:
 
-   * REPOS_NAME:      The single path component that is the directory
-                      which contains the repository.
+   - @a repos_basename: The single path component that is the directory
+                      which contains the repository.  (Don't confuse
+                      this with the "repository name" as optionally
+                      defined via the SVNReposName directive!)
 
-   * RELATIVE_PATH:   The remaining imaginary path components.
+   - @a relative_path:  The remaining imaginary path components.
 
-   * REPOS_PATH:      The actual path within the repository filesystem, or
+   - @a repos_path:     The actual path within the repository filesystem, or
                       NULL if no part of the uri refers to a path in
                       the repository (e.g. "!svn/vcc/default" or
                       "!svn/bln/25").
@@ -62,29 +65,29 @@ extern "C" {
 
        /svn/repos/proj1/!svn/blah/13//A/B/alpha
 
-   In the SVNPath case, this function would receive a ROOT_PATH of
+   In the SVNPath case, this function would receive a @a root_path of
    '/svn/repos/proj1', and in the SVNParentPath case would receive a
-   ROOT_PATH of '/svn/repos'.  But either way, we would get back:
+   @a root_path of '/svn/repos'.  But either way, we would get back:
 
-     * CLEANED_URI:    /svn/repos/proj1/!svn/blah/13/A/B/alpha
-     * REPOS_NAME:     proj1
-     * RELATIVE_PATH:  /!svn/blah/13/A/B/alpha
-     * REPOS_PATH:     A/B/alpha
-     * TRAILING_SLASH: FALSE
+     - @a cleaned_uri:    /svn/repos/proj1/!svn/blah/13/A/B/alpha
+     - @a repos_basename: proj1
+     - @a relative_path:  /!svn/blah/13/A/B/alpha
+     - @a repos_path:     A/B/alpha
+     - @a trailing_slash: FALSE
 */
 AP_MODULE_DECLARE(dav_error *) dav_svn_split_uri(request_rec *r,
                                                  const char *uri,
                                                  const char *root_path,
                                                  const char **cleaned_uri,
                                                  int *trailing_slash,
-                                                 const char **repos_name,
+                                                 const char **repos_basename,
                                                  const char **relative_path,
                                                  const char **repos_path);
 
 
-/* Given an apache request R and a ROOT_PATH to the svn location
-   block sets *REPOS_PATH to the path of the repository on disk.
-*/
+/**
+ * Given an apache request @a r and a @a root_path to the svn location
+ * block, set @a *repos_path to the path of the repository on disk.  */
 AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r,
                                                       const char *root_path,
                                                       const char **repos_path);

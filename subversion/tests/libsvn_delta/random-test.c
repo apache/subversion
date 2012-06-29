@@ -57,7 +57,7 @@ static void init_params(apr_uint32_t *seed,
                         apr_uint32_t *maxlen, int *iterations,
                         int *dump_files, int *print_windows,
                         const char **random_bytes,
-                        apr_uint32_t *bytes_range,
+                        apr_size_t *bytes_range,
                         apr_pool_t *pool)
 {
   apr_getopt_t *opt;
@@ -80,7 +80,7 @@ static void init_params(apr_uint32_t *seed,
       switch (optch)
         {
         case 's':
-          *seed = atol(opt_arg);
+          *seed = (apr_uint32_t) atol(opt_arg);
           break;
         case 'l':
           *maxlen = atoi(opt_arg);
@@ -160,7 +160,7 @@ generate_random_file(apr_uint32_t maxlen,
                      apr_uint32_t subseed_base,
                      apr_uint32_t *seed,
                      const char *random_bytes,
-                     apr_uint32_t bytes_range,
+                     apr_size_t bytes_range,
                      int dump_files,
                      apr_pool_t *pool)
 {
@@ -189,7 +189,7 @@ generate_random_file(apr_uint32_t maxlen,
         {
           const int ch = (random_bytes
                           ? (unsigned)random_bytes[r % bytes_range]
-                          : r % bytes_range);
+                          : (int)(r % bytes_range));
           if (buf == end)
             {
               apr_size_t ignore_length;
@@ -198,7 +198,7 @@ generate_random_file(apr_uint32_t maxlen,
               buf = file_buffer;
             }
 
-          *buf++ = ch;
+          *buf++ = (char)ch;
           r = r * 1103515245 + 12345;
         }
     }
@@ -207,7 +207,6 @@ generate_random_file(apr_uint32_t maxlen,
     {
       apr_size_t ignore_length;
       apr_file_write_full(fp, file_buffer, buf - file_buffer, &ignore_length);
-      buf = file_buffer;
     }
   rewind_file(fp);
 
@@ -288,7 +287,8 @@ copy_tempfile(apr_file_t *fp, apr_pool_t *pool)
 static svn_error_t *
 random_test(apr_pool_t *pool)
 {
-  apr_uint32_t seed, bytes_range, maxlen;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
@@ -330,15 +330,17 @@ random_test(apr_pool_t *pool)
       stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
                                          delta_pool);
 
-      /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff2(&handler, &handler_baton, stream, 1,
+      /* Make stage 2: encode the text delta in svndiff format using
+                       varying compression levels. */
+      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, 1, i % 10,
                               delta_pool);
 
       /* Make stage 1: create the text delta.  */
-      svn_txdelta(&txdelta_stream,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream,
+                   svn_stream_from_aprfile(source, delta_pool),
+                   svn_stream_from_aprfile(target, delta_pool),
+                   FALSE,
+                   delta_pool);
 
       SVN_ERR(svn_txdelta_send_txstream(txdelta_stream,
                                         handler,
@@ -365,7 +367,8 @@ static svn_error_t *
 do_random_combine_test(apr_pool_t *pool,
                        apr_uint32_t *last_seed)
 {
-  apr_uint32_t seed, bytes_range, maxlen;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
@@ -412,21 +415,24 @@ do_random_combine_test(apr_pool_t *pool,
       stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
                                          delta_pool);
 
-      /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff2(&handler, &handler_baton, stream, 1,
+      /* Make stage 2: encode the text delta in svndiff format using
+                       varying compression levels. */
+      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, 1, i % 10,
                               delta_pool);
 
       /* Make stage 1: create the text deltas.  */
 
-      svn_txdelta(&txdelta_stream_A,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(middle, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream_A,
+                   svn_stream_from_aprfile(source, delta_pool),
+                   svn_stream_from_aprfile(middle, delta_pool),
+                   FALSE,
+                   delta_pool);
 
-      svn_txdelta(&txdelta_stream_B,
-                  svn_stream_from_aprfile(middle_copy, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream_B,
+                   svn_stream_from_aprfile(middle_copy, delta_pool),
+                   svn_stream_from_aprfile(target, delta_pool),
+                   FALSE,
+                   delta_pool);
 
       {
         svn_txdelta_window_t *window_A;

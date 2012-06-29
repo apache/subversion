@@ -3,7 +3,7 @@
 #  blame_tests.py:  testing line-by-line annotation.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,16 +25,22 @@
 ######################################################################
 
 # General modules
-import os, sys
+import os, sys, re
 
 # Our testing module
 import svntest
 from svntest.main import server_has_mergeinfo
 
+# For some basic merge setup used by blame -g tests.
+from merge_tests import set_up_branch
+
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 # Helper function to validate the output of a particular run of blame.
@@ -147,6 +153,7 @@ def blame_binary(sbox):
 # (change needed if the desired behavior is to
 #  run blame recursively on all the files in it)
 #
+@Issue(2154)
 def blame_directory(sbox):
   "annotating a directory not allowed"
 
@@ -210,7 +217,7 @@ def blame_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ['<?xml version="1.0"?>\n',
+  template = ['<?xml version="1.0" encoding="UTF-8"?>\n',
               '<blame>\n',
               '<target\n',
               '   path="' + file_path + '">\n',
@@ -243,8 +250,8 @@ def blame_in_xml(sbox):
 
 
 # For a line changed before the requested start revision, blame should not
-# print a revision number (as fixed in r8035) or crash (as it did with
-# "--verbose" before being fixed in r9890).
+# print a revision number (as fixed in r848109) or crash (as it did with
+# "--verbose" before being fixed in r849964).
 #
 def blame_on_unknown_revision(sbox):
   "blame lines from unknown revisions"
@@ -326,6 +333,7 @@ def blame_eol_styles(sbox):
 
   # do the test for each eol-style
   for eol in ['CR', 'LF', 'CRLF', 'native']:
+    svntest.main.run_svn(None, 'propdel', 'svn:eol-style', file_path)
     svntest.main.file_write(file_path, "This is no longer the file 'iota'.\n")
 
     for i in range(1,3):
@@ -454,6 +462,7 @@ def blame_ignore_eolstyle(sbox):
     'blame', '-x', '--ignore-eol-style', file_path)
 
 
+@SkipUnless(server_has_mergeinfo)
 def blame_merge_info(sbox):
   "test 'svn blame -g'"
 
@@ -462,10 +471,10 @@ def blame_merge_info(sbox):
 
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'trunk', 'iota')
+  mu_path = os.path.join(wc_dir, 'trunk', 'A', 'mu')
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
-    'blame', '-g', iota_path)
+    None, None, [], 'blame', '-g', iota_path)
 
   expected_blame = [
       { 'revision' : 2,
@@ -481,7 +490,47 @@ def blame_merge_info(sbox):
     ]
   parse_and_verify_blame(output, expected_blame, 1)
 
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, None, [], 'blame', '-g', '-r10:11', iota_path)
 
+  expected_blame = [
+      { 'revision' : None,
+        'author' : None,
+        'text' : "This is the file 'iota'.\n",
+        'merged' : 0,
+      },
+      { 'revision' : None,
+        'author' : None,
+        'text' : "'A' has changed a bit.\n",
+        'merged' : 0,
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame, 1)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, None, [], 'blame', '-g', '-r16:17', mu_path)
+
+  expected_blame = [
+      { 'revision' : None,
+        'author' : None,
+        'text' : "This is the file 'mu'.\n",
+        'merged' : 0,
+      },
+      { 'revision' : 16,
+        'author' : 'jrandom',
+        'text' : "Don't forget to look at 'upsilon', as well.\n",
+        'merged' : 1,
+      },
+      { 'revision' : 16,
+        'author' : 'jrandom',
+        'text' : "This is yet more content in 'mu'.\n",
+        'merged' : 1,
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame, 1)
+
+
+@SkipUnless(server_has_mergeinfo)
 def blame_merge_out_of_range(sbox):
   "don't look for merged files out of range"
 
@@ -510,6 +559,7 @@ def blame_merge_out_of_range(sbox):
   parse_and_verify_blame(output, expected_blame, 1)
 
 # test for issue #2888: 'svn blame' aborts over ra_serf
+@Issue(2888)
 def blame_peg_rev_file_not_in_head(sbox):
   "blame target not in HEAD with peg-revisions"
 
@@ -664,6 +714,150 @@ def blame_output_after_merge(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'blame', '-g', mu_path)
 
+  # Now test with -rN:M
+  expected_output = [ "     -          - New version of file 'mu'.\n",
+                      "     -          - 2nd line in file 'mu'.\n",
+                      "     7    jrandom new 3rd line in file 'mu'.\n",
+                      "     7    jrandom add 3.5 line in file 'mu'.\n",
+                      "     -          - 4th line in file 'mu'.\n",
+                      "     -          - 5th line in file 'mu'.\n",
+                      "     -          - 6th line in file 'mu'.\n"]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame',  '-r', '4:head', mu_path)
+
+  # Next test with the -g option with -rN:M
+  expected_output = [ "       -          - New version of file 'mu'.\n",
+                      "       -          - 2nd line in file 'mu'.\n",
+                      "G      -          - new 3rd line in file 'mu'.\n",
+                      "G      6    jrandom add 3.5 line in file 'mu'.\n",
+                      "       -          - 4th line in file 'mu'.\n",
+                      "       -          - 5th line in file 'mu'.\n",
+                      "       -          - 6th line in file 'mu'.\n"]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame', '-g', '-r', '6:head', mu_path)
+
+#----------------------------------------------------------------------
+
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+@Issue(3862)
+def merge_sensitive_blame_and_empty_mergeinfo(sbox):
+  "blame -g handles changes from empty mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox, True)
+
+  A_COPY_path   = os.path.join(wc_dir, 'A_COPY')
+  psi_path      = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  psi_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+
+  # Make an edit to A/D/H/psi in r3.
+  svntest.main.file_append(psi_path, "trunk edit in revision three.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+
+  # Merge r3 from A to A_COPY, reverse merge r3 from A/D/H/psi
+  # to A_COPY/D/H/psi, and commit as r4.  This results in empty
+  # mergeinfo on A_COPY/D/H/psi.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-c3',
+                       sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'merge', '-c-3',
+                       sbox.repo_url + '/A/D/H/psi', psi_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Sync merge A to A_COPY excepting A_COPY/D/H/psi',
+                       wc_dir)
+
+  # Make an edit to A/D/H/psi in r5.
+  svntest.main.file_append(psi_path, "trunk edit in revision five.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+
+  # Sync merge A/D/H/psi to A_COPY/D/H/psi and commit as r6.  This replaces
+  # the empty mergeinfo on A_COPY/D/H/psi with '/A/D/H/psi:2-5'.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge',  sbox.repo_url + '/A/D/H/psi',
+                       psi_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Sync merge A/D/H/psi to A_COPY/D/H/psi', wc_dir)
+
+  # Check the blame -g output:
+  # Currently this test fails because the trunk edit done in r3 is
+  # reported as having been done in r5.
+  #
+  #   >svn blame -g A_COPY\D\H\psi
+  #          1    jrandom This is the file 'psi'.
+  #   G      5    jrandom trunk edit in revision three.
+  #   G      5    jrandom trunk edit in revision five.
+  expected_output = [
+      "       1    jrandom This is the file 'psi'.\n",
+      "G      3    jrandom trunk edit in revision three.\n",
+      "G      5    jrandom trunk edit in revision five.\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame', '-g', psi_COPY_path)
+
+def blame_multiple_targets(sbox):
+  "blame multiple target"
+
+  sbox.build()
+
+  def multiple_wc_targets():
+    "multiple wc targets"
+
+    # First, make a new revision of iota.
+    iota = os.path.join(sbox.wc_dir, 'iota')
+    non_existent = os.path.join(sbox.wc_dir, 'non-existent')
+    svntest.main.file_append(iota, "New contents for iota\n")
+    svntest.main.run_svn(None, 'ci',
+                         '-m', '', iota)
+
+    expected_output = [
+      "     1    jrandom This is the file 'iota'.\n",
+      "     2    jrandom New contents for iota\n",
+      ]
+
+    expected_err = ".*W155010.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'blame',
+                                                    non_existent, iota)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('blame failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    # First, make a new revision of iota.
+    iota = os.path.join(sbox.wc_dir, 'iota')
+    iota_url = sbox.repo_url + '/iota'
+    non_existent = sbox.repo_url + '/non-existent'
+    svntest.main.file_append(iota, "New contents for iota\n")
+    svntest.main.run_svn(None, 'ci',
+                         '-m', '', iota)
+
+    expected_output = [
+      "     1    jrandom This is the file 'iota'.\n",
+      "     2    jrandom New contents for iota\n",
+      ]
+
+    expected_err = ".*(W160017|W160013).*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'blame',
+                                                    non_existent, iota_url)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('blame failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  # Test one by one
+  multiple_wc_targets()
+  multiple_url_targets()
 
 ########################################################################
 # Run the tests
@@ -680,11 +874,13 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              SkipUnless(blame_merge_info, server_has_mergeinfo),
-              SkipUnless(blame_merge_out_of_range, server_has_mergeinfo),
+              blame_merge_info,
+              blame_merge_out_of_range,
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
               blame_output_after_merge,
+              merge_sensitive_blame_and_empty_mergeinfo,
+              blame_multiple_targets,
              ]
 
 if __name__ == '__main__':

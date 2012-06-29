@@ -1,3 +1,23 @@
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -5,14 +25,12 @@ if version_info[0] >= 3:
 else:
   # Python <3.0
   from cStringIO import StringIO
-import unittest, os, tempfile, shutil, setup_path, binascii
+import unittest, os, tempfile, setup_path, binascii
 import svn.diff
 from svn import core, repos, wc, client
 from svn import delta, ra
 from svn.core import SubversionException, SVN_INVALID_REVNUM
-
-from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH, REPOS_URL
+import utils
 
 class SubversionWorkingCopyTestCase(unittest.TestCase):
   """Test cases for the Subversion working copy layer"""
@@ -20,29 +38,27 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
-    # Isolate each test from the others with a fresh repository.
-    # Eventually, we should move this into a shared TestCase base
-    # class that all test cases in this directory can use.
-    SubversionRepositoryTestSetup().setUp()
+    self.temper = utils.Temper()
 
-    # Open repository directly for cross-checking
-    self.repos = repos.open(REPOS_PATH)
+    # Isolate each test from the others with a fresh repository.
+    (self.repos, _, self.repos_uri) = self.temper.alloc_known_repo(
+      'trac/versioncontrol/tests/svnrepos.dump', suffix='-wc-repo')
     self.fs = repos.fs(self.repos)
 
-    self.path = core.svn_dirent_internal_style(tempfile.mktemp())
+    self.path = self.temper.alloc_empty_dir(suffix='-wc-wc')
 
     client_ctx = client.create_context()
 
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    client.checkout2(REPOS_URL, self.path, rev, rev, True, True,
+    client.checkout2(self.repos_uri, self.path, rev, rev, True, True,
             client_ctx)
 
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
 
   def test_entry(self):
-      wc_entry = wc.entry(self.path, self.wc, True)
+      wc.entry(self.path, self.wc, True)
 
   def test_lock(self):
       readme_path = '%s/trunk/README.txt' % self.path
@@ -92,13 +108,13 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
       class MyReporter:
           def __init__(self):
-              self._finished_report = False
+              self.finished_report = False
 
           def abort_report(self, pool):
               pass
 
           def finish_report(self, pool):
-              self._finished_report = True
+              self.finished_report = True
 
           def set_path(self, path, revision, start_empty, lock_token, pool):
               set_paths.append(path)
@@ -122,7 +138,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                           True, True, False, notify, info)
 
       # Check that the report finished
-      self.assert_(reporter._finished_report)
+      self.assert_(reporter.finished_report)
       self.assertEqual([''], set_paths)
       self.assertEqual(1, len(infos))
 
@@ -139,7 +155,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assert_(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
-      self.assertEqual([REPOS_URL, 12],
+      self.assertEqual([self.repos_uri, 12],
                        wc.get_ancestry(self.path, self.wc))
 
   def test_status(self):
@@ -158,7 +174,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                                               target,
                                               None,  # SvnConfig
                                               True,  # recursive
-                                              False, # get_all
+                                              True, # get_all
                                               False, # no_ignore
                                               status_func,
                                               None,  # cancel_func
@@ -191,15 +207,18 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
               wc.get_prop_diffs(self.path, self.wc))
 
   def test_get_pristine_copy_path(self):
-      path_to_file = '%s/%s' % (self.path, 'foo')
-      path_to_text_base = '%s/%s/text-base/foo.svn-base' % (self.path,
-        wc.get_adm_dir())
-      self.assertEqual(path_to_text_base, wc.get_pristine_copy_path(path_to_file))
+      path_to_file = '%s/trunk/README.txt' % self.path
+      path_to_text_base = wc.get_pristine_copy_path(path_to_file)
+      text_base = open(path_to_text_base).read()
+      # TODO: This test should modify the working file first, to ensure the
+      # path isn't just the path to the working file.
+      self.assertEqual(text_base, 'A test.\n')
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
-
-      self.assertEqual(['', 'tags', 'branches', 'trunk'], list(entries.keys()))
+      keys = list(entries.keys())
+      keys.sort()
+      self.assertEqual(['', 'branches', 'tags', 'trunk'], keys)
 
   def test_get_ignores(self):
       self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
@@ -215,7 +234,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     # Setup ra_ctx.
     ra.initialize()
     callbacks = ra.Callbacks()
-    ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
+    ra_ctx = ra.open2(self.repos_uri, callbacks, None, None)
 
     # Get commit editor.
     commit_info = [None]
@@ -272,7 +291,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_diff_editor4(self):
     pool = None
     depth = core.svn_depth_infinity
-    url = REPOS_URL
+    url = self.repos_uri
 
     # cause file_changed: Replace README.txt's contents.
     readme_path = '%s/trunk/README.txt' % self.path
@@ -313,7 +332,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     got_prop_changes = []
     def props_changed(path, propchanges):
       for (name, value) in propchanges.items():
-        (kind, unused_prefix_len) = core.svn_property_kind(name)
+        (kind, _) = core.svn_property_kind(name)
         if kind != core.svn_prop_regular_kind:
           continue
         got_prop_changes.append((path[len(self.path) + 1:], name, value))
@@ -420,12 +439,13 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def tearDown(self):
       wc.adm_close(self.wc)
-      core.svn_io_remove_dir(self.path)
       self.fs = None
       self.repos = None
+      self.temper.cleanup()
 
 def suite():
-    return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionWorkingCopyTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

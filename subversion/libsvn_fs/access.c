@@ -87,7 +87,7 @@ svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
                               const char *token)
 {
   apr_hash_set(access_ctx->lock_tokens,
-               token, APR_HASH_KEY_STRING, (void *) path);
+               token, APR_HASH_KEY_STRING, path);
   return SVN_NO_ERROR;
 }
 

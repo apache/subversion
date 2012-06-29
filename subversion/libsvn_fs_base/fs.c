@@ -333,9 +333,10 @@ bdb_write_config(svn_fs_t *fs)
     "#\n"
     "# Make sure you read the documentation at:\n"
     "#\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/lock/max.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/lock_max.html\n"
     "#\n"
     "# before tweaking these values.\n"
+    "#\n"
     "set_lk_max_locks   2000\n"
     "set_lk_max_lockers 2000\n"
     "set_lk_max_objects 2000\n"
@@ -344,9 +345,9 @@ bdb_write_config(svn_fs_t *fs)
     "#\n"
     "# Make sure you read the documentation at:\n"
     "#\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_lg_bsize.html\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_lg_max.html\n"
-    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/limits.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/api_reference/C/envset_lg_bsize.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/api_reference/C/envset_lg_max.html\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_limits.html\n"
     "#\n"
     "# Increase the size of the in-memory log buffer from the default\n"
     "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
@@ -354,24 +355,28 @@ bdb_write_config(svn_fs_t *fs)
     "# space required for hot backups.  The size of the log file must be\n"
     "# at least four times the size of the in-memory log buffer.\n"
     "#\n"
-    "# Note: Decreasing the in-memory buffer size below 256 Kbytes\n"
-    "# will hurt commit performance. For details, see this post from\n"
-    "# Daniel Berlin <dan@dberlin.org>:\n"
+    "# Note: Decreasing the in-memory buffer size below 256 Kbytes will hurt\n"
+    "# hurt commit performance. For details, see:\n"
     "#\n"
-    "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
+    "#   http://svn.haxx.se/dev/archive-2002-02/0141.shtml\n"
+    "#\n"
     "set_lg_bsize     262144\n"
     "set_lg_max      1048576\n"
     "#\n"
     "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
-    "# See http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
-    "# and http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
+    "# For more information, see:\n"
+    "#\n"
+    "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_config.html\n"
+    "#   http://svn.haxx.se/users/archive-2004-10/1000.shtml\n"
+    "#\n"
     "set_lg_regionmax 131072\n"
     "#\n"
     /* ### Configure this with "svnadmin create --bdb-cache-size" */
     "# The default cache size in BDB is only 256k. As explained in\n"
-    "# http://svn.haxx.se/dev/archive-2004-12/0369.shtml, this is too\n"
+    "# http://svn.haxx.se/dev/archive-2004-12/0368.shtml, this is too\n"
     "# small for most applications. Bump this number if \"db_stat -m\"\n"
     "# shows too many cache misses.\n"
+    "#\n"
     "set_cachesize    0 1048576 1\n";
 
   /* Run-time configurable options.
@@ -397,11 +402,12 @@ bdb_write_config(svn_fs_t *fs)
       "# Disable fsync of log files on transaction commit. Read the\n"
       "# documentation about DB_TXN_NOSYNC at:\n"
       "#\n"
-      "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
+      "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_config.html\n"
       "#\n"
-      "# [requires Berkeley DB 4.0]\n",
+      "# [requires Berkeley DB 4.0]\n"
+      "#\n",
       /* inactive */
-      "# set_flags DB_TXN_NOSYNC\n",
+      "#set_flags DB_TXN_NOSYNC\n",
       /* active */
       "set_flags DB_TXN_NOSYNC\n" },
     /* Controlled by "svnadmin create --bdb-log-keep" */
@@ -411,11 +417,12 @@ bdb_write_config(svn_fs_t *fs)
       "# Enable automatic removal of unused transaction log files.\n"
       "# Read the documentation about DB_LOG_AUTOREMOVE at:\n"
       "#\n"
-      "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
+      "#   http://docs.oracle.com/cd/E17076_02/html/programmer_reference/log_config.html\n"
       "#\n"
-      "# [requires Berkeley DB 4.2]\n",
+      "# [requires Berkeley DB 4.2]\n"
+      "#\n",
       /* inactive */
-      "# set_flags DB_LOG_AUTOREMOVE\n",
+      "#set_flags DB_LOG_AUTOREMOVE\n",
       /* active */
       "set_flags DB_LOG_AUTOREMOVE\n" },
   };
@@ -466,15 +473,6 @@ bdb_write_config(svn_fs_t *fs)
 
 
 
-static svn_error_t *
-base_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
-{
-  /* Nothing to do here. */
-  return SVN_NO_ERROR;
-}
-
-
-
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
@@ -482,11 +480,9 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
   svn_fs_base__change_rev_prop,
-  svn_fs_base__get_uuid,
   svn_fs_base__set_uuid,
   svn_fs_base__revision_root,
   svn_fs_base__begin_txn,
-  svn_fs_base__begin_obliteration_txn,
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
@@ -650,6 +646,15 @@ open_databases(svn_fs_t *fs,
 }
 
 
+/* Called by functions that initialize an svn_fs_t struct, after that 
+   initialization is done, to populate svn_fs_t->uuid. */
+static svn_error_t *
+populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_fs_base__populate_uuid(fs, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
             apr_pool_t *common_pool)
@@ -657,20 +662,19 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   svn_error_t *svn_err;
 
-  /* See if we had an explicitly specified pre-1.5-compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 3;
-
-  /* See if we had an explicitly specified pre-1.5-compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 2;
-
-  /* See if we had an explicitly specified pre-1.4-compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 1;
+  /* See if compatibility with older versions was explicitly requested. */
+  if (fs->config)
+    {
+      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                                   APR_HASH_KEY_STRING))
+        format = 1;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 2;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 3;
+    }
 
   /* Create the environment and databases. */
   svn_err = open_databases(fs, TRUE, format, path, pool);
@@ -686,7 +690,9 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
-  return base_serialized_init(fs, common_pool, pool);
+
+  SVN_ERR(populate_opened_fs(fs, pool));
+  return SVN_NO_ERROR;;
 
 error:
   svn_error_clear(cleanup_fs(fs));
@@ -770,7 +776,8 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       if (svn_err) goto error;
     }
 
-  return base_serialized_init(fs, common_pool, pool);
+  SVN_ERR(populate_opened_fs(fs, pool));
+  return SVN_NO_ERROR;
 
  error:
   svn_error_clear(cleanup_fs(fs));
@@ -871,6 +878,19 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       svn_pool_destroy(subpool);
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_verify(svn_fs_t *fs, const char *path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_revnum_t start,
+            svn_revnum_t end,
+            apr_pool_t *pool,
+            apr_pool_t *common_pool)
+{
+  /* Verifying is currently a no op for BDB. */
   return SVN_NO_ERROR;
 }
 
@@ -1156,15 +1176,25 @@ copy_db_file_safely(const char *src_dir,
 
 
 static svn_error_t *
-base_hotcopy(const char *src_path,
+base_hotcopy(svn_fs_t *src_fs,
+             svn_fs_t *dst_fs,
+             const char *src_path,
              const char *dest_path,
              svn_boolean_t clean_logs,
+             svn_boolean_t incremental,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              apr_pool_t *pool)
 {
   svn_error_t *err;
   u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
   int format;
+
+  if (incremental)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("BDB repositories do not support incremental "
+                               "hotcopy"));
 
   /* Check the FS format number to be certain that we know how to
      hotcopy this FS.  Pre-1.2 filesystems did not have a format file (you
@@ -1272,7 +1302,7 @@ base_hotcopy(const char *src_path,
                    "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
-              return svn_error_return(err);
+              return svn_error_trace(err);
           }
       }
     svn_pool_destroy(subpool);
@@ -1291,7 +1321,7 @@ base_hotcopy(const char *src_path,
              "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
-        return svn_error_return(err);
+        return svn_error_trace(err);
     }
 
   /* Only now that the hotcopied filesystem is complete,
@@ -1343,6 +1373,7 @@ static fs_library_vtable_t library_vtable = {
   base_open,
   base_open_for_recovery,
   base_upgrade,
+  base_verify,
   base_delete_fs,
   base_hotcopy,
   base_get_description,

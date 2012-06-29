@@ -1,3 +1,22 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
+dnl
 # Miscellaneous additional macros for Subversion's own use.
 
 # SVN_CONFIG_NICE(FILENAME)
@@ -182,4 +201,45 @@ AC_DEFUN([SVN_REMOVE_STANDARD_LIB_DIRS],
   if test -n "$output_flags"; then
     printf "%s" "${output_flags# }"
   fi
+])
+
+AC_DEFUN([SVN_CHECK_FOR_ATOMIC_BUILTINS],
+[
+  AC_CACHE_CHECK([whether the compiler provides atomic builtins], [svn_cv_atomic_builtins],
+  [AC_TRY_RUN([
+  int main()
+  {
+      unsigned long long val = 1010, tmp, *mem = &val;
+
+      if (__sync_fetch_and_add(&val, 1010) != 1010 || val != 2020)
+          return 1;
+
+      tmp = val;
+
+      if (__sync_fetch_and_sub(mem, 1010) != tmp || val != 1010)
+          return 1;
+
+      if (__sync_sub_and_fetch(&val, 1010) != 0 || val != 0)
+          return 1;
+
+      tmp = 3030;
+
+      if (__sync_val_compare_and_swap(mem, 0, tmp) != 0 || val != tmp)
+          return 1;
+
+      if (__sync_lock_test_and_set(&val, 4040) != 3030)
+          return 1;
+
+      mem = &tmp;
+
+      if (__sync_val_compare_and_swap(&mem, &tmp, &val) != &tmp)
+          return 1;
+
+      __sync_synchronize();
+
+      if (mem != &val)
+          return 1;
+
+      return 0;
+  }], [svn_cv_atomic_builtins=yes], [svn_cv_atomic_builtins=no], [svn_cv_atomic_builtins=no])])
 ])

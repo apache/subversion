@@ -1,5 +1,6 @@
 /*
- * file_revs.c: handle the file-revs-report request and response
+ * file-revs.c: mod_dav_svn REPORT handler for transmitting a chain of
+ *              file revisions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -30,7 +31,9 @@
 #include "svn_base64.h"
 #include "svn_props.h"
 #include "svn_dav.h"
+
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -203,8 +206,9 @@ file_rev_handler(void *baton,
 
       base64_stream = dav_svn__make_base64_output_stream(frb->bb, frb->output,
                                                          pool);
-      svn_txdelta_to_svndiff2(&frb->window_handler, &frb->window_baton,
-                              base64_stream, frb->svndiff_version, pool);
+      svn_txdelta_to_svndiff3(&frb->window_handler, &frb->window_baton,
+                              base64_stream, frb->svndiff_version,
+                              dav_svn__get_compression_level(), pool);
       *window_handler = delta_window_handler;
       *window_baton = frb;
       /* Start the txdelta element wich will be terminated by the window
@@ -235,7 +239,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   int ns;
   struct file_rev_baton frb;
   dav_svn__authz_read_baton arb;
-  const char *path = NULL;
+  const char *abs_path = NULL;
 
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;
@@ -278,11 +282,24 @@ dav_svn__file_revs_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          path = svn_path_join(resource->info->repos_path, rel_path,
-                               resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          abs_path = svn_fspath__join(resource->info->repos_path, rel_path,
+                                      resource->pool);
         }
       /* else unknown element; skip it */
     }
+
+  /* Check that all parameters are present and valid. */
+  if (! abs_path)
+    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                  "Not all parameters passed.",
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
 
   frb.bb = apr_brigade_create(resource->pool,
                               output->c->bucket_alloc);
@@ -294,7 +311,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* Get the revisions and send them. */
   serr = svn_repos_get_file_revs2(resource->info->repos->repos,
-                                  path, start, end, include_merged_revisions,
+                                  abs_path, start, end, include_merged_revisions,
                                   dav_svn__authz_read_func(&arb), &arb,
                                   file_rev_handler, &frb, resource->pool);
 
@@ -331,7 +348,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   dav_svn__operational_log(resource->info,
-                           svn_log__get_file_revs(path, start, end,
+                           svn_log__get_file_revs(abs_path, start, end,
                                                   include_merged_revisions,
                                                   resource->pool));
 

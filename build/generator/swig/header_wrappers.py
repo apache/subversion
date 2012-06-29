@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 #
 # header_wrappers.py: Generates SWIG proxy wrappers around Subversion
@@ -45,7 +65,13 @@ class Generator(generator.swig.Generator):
       )
     makefile.write('SWIG_WRAPPERS = %s\n\n' % ' '.join(wrapper_fnames))
     for short_name in self.short.values():
-      makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
+      # swig-pl needs the '.swig_checked' target here; swig-rb and swig-py
+      # already reach it via a different dependency chain:
+      #
+      #    In build-outputs.mk, swig-py and swig-rb targets depend on *.la
+      #    targets, which depend on *.lo targets, which depend on *.c targets,
+      #    which depend on .swig_checked target.
+      makefile.write('autogen-swig-%s: .swig_checked $(SWIG_WRAPPERS)\n' % short_name)
     makefile.write('\n\n')
 
   def proxy_filename(self, include_filename):

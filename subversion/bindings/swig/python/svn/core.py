@@ -2,7 +2,7 @@
 # core.py: public Python interface for core components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.tigris.org for more information.
+# See http://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -27,6 +27,44 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 import sys
+__all__ = [
+  # Symbols that 'import *' used to pull (in 1.7)
+  'Pool',
+  'SVNSYNC_PROP_CURRENTLY_COPYING',
+  'SVNSYNC_PROP_FROM_URL',
+  'SVNSYNC_PROP_FROM_UUID',
+  'SVNSYNC_PROP_LAST_MERGED_REV',
+  'SVNSYNC_PROP_LOCK',
+  'SVNSYNC_PROP_PREFIX',
+  'SubversionException',
+  # 'apr_array_header_t',
+  # 'apr_file_open_stderr',
+  # 'apr_file_open_stdout',
+  # 'apr_file_t',
+  # 'apr_hash_t',
+  # 'apr_initialize',
+  # 'apr_pool_clear',
+  # 'apr_pool_destroy',
+  # 'apr_pool_t',
+  # 'apr_terminate',
+  # 'apr_time_ansi_put',
+  # 'run_app',
+
+  # Symbols defined explicitly below.
+  'SVN_IGNORED_REVNUM',
+  'SVN_INVALID_REVNUM',
+  'svn_path_compare_paths',
+  'svn_mergeinfo_merge',
+  'svn_mergeinfo_sort',
+  'svn_rangelist_merge',
+  'svn_rangelist_reverse',
+  # 'Stream',
+  # 'apr_initialize',
+  # 'apr_terminate',
+  'svn_pool_create',
+  'svn_pool_destroy',
+  'svn_pool_clear',
+]
 
 class SubversionException(Exception):
 
@@ -65,6 +103,15 @@ class SubversionException(Exception):
     self.child = child
     self.file = file
     self.line = line
+
+  def __str__(self):
+    dump = '%d - %s' % (self.apr_err, self.message)
+    if self.file != None:
+      dump = dump + '\n at %s:%d' % (self.file, self.line)
+    if self.child != None:
+      dump = dump + '\n' + self.child.__str__()
+
+    return dump
 
   @classmethod
   def _new_from_err_list(cls, errors):

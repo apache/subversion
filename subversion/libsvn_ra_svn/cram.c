@@ -50,7 +50,7 @@ static int hex_to_int(char c)
 
 static char int_to_hex(int v)
 {
-  return (v < 10) ? '0' + v : 'a' + (v - 10);
+  return (char)((v < 10) ? '0' + v : 'a' + (v - 10));
 }
 
 static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
@@ -63,7 +63,7 @@ static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
       h2 = hex_to_int(hexval[2 * i + 1]);
       if (h1 == -1 || h2 == -1)
         return FALSE;
-      hashval[i] = (h1 << 4) | h2;
+      hashval[i] = (unsigned char)((h1 << 4) | h2);
     }
   return TRUE;
 }

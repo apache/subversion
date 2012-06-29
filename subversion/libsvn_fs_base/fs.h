@@ -79,14 +79,11 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 /* Revision at which the repo started using forward deltas. */
 #define SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
 
-/* Next filesystem-global unique identifier value (base36). */
-#define SVN_FS_BASE__MISC_NEXT_FSGUID            "next-fsguid"
-
 
 
 /*** The filesystem structure.  ***/
 
-typedef struct
+typedef struct base_fs_data_t
 {
   /* A Berkeley DB environment for all the filesystem's databases.
      This establishes the scope of the filesystem's transactions.  */
@@ -111,9 +108,6 @@ typedef struct
      transaction trail alive. */
   svn_boolean_t in_txn_trail;
 
-  /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
-  const char *uuid;
-
   /* The format number of this FS. */
   int format;
 
@@ -121,7 +115,7 @@ typedef struct
 
 
 /*** Filesystem Revision ***/
-typedef struct
+typedef struct revision_t
 {
   /* id of the transaction that was committed to create this
      revision. */
@@ -131,7 +125,7 @@ typedef struct
 
 
 /*** Transaction Kind ***/
-typedef enum
+typedef enum transaction_kind_t
 {
   transaction_kind_normal = 1,  /* normal, uncommitted */
   transaction_kind_committed,   /* committed */
@@ -141,7 +135,7 @@ typedef enum
 
 
 /*** Filesystem Transaction ***/
-typedef struct
+typedef struct transaction_t
 {
   /* kind of transaction. */
   transaction_kind_t kind;
@@ -169,7 +163,7 @@ typedef struct
 
 
 /*** Node-Revision ***/
-typedef struct
+typedef struct node_revision_t
 {
   /* node kind */
   svn_node_kind_t kind;
@@ -220,7 +214,7 @@ typedef struct
 
 
 /*** Representation Kind ***/
-typedef enum
+typedef enum rep_kind_t
 {
   rep_kind_fulltext = 1, /* fulltext */
   rep_kind_delta         /* delta */
@@ -229,7 +223,7 @@ typedef enum
 
 
 /*** "Delta" Offset/Window Chunk ***/
-typedef struct
+typedef struct rep_delta_chunk_t
 {
   /* diff format version number ### at this point, "svndiff" is the
      only format used. */
@@ -254,7 +248,7 @@ typedef struct
 
 
 /*** Representation ***/
-typedef struct
+typedef struct representation_t
 {
   /* representation kind */
   rep_kind_t kind;
@@ -298,7 +292,7 @@ typedef struct
 
 
 /*** Copy Kind ***/
-typedef enum
+typedef enum copy_kind_t
 {
   copy_kind_real = 1, /* real copy */
   copy_kind_soft      /* soft copy */
@@ -307,7 +301,7 @@ typedef enum
 
 
 /*** Copy ***/
-typedef struct
+typedef struct copy_t
 {
   /* What kind of copy occurred. */
   copy_kind_t kind;
@@ -325,7 +319,7 @@ typedef struct
 
 
 /*** Change ***/
-typedef struct
+typedef struct change_t
 {
   /* Path of the change. */
   const char *path;
@@ -344,7 +338,7 @@ typedef struct
 
 
 /*** Lock node ***/
-typedef struct
+typedef struct lock_node_t
 {
   /* entries list, maps (const char *) name --> (const char *) lock-node-id */
   apr_hash_t *entries;

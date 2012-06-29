@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 import os, re, sys
 
@@ -32,7 +52,7 @@ def parse_translation(f):
         line = f.readline()
         if line[0] != '"':
             break
-        msgid += '\n' + line[:-1]
+        msgid = msgid[:-1] + line[1:-1]
 
     # Parse optional msgid_plural
     msgid_plural = None
@@ -44,7 +64,7 @@ def parse_translation(f):
             line = f.readline()
             if line[0] != '"':
                 break
-            msgid_plural += '\n' + line[:-1]
+            msgid_plural = msgid_plural[:-1] + line[1:-1]
 
     # Parse msgstr
     msgstr = []
@@ -97,13 +117,13 @@ def main(argv):
         argv0 = os.path.basename(argv[0])
         sys.exit('Usage: %s <lang.po>\n'
                  '\n'
-                 'This script will replace the translations and flags in lang.po with\n'
-                 'the translations and flags in the source po file read from standard\n'
-                 'input.  Strings that are not found in the source file are left untouched.\n'
+                 'This script will replace the translations and flags in lang.po (LF line endings)\n'
+                 'with the translations and flags in the source po file read from standard input.\n'
+                 'Strings that are not found in the source file are left untouched.\n'
                  'A backup copy of lang.po is saved as lang.po.bak.\n'
                  '\n'
                  'Example:\n'
-                 '    svn cat http://svn.collab.net/repos/svn/trunk/subversion/po/sv.po | \\\n'
+                 '    svn cat http://svn.apache.org/repos/asf/subversion/trunk/subversion/po/sv.po | \\\n'
                  '        %s sv.po' % (argv0, argv0))
 
     # Read the source po file into a hash

@@ -61,7 +61,7 @@ svn_cl__help(apr_getopt_t *os,
 
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.tigris.org/\n");
+     "For additional information, see http://subversion.apache.org/\n");
 
   char *help_header =
     apr_psprintf(pool, _(help_header_template), SVN_VER_NUMBER);

@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 105
 Content-length: 105
 
-K 7
-svn:log
-V 5
-stuff
 K 10
 svn:author
 V 6
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2005-11-05T00:11:07.194039Z
+K 7
+svn:log
+V 5
+stuff
 PROPS-END
 
 Node-path: tags
@@ -61,10 +61,6 @@ Revision-number: 2
 Prop-content-length: 111
 Content-length: 111
 
-K 7
-svn:log
-V 10
-more stuff
 K 10
 svn:author
 V 6
@@ -73,6 +69,10 @@ K 8
 svn:date
 V 27
 2005-11-05T00:11:18.910470Z
+K 7
+svn:log
+V 10
+more stuff
 PROPS-END
 
 Node-path: tags/a-tag

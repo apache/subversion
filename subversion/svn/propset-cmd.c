@@ -55,7 +55,6 @@ svn_cl__propset(apr_getopt_t *os,
   svn_string_t *propval = NULL;
   svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
-  int i;
 
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
      NULL, else PNAME alone will precede the targets.  Get a UTF-8
@@ -86,31 +85,28 @@ svn_cl__propset(apr_getopt_t *os,
   /* We only want special Subversion property values to be in UTF-8
      and LF line endings.  All other propvals are taken literally. */
   if (svn_prop_needs_translation(pname_utf8))
-    SVN_ERR(svn_subst_translate_string(&propval, propval,
-                                       opt_state->encoding, scratch_pool));
-  else
-    if (opt_state->encoding)
-      return svn_error_create
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("--encoding option applies only to textual"
-           " Subversion-controlled properties"));
+    SVN_ERR(svn_subst_translate_string2(&propval, NULL, NULL, propval,
+                                        opt_state->encoding, FALSE,
+                                        scratch_pool, scratch_pool));
+  else if (opt_state->encoding)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("--encoding option applies only to textual"
+         " Subversion-controlled properties"));
 
   /* Suck up all the remaining arguments into a targets array */
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
-
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Implicit "." is okay for revision properties; it just helps
      us find the right repository. */
   if (opt_state->revprop)
     svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -135,8 +131,6 @@ svn_cl__propset(apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      apr_pool_t *iterpool;
-
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
 
@@ -176,28 +170,13 @@ svn_cl__propset(apr_getopt_t *os,
             }
         }
 
-      iterpool = svn_pool_create(scratch_pool);
-      for (i = 0; i < targets->nelts; i++)
-        {
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
-          svn_commit_info_t *commit_info;
+      SVN_ERR(svn_client_propset_local(pname_utf8, propval, targets,
+                                       opt_state->depth, opt_state->force,
+                                       opt_state->changelists, ctx,
+                                       scratch_pool));
 
-          svn_pool_clear(iterpool);
-          SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset3
-                              (&commit_info, pname_utf8, propval, target,
-                               opt_state->depth, opt_state->force,
-                               SVN_INVALID_REVNUM, opt_state->changelists,
-                               NULL, ctx, iterpool),
-                              NULL, opt_state->quiet,
-                              SVN_ERR_UNVERSIONED_RESOURCE,
-                              SVN_ERR_ENTRY_NOT_FOUND,
-                              SVN_NO_ERROR));
-
-          if (! opt_state->quiet)
-            svn_cl__check_boolean_prop_val(pname_utf8, propval->data, iterpool);
-        }
-      svn_pool_destroy(iterpool);
+      if (! opt_state->quiet)
+        svn_cl__check_boolean_prop_val(pname_utf8, propval->data, scratch_pool);
     }
 
   return SVN_NO_ERROR;

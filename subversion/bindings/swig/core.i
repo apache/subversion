@@ -244,6 +244,7 @@
 %ignore svn_auth_kwallet_version;
 %ignore svn_auth_get_kwallet_simple_provider;
 %ignore svn_auth_get_kwallet_ssl_client_cert_pw_provider;
+%ignore svn_auth_get_gpg_agent_simple_provider;
 
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
@@ -350,12 +351,17 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) (char *buffer, apr_size_t *len) ($*2_type temp) {
-    if (!PyInt_Check($input)) {
+    if (PyLong_Check($input)) {
+        temp = PyLong_AsLong($input);
+    }
+    else if (PyInt_Check($input)) {
+        temp = PyInt_AsLong($input);
+    }
+    else {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
         SWIG_fail;
     }
-    temp = PyInt_AsLong($input);
     if (temp < 0) {
         PyErr_SetString(PyExc_ValueError,
                         "buffer size must be a positive integer");
@@ -697,6 +703,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %authprompt_callback_typemap(ssl_server_trust)
 %authprompt_callback_typemap(ssl_client_cert)
 %authprompt_callback_typemap(ssl_client_cert_pw)
+%authprompt_callback_typemap(gnome_keyring_unlock)
 
 /* -----------------------------------------------------------------------
  * For all the various functions that set a callback baton create a reference
@@ -745,6 +752,16 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %ignore svn_opt_parse_all_args;
 #endif
 
+#ifdef SWIGPYTHON
+# The auth baton depends on the providers, so we preserve a
+# reference to them inside the wrapper. This way, if all external
+# references to the providers are gone, they will still be alive,
+# keeping the baton valid.
+%feature("pythonappend") svn_auth_open %{
+  val.__dict__["_deps"] = list(args[0])
+%}
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_error_codes_h.swg
@@ -770,11 +787,43 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
+
+
+#ifdef SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC
+%inline %{
+/* Helper function to set the gnome-keyring unlock prompt function. This
+ * C function accepts an auth baton, a function and a prompt baton, but
+ * the below callback_typemap uses both the function and the prompt
+ * baton, so the resulting binding has just two arguments: The auth
+ * baton and the prompt function.
+ * The prompt function should again have two arguments: The keyring name
+ * (string) and a pool (except for the ruby version, which doesn't have
+ * the pool argument). It should return the entered password (string).
+ * This binding generated for this function generates a reference to the
+ * prompt function that was passed into this. The caller should store
+ * that reference somewhere, to prevent the function from being garbage
+ * collected...
+ */
+static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
+                                                          svn_auth_gnome_keyring_unlock_prompt_func_t prompt_func,
+                                                          void *prompt_baton) {
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
+                           prompt_func);
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_BATON,
+                           prompt_baton);
+}
+%}
+#endif
+
 #if defined(SWIGPERL) || defined(SWIGRUBY)
 %include svn_md5_h.swg
 #endif
 
 #ifdef SWIGPERL
+/* The apr_file_t* 'in' typemap can't cope with struct members, and there
+   is no reason to change this one. */
+%immutable svn_patch_t::patch_file;
+
 %include svn_diff_h.swg
 %include svn_error_h.swg
 

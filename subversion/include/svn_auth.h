@@ -34,7 +34,6 @@
 
 #include "svn_types.h"
 #include "svn_config.h"
-#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -417,8 +416,8 @@ typedef svn_error_t *(*svn_auth_username_prompt_func_t)(
 #define SVN_AUTH_SSL_CNMISMATCH  0x00000004
 /** @brief Certificate authority is unknown (i.e. not trusted) */
 #define SVN_AUTH_SSL_UNKNOWNCA   0x00000008
-/** @brief Other failure. This can happen if neon has introduced a new
- * failure bit that we do not handle yet. */
+/** @brief Other failure. This can happen if an unknown failure occurs
+ * that we do not handle yet. */
 #define SVN_AUTH_SSL_OTHER       0x40000000
 /** @} */
 
@@ -533,7 +532,7 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)(
  */
 void
 svn_auth_open(svn_auth_baton_t **auth_baton,
-              apr_array_header_t *providers,
+              const apr_array_header_t *providers,
               apr_pool_t *pool);
 
 /** Set an authentication run-time parameter.
@@ -783,11 +782,11 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
 /** Set @a *provider to an authentication provider of type @c
- * svn_auth_provider_object_t, or return @a NULL if the provider is not
+ * svn_auth_provider_object_t, or return @c NULL if the provider is not
  * available for the requested platform or the requested provider is unknown.
  *
- * Valid @a provider_name values are: "gnome_keyring", "keychain", "kwallet"
- * and "windows".
+ * Valid @a provider_name values are: "gnome_keyring", "keychain", "kwallet",
+ * "gpg_agent", and "windows".
  *
  * Valid @a provider_type values are: "simple", "ssl_client_cert_pw" and
  * "ssl_server_trust".
@@ -821,7 +820,8 @@ svn_auth_get_platform_specific_provider(
  *   1. gnome-keyring
  *   2. kwallet
  *   3. keychain
- *   4. windows-cryptoapi
+ *   4. gpg-agent
+ *   5. windows-cryptoapi
  *
  * @since New in 1.6.
  */
@@ -1071,6 +1071,28 @@ svn_auth_get_kwallet_ssl_client_cert_pw_provider(
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool);
 #endif /* (!DARWIN && !WIN32) || DOXYGEN */
+
+#if !defined(WIN32) || defined(DOXYGEN)
+/**
+ * Set @a *provider to an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.
+ *
+ * This is like svn_client_get_simple_provider(), except that the
+ * password is obtained from gpg_agent, which will keep it in
+ * a memory cache.
+ *
+ * Allocate @a *provider in @a pool.
+ *
+ * @since New in 1.8
+ * @note This function actually works only on systems with
+ * GNU Privacy Guard installed.
+ */
+void
+svn_auth_get_gpg_agent_simple_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool);
+#endif /* !defined(WIN32) || defined(DOXYGEN) */
 
 
 /** Set @a *provider to an authentication provider of type @c

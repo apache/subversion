@@ -37,29 +37,17 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/*
- * The primary macro defined by this header is SVN_DBG(). It helps by
- * printing stuff to stdout (or however SVN_DBG_OUTPUT is defined) for
- * debugging purposes. Typical usage is like this:
- *
- *   SVN_DBG(("cleanup. type=%d  path='%s'\n", lock->type, lock->path));
- *
- * producing:
- *
- *   DBG: lock.c: 292: cleanup. type=2  path='include/private'
- *
- * Note that these output lines are filtered by our test suite automatically,
- * so you don't have to worry about throwing off expected output.
- */
-
-
-/* A couple helper functions for the macros below.  */
+/* A few helper functions for the macros below.  */
 void
 svn_dbg__preamble(const char *file, long line, FILE *output);
 void
 svn_dbg__printf(const char *fmt, ...)
   __attribute__((format(printf, 1, 2)));
-
+void
+svn_dbg__print_props(apr_hash_t *props,
+                     const char *header_fmt,
+                     ...)
+  __attribute__((format(printf, 2, 3)));
 
 /* Print to stdout. Edit this line if you need stderr.  */
 #define SVN_DBG_OUTPUT stdout
@@ -71,11 +59,32 @@ svn_dbg__printf(const char *fmt, ...)
 #ifdef SVN_DBG_QUIET
 
 #define SVN_DBG(ARGS) svn_dbg__preamble(__FILE__, __LINE__, NULL)
+#define SVN_DBG_PROPS(ARGS) svn_dbg__preamble(__FILE__, __LINE__, NULL)
 
 #else
 
+/** Debug aid macro that prints the file:line of the call and printf-like
+ * arguments to the #SVN_DBG_OUTPUT stdio stream (#stdout by default).  Typical
+ * usage:
+ *
+ * <pre>
+ *   SVN_DBG(("rev=%ld kind=%s\n", revnum, svn_kind_to_word(kind)));
+ * </pre>
+ *
+ * outputs:
+ *
+ * <pre>
+ *   DBG: kitchensink.c: 42: rev=3141592 kind=file
+ * </pre>
+ *
+ * Note that these output lines are filtered by our test suite automatically,
+ * so you don't have to worry about throwing off expected output.
+ */
 #define SVN_DBG(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, SVN_DBG_OUTPUT), \
                        svn_dbg__printf ARGS)
+#define SVN_DBG_PROPS(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, \
+                                               SVN_DBG_OUTPUT), \
+                             svn_dbg__print_props ARGS)
 
 #endif
 
@@ -83,6 +92,10 @@ svn_dbg__printf(const char *fmt, ...)
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#else /* SVN_DEBUG */
+
+/* We DON'T define SVN_DBG in release mode. See top of this file. */
 
 #endif /* SVN_DEBUG */
 #endif /* SVN_DEBUG_H */

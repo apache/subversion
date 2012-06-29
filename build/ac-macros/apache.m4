@@ -1,3 +1,21 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
 dnl
 dnl Macros to find an Apache installation
 dnl
@@ -81,13 +99,16 @@ if test -n "$APXS" && test "$APXS" != "no"; then
     1)
       apache_minor_version_wanted_regex=["[1-4]"]
       ;;
+    2)
+      apache_minor_version_wanted_regex=["[3-5]"]
+      ;;
     *)
       AC_MSG_ERROR([unknown APR version])
       ;;
   esac
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  AC_EGREP_CPP([[apache_minor_version= *"$apache_minor_version_wanted_regex"]],
+  AC_EGREP_CPP([apache_minor_version= *\"$apache_minor_version_wanted_regex\"],
                [
 #include "$APXS_INCLUDE/ap_release.h"
 apache_minor_version=AP_SERVER_MINORVERSION],
@@ -125,7 +146,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
         APACHE_LDFLAGS="-shrext .so"
         ;;
     esac
-else
+elif test x"$APXS" != x"no"; then
     echo "=================================================================="
     echo "WARNING: skipping the build of mod_dav_svn"
     echo "         try using --with-apxs"

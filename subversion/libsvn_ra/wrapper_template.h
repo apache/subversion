@@ -71,12 +71,15 @@ static svn_error_t *compat_open(void **session_baton,
    * the alternative (creating a new ra_util library) would be massive
    * overkill for the time being.  Just be sure to keep the following
    * line and the code of svn_ra_create_callbacks in sync.  */
-  svn_ra_callbacks2_t *callbacks2 = apr_pcalloc(pool,
+  apr_pool_t *sesspool = svn_pool_create(pool);
+  svn_ra_callbacks2_t *callbacks2 = apr_pcalloc(sesspool,
                                                 sizeof(*callbacks2));
 
-  svn_ra_session_t *sess = apr_pcalloc(pool, sizeof(*sess));
+  svn_ra_session_t *sess = apr_pcalloc(sesspool, sizeof(*sess));
+  const char *session_url;
+
   sess->vtable = &VTBL;
-  sess->pool = pool;
+  sess->pool = sesspool;
 
   callbacks2->open_tmp_file = callbacks->open_tmp_file;
   callbacks2->auth_baton = callbacks->auth_baton;
@@ -87,8 +90,18 @@ static svn_error_t *compat_open(void **session_baton,
   callbacks2->progress_func = NULL;
   callbacks2->progress_baton = NULL;
 
-  SVN_ERR(VTBL.open_session(sess, repos_URL, callbacks2, callback_baton,
-                            config, pool));
+  SVN_ERR(VTBL.open_session(sess, &session_url, repos_URL,
+                            callbacks2, callback_baton, config, sesspool));
+
+  if (strcmp(repos_URL, session_url) != 0)
+    {
+      svn_pool_destroy(sesspool);
+      return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
+                               _("Session URL '%s' does not match requested "
+                                 " URL '%s', and redirection was disallowed."),
+                               session_url, repos_URL);
+    }
+
   *session_baton = sess;
   return SVN_NO_ERROR;
 }
@@ -114,7 +127,7 @@ static svn_error_t *compat_change_rev_prop(void *session_baton,
                                            const svn_string_t *value,
                                            apr_pool_t *pool)
 {
-  return VTBL.change_rev_prop(session_baton, rev, propname, value, pool);
+  return VTBL.change_rev_prop(session_baton, rev, propname, NULL, value, pool);
 }
 
 static svn_error_t *compat_rev_proplist(void *session_baton,

@@ -24,6 +24,7 @@
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
+import java.util.Set;
 
 /**
  * this class is returned by SVNClientInterface.info2 and contains information
@@ -245,6 +246,132 @@ public class Info2 implements java.io.Serializable
         this.reposSize = reposSize;
         this.depth = depth;
         this.treeConflict = treeConflict;
+    }
+
+    static private String
+    getConflictOld(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getBasePath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getConflictNew(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getTheirPath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getConflictWrk(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getMyPath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getPrejfile(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.property)
+            return conflict.getTheirPath();
+        }
+
+      return null;
+    }
+
+    static private ConflictDescriptor
+    getTreeConflict(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                        conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.tree)
+            return new ConflictDescriptor(conflict);
+        }
+
+      return null;
+    }
+
+    static private String
+    getChecksumDigest(org.apache.subversion.javahl.types.Checksum checksum)
+    {
+    	if (checksum == null)
+    		return null;
+
+    	if (checksum.getKind() != org.apache.subversion.javahl.types.Checksum.Kind.MD5)
+    		return null;
+
+    	StringBuffer hexDigest = new StringBuffer();
+    	for (byte b : checksum.getDigest())
+    	{
+    		hexDigest.append(Integer.toHexString(0xFF & b));
+    	}
+
+    	return hexDigest.toString();
+    }
+
+    /**
+     * A backward-compat constructor.
+     */
+    public Info2(org.apache.subversion.javahl.types.Info aInfo)
+    {
+        this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(),
+             NodeKind.fromApache(aInfo.getKind()),
+             aInfo.getReposRootUrl(), aInfo.getReposUUID(),
+             aInfo.getLastChangedRev(),
+             aInfo.getLastChangedDate() == null ? 0
+                : aInfo.getLastChangedDate().getTime() * 1000,
+             aInfo.getLastChangedAuthor(),
+             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
+             aInfo.isHasWcInfo(),
+             aInfo.getSchedule() == null ? 0 : aInfo.getSchedule().ordinal(),
+             aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
+             aInfo.getTextTime() == null ? 0
+                : aInfo.getTextTime().getTime() * 1000,
+             0, getChecksumDigest(aInfo.getChecksum()),
+             getConflictOld(aInfo.getConflicts()),
+             getConflictNew(aInfo.getConflicts()),
+             getConflictWrk(aInfo.getConflicts()),
+             getPrejfile(aInfo.getConflicts()),
+             aInfo.getChangelistName(), aInfo.getWorkingSize(),
+             aInfo.getReposSize(), Depth.fromADepth(aInfo.getDepth()),
+             getTreeConflict(aInfo.getConflicts()));
     }
 
     /**

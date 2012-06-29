@@ -28,10 +28,12 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -50,21 +52,51 @@ svn_cl__cleanup(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
+
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      svn_error_t *err;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_client_cleanup(target, ctx, subpool));
+      err = svn_client_cleanup(target, ctx, subpool);
+      if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+        {
+          const char *target_abspath;
+          svn_error_t *err2 = svn_dirent_get_absolute(&target_abspath,
+                                                      target, subpool);
+          if (err2)
+            {
+              err =  svn_error_compose_create(err, err2);
+            }
+          else
+            {
+              const char *wcroot_abspath;
+
+              err2 = svn_client_get_wc_root(&wcroot_abspath, target_abspath,
+                                            ctx, subpool, subpool);
+              if (err2)
+                err =  svn_error_compose_create(err, err2);
+              else
+                err = svn_error_createf(SVN_ERR_WC_LOCKED, err,
+                                        _("Working copy locked; try running "
+                                          "'svn cleanup' on the root of the "
+                                          "working copy ('%s') instead."),
+                                          svn_dirent_local_style(wcroot_abspath,
+                                                                 subpool));
+            }
+        }
+      SVN_ERR(err);
     }
 
   svn_pool_destroy(subpool);

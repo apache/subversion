@@ -108,8 +108,8 @@ test_text_retrieval(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
-  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, FALSE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
      values retrieved using svn_config. */
@@ -159,8 +159,8 @@ test_boolean_retrieval(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
-  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, FALSE, pool));
 
   for (i = 0; true_keys[i] != NULL; i++)
     {
@@ -211,7 +211,7 @@ test_boolean_retrieval(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_has_section(apr_pool_t *pool)
+test_has_section_case_insensitive(apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *cfg_file;
@@ -219,11 +219,20 @@ test_has_section(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
-  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
     return fail(pool, "Failed to find section1");
+
+  if (! svn_config_has_section(cfg, "SECTION1"))
+    return fail(pool, "Failed to find SECTION1");
+
+  if (! svn_config_has_section(cfg, "UpperCaseSection"))
+    return fail(pool, "Failed to find UpperCaseSection");
+
+  if (! svn_config_has_section(cfg, "uppercasesection"))
+    return fail(pool, "Failed to find UpperCaseSection");
 
   if (svn_config_has_section(cfg, "notthere"))
     return fail(pool, "Returned true on missing section");
@@ -231,6 +240,35 @@ test_has_section(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_has_section_case_sensitive(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *cfg_file;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_config_read2(&cfg, cfg_file, TRUE, TRUE, pool));
+
+  if (! svn_config_has_section(cfg, "section1"))
+    return fail(pool, "Failed to find section1");
+
+  if (svn_config_has_section(cfg, "SECTION1"))
+    return fail(pool, "Returned true on missing section");
+
+  if (! svn_config_has_section(cfg, "UpperCaseSection"))
+    return fail(pool, "Failed to find UpperCaseSection");
+
+  if (svn_config_has_section(cfg, "uppercasesection"))
+    return fail(pool, "Returned true on missing section");
+
+  if (svn_config_has_section(cfg, "notthere"))
+    return fail(pool, "Returned true on missing section");
+
+  return SVN_NO_ERROR;
+}
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -246,7 +284,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_config"),
     SVN_TEST_PASS2(test_boolean_retrieval,
                    "test svn_config boolean conversion"),
-    SVN_TEST_PASS2(test_has_section,
-                   "test svn_config_has_section"),
+    SVN_TEST_PASS2(test_has_section_case_insensitive,
+                   "test svn_config_has_section (case insensitive)"),
+    SVN_TEST_PASS2(test_has_section_case_sensitive,
+                   "test svn_config_has_section (case sensitive)"),
     SVN_TEST_NULL
   };

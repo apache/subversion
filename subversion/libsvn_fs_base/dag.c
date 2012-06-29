@@ -49,9 +49,12 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 #include "bdb/checksum-reps-table.h"
+#include "bdb/changes-table.h"
+#include "bdb/node-origins-table.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -249,7 +252,7 @@ txn_body_dag_init_fs(void *baton,
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), trail->pool);
   date.len = strlen(date.data);
-  return svn_fs_base__set_rev_prop(fs, 0, SVN_PROP_REVISION_DATE, &date,
+  return svn_fs_base__set_rev_prop(fs, 0, SVN_PROP_REVISION_DATE, NULL, &date,
                                    trail, trail->pool);
 }
 
@@ -279,7 +282,7 @@ get_dir_entries(apr_hash_t **entries_p,
                 trail_t *trail,
                 apr_pool_t *pool)
 {
-  apr_hash_t *entries = apr_hash_make(pool);
+  apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
   svn_string_t entries_raw;
   svn_skel_t *entries_skel;
@@ -288,7 +291,7 @@ get_dir_entries(apr_hash_t **entries_p,
   if (noderev->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       _("Attempted to create entry in non-directory parent"));
+       _("Attempted to get entries of a non-directory node"));
 
   /* If there's a DATA-KEY, there might be entries to fetch. */
   if (noderev->data_key)
@@ -479,7 +482,7 @@ make_entry(dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset(&new_noderev, 0, sizeof(new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  new_noderev.created_path = svn_uri_join(parent_path, name, pool);
+  new_noderev.created_path = svn_fspath__join(parent_path, name, pool);
   SVN_ERR(svn_fs_base__create_node
           (&new_node_id, svn_fs_base__dag_get_fs(parent), &new_noderev,
            svn_fs_base__id_copy_id(svn_fs_base__dag_get_id(parent)),
@@ -636,7 +639,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       else if (err)
         {
           if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
-            return svn_error_return(err);
+            return svn_error_trace(err);
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -761,7 +764,7 @@ svn_fs_base__dag_clone_child(dag_node_t **child_p,
       noderev->predecessor_id = cur_entry->id;
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
-      noderev->created_path = svn_uri_join(parent_path, name, pool);
+      noderev->created_path = svn_fspath__join(parent_path, name, pool);
       SVN_ERR(svn_fs_base__create_successor(&new_node_id, fs, cur_entry->id,
                                             noderev, copy_id, txn_id,
                                             trail, pool));
@@ -834,13 +837,6 @@ svn_fs_base__dag_clone_root(dag_node_t **root_p,
 }
 
 
-/* Delete the directory entry named NAME from PARENT, as part of
-   TRAIL.  PARENT must be mutable.  NAME must be a single path
-   component.  If REQUIRE_EMPTY is true and the node being deleted is
-   a directory, it must be empty.
-
-   If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
-   PARENT.  */
 svn_error_t *
 svn_fs_base__dag_delete(dag_node_t *parent,
                         const char *name,
@@ -1041,8 +1037,8 @@ svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
         }
     }
 
-  /* ... then delete the node itself, after deleting any mutable
-     representations and strings it points to. */
+  /* ... then delete the node itself, any mutable representations and
+     strings it points to, and possibly its node-origins record. */
   return svn_fs_base__dag_remove_node(fs, id, txn_id, trail, pool);
 }
 
@@ -1279,15 +1275,9 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
 
       if (! svn_checksum_match(checksum, test_checksum))
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           apr_psprintf(pool, "%s:\n%s\n%s\n",
+        return svn_checksum_mismatch_err(checksum, test_checksum, pool,
                         _("Checksum mismatch on representation '%s'"),
-                        _("   expected:  %s"),
-                        _("     actual:  %s")),
-           noderev->edit_key,
-           svn_checksum_to_cstring_display(checksum, pool),
-           svn_checksum_to_cstring_display(test_checksum, pool));
+                        noderev->edit_key);
     }
 
   /* Now, we want to delete the old representation and replace it with
@@ -1340,8 +1330,8 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, old_data_key, txn_id,
                                                trail, pool));
 
-  /* If we've got a discardable rep (probably because we ended us
-     re-using a preexisting one).  Throw out the discardable rep. */
+  /* If we've got a discardable rep (probably because we ended up
+     re-using a preexisting one), throw out the discardable rep. */
   if (useless_data_key)
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, useless_data_key,
                                                txn_id, trail, pool));
@@ -1427,7 +1417,7 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
       noderev->predecessor_id = svn_fs_base__id_copy(src_id, pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
-      noderev->created_path = svn_uri_join
+      noderev->created_path = svn_fspath__join
         (svn_fs_base__dag_get_created_path(to_node), entry, pool);
       SVN_ERR(svn_fs_base__create_successor(&id, fs, src_id, noderev,
                                             copy_id, txn_id, trail, pool));
@@ -1534,7 +1524,6 @@ svn_fs_base__dag_deltify(dag_node_t *target,
   return SVN_NO_ERROR;
 }
 
-
 /* Maybe store a `checksum-reps' index record for the representation whose
    key is REP.  (If there's already a rep for this checksum, we don't
    bother overwriting it.)  */
@@ -1559,7 +1548,7 @@ maybe_store_checksum_rep(const char *rep,
           err = SVN_NO_ERROR;
         }
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -1622,9 +1611,8 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
   return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
-                                   &date, trail, pool);
+                                   NULL, &date, trail, pool);
 }
-
 
 
 /*** Comparison. ***/

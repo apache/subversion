@@ -64,14 +64,18 @@ extern "C" {
 
 
 /** Convert @a path from the local style to the canonical internal style.
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_internal_style().
  */
 SVN_DEPRECATED
 const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool);
 
 /** Convert @a path from the canonical internal style to the local style.
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_local_style().
  */
 SVN_DEPRECATED
 const char *
@@ -102,6 +106,8 @@ svn_path_local_style(const char *path, apr_pool_t *pool);
  * for the base.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_join(), svn_uri_join(),
+ * svn_relpath_join() or svn_fspath__join().
  */
 SVN_DEPRECATED
 char *
@@ -120,6 +126,8 @@ svn_path_join(const char *base, const char *component, apr_pool_t *pool);
  * See svn_path_join() for further notes about joining paths.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * For new code, consider using svn_dirent_join_many() or a sequence of
+ * calls to one of the *_join() functions.
  */
 SVN_DEPRECATED
 char *
@@ -138,10 +146,9 @@ svn_path_join_many(apr_pool_t *pool, const char *base, ...);
  *
  * @note If an empty string is passed, then an empty string will be returned.
  *
- * New code should use either svn_dirent_basename() (for local paths) or
- * svn_uri_basename() (for urls and repository paths).
- *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_basename(), svn_uri_basename(),
+ * svn_relpath_basename() or svn_fspath__basename().
  */
 SVN_DEPRECATED
 char *
@@ -153,10 +160,9 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  *
  * The returned dirname will be allocated in @a pool.
  *
- * New code should use either svn_dirent_dirname() (for local paths) or
- * svn_uri_dirname() (for urls and repository paths).
- *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_dirname(), svn_uri_dirname(),
+ * svn_relpath_dirname() or svn_fspath__dirname().
  */
 SVN_DEPRECATED
 char *
@@ -226,10 +232,9 @@ svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  *
- * New code should use either svn_dirent_split() (for local paths) or
- * svn_uri_split() (for urls and repository paths).
- *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_split(), svn_uri_split(),
+ * svn_relpath_split() or svn_fspath__split().
  */
 SVN_DEPRECATED
 void
@@ -246,12 +251,14 @@ svn_path_split(const char *path,
 int
 svn_path_is_empty(const char *path);
 
+
 #ifndef SVN_DIRENT_URI_H
 /* This declaration has been moved to svn_dirent_uri.h, and remains
    here only for compatibility reasons. */
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
 #endif /* SVN_DIRENT_URI_H */
+
 
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
@@ -267,6 +274,8 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
  * allocated from @a pool.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_canonicalize(), svn_uri_canonicalize(),
+ * svn_relpath_canonicalize() or svn_fspath__canonicalize().
  */
 SVN_DEPRECATED
 const char *
@@ -277,6 +286,8 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool);
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_is_canonical(), svn_uri_is_canonical(),
+ * svn_relpath_is_canonical() or svn_fspath__is_canonical().
  */
 SVN_DEPRECATED
 svn_boolean_t
@@ -285,6 +296,10 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool);
 
 /** Return an integer greater than, equal to, or less than 0, according
  * as @a path1 is greater than, equal to, or less than @a path2.
+ *
+ * This function works like strcmp() except that it orders children in
+ * subdirectories directly after their parents. This allows using the
+ * given ordering for a depth first walk.
  */
 int
 svn_path_compare_paths(const char *path1, const char *path2);
@@ -301,6 +316,9 @@ svn_path_compare_paths(const char *path1, const char *path2);
  * component, i.e. 'protocol://' is not a sufficient ancestor.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_get_longest_ancestor(),
+ * svn_uri_get_longest_ancestor(), svn_relpath_get_longest_ancestor() or
+ * svn_fspath__get_longest_ancestor().
  */
 SVN_DEPRECATED
 char *
@@ -315,6 +333,7 @@ svn_path_get_longest_ancestor(const char *path1,
  * and a copy of the URL is returned.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_get_absolute() on a non-URL input.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -329,6 +348,8 @@ svn_path_get_absolute(const char **pabsolute,
  * a file, since directories do not normally vanish.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should implement the required logic directly; no direct
+ * replacement is provided.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -369,6 +390,8 @@ svn_path_split_if_file(const char *path,
  * copy.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * New code should use svn_dirent_condense_targets() or
+ * svn_uri_condense_targets().
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -490,6 +513,9 @@ svn_path_is_dotpath_present(const char *path);
  *       identify the remainder path.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * For replacement functionality, see svn_dirent_skip_ancestor(),
+ * svn_dirent_is_child(), svn_uri_skip_ancestor(), and
+ * svn_relpath_skip_ancestor().
  */
 SVN_DEPRECATED
 const char *
@@ -499,7 +525,10 @@ svn_path_is_child(const char *path1, const char *path2, apr_pool_t *pool);
  * and FALSE otherwise.
  *
  * @since New in 1.3.
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
+ * For replacement functionality, see svn_dirent_skip_ancestor(),
+ * svn_uri_skip_ancestor(), and svn_relpath_skip_ancestor().
  */
 SVN_DEPRECATED
 svn_boolean_t
@@ -584,7 +613,7 @@ svn_path_url_add_component2(const char *url,
                             const char *component,
                             apr_pool_t *pool);
 
-/** Like svn_path_url_add_component2, but allows path components that
+/** Like svn_path_url_add_component2(), but allows path components that
  * end with a trailing '/'
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.

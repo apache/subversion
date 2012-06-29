@@ -1,5 +1,25 @@
 #!/usr/bin/env python
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
 # Checkout files from the SWIG library into Subversion's proxy directory
 #
 
@@ -40,15 +60,15 @@ class Generator(generator.swig.Generator):
       os.remove(out)
     if self._skip_checkout(path):
       open(out, "w")
-    elif self.version() == 103024:
+    elif self.version() == (1, 3, 24):
       shutil.copy(build_path_join(self.swig_libdir, path), out)
     else:
       run("%s -o %s -co %s" % (self.swig_path, out, path))
 
   def _skip_checkout(self, path):
     """Should we skip this checkout?"""
-    return (path == "ruby/rubytracking.swg" and self.version() < 103026 or
-            path == "common.swg" and self.version() > 103024)
+    return (path == "ruby/rubytracking.swg" and self.version() < (1, 3, 26) or
+            path == "common.swg" and self.version() > (1, 3, 24))
 
   def _output_file(self, path):
     """Get output filename"""

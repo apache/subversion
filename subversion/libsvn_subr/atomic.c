@@ -31,8 +31,14 @@
 
 svn_error_t*
 svn_atomic__init_once(volatile svn_atomic_t *global_status,
-                      svn_error_t *(*init_func)(apr_pool_t*), apr_pool_t* pool)
+                      svn_error_t *(*init_func)(void*,apr_pool_t*),
+                      void *baton,
+                      apr_pool_t* pool)
 {
+  /* !! Don't use localizable strings in this function, because these
+     !! might cause deadlocks. This function can be used to initialize
+     !! libraries that are used for generating error messages. */
+
   /* We have to call init_func exactly once.  Because APR
      doesn't have statically-initialized mutexes, we implement a poor
      man's spinlock using svn_atomic_cas. */
@@ -42,7 +48,7 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
 
   if (status == SVN_ATOMIC_UNINITIALIZED)
     {
-      svn_error_t *err = init_func(pool);
+      svn_error_t *err = init_func(baton, pool);
       if (err)
         {
 #if APR_HAS_THREADS
@@ -51,7 +57,8 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
                          SVN_ATOMIC_INIT_FAILED,
                          SVN_ATOMIC_START_INIT);
 #endif
-          return err;
+          return svn_error_create(SVN_ERR_ATOMIC_INIT_FAILURE, err,
+                                  "Couldn't perform atomic initialization");
         }
       svn_atomic_cas(global_status,
                      SVN_ATOMIC_INITIALIZED,

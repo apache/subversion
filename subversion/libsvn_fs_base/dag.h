@@ -281,7 +281,6 @@ svn_error_t *svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                          trail_t *trail,
                                          apr_pool_t *pool);
 
-
 
 /* Directories.  */
 
@@ -355,9 +354,12 @@ svn_error_t *svn_fs_base__dag_clone_child(dag_node_t **child_p,
 /* Delete the directory entry named NAME from PARENT, as part of
    TRAIL.  PARENT must be mutable.  NAME must be a single path
    component; it cannot be a slash-separated directory path.  If the
-   node being deleted is a mutable directory, remove all mutable nodes
-   reachable from it.  TXN_ID is the Subversion transaction under
-   which this occurs.
+   entry being deleted points to a mutable node revision, also remove
+   that node revision and (if it is a directory) all mutable node
+   revisions reachable from it.  Also delete the node-origins record
+   for each deleted node revision that had no predecessor.
+
+   TXN_ID is the Subversion transaction under which this occurs.
 
    If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
    PARENT.  */
@@ -370,9 +372,12 @@ svn_error_t *svn_fs_base__dag_delete(dag_node_t *parent,
 
 /* Delete the node revision assigned to node ID from FS's `nodes'
    table, as part of TRAIL.  Also delete any mutable representations
-   and strings associated with that node revision.  ID may refer to a
-   file or directory, which must be mutable.  TXN_ID is the Subversion
-   transaction under which this occurs.
+   and strings associated with that node revision.  Also delete the
+   node-origins record for this node revision's node id, if this node
+   revision had no predecessor.
+
+   ID may refer to a file or directory, which must be mutable.  TXN_ID
+   is the Subversion transaction under which this occurs.
 
    NOTE: If ID represents a directory, and that directory has mutable
    children, you risk orphaning those children by leaving them
@@ -388,9 +393,12 @@ svn_error_t *svn_fs_base__dag_remove_node(svn_fs_t *fs,
 /* Delete all mutable node revisions reachable from node ID, including
    ID itself, from FS's `nodes' table, as part of TRAIL.  Also delete
    any mutable representations and strings associated with that node
-   revision.  ID may refer to a file or directory, which may be
-   mutable or immutable.  TXN_ID is the Subversion transaction under
-   which this occurs.  */
+   revision.  Also delete the node-origins record for each deleted
+   node revision that had no predecessor.
+
+   ID may refer to a file or directory, which may be mutable or
+   immutable.  TXN_ID is the Subversion transaction under which this
+   occurs.  */
 svn_error_t *svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
                                                 const svn_fs_id_t *id,
                                                 const char *txn_id,
@@ -538,7 +546,6 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       const char *txn_id,
                                       trail_t *trail,
                                       apr_pool_t *pool);
-
 
 /* Index NODE's backing data representations by their checksum.  Do
    this as part of TRAIL.  Use POOL for allocations. */

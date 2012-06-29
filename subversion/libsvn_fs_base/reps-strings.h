@@ -38,14 +38,14 @@ extern "C" {
 
 
 
-/* Get or create a mutable representation in FS, store the new rep's
-   key in *NEW_REP_KEY.
+/* Get or create a mutable representation in FS, and set *NEW_REP_KEY to its
+   key.
 
    TXN_ID is the id of the Subversion transaction under which this occurs.
 
-   If REP_KEY is already a mutable representation, set *NEW_REP_KEY to
-   REP_KEY, else set *NEW_REP_KEY to a brand new rep key allocated in
-   POOL. */
+   If REP_KEY is not null and is already a mutable representation, set
+   *NEW_REP_KEY to REP_KEY, else create a brand new rep and set *NEW_REP_KEY
+   to its key, allocated in POOL. */
 svn_error_t *svn_fs_base__get_mutable_rep(const char **new_rep_key,
                                           const char *rep_key,
                                           svn_fs_t *fs,
@@ -167,7 +167,6 @@ svn_error_t *svn_fs_base__rep_deltify(svn_fs_t *fs,
                                       const char *source,
                                       trail_t *trail,
                                       apr_pool_t *pool);
-
 
 
 #ifdef __cplusplus

@@ -37,7 +37,7 @@
 
 #include "svn_private_config.h"
 
-typedef struct
+typedef struct blame_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_stream_t *out;
@@ -51,6 +51,8 @@ typedef struct
    XML to stdout. */
 static svn_error_t *
 blame_receiver_xml(void *baton,
+                   svn_revnum_t start_revnum,
+                   svn_revnum_t end_revnum,
                    apr_int64_t line_no,
                    svn_revnum_t revision,
                    apr_hash_t *rev_props,
@@ -117,13 +119,26 @@ print_line_info(svn_stream_t *out,
                 const char *date,
                 const char *path,
                 svn_boolean_t verbose,
+                svn_revnum_t end_revnum,
                 apr_pool_t *pool)
 {
   const char *time_utf8;
   const char *time_stdout;
-  const char *rev_str = SVN_IS_VALID_REVNUM(revision)
-    ? apr_psprintf(pool, "%6ld", revision)
-                        : "     -";
+  const char *rev_str;
+  int rev_maxlength;
+
+  /* The standard column width for the revision number is 6 characters.
+     If the revision number can potentially be larger (i.e. if the end_revnum
+     is larger than 1000000), we increase the column width as needed. */
+  rev_maxlength = 6;
+  while (end_revnum >= 1000000)
+    {
+      rev_maxlength++;
+      end_revnum = end_revnum / 10;
+    }
+  rev_str = SVN_IS_VALID_REVNUM(revision)
+    ? apr_psprintf(pool, "%*ld", rev_maxlength, revision)
+    : apr_psprintf(pool, "%*s", rev_maxlength, "-");
 
   if (verbose)
     {
@@ -152,7 +167,7 @@ print_line_info(svn_stream_t *out,
     }
   else
     {
-      return svn_stream_printf(out, pool, "%s %10s ", rev_str,
+      return svn_stream_printf(out, pool, "%s %10.10s ", rev_str,
                                author ? author : "         -");
     }
 
@@ -162,6 +177,8 @@ print_line_info(svn_stream_t *out,
 /* This implements the svn_client_blame_receiver3_t interface. */
 static svn_error_t *
 blame_receiver(void *baton,
+               svn_revnum_t start_revnum,
+               svn_revnum_t end_revnum,
                apr_int64_t line_no,
                svn_revnum_t revision,
                apr_hash_t *rev_props,
@@ -186,11 +203,11 @@ blame_receiver(void *baton,
          we may need to adjust this. */
       if (merged_revision < revision)
         {
-          svn_stream_printf(out, pool, "G ");
+          SVN_ERR(svn_stream_puts(out, "G "));
           use_merged = TRUE;
         }
       else
-        svn_stream_printf(out, pool, "  ");
+        SVN_ERR(svn_stream_puts(out, "  "));
     }
 
   if (use_merged)
@@ -199,14 +216,16 @@ blame_receiver(void *baton,
                                                SVN_PROP_REVISION_AUTHOR),
                             svn_prop_get_value(merged_rev_props,
                                                SVN_PROP_REVISION_DATE),
-                            merged_path, opt_state->verbose, pool));
+                            merged_path, opt_state->verbose, end_revnum,
+                            pool));
   else
     SVN_ERR(print_line_info(out, revision,
                             svn_prop_get_value(rev_props,
                                                SVN_PROP_REVISION_AUTHOR),
                             svn_prop_get_value(rev_props,
                                                SVN_PROP_REVISION_DATE),
-                            NULL, opt_state->verbose, pool));
+                            NULL, opt_state->verbose, end_revnum,
+                            pool));
 
   return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
 }
@@ -226,10 +245,11 @@ svn_cl__blame(apr_getopt_t *os,
   int i;
   svn_boolean_t end_revision_unspecified = FALSE;
   svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
+  svn_boolean_t seen_nonexistent_target = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Blame needs a file on which to operate. */
   if (! targets->nelts)
@@ -263,7 +283,7 @@ svn_cl__blame(apr_getopt_t *os,
   if (! opt_state->xml)
     SVN_ERR(svn_stream_for_stdout(&bl.out, pool));
   else
-    bl.sbuf = svn_stringbuf_create("", pool);
+    bl.sbuf = svn_stringbuf_create_empty(pool);
 
   bl.opt_state = opt_state;
 
@@ -358,9 +378,18 @@ svn_cl__blame(apr_getopt_t *os,
                                           _("Skipping binary file: '%s'\n"),
                                           target));
             }
+          else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+                   err->apr_err == SVN_ERR_FS_NOT_FILE ||
+                   err->apr_err == SVN_ERR_FS_NOT_FOUND)
+            {
+              svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(err);
+              err = NULL;
+              seen_nonexistent_target = TRUE;
+            }
           else
             {
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
       else if (opt_state->xml)
@@ -377,5 +406,11 @@ svn_cl__blame(apr_getopt_t *os,
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("blame", pool));
 
-  return SVN_NO_ERROR;
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not perform blame on all targets because some "
+        "targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

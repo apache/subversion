@@ -22,11 +22,6 @@
  */
 package org.tigris.subversion.javahl;
 
-import org.tigris.subversion.javahl.Revision;
-import org.tigris.subversion.javahl.Status;
-import org.tigris.subversion.javahl.NodeKind;
-import org.tigris.subversion.javahl.DirEntry;
-
 import java.io.*;
 import java.util.HashMap;
 import java.util.Iterator;

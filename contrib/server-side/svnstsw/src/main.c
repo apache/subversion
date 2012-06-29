@@ -115,7 +115,7 @@ static const mode_t Svnstsw_umask = SVNSTSW_UMASK();
  * @brief Structure holding the values passed in via the command-line
  * arguments.
  */
-typedef struct {
+typedef struct svnstsw_args_t {
     /**
      * @brief whether @p svnserve should be passed the @p --read-only
      * command-line argument

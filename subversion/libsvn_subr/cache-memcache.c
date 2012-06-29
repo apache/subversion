@@ -29,6 +29,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_cache.h"
+#include "private/svn_dep_compat.h"
 
 #include "cache.h"
 
@@ -44,7 +45,7 @@
 */
 
 /* The (internal) cache object. */
-typedef struct {
+typedef struct memcache_t {
   /* The memcached server set we're using. */
   apr_memcache_t *memcache;
 
@@ -75,10 +76,11 @@ struct svn_memcache_t {
                                     2 * APR_MD5_DIGESTSIZE)
 
 
-/* Returns a memcache key for the given key KEY for CACHE, allocated
+/* Set *MC_KEY to a memcache key for the given key KEY for CACHE, allocated
    in POOL. */
-static const char *
-build_key(memcache_t *cache,
+static svn_error_t *
+build_key(const char **mc_key,
+          memcache_t *cache,
           const void *raw_key,
           apr_pool_t *pool)
 {
@@ -97,7 +99,7 @@ build_key(memcache_t *cache,
     }
 
   long_key = apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix,
-                         NULL);
+                         (char *)NULL);
   long_key_len = strlen(long_key);
 
   /* We don't want to have a key that's too big.  If it was going to
@@ -111,40 +113,51 @@ build_key(memcache_t *cache,
   if (long_key_len > MEMCACHED_KEY_UNHASHED_LEN)
     {
       svn_checksum_t *checksum;
-      svn_checksum(&checksum, svn_checksum_md5, long_key, long_key_len, pool);
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, long_key, long_key_len,
+                           pool));
 
       long_key = apr_pstrcat(pool,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
                              svn_checksum_to_cstring_display(checksum, pool),
-                             NULL);
+                             (char *)NULL);
     }
 
-  return long_key;
+  *mc_key = long_key;
+  return SVN_NO_ERROR;
 }
 
-
+/* Core functionality of our getter functions: fetch DATA from the memcached
+ * given by CACHE_VOID and identified by KEY. Indicate success in FOUND and
+ * use a tempoary sub-pool of POOL for allocations.
+ */
 static svn_error_t *
-memcache_get(void **value_p,
-             svn_boolean_t *found,
-             void *cache_void,
-             const void *key,
-             apr_pool_t *pool)
+memcache_internal_get(char **data,
+                      apr_size_t *size,
+                      svn_boolean_t *found,
+                      void *cache_void,
+                      const void *key,
+                      apr_pool_t *pool)
 {
   memcache_t *cache = cache_void;
   apr_status_t apr_err;
-  char *data;
   const char *mc_key;
-  apr_size_t data_len;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool;
 
-  mc_key = build_key(cache, key, subpool);
+  if (key == NULL)
+    {
+      *found = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  subpool = svn_pool_create(pool);
+  SVN_ERR(build_key(&mc_key, cache, key, subpool));
 
   apr_err = apr_memcache_getp(cache->memcache,
-                              (cache->deserialize_func ? subpool : pool),
+                              pool,
                               mc_key,
-                              &data,
-                              &data_len,
+                              data,
+                              size,
                               NULL /* ignore flags */);
   if (apr_err == APR_NOTFOUND)
     {
@@ -152,22 +165,10 @@ memcache_get(void **value_p,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
-  else if (apr_err != APR_SUCCESS || !data)
+  else if (apr_err != APR_SUCCESS || !*data)
     return svn_error_wrap_apr(apr_err,
                               _("Unknown memcached error while reading"));
 
-  /* We found it! */
-  if (cache->deserialize_func)
-    {
-      SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
-    }
-  else
-    {
-      svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
-      value->data = data;
-      value->len = data_len;
-      *value_p = value;
-    }
   *found = TRUE;
 
   svn_pool_destroy(subpool);
@@ -176,17 +177,83 @@ memcache_get(void **value_p,
 
 
 static svn_error_t *
+memcache_get(void **value_p,
+             svn_boolean_t *found,
+             void *cache_void,
+             const void *key,
+             apr_pool_t *result_pool)
+{
+  memcache_t *cache = cache_void;
+  char *data;
+  apr_size_t data_len;
+  SVN_ERR(memcache_internal_get(&data,
+                                &data_len,
+                                found,
+                                cache_void,
+                                key,
+                                result_pool));
+
+  /* If we found it, de-serialize it. */
+  if (*found)
+    {
+      if (cache->deserialize_func)
+        {
+          SVN_ERR((cache->deserialize_func)(value_p, data, data_len,
+                                            result_pool));
+        }
+      else
+        {
+          svn_string_t *value = apr_pcalloc(result_pool, sizeof(*value));
+          value->data = data;
+          value->len = data_len;
+          *value_p = value;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Core functionality of our setter functions: store LENGH bytes of DATA
+ * to be identified by KEY in the memcached given by CACHE_VOID. Use POOL
+ * for temporary allocations.
+ */
+static svn_error_t *
+memcache_internal_set(void *cache_void,
+                      const void *key,
+                      const char *data,
+                      apr_size_t len,
+                      apr_pool_t *scratch_pool)
+{
+  memcache_t *cache = cache_void;
+  const char *mc_key;
+  apr_status_t apr_err;
+
+  SVN_ERR(build_key(&mc_key, cache, key, scratch_pool));
+  apr_err = apr_memcache_set(cache->memcache, mc_key, (char *)data, len, 0, 0);
+
+  /* ### Maybe write failures should be ignored (but logged)? */
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown memcached error while writing"));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 memcache_set(void *cache_void,
              const void *key,
              void *value,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   memcache_t *cache = cache_void;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  char *data;
-  const char *mc_key = build_key(cache, key, subpool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  void *data;
   apr_size_t data_len;
-  apr_status_t apr_err;
+  svn_error_t *err;
+
+  if (key == NULL)
+    return SVN_NO_ERROR;
 
   if (cache->serialize_func)
     {
@@ -199,15 +266,69 @@ memcache_set(void *cache_void,
       data_len = value_str->len;
     }
 
-  apr_err = apr_memcache_set(cache->memcache, mc_key, data, data_len, 0, 0);
-
-  /* ### Maybe write failures should be ignored (but logged)? */
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown memcached error while writing"));
+  err = memcache_internal_set(cache_void, key, data, data_len, subpool);
 
   svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
+  return err;
+}
+
+static svn_error_t *
+memcache_get_partial(void **value_p,
+                     svn_boolean_t *found,
+                     void *cache_void,
+                     const void *key,
+                     svn_cache__partial_getter_func_t func,
+                     void *baton,
+                     apr_pool_t *result_pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  char *data;
+  apr_size_t size;
+  SVN_ERR(memcache_internal_get(&data,
+                                &size,
+                                found,
+                                cache_void,
+                                key,
+                                result_pool));
+
+  /* If we found it, de-serialize it. */
+  return *found
+    ? func(value_p, data, size, baton, result_pool)
+    : err;
+}
+
+
+static svn_error_t *
+memcache_set_partial(void *cache_void,
+                     const void *key,
+                     svn_cache__partial_setter_func_t func,
+                     void *baton,
+                     apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  void *data;
+  apr_size_t size;
+  svn_boolean_t found = FALSE;
+
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  SVN_ERR(memcache_internal_get((char **)&data,
+                                &size,
+                                &found,
+                                cache_void,
+                                key,
+                                subpool));
+
+  /* If we found it, modify it and write it back to cache */
+  if (found)
+    {
+      SVN_ERR(func(&data, &size, baton, subpool));
+      err = memcache_internal_set(cache_void, key, data, size, subpool);
+    }
+
+  svn_pool_destroy(subpool);
+  return err;
 }
 
 
@@ -216,16 +337,52 @@ memcache_iter(svn_boolean_t *completed,
               void *cache_void,
               svn_iter_apr_hash_cb_t user_cb,
               void *user_baton,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                           _("Can't iterate a memcached cache"));
 }
 
+static svn_boolean_t
+memcache_is_cachable(void *unused, apr_size_t size)
+{
+  (void)unused;  /* silence gcc warning. */
+
+  /* The memcached cutoff seems to be a bit (header length?) under a megabyte.
+   * We round down a little to be safe.
+   */
+  return size < 1000000;
+}
+
+static svn_error_t *
+memcache_get_info(void *cache_void,
+                  svn_cache__info_t *info,
+                  svn_boolean_t reset,
+                  apr_pool_t *result_pool)
+{
+  memcache_t *cache = cache_void;
+
+  info->id = apr_pstrdup(result_pool, cache->prefix);
+
+  /* we don't have any memory allocation info */
+
+  info->used_size = 0;
+  info->total_size = 0;
+  info->data_size = 0;
+  info->used_entries = 0;
+  info->total_entries = 0;
+
+  return SVN_NO_ERROR;
+}
+
 static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
   memcache_set,
-  memcache_iter
+  memcache_iter,
+  memcache_is_cachable,
+  memcache_get_partial,
+  memcache_set_partial,
+  memcache_get_info
 };
 
 svn_error_t *
@@ -371,7 +528,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                     svn_config_t *config,
                                     apr_pool_t *pool)
 {
-  apr_uint16_t server_count;
+  int server_count;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   server_count =
@@ -386,12 +543,15 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
       return SVN_NO_ERROR;
     }
 
+  if (server_count > APR_INT16_MAX)
+    return svn_error_create(SVN_ERR_TOO_MANY_MEMCACHED_SERVERS, NULL, NULL);
+
 #ifdef SVN_HAVE_MEMCACHE
   {
     struct ams_baton b;
     svn_memcache_t *memcache = apr_pcalloc(pool, sizeof(*memcache));
     apr_status_t apr_err = apr_memcache_create(pool,
-                                               server_count,
+                                               (apr_uint16_t)server_count,
                                                0, /* flags */
                                                &(memcache->c));
     if (apr_err != APR_SUCCESS)

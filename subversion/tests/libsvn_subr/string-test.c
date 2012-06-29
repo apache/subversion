@@ -39,7 +39,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
-
+#include "private/svn_string_private.h"
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -219,7 +219,6 @@ test10(apr_pool_t *pool)
 {
   svn_stringbuf_t *s, *t;
   size_t len_1 = 0;
-  size_t len_2 = 0;
   size_t block_len_1 = 0;
   size_t block_len_2 = 0;
 
@@ -229,17 +228,16 @@ test10(apr_pool_t *pool)
 
   t = svn_stringbuf_create(", plus a string more than twice as long", pool);
   svn_stringbuf_appendstr(s, t);
-  len_2       = (s->len);
   block_len_2 = (s->blocksize);
 
   /* Test that:
-   *   - The initial block was just the right fit.
+   *   - The initial block was at least the right fit.
+   *   - The initial block was not excessively large.
    *   - The block more than doubled (because second string so long).
-   *   - The block grew by a power of 2.
    */
-  if ((len_1 == (block_len_1 - 1))
-      && ((block_len_2 / block_len_1) > 2)
-        && (((block_len_2 / block_len_1) % 2) == 0))
+  if ((len_1 <= (block_len_1 - 1))
+      && ((block_len_1 - len_1) <= APR_ALIGN_DEFAULT(1))
+        && ((block_len_2 / block_len_1) > 2))
     return SVN_NO_ERROR;
   else
     return fail(pool, "test failed");
@@ -421,7 +419,7 @@ test15(apr_pool_t *pool)
 static svn_error_t *
 test16(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("", pool);
+  a = svn_stringbuf_create_empty(pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
@@ -513,6 +511,35 @@ test23(apr_pool_t *pool)
   return test_stringbuf_unequal("abc", "abb", pool);
 }
 
+static svn_error_t *
+test24(apr_pool_t *pool)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_size_t length;
+
+  length = svn__i64toa(buffer, 0);
+  SVN_TEST_ASSERT(length == 1);
+  SVN_TEST_STRING_ASSERT(buffer, "0");
+
+  length = svn__i64toa(buffer, 0x8000000000000000ll);
+  SVN_TEST_ASSERT(length == 20);
+  SVN_TEST_STRING_ASSERT(buffer, "-9223372036854775808");
+
+  length = svn__i64toa(buffer, 0x7fffffffffffffffll);
+  SVN_TEST_ASSERT(length == 19);
+  SVN_TEST_STRING_ASSERT(buffer, "9223372036854775807");
+
+  length = svn__ui64toa(buffer, 0ull);
+  SVN_TEST_ASSERT(length == 1);
+  SVN_TEST_STRING_ASSERT(buffer, "0");
+
+  length = svn__ui64toa(buffer, 0xffffffffffffffffull);
+  SVN_TEST_ASSERT(length == 20);
+  SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
+
+  return test_stringbuf_unequal("abc", "abb", pool);
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -570,5 +597,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "compare stringbufs; different lengths"),
     SVN_TEST_PASS2(test23,
                    "compare stringbufs; same length, different content"),
+    SVN_TEST_PASS2(test24,
+                   "verify i64toa"),
     SVN_TEST_NULL
   };

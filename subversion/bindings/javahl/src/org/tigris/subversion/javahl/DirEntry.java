@@ -148,6 +148,19 @@ public class DirEntry implements java.io.Serializable
     }
 
     /**
+     * A backward-compat constructor
+     */
+    DirEntry(org.apache.subversion.javahl.types.DirEntry aEntry)
+    {
+        this(aEntry.getPath(), aEntry.getAbsPath(),
+             NodeKind.fromApache(aEntry.getNodeKind()),
+             aEntry.getSize(), aEntry.getHasProps(),
+             aEntry.getLastChangedRevisionNumber(),
+             aEntry.getLastChanged().getTime() * 1000,
+             aEntry.getLastAuthor());
+    }
+
+    /**
      * Returns the path of the entry.
      * @return the path of the entry.
      */

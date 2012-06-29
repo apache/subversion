@@ -2,7 +2,7 @@
 # fs.py: public Python interface for fs components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.tigris.org for more information.
+# See http://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -27,6 +27,7 @@ from libsvn.fs import *
 from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
 

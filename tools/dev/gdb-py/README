@@ -1,0 +1,29 @@
+This directory includes a Python module which will integrate with gdb which
+can be used to pretty-print various Subversion types.  For additional
+information about gdb pretty-printing, see:
+
+  http://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html
+
+
+How to Use
+----------
+To enable pretty printing of selected Subversion types, put the following code
+in your ~/.gdbinit:
+
+[[[
+python
+import sys, os.path
+sys.path.insert(0, os.path.expanduser('~/dev/svn-trunk/tools/dev/gdb-py'))
+from svndbg.printers import register_libsvn_printers
+register_libsvn_printers(None)
+end
+]]]
+
+Change the path to point to the correct location on your platform for the
+gdb-py directory, and then load gdb.  Everything should Just Work.
+(I believe this requires gdb >= 7.0, but earlier versions may also work.)
+
+The list of currently supported types for pretty printing is a bit lacking,
+so should you run into a type which could be useful to be pretty printed,
+read the documentation referenced above and follow the existing examples
+to extend the pretty-printing support.  Enjoy!

@@ -1,8 +1,29 @@
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
 # gen_make.py -- generate makefiles and dependencies
 #
 
 import os
+import stat
 import sys
 try:
   # Python >=3.0
@@ -120,6 +141,7 @@ class Generator(gen_base.GeneratorBase):
     data.bdb_test_progs = self.bdb_test_progs + self.bdb_scripts
     data.test_deps = self.test_deps + self.scripts
     data.test_progs = self.test_progs + self.scripts
+    data.test_helpers = self.test_helpers
 
     # write list of all manpages
     data.manpages = self.manpages
@@ -136,6 +158,9 @@ class Generator(gen_base.GeneratorBase):
          and not target.external_lib \
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
+    for script in self.scripts:
+      if script.endswith('.py'):
+        cfiles.append(script + 'c')
     data.cfiles = sorted(cfiles)
 
     # here are all the SQL files and their generated headers. the Makefile
@@ -325,9 +350,11 @@ class Generator(gen_base.GeneratorBase):
         continue
 
       outputs = [ ]
+
       for t in i_targets:
         if hasattr(t, 'filename'):
           outputs.append(t.filename)
+
       data.itargets.append(_eztdata(type=itype, outputs=outputs))
 
     ########################################
@@ -343,18 +370,21 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      ezt_area = _eztdata(type=area, files=[ ], extra_install=None)
+      ezt_area = _eztdata(type=area, files=[ ], apache_files=[ ],
+                          extra_install=None)
 
-      if area == 'apache-mod':
-        data.areas.append(ezt_area)
-
-        for file in files:
+      def apache_file_to_eztdata(file):
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
           base, ext = os.path.splitext(fname)
           name = base.replace('mod_', '')
-          ezt_area.files.append(_eztdata(fullname=file, dirname=dirname,
-                                         name=name, filename=fname))
+          return _eztdata(fullname=file, dirname=dirname,
+                          name=name, filename=fname)
+      if area == 'apache-mod':
+        data.areas.append(ezt_area)
+
+        for file in files:
+          ezt_area.files.append(apache_file_to_eztdata(file))
 
       elif area != 'test' and area != 'bdb-test':
         data.areas.append(ezt_area)
@@ -364,6 +394,14 @@ class Generator(gen_base.GeneratorBase):
         ezt_area.varname = area_var
         ezt_area.uppervar = upper_var
 
+        # ### TODO: This is a hack.  See discussion here:
+        # ### http://mid.gmane.org/20120316191639.GA28451@daniel3.local
+        apache_files = [t.filename for t in inst_targets
+                        if isinstance(t, gen_base.TargetApacheMod)]
+
+        files = [f for f in files if f not in apache_files]
+        for file in apache_files:
+          ezt_area.apache_files.append(apache_file_to_eztdata(file))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
@@ -384,7 +422,8 @@ class Generator(gen_base.GeneratorBase):
         # in Makefile.in
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' or \
-           area[:7] == 'javahl-':
+           area[:7] == 'javahl-' \
+           or area == 'tools':
           ezt_area.extra_install = 'yes'
 
     ########################################
@@ -430,6 +469,8 @@ class Generator(gen_base.GeneratorBase):
 
     self.write_standalone()
 
+    self.write_transform_libtool_scripts(install_sources)
+
   def write_standalone(self):
     """Write autogen-standalone.mk"""
 
@@ -444,6 +485,100 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
+
+  def write_transform_libtool_scripts(self, install_sources):
+    """Write build/transform_libtool_scripts.sh"""
+    script = 'build/transform_libtool_scripts.sh'
+    fd = open(script, 'w')
+    fd.write('''#!/bin/sh
+# DO NOT EDIT -- AUTOMATICALLY GENERATED
+
+transform()
+{
+  SCRIPT="$1"
+  LIBS="$2"
+  if [ -f $SCRIPT ]; then
+    if grep LD_PRELOAD "$SCRIPT" > /dev/null; then
+      :
+    elif grep LD_LIBRARY_PATH "$SCRIPT" > /dev/null; then
+      echo "Transforming $SCRIPT"
+      EXISTINGLIBS=""
+      for LIB in $LIBS; do
+        # exclude libsvn_test since the undefined test_funcs breaks libtool
+        case $LIB in
+          *libsvn_test-*) continue ;;
+        esac
+        if [ ! -f $LIB ]; then
+          continue
+        fi
+        if [ -z "$EXISTINGLIBS" ]; then
+          EXISTINGLIBS="$LIB"
+        else
+          EXISTINGLIBS="$EXISTINGLIBS $LIB"
+        fi
+      done
+      if [ ! -z "$EXISTINGLIBS" ]; then
+        cat "$SCRIPT" |
+        (
+          read LINE
+          echo "$LINE"
+          read LINE
+          echo "$LINE"
+          read LINE
+          echo "$LINE"
+          read LINE
+          echo "$LINE"
+          echo "LD_PRELOAD=\\"$EXISTINGLIBS\\""
+          echo "export LD_PRELOAD"
+          cat
+        ) < "$SCRIPT" > "$SCRIPT.new"
+        mv -f "$SCRIPT.new" "$SCRIPT"
+        chmod +x "$SCRIPT"
+      fi
+    fi
+  fi
+}
+
+DIR=`pwd`
+
+''')
+    libdep_cache = {}
+    paths = {}
+    for lib in ('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'):
+      paths[lib] = self.sections[lib].options.get('path')
+    for target_ob in install_sources:
+      if not isinstance(target_ob, gen_base.TargetExe):
+        continue
+      name = target_ob.name
+      libs = self._get_all_lib_deps(target_ob.name, libdep_cache, paths)
+      path = paths[name]
+      for i in range(0, len(libs)):
+        lib = libs[i]
+        libpath = paths[libs[i]]
+        libs[i] = '$DIR/%s/.libs/%s-%s.so' % (libpath, lib, self.version)
+      fd.write('transform %s/%s "%s"\n' % (path, name, " ".join(libs)))
+    fd.close()
+    mode = stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH
+    os.chmod(script, mode)
+
+  def _get_all_lib_deps(self, target_name, libdep_cache, paths):
+    if not target_name in libdep_cache:
+      libs = set()
+      path = None
+      if target_name in self.sections:
+        section = self.sections[target_name]
+        opt_libs = self.sections[target_name].options.get('libs')
+        paths[target_name] = section.options.get('path')
+        if opt_libs:
+          for lib_name in opt_libs.split():
+            if lib_name.startswith('libsvn_'):
+              libs.add(lib_name)
+            for lib in self._get_all_lib_deps(lib_name, libdep_cache, paths):
+              libs.add(lib)
+      if target_name == 'libsvn_subr':
+        libs.update(('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'))
+      libdep_cache[target_name] = sorted(libs)
+    return libdep_cache[target_name]
 
 class UnknownDependency(Exception):
   "We don't know how to deal with the dependent to link it in."

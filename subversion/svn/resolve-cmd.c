@@ -29,6 +29,7 @@
 #define APR_WANT_STDIO
 #include <apr_want.h>
 
+#include "svn_path.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -53,6 +54,7 @@ svn_cl__resolve(apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   apr_pool_t *iterpool;
+  svn_boolean_t had_error = FALSE;
 
   switch (opt_state->accept_which)
     {
@@ -75,8 +77,11 @@ svn_cl__resolve(apr_getopt_t *os,
       conflict_choice = svn_wc_conflict_choose_mine_full;
       break;
     case svn_cl__accept_unspecified:
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("missing --accept option"));
+      if (ctx->conflict_func2 == NULL)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("missing --accept option"));
+      conflict_choice = svn_wc_conflict_choose_unspecified;
+      break;
     default:
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               _("invalid 'accept' ARG"));
@@ -84,18 +89,22 @@ svn_cl__resolve(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
   if (! targets->nelts)
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+    svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_empty;
+    {
+      if (opt_state->accept_which == svn_cl__accept_unspecified)
+        opt_state->depth = svn_depth_infinity;
+      else
+        opt_state->depth = svn_depth_empty;
+    }
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -111,9 +120,15 @@ svn_cl__resolve(apr_getopt_t *os,
         {
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
+          had_error = TRUE;
         }
     }
   svn_pool_destroy(iterpool);
+
+  if (had_error)
+    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
+                            _("Failure occurred resolving one or more "
+                              "conflicts"));
 
   return SVN_NO_ERROR;
 }

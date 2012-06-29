@@ -30,8 +30,8 @@ class WC(object):
 
         Keyword arguments:
         path -- path to the working copy (default current working directory)
-        user -- object implementingthe user interface representing the user
-            performing the operatio (defaults to an instance of the User class)
+        user -- object implementing the user interface representing the user
+            performing the operation (defaults to an instance of the User class)
         """
         if user is None:
             user = User()
@@ -78,6 +78,10 @@ class WC(object):
             svn_client_get_commit_log2_t(self._log_func_wrapper)
         self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
+
+    def close(self):
+        """Close this WC object, releasing any resources."""
+        self.pool.clear()
 
     def copy(self, src, dest, rev = ""):
         """Copy src to dest.
@@ -238,7 +242,7 @@ class WC(object):
     def set_progress_func(self, progress_func):
         """Setup a callback for network progress information.
 
-        This callback should accept two intergers, being the number of bytes
+        This callback should accept two integers, being the number of bytes
         sent and the number of bytes to send.
 
         Keyword arguments:
@@ -428,7 +432,7 @@ class WC(object):
         return props
 
     def propget(self, propname, target="", recurse=True):
-        """Get the the value of propname for target.
+        """Get the value of propname for target.
 
         Returns a hash the keys of which are file paths and the values are the
         value of PROPNAME for the corresponding file. The values of the hash
@@ -477,7 +481,7 @@ class WC(object):
         """Get the status on path using callback to status.
 
         The status callback (which can be set when this method is called or
-        earlier) wil be called for each item.
+        earlier) will be called for each item.
 
         Keyword arguments:
         path -- items to get status for (defaults to WC root)
@@ -585,8 +589,8 @@ class WC(object):
         """Register a callback to get a log message for commit and commit-like
         operations.
 
-        LOG_FUNC should take an array as an argument,vwhich holds the files to
-        be commited. It should return a list of thevform [LOG, FILE] where LOG
+        LOG_FUNC should take an array as an argument, which holds the files to
+        be committed. It should return a list of the form [LOG, FILE] where LOG
         is a log message and FILE is the temporary file, if one was created
         instead of a log message. If LOG is None, the operation will be
         canceled and FILE will be treated as the temporary file holding the
@@ -615,9 +619,9 @@ class WC(object):
         """Commit changes in the working copy.
 
         Keyword arguments:
-        paths -- list of paths that should be commited (defaults to WC root)
+        paths -- list of paths that should be committed (defaults to WC root)
         recurse -- if True, the contents of directories to be committed will
-            also be commited (default True)
+            also be committed (default True)
         keep_locks -- if True, locks will not be released during commit
             (default False)"""
         commit_info = POINTER(svn_commit_info_t)()
@@ -702,9 +706,9 @@ class WC(object):
         self.iterpool.clear()
 
     def relocate(self, from_url, to_url, dir="", recurse=True):
-        """Modify a working copy directory, changing repository URLs. that begin with FROM_URL to begin with
-        TO_URL instead, recursing into subdirectories if RECURSE is True
-        (True by default).
+        """Modify a working copy directory, changing repository URLs that begin
+        with FROM_URL to begin with TO_URL instead, recursing into
+        subdirectories if RECURSE is True (True by default).
 
         Keyword arguments:
         from_url -- url to be replaced, if this url is matched at the beginning

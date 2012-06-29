@@ -3,7 +3,7 @@
 #  merge_authz_tests.py:  merge tests that need to write an authz file
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -34,9 +34,12 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 from merge_tests import set_up_branch
 from merge_tests import expected_merge_output
@@ -70,6 +73,12 @@ from svntest.actions import inject_conflict_into_expected_state
 #         This is *not* a full test of issue #2829, see also merge_tests.py,
 #         search for "2829".  This tests the problem where a merge adds a path
 #         with a missing sibling and so needs its own explicit mergeinfo.
+#
+# #4056 - Don't record non-inheritable mergeinfo if missing subtrees are not
+#         touched by the full-depth diff
+@Issues(2893,2997,2829,4056)
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
 def mergeinfo_and_skipped_paths(sbox):
   "skipped paths get overriding mergeinfo"
 
@@ -82,13 +91,6 @@ def mergeinfo_and_skipped_paths(sbox):
   #   2) Destination of merge is inaccessible due to authz restrictions.
   #   3) Source *and* destination of merge is inaccessible due to authz
   #      restrictions.
-  #   4) File path is versioned but is missing from disk due to OS deletion.
-  #      This isn't technically part of issue #2893 but we handle this case
-  #      and it didn't warrant its own test).
-  #
-  # Eventually we should also test(?):
-  #
-  #   5) Dir path is versioned but is missing from disk due to an OS deletion.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -122,28 +124,28 @@ def mergeinfo_and_skipped_paths(sbox):
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
   zeta_path = os.path.join(wc_dir, "A", "D", "H", "zeta")
 
-  # Restrict access to some more of the merge destination the
-  # old fashioned way, delete it via the OS.
-  ### TODO: Delete a versioned directory?
-  os.remove(omega_path)
-
   # Merge r4:8 into the restricted WC's A_COPY.
   #
   # We expect A_COPY/B/E to be skipped because we can't access the source
   # and A_COPY/D/H/omega because it is missing.  Since we have A_COPY/B/E
   # we should override it's inherited mergeinfo, giving it just what it
-  # inherited from A_COPY before the merge.  omega is missing, but since
-  # it is a file we can record the fact that it is missing in its parent
-  # directory A_COPY/D/H.
+  # inherited from A_COPY before the merge.
   expected_output = wc.State(A_COPY_path, {
     'D/G/rho'   : Item(status='U '),
     'D/H/psi'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_path, {
+    ''          : Item(status=' U'),
+    'B/E'       : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_path, {
     })
   expected_status = wc.State(A_COPY_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/psi'   : Item(status='M ', wc_rev=8),
-    'D/H/omega' : Item(status='!M', wc_rev=8),
+    'D/H/omega' : Item(status='M ', wc_rev=8),
     'D/H'       : Item(status='  ', wc_rev=8),
     'D/G/pi'    : Item(status='  ', wc_rev=8),
     'D/G/rho'   : Item(status='M ', wc_rev=8),
@@ -164,9 +166,7 @@ def mergeinfo_and_skipped_paths(sbox):
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-8'}),
     'D/H/psi'   : Item("New content"),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
-     # 'D/H/omega' : run_and_verify_merge() doesn't support checking
-     #               the props on a missing path, so we do that
-     #               manually (see below).
+    'D/H/omega' : Item("New content"),
     'D/H'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
     'D/G/rho'   : Item("New content"),
@@ -185,22 +185,17 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_path, {
     'B/E'       : Item(),
-    'D/H/omega' : Item(),
     })
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
-                                       sbox.repo_url + \
-                                       '/A',
+                                       sbox.repo_url + '/A', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  # Manually check the props on A_COPY/D/H/omega.
-  svntest.actions.run_and_verify_svn(None, ['\n'], [],
-                                    'pg', SVN_PROP_MERGEINFO, omega_path)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
@@ -216,12 +211,19 @@ def mergeinfo_and_skipped_paths(sbox):
   # parent of a missing child and the sibling of missing child, but the former
   # always takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
-    'D/G'       : Item(status='  ', treeconflict='C'),
     'D/H/omega' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' U'),
+    'D'         : Item(status=' U'),
+    'D/H'       : Item(status=' U'),
+    'D/H/omega' : Item(status=' U'),
+    'B/E'       : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_path, {
     })
   expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
-    'D/G'       : Item(status='! ', treeconflict='C'),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
     'D/H'       : Item(status=' M', wc_rev=8),
@@ -255,13 +257,14 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_2_path, {
     'B/E'     : Item(),
+    'D/G'       : Item(),
     'D/H/psi'   : Item(),
     })
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
-                                       sbox.repo_url + \
-                                       '/A',
+                                       sbox.repo_url + '/A', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -277,6 +280,12 @@ def mergeinfo_and_skipped_paths(sbox):
   # neither gets any mergeinfo recorded.
   expected_output = wc.State(A_COPY_3_path, {
     'D/G/rho' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_3_path, {
+    ''  : Item(status=' U'),
+    'B' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_3_path, {
     })
   expected_status = wc.State(A_COPY_3_path, {
     ''          : Item(status=' M', wc_rev=8),
@@ -315,11 +324,11 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_3_path, {'B/E' : Item()})
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_3_path, '5', '7',
-                                       sbox.repo_url + \
-                                       '/A',
+                                       sbox.repo_url + '/A', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -338,6 +347,8 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     })
+  expected_elision_output = wc.State(A_COPY_2_H_path, {
+    })
   expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status='  ', wc_rev=8),
@@ -352,16 +363,22 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_skip = wc.State(A_COPY_2_H_path, {
     'psi'   : Item(),
     })
-  saved_cwd = os.getcwd()
+  # Note we don't bother checking expected mergeinfo output because the
+  # multiple merges being performed here, -c5 and -c8, will result in
+  # first ' U' and then ' G' mergeinfo notifications.  Our expected
+  # tree structures can't handle checking for multiple values for the
+  # same key.
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '5',
-                                       sbox.repo_url + \
-                                       '/A/D/H',
+                                       sbox.repo_url + '/A/D/H', None,
                                        expected_output,
+                                       None, # expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0, '-c5', '-c8')
+                                       None, 1, 0, '-c5', '-c8',
+                                       A_COPY_2_H_path)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
@@ -379,13 +396,64 @@ def mergeinfo_and_skipped_paths(sbox):
 
   # Merge -r7:9 to the restricted WC's A_COPY_2/D/H.
   #
-  # r9 adds a path, 'A_COPY_2/D/H/zeta', which has a parent with
-  # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing).
-  # 'A_COPY_2/D/H/zeta' must therefore get its own explicit mergeinfo from
-  # this merge.
+  # r9 adds a path, 'A_COPY_2/D/H/zeta', which has a missing sibling 'psi',
+  # but since 'psi' is untouched by the merge it isn't skipped, and since it
+  # isn't skipped, its parent 'A_COPY_2/D/H' won't get non-inheritable
+  # mergeinfo set on it to describe the merge, so none of the parent's
+  # children will get explicit mergeinfo -- see issue #4056.
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     'zeta'  : Item(status='A '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_2_H_path, {
+    ''      : Item(status=' U'),
+    'omega' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_H_path, {
+    'omega' : Item(status=' U'),
+    })
+  expected_status = wc.State(A_COPY_2_H_path, {
+    ''      : Item(status=' M', wc_rev=8),
+    'chi'   : Item(status='  ', wc_rev=8),
+    'omega' : Item(status='M ', wc_rev=8),
+    'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8-9'}),
+    'omega' : Item("New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'zeta'  : Item("This is the file 'zeta'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_2_H_path, {})
+  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
+                                       sbox.repo_url + '/A/D/H', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+
+  # Merge -r4:9 to the restricted WC's A_COPY_2/D/H.
+  #
+  # r9 adds a path, 'A_COPY_2/D/H/zeta', which has a parent with
+  # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing
+  # and skipped). 'A_COPY_2/D/H/zeta' must therefore get its own explicit
+  # mergeinfo from this merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                     wc_restricted)
+  expected_output = wc.State(A_COPY_2_H_path, {
+    'omega' : Item(status='U '),
+    'zeta'  : Item(status='A '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_2_H_path, {
+    ''      : Item(status=' U'),
+    'omega' : Item(status=' U'),
+    'zeta'  : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_H_path, {
     })
   expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
@@ -394,25 +462,29 @@ def mergeinfo_and_skipped_paths(sbox):
     'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8-9*'}),
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5-9*'}),
     'omega' : Item("New content",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:5-9'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'zeta'  : Item("This is the file 'zeta'.\n",
-                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:9'}),
     })
-  expected_skip = wc.State(A_COPY_2_H_path, {})
-  saved_cwd = os.getcwd()
-  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
-                                       sbox.repo_url + \
-                                       '/A/D/H',
+  expected_skip = wc.State(A_COPY_2_H_path, {
+    'psi' : Item(),
+    })
+  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '9',
+                                       sbox.repo_url + '/A/D/H', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 0)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(2876)
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
 
@@ -507,11 +579,14 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         expected_status,
                                         None,
                                         wc_dir, wc_dir)
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,4]],
-                                     'U    ' + Acopy_gamma_path + '\n'),
-                                     [], 'merge', '-r1:4',
-                                     A_url + '/D/gamma' + '@4',
-                                     Acopy_gamma_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,4]],
+                          ['U    ' + Acopy_gamma_path + '\n',
+                           ' U   ' + Acopy_gamma_path + '\n']),
+    [], 'merge', '-r1:4',
+    A_url + '/D/gamma' + '@4',
+    Acopy_gamma_path)
 
   # r6: create an empty (unreadable) commit.
   # Empty or unreadable revisions used to crash a svn 1.6+ client when
@@ -524,10 +599,140 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # A delete merged ontop of a modified file is normally a tree conflict,
   # see notes/tree-conflicts/detection.txt, but --force currently avoids
   # this.
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,6]],
-                                     ['D    ' + Acopy_gamma_path + '\n']),
-                                     [], 'merge', '-r1:6', '--force',
-                                     A_url, Acopy_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,6]],
+                          ['D    ' + Acopy_gamma_path + '\n',
+                           ' U   ' + Acopy_path + '\n']),
+    [], 'merge', '-r1:6', '--force',
+    A_url, Acopy_path)
+
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
+def reintegrate_fails_if_no_root_access(sbox):
+  "reintegrate fails if no root access"
+
+  # If a user is authorized to a reintegrate source and target, they
+  # should be able to reintegrate, regardless of what authorization
+  # they have to parents of the source and target.
+  #
+  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3242#desc78
+
+  # Some paths we'll care about
+  wc_dir = sbox.wc_dir
+  A_path          = os.path.join(wc_dir, 'A')
+  A_COPY_path     = os.path.join(wc_dir, 'A_COPY')
+  beta_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'beta')
+  rho_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
+  omega_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'omega')
+  psi_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+
+  # Copy A@1 to A_COPY in r2, and then make some changes to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Make a change on the branch, to A_COPY/mu, commit in r7.
+  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+                          "Changed on the branch.")
+  expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/mu', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY/mu', contents='Changed on the branch.')
+
+  # Update the WC.
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+
+  # Sync A_COPY with A.
+  expected_output = expected_merge_output([[2,7]],
+                                          ['U    ' + beta_COPY_path  + '\n',
+                                           'U    ' + rho_COPY_path   + '\n',
+                                           'U    ' + omega_COPY_path + '\n',
+                                           'U    ' + psi_COPY_path   + '\n',
+                                           # Mergeinfo notification
+                                           ' U   ' + A_COPY_path     + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'synch A_COPY with A', wc_dir)
+
+  # Update so we are ready for reintegrate.
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Change authz file so everybody has access to everything but the root.
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_restrictive_svnserve_conf(sbox.repo_dir)
+    write_authz_file(sbox, {"/"       : "* =",
+                            "/A"      : "* = rw",
+                            "/A_COPY" : "* = rw",
+                            "/iota"   : "* = rw"})
+
+  # Now reintegrate A_COPY back to A.  The lack of access to the root of the
+  # repository shouldn't be a problem.
+  expected_output = wc.State(A_path, {
+    'mu'           : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8'}),
+    'B'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/F'       : Item(),
+    'mu'        : Item("Changed on the branch."),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/omega' : Item("New content"),
+    'D/H/psi'   : Item("New content"),
+  })
+  expected_status = wc.State(A_path, {
+    "B"            : Item(status='  ', wc_rev=8),
+    "B/lambda"     : Item(status='  ', wc_rev=8),
+    "B/E"          : Item(status='  ', wc_rev=8),
+    "B/E/alpha"    : Item(status='  ', wc_rev=8),
+    "B/E/beta"     : Item(status='  ', wc_rev=8),
+    "B/F"          : Item(status='  ', wc_rev=8),
+    "mu"           : Item(status='M ', wc_rev=8),
+    "C"            : Item(status='  ', wc_rev=8),
+    "D"            : Item(status='  ', wc_rev=8),
+    "D/gamma"      : Item(status='  ', wc_rev=8),
+    "D/G"          : Item(status='  ', wc_rev=8),
+    "D/G/pi"       : Item(status='  ', wc_rev=8),
+    "D/G/rho"      : Item(status='  ', wc_rev=8),
+    "D/G/tau"      : Item(status='  ', wc_rev=8),
+    "D/H"          : Item(status='  ', wc_rev=8),
+    "D/H/chi"      : Item(status='  ', wc_rev=8),
+    "D/H/omega"    : Item(status='  ', wc_rev=8),
+    "D/H/psi"      : Item(status='  ', wc_rev=8),
+    ""             : Item(status=' M', wc_rev=8),
+  })
+  expected_skip = wc.State(A_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, True, True,
+                                       '--reintegrate', A_path)
 
 ########################################################################
 # Run the tests
@@ -535,15 +740,14 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(Skip(mergeinfo_and_skipped_paths,
-                              svntest.main.is_ra_type_file),
-                         svntest.main.server_has_mergeinfo),
-              SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
-                         server_has_mergeinfo),
+              mergeinfo_and_skipped_paths,
+              merge_fails_if_subtree_is_deleted_on_src,
+              reintegrate_fails_if_no_root_access,
              ]
+serial_only = True
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list, serial_only = True)
+  svntest.main.run_tests(test_list, serial_only = serial_only)
   # NOTREACHED
 
 

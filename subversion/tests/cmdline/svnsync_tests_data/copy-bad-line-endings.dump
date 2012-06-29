@@ -16,11 +16,6 @@ Revision-number: 1
 Prop-content-length: 151
 Content-length: 151
 
-K 7
-svn:log
-V 49
-added svn:ignore using CRLF to terminate lines
-
 K 10
 svn:author
 V 7
@@ -29,6 +24,11 @@ K 8
 svn:date
 V 27
 2009-03-27T19:33:51.178381Z
+K 7
+svn:log
+V 49
+added svn:ignore using CRLF to terminate lines
+
 PROPS-END
 
 Node-path: 

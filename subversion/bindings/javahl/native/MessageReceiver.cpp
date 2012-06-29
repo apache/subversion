@@ -58,7 +58,7 @@ void MessageReceiver::receiveMessage(const char *message)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/ISVNAdmin$MessageReceiver");
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -68,8 +68,6 @@ void MessageReceiver::receiveMessage(const char *message)
         return;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
     }
 
   // Convert the message to a Java string.
@@ -84,6 +82,4 @@ void MessageReceiver::receiveMessage(const char *message)
 
   // Delete the Java string.
   env->DeleteLocalRef(jmsg);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
 }

@@ -1,0 +1,30 @@
+The SVN Vision meeting will be held on March 24-26 at the GooglePlex
+in NYC.  This is a preliminary agenda; feel free to hack it at will.
+
+The general plan is to discuss stuff on March 24, 25, and then spend the
+morning of March 26 putting the results together in order to present to dev@.
+Most of the anticipated attendees have afternoon flights on March 26, so we'll
+then bid each other farewell until Berlin in June.
+
+Potential topics for discussion:
+ * Feedback from users we've talked to
+ * What is the new Vision for Subversion?
+ * Beyond Subversion 1.7 -- a high-level roadmap proposal
+ * How do we encourage additional investment (of time, talent, and treasure)?
+ * Subversion 2.0 (the Elephant in the Room)
+
+Other non-vision-related stuff, if time allows (or perhaps after hours):
+
+  Stuff Hyrum would like to talk about:
+   * Why is merge slow (compared to $OTHER_SYSTEM)?
+       - Is it endemic to Subversion's architecture, or can it be fixed?
+   * Some musing on FS library design (hopefully with the insight of
+     Mr. Jon Trowbridge).
+
+  Some stuff Mike would like to talk about:
+    * Improve feature negotiation between repos and client (by way of server)
+        - Get repos-dictated config here, too?
+    * Consider dropping back-end feature parity requirement/goal.
+        - Consider improving the backends independently (why should
+          the world wait on obliterate suppport or anything else)
+    * Consider looking into new, more flexible backend designs.

@@ -1,12 +1,15 @@
-log: Show the log messages for a set of revision(s) and/or file(s).
-usage: 1. log [PATH]
+log: Show the log messages for a set of revision(s) and/or path(s).
+usage: 1. log [PATH][@REV]
        2. log URL[@REV] [PATH...]
 
-  1. Print the log messages for a local PATH (default: '.').
-     The default revision range is BASE:1.
+  1. Print the log messages for the URL corresponding to PATH
+     (default: '.'). If specified, REV is the revision in which the
+     URL is first looked up, and the default revision range is REV:1.
+     If REV is not specified, the default revision range is BASE:1,
+     since the URL might not exist in the HEAD revision.
 
   2. Print the log messages for the PATHs (default: '.') under URL.
-     If specified, REV determines in which revision the URL is first
+     If specified, REV is the revision in which the URL is first
      looked up, and the default revision range is REV:1; otherwise,
      the URL is looked up in HEAD, and the default revision range is
      HEAD:1.
@@ -24,11 +27,45 @@ usage: 1. log [PATH]
   follow copy history by default.  Use --stop-on-copy to disable this
   behavior, which can be useful for determining branchpoints.
 
+  The --depth option is only valid in combination with the --diff option
+  and limits the scope of the displayed diff to the specified depth.
+
+  If the --search option is used, log messages are displayed only if the
+  provided search pattern matches the author, date, log message text,
+  or, if the --verbose option is also provided, a changed path.
+  The search pattern may include glob syntax wildcards:
+      ?      matches any single character
+      *      matches a sequence of arbitrary characters
+      [...]  matches any of the characters listed inside the brackets
+  If --limit is used in combination with --search, --limit restricts the
+  number of log messages searched, rather than restricting the output
+  to a particular number of matching log messages.
+
   Examples:
-    svn log
-    svn log foo.c
-    svn log http://www.example.com/repo/project/foo.c
-    svn log http://www.example.com/repo/project foo.c bar.c
+
+    Show the latest 5 log messages for the current working copy
+    directory and display paths changed in each commit:
+      svn log -l 5 -v
+
+    Show the log for bar.c as of revision 42:
+      svn log bar.c@42
+
+    Show log messages and diffs for each commit to foo.c:
+      svn log --diff http://www.example.com/repo/project/foo.c
+    (Because the above command uses a full URL it does not require
+     a working copy.)
+
+    Show log messages for the children foo.c and bar.c of the directory
+    '/trunk' as it appeared in revision 50, using the ^/ URL shortcut:
+      svn log ^/trunk@50 foo.c bar.c
+
+    Show the log messages for any incoming changes to foo.c during the
+    next 'svn update':
+      svn log -r BASE:HEAD foo.c
+
+    Show the log message for the revision in which /branches/foo
+    was created:
+      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
@@ -52,24 +89,47 @@ Valid options:
   --with-all-revprops      : retrieve all revision properties
   --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
+  --depth ARG              : limit operation by depth ARG ('empty', 'files',
+                             'immediates', or 'infinity')
+  --diff                   : produce diff output
+  --diff-cmd ARG           : use ARG as diff command
+  --internal-diff          : override diff-cmd specified in config file
+  -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
+                             external diff program, ARG is simply passed along
+                             to the program. But when Subversion is using its
+                             default internal diff implementation, or when
+                             Subversion is displaying blame annotations, ARG
+                             could be any of the following:
+                                -u (--unified):
+                                   Output 3 lines of unified context.
+                                -b (--ignore-space-change):
+                                   Ignore changes in the amount of white space.
+                                -w (--ignore-all-space):
+                                   Ignore all white space.
+                                --ignore-eol-style:
+                                   Ignore changes in EOL style.
+                                -p (--show-c-function):
+                                   Show C function name in diff output.
+  --search ARG             : use ARG as search pattern (glob syntax)
+  --isearch ARG            : like --search, but case-insensitive
 
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
-  --trust-server-cert      : accept unknown SSL server certificates without
-                             prompting (but only with '--non-interactive')
+  --trust-server-cert      : accept SSL server certificates from unknown
+                             certificate authorities without prompting (but only
+                             with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
                                  servers:global:http-library=serf
 
-
-switch (sw): Update the working copy to a different URL.
+switch (sw): Update the working copy to a different URL within the same repository.
 usage: 1. switch URL[@PEGREV] [PATH]
-       2. switch --relocate FROM TO [PATH...]
+       2. switch --relocate FROM-PREFIX TO-PREFIX [PATH...]
 
   1. Update the working copy to mirror a new URL within the repository.
      This behavior is similar to 'svn update', and is the way to
@@ -89,26 +149,21 @@ usage: 1. switch URL[@PEGREV] [PATH]
      are applied to the obstructing path.
 
      Use the --set-depth option to set a new working copy depth on the
-     targets of this operation.  Currently, the depth of a working copy
-     directory can only be increased (telescoped more deeply); you cannot
-     make a directory more shallow.
+     targets of this operation.
 
-  2. Rewrite working copy URL metadata to reflect a syntactic change only.
-     This is used when repository's root URL changes (such as a scheme
-     or hostname change) but your working copy still reflects the same
-     directory within the same repository.
+     By default, Subversion will refuse to switch a working copy path to
+     a new URL with which it shares no common version control ancestry.
+     Use the '--ignore-ancestry' option to override this sanity check.
 
-     FROM is the root URL which will be relocated from.
-     You can use 'svn info' to determine the root URL of the current
-     working copy directory (look for 'URL:' in its output).
-
-     TO is the root URL which will be relocated to.
+  2. The '--relocate' option is deprecated. This syntax is equivalent to
+     'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.
 
   See also 'svn help update' for a list of possible characters
   reporting the action taken.
 
   Examples:
     svn switch ^/branches/1.x-release
+    svn switch --relocate http:// svn://
     svn switch --relocate http://www.example.com/repo/project \
                           svn://svn.example.com/repo/project
 
@@ -123,31 +178,32 @@ Valid options:
                                 'PREV'       revision just before COMMITTED
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
-                            'immediates', or 'infinity')
+                             'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('exclude',
-                            'empty', 'files', 'immediates', or 'infinity')
+                             'empty', 'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
-                             [aliases: --ie]
+  --ignore-ancestry        : ignore ancestry when calculating merges
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
-                            ('postpone', 'base', 'mine-conflict',
+                             ('postpone', 'working', 'base', 'mine-conflict',
                              'theirs-conflict', 'mine-full', 'theirs-full',
                              'edit', 'launch')
+                             (shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')
 
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
-  --trust-server-cert      : accept unknown SSL server certificates without
-                             prompting (but only with '--non-interactive')
+  --trust-server-cert      : accept SSL server certificates from unknown
+                             certificate authorities without prompting (but only
+                             with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
                                  servers:global:http-library=serf
-
 

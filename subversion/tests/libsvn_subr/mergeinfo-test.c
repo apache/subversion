@@ -26,6 +26,8 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
@@ -115,7 +117,7 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2;
 
-#define NBR_MERGEINFO_VALS 20
+#define NBR_MERGEINFO_VALS 24
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -144,7 +146,12 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/gunther_branch:7-12*,1,5-10*",
     /* Adjacent rangelists of differing inheritability. */
     "/b5:5-53,1-4,54-90*",
-    "/c0:1-77,12-44"
+    "/c0:1-77,12-44",
+    /* Non-canonical paths. */
+    "/A/:7-8",
+    "/A///:7-8",
+    "/A/.:7-8",
+    "/A/./B:7-8"
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -154,9 +161,12 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/trunk",
     "/trunk",
     "/branch",
-    "patch-common::netasq-bpf.c",
-    "patch-common_netasq-bpf.c:",
-    ":patch:common:netasq:bpf.c",
+
+    /* svn_mergeinfo_parse converts relative merge soure paths to absolute. */
+    "/patch-common::netasq-bpf.c",
+    "/patch-common_netasq-bpf.c:",
+    "/:patch:common:netasq:bpf.c",
+
     "/trunk",
     "/trunk",
     "/trunk",
@@ -168,7 +178,13 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/gunther_branch",
     "/gunther_branch",
     "/b5",
-    "/c0"
+    "/c0",
+
+    /* non-canonical paths converted to canonical */
+    "/A",
+    "/A",
+    "/A",
+    "/A/B"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -195,6 +211,10 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 1, TRUE}, {4, 12, FALSE} },
     { {0, 53, TRUE}, {53, 90, FALSE} },
     { {0, 77, TRUE} },
+    { {6, 8, TRUE} },
+    { {6, 8, TRUE} },
+    { {6, 8, TRUE} },
+    { {6, 8, TRUE} },
   };
 
 static svn_error_t *
@@ -379,7 +399,7 @@ range_to_string(svn_merge_range_t *range,
    verified (e.g. "svn_rangelist_intersect"), while TYPE is a word
    describing what the ranges being examined represent. */
 static svn_error_t *
-verify_ranges_match(apr_array_header_t *actual_rangelist,
+verify_ranges_match(const apr_array_header_t *actual_rangelist,
                     svn_merge_range_t *expected_ranges, int nbr_expected,
                     const char *func_verified, const char *type,
                     apr_pool_t *pool)
@@ -463,8 +483,7 @@ test_rangelist_reverse(apr_pool_t *pool)
   svn_merge_range_t expected_rangelist[3] =
     { {10, 9, TRUE}, {7, 4, TRUE}, {3, 2, TRUE} };
 
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 3,5-7,10", pool));
-  rangelist = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
+  SVN_ERR(svn_rangelist__parse(&rangelist, "3,5-7,10", pool));
 
   SVN_ERR(svn_rangelist_reverse(rangelist, pool));
 
@@ -476,21 +495,66 @@ static svn_error_t *
 test_rangelist_intersect(apr_pool_t *pool)
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
-  svn_merge_range_t expected_intersection[] =
-    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE},
+
+  /* Expected intersection when considering inheritance. */
+  svn_merge_range_t intersection_consider_inheritance[] =
+    { {0, 1, TRUE}, {11, 12, TRUE}, {30, 32, FALSE}, {39, 42, TRUE} };
+
+  /* Expected intersection when ignoring inheritance. */
+  svn_merge_range_t intersection_ignore_inheritance[] =
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, FALSE},
       {39, 42, TRUE} };
 
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32,40-42", pool));
-  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44",
-                              pool));
-  rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
-  rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
+  SVN_ERR(svn_rangelist__parse(&rangelist1, "1-6,12-16,30-32*,40-42", pool));
+  SVN_ERR(svn_rangelist__parse(&rangelist2, "1,3-4*,7,9,11-12,31-34*,38-44",
+                               pool));
 
+  /* Check the intersection while considering inheritance twice, reversing
+     the order of the rangelist arguments on the second call to
+     svn_rangelist_intersection.  The order *should* have no effect on
+     the result -- see http://svn.haxx.se/dev/archive-2010-03/0351.shtml.
+
+     '3-4*' has different inheritance than '1-6', so no intersection is
+     expected.  '30-32*' and '31-34*' have the same inheritance, so intersect
+     at '31-32*'.  Per the svn_rangelist_intersect API, since both ranges
+     are non-inheritable, so is the result. */
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
                                   TRUE, pool));
 
-  return verify_ranges_match(intersection, expected_intersection, 5,
-                             "svn_rangelist_intersect", "intersect", pool);
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_consider_inheritance,
+                              4, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist2, rangelist1,
+                                  TRUE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_consider_inheritance,
+                              4, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  /* Check the intersection while ignoring inheritance.  The one difference
+     from when we consider inheritance is that '3-4*' and '1-6' now intersect,
+     since we don't care about inheritability, just the start and end ranges.
+     Per the svn_rangelist_intersect API, since only one range is
+     non-inheritable the result is inheritable. */
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
+                                  FALSE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_ignore_inheritance,
+                              5, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist2, rangelist1,
+                                  FALSE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_ignore_inheritance,
+                              5, "svn_rangelist_intersect", "intersect",
+                              pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -538,6 +602,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
   struct mergeinfo_merge_path_range
     {
       const char *path;
+      int expected_n;
       svn_merge_range_t expected_rngs[MAX_NBR_MERGEINFO_RANGES];
     };
 
@@ -560,75 +625,75 @@ test_merge_mergeinfo(apr_pool_t *pool)
       /* One path, intersecting inheritable ranges */
       { "/trunk: 5-10",
         "/trunk: 6", 1,
-        { {"/trunk", { {4, 10, TRUE} } } } },
+        { {"/trunk", 1, { {4, 10, TRUE} } } } },
 
       /* One path, intersecting non-inheritable ranges */
       { "/trunk: 5-10*",
         "/trunk: 6*", 1,
-        { {"/trunk", { {4, 10, FALSE} } } } },
+        { {"/trunk", 1, { {4, 10, FALSE} } } } },
 
       /* One path, intersecting ranges with different inheritability */
       { "/trunk: 5-10",
         "/trunk: 6*", 1,
-        { {"/trunk", { {4, 10, TRUE} } } } },
+        { {"/trunk", 1, { {4, 10, TRUE} } } } },
 
       /* One path, intersecting ranges with different inheritability */
       { "/trunk: 5-10*",
         "/trunk: 6", 1,
-        { {"/trunk", { {4, 5, FALSE}, {5, 6, TRUE}, {6, 10, FALSE} } } } },
+        { {"/trunk", 3, { {4, 5, FALSE}, {5, 6, TRUE}, {6, 10, FALSE} } } } },
 
       /* Adjacent ranges all inheritable ranges */
       { "/trunk: 1,3,5-11,13",
         "/trunk: 2,4,12,14-22", 1,
-         { {"/trunk", { {0, 22, TRUE} } } } },
+        { {"/trunk", 1, { {0, 22, TRUE} } } } },
 
       /* Adjacent ranges all non-inheritable ranges */
       { "/trunk: 1*,3*,5-11*,13*",
         "/trunk: 2*,4*,12*,14-22*", 1,
-         { {"/trunk", { {0, 22, FALSE} } } } },
+        { {"/trunk", 1, { {0, 22, FALSE} } } } },
 
       /* Adjacent ranges differing inheritability */
       { "/trunk: 1*,3*,5-11*,13*",
         "/trunk: 2,4,12,14-22", 1,
-         { {"/trunk", { { 0,  1, FALSE}, { 1,  2, TRUE},
-                        { 2,  3, FALSE}, { 3,  4, TRUE},
-                        { 4, 11, FALSE}, {11, 12, TRUE},
-                        {12, 13, FALSE}, {13, 22, TRUE} } } } },
+        { {"/trunk", 8, { { 0,  1, FALSE}, { 1,  2, TRUE},
+                          { 2,  3, FALSE}, { 3,  4, TRUE},
+                          { 4, 11, FALSE}, {11, 12, TRUE},
+                          {12, 13, FALSE}, {13, 22, TRUE} } } } },
 
       /* Adjacent ranges differing inheritability */
       { "/trunk: 1,3,5-11,13",
         "/trunk: 2*,4*,12*,14-22*", 1,
-         { {"/trunk", { { 0,  1, TRUE}, { 1,  2, FALSE},
-                        { 2,  3, TRUE}, { 3,  4, FALSE},
-                        { 4, 11, TRUE}, {11, 12, FALSE},
-                        {12, 13, TRUE}, {13, 22, FALSE} } } } },
+        { {"/trunk", 8, { { 0,  1, TRUE}, { 1,  2, FALSE},
+                          { 2,  3, TRUE}, { 3,  4, FALSE},
+                          { 4, 11, TRUE}, {11, 12, FALSE},
+                          {12, 13, TRUE}, {13, 22, FALSE} } } } },
 
       /* Two paths all inheritable ranges */
       { "/trunk::1: 3,5,7-9,10,11,13,14\n/fred:8-10",
         "/trunk::1: 1-4,6\n/fred:9-12", 2,
-        { {"/trunk::1", { {0, 11, TRUE}, {12, 14, TRUE} } },
-          {"/fred",  { {7, 12, TRUE} } } } },
+        { {"/trunk::1", 2, { {0, 11, TRUE}, {12, 14, TRUE} } },
+          {"/fred",     1, { {7, 12, TRUE} } } } },
 
       /* Two paths all non-inheritable ranges */
       { "/trunk: 3*,5*,7-9*,10*,11*,13*,14*\n/fred:8-10*",
         "/trunk: 1-4*,6*\n/fred:9-12*", 2,
-        { {"/trunk", { {0, 11, FALSE}, {12, 14, FALSE} } },
-          {"/fred",  { {7, 12, FALSE} } } } },
+        { {"/trunk", 2, { {0, 11, FALSE}, {12, 14, FALSE} } },
+          {"/fred",  1, { {7, 12, FALSE} } } } },
 
       /* Two paths mixed inheritability */
       { "/trunk: 3,5*,7-9,10,11*,13,14\n/fred:8-10",
         "/trunk: 1-4,6\n/fred:9-12*", 2,
-        { {"/trunk", { { 0,  4, TRUE }, { 4,  5, FALSE}, {5, 10, TRUE},
-                       {10, 11, FALSE}, {12, 14, TRUE } } },
-          {"/fred",  { { 7, 10, TRUE }, {10, 12, FALSE} } } } },
+        { {"/trunk", 5, { { 0,  4, TRUE }, { 4,  5, FALSE}, {5, 10, TRUE},
+                          {10, 11, FALSE}, {12, 14, TRUE } } },
+          {"/fred",  2, { { 7, 10, TRUE }, {10, 12, FALSE} } } } },
 
       /* A slew of different paths but no ranges to be merged */
       { "/trunk: 3,5-9*\n/betty: 2-4",
         "/fred: 1-18\n/:barney: 1,3-43", 4,
-        { {"/trunk",   { {2,  3, TRUE}, {4,  9, FALSE} } },
-          {"/betty",   { {1,  4, TRUE} } },
-          {"/:barney", { {0,  1, TRUE}, {2, 43, TRUE} } },
-          {"/fred",    { {0, 18, TRUE} } } } }
+        { {"/trunk",   2, { {2,  3, TRUE}, {4,  9, FALSE} } },
+          {"/betty",   1, { {1,  4, TRUE} } },
+          {"/:barney", 2, { {0,  1, TRUE}, {2, 43, TRUE} } },
+          {"/fred",    1, { {0, 18, TRUE} } } } }
     };
 
   for (i = 0; i < NBR_MERGEINFO_MERGES; i++)
@@ -647,7 +712,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
       SVN_ERR(svn_mergeinfo_to_string(&info2_starting, info2, pool));
 
       SVN_ERR(svn_mergeinfo_merge(info1, info2, pool));
-      if (mergeinfo[i].expected_paths != apr_hash_count(info1))
+      if (mergeinfo[i].expected_paths != (int)apr_hash_count(info1))
         return fail(pool, "Wrong number of paths in merged mergeinfo");
 
       /* Check that info2 remained unchanged. */
@@ -663,36 +728,18 @@ test_merge_mergeinfo(apr_pool_t *pool)
 
       for (j = 0; j < mergeinfo[i].expected_paths; j++)
         {
-          int k;
           apr_array_header_t *rangelist =
             apr_hash_get(info1, mergeinfo[i].path_rngs[j].path,
                          APR_HASH_KEY_STRING);
           if (!rangelist)
             return fail(pool, "Missing path '%s' in merged mergeinfo",
-                        mergeinfo[i].path_rngs->path);
-          for (k = 0; k < rangelist->nelts; k++)
-            {
-              svn_merge_range_t *ranges =
-                APR_ARRAY_IDX(rangelist, k, svn_merge_range_t *);
-              if (ranges->start
-                    != mergeinfo[i].path_rngs[j].expected_rngs[k].start
-                  || ranges->end
-                    != mergeinfo[i].path_rngs[j].expected_rngs[k].end
-                  || ranges->inheritable
-                    != mergeinfo[i].path_rngs[j].expected_rngs[k].inheritable)
-                return fail(
-                  pool,
-                  "Range'%i-%i%s' not found in merged mergeinfo",
-                  mergeinfo[i].path_rngs->expected_rngs[k].start,
-                  mergeinfo[i].path_rngs->expected_rngs[k].end,
-                  mergeinfo[i].path_rngs->expected_rngs[k].inheritable
-                  ? "" : "*");
-            }
-          /* Were more ranges expected? */
-          if (k < MAX_NBR_MERGEINFO_RANGES
-              && mergeinfo[i].path_rngs[j].expected_rngs[k].start != 0)
-            return fail(pool,
-                        "Not all expected ranges found in merged mergeinfo");
+                        mergeinfo[i].path_rngs[j].path);
+          SVN_ERR(verify_ranges_match(
+                    rangelist,
+                    mergeinfo[i].path_rngs[j].expected_rngs,
+                    mergeinfo[i].path_rngs[j].expected_n,
+                    apr_psprintf(pool, "svn_rangelist_merge case %i:%i", i, j),
+                    "merge", pool));
         }
     }
 
@@ -733,39 +780,39 @@ test_remove_rangelist(apr_pool_t *pool)
   struct rangelist_remove_test_data test_data[SIZE_OF_RANGE_REMOVE_TEST_ARRAY] =
     {
       /* Eraser is a proper subset of whiteboard */
-      {"/A: 1-44",  "/A: 5",  2, { {0,  4, TRUE }, {5, 44, TRUE }},
-                              2, { {0,  4, TRUE }, {5, 44, TRUE }}},
-      {"/A: 1-44*", "/A: 5",  1, { {0, 44, FALSE} },
-                              2, { {0,  4, FALSE}, {5, 44, FALSE}}},
-      {"/A: 1-44",  "/A: 5*", 1, { {0, 44, TRUE } },
-                              2, { {0,  4, TRUE }, {5, 44, TRUE }}},
-      {"/A: 1-44*", "/A: 5*", 2, { {0,  4, FALSE}, {5, 44, FALSE}},
-                              2, { {0,  4, FALSE}, {5, 44, FALSE}}},
+      {"1-44",  "5",  2, { {0,  4, TRUE }, {5, 44, TRUE }},
+                      2, { {0,  4, TRUE }, {5, 44, TRUE }}},
+      {"1-44*", "5",  1, { {0, 44, FALSE} },
+                      2, { {0,  4, FALSE}, {5, 44, FALSE}}},
+      {"1-44",  "5*", 1, { {0, 44, TRUE } },
+                      2, { {0,  4, TRUE }, {5, 44, TRUE }}},
+      {"1-44*", "5*", 2, { {0,  4, FALSE}, {5, 44, FALSE}},
+                      2, { {0,  4, FALSE}, {5, 44, FALSE}}},
       /* Non-intersecting ranges...nothing is removed */
-      {"/A: 2-9,14-19",   "/A: 12",  2, { {1, 9, TRUE }, {13, 19, TRUE }},
-                                     2, { {1, 9, TRUE }, {13, 19, TRUE }}},
-      {"/A: 2-9*,14-19*", "/A: 12",  2, { {1, 9, FALSE}, {13, 19, FALSE}},
-                                     2, { {1, 9, FALSE}, {13, 19, FALSE}}},
-      {"/A: 2-9,14-19",   "/A: 12*", 2, { {1, 9, TRUE }, {13, 19, TRUE }},
-                                     2, { {1, 9, TRUE }, {13, 19, TRUE }}},
-      {"/A: 2-9*,14-19*", "/A: 12*", 2, { {1, 9, FALSE}, {13, 19, FALSE}},
-                                     2, { {1, 9, FALSE}, {13, 19, FALSE}}},
+      {"2-9,14-19",   "12",  2, { {1, 9, TRUE }, {13, 19, TRUE }},
+                             2, { {1, 9, TRUE }, {13, 19, TRUE }}},
+      {"2-9*,14-19*", "12",  2, { {1, 9, FALSE}, {13, 19, FALSE}},
+                             2, { {1, 9, FALSE}, {13, 19, FALSE}}},
+      {"2-9,14-19",   "12*", 2, { {1, 9, TRUE }, {13, 19, TRUE }},
+                             2, { {1, 9, TRUE }, {13, 19, TRUE }}},
+      {"2-9*,14-19*", "12*", 2, { {1, 9, FALSE}, {13, 19, FALSE}},
+                             2, { {1, 9, FALSE}, {13, 19, FALSE}}},
       /* Eraser overlaps whiteboard */
-      {"/A: 1,9-17",  "/A: 12-20",  2, { {0,  1, TRUE }, {8, 11, TRUE }},
-                                    2, { {0,  1, TRUE }, {8, 11, TRUE }}},
-      {"/A: 1,9-17*", "/A: 12-20",  2, { {0,  1, TRUE }, {8, 17, FALSE}},
-                                    2, { {0,  1, TRUE }, {8, 11, FALSE}}},
-      {"/A: 1,9-17",  "/A: 12-20*", 2, { {0,  1, TRUE }, {8, 17, TRUE }},
-                                    2, { {0,  1, TRUE }, {8, 11, TRUE }}},
-      {"/A: 1,9-17*", "/A: 12-20*", 2, { {0,  1, TRUE }, {8, 11, FALSE}},
-                                    2, { {0,  1, TRUE }, {8, 11, FALSE}}},
-      /* Empty mergeinfo (i.e. empty rangelist) */
-      {"",  "",               0, { {0, 0, FALSE}},
-                              0, { {0, 0, FALSE}}},
-      {"",  "/A: 5-8,10-100", 0, { {0, 0, FALSE}},
-                              0, { {0, 0, FALSE}}},
-      {"/A: 5-8,10-100",  "", 2, { {4, 8, TRUE }, {9, 100, TRUE }},
-                              2, { {4, 8, TRUE }, {9, 100, TRUE }}}
+      {"1,9-17",  "12-20",  2, { {0,  1, TRUE }, {8, 11, TRUE }},
+                            2, { {0,  1, TRUE }, {8, 11, TRUE }}},
+      {"1,9-17*", "12-20",  2, { {0,  1, TRUE }, {8, 17, FALSE}},
+                            2, { {0,  1, TRUE }, {8, 11, FALSE}}},
+      {"1,9-17",  "12-20*", 2, { {0,  1, TRUE }, {8, 17, TRUE }},
+                            2, { {0,  1, TRUE }, {8, 11, TRUE }}},
+      {"1,9-17*", "12-20*", 2, { {0,  1, TRUE }, {8, 11, FALSE}},
+                            2, { {0,  1, TRUE }, {8, 11, FALSE}}},
+      /* Empty rangelist */
+      {"",  "",           0, { {0, 0, FALSE}},
+                          0, { {0, 0, FALSE}}},
+      {"",  "5-8,10-100", 0, { {0, 0, FALSE}},
+                          0, { {0, 0, FALSE}}},
+      {"5-8,10-100",  "", 2, { {4, 8, TRUE }, {9, 100, TRUE }},
+                          2, { {4, 8, TRUE }, {9, 100, TRUE }}}
     };
 
   err = child_err = SVN_NO_ERROR;
@@ -780,10 +827,8 @@ test_remove_rangelist(apr_pool_t *pool)
           svn_string_t *whiteboard_starting;
           svn_string_t *whiteboard_ending;
 
-          SVN_ERR(svn_mergeinfo_parse(&info1, (test_data[i]).eraser, pool));
-          SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).whiteboard, pool));
-          eraser = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
-          whiteboard = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+          SVN_ERR(svn_rangelist__parse(&eraser, test_data[i].eraser, pool));
+          SVN_ERR(svn_rangelist__parse(&whiteboard, test_data[i].whiteboard, pool));
 
           /* Represent empty mergeinfo with an empty rangelist. */
           if (eraser == NULL)
@@ -877,7 +922,8 @@ test_remove_rangelist(apr_pool_t *pool)
 /* Random number seed. */
 static apr_uint32_t random_rev_array_seed;
 
-/* Fill 3/4 of the array with 1s. */
+/* Set a random 3/4-ish of the elements of array REVS[RANDOM_REV_ARRAY_LENGTH]
+ * to TRUE and the rest to FALSE. */
 static void
 randomly_fill_rev_array(svn_boolean_t *revs)
 {
@@ -889,6 +935,8 @@ randomly_fill_rev_array(svn_boolean_t *revs)
     }
 }
 
+/* Set *RANGELIST to a rangelist representing the revisions that are marked
+ * with TRUE in the array REVS[RANDOM_REV_ARRAY_LENGTH]. */
 static svn_error_t *
 rev_array_to_rangelist(apr_array_header_t **rangelist,
                        svn_boolean_t *revs,
@@ -943,6 +991,9 @@ test_rangelist_remove_randomly(apr_pool_t *pool)
 
       randomly_fill_rev_array(first_revs);
       randomly_fill_rev_array(second_revs);
+      /* There is no change numbered "r0" */
+      first_revs[0] = FALSE;
+      second_revs[0] = FALSE;
       for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
         expected_revs[j] = second_revs[j] && !first_revs[j];
 
@@ -998,6 +1049,9 @@ test_rangelist_intersect_randomly(apr_pool_t *pool)
 
       randomly_fill_rev_array(first_revs);
       randomly_fill_rev_array(second_revs);
+      /* There is no change numbered "r0" */
+      first_revs[0] = FALSE;
+      second_revs[0] = FALSE;
       for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
         expected_revs[j] = second_revs[j] && first_revs[j];
 
@@ -1083,6 +1137,22 @@ test_mergeinfo_to_string(apr_pool_t *pool)
   if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Mergeinfo string not what we expected");
 
+  /* Manually construct some mergeinfo with relative path
+     merge source keys.  These should be tolerated as input
+     to svn_mergeinfo_to_string(), but the resulting svn_string_t
+     should have absolute keys. */
+  info2 = apr_hash_make(pool);
+  apr_hash_set(info2, "fred",
+               APR_HASH_KEY_STRING,
+               apr_hash_get(info1, "/fred", APR_HASH_KEY_STRING));
+  apr_hash_set(info2, "trunk",
+               APR_HASH_KEY_STRING,
+               apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
+  SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
+
+  if (svn_string_compare(expected, output) != TRUE)
+    return fail(pool, "Mergeinfo string not what we expected");
+
   return SVN_NO_ERROR;
 }
 
@@ -1104,100 +1174,123 @@ test_rangelist_merge(apr_pool_t *pool)
     svn_merge_range_t expected_merge[6];
   };
 
-  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 59
+  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 68
   /* The actual test data. */
   struct rangelist_merge_test_data test_data[SIZE_OF_RANGE_MERGE_TEST_ARRAY] =
     {
       /* Non-intersecting ranges */
-      {"/A: 1-44",    "/A: 70-101",  2, {{ 0, 44, TRUE }, {69, 101, TRUE }}},
-      {"/A: 1-44*",   "/A: 70-101",  2, {{ 0, 44, FALSE}, {69, 101, TRUE }}},
-      {"/A: 1-44",    "/A: 70-101*", 2, {{ 0, 44, TRUE }, {69, 101, FALSE}}},
-      {"/A: 1-44*",   "/A: 70-101*", 2, {{ 0, 44, FALSE}, {69, 101, FALSE}}},
-      {"/A: 70-101",  "/A: 1-44",    2, {{ 0, 44, TRUE }, {69, 101, TRUE }}},
-      {"/A: 70-101*", "/A: 1-44",    2, {{ 0, 44, TRUE }, {69, 101, FALSE}}},
-      {"/A: 70-101",  "/A: 1-44*",   2, {{ 0, 44, FALSE}, {69, 101, TRUE }}},
-      {"/A: 70-101*", "/A: 1-44*",   2, {{ 0, 44, FALSE}, {69, 101, FALSE}}},
+      {"1-44",    "70-101",  2, {{ 0, 44, TRUE }, {69, 101, TRUE }}},
+      {"1-44*",   "70-101",  2, {{ 0, 44, FALSE}, {69, 101, TRUE }}},
+      {"1-44",    "70-101*", 2, {{ 0, 44, TRUE }, {69, 101, FALSE}}},
+      {"1-44*",   "70-101*", 2, {{ 0, 44, FALSE}, {69, 101, FALSE}}},
+      {"70-101",  "1-44",    2, {{ 0, 44, TRUE }, {69, 101, TRUE }}},
+      {"70-101*", "1-44",    2, {{ 0, 44, TRUE }, {69, 101, FALSE}}},
+      {"70-101",  "1-44*",   2, {{ 0, 44, FALSE}, {69, 101, TRUE }}},
+      {"70-101*", "1-44*",   2, {{ 0, 44, FALSE}, {69, 101, FALSE}}},
 
       /* Intersecting ranges with same starting and ending revisions */
-      {"/A: 4-20",  "/A: 4-20",  1, {{3, 20, TRUE }}},
-      {"/A: 4-20*", "/A: 4-20",  1, {{3, 20, TRUE }}},
-      {"/A: 4-20",  "/A: 4-20*", 1, {{3, 20, TRUE }}},
-      {"/A: 4-20*", "/A: 4-20*", 1, {{3, 20, FALSE}}},
+      {"4-20",  "4-20",  1, {{3, 20, TRUE }}},
+      {"4-20*", "4-20",  1, {{3, 20, TRUE }}},
+      {"4-20",  "4-20*", 1, {{3, 20, TRUE }}},
+      {"4-20*", "4-20*", 1, {{3, 20, FALSE}}},
 
       /* Intersecting ranges with same starting revision */
-      {"/A: 6-17",  "/A: 6-12",  1, {{5, 17, TRUE}}},
-      {"/A: 6-17*", "/A: 6-12",  2, {{5, 12, TRUE }, {12, 17, FALSE}}},
-      {"/A: 6-17",  "/A: 6-12*", 1, {{5, 17, TRUE }}},
-      {"/A: 6-17*", "/A: 6-12*", 1, {{5, 17, FALSE}}},
-      {"/A: 6-12",  "/A: 6-17",  1, {{5, 17, TRUE }}},
-      {"/A: 6-12*", "/A: 6-17",  1, {{5, 17, TRUE }}},
-      {"/A: 6-12",  "/A: 6-17*", 2, {{5, 12, TRUE }, {12, 17, FALSE}}},
-      {"/A: 6-12*", "/A: 6-17*", 1, {{5, 17, FALSE}}},
+      {"6-17",  "6-12",  1, {{5, 17, TRUE}}},
+      {"6-17*", "6-12",  2, {{5, 12, TRUE }, {12, 17, FALSE}}},
+      {"6-17",  "6-12*", 1, {{5, 17, TRUE }}},
+      {"6-17*", "6-12*", 1, {{5, 17, FALSE}}},
+      {"6-12",  "6-17",  1, {{5, 17, TRUE }}},
+      {"6-12*", "6-17",  1, {{5, 17, TRUE }}},
+      {"6-12",  "6-17*", 2, {{5, 12, TRUE }, {12, 17, FALSE}}},
+      {"6-12*", "6-17*", 1, {{5, 17, FALSE}}},
 
       /* Intersecting ranges with same ending revision */
-      {"/A: 5-77",   "/A: 44-77",  1, {{4, 77, TRUE }}},
-      {"/A: 5-77*",  "/A: 44-77",  2, {{4, 43, FALSE}, {43, 77, TRUE}}},
-      {"/A: 5-77",   "/A: 44-77*", 1, {{4, 77, TRUE }}},
-      {"/A: 5-77*",  "/A: 44-77*", 1, {{4, 77, FALSE}}},
-      {"/A: 44-77",  "/A: 5-77",   1, {{4, 77, TRUE }}},
-      {"/A: 44-77*", "/A: 5-77",   1, {{4, 77, TRUE }}},
-      {"/A: 44-77",  "/A: 5-77*",  2, {{4, 43, FALSE}, {43, 77, TRUE}}},
-      {"/A: 44-77*", "/A: 5-77*",  1, {{4, 77, FALSE}}},
+      {"5-77",   "44-77",  1, {{4, 77, TRUE }}},
+      {"5-77*",  "44-77",  2, {{4, 43, FALSE}, {43, 77, TRUE}}},
+      {"5-77",   "44-77*", 1, {{4, 77, TRUE }}},
+      {"5-77*",  "44-77*", 1, {{4, 77, FALSE}}},
+      {"44-77",  "5-77",   1, {{4, 77, TRUE }}},
+      {"44-77*", "5-77",   1, {{4, 77, TRUE }}},
+      {"44-77",  "5-77*",  2, {{4, 43, FALSE}, {43, 77, TRUE}}},
+      {"44-77*", "5-77*",  1, {{4, 77, FALSE}}},
 
       /* Intersecting ranges with different starting and ending revision
          where one range is a proper subset of the other. */
-      {"/A: 12-24",  "/A: 20-23",  1, {{11, 24, TRUE }}},
-      {"/A: 12-24*", "/A: 20-23",  3, {{11, 19, FALSE}, {19, 23, TRUE },
-                                       {23, 24, FALSE}}},
-      {"/A: 12-24",  "/A: 20-23*", 1, {{11, 24, TRUE }}},
-      {"/A: 12-24*", "/A: 20-23*", 1, {{11, 24, FALSE}}},
-      {"/A: 20-23",  "/A: 12-24",  1, {{11, 24, TRUE }}},
-      {"/A: 20-23*", "/A: 12-24",  1, {{11, 24, TRUE }}},
-      {"/A: 20-23",  "/A: 12-24*", 3, {{11, 19, FALSE}, {19, 23, TRUE },
-                                       {23, 24, FALSE}}},
-      {"/A: 20-23*", "/A: 12-24*", 1, {{11, 24, FALSE}}},
+      {"12-24",  "20-23",  1, {{11, 24, TRUE }}},
+      {"12-24*", "20-23",  3, {{11, 19, FALSE}, {19, 23, TRUE },
+                               {23, 24, FALSE}}},
+      {"12-24",  "20-23*", 1, {{11, 24, TRUE }}},
+      {"12-24*", "20-23*", 1, {{11, 24, FALSE}}},
+      {"20-23",  "12-24",  1, {{11, 24, TRUE }}},
+      {"20-23*", "12-24",  1, {{11, 24, TRUE }}},
+      {"20-23",  "12-24*", 3, {{11, 19, FALSE}, {19, 23, TRUE },
+                               {23, 24, FALSE}}},
+      {"20-23*", "12-24*", 1, {{11, 24, FALSE}}},
 
       /* Intersecting ranges with different starting and ending revision
          where neither range is a proper subset of the other. */
-      {"/A: 50-73",  "/A: 60-99",  1, {{49, 99, TRUE }}},
-      {"/A: 50-73*", "/A: 60-99",  2, {{49, 59, FALSE}, {59, 99, TRUE }}},
-      {"/A: 50-73",  "/A: 60-99*", 2, {{49, 73, TRUE }, {73, 99, FALSE}}},
-      {"/A: 50-73*", "/A: 60-99*", 1, {{49, 99, FALSE}}},
-      {"/A: 60-99",  "/A: 50-73",  1, {{49, 99, TRUE }}},
-      {"/A: 60-99*", "/A: 50-73",  2, {{49, 73, TRUE }, {73, 99, FALSE}}},
-      {"/A: 60-99",  "/A: 50-73*", 2, {{49, 59, FALSE}, {59, 99, TRUE }}},
-      {"/A: 60-99*", "/A: 50-73*", 1, {{49, 99, FALSE}}},
+      {"50-73",  "60-99",  1, {{49, 99, TRUE }}},
+      {"50-73*", "60-99",  2, {{49, 59, FALSE}, {59, 99, TRUE }}},
+      {"50-73",  "60-99*", 2, {{49, 73, TRUE }, {73, 99, FALSE}}},
+      {"50-73*", "60-99*", 1, {{49, 99, FALSE}}},
+      {"60-99",  "50-73",  1, {{49, 99, TRUE }}},
+      {"60-99*", "50-73",  2, {{49, 73, TRUE }, {73, 99, FALSE}}},
+      {"60-99",  "50-73*", 2, {{49, 59, FALSE}, {59, 99, TRUE }}},
+      {"60-99*", "50-73*", 1, {{49, 99, FALSE}}},
 
       /* Multiple ranges. */
-      {"/A: 1-5,7,12-13",    "/A: 2-17",  1, {{0,  17, TRUE }}},
-      {"/A: 1-5*,7*,12-13*", "/A: 2-17*", 1, {{0,  17, FALSE}}},
+      {"1-5,7,12-13",    "2-17",  1, {{0,  17, TRUE }}},
+      {"1-5*,7*,12-13*", "2-17*", 1, {{0,  17, FALSE}}},
 
-      {"/A: 1-5,7,12-13",    "/A: 2-17*", 6,
+      {"1-5,7,12-13",    "2-17*", 6,
        {{0,  5, TRUE }, { 5,  6, FALSE}, { 6,  7, TRUE },
         {7, 11, FALSE}, {11, 13, TRUE }, {13, 17, FALSE}}},
 
-      {"/A: 1-5*,7*,12-13*", "/A: 2-17", 2,
+      {"1-5*,7*,12-13*", "2-17", 2,
        {{0, 1, FALSE}, {1, 17, TRUE }}},
 
-      {"/A: 2-17",  "/A: 1-5,7,12-13",    1, {{0,  17, TRUE }}},
-      {"/A: 2-17*", "/A: 1-5*,7*,12-13*", 1, {{0,  17, FALSE}}},
+      {"2-17",  "1-5,7,12-13",    1, {{0,  17, TRUE }}},
+      {"2-17*", "1-5*,7*,12-13*", 1, {{0,  17, FALSE}}},
 
-      {"/A: 2-17*", "/A: 1-5,7,12-13", 6,
+      {"2-17*", "1-5,7,12-13", 6,
        {{0,  5, TRUE }, { 5,  6, FALSE}, { 6,  7, TRUE },
         {7, 11, FALSE}, {11, 13, TRUE }, {13, 17, FALSE}}},
 
-      {"/A: 2-17", "/A: 1-5*,7*,12-13*", 2,
+      {"2-17", "1-5*,7*,12-13*", 2,
        {{0, 1, FALSE}, {1, 17, TRUE}}},
+
+      {"3-4*,10-15,20", "5-60*", 5,
+       {{2, 9, FALSE}, {9, 15, TRUE}, {15, 19, FALSE},{19, 20, TRUE},
+        {20, 60, FALSE}}},
+
+      {"5-60*", "3-4*,10-15,20", 5,
+       {{2, 9, FALSE}, {9, 15, TRUE}, {15, 19, FALSE},{19, 20, TRUE},
+        {20, 60, FALSE}}},
+
+      {"3-4*,50-100*", "5-60*", 1, {{2, 100, FALSE}}},
+
+      {"5-60*", "3-4*,50-100*", 1, {{2, 100, FALSE}}},
+
+      {"3-4*,50-100", "5-60*", 2, {{2, 49, FALSE}, {49, 100, TRUE}}},
+
+      {"5-60*", "3-4*,50-100", 2, {{2, 49, FALSE}, {49, 100, TRUE}}},
+
+      {"3-4,50-100*", "5-60", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
+
+      {"5-60", "3-4,50-100*", 2, {{2, 60, TRUE}, {60, 100, FALSE}}},
+
+      {"5,9,11-15,17,200-300,999", "7-50", 4,
+       {{4, 5, TRUE}, {6, 50, TRUE}, {199, 300, TRUE}, {998, 999, TRUE}}},
 
       /* A rangelist merged with an empty rangelist should equal the
          non-empty rangelist but in compacted form. */
-      {"/A: 1-44,45,46,47-50",       "",  1, {{ 0, 50, TRUE }}},
-      {"/A: 1,2,3,4,5,6,7,8",        "",  1, {{ 0, 8,  TRUE }}},
-      {"/A: 6-10,12-13,14,15,16-22", "",  2,
+      {"1-44,45,46,47-50",       "",  1, {{ 0, 50, TRUE }}},
+      {"1,2,3,4,5,6,7,8",        "",  1, {{ 0, 8,  TRUE }}},
+      {"6-10,12-13,14,15,16-22", "",  2,
        {{ 5, 10, TRUE }, { 11, 22, TRUE }}},
-      {"", "/A: 1-44,45,46,47-50",        1, {{ 0, 50, TRUE }}},
-      {"", "/A: 1,2,3,4,5,6,7,8",         1, {{ 0, 8,  TRUE }}},
-      {"", "/A: 6-10,12-13,14,15,16-22",  2,
+      {"", "1-44,45,46,47-50",        1, {{ 0, 50, TRUE }}},
+      {"", "1,2,3,4,5,6,7,8",         1, {{ 0, 8,  TRUE }}},
+      {"", "6-10,12-13,14,15,16-22",  2,
        {{ 5, 10, TRUE }, { 11, 22, TRUE }}},
 
       /* An empty rangelist merged with an empty rangelist is, drum-roll
@@ -1210,10 +1303,8 @@ test_rangelist_merge(apr_pool_t *pool)
     {
       svn_string_t *rangelist2_starting, *rangelist2_ending;
 
-      SVN_ERR(svn_mergeinfo_parse(&info1, (test_data[i]).mergeinfo1, pool));
-      SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).mergeinfo2, pool));
-      rangelist1 = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
-      rangelist2 = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+      SVN_ERR(svn_rangelist__parse(&rangelist1, test_data[i].mergeinfo1, pool));
+      SVN_ERR(svn_rangelist__parse(&rangelist2, test_data[i].mergeinfo2, pool));
 
       /* Create empty rangelists if necessary. */
       if (rangelist1 == NULL)
@@ -1297,7 +1388,7 @@ test_rangelist_diff(apr_pool_t *pool)
   #define SIZE_OF_RANGE_DIFF_TEST_ARRAY 16
   /* The actual test data array.
 
-                    'from' --> {"/A: 1,5-8",  "/A: 1,6,10-12", <-- 'to'
+                    'from' --> {"1,5-8",  "1,6,10-12", <-- 'to'
       Number of adds when  -->  1, { { 9, 12, TRUE } },
       considering inheritance
 
@@ -1315,97 +1406,97 @@ test_rangelist_diff(apr_pool_t *pool)
   struct rangelist_diff_test_data test_data[SIZE_OF_RANGE_DIFF_TEST_ARRAY] =
     {
       /* Add and Delete */
-      {"/A: 1",  "/A: 3",
+      {"1",  "3",
        1, { { 2, 3, TRUE } },
        1, { { 0, 1, TRUE } },
        1, { { 2, 3, TRUE } },
        1, { { 0, 1, TRUE } } },
 
       /* Add only */
-      {"/A: 1",  "/A: 1,3",
+      {"1",  "1,3",
        1, { { 2, 3, TRUE } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 3, TRUE } },
        0, { { 0, 0, FALSE } } },
 
       /* Delete only */
-      {"/A: 1,3",  "/A: 1",
+      {"1,3",  "1",
        0, { { 0, 0, FALSE } },
        1, { { 2, 3, TRUE  } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 3, TRUE  } } },
 
       /* No diff */
-      {"/A: 1,3",  "/A: 1,3",
+      {"1,3",  "1,3",
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } } },
 
-      {"/A: 1,3*",  "/A: 1,3*",
+      {"1,3*",  "1,3*",
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } } },
 
       /* Adds and Deletes */
-      {"/A: 1,5-8",  "/A: 1,6,10-12",
+      {"1,5-8",  "1,6,10-12",
        1, { { 9, 12, TRUE } },
        2, { { 4, 5, TRUE }, { 6, 8, TRUE } },
        1, { { 9, 12, TRUE } },
        2, { { 4, 5, TRUE }, { 6, 8, TRUE } } },
 
-      {"/A: 6*",  "/A: 6",
+      {"6*",  "6",
        1, { { 5, 6, TRUE  } },
        1, { { 5, 6, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } } },
 
       /* Intersecting range with different inheritability */
-      {"/A: 6",  "/A: 6*",
+      {"6",  "6*",
        1, { { 5, 6, FALSE } },
        1, { { 5, 6, TRUE  } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } } },
 
-      {"/A: 6*",  "/A: 6",
+      {"6*",  "6",
        1, { { 5, 6, TRUE  } },
        1, { { 5, 6, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } } },
 
-      {"/A: 1,5-8",  "/A: 1,6*,10-12",
+      {"1,5-8",  "1,6*,10-12",
        2, { { 5,  6, FALSE }, { 9, 12, TRUE } },
        1, { { 4,  8, TRUE  } },
        1, { { 9, 12, TRUE  } },
        2, { { 4,  5, TRUE  }, { 6,  8, TRUE } } },
 
-     {"/A: 1,5-8*",  "/A: 1,6,10-12",
+     {"1,5-8*",  "1,6,10-12",
        2, { { 5,  6, TRUE  }, { 9, 12, TRUE  } },
        1, { { 4,  8, FALSE } },
        1, { { 9, 12, TRUE  } },
        2, { { 4,  5, FALSE }, { 6,  8, FALSE } } },
 
       /* Empty range diffs */
-      {"/A: 3-9",  "",
+      {"3-9",  "",
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, TRUE  } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, TRUE  } } },
 
-      {"/A: 3-9*",  "",
+      {"3-9*",  "",
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, FALSE } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, FALSE } } },
 
-      {"",  "/A: 3-9",
+      {"",  "3-9",
        1, { { 2, 9, TRUE  } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, TRUE  } },
        0, { { 0, 0, FALSE } } },
 
-      {"",  "/A: 3-9*",
+      {"",  "3-9*",
        1, { { 2, 9, FALSE } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, FALSE } },
@@ -1422,10 +1513,8 @@ test_rangelist_diff(apr_pool_t *pool)
   err = child_err = SVN_NO_ERROR;
   for (i = 0; i < SIZE_OF_RANGE_DIFF_TEST_ARRAY; i++)
     {
-      SVN_ERR(svn_mergeinfo_parse(&info1, (test_data[i]).to, pool));
-      SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).from, pool));
-      to = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
-      from = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+      SVN_ERR(svn_rangelist__parse(&to, test_data[i].to, pool));
+      SVN_ERR(svn_rangelist__parse(&from, test_data[i].from, pool));
 
       /* Represent empty mergeinfo with an empty rangelist. */
       if (to == NULL)
@@ -1484,6 +1573,99 @@ test_rangelist_diff(apr_pool_t *pool)
     }
   return err;
 }
+
+
+/* Test data structure for test_remove_prefix_from_catalog(). */
+struct catalog_bits
+{
+  const char *orig_path;
+  const char *new_path;
+  const char *mergeinfo;
+};
+
+
+/* Helper for test_remove_prefix_from_catalog(). */
+static svn_error_t *
+remove_prefix_helper(struct catalog_bits *test_data,
+                     const char *prefix_path,
+                     apr_pool_t *pool)
+{
+  svn_mergeinfo_catalog_t in_catalog, out_catalog, exp_out_catalog;
+  apr_hash_index_t *hi;
+  int i = 0;
+
+  in_catalog = apr_hash_make(pool);
+  exp_out_catalog = apr_hash_make(pool);
+  while (test_data[i].orig_path)
+    {
+      struct catalog_bits data = test_data[i];
+      const char *orig_path = apr_pstrdup(pool, data.orig_path);
+      const char *new_path = apr_pstrdup(pool, data.new_path);
+      svn_mergeinfo_t mergeinfo;
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, data.mergeinfo, pool));
+      apr_hash_set(in_catalog, orig_path, APR_HASH_KEY_STRING, mergeinfo);
+      apr_hash_set(exp_out_catalog, new_path, APR_HASH_KEY_STRING, mergeinfo);
+      i++;
+    }
+  SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&out_catalog, in_catalog,
+                                                    prefix_path, pool));
+  if (apr_hash_count(exp_out_catalog) != apr_hash_count(out_catalog))
+    return svn_error_create(SVN_ERR_TEST_FAILED, 0,
+                            "Got unexpected number of catalog entries");
+  for (hi = apr_hash_first(pool, out_catalog); hi; hi = apr_hash_next(hi))
+    {
+      const void *path;
+      apr_ssize_t path_len;
+      void *out_mergeinfo, *exp_out_mergeinfo;
+      apr_hash_this(hi, &path, &path_len, &out_mergeinfo);
+      exp_out_mergeinfo = apr_hash_get(exp_out_catalog, path, path_len);
+      if (! exp_out_mergeinfo)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, 0,
+                                 "Found unexpected key '%s' in catalog",
+                                 (const char *)path);
+      if (exp_out_mergeinfo != out_mergeinfo)
+        return svn_error_create(SVN_ERR_TEST_FAILED, 0,
+                                "Detected value tampering in catalog");
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_remove_prefix_from_catalog(apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* For testing the remove of the prefix "/trunk"  */
+  struct catalog_bits test_data_1[] =
+    {
+      { "/trunk",           "",          "/A:1" },
+      { "/trunk/foo",       "foo",       "/A/foo:1,3*" },
+      { "/trunk/foo/bar",   "foo/bar",   "/A/foo:1-4" },
+      { "/trunk/baz",       "baz",       "/A/baz:2" },
+      { NULL, NULL, NULL }
+    };
+
+  /* For testing the remove of the prefix "/"  */
+  struct catalog_bits test_data_2[] =
+    {
+      { "/",                "",                "/:2" },
+      { "/trunk",           "trunk",           "/A:1" },
+      { "/trunk/foo",       "trunk/foo",       "/A/foo:1,3*" },
+      { "/trunk/foo/bar",   "trunk/foo/bar",   "/A/foo:1-4" },
+      { "/trunk/baz",       "trunk/baz",       "/A/baz:2" },
+      { NULL, NULL, NULL }
+    };
+
+  svn_pool_clear(subpool);
+  SVN_ERR(remove_prefix_helper(test_data_1, "/trunk", subpool));
+
+  svn_pool_clear(subpool);
+  SVN_ERR(remove_prefix_helper(test_data_2, "/", subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1513,16 +1695,18 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_diff_mergeinfo,
                    "diff of mergeinfo"),
     SVN_TEST_PASS2(test_merge_mergeinfo,
-                   "merging of mergeinfo hashs"),
+                   "merging of mergeinfo hashes"),
     SVN_TEST_PASS2(test_mergeinfo_intersect,
                    "intersection of mergeinfo"),
     SVN_TEST_PASS2(test_rangelist_to_string,
                    "turning rangelist back into a string"),
     SVN_TEST_PASS2(test_mergeinfo_to_string,
                    "turning mergeinfo back into a string"),
-    SVN_TEST_PASS2(test_rangelist_merge,
+    SVN_TEST_XFAIL2(test_rangelist_merge,
                    "merge of rangelists"),
     SVN_TEST_PASS2(test_rangelist_diff,
                    "diff of rangelists"),
+    SVN_TEST_PASS2(test_remove_prefix_from_catalog,
+                   "removal of prefix paths from catalog keys"),
     SVN_TEST_NULL
   };

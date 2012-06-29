@@ -25,7 +25,7 @@ package org.tigris.subversion.javahl;
 
 /**
  * The constants in this interface describe the changes to an item to
- * be commited.
+ * be committed.
  */
 public interface CommitItemStateFlags
 {

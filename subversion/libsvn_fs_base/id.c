@@ -28,7 +28,7 @@
 
 
 
-typedef struct {
+typedef struct id_private_t {
   const char *node_id;
   const char *copy_id;
   const char *txn_id;
@@ -168,7 +168,7 @@ svn_fs_base__id_parse(const char *data,
 {
   svn_fs_id_t *id;
   id_private_t *pvt;
-  char *data_copy, *str, *last_str;
+  char *data_copy, *str;
 
   /* Dup the ID data into POOL.  Our returned ID will have references
      into this memory. */
@@ -181,24 +181,25 @@ svn_fs_base__id_parse(const char *data,
   id->fsap_data = pvt;
 
   /* Now, we basically just need to "split" this data on `.'
-     characters.  We will use apr_strtok, which will put terminators
-     where each of the '.'s used to be.  Then our new id field will
-     reference string locations inside our duplicate string.*/
+     characters.  We will use svn_cstring_tokenize, which will put
+     terminators where each of the '.'s used to be.  Then our new
+     id field will reference string locations inside our duplicate
+     string.*/
 
   /* Node Id */
-  str = apr_strtok(data_copy, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->node_id = str;
 
   /* Copy Id */
-  str = apr_strtok(NULL, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->copy_id = str;
 
   /* Txn Id */
-  str = apr_strtok(NULL, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->txn_id = str;

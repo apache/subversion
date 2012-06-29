@@ -67,6 +67,10 @@ class RepositoryURI(object):
         return self._as_parameter_
 
 class RemoteRepository(object):
+    """This class represents a connection from the client to a remote
+       Subversion repository."""
+    # The interface corresponds roughly to the svn_ra API, and an object of
+    # this type basically represents the C type 'svn_ra_session_t'.
 
     def __init__(self, url, user=None):
         """Open a new session to URL with the specified USER.
@@ -94,6 +98,10 @@ class RemoteRepository(object):
             svn_client_get_commit_log2_t(self._log_func_wrapper)
         self.client[0].log_msg_baton2 = c_void_p()
         self._log_func = None
+
+    def close(self):
+        """Close this RemoteRepository object, releasing any resources."""
+        self.pool.clear()
 
     def txn(self):
         """Create a transaction"""
@@ -146,7 +154,12 @@ class RemoteRepository(object):
         svn_ra_get_dir2(self, dirents.byref(), NULL, NULL, path,
                         rev, fields, dirents.pool)
         self.iterpool.clear()
-        return dirents
+        # Create a Python dict of svn_dirent_t objects from this Hash of
+        # pointers to svn_dirent_t.
+        result = {}
+        for path, dirent_p in dirents.items():
+            result[path] = dirent_p[0]
+        return result
 
     def cat(self, buffer, path, rev = SVN_INVALID_REVNUM):
         """Get PATH@REV and save it to BUFFER. BUFFER must be a Python file
@@ -170,7 +183,7 @@ class RemoteRepository(object):
             rev = self.latest_revnum()
         svn_ra_stat(self, path, rev, byref(dirent), dirent.pool)
         self.iterpool.clear()
-        return dirent
+        return dirent[0]
 
     def proplist(self, path, rev = SVN_INVALID_REVNUM):
         """Return a dictionary containing the properties on PATH@REV
@@ -324,7 +337,7 @@ class RemoteRepository(object):
     def set_log_func(self, log_func):
         """Register a callback to get a log message for commit and
         commit-like operations. LOG_FUNC should take an array as an argument,
-        which holds the files to be commited. It should return a list of the
+        which holds the files to be committed. It should return a list of the
         form [LOG, FILE] where LOG is a log message and FILE is the temporary
         file, if one was created instead of a log message. If LOG is None,
         the operation will be canceled and FILE will be treated as the
@@ -396,6 +409,14 @@ class LocalRepository(object):
             svn_repos_open(byref(self._as_parameter_), path, self.pool)
         self.fs = _fs(self)
 
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        """Close this LocalRepository object, releasing any resources. In
+           particular, this closes the rep-cache DB."""
+        self.pool.clear()
+
     def latest_revnum(self):
         """Get the latest revision in the repository"""
         return self.fs.latest_revnum()
@@ -408,7 +429,7 @@ class LocalRepository(object):
           ... absent, then we return svn_node_none.
           ... a regular file, then we return svn_node_file.
           ... a directory, then we return svn_node_dir
-          ... unknown, then we return svn_node_unknowna
+          ... unknown, then we return svn_node_unknown
         """
         assert(not encoded)
         root = self.fs.root(rev=rev, pool=self.iterpool)
@@ -532,7 +553,6 @@ class _fs(object):
        This class represents an svn_fs_t object"""
 
     def __init__(self, repos):
-        self.repos = repos
         self.iterpool = Pool()
         self._as_parameter_ = svn_repos_fs(repos)
 
@@ -562,13 +582,6 @@ class _fs(object):
            temporary allocations. Otherwise, pool will be used for
            temporary allocations."""
         return _fs_root(self, rev, txn, pool, iterpool)
-
-    def txn(self, message, base_rev=None):
-        """Open a new transaction for commit to the specified
-           repository, assuming that our data is up to date as
-           of base_rev. Setup the author and commit message
-           revprops."""
-        return _fs_txn(self.repos, message, base_rev)
 
 class _fs_root(object):
     """NOTE: This is a private class. Don't use it outside of

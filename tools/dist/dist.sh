@@ -1,11 +1,31 @@
 #!/bin/sh
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
 #                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
-#                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign] [-nodeps]
+#                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The tarball will be constructed from the root located at REPOS-PATH,
@@ -42,7 +62,7 @@ USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
 [-neon NEON_PATH ] [-serf SERF_PATH] [-zlib ZLIB_PATH] \
-[-sqlite SQLITE_PATH] [-zip] [-sign] [-nodeps]
+[-sqlite SQLITE_PATH] [-zip] [-sign]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278 -pr branches/foo
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -81,7 +101,6 @@ do
         ARG_PREV=$ARG
         ;;
       -zip) ZIP=1 ;;
-      -nodeps) NODEPS=1 ;;
       -sign) SIGN=1 ;;
       *)
         echo " $USAGE"
@@ -179,10 +198,8 @@ if [ $? -ne 0 ]; then
 fi
 
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
-DEPSNAME="subversion-deps-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
-DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
 echo "     constructed from path: /$REPOS_PATH"
@@ -190,7 +207,6 @@ echo " constructed from revision: $REVISION"
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
-mkdir -p "$DEPSPATH"
 echo "Removed and recreated $DIST_SANDBOX"
 
 LC_ALL=C
@@ -208,74 +224,48 @@ echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 
 rm -f "$DISTPATH/STATUS"
 
-# Remove the www/ directory, and create an empty directory in it's place.
-# Export hacking.html from trunk into that directory.
-# (See http://svn.haxx.se/dev/archive-2008-02/0863.shtml for rationale.)
-rm -rf "$DISTPATH/www"
-mkdir "$DISTPATH/www"
-${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-    "http://svn.apache.org/repos/asf/subversion/trunk/www/hacking.html" \
-    --username none --password none "$DISTPATH/www/hacking.html"
+ver_major=`echo $VERSION | cut -d '.' -f 1`
+ver_minor=`echo $VERSION | cut -d '.' -f 2`
+ver_patch=`echo $VERSION | cut -d '.' -f 3`
 
 # Remove contrib/ from our distribution tarball.  Some of it is of
 # unknown license, and usefulness.
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
-rm -rf "$DISTPATH/contrib"
-
-install_dependency()
-{
-  DEP_NAME=$1
-  if [ -z $2 ]; then
-    DEP_PATH=/dev/null
-  else
-    DEP_PATH=$2
-  fi
-
-  if [ -d $DEP_PATH ]; then
-    if [ -d $DEP_PATH/.svn ]; then
-      echo "Exporting local $DEP_NAME into sandbox"
-      ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS "$DEP_PATH" "$DISTPATH/$DEP_NAME"
-    else
-      echo "Copying local $DEP_NAME into sandbox"
-      cp -r "$DEP_PATH" "$DISTPATH/$DEP_NAME" 
-      (cd "$DISTPATH/$DEP_NAME" && [ -f Makefile ] && make distclean)
-      echo "Removing all CVS/ and .cvsignore files from $DEP_NAME..."
-      find "$DISTPATH/$DEP_NAME" -name CVS -type d -print | xargs rm -fr
-      find "$DISTPATH/$DEP_NAME" -name .cvsignore -print | xargs rm -f
-      find "$DISTPATH/$DEP_NAME" -name '*.o' -print | xargs rm -f
-    fi
-  else
-    # Not having the dependency directories isn't fatal if -nodeps passed.
-    if [ -z "$NODEPS" ]; then
-      echo "Missing dependency directory!"
-      exit 2
-    fi
-  fi
-}
-
-move_dependency()
-{
-  DEP_NAME=$1
-
-  SOURCE_PATH="$DISTPATH/$DEP_NAME"
-  DEST_PATH="$DEPSPATH/$DEP_NAME"
-
-  rm -rf "$DEST_PATH"
-  mv "$SOURCE_PATH" "$DEST_PATH"
-}
-
-install_dependency apr "$APR_PATH"
-install_dependency apr-util "$APRU_PATH"
-
-if [ -n "$ZIP" ]; then
-  install_dependency apr-iconv "$APRI_PATH"
+if [ "$ver_major" -eq "1" -a "$ver_minor" -ge "7" ]; then
+  rm -rf "$DISTPATH/contrib"
 fi
 
-install_dependency neon "$NEON_PATH"
-install_dependency serf "$SERF_PATH"
-install_dependency zlib "$ZLIB_PATH"
-install_dependency sqlite-amalgamation "$SQLITE_PATH"
+# Remove notes/ from our distribution tarball.  It's large, but largely
+# blue-sky and out-of-date, and of questionable use to end users.
+if [ "$ver_major" -eq "1" -a "$ver_minor" -ge "7" ]; then
+  rm -rf "$DISTPATH/notes"
+fi
 
+# Remove packages/ from the tarball.
+# (See http://svn.haxx.se/dev/archive-2009-12/0205.shtml)
+if [ "$ver_major" -eq "1" -a "$ver_minor" -ge "7" ]; then
+  rm -rf "$DISTPATH/packages"
+fi
+
+# Remove www/ from the tarball for 1.6.x and earlier releases
+if [ "$ver_major" -eq "1" -a "$ver_minor" -le "6" ]; then
+  rm -rf "$DISTPATH/www"
+fi
+
+# Check for a recent enough Python
+# Instead of attempting to deal with various line ending issues, just export
+# the find_python script manually.
+${svn:-svn} export -q -r "$REVISION"  \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
+     --username none --password none "$DIST_SANDBOX/find_python.sh"
+PYTHON="`$DIST_SANDBOX/find_python.sh`"
+if test -z "$PYTHON"; then
+  echo "Python 2.4 or later is required to run dist.sh"
+  echo "If you have a suitable Python installed, but not on the"
+  echo "PATH, set the environment variable PYTHON to the full path"
+  echo "to the Python executable, and re-run dist.sh"
+  exit 1
+fi
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
@@ -285,30 +275,24 @@ find "$DISTPATH" -name config.nice -print | xargs rm -f
 # on end-user's systems, when they should just be compiled by the
 # Release Manager and left at that.
 
-ver_major=`echo $VERSION | cut -d '.' -f 1`
-ver_minor=`echo $VERSION | cut -d '.' -f 2`
-ver_patch=`echo $VERSION | cut -d '.' -f 3`
-
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
-
-if [ "$VERSION" != "trunk"]; then
+if [ "$VERSION" != "trunk" ] && [ "$VERSION" != "nightly" ]; then
   sed \
-   -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
-   -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
-   -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
+   -e "/#define *SVN_VER_MAJOR/s/[0-9][0-9]*/$ver_major/" \
+   -e "/#define *SVN_VER_MINOR/s/[0-9][0-9]*/$ver_minor/" \
+   -e "/#define *SVN_VER_PATCH/s/[0-9][0-9]*/$ver_patch/" \
    -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
    -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
-   -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION/" \
+   -e "/#define *SVN_VER_REVISION/s/[0-9][0-9]*/$REVISION/" \
     < "$vsn_file" > "$vsn_file.tmp"
 else
   # Don't munge the version number if we are creating a nightly trunk tarball
   sed \
    -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
    -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
-   -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION/" \
+   -e "/#define *SVN_VER_REVISION/s/[0-9]\\+/$REVISION/" \
     < "$vsn_file" > "$vsn_file.tmp"
 fi
-
 mv -f "$vsn_file.tmp" "$vsn_file"
 
 echo "Creating svn_version.h.dist, for use in tagging matching tarball..."
@@ -322,20 +306,14 @@ if [ -z "$ZIP" ] ; then
   (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
 
+# Pre-translate the various sql-derived header files
+echo "Generating SQL-derived headers..."
+for f in `find "$DISTPATH/subversion" -name '*.sql'`; do
+  $PYTHON $DISTPATH/build/transform_sql.py $f `echo $f | sed 's/\.[^\.]*$//'`.h
+done
+
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
-
-# Now that the dependencies have been configured/cleaned properly,
-# move them into their separate tree for packaging.
-move_dependency apr
-move_dependency apr-util
-if [ -n "$ZIP" ]; then
-  move_dependency apr-iconv
-fi
-move_dependency neon
-move_dependency serf
-move_dependency zlib
-move_dependency sqlite-amalgamation
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
@@ -346,14 +324,9 @@ if [ -z "$ZIP" ]; then
   echo "Rolling $DISTNAME.tar ..."
   (cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
     "$DISTNAME.tar"
-  echo "Rolling $DEPSNAME.tar ..."
-  (cd "$DIST_SANDBOX/deps" > /dev/null && pax -x ustar -w "$DISTNAME") > \
-    "$DEPSNAME.tar"
 
   echo "Compressing to $DISTNAME.tar.bz2 ..."
   bzip2 -9fk "$DISTNAME.tar"
-  echo "Compressing to $DEPSNAME.tar.bz2 ..."
-  bzip2 -9fk "$DEPSNAME.tar"
 
   # Use the gzip -n flag - this prevents it from storing the original name of
   # the .tar file, and far more importantly, the mtime of the .tar file, in the
@@ -366,15 +339,10 @@ if [ -z "$ZIP" ]; then
   # not any of its contents, so there will be no effect on end-users.
   echo "Compressing to $DISTNAME.tar.gz ..."
   gzip -9nf "$DISTNAME.tar"
-  echo "Compressing to $DEPSNAME.tar.gz ..."
-  gzip -9nf "$DEPSNAME.tar"
 else
   echo "Rolling $DISTNAME.zip ..."
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
     "$DISTNAME.zip"
-  echo "Rolling $DEPSNAME.zip ..."
-  (cd "$DIST_SANDBOX/deps" > /dev/null && zip -q -r - "$DISTNAME") > \
-    "$DEPSNAME.zip"
 fi
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
@@ -406,30 +374,34 @@ sign_file()
   fi
 }
 
+# allow md5sum and sha1sum tool names to be overridden
+[ -n "$MD5SUM" ] || MD5SUM=md5sum
+[ -n "$SHA1SUM" ] || SHA1SUM=sha1sum
+
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
-  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
-  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2 $DEPSNAME.tar.bz2 $DEPSNAME.tar.gz
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
   echo ""
   echo "md5sums:"
-  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
-  type sha1sum > /dev/null 2>&1
+  $MD5SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  type $SHA1SUM > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sums:"
-    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+    $SHA1SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
 else
-  ls -l "$DISTNAME.zip" "$DEPSNAME.zip"
-  sign_file $DISTNAME.zip $DEPSNAME.zip
+  ls -l "$DISTNAME.zip"
+  sign_file $DISTNAME.zip
   echo ""
   echo "md5sum:"
-  md5sum "$DISTNAME.zip" "$DEPSNAME.zip"
-  type sha1sum > /dev/null 2>&1
+  $MD5SUM "$DISTNAME.zip"
+  type $SHA1SUM > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sum:"
-    sha1sum "$DISTNAME.zip" "$DEPSNAME.zip"
+    $SHA1SUM "$DISTNAME.zip"
   fi
 fi

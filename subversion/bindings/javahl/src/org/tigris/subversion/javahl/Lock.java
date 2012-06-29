@@ -39,7 +39,7 @@ public class Lock implements java.io.Serializable
     // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
     // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * the owner of the lock
@@ -89,6 +89,16 @@ public class Lock implements java.io.Serializable
         this.comment = comment;
         this.creationDate = creationDate;
         this.expirationDate = expirationDate;
+    }
+
+    Lock(org.apache.subversion.javahl.types.Lock aLock)
+    {
+        this(aLock.getOwner(), aLock.getPath(), aLock.getToken(),
+             aLock.getComment(),
+             aLock.getCreationDate() == null ? 0
+                : aLock.getCreationDate().getTime() * 1000,
+             aLock.getExpirationDate() == null ? 0
+                : aLock.getExpirationDate().getTime() * 1000);
     }
 
     /**

@@ -35,7 +35,7 @@ my $print        = 0;
 my $help         = 0;
 my $man          = 0;
 my $nonrecursive = 0;
-my $path         = $CWD;
+my @paths        = ($CWD);
 GetOptions(
     "exclude=s"       => \@exclude,
     "force"           => \$force,
@@ -47,7 +47,7 @@ GetOptions(
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
-$path = Cwd::abs_path( $ARGV[0] ) if @ARGV;
+@paths = map { Cwd::abs_path($_) } @ARGV if @ARGV;
 
 # Precompile regexes.
 $_ = qr/$_/ foreach @exclude;
@@ -58,7 +58,8 @@ if ($use_svn_module) {
     my $ctx = new SVN::Client;
 
     # Call handler function with status info for each file.
-    $ctx->status( $path, undef, \&clean, !$nonrecursive, 1, 0, 1 );
+    $ctx->status( $_, undef, \&clean, !$nonrecursive, 1, 0, 1 )
+      for @paths;
 }
 else {
     warn "Warning: Not using SVN Perl modules, this might be slow.\n"
@@ -74,11 +75,11 @@ else {
     if ( $^O eq 'MSWin32' ) {
 
         # Perl on Windows currently doesn't have list pipe opens.
-        open SVN, join( ' ', @command, @ARGV ) . '|'
+        open SVN, join( ' ', @command, @paths ) . '|'
           or die "Can't call program \"svn\": $!\n";
     }
     else {
-        open SVN, "-|", @command, @ARGV
+        open SVN, "-|", @command, @paths
           or die "Can't call program \"svn\": $!\n";
     }
   LINE: while (<SVN>) {

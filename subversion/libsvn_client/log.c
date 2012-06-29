@@ -44,40 +44,8 @@
 
 /*** Getting misc. information ***/
 
-/* A log callback conforming to the svn_log_entry_receiver_t
-   interface for obtaining the last revision of a node at a path and
-   storing it in *BATON (an svn_revnum_t). */
-static svn_error_t *
-revnum_receiver(void *baton,
-                svn_log_entry_t *log_entry,
-                apr_pool_t *pool)
-{
-  if (SVN_IS_VALID_REVNUM(log_entry->revision))
-    *((svn_revnum_t *) baton) = log_entry->revision;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
-                               svn_ra_session_t *ra_session,
-                               const char *rel_path,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool)
-{
-  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
-  apr_array_header_t *revprops = apr_array_make(pool, 0, sizeof(char *));
-  *oldest_rev = SVN_INVALID_REVNUM;
-  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
-
-  /* Trace back in history to find the revision at which this node
-     was created (copied or added). */
-  return svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                         FALSE, revprops, revnum_receiver, oldest_rev, pool);
-}
-
 /* The baton for use with copyfrom_info_receiver(). */
-typedef struct
+typedef struct copyfrom_info_t
 {
   svn_boolean_t is_first;
   const char *path;
@@ -133,23 +101,22 @@ svn_client__get_copy_source(const char *path_or_url,
   copyfrom_info_t copyfrom_info = { 0 };
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
-  svn_revnum_t at_rev;
-  const char *at_url;
+  svn_client__pathrev_t *at_loc;
 
   copyfrom_info.is_first = TRUE;
   copyfrom_info.path = NULL;
   copyfrom_info.rev = SVN_INVALID_REVNUM;
   copyfrom_info.pool = pool;
 
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                           path_or_url, NULL,
-                                           revision, revision,
-                                           ctx, sesspool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
+                                            path_or_url, NULL,
+                                            revision, revision,
+                                            ctx, sesspool));
 
   /* Find the copy source.  Walk the location segments to find the revision
      at which this node was created (copied or added). */
 
-  err = svn_ra_get_location_segments(ra_session, "", at_rev, at_rev,
+  err = svn_ra_get_location_segments(ra_session, "", at_loc->rev, at_loc->rev,
                                      SVN_INVALID_REVNUM,
                                      copyfrom_info_receiver, &copyfrom_info,
                                      pool);
@@ -169,7 +136,7 @@ svn_client__get_copy_source(const char *path_or_url,
             *copyfrom_path = NULL;
             *copyfrom_rev = SVN_INVALID_REVNUM;
         }
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
 
   *copyfrom_path = copyfrom_info.path;
@@ -180,7 +147,7 @@ svn_client__get_copy_source(const char *path_or_url,
 
 /* compatibility with pre-1.5 servers, which send only author/date/log
  *revprops in log entries */
-typedef struct
+typedef struct pre_15_receiver_baton_t
 {
   svn_client_ctx_t *ctx;
   /* ra session for retrieving revprops from old servers */
@@ -243,8 +210,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
                                   name, &value, pool));
           if (log_entry->revprops == NULL)
             log_entry->revprops = apr_hash_make(pool);
-          apr_hash_set(log_entry->revprops, (const void *)name,
-                       APR_HASH_KEY_STRING, (const void *)value);
+          apr_hash_set(log_entry->revprops, name, APR_HASH_KEY_STRING, value);
         }
       if (log_entry->revprops)
         {
@@ -276,7 +242,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 }
 
 /* limit receiver */
-typedef struct
+typedef struct limit_receiver_baton_t
 {
   int limit;
   svn_log_entry_receiver_t receiver;
@@ -313,16 +279,14 @@ svn_client_log5(const apr_array_header_t *targets,
 {
   svn_ra_session_t *ra_session;
   const char *url_or_path;
-  svn_boolean_t is_url;
   svn_boolean_t has_log_revprops;
-  const char *actual_url;
   apr_array_header_t *condensed_targets;
-  svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
   const char *ra_target;
   pre_15_receiver_baton_t rb = {0};
   apr_pool_t *iterpool;
   int i;
+  svn_opt_revision_t peg_rev;
 
   if (revision_ranges->nelts == 0)
     {
@@ -331,17 +295,12 @@ svn_client_log5(const apr_array_header_t *targets,
          _("Missing required revision specification"));
     }
 
+  /* Make a copy of PEG_REVISION, we may need to change it to a
+     default value. */
+  peg_rev = *peg_revision;
+
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
-  is_url = svn_path_is_url(url_or_path);
-
-  if (is_url && SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
-    {
-      return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         _("Revision type requires a working copy path, not a URL"));
-    }
-
   session_opt_rev.kind = svn_opt_revision_unspecified;
 
   for (i = 0; i < revision_ranges->nelts; i++)
@@ -366,9 +325,9 @@ svn_client_log5(const apr_array_header_t *targets,
       else if (range->start.kind == svn_opt_revision_unspecified)
         {
           /* Default to any specified peg revision.  Otherwise, if the
-           * first target is an URL, then we default to HEAD:0.  Lastly,
+           * first target is a URL, then we default to HEAD:0.  Lastly,
            * the default is BASE:0 since WC@HEAD may not exist. */
-          if (peg_revision->kind == svn_opt_revision_unspecified)
+          if (peg_rev.kind == svn_opt_revision_unspecified)
             {
               if (svn_path_is_url(url_or_path))
                 range->start.kind = svn_opt_revision_head;
@@ -376,7 +335,7 @@ svn_client_log5(const apr_array_header_t *targets,
                 range->start.kind = svn_opt_revision_base;
             }
           else
-            range->start = *peg_revision;
+            range->start = peg_rev;
 
           if (range->end.kind == svn_opt_revision_unspecified)
             {
@@ -393,15 +352,6 @@ svn_client_log5(const apr_array_header_t *targets,
              _("Missing required revision specification"));
         }
 
-      if (is_url
-          && (SVN_CLIENT__REVKIND_NEEDS_WC(range->start.kind)
-              || SVN_CLIENT__REVKIND_NEEDS_WC(range->end.kind)))
-        {
-          return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-             _("Revision type requires a working copy path, not a URL"));
-        }
-
       /* Determine the revision to open the RA session to. */
       if (session_opt_rev.kind == svn_opt_revision_unspecified)
         {
@@ -411,6 +361,11 @@ svn_client_log5(const apr_array_header_t *targets,
               session_opt_rev =
                   (range->start.value.number > range->end.value.number ?
                    range->start : range->end);
+            }
+          else if (range->start.kind == svn_opt_revision_head ||
+                   range->end.kind == svn_opt_revision_head)
+            {
+              session_opt_rev.kind = svn_opt_revision_head;
             }
           else if (range->start.kind == svn_opt_revision_date &&
                    range->end.kind == svn_opt_revision_date)
@@ -423,7 +378,7 @@ svn_client_log5(const apr_array_header_t *targets,
     }
 
   /* Use the passed URL, if there is one.  */
-  if (is_url)
+  if (svn_path_is_url(url_or_path))
     {
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
@@ -436,8 +391,18 @@ svn_client_log5(const apr_array_header_t *targets,
         {
           /* We have some paths, let's use them. Start after the URL.  */
           for (i = 1; i < targets->nelts; i++)
-            APR_ARRAY_PUSH(condensed_targets, const char *) =
-                APR_ARRAY_IDX(targets, i, const char *);
+            {
+              const char *target;
+
+              target = APR_ARRAY_IDX(targets, i, const char *);
+
+              if (svn_path_is_url(target) || svn_dirent_is_absolute(target))
+                return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                         _("'%s' is not a relative path"),
+                                          target);
+
+              APR_ARRAY_PUSH(condensed_targets, const char *) = target;
+            }
         }
       else
         {
@@ -457,6 +422,11 @@ svn_client_log5(const apr_array_header_t *targets,
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 _("When specifying working copy paths, only "
                                   "one target may be given"));
+
+      /* An unspecified PEG_REVISION for a working copy path defaults
+         to svn_opt_revision_working. */
+      if (peg_rev.kind == svn_opt_revision_unspecified)
+          peg_rev.kind = svn_opt_revision_working;
 
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
@@ -482,15 +452,14 @@ svn_client_log5(const apr_array_header_t *targets,
           APR_ARRAY_PUSH(target_urls, const char *) = url;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
-      svn_pool_destroy(iterpool);
 
       /* if we have no valid target_urls, just exit. */
       if (target_urls->nelts == 0)
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR(svn_path_condense_targets(&url_or_path, &condensed_targets,
-                                        target_urls, TRUE, pool));
+      SVN_ERR(svn_uri_condense_targets(&url_or_path, &condensed_targets,
+                                       target_urls, TRUE, pool, iterpool));
 
       if (condensed_targets->nelts == 0)
         APR_ARRAY_PUSH(condensed_targets, const char *) = "";
@@ -498,21 +467,25 @@ svn_client_log5(const apr_array_header_t *targets,
       /* 'targets' now becomes 'real_targets', which has bogus,
          unversioned things removed from it. */
       targets = real_targets;
+      svn_pool_destroy(iterpool);
     }
 
 
   {
+    svn_client__pathrev_t *actual_loc;
+
     /* If this is a revision type that requires access to the working copy,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
-    if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
-      SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
+    if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_rev.kind))
+      SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
+                                          TRUE, pool, pool));
     else
       ra_target = url_or_path;
 
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &actual_url, ra_target, NULL,
-                                             peg_revision, &session_opt_rev,
+    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &actual_loc,
+                                             ra_target, NULL,
+                                             &peg_rev, &session_opt_rev,
                                              ctx, pool));
 
     SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
@@ -524,7 +497,7 @@ svn_client_log5(const apr_array_header_t *targets,
 
       /* Create ra session on first use */
       rb.ra_session_pool = pool;
-      rb.ra_session_url = actual_url;
+      rb.ra_session_url = actual_loc->url;
     }
   }
 
@@ -556,13 +529,13 @@ svn_client_log5(const apr_array_header_t *targets,
    * the named range.  This led to revisions being printed in strange
    * order or being printed more than once.  This is issue 1550.
    *
-   * In r11599, jpieper blocked multiple wc targets in svn/log-cmd.c,
+   * In r851673, jpieper blocked multiple wc targets in svn/log-cmd.c,
    * meaning this block not only doesn't work right in that case, but isn't
    * even testable that way (svn has no unit test suite; we can only test
    * via the svn command).  So, that check is now moved into this function
    * (see above).
    *
-   * kfogel ponders future enhancements in r4186:
+   * kfogel ponders future enhancements in r844260:
    * I think that's okay behavior, since the sense of the command is
    * that one wants a particular range of logs for *this* file, then
    * another range for *that* file, and so on.  But we should
@@ -580,7 +553,7 @@ svn_client_log5(const apr_array_header_t *targets,
     {
       svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
       const char *path = APR_ARRAY_IDX(targets, 0, const char *);
-      const char *local_abspath;
+      const char *local_abspath_or_url;
       svn_opt_revision_range_t *range;
       limit_receiver_baton_t lb;
       svn_log_entry_receiver_t passed_receiver;
@@ -588,15 +561,20 @@ svn_client_log5(const apr_array_header_t *targets,
       const apr_array_header_t *passed_receiver_revprops;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
+
+      if (!svn_path_is_url(path))
+        SVN_ERR(svn_dirent_get_absolute(&local_abspath_or_url, path, iterpool));
+      else
+        local_abspath_or_url = path;
+
       range = APR_ARRAY_IDX(revision_ranges, i, svn_opt_revision_range_t *);
 
       SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
-                                              ctx->wc_ctx, local_abspath,
+                                              ctx->wc_ctx, local_abspath_or_url,
                                               ra_session, &range->start,
                                               iterpool));
       SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
-                                              ctx->wc_ctx, local_abspath,
+                                              ctx->wc_ctx, local_abspath_or_url,
                                               ra_session, &range->end,
                                               iterpool));
 

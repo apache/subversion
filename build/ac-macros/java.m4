@@ -1,3 +1,21 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
 dnl
 dnl java.m4: Locates the JDK and its include files and libraries.
 dnl
@@ -64,28 +82,62 @@ AC_DEFUN(SVN_FIND_JDK,
   dnl /System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Commands
   dnl See http://developer.apple.com/qa/qa2001/qa1170.html
   os_arch="`uname`"
+  if test "$os_arch" = "Darwin"; then
+    OSX_VER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
+
+    if test "$OSX_VER" = "10.4"; then
+      dnl For OS X 10.4, the SDK version is 10.4u instead of 10.4.
+      OSX_VER="10.4u"
+    fi
+
+    OSX_SYS_JAVA_FRAMEWORK="/System/Library/Frameworks/JavaVM.framework"
+    OSX_SDK_JAVA_FRAMEWORK="/Developer/SDKs/MacOSX$OSX_VER.sdk/System/Library"
+    OSX_SDK_JAVA_FRAMEWORK="$OSX_SDK_JAVA_FRAMEWORK/Frameworks/JavaVM.framework"
+  fi
+
   if test "$os_arch" = "Darwin" && test "$JDK" = "/usr" &&
      test -d "/Library/Java/Home"; then
-      JDK="/Library/Java/Home"
+    JDK="/Library/Java/Home"
   fi
+
   if test "$os_arch" = "Darwin" && test "$JDK" = "/Library/Java/Home"; then
-      JRE_LIB_DIR="/System/Library/Frameworks/JavaVM.framework/Classes"
+    JRE_LIB_DIR="$OSX_SYS_JAVA_FRAMEWORK/Classes"
   else
-      JRE_LIB_DIR="$JDK/jre/lib"
+    JRE_LIB_DIR="$JDK/jre/lib"
   fi
 
   if test -f "$JDK/include/jni.h"; then
     dnl This *must* be fully expanded, or we'll have problems later in find.
     JNI_INCLUDEDIR="$JDK/include"
     JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" && test -e "$JDK/Headers/jni.h"; then
+    dnl Search the Headers directory in the JDK
+    JNI_INCLUDEDIR="$JDK/Headers"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" &&
+       test -e "$OSX_SYS_JAVA_FRAMEWORK/Headers/jni.h"; then
+    dnl Search the System framework's Headers directory
+    JNI_INCLUDEDIR="$OSX_SYS_JAVA_FRAMEWORK/Headers"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" &&
+       test -e "$OSX_SDK_JAVA_FRAMEWORK/Headers/jni.h"; then
+    dnl Search the SDK's System framework's Headers directory
+    JNI_INCLUDEDIR="$OSX_SDK_JAVA_FRAMEWORK/Headers"
+    JDK_SUITABLE=yes
   else
-    AC_MSG_WARN([no JNI header files found.])
-    if test "$os_arch" = "Darwin"; then
-      AC_MSG_WARN([You may need to install the latest Java Development package from http://connect.apple.com/.  Apple no longer includes the JNI header files by default on Java updates.])
-    fi
     JDK_SUITABLE=no
   fi
-  AC_MSG_RESULT([$JDK_SUITABLE])
+  if test "$JDK_SUITABLE" = "yes"; then
+    AC_MSG_RESULT([$JNI_INCLUDEDIR/jni.h])
+  else
+    AC_MSG_RESULT([no])
+    if test "$where" != "check"; then
+      AC_MSG_WARN([no JNI header files found.])
+      if test "$os_arch" = "Darwin"; then
+        AC_MSG_WARN([You may need to install the latest Java Development package from http://connect.apple.com/.  Apple no longer includes the JNI header files by default on Java updates.])
+      fi
+    fi
+  fi
 
   if test "$JDK_SUITABLE" = "yes"; then
     JAVA_BIN='$(JDK)/bin'
@@ -138,9 +190,9 @@ AC_DEFUN(SVN_FIND_JDK,
     # The release for "-source" could actually be greater than that
     # of "-target", if we want to cross-compile for lesser JVMs.
     if test -z "$JAVAC_FLAGS"; then
-      JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.3"
+      JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.5"
       if test "$enable_debugging" = "yes"; then
-        JAVAC_FLAGS="-g $JAVAC_FLAGS"
+        JAVAC_FLAGS="-g -Xlint:unchecked $JAVAC_FLAGS"
       fi
     fi
 

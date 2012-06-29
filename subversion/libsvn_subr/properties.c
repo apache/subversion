@@ -62,31 +62,42 @@ svn_prop_has_svn_prop(const apr_hash_t *props, apr_pool_t *pool)
 }
 
 
+#define SIZEOF_WC_PREFIX (sizeof(SVN_PROP_WC_PREFIX) - 1)
+#define SIZEOF_ENTRY_PREFIX (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
+
+svn_prop_kind_t
+svn_property_kind2(const char *prop_name)
+{
+
+  if (strncmp(prop_name, SVN_PROP_WC_PREFIX, SIZEOF_WC_PREFIX) == 0)
+    return svn_prop_wc_kind;
+
+  if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, SIZEOF_ENTRY_PREFIX) == 0)
+    return svn_prop_entry_kind;
+
+  return svn_prop_regular_kind;
+}
+
+
+/* NOTE: this function is deprecated, but we cannot move it to deprecated.c
+   because we need the SIZEOF_*_PREFIX constant symbols defined above.  */
 svn_prop_kind_t
 svn_property_kind(int *prefix_len,
                   const char *prop_name)
 {
-  apr_size_t wc_prefix_len = sizeof(SVN_PROP_WC_PREFIX) - 1;
-  apr_size_t entry_prefix_len = sizeof(SVN_PROP_ENTRY_PREFIX) - 1;
+  svn_prop_kind_t kind = svn_property_kind2(prop_name);
 
-  if (strncmp(prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
-    {
-      if (prefix_len)
-        *prefix_len = wc_prefix_len;
-      return svn_prop_wc_kind;
-    }
-
-  if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
-    {
-      if (prefix_len)
-        *prefix_len = entry_prefix_len;
-      return svn_prop_entry_kind;
-    }
-
-  /* else... */
   if (prefix_len)
-    *prefix_len = 0;
-  return svn_prop_regular_kind;
+    {
+      if (kind == svn_prop_wc_kind)
+        *prefix_len = SIZEOF_WC_PREFIX;
+      else if (kind == svn_prop_entry_kind)
+        *prefix_len = SIZEOF_ENTRY_PREFIX;
+      else
+        *prefix_len = 0;
+    }
+
+  return kind;
 }
 
 
@@ -111,7 +122,7 @@ svn_categorize_props(const apr_array_header_t *proplist,
       enum svn_prop_kind kind;
 
       prop = &APR_ARRAY_IDX(proplist, i, svn_prop_t);
-      kind = svn_property_kind(NULL, prop->name);
+      kind = svn_property_kind2(prop->name);
       newprop = NULL;
 
       if (kind == svn_prop_regular_kind)
@@ -221,6 +232,100 @@ svn_prop_diffs(apr_array_header_t **propdiffs,
   return SVN_NO_ERROR;
 }
 
+/**
+ * Reallocate the members of PROP using POOL.
+ */
+static void
+svn_prop__members_dup(svn_prop_t *prop, apr_pool_t *pool)
+{
+  if (prop->name)
+    prop->name = apr_pstrdup(pool, prop->name);
+  if (prop->value)
+    prop->value = svn_string_dup(prop->value, pool);
+}
+
+svn_prop_t *
+svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool)
+{
+  svn_prop_t *new_prop = apr_palloc(pool, sizeof(*new_prop));
+
+  *new_prop = *prop;
+
+  svn_prop__members_dup(new_prop, pool);
+
+  return new_prop;
+}
+
+apr_array_header_t *
+svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *new_array = apr_array_copy(pool, array);
+  for (i = 0; i < new_array->nelts; ++i)
+    {
+      svn_prop_t *elt = &APR_ARRAY_IDX(new_array, i, svn_prop_t);
+      svn_prop__members_dup(elt, pool);
+    }
+  return new_array;
+}
+
+apr_array_header_t *
+svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_array_header_t *array = apr_array_make(pool, apr_hash_count(hash),
+                                             sizeof(svn_prop_t));
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      svn_prop_t prop;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      prop.name = key;
+      prop.value = val;
+      APR_ARRAY_PUSH(array, svn_prop_t) = prop;
+    }
+
+  return array;
+}
+
+apr_hash_t *
+svn_prop_hash_dup(apr_hash_t *hash,
+                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *new_hash = apr_hash_make(pool);
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *prop;
+
+      apr_hash_this(hi, &key, &klen, &prop);
+      apr_hash_set(new_hash, apr_pstrmemdup(pool, key, klen), klen,
+                   svn_string_dup(prop, pool));
+    }
+  return new_hash;
+}
+
+apr_hash_t *
+svn_prop_array_to_hash(const apr_array_header_t *properties,
+                       apr_pool_t *pool)
+{
+  int i;
+  apr_hash_t *prop_hash = apr_hash_make(pool);
+
+  for (i = 0; i < properties->nelts; i++)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(properties, i, svn_prop_t);
+      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
+
+  return prop_hash;
+}
 
 svn_boolean_t
 svn_prop_is_boolean(const char *prop_name)

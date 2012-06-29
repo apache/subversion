@@ -1,0 +1,120 @@
+﻿[#
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+-->
+]<?xml version="1.0" encoding="utf-8"?>
+[format "xml"]
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+[for configs][for platforms]    <ProjectConfiguration Include="[configs.name]|[platforms]">
+      <Configuration>[configs.name]</Configuration>
+      <Platform>[platforms]</Platform>
+    </ProjectConfiguration>
+[end][end]  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>[project_guid]</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+[for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="Configuration">
+    <ConfigurationType>[config_type]</ConfigurationType>
+    <UseDebugLibraries>[is configs.name "Debug"]true[else]false[end]</UseDebugLibraries>
+[is configs.name "Release"]    <WholeProgramOptimization>true</WholeProgramOptimization>
+[end]    <PlatformToolset>[toolset_version]</PlatformToolset>
+  </PropertyGroup>
+[end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+[for platforms][for configs]  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  </ImportGroup>
+[end][end]  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\[target.output_dir]\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$(SolutionDir)[configs.name]\[target.intermediate_dir]\[target.proj_name]\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[target.output_name_without_ext]</TargetName>
+[is config_type "DynamicLibrary"][is target.output_ext ".dll"][else]    <TargetExt>[target.output_ext]</TargetExt>
+[end][end][end][end]  </PropertyGroup>
+[for configs][for platforms]  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
+    <ClCompile>
+[is configs.name "Debug"]      <Optimization>Disabled</Optimization>
+[else]      <Optimization>Full</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <StringPooling>true</StringPooling>
+[end]      <AdditionalIncludeDirectories>[for includes][includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BrowseInformation>true</BrowseInformation>
+      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <DisableSpecificWarnings>4100;4127;4204;4206;4701;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4715;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+    </ClCompile>
+[is config_type "Application"]    <Link>
+      <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <EnableUAC>true</EnableUAC>
+[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+[else]      <OptimizeReferences>true</OptimizeReferences>
+[end]    </Link>
+[else][is config_type "DynamicLibrary"]    <Link>
+      <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+[end][if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
+[end]    </Link>
+[else][is config_type "StaticLibrary"]    <Lib>
+      <TargetMachine>[is platforms "X64"]MachineX64[else]MachineX86[end]</TargetMachine>
+[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+[end]    </Lib>
+[end][end][end]  </ItemDefinitionGroup>
+[end][end][if-any target.desc]  <ItemGroup>
+    <ResourceCompile Include="..\svn.rc">
+[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end];%(PreprocessorDefinitions)</PreprocessorDefinitions>
+[end][end]    </ResourceCompile>
+  </ItemGroup>
+[end]  <ItemGroup>
+[for sources][is sources.extension ".h"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">
+      <FileType>Document</FileType>
+[for configs][for platforms]      <Command Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_build]</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for sources.user_deps][sources.user_deps];[end]%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_target];%(Outputs)</Outputs>
+[if-any sources.custom_desc]<Message Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_desc]</Message>
+[end][end][end]    </CustomBuild>
+[else][is sources.extension ".c"]    <ClCompile Include="[sources.path]" />
+[else][is sources.extension ".cpp"]    <ClCompile Include="[sources.path]" />
+[else]    <None Include="[sources.path]" />
+[end][end][end][end][end]  </ItemGroup>
+  <ItemGroup>
+[for sources][is sources.extension ".h"]    <ClInclude Include="[sources.path]" />
+[end][end]  </ItemGroup>
+  <ItemGroup>
+[for depends]    <ProjectReference Include="[depends.path]">
+      <Project>[depends.guid]</Project>
+    </ProjectReference>
+[end]  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
+[end]

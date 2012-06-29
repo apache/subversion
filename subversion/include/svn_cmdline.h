@@ -289,7 +289,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt(
   apr_pool_t *pool);
 
 /** An implementation of @c svn_auth_plaintext_prompt_func_t that
- * prompts the user whether storing unencypted passwords to disk is OK.
+ * prompts the user whether storing unencrypted passwords to disk is OK.
  *
  * Expects a @c svn_cmdline_prompt_baton2_t to be passed as @a baton.
  *
@@ -302,7 +302,7 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
                                   apr_pool_t *pool);
 
 /** An implementation of @c svn_auth_plaintext_passphrase_prompt_func_t that
- * prompts the user whether storing unencypted passphrase to disk is OK.
+ * prompts the user whether storing unencrypted passphrase to disk is OK.
  *
  * Expects a @c svn_cmdline_prompt_baton2_t to be passed as @a baton.
  *

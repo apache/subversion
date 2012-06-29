@@ -29,29 +29,28 @@
 
 #include <jni.h>
 #include "Pool.h"
+#include "StringArray.h"
 
 struct apr_array_header_t;
-struct svn_error_t;
-class SVN::Pool;
 
 #include "Path.h"
+#include "Pool.h"
 #include <vector>
 
 class Targets
 {
  private:
-  std::vector<Path> m_targets;
-  jobjectArray m_targetArray;
+  SVN::Pool m_subpool;
+  std::vector<const char*> m_targets;
+  StringArray *m_strArray;
   svn_error_t *m_error_occured;
-  bool m_doesNotContainsPath;
  public:
-  Targets(jobjectArray jtargets);
-  Targets(const char *path);
+  Targets(StringArray &strArray, SVN::Pool &in_pool);
+  Targets(const char *path, SVN::Pool &in_pool);
   void add(const char *path);
   ~Targets();
   const apr_array_header_t *array(const SVN::Pool &pool);
   svn_error_t *error_occured();
-  void setDoesNotContainsPath();
 };
 
 #endif // TARGETS_H

@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 728f5e1e-a57c-4dd4-8b4f-ca752f5178f3
+UUID: 11659000-ab01-11e1-8800-0080c8fbf679
 
 Revision-number: 0
 Prop-content-length: 56
@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 97
 Content-length: 97
 
-K 7
-svn:log
-V 0
-
 K 10
 svn:author
 V 3
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2007-12-07T20:53:40.322712Z
+K 7
+svn:log
+V 0
+
 PROPS-END
 
 Node-path: trunk
@@ -43,10 +43,6 @@ Revision-number: 2
 Prop-content-length: 124
 Content-length: 124
 
-K 7
-svn:log
-V 26
-Import greek tree on trunk
 K 10
 svn:author
 V 3
@@ -55,6 +51,10 @@ K 8
 svn:date
 V 27
 2007-12-07T20:56:45.939703Z
+K 7
+svn:log
+V 26
+Import greek tree on trunk
 PROPS-END
 
 Node-path: trunk/A
@@ -276,10 +276,6 @@ Revision-number: 3
 Prop-content-length: 127
 Content-length: 127
 
-K 7
-svn:log
-V 29
-* trunk/A/D/H/psi: extra line
 K 10
 svn:author
 V 3
@@ -288,6 +284,10 @@ K 8
 svn:date
 V 27
 2007-12-07T21:12:26.232653Z
+K 7
+svn:log
+V 29
+* trunk/A/D/H/psi: extra line
 PROPS-END
 
 Node-path: trunk/A/D/H/psi
@@ -306,10 +306,6 @@ Revision-number: 4
 Prop-content-length: 128
 Content-length: 128
 
-K 7
-svn:log
-V 26
-make changes on A and iota
 K 10
 svn:author
 V 7
@@ -318,6 +314,10 @@ K 8
 svn:date
 V 27
 2007-12-09T21:25:05.711998Z
+K 7
+svn:log
+V 26
+make changes on A and iota
 PROPS-END
 
 Node-path: trunk/A
@@ -337,10 +337,6 @@ Revision-number: 5
 Prop-content-length: 116
 Content-length: 116
 
-K 7
-svn:log
-V 14
-Renamed A to B
 K 10
 svn:author
 V 7
@@ -349,6 +345,10 @@ K 8
 svn:date
 V 27
 2007-12-09T21:26:14.639561Z
+K 7
+svn:log
+V 14
+Renamed A to B
 PROPS-END
 
 Node-path: trunk/A
@@ -359,10 +359,6 @@ Revision-number: 6
 Prop-content-length: 116
 Content-length: 116
 
-K 7
-svn:log
-V 14
-Moved B/D to A
 K 10
 svn:author
 V 7
@@ -371,6 +367,10 @@ K 8
 svn:date
 V 27
 2007-12-09T21:27:02.055549Z
+K 7
+svn:log
+V 14
+Moved B/D to A
 PROPS-END
 
 Node-path: trunk/A
@@ -496,10 +496,6 @@ Revision-number: 7
 Prop-content-length: 125
 Content-length: 125
 
-K 7
-svn:log
-V 23
-Added property to trunk
 K 10
 svn:author
 V 7
@@ -508,6 +504,10 @@ K 8
 svn:date
 V 27
 2007-12-09T21:28:07.300170Z
+K 7
+svn:log
+V 23
+Added property to trunk
 PROPS-END
 
 Node-path: trunk

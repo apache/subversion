@@ -31,22 +31,22 @@
 #include "Pool.h"
 
 struct apr_array_header_t;
-struct svn_error_t;
-class SVN::Pool;
 
-#include "Path.h"
+#include "Array.h"
 #include <vector>
 #include <string>
 
-class StringArray
+class StringArray : Array
 {
  private:
   std::vector<std::string> m_strings;
-  jobjectArray m_stringArray;
+  void init(void);
  public:
   StringArray(jobjectArray jstrings);
+  StringArray(jobject jstringCollection);
   ~StringArray();
   const apr_array_header_t *array(const SVN::Pool &pool);
+  const std::vector<std::string> &vector(void) const;
 };
 
 #endif // STRINGARRAY_H

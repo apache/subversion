@@ -1,7 +1,6 @@
 /*
  * svn_dav_protocol.h: Declarations of the protocol shared by the
- * mod_dav_svn backend for httpd's mod_dav, and its ra_neon and
- * ra_serf RA DAV clients.
+ * mod_dav_svn backend for httpd's mod_dav and its ra_serf RA DAV clients.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -45,6 +44,17 @@ extern "C" {
 #define SVN_DAV__REVISION "revision"
 #define SVN_DAV__INCLUDE_DESCENDANTS "include-descendants"
 #define SVN_DAV__VERSION_NAME "version-name"
+
+/** Names of XML elements attributes and tags for svn_ra_change_rev_prop2()'s
+    extension of PROPPATCH.  */
+#define SVN_DAV__OLD_VALUE "old-value"
+#define SVN_DAV__OLD_VALUE__ABSENT "absent"
+
+/** Helper typedef for svn_ra_change_rev_prop2() implementation. */
+typedef struct svn_dav__two_props_t {
+  const svn_string_t *const *old_value_p;
+  const svn_string_t *new_value;
+} svn_dav__two_props_t;
 
 #ifdef __cplusplus
 }

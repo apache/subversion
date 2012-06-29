@@ -1,3 +1,24 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+ */
+
 /* -*- c-file-style: "ruby" -*- */
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
@@ -991,7 +1012,7 @@ c2r_svn_string(void *value, void *ctx)
   return c2r_string2(s->data);
 }
 
-typedef struct {
+typedef struct prop_hash_each_arg_t {
   apr_array_header_t *array;
   apr_pool_t *pool;
 } prop_hash_each_arg_t;
@@ -1210,10 +1231,10 @@ svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 static void
 r2c_swig_type2(VALUE value, const char *type_name, void **result)
 {
+#ifdef SWIG_IsOK
   int res;
   res = SWIG_ConvertPtr(value, result, SWIG_TypeQuery(type_name),
                         SWIG_POINTER_EXCEPTION);
-#ifdef SWIG_IsOK
   if (!SWIG_IsOK(res)) {
     VALUE message = rb_funcall(value, rb_intern("inspect"), 0);
     rb_str_cat2(message, "must be ");
@@ -1292,6 +1313,9 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item2,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_merge_range,
                           c2r_merge_range_dup, EMPTY_CPP_ARGUMENT,
                           svn_merge_range_t *, NULL)
+DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_auth_provider_object,
+                          c2r_swig_type, EMPTY_CPP_ARGUMENT,
+                          svn_auth_provider_object_t *, "svn_auth_provider_object_t*")
 
 static VALUE
 c2r_merge_range_array(void *value, void *ctx)
@@ -1555,19 +1579,19 @@ svn_swig_rb_hash_to_apr_hash_merge_range(VALUE hash, apr_pool_t *pool)
 
 
 /* callback */
-typedef struct {
+typedef struct callback_baton_t {
   VALUE pool;
   VALUE receiver;
   ID message;
   VALUE args;
 } callback_baton_t;
 
-typedef struct {
+typedef struct callback_rescue_baton_t {
   svn_error_t **err;
   VALUE pool;
 } callback_rescue_baton_t;
 
-typedef struct {
+typedef struct callback_handle_error_baton_t {
   callback_baton_t *callback_baton;
   callback_rescue_baton_t *rescue_baton;
 } callback_handle_error_baton_t;
@@ -1654,7 +1678,7 @@ invoke_callback_handle_error(VALUE baton, VALUE pool, svn_error_t **err)
 
 
 /* svn_delta_editor_t */
-typedef struct {
+typedef struct item_baton {
   VALUE editor;
   VALUE baton;
 } item_baton;
@@ -2935,6 +2959,41 @@ svn_swig_rb_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
   }
 
   *cred = new_cred;
+  return err;
+}
+
+svn_error_t *
+svn_swig_rb_auth_gnome_keyring_unlock_prompt_func(char **keyring_passwd,
+                                                  const char *keyring_name,
+                                                  void *baton,
+                                                  apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+  *keyring_passwd = NULL;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    char error_message[] =
+      "svn_auth_gnome_keyring_unlock_prompt_func_t should"
+      "return a string, not '%s'.";
+
+    callback_baton_t cbb;
+    VALUE result;
+
+    cbb.receiver = proc;
+    cbb.message = id_call;
+    cbb.args = rb_ary_new3(1, c2r_string2(keyring_name));
+    result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+
+    if (!NIL_P(result)) {
+      if (!RTEST(rb_obj_is_kind_of(result, rb_cString)))
+        rb_raise(rb_eTypeError, error_message, r2c_inspect(result));
+      *keyring_passwd = (char *)r2c_string(result, NULL, pool);
+    }
+  }
+
   return err;
 }
 

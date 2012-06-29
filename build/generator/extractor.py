@@ -24,7 +24,6 @@
 
 import os
 import re
-import string
 
 #
 # This parses the following two types of declarations:
@@ -56,6 +55,8 @@ _filter_names = [
   'svn_auth_get_kwallet_ssl_client_cert_pw_provider',
   'svn_auth_gnome_keyring_version',
   'svn_auth_kwallet_version',
+  'svn_auth_get_gpg_agent_simple_provider',
+  'svn_auth_gpg_agent_version',
   ]
 
 if __name__ == '__main__':
@@ -67,3 +68,5 @@ if __name__ == '__main__':
       print(func)
     if os.path.basename(fname) == 'svn_ctype.h':
       print('svn_ctype_table = svn_ctype_table_internal CONSTANT')
+    elif os.path.basename(fname) == 'svn_wc_private.h':
+      print('svn_wc__internal_walk_children')

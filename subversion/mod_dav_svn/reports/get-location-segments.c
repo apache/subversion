@@ -1,6 +1,7 @@
 /*
- * get-location-segments.c: mod_dav_svn versioning provider functions
- *                          for Subversion's get-location-segments RA API.
+ * get-location-segments.c: mod_dav_svn REPORT handler for mapping
+ *                          revision ranges to path locations along
+ *                          the history of an object
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -38,6 +39,8 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -112,7 +115,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   apr_bucket_brigade *bb;
   int ns;
   apr_xml_elem *child;
-  const char *path = NULL;
+  const char *abs_path = NULL;
   svn_revnum_t peg_revision = SVN_INVALID_REVNUM;
   svn_revnum_t start_rev = SVN_INVALID_REVNUM;
   svn_revnum_t end_rev = SVN_INVALID_REVNUM;
@@ -155,16 +158,22 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
         }
       else if (strcmp(child->name, "path") == 0)
         {
-          path = dav_xml_get_cdata(child, resource->pool, 0);
-          if ((derr = dav_svn__test_canonical(path, resource->pool)))
+          const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          path = svn_path_join(resource->info->repos_path, path,
-                               resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          abs_path = svn_fspath__join(resource->info->repos_path, rel_path,
+                                      resource->pool);
         }
     }
 
-  /* Check our inputs. */
-  if (! path)
+  /* Check that all parameters are present and valid. */
+  if (! abs_path)
     return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "Not all parameters passed.",
                                   SVN_DAV_ERROR_NAMESPACE,
@@ -198,7 +207,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   location_segment_baton.output = output;
   location_segment_baton.bb = bb;
   if ((serr = svn_repos_node_location_segments(resource->info->repos->repos,
-                                               path, peg_revision,
+                                               abs_path, peg_revision,
                                                start_rev, end_rev,
                                                location_segment_receiver,
                                                &location_segment_baton,

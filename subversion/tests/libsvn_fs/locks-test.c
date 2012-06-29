@@ -91,6 +91,40 @@ verify_matching_lock_paths(struct get_locks_baton_t *baton,
 }
 
 
+/* Create a filesystem in a directory called NAME, and populate it with
+ * the standard Greek tree.  Set *FS_P to the new filesystem object and
+ * *NEWREV_P to the head revision number.  Unwanted outputs may be NULL. */
+static svn_error_t *
+create_greek_fs(svn_fs_t **fs_p,
+                svn_revnum_t *newrev_p,
+                const char *name,
+                const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t newrev;
+
+  /* Prepare a filesystem and a new txn. */
+  SVN_ERR(svn_test__create_fs(&fs, name, opts, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Create the greek tree and commit it. */
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(newrev));
+
+  if (fs_p)
+    *fs_p = fs;
+  if (newrev_p)
+    *newrev_p = newrev;
+  return SVN_NO_ERROR;
+}
+
+
 /*-----------------------------------------------------------------*/
 
 /** The actual lock-tests called by `make check` **/
@@ -103,22 +137,11 @@ lock_only(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-only",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, NULL, "test-repo-lock-only",
+                          opts, pool));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -142,22 +165,11 @@ lookup_lock_by_path(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lookup-lock-by-path",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, NULL, "test-repo-lookup-lock-by-path",
+                          opts, pool));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -183,24 +195,13 @@ attach_lock(const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *somelock;
   svn_lock_t *mylock;
   const char *token;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-attach-lock",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, NULL, "test-repo-attach-lock",
+                          opts, pool));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -235,24 +236,13 @@ get_locks(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock;
   struct get_locks_baton_t *get_locks_baton;
   apr_size_t i, num_expected_paths;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-get-locks",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, NULL, "test-repo-get-locks",
+                          opts, pool));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -354,6 +344,18 @@ get_locks(const svn_test_opts_t *opts,
                                        num_expected_paths, pool));
   }
 
+  /* A path that is longer and alphabetically earlier than some locked
+     paths, this exercises the r1205848 BDB lock code. */
+  {
+    static const char *expected_paths[] = { 0 };
+    num_expected_paths = 0;
+    get_locks_baton = make_get_locks_baton(pool);
+    SVN_ERR(svn_fs_get_locks(fs, "A/D/H/ABCDEFGHIJKLMNOPQR", get_locks_callback,
+                             get_locks_baton, pool));
+    SVN_ERR(verify_matching_lock_paths(get_locks_baton, expected_paths,
+                                       num_expected_paths, pool));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -365,22 +367,11 @@ basic_lock(const svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-basic-lock",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, NULL, "test-repo-basic-lock",
+                          opts, pool));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -423,15 +414,8 @@ lock_credentials(const svn_test_opts_t *opts,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-credentials",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-repo-lock-credentials",
+                          opts, pool));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -455,6 +439,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Try to commit the file change.  Should fail, because we're nobody. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_TEST_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -467,6 +452,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Try to commit the file change.  Should fail, because we're 'hortense'. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_TEST_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -479,6 +465,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Try to commit the file change.  Should fail, because there's no token. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_TEST_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -490,6 +477,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Commit should now succeed. */
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -513,15 +501,8 @@ final_lock_check(const svn_test_opts_t *opts,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-final-lock-check",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-repo-final-lock-check",
+                          opts, pool));
 
   /* Make a new transaction and delete "/A" */
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
@@ -540,6 +521,7 @@ final_lock_check(const svn_test_opts_t *opts,
   /* Try to commit the transaction.  Should fail, because a child of
      the deleted directory is locked by someone else. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_TEST_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -550,6 +532,7 @@ final_lock_check(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_set_access(fs, access));
   SVN_ERR(svn_fs_access_add_lock_token(access, mylock->token));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -570,15 +553,8 @@ lock_dir_propchange(const svn_test_opts_t *opts,
   svn_fs_access_t *access;
   svn_lock_t *mylock;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-dir-propchange",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-repo-lock-dir-propchange",
+                          opts, pool));
 
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -599,134 +575,10 @@ lock_dir_propchange(const svn_test_opts_t *opts,
   /* Commit should succeed;  this means we're doing a non-recursive
      lock-check on directory, rather than a recursive one.  */
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* DAV clients sometimes LOCK non-existent paths, as a way of
-   reserving names.  Check that this technique works. */
-static svn_error_t *
-lock_name_reservation(const svn_test_opts_t *opts,
-                      apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *rev_root;
-  const char *conflict;
-  svn_revnum_t newrev;
-  svn_fs_access_t *access;
-  svn_lock_t *mylock;
-  svn_error_t *err;
-
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-name-reservation",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
-
-  /* Become 'bubba' and lock imaginary path  "/A/D/G2/blooga". */
-  SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
-  SVN_ERR(svn_fs_set_access(fs, access));
-  SVN_ERR(svn_fs_lock(&mylock, fs, "/A/D/G2/blooga", NULL, "", 0, 0,
-                      SVN_INVALID_REVNUM, FALSE, pool));
-
-  /* We are no longer 'bubba'.  We're nobody. */
-  SVN_ERR(svn_fs_set_access(fs, NULL));
-
-  /* Make a new transaction. */
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* This copy should fail, because an imaginary path in the target of
-     the copy is reserved by someone else. */
-  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 1, pool));
-  err = svn_fs_copy(rev_root, "/A/D/G", txn_root, "/A/D/G2", pool);
-  if (! err)
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, NULL,
-       "Uhoh, copy succeeded when path within target was locked.");
-  svn_error_clear(err);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Test that we can set and get locks in and under a directory.  We'll
-   use non-existent FS paths for this test, though, as the FS API
-   currently disallows directory locking.  */
-static svn_error_t *
-directory_locks_kinda(const svn_test_opts_t *opts,
-                      apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_fs_access_t *access;
-  svn_lock_t *mylock;
-  apr_size_t num_expected_paths, i;
-  struct get_locks_baton_t *get_locks_baton;
-
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-directory-locks-kinda",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* We are now 'bubba'. */
-  SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
-  SVN_ERR(svn_fs_set_access(fs, access));
-
-  /*** Lock some various, non-existent, yet dir-name-spacily
-       overlapping paths; verify. ***/
-  {
-    static const char *expected_paths[] = {
-      "/Program Files/Tigris.org/Subversion",
-      "/Program Files/Tigris.org",
-      "/Stuff/Junk/Fluff",
-      "/Program Files",
-    };
-    num_expected_paths = sizeof(expected_paths) / sizeof(const char *);
-
-    /* Lock all paths under /A/D/G. */
-    for (i = 0; i < num_expected_paths; i++)
-      {
-        SVN_ERR(svn_fs_lock(&mylock, fs, expected_paths[i], NULL, "", 0, 0,
-                            SVN_INVALID_REVNUM, FALSE, pool));
-      }
-    get_locks_baton = make_get_locks_baton(pool);
-    SVN_ERR(svn_fs_get_locks(fs, "/", get_locks_callback,
-                             get_locks_baton, pool));
-    SVN_ERR(verify_matching_lock_paths(get_locks_baton, expected_paths,
-                                       num_expected_paths, pool));
-  }
-
-  /*** Now unlock a "middle directory" ***/
-  {
-    static const char *expected_paths[] = {
-      "/Program Files/Tigris.org/Subversion",
-      "/Stuff/Junk/Fluff",
-      "/Program Files",
-    };
-    num_expected_paths = sizeof(expected_paths) / sizeof(const char *);
-
-    SVN_ERR(svn_fs_unlock(fs, "/Program Files/Tigris.org", NULL,
-                          TRUE, pool));
-    get_locks_baton = make_get_locks_baton(pool);
-    SVN_ERR(svn_fs_get_locks(fs, "/", get_locks_callback,
-                             get_locks_baton, pool));
-    SVN_ERR(verify_matching_lock_paths(get_locks_baton, expected_paths,
-                                       num_expected_paths, pool));
-  }
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Test that locks auto-expire correctly. */
 static svn_error_t *
@@ -743,15 +595,8 @@ lock_expiration(const svn_test_opts_t *opts,
   svn_error_t *err;
   struct get_locks_baton_t *get_locks_baton;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-expiration",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-repo-lock-expiration",
+                          opts, pool));
 
   /* Make a new transaction and change rho. */
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
@@ -774,6 +619,7 @@ lock_expiration(const svn_test_opts_t *opts,
   /* Try to commit.  Should fail because we're 'nobody', and the lock
      hasn't expired yet. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_TEST_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -810,6 +656,7 @@ lock_expiration(const svn_test_opts_t *opts,
   }
 
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -820,22 +667,11 @@ lock_break_steal_refresh(const svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-steal-refresh",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, NULL, "test-repo-steal-refresh",
+                          opts, pool));
 
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -907,15 +743,8 @@ lock_out_of_date(const svn_test_opts_t *opts,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-out-of-date",
-                              opts, pool));
-  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR(create_greek_fs(&fs, &newrev, "test-repo-lock-out-of-date",
+                          opts, pool));
 
   /* Commit a small change to /A/D/G/rho, creating revision 2. */
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
@@ -923,6 +752,7 @@ lock_out_of_date(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__set_file_contents(txn_root, "/A/D/G/rho",
                                       "new contents", pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -981,10 +811,6 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test that locking is enforced in final commit step"),
     SVN_TEST_OPTS_PASS(lock_dir_propchange,
                        "dir propchange can be committed with locked child"),
-    SVN_TEST_OPTS_XFAIL(lock_name_reservation,
-                        "able to reserve a name (lock non-existent path)"),
-    SVN_TEST_OPTS_XFAIL(directory_locks_kinda,
-                        "directory locks (kinda)"),
     SVN_TEST_OPTS_PASS(lock_expiration,
                        "test that locks can expire"),
     SVN_TEST_OPTS_PASS(lock_break_steal_refresh,

@@ -34,8 +34,14 @@
 #include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_user.h"
+#include "svn_ctype.h"
 
 #include "svn_private_config.h"
+
+#ifdef __HAIKU__
+#  include <FindDirectory.h>
+#  include <StorageDefs.h>
+#endif
 
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
@@ -54,15 +60,19 @@ typedef struct parse_context_t
   /* The current line in the file */
   int line;
 
-  /* Cached ungotten character  - streams don't support ungetc()
-     [emulate it] */
+  /* Emulate an ungetc */
   int ungotten_char;
-  svn_boolean_t have_ungotten_char;
 
-  /* Temporary strings, allocated from the temp pool */
+  /* Temporary strings */
   svn_stringbuf_t *section;
   svn_stringbuf_t *option;
   svn_stringbuf_t *value;
+
+  /* Parser buffer for getc() to avoid call overhead into several libraries
+     for every character */
+  char parser_buffer[SVN_STREAM_CHUNK_SIZE]; /* Larger than most config files */
+  size_t buffer_pos; /* Current position within parser_buffer */
+  size_t buffer_size; /* parser_buffer contains this many bytes */
 } parse_context_t;
 
 
@@ -76,25 +86,59 @@ typedef struct parse_context_t
 static APR_INLINE svn_error_t *
 parser_getc(parse_context_t *ctx, int *c)
 {
-  if (ctx->have_ungotten_char)
+  do
     {
-      *c = ctx->ungotten_char;
-      ctx->have_ungotten_char = FALSE;
-    }
-  else
-    {
-      char char_buf;
-      apr_size_t readlen = 1;
-
-      SVN_ERR(svn_stream_read(ctx->stream, &char_buf, &readlen));
-
-      if (readlen == 1)
-        *c = char_buf;
+      if (ctx->ungotten_char != EOF)
+        {
+          *c = ctx->ungotten_char;
+          ctx->ungotten_char = EOF;
+        }
+      else if (ctx->buffer_pos < ctx->buffer_size)
+        {
+          *c = ctx->parser_buffer[ctx->buffer_pos];
+          ctx->buffer_pos++;
+        }
       else
-        *c = EOF;
+        {
+          ctx->buffer_pos = 0;
+          ctx->buffer_size = sizeof(ctx->parser_buffer);
+
+          SVN_ERR(svn_stream_read(ctx->stream, ctx->parser_buffer,
+                                  &(ctx->buffer_size)));
+
+          if (ctx->buffer_pos < ctx->buffer_size)
+            {
+              *c = ctx->parser_buffer[ctx->buffer_pos];
+              ctx->buffer_pos++;
+            }
+          else
+            *c = EOF;
+        }
     }
+  while (*c == '\r');
 
   return SVN_NO_ERROR;
+}
+
+/* Simplified version of parser_getc() to be used inside skipping loops.
+ * It will not check for 'ungotton' chars and may or may not ignore '\r'.
+ *
+ * In a 'while(cond) getc();' loop, the first iteration must call
+ * parser_getc to handle all the special cases.  Later iterations should
+ * use parser_getc_plain for maximum performance.
+ */
+static APR_INLINE svn_error_t *
+parser_getc_plain(parse_context_t *ctx, int *c)
+{
+  if (ctx->buffer_pos < ctx->buffer_size)
+    {
+      *c = ctx->parser_buffer[ctx->buffer_pos];
+      ctx->buffer_pos++;
+
+      return SVN_NO_ERROR;
+    }
+
+  return parser_getc(ctx, c);
 }
 
 /* Emulate ungetc() because streams don't support it.
@@ -105,7 +149,6 @@ static APR_INLINE svn_error_t *
 parser_ungetc(parse_context_t *ctx, int c)
 {
   ctx->ungotten_char = c;
-  ctx->have_ungotten_char = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -117,14 +160,14 @@ parser_ungetc(parse_context_t *ctx, int c)
 static APR_INLINE svn_error_t *
 skip_whitespace(parse_context_t *ctx, int *c, int *pcount)
 {
-  int ch;
+  int ch = 0;
   int count = 0;
 
   SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != '\n' && apr_isspace(ch))
+  while (svn_ctype_isspace(ch) && ch != '\n' && ch != EOF)
     {
       ++count;
-      SVN_ERR(parser_getc(ctx, &ch));
+      SVN_ERR(parser_getc_plain(ctx, &ch));
     }
   *pcount = count;
   *c = ch;
@@ -140,8 +183,8 @@ skip_to_eoln(parse_context_t *ctx, int *c)
   int ch;
 
   SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != '\n')
-    SVN_ERR(parser_getc(ctx, &ch));
+  while (ch != '\n' && ch != EOF)
+    SVN_ERR(parser_getc_plain(ctx, &ch));
 
   *c = ch;
   return SVN_NO_ERROR;
@@ -161,8 +204,8 @@ parse_value(int *pch, parse_context_t *ctx)
   while (ch != EOF && ch != '\n')
     /* last ch seen was ':' or '=' in parse_option. */
     {
-      const char char_from_int = ch;
-      svn_stringbuf_appendbytes(ctx->value, &char_from_int, 1);
+      const char char_from_int = (char)ch;
+      svn_stringbuf_appendbyte(ctx->value, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
   /* Leading and trailing whitespace is ignored. */
@@ -213,13 +256,12 @@ parse_value(int *pch, parse_context_t *ctx)
               else
                 {
                   /* This is a continuation line. Read it. */
-                  svn_stringbuf_appendbytes(ctx->value, " ", 1);
+                  svn_stringbuf_appendbyte(ctx->value, ' ');
 
                   while (ch != EOF && ch != '\n')
                     {
-                      const char char_from_int = ch;
-                      svn_stringbuf_appendbytes(ctx->value,
-                                                &char_from_int, 1);
+                      const char char_from_int = (char)ch;
+                      svn_stringbuf_appendbyte(ctx->value, char_from_int);
                       SVN_ERR(parser_getc(ctx, &ch));
                     }
                   /* Trailing whitespace is ignored. */
@@ -236,7 +278,7 @@ parse_value(int *pch, parse_context_t *ctx)
 
 /* Parse a single option */
 static svn_error_t *
-parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
+parse_option(int *pch, parse_context_t *ctx, apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
@@ -245,8 +287,8 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   ch = *pch;   /* Yes, the first char is relevant. */
   while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
-      const char char_from_int = ch;
-      svn_stringbuf_appendbytes(ctx->option, &char_from_int, 1);
+      const char char_from_int = (char)ch;
+      svn_stringbuf_appendbyte(ctx->option, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
 
@@ -255,7 +297,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                               "%s:%d: Option must end with ':' or '='",
-                              svn_dirent_local_style(ctx->file, pool),
+                              svn_dirent_local_style(ctx->file, scratch_pool),
                               ctx->line);
     }
   else
@@ -279,7 +321,8 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
  * starts a section name.
  */
 static svn_error_t *
-parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
+parse_section_name(int *pch, parse_context_t *ctx,
+                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
@@ -288,8 +331,8 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != EOF && ch != ']' && ch != '\n')
     {
-      const char char_from_int = ch;
-      svn_stringbuf_appendbytes(ctx->section, &char_from_int, 1);
+      const char char_from_int = (char)ch;
+      svn_stringbuf_appendbyte(ctx->section, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
 
@@ -298,7 +341,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                               "%s:%d: Section header must end with ']'",
-                              svn_dirent_local_style(ctx->file, pool),
+                              svn_dirent_local_style(ctx->file, scratch_pool),
                               ctx->line);
     }
   else
@@ -331,7 +374,19 @@ svn_config__sys_config_path(const char **path_p,
                                    SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
-#else  /* ! WIN32 */
+#elif defined(__HAIKU__)
+  {
+    char folder[B_PATH_NAME_LENGTH];
+
+    status_t error = find_directory(B_COMMON_SETTINGS_DIRECTORY, -1, false,
+                                    folder, sizeof(folder));
+    if (error)
+      return SVN_NO_ERROR;
+
+    *path_p = svn_dirent_join_many(pool, folder,
+                                   SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+  }
+#else  /* ! WIN32 && !__HAIKU__ */
 
   *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
@@ -346,91 +401,101 @@ svn_config__sys_config_path(const char **path_p,
 
 svn_error_t *
 svn_config__parse_file(svn_config_t *cfg, const char *file,
-                       svn_boolean_t must_exist, apr_pool_t *pool)
+                       svn_boolean_t must_exist, apr_pool_t *result_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  parse_context_t ctx;
+  parse_context_t *ctx;
   int ch, count;
   svn_stream_t *stream;
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
-  err = svn_stream_open_readonly(&stream, file, pool, pool);
+  err = svn_stream_open_readonly(&stream, file, scratch_pool, scratch_pool);
 
   if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
+      svn_pool_destroy(scratch_pool);
       return SVN_NO_ERROR;
     }
   else
     SVN_ERR(err);
 
-  ctx.cfg = cfg;
-  ctx.file = file;
-  ctx.stream = svn_subst_stream_translated(stream, "\n", TRUE, NULL, FALSE,
-                                           pool);
-  ctx.line = 1;
-  ctx.have_ungotten_char = FALSE;
-  ctx.section = svn_stringbuf_create("", pool);
-  ctx.option = svn_stringbuf_create("", pool);
-  ctx.value = svn_stringbuf_create("", pool);
+  ctx = apr_palloc(scratch_pool, sizeof(*ctx));
+
+  ctx->cfg = cfg;
+  ctx->file = file;
+  ctx->stream = stream;
+  ctx->line = 1;
+  ctx->ungotten_char = EOF;
+  ctx->section = svn_stringbuf_create_empty(scratch_pool);
+  ctx->option = svn_stringbuf_create_empty(scratch_pool);
+  ctx->value = svn_stringbuf_create_empty(scratch_pool);
+  ctx->buffer_pos = 0;
+  ctx->buffer_size = 0;
 
   do
     {
-      SVN_ERR(skip_whitespace(&ctx, &ch, &count));
+      SVN_ERR(skip_whitespace(ctx, &ch, &count));
 
       switch (ch)
         {
         case '[':               /* Start of section header */
           if (count == 0)
-            SVN_ERR(parse_section_name(&ch, &ctx, pool));
+            SVN_ERR(parse_section_name(&ch, ctx, scratch_pool));
           else
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Section header"
                                      " must start in the first column",
-                                     svn_dirent_local_style(file, pool),
-                                     ctx.line);
+                                     svn_dirent_local_style(file,
+                                                            scratch_pool),
+                                     ctx->line);
           break;
 
         case '#':               /* Comment */
           if (count == 0)
             {
-              SVN_ERR(skip_to_eoln(&ctx, &ch));
-              ++ctx.line;
+              SVN_ERR(skip_to_eoln(ctx, &ch));
+              ++(ctx->line);
             }
           else
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Comment"
                                      " must start in the first column",
-                                     svn_dirent_local_style(file, pool),
-                                     ctx.line);
+                                     svn_dirent_local_style(file,
+                                                            scratch_pool),
+                                     ctx->line);
           break;
 
         case '\n':              /* Empty line */
-          ++ctx.line;
+          ++(ctx->line);
           break;
 
         case EOF:               /* End of file or read error */
           break;
 
         default:
-          if (svn_stringbuf_isempty(ctx.section))
+          if (svn_stringbuf_isempty(ctx->section))
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Section header expected",
-                                     svn_dirent_local_style(file, pool),
-                                     ctx.line);
+                                     svn_dirent_local_style(file,
+                                                            scratch_pool),
+                                     ctx->line);
           else if (count != 0)
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Option expected",
-                                     svn_dirent_local_style(file, pool),
-                                     ctx.line);
+                                     svn_dirent_local_style(file,
+                                                            scratch_pool),
+                                     ctx->line);
           else
-            SVN_ERR(parse_option(&ch, &ctx, pool));
+            SVN_ERR(parse_option(&ch, ctx, scratch_pool));
           break;
         }
     }
   while (ch != EOF);
 
   /* Close the streams (and other cleanup): */
-  return svn_stream_close(ctx.stream);
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -446,7 +511,7 @@ ensure_auth_subdir(const char *auth_dir,
   const char *subdir_full_path;
   svn_node_kind_t kind;
 
-  subdir_full_path = svn_dirent_join_many(pool, auth_dir, subdir, NULL);
+  subdir_full_path = svn_dirent_join(auth_dir, subdir, pool);
   err = svn_io_check_path(subdir_full_path, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -468,7 +533,7 @@ ensure_auth_dirs(const char *path,
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
-  auth_dir = svn_dirent_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  auth_dir = svn_dirent_join(path, SVN_CONFIG__AUTH_SUBDIR, pool);
   err = svn_io_check_path(auth_dir, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -732,9 +797,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
                                                                              NL
         "###   http-compression           Whether to compress HTTP requests" NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
-#ifdef SVN_NEON_0_26
-        "###   http-auth-types            Auth types to use for HTTP library"NL
-#endif
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL
@@ -744,21 +806,25 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   ssl-pkcs11-provider        Name of PKCS#11 provider to use."  NL
         "###   http-library               Which library to use for http/https"
                                                                              NL
-        "###                              connections (neon or serf)"        NL
+        "###                              connections."                      NL
         "###   store-passwords            Specifies whether passwords used"  NL
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL
         "###                              to disk in any way."               NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "###   store-plaintext-passwords  Specifies whether passwords may"   NL
         "###                              be cached on disk unencrypted."    NL
+#endif
         "###   store-ssl-client-cert-pp   Specifies whether passphrase used" NL
         "###                              to authenticate against a client"  NL
         "###                              certificate may be cached to disk" NL
         "###                              in any way"                        NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "###   store-ssl-client-cert-pp-plaintext"                           NL
         "###                              Specifies whether client cert"     NL
         "###                              passphrases may be cached on disk" NL
         "###                              unencrypted (i.e., as plaintext)." NL
+#endif
         "###   store-auth-creds           Specifies whether any auth info"   NL
         "###                              (passwords as well as server certs)"
                                                                              NL
@@ -766,15 +832,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   username                   Specifies the default username."   NL
         "###"                                                                NL
         "### Set store-passwords to 'no' to avoid storing passwords on disk" NL
-        "### in any way, including in password stores. It defaults to 'yes',"
-                                                                             NL
-        "### but Subversion will never save your password to disk in plaintext"
-                                                                             NL
-        "### unless you tell it to."                                         NL
+        "### in any way, including in password stores.  It defaults to"      NL
+        "### 'yes', but Subversion will never save your password to disk in" NL
+        "### plaintext unless explicitly configured to do so."               NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
         "###"                                                                NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
         "### passwords in unencrypted form in the auth/ area of your config" NL
         "### directory. Set it to 'yes' to allow Subversion to store"        NL
@@ -784,11 +849,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### this option has no effect if either 'store-passwords' or "      NL
         "### 'store-auth-creds' is set to 'no'."                             NL
         "###"                                                                NL
+#endif
         "### Set store-ssl-client-cert-pp to 'no' to avoid storing ssl"      NL
         "### client certificate passphrases in the auth/ area of your"       NL
         "### config directory.  It defaults to 'yes', but Subversion will"   NL
-        "### never save your passphrase to disk in plaintext unless you tell"NL
-        "### it to via 'store-ssl-client-cert-pp-plaintext' (see below)."    NL
+        "### never save your passphrase to disk in plaintext unless"         NL
+        "### explicitly configured to do so."                                NL
         "###"                                                                NL
         "### Note store-ssl-client-cert-pp only prevents the saving of *new*"NL
         "### passphrases; it doesn't invalidate existing passphrases.  To do"NL
@@ -797,6 +863,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                    svn.serverconfig.netmodel.html\\"            NL
         "###                    #svn.serverconfig.netmodel.credcache"        NL
         "###"                                                                NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "### Set store-ssl-client-cert-pp-plaintext to 'no' to avoid storing"NL
         "### passphrases in unencrypted form in the auth/ area of your"      NL
         "### config directory.  Set it to 'yes' to allow Subversion to"      NL
@@ -806,6 +873,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### this option has no effect if either 'store-auth-creds' or "     NL
         "### 'store-ssl-client-cert-pp' is set to 'no'."                     NL
         "###"                                                                NL
+#endif
         "### Set store-auth-creds to 'no' to avoid storing any Subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
         "### Note that this includes SSL server certificates."               NL
@@ -815,6 +883,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
+        "###"                                                                NL
+        "### Most users will not need to explicitly set the http-library"    NL
+        "### option, but valid values for the option include:"               NL
+        "###    'serf': Serf-based module (Subversion 1.5 - present)"        NL
+        "###    'neon': Neon-based module (Subversion 1.0 - 1.7)"            NL
+        "### Availability of these modules may depend on your specific"      NL
+        "### Subversion distribution."                                       NL
         "###"                                                                NL
         "### The commented-out examples below are intended only to"          NL
         "### demonstrate how to use this file; any resemblance to actual"    NL
@@ -837,11 +912,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-username = blah"                                       NL
         "# http-proxy-password = doubleblah"                                 NL
         "# http-timeout = 60"                                                NL
-#ifdef SVN_NEON_0_26
-        "# http-auth-types = basic;digest;negotiate"                         NL
-#endif
         "# neon-debug-mask = 130"                                            NL
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "# store-plaintext-passwords = no"                                   NL
+#endif
         "# username = harry"                                                 NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
@@ -878,18 +952,18 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-username = defaultusername"                            NL
         "# http-proxy-password = defaultpassword"                            NL
         "# http-compression = no"                                            NL
-#ifdef SVN_NEON_0_26
-        "# http-auth-types = basic;digest;negotiate"                         NL
-#endif
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
         "#"                                                                  NL
         "# Password / passphrase caching parameters:"                        NL
         "# store-passwords = no"                                             NL
-        "# store-plaintext-passwords = no"                                   NL
         "# store-ssl-client-cert-pp = no"                                    NL
-        "# store-ssl-client-cert-pp-plaintext = no"                          NL;
+#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
+        "# store-plaintext-passwords = no"                                   NL
+        "# store-ssl-client-cert-pp-plaintext = no"                          NL
+#endif
+        ;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -937,6 +1011,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Valid password stores:"                                         NL
         "###   gnome-keyring        (Unix-like systems)"                     NL
         "###   kwallet              (Unix-like systems)"                     NL
+        "###   gpg-agent            (Unix-like systems)"                     NL
         "###   keychain             (Mac OS X)"                              NL
         "###   windows-cryptoapi    (Windows)"                               NL
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
@@ -944,7 +1019,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #elif defined(WIN32) && !defined(__MINGW32__)
         "# password-stores = windows-cryptoapi"                              NL
 #else
-        "# password-stores = gnome-keyring,kwallet"                          NL
+        "# password-stores = gpg-agent,gnome-keyring,kwallet"                NL
 #endif
         "### To disable all password stores, use an empty list:"             NL
         "# password-stores ="                                                NL
@@ -979,6 +1054,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff implementation."                   NL
         "# diff-cmd = diff_program (diff, gdiff, etc.)"                      NL
+        "### Diff-extensions are arguments passed to an external diff"       NL
+        "### program or to Subversion's internal diff implementation."       NL
+        "### Set diff-extensions to override the default arguments ('-u')."  NL
+        "# diff-extensions = -u -p"                                          NL
         "### Set diff3-cmd to the absolute path of your 'diff3' program."    NL
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff3 implementation."                  NL
@@ -987,8 +1066,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   accepts the '--diff-program' option."                         NL
         "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
-        "### merging tool of choice. Subversion will pass 4 arguments to"    NL
-        "### the specified command: base theirs mine merged"                 NL
+        "### merging tool of choice. Subversion will pass 5 arguments to"    NL
+        "### the specified command: base theirs mine merged wcfile"          NL
         "# merge-tool-cmd = merge_command"                                   NL
         ""                                                                   NL
         "### Section for configuring tunnel agents."                         NL
@@ -1017,7 +1096,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### path separator.  A single backslash will be treated as an"      NL
         "### escape for the following character."                            NL
         ""                                                                   NL
-        "### Section for configuring miscelleneous Subversion options."      NL
+        "### Section for configuring miscellaneous Subversion options."      NL
         "[miscellany]"                                                       NL
         "### Set global-ignores to a set of whitespace-delimited globs"      NL
         "### which Subversion will ignore in its 'status' output, and"       NL
@@ -1049,6 +1128,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Set interactive-conflicts to 'no' to disable interactive"       NL
         "### conflict resolution prompting.  It defaults to 'yes'."          NL
         "# interactive-conflicts = no"                                       NL
+        "### Set memory-cache-size to define the size of the memory cache"   NL
+        "### used by the client when accessing a FSFS repository via"        NL
+        "### ra_local (the file:// scheme). The value represents the number" NL
+        "### of MB used by the cache."                                       NL
+        "# memory-cache-size = 16"                                           NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
         "[auto-props]"                                                       NL
@@ -1113,7 +1197,20 @@ svn_config_get_user_config_path(const char **path,
                                  SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
-#else  /* ! WIN32 */
+#elif defined(__HAIKU__)
+  {
+    char folder[B_PATH_NAME_LENGTH];
+
+    status_t error = find_directory(B_USER_SETTINGS_DIRECTORY, -1, false,
+                                    folder, sizeof(folder));
+    if (error)
+      return SVN_NO_ERROR;
+
+    *path = svn_dirent_join_many(pool, folder,
+                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+  }
+#else  /* ! WIN32 && !__HAIKU__ */
+
   {
     const char *homedir = svn_user_get_homedir(pool);
     if (! homedir)

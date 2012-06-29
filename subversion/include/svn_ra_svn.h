@@ -60,6 +60,8 @@ extern "C" {
 #define SVN_RA_SVN_CAP_LOG_REVPROPS "log-revprops"
 /* maps to SVN_RA_CAPABILITY_PARTIAL_REPLAY */
 #define SVN_RA_SVN_CAP_PARTIAL_REPLAY "partial-replay"
+/* maps to SVN_RA_CAPABILITY_ATOMIC_REVPROPS */
+#define SVN_RA_SVN_CAP_ATOMIC_REVPROPS "atomic-revprops"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
@@ -155,11 +157,38 @@ typedef struct svn_ra_svn_item_t
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
+/**
+ * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
+ *
+ * @note This is a private API, external consumers should not use it.
+ */
+svn_error_t *
+svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
+                               svn_delta_shim_callbacks_t *shim_callbacks);
+
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
+ * Specify the desired network data compression level (zlib) from
+ * 0 (no compression) to 9 (best but slowest).
+ *
+ * @since New in 1.7.
  */
+svn_ra_svn_conn_t *
+svn_ra_svn_create_conn2(apr_socket_t *sock,
+                        apr_file_t *in_file,
+                        apr_file_t *out_file,
+                        int compression_level,
+                        apr_pool_t *pool);
+
+/** Similar to svn_ra_svn_create_conn2() but uses default
+ * compression level (#SVN_DELTA_COMPRESSION_LEVEL_DEFAULT) for network
+ * transmissions.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn(apr_socket_t *sock,
                        apr_file_t *in_file,
@@ -175,13 +204,20 @@ svn_ra_svn_create_conn(apr_socket_t *sock,
  */
 svn_error_t *
 svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                            apr_array_header_t *list);
+                            const apr_array_header_t *list);
 
 /** Return @c TRUE if @a conn has the capability @a capability, or
  * @c FALSE if it does not. */
 svn_boolean_t
 svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                           const char *capability);
+
+/** Return the data compression level to use for network transmissions
+ *
+ * @since New in 1.7.
+ */
+int
+svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
 
 /** Returns the remote address of the connection as a string, if known,
  *  or NULL if inapplicable. */
@@ -286,11 +322,11 @@ svn_ra_svn_flush(svn_ra_svn_conn_t *conn,
  * Use the '!' format specifier to write partial tuples when you have
  * to transmit an array or other unusual data.  For example, to write
  * a tuple containing a revision, an array of words, and a boolean:
- * @verbatim
+ * @code
      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
      for (i = 0; i < n; i++)
        SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
-     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endverbatim
+     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endcode
  */
 svn_error_t *
 svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn,
@@ -347,7 +383,7 @@ svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * tuple specification; use 'B' instead.
  */
 svn_error_t *
-svn_ra_svn_parse_tuple(apr_array_header_t *list,
+svn_ra_svn_parse_tuple(const apr_array_header_t *list,
                        apr_pool_t *pool,
                        const char *fmt, ...);
 
@@ -365,7 +401,7 @@ svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_ra_svn_parse_proplist(apr_array_header_t *list,
+svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                           apr_pool_t *pool,
                           apr_hash_t **props);
 

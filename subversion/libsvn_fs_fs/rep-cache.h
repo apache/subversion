@@ -40,6 +40,25 @@ svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool);
 
+/* Set *EXISTS to TRUE iff the rep-cache DB file exists. */
+svn_error_t *
+svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
+                            svn_fs_t *fs, apr_pool_t *pool);
+
+/* Iterate all representations currently in FS's cache. */
+svn_error_t *
+svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
+                              svn_error_t *(*walker)(representation_t *rep,
+                                                     void *walker_baton,
+                                                     svn_fs_t *fs,
+                                                     apr_pool_t *scratch_pool),
+                              void *walker_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              svn_revnum_t start,
+                              svn_revnum_t end,
+                              apr_pool_t *pool);
+
 /* Return the representation REP in FS which has fulltext CHECKSUM.
    REP is allocated in POOL.  If the rep cache database has not been
    opened, just set *REP to NULL. */
@@ -60,6 +79,13 @@ svn_error_t *
 svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              representation_t *rep,
                              svn_boolean_t reject_dup,
+                             apr_pool_t *pool);
+
+/* Delete from the cache all reps corresponding to revisions younger
+   than YOUNGEST. */
+svn_error_t *
+svn_fs_fs__del_rep_reference(svn_fs_t *fs,
+                             svn_revnum_t youngest,
                              apr_pool_t *pool);
 
 #ifdef __cplusplus

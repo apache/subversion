@@ -4,7 +4,7 @@
 #  utf8_tests.py:  testing the svn client's utf8 (i18n) handling
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -34,7 +34,12 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-Skip = svntest.testcase.Skip
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 #--------------------------------------------------------------------
 # Data
@@ -55,7 +60,7 @@ i18n_logmsg = 'drie\xc3\xabntwintig keer was \xc3\xa9\xc3\xa9n keer teveel'
 #
 #   Each test must return on success or raise on failure.
 
-
+@Skip()
 def basic_utf8_conversion(sbox):
   "conversion of paths and logs to/from utf8"
 
@@ -154,7 +159,7 @@ if localematch:
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(basic_utf8_conversion)
+              basic_utf8_conversion,
              ]
 
 if __name__ == '__main__':

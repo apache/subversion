@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "my-assertions"
 require "util"
 
@@ -518,8 +537,8 @@ class SvnClientTest < Test::Unit::TestCase
       assert(!File.exist?(path3))
     end
   ensure
-    FileUtils.rm_rf(wc_path3)
-    FileUtils.rm_rf(wc_path2)
+    remove_recursively_with_retry(wc_path3)
+    remove_recursively_with_retry(wc_path2)
   end
 
   def test_update
@@ -997,22 +1016,32 @@ class SvnClientTest < Test::Unit::TestCase
       end
       assert_equal_log_entries([
                                 [
-                                 {branch_path_relative_uri => ["D", nil, -1]},
-                                 rev4,
+                                 {branch_path_relative_uri => ["M", nil, -1]},
+                                 rev2,
                                  {
                                    "svn:author" => @author,
                                    "svn:log" => log,
                                  },
                                  false,
                                 ]
-                               ] * 2, merged_entries)
+                               ], merged_entries)
 
       ctx.propdel("svn:mergeinfo", trunk)
       merged_entries = []
       ctx.log_merged(trunk, rev4, branch_uri, rev4) do |entry|
         merged_entries << entry
       end
-      assert_equal_log_entries([], merged_entries)
+      assert_equal_log_entries([
+                                [
+                                 {branch_path_relative_uri => ["M", nil, -1]},
+                                 rev2,
+                                 {
+                                   "svn:author" => @author,
+                                   "svn:log" => log,
+                                 },
+                                 false,
+                                ]
+                               ], merged_entries)
 
       ctx.revert(trunk)
       File.open(trunk_path, "a") {|f| f.print(src)}
@@ -1049,6 +1078,12 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.merge_peg(from, from_rev1, from_rev2, to, nil, *rest)
     end
   end
+
+=begin
+  We haven't yet figured out what to expect in the case of an obstruction,
+  but it is no longer an error.  Commenting out this test until that
+  decision is made (see issue #3680:
+  http://subversion.tigris.org/issues/show_bug.cgi?id=3680)
 
   def test_cleanup
     log = "sample log"
@@ -1095,6 +1130,7 @@ class SvnClientTest < Test::Unit::TestCase
       end
     end
   end
+=end
 
   def test_relocate
     log = "sample log"
@@ -1251,7 +1287,6 @@ class SvnClientTest < Test::Unit::TestCase
         ctx.mv(path1, path2)
       end
       ctx.revert([path1, path2])
-      FileUtils.rm(path2)
 
       File.open(path1, "w") {|f| f.print(src2)}
       assert_nothing_raised do
@@ -1957,6 +1992,8 @@ class SvnClientTest < Test::Unit::TestCase
                      [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
+                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_STARTING],
+                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_DONE],
                    ],
                    notify_info)
 
@@ -1967,6 +2004,8 @@ class SvnClientTest < Test::Unit::TestCase
                      [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                      [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
+                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_STARTING],
+                     [@wc_path, Svn::Wc::NOTIFY_CONFLICT_RESOLVER_DONE],
                    ],
                    notify_info)
     end
@@ -2306,7 +2345,9 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_changelists_get_without_block
     assert_changelists do |ctx, changelist_name|
-      ctx.changelists(changelist_name, @wc_path)
+      changelists = ctx.changelists(changelist_name, @wc_path)
+      changelists.each_value { |v| v.sort! }
+      changelists
     end
   end
 
@@ -2316,6 +2357,7 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.changelists(changelist_name, @wc_path) do |path,cl_name|
         changelists[cl_name] << path
       end
+      changelists.each_value { |v| v.sort! }
       changelists
     end
   end

@@ -1,4 +1,24 @@
-import unittest, os, setup_path, tempfile
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+import unittest, setup_path
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -8,9 +28,7 @@ else:
   from StringIO import StringIO
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
-
-from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
+import utils
 
 class ChangeReceiver(delta.Editor):
   """A delta editor which saves textdeltas for later use"""
@@ -20,7 +38,7 @@ class ChangeReceiver(delta.Editor):
     self.tgt_root = tgt_root
     self.textdeltas = []
 
-  def apply_textdelta(self, file_baton, base_checksum):
+  def apply_textdelta(self, file_baton, base_checksum, pool=None):
     def textdelta_handler(textdelta):
       if textdelta is not None:
         self.textdeltas.append(textdelta)
@@ -35,22 +53,37 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
   def setUp(self):
     """Load a Subversion repository"""
-    self.repos = repos.open(REPOS_PATH)
+    self.temper = utils.Temper()
+    (self.repos, _, _) = self.temper.alloc_known_repo(
+      'trac/versioncontrol/tests/svnrepos.dump', suffix='-repository')
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
 
   def tearDown(self):
     self.fs = None
     self.repos = None
+    self.temper.cleanup()
+
+  def test_cease_invocation(self):
+    """Test returning SVN_ERR_CEASE_INVOCATION from a callback"""
+
+    revs = []
+    def history_lookup(path, rev, pool):
+      revs.append(rev)
+      raise core.SubversionException(apr_err=core.SVN_ERR_CEASE_INVOCATION,
+                                     message="Hi from history_lookup")
+
+    repos.history2(self.fs, '/trunk/README2.txt', history_lookup, None, 0,
+                   self.rev, True)
+    self.assertEqual(len(revs), 1)
 
   def test_create(self):
     """Make sure that repos.create doesn't segfault when we set fs-type
        using a config hash"""
     fs_config = { "fs-type": "fsfs" }
     for i in range(5):
-      path = core.svn_dirent_internal_style(tempfile.mkdtemp("-test" + str(i)))
+      path = self.temper.alloc_empty_dir(suffix='-repository-create%d' % i)
       repos.create(path, "", "", None, fs_config)
-      repos.delete(path)
 
   def test_dump_fs2(self):
     """Test the dump_fs2 function"""
@@ -137,10 +170,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
                     _authz_callback, 1, 1, 0, 0)
 
-    # Check results
-    self.assertEqual(editor.textdeltas[0].new_data, "This is a test.\n")
-    self.assertEqual(editor.textdeltas[1].new_data, "A test.\n")
-    self.assertEqual(len(editor.textdeltas),2)
+    # Check results.
+    # Ignore the order in which the editor delivers the two sibling files.
+    self.assertEqual(set([editor.textdeltas[0].new_data,
+                          editor.textdeltas[1].new_data]),
+                     set(["This is a test.\n", "A test.\n"]))
+    self.assertEqual(len(editor.textdeltas), 2)
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""
@@ -164,8 +199,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                      "Youngest revision")
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionRepositoryTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

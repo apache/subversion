@@ -1,4 +1,24 @@
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
 # gen_dsp.py -- generate Microsoft Visual C++ 6 projects
 #
 
@@ -78,13 +98,37 @@ class Generator(gen_win.WinGeneratorBase):
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
 
-    self.write_with_template(fname, 'msvc_dsp.ezt', data)
+    self.write_with_template(fname, 'templates/msvc_dsp.ezt', data)
 
   def write(self):
     "Write a Workspace (.dsw)"
 
+    # Gather sql targets for inclusion in svn_config project.
+    class _eztdata(object):
+      def __init__(self, **kw):
+        vars(self).update(kw)
+
+    import sys
+    sql=[]
+    for hdrfile, sqlfile in sorted(self.graph.get_deps(gen_base.DT_SQLHDR),
+                                   key=lambda t: t[0]):
+      sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
+                          source=sqlfile[0].replace('/', '\\'),
+                          svn_python=sys.executable))
+
+    self.move_proj_file(self.projfilesdir,
+                        'svn_config.dsp',
+                          (
+                            ('sql', sql),
+                            ('project_guid', self.makeguid('__CONFIG__')),
+                          )
+                        )
+    self.move_proj_file(self.projfilesdir,
+                        'svn_locale.dsp',
+                        (
+                          ('project_guid', self.makeguid('svn_locale')),
+                        ))
     self.write_zlib_project_file('zlib.dsp')
-    self.write_neon_project_file('neon.dsp')
     self.write_serf_project_file('serf.dsp')
     install_targets = self.get_install_targets()
 
@@ -125,4 +169,4 @@ class Generator(gen_win.WinGeneratorBase):
       'targets' : targets,
       }
 
-    self.write_with_template('subversion_msvc.dsw', 'msvc_dsw.ezt', data)
+    self.write_with_template('subversion_msvc.dsw', 'templates/msvc_dsw.ezt', data)

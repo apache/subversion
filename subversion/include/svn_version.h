@@ -62,7 +62,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      7
+#define SVN_VER_MINOR      8
 
 /**
  * Patch number.
@@ -94,7 +94,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (dev build)"
+#define SVN_VER_TAG        " (under development)"
 
 
 /** Number tag: a string describing the version.
@@ -134,7 +134,7 @@ extern "C" {
 #define SVN_VER_NUMBER     SVN_VER_NUM SVN_VER_NUMTAG
 
 /** Complete version string */
-#define SVN_VERSION        SVN_VER_NUM SVN_VER_TAG
+#define SVN_VERSION        SVN_VER_NUMBER SVN_VER_TAG
 
 
 
@@ -147,18 +147,18 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-typedef struct svn_version_t
+struct svn_version_t
 {
   int major;                    /**< Major version number */
   int minor;                    /**< Minor version number */
   int patch;                    /**< Patch number */
 
   /**
-   * The version tag (#SVN_VER_NUMTAG).\ Must always point to a
+   * The version tag (#SVN_VER_NUMTAG). Must always point to a
    * statically allocated string.
    */
   const char *tag;
-} svn_version_t;
+};
 
 /**
  * Define a static svn_version_t object.

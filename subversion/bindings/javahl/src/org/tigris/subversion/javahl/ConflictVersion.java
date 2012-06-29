@@ -50,6 +50,15 @@ public class ConflictVersion
         this.nodeKind = nodeKind;
     }
 
+    /**
+     * A backward-compat constructor.
+     */
+    public ConflictVersion(org.apache.subversion.javahl.types.ConflictVersion aVer)
+    {
+        this(aVer.getReposURL(), aVer.getPegRevision(), aVer.getPathInRepos(),
+             NodeKind.fromApache(aVer.getNodeKind()));
+    }
+
     public String getReposURL()
     {
         return reposURL;

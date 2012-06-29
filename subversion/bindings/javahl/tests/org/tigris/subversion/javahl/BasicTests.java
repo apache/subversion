@@ -1352,14 +1352,17 @@ public class BasicTests extends SVNTests
         client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null, true);
         removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
-        thisTest.getWc().removeItem("A/B/E/alpha");
-        thisTest.getWc().removeItem("A/B/E/beta");
+        thisTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.deleted);
+        thisTest.getWc().setItemTextStatus("A/B/E/beta", Status.Kind.deleted);
 
         // test the status of the working copy
         thisTest.checkStatus();
 
-        // revert A/B/E -> this will not resurect it
+        // revert A/B/E -> this will resurect it
         client.revert(thisTest.getWCPath()+"/A/B/E", true);
+        thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.normal);
+        thisTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.normal);
+        thisTest.getWc().setItemTextStatus("A/B/E/beta", Status.Kind.normal);
 
         // test the status of the working copy
         thisTest.checkStatus();
@@ -1637,8 +1640,7 @@ public class BasicTests extends SVNTests
         assertFalse("failed to remove unmodified file",
                 new File(thisTest.getWorkingCopy(), "A/B/E/alpha").exists());
         file = new File(thisTest.getWorkingCopy(),"A/B/F");
-        assertTrue("removed versioned dir", file.exists()
-                && file.isDirectory());
+        assertFalse("failed to remove versioned dir", file.exists());
         assertFalse("failed to remove unversioned dir",
                 new File(thisTest.getWorkingCopy(), "A/C/Q").exists());
         assertFalse("failed to remove added dir",
@@ -1714,83 +1716,6 @@ public class BasicTests extends SVNTests
         // check out the previous revision
         client.checkout(thisTest.getUrl()+"/A/D", thisTest.getWCPath()+"/new_D",
                 new Revision.Number(1), true);
-    }
-
-    /**
-     * Test if Subversion will detect the change of a file to a
-     * direcory.
-     * @throws Throwable
-     */
-    public void testBasicNodeKindChange() throws Throwable
-    {
-        // create working copy
-        OneTest thisTest = new OneTest();
-
-        //  remove A/D/gamma
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null,
-                false);
-        thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.deleted);
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        try
-        {
-            // creating a directory in the place of the deleted file should
-            // fail
-            client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"},
-                    null);
-            fail("can change node kind");
-        }
-        catch(ClientException e)
-        {
-
-        }
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        // commit the deletion
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "A/D/gamma", NodeKind.file,
-                CommitItemStateFlags.Delete);
-        assertEquals("wrong revision number from commit",
-                client.commit(new String[]{thisTest.getWCPath()},"log message",
-                        true), 2);
-        thisTest.getWc().removeItem("A/D/gamma");
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        try
-        {
-            // creating a directory in the place of the deleted file should
-            // still fail
-            client.mkdir(
-                    new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null);
-            fail("can change node kind");
-        }
-        catch(ClientException e)
-        {
-
-        }
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        // update the working copy
-        client.update(thisTest.getWCPath(), null, true);
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        // now creating the directory should succeed
-        client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null);
-        thisTest.getWc().addItem("A/D/gamma", null);
-        thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.added);
-
-        // check the working copy status
-        thisTest.checkStatus();
     }
 
     /**
@@ -2038,6 +1963,11 @@ public class BasicTests extends SVNTests
         assertEquals("wrong date with getTimeMillis()",
                      lm[0].getDate(),
                      new java.util.Date(lm[0].getTimeMillis()));
+
+        // Ensure that targets get canonicalized
+        String non_canonical = thisTest.getUrl().toString() + "/";
+        LogMessage lm2[] = client.logMessages(non_canonical, null,
+                                              null, false, true);
     }
 
     /**
@@ -2135,7 +2065,9 @@ public class BasicTests extends SVNTests
                          -1, info.getReposSize());
 
            // Examine depth
-           assertEquals(Depth.infinity, info.getDepth());
+           assertEquals("Unexpected depth for '" + info + "'",
+                        (isFile ? Depth.unknown : Depth.infinity),
+                        info.getDepth());
         }
 
         // Create wc with a depth of Depth.empty
@@ -2247,7 +2179,9 @@ public class BasicTests extends SVNTests
     private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
-                                         Revision srcPegRevision) {
+                                         Revision srcPegRevision)
+        throws SubversionException
+    {
         class Callback implements LogMessageCallback {
 
             List revList = new ArrayList();
@@ -2268,15 +2202,10 @@ public class BasicTests extends SVNTests
                 return revisions;
             }
         }
-        try {
-            Callback callback = new Callback();
-            client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                                   srcPegRevision, false, null, callback);
-            return callback.getRevisions();
-        } catch (ClientException e) {
-            return null;
-        }
-
+        Callback callback = new Callback();
+        client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                               srcPegRevision, false, null, callback);
+        return callback.getRevisions();
     }
 
     /**
@@ -2741,13 +2670,17 @@ public class BasicTests extends SVNTests
         String aPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A"),
                                      false);
 
-        expectedDiffOutput = NL + "Property changes on: A" + NL +
+        expectedDiffOutput = "Index: A" + NL + sepLine +
+            "--- A\t(revision 1)" + NL +
+            "+++ A\t(working copy)" + NL +
+            NL + "Property changes on: A" + NL +
             underSepLine +
             "Added: testprop" + NL +
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.propertySet(aPath, "testprop", "Test property value." + NL,
+                           false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false);
@@ -2756,13 +2689,17 @@ public class BasicTests extends SVNTests
                                  expectedDiffOutput, diffOutput);
 
         // Test diff where relativeToDir and path are the same.
-        expectedDiffOutput = NL + "Property changes on: ." + NL +
+        expectedDiffOutput = "Index: ." + NL + sepLine +
+            "--- .\t(revision 1)" + NL +
+            "+++ .\t(working copy)" + NL +
+            NL + "Property changes on: ." + NL +
             underSepLine +
             "Added: testprop" + NL +
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.propertySet(aPath, "testprop", "Test property value." + NL,
+                           false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false);
@@ -3082,10 +3019,9 @@ public class BasicTests extends SVNTests
                 tcTest.getWc().getItemContent("A/B/E/alpha"));
         tcTest.getWc().setItemWorkingCopyRevision("A/B/F/alpha", 2);
         // we expect the tree conflict to turn the existing item into
-        // a scheduled-add with history.  We expect the modifications in
-        // the local file to have been copied to the new file.
+        // a scheduled-add with history.
         tcTest.getWc().setItemTextStatus("A/B/E/alpha", StatusKind.added);
-        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.modified);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.normal);
 
         // check the status of the working copy of the tc test
         tcTest.checkStatus();
@@ -3117,6 +3053,10 @@ public class BasicTests extends SVNTests
      * @throws IOException
      * @throws SubversionException
      */
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      http://subversion.tigris.org/issues/show_bug.cgi?id=3680
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -3265,7 +3205,7 @@ public class BasicTests extends SVNTests
                                    backupTest.getWc().getItemContent("A/D/H/omega"));
 
         backupTest.checkStatus();
-    }
+    }*/
 
     /**
      * Test basic blame functionality.  This test marginally tests blame

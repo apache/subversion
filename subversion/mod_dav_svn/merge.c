@@ -36,6 +36,7 @@
 
 #include "dav_svn.h"
 
+#include "private/svn_fspath.h"
 
 /* #################################################################
 
@@ -184,7 +185,7 @@ do_resources(const dav_svn_repos *repos,
              (and then remember that you sent it).  Allocate parent in
              pool, not subpool, because it stays in the sent hash
              afterwards. */
-          const char *parent = svn_path_dirname(path, pool);
+          const char *parent = svn_fspath__dirname(path, pool);
           if (! apr_hash_get(sent, parent, APR_HASH_KEY_STRING))
             {
               SVN_ERR(send_response(repos, root, parent,
@@ -209,7 +210,7 @@ dav_error *
 dav_svn__merge_response(ap_filter_t *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
-                        char *post_commit_err,
+                        const char *post_commit_err,
                         apr_xml_elem *prop_elem,
                         svn_boolean_t disable_merge_response,
                         apr_pool_t *pool)
@@ -252,7 +253,9 @@ dav_svn__merge_response(ap_filter_t *output,
       post_commit_err_elem = apr_psprintf(pool,
                                           "<S:post-commit-err>%s"
                                           "</S:post-commit-err>",
-                                          post_commit_err);
+                                          apr_xml_quote_string(pool,
+                                                               post_commit_err,
+                                                               0));
     }
   else
     {
@@ -359,5 +362,5 @@ dav_svn__merge_response(ap_filter_t *output,
   /* send whatever is left in the brigade */
   (void) ap_pass_brigade(output, bb);
 
-  return SVN_NO_ERROR;
+  return NULL;
 }

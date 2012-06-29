@@ -92,7 +92,7 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  apr_pool_t *pool);
 
 /** Sets the config options in @a config_options, an apr array containing
- * svn_cmdline__config_argument_t* elements to the configuration in @a cfg,
+ * @c svn_cmdline__config_argument_t* elements, to the configuration in @a cfg,
  * a hash mapping of <tt>const char *</tt> configuration file names to
  * @c svn_config_t *'s. Write warnings to stderr.
  *
@@ -102,7 +102,7 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
  */
 svn_error_t *
 svn_cmdline__apply_config_options(apr_hash_t *config,
-                                  apr_array_header_t *config_options,
+                                  const apr_array_header_t *config_options,
                                   const char *prefix,
                                   const char *argument_name);
 

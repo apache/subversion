@@ -61,7 +61,7 @@ static int canonicalize_username(sasl_conn_t *conn,
                                  char *out, /* the output buffer */
                                  unsigned out_max, unsigned *out_len)
 {
-  int realm_len = strlen(user_realm);
+  size_t realm_len = strlen(user_realm);
   char *pos;
 
   *out_len = inlen;
@@ -102,15 +102,10 @@ static sasl_callback_t callbacks[] =
   { SASL_CB_LIST_END, NULL, NULL }
 };
 
-static svn_error_t *initialize(apr_pool_t *pool)
+static svn_error_t *initialize(void *baton, apr_pool_t *pool)
 {
   int result;
-  apr_status_t status;
-
-  status = svn_ra_svn__sasl_common_init(pool);
-  if (status)
-    return svn_error_wrap_apr(status,
-                              _("Could not initialize the SASL library"));
+  SVN_ERR(svn_ra_svn__sasl_common_init(pool));
 
   /* The second parameter tells SASL to look for a configuration file
      named subversion.conf. */
@@ -127,7 +122,8 @@ static svn_error_t *initialize(apr_pool_t *pool)
 
 svn_error_t *cyrus_init(apr_pool_t *pool)
 {
-  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, initialize, pool));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status,
+                                initialize, NULL, pool));
   return SVN_NO_ERROR;
 }
 
@@ -296,13 +292,13 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
                  SVN_CONFIG_SECTION_SASL,
                  SVN_CONFIG_OPTION_MIN_SSF,
                  "0");
-  secprops.min_ssf = atoi(val);
+  SVN_ERR(svn_cstring_atoui(&secprops.min_ssf, val));
 
   svn_config_get(b->cfg, &val,
                  SVN_CONFIG_SECTION_SASL,
                  SVN_CONFIG_OPTION_MAX_SSF,
                  "256");
-  secprops.max_ssf = atoi(val);
+  SVN_ERR(svn_cstring_atoui(&secprops.max_ssf, val));
 
   /* Set security properties. */
   result = sasl_setprop(sasl_ctx, SASL_SEC_PROPS, &secprops);
@@ -359,8 +355,10 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
         return fail_cmd(conn, pool, sasl_ctx);
 
       if ((p = strchr(user, '@')) != NULL)
-        /* Drop the realm part. */
-        b->user = apr_pstrndup(b->pool, user, p - (char *)user);
+        {
+          /* Drop the realm part. */
+          b->user = apr_pstrndup(b->pool, user, p - (const char *)user);
+        }
       else
         {
           svn_error_t *err;

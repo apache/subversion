@@ -20,10 +20,10 @@ SVN::Core - Core module of the subversion perl bindings
     sub something {
         # create a subpool of the current default pool
         my $pool = SVN::Pool->new_default_sub;
-	# some svn operations...
+        # some svn operations...
 
-	# $pool gets destroyed and the previous default pool
-	# is restored when $pool's lexical scope ends
+        # $pool gets destroyed and the previous default pool
+        # is restored when $pool's lexical scope ends
     }
 
     # svn_stream_t as native perl io handle
@@ -155,7 +155,7 @@ sub CLOSE
 {
     my $self = shift;
     *$self->{svn_stream}->close
-	if *$self->{svn_stream};
+        if *$self->{svn_stream};
     undef *$self->{svn_stream};
 }
 
@@ -170,7 +170,7 @@ sub GETC
 sub print
 {
     my $self = shift;
-    $self->WRITE ($_[0], length ($_[0]));
+    $self->WRITE($_[0], length($_[0]));
 }
 
 sub PRINT
@@ -178,7 +178,7 @@ sub PRINT
     my $self = shift;
     if (defined $\) {
         if (defined $,) {
-	    $self->print(join($,, @_).$\);
+            $self->print(join($,, @_).$\);
         } else {
             $self->print(join("",@_).$\);
         }
@@ -201,8 +201,8 @@ sub PRINTF
 sub getline
 {
     my $self = shift;
-    *$self->{pool} ||= SVN::Core::pool_create (undef);
-    my ($buf, $eof) = *$self->{svn_stream}->readline ($/, *$self->{pool});
+    *$self->{pool} ||= SVN::Core::pool_create(undef);
+    my ($buf, $eof) = *$self->{svn_stream}->readline($/, *$self->{pool});
     return undef if $eof && !length($buf);
     return $eof ? $buf : $buf.$/;
 }
@@ -220,16 +220,16 @@ sub READLINE
 {
     my $self = shift;
     unless (defined $/) {
-	my $buf = '';
-	while (length( my $chunk = *$self->{svn_stream}->read
-	       ($SVN::Core::STREAM_CHUNK_SIZE)) ) {
-	    $buf .= $chunk;
-	}
-	return $buf;
+        my $buf = '';
+        while (length( my $chunk = *$self->{svn_stream}->read
+               ($SVN::Core::STREAM_CHUNK_SIZE)) ) {
+            $buf .= $chunk;
+        }
+        return $buf;
     }
     elsif (ref $/) {
-        my $buf = *$self->{svn_stream}->read (${$/});
-	return length($buf) ? $buf : undef;
+        my $buf = *$self->{svn_stream}->read(${$/});
+        return length($buf) ? $buf : undef;
     }
     return wantarray ? $self->getlines : $self->getline;
 }
@@ -238,9 +238,9 @@ sub READ {
     my $self = shift;
     my $len = $_[1];
     if (@_ > 2) { # read offset
-        substr($_[0],$_[2]) = *$self->{svn_stream}->read ($len);
+        substr($_[0],$_[2]) = *$self->{svn_stream}->read($len);
     } else {
-        $_[0] = *$self->{svn_stream}->read ($len);
+        $_[0] = *$self->{svn_stream}->read($len);
     }
     return $len;
 }
@@ -263,7 +263,7 @@ sub WRITE {
             my $rem = $slen - $off;
             $len = $rem if $rem < $len;
         }
-	*$self->{svn_stream}->write (substr ($_[0], $off, $len));
+        *$self->{svn_stream}->write(substr($_[0], $off, $len));
     }
     return $len;
 }
@@ -285,7 +285,7 @@ my %WRAPPED;
 
 sub default {
     my ($pool) = @_;
-    my $pobj = SVN::Pool->_wrap ($$pool);
+    my $pobj = SVN::Pool->_wrap($$pool);
     $WRAPPED{$pool} = $pobj;
     $pobj->default;
 }
@@ -315,11 +315,11 @@ also use $pool-E<gt>default to make it the default pool in the scope.
 
 =over 4
 
-=item new ([$parent])
+=item new([$parent])
 
 Create a new pool. The pool is a root pool if $parent is not supplied.
 
-=item new_default ([$parent])
+=item new_default([$parent])
 
 Create a new pool. The pool is a root pool if $parent is not supplied.
 Set the new pool as default pool.
@@ -355,14 +355,14 @@ my @POOLSTACK;
 
 sub new {
     my ($class, $parent) = @_;
-    $parent = $$parent if ref ($parent) eq 'SVN::Pool';
-    my $self = bless \create ($parent), $class;
+    $parent = $$parent if ref($parent) eq 'SVN::Pool';
+    my $self = bless \create($parent), $class;
     return $self;
 }
 
 sub new_default_sub {
-    my $parent = ref ($_[0]) ? ${+shift} : $SVN::_Core::current_pool;
-    my $self = SVN::Pool->new_default ($parent);
+    my $parent = ref($_[0]) ? ${+shift} : $SVN::_Core::current_pool;
+    my $self = SVN::Pool->new_default($parent);
     return $self;
 }
 
@@ -375,13 +375,13 @@ sub new_default {
 sub default {
     my $self = shift;
     push @POOLSTACK, $SVN::_Core::current_pool
-	unless $$SVN::_Core::current_pool == 0;
+        unless $$SVN::_Core::current_pool == 0;
     $SVN::_Core::current_pool = $$self;
 }
 
 sub clear {
     my $self = shift;
-    apr_pool_clear ($$self);
+    apr_pool_clear($$self);
 }
 
 my $globaldestroy;
@@ -419,7 +419,7 @@ sub DESTROY {
         delete $WRAPPOOL{$self};
     }
     else {
-        apr_pool_destroy ($$self)
+        apr_pool_destroy($$self)
     }
 }
 
@@ -427,28 +427,28 @@ package _p_svn_error_t;
 use SVN::Base qw(Core svn_error_t_);
 
 sub strerror {
-	return SVN::Error::strerror($_[$[]->apr_err());
+    return SVN::Error::strerror($_[$[]->apr_err());
 }
 
 sub handle_error {
-	return SVN::Error::handle_error(@_);
+    return SVN::Error::handle_error(@_);
 }
 
 sub expanded_message {
-	return SVN::Error::expanded_message(@_);
+    return SVN::Error::expanded_message(@_);
 }
 
 sub handle_warning {
-	# need to swap parameter order.
-	return SVN::Error::handle_warning($_[$[+1],$_[$[]);
+    # need to swap parameter order.
+    return SVN::Error::handle_warning($_[$[+1],$_[$[]);
 }
 
 foreach my $function (qw(compose clear quick_wrap)) {
     no strict 'refs';
     my $real_function = \&{"SVN::_Core::svn_error_$function"};
     *{"_p_svn_error_t::$function"} = sub {
-			  return $real_function->(@_);
-		}
+        return $real_function->(@_);
+    }
 }
 
 package SVN::Error;
@@ -457,8 +457,8 @@ use SVN::Base qw(Core SVN_ERR_);
 use Carp;
 our @CARP_NOT = qw(SVN::Base SVN::Client SVN::Core SVN::Delta
                    SVN::Delta::Editor SVN::Error SVN::Fs SVN::Node
-									 SVN::Pool SVN::Ra SVN::Ra::Callbacks SVN::Ra::Reporter
-									 SVN::Repos SVN::Stream SVN::TxDelta SVN::Wc);
+                   SVN::Pool SVN::Ra SVN::Ra::Callbacks SVN::Ra::Reporter
+                   SVN::Repos SVN::Stream SVN::TxDelta SVN::Wc);
 
 =head2 svn_error_t - SVN::Error
 
@@ -560,9 +560,9 @@ our $handler = \&croak_on_error;
 foreach my $function (qw(handle_error handle_warning strerror)) {
     no strict 'refs';
     my $real_function = \&{"SVN::_Core::svn_$function"};
-	  *{"SVN::Error::$function"} = sub {
-	      return $real_function->(@_);
-		}
+    *{"SVN::Error::$function"} = sub {
+        return $real_function->(@_);
+    }
 }
 
 =item SVN::Error::expanded_message($svn_error_t) or $svn_error_t-E<gt>expanded_message()
@@ -574,17 +574,18 @@ exception handlers get their error messages.
 =cut
 
 sub expanded_message {
-	  my $svn_error = shift;
+    my $svn_error = shift;
     unless (is_error($svn_error)) {
-	      return undef;
-		}
+        return undef;
+    }
 
-		my $error_message = $svn_error->strerror();
-		while ($svn_error) {
-		    $error_message .= ': ' . $svn_error->message();
-				$svn_error = $svn_error->child();
-		}
-		return $error_message;
+    my $error_message = $svn_error->strerror();
+    while ($svn_error) {
+        my $msg = $svn_error->message();
+        $error_message .= ": $msg" if $msg;
+        $svn_error = $svn_error->child();
+    }
+    return $error_message;
 }
 
 
@@ -597,7 +598,7 @@ an error.
 =cut
 
 sub is_error {
-		 return (ref($_[$[]) eq '_p_svn_error_t');
+     return (ref($_[$[]) eq '_p_svn_error_t');
 }
 
 =item SVN::Error::croak_on_error
@@ -620,16 +621,16 @@ unchanged.
 =cut
 
 sub croak_on_error {
-		unless (is_error($_[$[])) {
-			return @_;
-		}
+    unless (is_error($_[$[])) {
+      return @_;
+    }
     my $svn_error = shift;
 
-		my $error_message = $svn_error->expanded_message();
+    my $error_message = $svn_error->expanded_message();
 
-		$svn_error->clear();
+    $svn_error->clear();
 
-		croak($error_message);
+    croak($error_message);
 }
 
 =item SVN::Error::confess_on_error
@@ -641,16 +642,16 @@ This is useful when you are doing development work on the bindings themselves.
 =cut
 
 sub confess_on_error {
-		unless (is_error($_[$[])) {
-				return @_;
-		}
+    unless (is_error($_[$[])) {
+        return @_;
+    }
     my $svn_error = shift;
 
-		my $error_message = $svn_error->expanded_message();
+    my $error_message = $svn_error->expanded_message();
 
-		$svn_error->clear();
+    $svn_error->clear();
 
-		confess($error_message);
+    confess($error_message);
 }
 
 =item SVN::Error::ignore_error
@@ -665,11 +666,11 @@ clears it.  It then returns all the other parameters.
 
 sub ignore_error {
     if (is_error($_[$[])) {
-		    my $svn_error = shift;
-				$svn_error->clear();
-		}
+        my $svn_error = shift;
+        $svn_error->clear();
+    }
 
-		return @_;
+    return @_;
 }
 
 package _p_svn_log_changed_path_t;

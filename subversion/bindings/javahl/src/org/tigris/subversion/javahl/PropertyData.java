@@ -52,7 +52,7 @@ public class PropertyData
      * reference to the creating SVNClient object to change or delete this
      * property
      */
-    private SVNClient client;
+    private SVNClientInterface client;
 
     /**
      * Standard subversion known properties
@@ -128,7 +128,7 @@ public class PropertyData
      * @param v     the string value of the property
      * @param d     the byte array value of the property
      */
-    PropertyData(SVNClient cl, String p, String n, String v, byte[] d)
+    PropertyData(SVNClientInterface cl, String p, String n, String v, byte[] d)
     {
         path = p;
         name = n;

@@ -27,6 +27,13 @@
 #include "svn_version.h"
 
 #include "../svn_test.h"
+#include "svn_private_config.h"
+
+#ifndef SVN_DISABLE_FULL_VERSION_MATCH
+#define FALSE_IF_FULL FALSE
+#else
+#define FALSE_IF_FULL TRUE
+#endif
 
 static svn_error_t *
 test_version_compatibility(apr_pool_t *pool)
@@ -55,16 +62,16 @@ test_version_compatibility(apr_pool_t *pool)
     { {1, 0, 1, "dev"}, {1, 0, 1, "dev"}, TRUE },
     { {1, 1, 0, "dev"}, {1, 1, 0, "dev"}, TRUE },
     { {1, 1, 1, "dev"}, {1, 1, 1, "dev"}, TRUE },
-    { {1, 0, 0, "dev"}, {1, 0, 1, "dev"}, FALSE },
-    { {1, 0, 0, "dev"}, {1, 1, 0, "dev"}, FALSE },
-    { {1, 0, 0, "cev"}, {1, 0, 0, "dev"}, FALSE },
-    { {1, 0, 0, "eev"}, {1, 0, 0, "dev"}, FALSE },
-    { {1, 0, 1, "dev"}, {1, 0, 0, "dev"}, FALSE },
+    { {1, 0, 0, "dev"}, {1, 0, 1, "dev"}, FALSE_IF_FULL },
+    { {1, 0, 0, "dev"}, {1, 1, 0, "dev"}, FALSE_IF_FULL },
+    { {1, 0, 0, "cev"}, {1, 0, 0, "dev"}, FALSE_IF_FULL },
+    { {1, 0, 0, "eev"}, {1, 0, 0, "dev"}, FALSE_IF_FULL },
+    { {1, 0, 1, "dev"}, {1, 0, 0, "dev"}, FALSE_IF_FULL },
     { {1, 1, 0, "dev"}, {1, 0, 0, "dev"}, FALSE },
 
-    { {1, 0, 0, ""},    {1, 0, 0, "dev"}, FALSE },
+    { {1, 0, 0, ""},    {1, 0, 0, "dev"}, FALSE_IF_FULL },
 
-    { {1, 0, 0, "dev"}, {1, 0, 0, ""}, FALSE },
+    { {1, 0, 0, "dev"}, {1, 0, 0, ""}, FALSE_IF_FULL },
     { {1, 0, 1, "dev"}, {1, 0, 0, ""}, TRUE },
     { {1, 1, 0, "dev"}, {1, 0, 0, ""}, FALSE },
     { {1, 1, 1, "dev"}, {1, 1, 0, ""}, TRUE },

@@ -46,21 +46,20 @@ svn_cl__delete(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
+  svn_boolean_t is_url;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
+  is_url = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
 
-  if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
+  if (! is_url)
     {
       ctx->log_msg_func3 = NULL;
       if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
@@ -77,21 +76,20 @@ svn_cl__delete(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  err = svn_client_delete3(&commit_info, targets, opt_state->force,
-                           opt_state->keep_local, opt_state->revprop_table,
-                           ctx, pool);
+  err = svn_client_delete4(targets, opt_state->force, opt_state->keep_local,
+                           opt_state->revprop_table,
+                           (opt_state->quiet
+                            ? NULL : svn_cl__print_commit_info),
+                           NULL, ctx, pool);
   if (err)
     err = svn_cl__may_need_force(err);
 
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
-    return svn_error_return(err);
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }

@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 # See usage() for details, or run with --help option.
 #
@@ -8,8 +28,9 @@
 #
 # Some Subversion project log messages include parseable data to help
 # track who's contributing what.  The exact syntax is described in
-# hacking.html#crediting, but here's an example, indented by three
-# spaces, i.e., the "Patch by:" starts at the beginning of a line:
+# http://subversion.apache.org/docs/community-guide/conventions.html#crediting,
+# but here's an example, indented by three spaces, i.e., the "Patch by:"
+# starts at the beginning of a line:
 #
 #    Patch by: David Anderson <david.anderson@calixo.net>
 #              <justin@erenkrantz.com>
@@ -490,7 +511,7 @@ class LogMessage(object):
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*(.*)')
+field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found|Inspired) by:\s*\S.*$')
 field_aliases = { 'Reviewed' : 'Review' }
 parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
 
@@ -545,6 +566,8 @@ def graze(input):
                                          + (field.alias or field.name)
                                          + ' by:\s+|\s+)([^\s(].*)')
                 m = in_field_re.match(line)
+                if m is None:
+                  sys.stderr.write("Error matching: %s\n" % (line))
                 user, real, email = Contributor.parse(m.group(2))
                 if user == 'me':
                   user = log.committer
@@ -583,14 +606,14 @@ index_introduction = '''
 <p>The following list of contributors and their contributions is meant
 to help us keep track of whom to consider for commit access.  The list
 was generated from "svn&nbsp;log" output by <a
-href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
+href="http://svn.apache.org/repos/asf/subversion/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
-href="http://subversion.tigris.org/hacking.html#crediting">special
-contribution format</a>.</p>
+href="http://subversion.apache.org/docs/community-guide/conventions.html#crediting"
+>special contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
 contributed what to Subversion!</i> It omits existing <a
-href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
+href="http://svn.apache.org/repos/asf/subversion/trunk/COMMITTERS"
 >full committers</a>, for example, because they are irrelevant to our
 search for new committers.  Also, it merely counts changes, it does
 not evaluate them.  To truly understand what someone has contributed,
@@ -695,7 +718,7 @@ def usage():
   print('in which you can browse to see who contributed what.')
   print('')
   print('The log input should use the contribution-tracking format defined')
-  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('in http://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
   print('')
   print('Options:')
   print('')

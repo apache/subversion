@@ -39,6 +39,7 @@
 #include "lock-tokens-table.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 
 
 int
@@ -184,13 +185,14 @@ get_lock(svn_lock_t **lock_p,
          matching path-key. */
       err = svn_fs_bdb__lock_token_delete(fs, path, trail, pool);
     }
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
 
 svn_error_t *
 svn_fs_bdb__locks_get(svn_fs_t *fs,
                       const char *path,
+                      svn_depth_t depth,
                       svn_fs_get_locks_callback_t get_locks_func,
                       void *get_locks_baton,
                       trail_t *trail,
@@ -205,6 +207,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
   svn_lock_t *lock;
   svn_error_t *err;
   const char *lookup_path = path;
+  apr_size_t lookup_len;
 
   /* First, try to lookup PATH itself. */
   err = svn_fs_bdb__lock_token_get(&lock_token, fs, path, trail, pool);
@@ -216,18 +219,25 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
     }
   else if (err)
     {
-      return svn_error_return(err);
+      return svn_error_trace(err);
     }
   else
     {
       SVN_ERR(get_lock(&lock, fs, path, lock_token, trail, pool));
       if (lock && get_locks_func)
-        SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+        {
+          SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+
+          /* Found a lock so PATH is a file and we can ignore depth */
+          return SVN_NO_ERROR;
+        }
     }
 
+  /* If we're only looking at PATH itself (depth = empty), stop here. */
+  if (depth == svn_depth_empty)
+    return SVN_NO_ERROR;
+
   /* Now go hunt for possible children of PATH. */
-  if (strcmp(path, "/") != 0)
-    lookup_path = apr_pstrcat(pool, path, "/", NULL);
 
   svn_fs_base__trail_debug(trail, "lock-tokens", "cursor");
   db_err = bfd->lock_tokens->cursor(bfd->lock_tokens, trail->db_txn,
@@ -244,10 +254,15 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
   db_err = svn_bdb_dbc_get(cursor, &key, svn_fs_base__result_dbt(&value),
                            DB_SET_RANGE);
 
+  if (!svn_fspath__is_root(path, strlen(path)))
+    lookup_path = apr_pstrcat(pool, path, "/", (char *)NULL);
+  lookup_len = strlen(lookup_path);
+
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH we
      know it is either LOOKUP_PATH or a decendant thereof.  */
   while ((! db_err)
-         && strncmp(lookup_path, key.data, strlen(lookup_path)) == 0)
+         && lookup_len < key.size
+         && strncmp(lookup_path, key.data, lookup_len) == 0)
     {
       const char *child_path;
 
@@ -260,12 +275,24 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
       child_path = apr_pstrmemdup(subpool, key.data, key.size);
       lock_token = apr_pstrmemdup(subpool, value.data, value.size);
 
+      if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
+        {
+          /* On the assumption that we only store locks for files,
+             depth=files and depth=immediates should boil down to the
+             same set of results.  So just see if CHILD_PATH is an
+             immediate child of PATH.  If not, we don't care about
+             this item.   */
+          const char *rel_path = svn_fspath__skip_ancestor(path, child_path);
+          if (!rel_path || (svn_path_component_count(rel_path) != 1))
+            goto loop_it;
+        }
+
       /* Get the lock for CHILD_PATH.  */
       err = get_lock(&lock, fs, child_path, lock_token, trail, subpool);
       if (err)
         {
           svn_bdb_dbc_close(cursor);
-          return svn_error_return(err);
+          return svn_error_trace(err);
         }
 
       /* Lock is verified, hand it off to our callback. */
@@ -275,10 +302,11 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
           if (err)
             {
               svn_bdb_dbc_close(cursor);
-              return svn_error_return(err);
+              return svn_error_trace(err);
             }
         }
 
+    loop_it:
       svn_fs_base__result_dbt(&key);
       svn_fs_base__result_dbt(&value);
       db_err = svn_bdb_dbc_get(cursor, &key, &value, DB_NEXT);

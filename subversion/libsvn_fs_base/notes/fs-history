@@ -63,7 +63,7 @@ under-the-hood is as follows:
    1. The root refers to a particular snapshot of the DAG node tree,
       and from this we can learn the node-revision ID of the node
       which represents the root directory ("/") as it appears in that
-      snaphot.  Given this node-revision ID, it's all DAG from here.
+      snapshot.  Given this node-revision ID, it's all DAG from here.
 
    2. The path is split into components and traversed, beginning with
       the root node, and walking down toward the full path.  Each

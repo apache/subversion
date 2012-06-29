@@ -65,14 +65,14 @@ VERSION="0.0.7"
 #
 # License:
 #    The same as svn itself. for latest version check:
-#    http://svn.collab.net/repos/svn/trunk/subversion/LICENSE
+#    http://svn.apache.org/repos/asf/subversion/trunk/subversion/LICENSE
 #
 # Thanks to the subversion team for their great work.
 #
 # Links:
 #    If you do not like our solution check:
 #       - svnpush
-#         + http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-push/svn-push.c
+#         + http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/svn-push/svn-push.c
 #       - svn replicate
 #         + https://open.datacore.ch/read-only/
 #       - SVN::Mirror and SVN::Web

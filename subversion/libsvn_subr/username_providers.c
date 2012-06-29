@@ -165,7 +165,7 @@ svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
 /*-----------------------------------------------------------------------*/
 
 /* Baton type for username-only prompting. */
-typedef struct
+typedef struct username_prompt_provider_baton_t
 {
   svn_auth_username_prompt_func_t prompt_func;
   void *prompt_baton;
@@ -176,7 +176,7 @@ typedef struct
 
 
 /* Iteration baton type for username-only prompting. */
-typedef struct
+typedef struct username_prompt_iter_baton_t
 {
   /* how many times we've reprompted */
   int retries;

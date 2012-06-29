@@ -164,7 +164,7 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
 /**
  * Return pointer to an @c apr_getopt_option_t for the option whose
  * option code is @a code, or @c NULL if no match.  @a option_table must end
- * with an element whose every field is zero.  If @c command is non-NULL,
+ * with an element whose every field is zero.  If @a command is non-NULL,
  * then return the subcommand-specific option description instead of the
  * generic one, if a specific description is defined.
  *
@@ -291,6 +291,11 @@ svn_opt_format_option(const char **string,
  * pool for temporary allocation.  @a subcommand may be a canonical
  * command name or an alias.  ### @todo Why does this only print to
  * @c stdout, whereas svn_opt_print_generic_help() gives us a choice?
+ *
+ * When printing the description of an option, if the same option code
+ * appears a second time in @a options_table with a different name, then
+ * use that second name as an alias for the first name.  This additional
+ * behaviour is new in 1.7.
  *
  * @since New in 1.5.
  */
@@ -517,7 +522,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
 /**
@@ -533,7 +538,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
 
@@ -555,7 +560,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
-                             apr_array_header_t *known_targets,
+                             const apr_array_header_t *known_targets,
                              svn_opt_revision_t *start_revision,
                              svn_opt_revision_t *end_revision,
                              svn_boolean_t extract_revisions,
@@ -611,31 +616,31 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
                        apr_pool_t *pool);
 
 /**
- * Parse a working-copy or URL in @a path, extracting any trailing
+ * Parse a working-copy path or URL in @a path, extracting any trailing
  * revision specifier of the form "@rev" from the last component of
  * the path.
  *
  * Some examples would be:
  *
- *    "foo/bar"                      -> "foo/bar",       (unspecified)
- *    "foo/bar@13"                   -> "foo/bar",       (number, 13)
- *    "foo/bar@HEAD"                 -> "foo/bar",       (head)
- *    "foo/bar@{1999-12-31}"         -> "foo/bar",       (date, 1999-12-31)
- *    "http://a/b@27"                -> "http://a/b",    (number, 27)
- *    "http://a/b@COMMITTED"         -> "http://a/b",    (committed) [*]
- *    "http://a/b@{1999-12-31}       -> "http://a/b",    (date, 1999-12-31)
- *    "http://a/b@%7B1999-12-31%7D   -> "http://a/b",    (date, 1999-12-31)
- *    "foo/bar@1:2"                  -> error
- *    "foo/bar@baz"                  -> error
- *    "foo/bar@"                     -> "foo/bar",       (base)
- *    "foo/@bar@"                    -> "foo/@bar",      (base)
- *    "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
- *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
- *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
- *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
- *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
- *    "@foo/bar"                     -> error
- *    "@foo/bar@"                    -> "@foo/bar",      (unspecified)
+ *   - "foo/bar"                      -> "foo/bar",       (unspecified)
+ *   - "foo/bar@13"                   -> "foo/bar",       (number, 13)
+ *   - "foo/bar@HEAD"                 -> "foo/bar",       (head)
+ *   - "foo/bar@{1999-12-31}"         -> "foo/bar",       (date, 1999-12-31)
+ *   - "http://a/b@27"                -> "http://a/b",    (number, 27)
+ *   - "http://a/b@COMMITTED"         -> "http://a/b",    (committed) [*]
+ *   - "http://a/b@{1999-12-31}"      -> "http://a/b",    (date, 1999-12-31)
+ *   - "http://a/b@%7B1999-12-31%7D"  -> "http://a/b",    (date, 1999-12-31)
+ *   - "foo/bar@1:2"                  -> error
+ *   - "foo/bar@baz"                  -> error
+ *   - "foo/bar@"                     -> "foo/bar",       (unspecified)
+ *   - "foo/@bar@"                    -> "foo/@bar",      (unspecified)
+ *   - "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
+ *   - "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
+ *   - "foo/@bar@HEAD"                -> "foo/@bar",      (head)
+ *   - "foo@/bar"                     -> "foo@/bar",      (unspecified)
+ *   - "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
+ *   - "@foo/bar"                     -> "@foo/bar",      (unspecified)
+ *   - "@foo/bar@"                    -> "@foo/bar",      (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *
@@ -743,29 +748,6 @@ svn_opt_print_help(apr_getopt_t *os,
                    const apr_getopt_option_t *option_table,
                    const char *footer,
                    apr_pool_t *pool);
-
-/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
- * specifiers snipped off the end of each element.
- *
- * This function is useful for subcommands for which peg revisions
- * do not make any sense. Such subcommands still need to allow peg
- * revisions to be specified on the command line so that users of
- * the command line client can consistently escape '@' characters
- * in filenames by appending an '@' character, regardless of the
- * subcommand being used.
- *
- * If a peg revision is present but cannot be parsed, an error is thrown.
- * The user has likely forgotten to escape an '@' character in a filename.
- *
- * It is safe to pass the address of @a targets as @a true_targets_p.
- *
- * Do all allocations in @a pool.
- *
- * @since New in 1.7. */
-svn_error_t *
-svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
-                          apr_array_header_t *targets,
-                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

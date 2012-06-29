@@ -61,6 +61,7 @@ svn_error_t *svn_fs_base__rev_get_txn_id(const char **txn_id_p,
 svn_error_t *svn_fs_base__set_rev_prop(svn_fs_t *fs,
                                        svn_revnum_t rev,
                                        const char *name,
+                                       const svn_string_t *const *old_value_p,
                                        const svn_string_t *value,
                                        trail_t *trail,
                                        apr_pool_t *pool);
@@ -91,7 +92,7 @@ svn_error_t *svn_fs_base__txn_get_revision(svn_revnum_t *revision,
                                            apr_pool_t *pool);
 
 
-/* Retrieve information about the Subversion transaction SVN_TXN from
+/* Retrieve information about the Subversion transaction TXN_NAME from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
    Set *BASE_ROOT_ID_P to the ID of the root directory of the
@@ -180,19 +181,13 @@ svn_error_t *svn_fs_base__revision_proplist(apr_hash_t **table_p,
 
 svn_error_t *svn_fs_base__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
                                           const char *name,
+                                          const svn_string_t *const *old_value_p,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                     svn_revnum_t rev, apr_uint32_t flags,
                                     apr_pool_t *pool);
-
-/* Begin a new transaction in filesystem FS, to replace an existing
-   revision REV.  The new transaction is returned in *TXN_P.  Allocate
-   the new transaction structure from POOL. */
-svn_error_t *svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                                                 svn_fs_t *fs, svn_revnum_t rev,
-                                                 apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__open_txn(svn_fs_txn_t **txn, svn_fs_t *fs,
                                    const char *name, apr_pool_t *pool);
@@ -225,7 +220,7 @@ svn_error_t *svn_fs_base__change_txn_prop(svn_fs_txn_t *txn, const char *name,
                                           apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
-                                           apr_array_header_t *props,
+                                           const apr_array_header_t *props,
                                            apr_pool_t *pool);
 
 

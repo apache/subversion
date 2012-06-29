@@ -44,17 +44,17 @@
 
 /*** Code. ***/
 
-/* Helper function to handle copying a potentially translated version of
-   local file LOCAL_ABSPATH to OUTPUT.  REVISION must be one of the following:
-   BASE, COMMITTED, WORKING.  Uses SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-cat_local_file(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_stream_t *output,
-               const svn_opt_revision_t *revision,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__get_normalized_stream(svn_stream_t **normal_stream,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  const svn_opt_revision_t *revision,
+                                  svn_boolean_t expand_keywords,
+                                  svn_boolean_t normalize_eols,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
@@ -68,10 +68,9 @@ cat_local_file(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE,
-                                scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
 
-  if (kind == svn_node_unknown)
+  if (kind == svn_node_unknown || kind == svn_node_none)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(local_abspath,
@@ -85,16 +84,21 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   if (revision->kind != svn_opt_revision_working)
     {
       SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
-                                            scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
-                                     scratch_pool, scratch_pool));
+                                            result_pool, scratch_pool));
+      if (input == NULL)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                 _("'%s' has no base revision until it is committed"),
+                 svn_dirent_local_style(local_abspath, scratch_pool));
+
+      SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, local_abspath,
+                                        scratch_pool, scratch_pool));
     }
   else
     {
-      svn_wc_status2_t *status;
+      svn_wc_status3_t *status;
 
       SVN_ERR(svn_stream_open_readonly(&input, local_abspath, scratch_pool,
-                                       scratch_pool));
+                                       result_pool));
 
       SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath, scratch_pool,
                                 scratch_pool));
@@ -158,18 +162,16 @@ cat_local_file(svn_wc_context_t *wc_ctx,
                                         author, scratch_pool));
     }
 
-  /* Our API contract says that OUTPUT will not be closed. The two paths
-     below close it, so disown the stream to protect it. The input will
-     be closed, which is good (since we opened it). */
-  output = svn_stream_disown(output, scratch_pool);
-
   /* Wrap the output stream if translation is needed. */
   if (eol != NULL || kw != NULL)
-    output = svn_subst_stream_translated(output, eol, FALSE, kw, TRUE,
-                                         scratch_pool);
+    input = svn_subst_stream_translated(
+      input,
+      (eol_style && normalize_eols) ? SVN_SUBST_NATIVE_EOL_STR : eol,
+      FALSE, kw, expand_keywords, result_pool);
 
-  return svn_error_return(svn_stream_copy3(input, output, cancel_func,
-                                           cancel_baton, scratch_pool));
+  *normal_stream = input;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -181,13 +183,12 @@ svn_client_cat2(svn_stream_t *out,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
-  svn_node_kind_t url_kind;
+  svn_client__pathrev_t *loc;
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props;
-  const char *url;
   svn_stream_t *output = out;
+  svn_error_t *err;
 
   /* ### Inconsistent default revision logic in this command. */
   if (peg_revision->kind == svn_opt_revision_unspecified)
@@ -208,28 +209,44 @@ svn_client_cat2(svn_stream_t *out,
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       const char *local_abspath;
+      svn_stream_t *normal_stream;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
-      return svn_error_return(
-        cat_local_file(ctx->wc_ctx, local_abspath, out, revision,
-                       ctx->cancel_func, ctx->cancel_baton, pool));
+      SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
+                                            local_abspath, revision, TRUE, FALSE,
+                                            ctx->cancel_func, ctx->cancel_baton,
+                                            pool, pool));
+
+      /* We don't promise to close output, so disown it to ensure we don't. */
+      output = svn_stream_disown(output, pool);
+
+      return svn_error_trace(svn_stream_copy3(normal_stream, output,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, pool));
     }
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
-                                           peg_revision,
-                                           revision, ctx, pool));
-
-  /* Make sure the object isn't a directory. */
-  SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));
-  if (url_kind == svn_node_dir)
-    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                             _("URL '%s' refers to a directory"), url);
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            path_or_url, NULL,
+                                            peg_revision,
+                                            revision, ctx, pool));
 
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
-  SVN_ERR(svn_ra_get_file(ra_session, "", rev, NULL, NULL, &props, pool));
+  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FILE)
+        {
+          return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, err,
+                                   _("URL '%s' refers to a directory"),
+                                   loc->url);
+        }
+      else
+        {
+          return svn_error_trace(err);
+        }
+    }
 
   eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
   keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
@@ -267,7 +284,7 @@ svn_client_cat2(svn_stream_t *out,
           SVN_ERR(svn_subst_build_keywords2
                   (&kw, keywords->data,
                    cmt_rev->data,
-                   url,
+                   loc->url,
                    when,
                    cmt_author ? cmt_author->data : NULL,
                    pool));
@@ -280,7 +297,7 @@ svn_client_cat2(svn_stream_t *out,
                                            eol_str, FALSE, kw, TRUE, pool);
     }
 
-  SVN_ERR(svn_ra_get_file(ra_session, "", rev, output, NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev, output, NULL, NULL, pool));
 
   if (out != output)
     /* Close the interjected stream */

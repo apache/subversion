@@ -119,7 +119,29 @@ extern "C" {
    SVN_NO_ERROR, `svn_fs_base__retry_txn' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
    trail's pool alone so all the objects it contains are still
-   around (unless you request otherwise), and returns SVN_NO_ERROR.  */
+   around (unless you request otherwise), and returns SVN_NO_ERROR.
+
+
+   Keep the amount of work done in a trail small. C-Mike Pilato said to me:
+
+   I want to draw your attention to something that you may or may not realize
+   about designing for the BDB backend.  The 'trail' objects are (generally)
+   representative of Berkeley DB transactions -- that part I'm sure you know.
+   But you might not realize the value of keeping transactions as small as
+   possible.  Berkeley DB will accumulate locks (which I believe are
+   page-level, not as tight as row-level like you might hope) over the course
+   of a transaction, releasing those locks only at transaction commit/abort.
+   Berkeley DB backends are configured to have a maximum number of locks and
+   lockers allowed, and it's easier than you might think to hit the max-locks
+   thresholds (especially under high concurrency) and see an error (typically a
+   "Cannot allocate memory") result from that.
+
+   For example, in [a loop] you are writing a bunch of rows to the
+   `changes' table.  Could be 10.  Could be 100,000.  100,000 writes and
+   associated locks might be a problem or it might not.  But I use it as a way
+   to encourage you to think about reducing the amount of work you spend in any
+   one trail [...].
+*/
 
 struct trail_t
 {

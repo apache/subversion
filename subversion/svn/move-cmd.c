@@ -48,12 +48,11 @@ svn_cl__move(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *dst_path;
-  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, TRUE, pool));
 
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -65,10 +64,6 @@ svn_cl__move(apr_getopt_t *os,
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
-
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
 
   dst_path = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
   apr_array_pop(targets);
@@ -87,11 +82,12 @@ svn_cl__move(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
+  err = svn_client_move6(targets, dst_path,
                          TRUE, opt_state->parents, opt_state->revprop_table,
-                         ctx, pool);
+                         (opt_state->quiet ? NULL : svn_cl__print_commit_info),
+                         NULL, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);
@@ -99,10 +95,7 @@ svn_cl__move(apr_getopt_t *os,
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
-    return svn_error_return(err);
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }

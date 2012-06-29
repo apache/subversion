@@ -3,7 +3,7 @@
 #  stat_tests.py:  testing the svn stat command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -29,16 +29,23 @@ import os
 import re
 import time
 import datetime
+import logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
+UnorderedOutput = svntest.verify.UnorderedOutput
 
 
 
@@ -64,7 +71,7 @@ def status_unversioned_file_in_current_dir(sbox):
 
 #----------------------------------------------------------------------
 # Regression for issue #590
-
+@Issue(590)
 def status_update_with_nested_adds(sbox):
   "run 'status -u' when nested additions are pending"
 
@@ -76,8 +83,8 @@ def status_update_with_nested_adds(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Create newdir and newfile
-  newdir_path = os.path.join(wc_dir, 'newdir')
-  newfile_path = os.path.join(wc_dir, 'newdir', 'newfile')
+  newdir_path = sbox.ospath('newdir')
+  newfile_path = sbox.ospath('newdir/newfile')
   os.makedirs(newdir_path)
   svntest.main.file_append(newfile_path, 'new text')
 
@@ -113,6 +120,12 @@ def status_update_with_nested_adds(sbox):
   svntest.actions.run_and_verify_unquiet_status(wc_backup,
                                                 expected_status)
 
+  # At one time an obstructing 'newdir' caused a SEGV on 'newdir/newfile'
+  os.makedirs(os.path.join(wc_backup, 'newdir'))
+  expected_status.tweak('newdir', status='? ')
+  svntest.actions.run_and_verify_unquiet_status(wc_backup,
+                                                expected_status)
+
 #----------------------------------------------------------------------
 
 # svn status -vN should include all entries in a directory
@@ -131,7 +144,7 @@ def status_shows_all_in_current_dir(sbox):
 
 
 #----------------------------------------------------------------------
-
+@Issue(2127)
 def status_missing_file(sbox):
   "status with a versioned file missing"
 
@@ -166,6 +179,7 @@ def status_type_change(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -175,47 +189,105 @@ def status_type_change(sbox):
   os.rename('A', 'iota')
   os.rename('was_iota', 'A')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A)", line):
-      raise svntest.Failure
+  if single_db:
+    expected_output = [
+        '~       A\n',
+        '!       A/mu\n',
+        '!       A/B\n',
+        '!       A/B/lambda\n',
+        '!       A/B/E\n',
+        '!       A/B/E/alpha\n',
+        '!       A/B/E/beta\n',
+        '!       A/B/F\n',
+        '!       A/C\n',
+        '!       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+    ]
+
+    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
+  else:
+    expected_output = [
+        '~       A\n',
+        '~       iota\n',
+    ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # Now change the file that is obstructing the versioned dir into an
   # unversioned dir.
   os.remove('A')
   os.mkdir('A')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A)", line):
-      raise svntest.Failure
+  if single_db:
+    # A is a directory again, so it is no longer missing, but it's
+    # descendants are
+    expected_output = [
+        '!       A/mu\n',
+        '!       A/B\n',
+        '!       A/B/lambda\n',
+        '!       A/B/E\n',
+        '!       A/B/E/alpha\n',
+        '!       A/B/E/beta\n',
+        '!       A/B/F\n',
+        '!       A/C\n',
+        '!       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+    ]
+    # Fix separator for Windows
+    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
+  else:
+    # A misses its administrative area, so it is missing
+    expected_output = [
+        '~       A\n',
+        '~       iota\n',
+    ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # Now change the versioned dir that is obstructing the file into an
   # unversioned dir.
   svntest.main.safe_rmtree('iota')
   os.mkdir('iota')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A)", line):
-      raise svntest.Failure
+  if not svntest.main.wc_is_singledb('.'):
+    # A misses its administrative area, so it is still missing and
+    # iota is still obstructed
+    expected_output = [
+        '~       A\n',
+        '~       iota\n',
+    ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
 #----------------------------------------------------------------------
-
+@SkipUnless(svntest.main.is_posix_os)
 def status_type_change_to_symlink(sbox):
   "status on versioned items replaced by symlinks"
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -225,13 +297,28 @@ def status_type_change_to_symlink(sbox):
   svntest.main.safe_rmtree('A/D')
   os.symlink('bar', 'A/D')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A/D)", line):
-      raise svntest.Failure
+  if single_db:
+    expected_output = [
+        '~       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+        ]
+  else:
+    expected_output = [
+        '~       A/D\n',
+        '~       iota\n',
+      ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # "valid" symlinks
   os.remove('iota')
@@ -239,13 +326,8 @@ def status_type_change_to_symlink(sbox):
   os.symlink('A/mu', 'iota')
   os.symlink('C', 'A/D')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A/D)", line):
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
 #----------------------------------------------------------------------
 # Regression test for revision 3686.
@@ -360,25 +442,25 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   expected_output = [
     '        *                                %s\n' % os.path.join("C", "J"),
-    'A                0       ?   ?           %s\n' % os.path.join("C", "K"),
+    'A                -       ?   ?           %s\n' % os.path.join("C", "K"),
     '        *        1        1 jrandom      C\n',
     'Status against revision:      2\n' ]
 
   os.chdir('A')
   svntest.actions.run_and_verify_svn(None,
-                                     expected_output,
+                                     UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', 'C')
 
   expected_output = [
     '        *                                J\n',
-    'A                0       ?   ?           K\n',
+    'A                -       ?   ?           K\n',
     '        *        1        1 jrandom      .\n',
     'Status against revision:      2\n']
 
   os.chdir('C')
   svntest.actions.run_and_verify_svn(None,
-                                     expected_output,
+                                     UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', '.')
 
@@ -513,6 +595,7 @@ def status_uninvited_parent_directory(sbox):
     if re.match("\\s+\\*.*\.other/?$", line):
       raise svntest.Failure
 
+@Issue(1289)
 def status_on_forward_deletion(sbox):
   "status -u on working copy deleted in HEAD"
   # See issue #1289.
@@ -564,7 +647,7 @@ def get_last_changed_date(path):
   for line in out:
     if re.match("^Last Changed Date", line):
       return line
-  print("Didn't find Last Changed Date for " + path)
+  logger.warn("Didn't find Last Changed Date for %s", path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -575,7 +658,7 @@ def get_text_timestamp(path):
   for line in out:
     if re.match("^Text Last Updated", line):
       return line
-  print("Didn't find text-time for " + path)
+  logger.warn("Didn't find text-time for %s", path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -605,29 +688,39 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   if text_time != pre_text_time:
     raise svntest.Failure
 
+  # revert/cleanup change the text-time even though the text doesn't change
+  if cmd == 'cleanup':
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time == pre_text_time:
+    raise svntest.Failure
 
 # Is this really a status test?  I'm not sure, but I don't know where
 # else to put it.
+@Issue(3773)
 def timestamp_behaviour(sbox):
   "timestamp behaviour"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path = os.path.join(wc_dir, 'A')
-  iota_path = os.path.join(wc_dir, 'iota')
+  A_path = sbox.ospath('A')
+  iota_path = sbox.ospath('iota')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Sleep to ensure timestamps change
-  time.sleep(2)
+  time.sleep(1.1)
 
   # Check behaviour of revert on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
 
   # Sleep to ensure timestamps change
-  time.sleep(2)
+  time.sleep(1.1)
 
   # Check behaviour of cleanup on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
@@ -636,6 +729,9 @@ def timestamp_behaviour(sbox):
   config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
                             'use_commit_config')
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 use-commit-times = yes
 '''
@@ -696,35 +792,35 @@ use-commit-times = yes
       or fmt[23:25] != iota_ts[23:25]):
     # NOTE: the two strings below won't *exactly* match (see just above),
     #   but the *numeric* portions of them should.
-    print("File timestamp on 'iota' does not match.")
-    print("  EXPECTED: %s" % iota_ts)
-    print("    ACTUAL: %s" % fmt)
+    logger.warn("File timestamp on 'iota' does not match.")
+    logger.warn("  EXPECTED: %s", iota_ts)
+    logger.warn("    ACTUAL: %s", fmt)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
 
+@Issues(1617,2030)
 def status_on_unversioned_dotdot(sbox):
   "status on '..' where '..' is not versioned"
   # See issue #1617 (and #2030).
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  new_dir = os.path.join(wc_dir, 'new_dir')
-  new_subdir = os.path.join(new_dir, 'new_subdir')
+  new_dir = sbox.ospath('new')
+  new_sub = sbox.ospath('new/sub')
+  new_subsub = sbox.ospath('new/sub/sub')
   os.mkdir(new_dir)
-  os.mkdir(new_subdir)
+  os.mkdir(new_sub)
+  os.mkdir(new_subsub)
 
-  os.chdir(new_subdir)
-
-  exit_code, out, err = svntest.main.run_svn(1, 'st', '..')
-  for line in err:
-    if line.find('svn: warning: \'..\' is not a working copy') != -1:
-      break
-  else:
-    raise svntest.Failure
+  os.chdir(new_subsub)
+  svntest.actions.run_and_verify_svn2(None, None,
+                                     "svn: warning: W155(010|007):.*'.*'.*not",
+                                      0, 'st', '..')
 
 #----------------------------------------------------------------------
 
+@Issue(2122)
 def status_on_partially_nonrecursive_wc(sbox):
   "status -u in partially non-recursive wc"
   # Based on issue #2122.
@@ -764,7 +860,7 @@ def status_on_partially_nonrecursive_wc(sbox):
   D_url = top_url + '/A/D'
   G_url = top_url + '/A/D/G'
   H_url = top_url + '/A/D/H'
-  rho = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  rho = sbox.ospath('A/D/G/rho')
 
   # Commit a change to A/D/G/rho.  This will be our equivalent of
   # whatever change it was that happened between r213 and HEAD in the
@@ -791,7 +887,7 @@ def missing_dir_in_anchor(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  foo_path = os.path.join(wc_dir, 'foo')
+  foo_path = sbox.ospath('foo')
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -801,14 +897,15 @@ def missing_dir_in_anchor(sbox):
 
   # At one point this caused a "foo not locked" error
   svntest.main.safe_rmtree(foo_path)
-  expected_status.tweak('foo', status='! ', wc_rev='?')
+  expected_status.tweak('foo', status='! ', entry_status='A ',
+                               wc_rev='-',  entry_rev='0')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 def status_in_xml(sbox):
   "status output in XML format"
 
-  sbox.build(read_only = True)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   file_name = "iota"
@@ -827,38 +924,43 @@ def status_in_xml(sbox):
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\"?>\n",
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   item=\"modified\"\n",
-              "   revision=\"1\">\n",
-              "<commit\n",
-              "   revision=\"1\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              time_str,
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-              "<against\n",
-              "   revision=\"1\"/>\n",
-              "</target>\n",
-              "</status>\n",
-             ]
+  expected_entries = {file_path : {'wcprops' : 'none',
+                                   'wcitem' : 'modified',
+                                   'wcrev' : '1',
+                                   'crev' : '1',
+                                   'author' : svntest.main.wc_author}}
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                                'status',
-                                                                file_path,
-                                                                '--xml', '-u')
+  svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
-  for i in range(0, len(output)):
-    if output[i] != template[i]:
-      print("ERROR: expected: %s actual: %s" % (template[i], output[i]))
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', 'repo-to-repo copy',
+                                     sbox.repo_url + '/iota',
+                                     sbox.repo_url + '/iota2')
+
+  file_path = sbox.ospath('iota2')
+
+  expected_entries = {file_path : {'wcprops' : 'none',
+                                   'wcitem' : 'none',
+                                   'rprops' : 'none',
+                                   'ritem' : 'added'}}
+
+  svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '-m', 'repo delete',
+                                     sbox.repo_url + '/A/B/E/alpha')
+
+  expected_entries = {sbox.ospath('A/B/E/alpha')
+                      : {'wcprops' : 'none',
+                         'wcitem' : 'normal',
+                         'wcrev' : '1',
+                         'crev' : '1',
+                         'author' : svntest.main.wc_author,
+                         'rprops' : 'none',
+                         'ritem' : 'deleted'}}
+
+  svntest.actions.run_and_verify_status_xml(expected_entries,
+                                            sbox.ospath('A/B/E/alpha'), '-u')
 
 #----------------------------------------------------------------------
 
@@ -866,7 +968,7 @@ def status_ignored_dir(sbox):
   "status on ignored directory"
   sbox.build()
   wc_dir = sbox.wc_dir
-  new_dir = os.path.join(wc_dir, "dir.o")
+  new_dir = sbox.ospath('dir.o')
   new_dir_url = sbox.repo_url + "/dir.o"
 
   svntest.actions.run_and_verify_svn("Create dir", "\n|Committed revision 2.", [],
@@ -884,12 +986,23 @@ def status_ignored_dir(sbox):
 
 #----------------------------------------------------------------------
 
+@Issue(2030)
 def status_unversioned_dir(sbox):
-  "status on unversioned dir (issue 2030)"
-  sbox.build(read_only = True)
-  dir = sbox.repo_dir
-  expected_err = ["svn: warning: '" + dir + "' is not a working copy\n",
-                  "svn: warning: '" + dir + "' is not a working copy\n"]
+  "status on unversioned dir"
+  sbox.build(read_only = True, create_wc = False)
+  dir = sbox.wc_dir
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  os.mkdir(dir)
+
+  # Depending on whether you run the tests below a working copy
+  # or not, the error message might either be something like
+  # svn: warning: W155007: '...copies/stat_tests-19' is not a working copy
+  # or
+  # svn: warning: W155010: The node '...copies/stat_tests-19' was not found.
+
+  expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
+                 os.path.basename(dir) + \
+                 "' (is not a working copy|was not found)"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       "status", dir, dir)
 
@@ -899,30 +1012,60 @@ def status_missing_dir(sbox):
   "status with a versioned directory missing"
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  a_d_g = os.path.join(wc_dir, "A", "D", "G")
+  a_d_g = sbox.ospath('A/D/G')
 
   # ok, blow away the A/D/G directory
   svntest.main.safe_rmtree(a_d_g)
 
-  expected = svntest.verify.UnorderedOutput(["!       " + a_d_g + "\n"])
-  svntest.actions.run_and_verify_svn(None, expected, [], "status", wc_dir)
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected = [
+                 '!       A/D/G\n',
+                 '!       A/D/G/rho\n',
+                 '!       A/D/G/pi\n',
+                 '!       A/D/G/tau\n',
+               ]
+    expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
+                 for s in expected ]
+  else:
+    expected = ["!       " + a_d_g + "\n"]
 
-  expected = svntest.verify.UnorderedOutput(
-         ["        *            " + os.path.join(a_d_g, "pi") + "\n",
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+                                     "status", wc_dir)
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected = [
+          "!                1   " + a_d_g + "\n",
+          "!                1   " + os.path.join(a_d_g, "rho") + "\n",
+          "!                1   " + os.path.join(a_d_g, "pi") + "\n",
+          "!                1   " + os.path.join(a_d_g, "tau") + "\n",
+          "Status against revision:      1\n" ]
+  else:
+    expected = [
+          "        *            " + os.path.join(a_d_g, "pi") + "\n",
           "        *            " + os.path.join(a_d_g, "rho") + "\n",
           "        *            " + os.path.join(a_d_g, "tau") + "\n",
           "!       *       ?    " + a_d_g + "\n",
-          "        *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
-          "Status against revision:      1\n" ])
+          "        *        1   " + sbox.ospath('A/D') + "\n",
+          "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
-  svntest.actions.run_and_verify_svn(None, expected, [],
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
                                      "status", "-u", wc_dir)
 
   # Finally run an explicit status request directly on the missing directory.
-  svntest.actions.run_and_verify_svn(None,
-                                     ["!       " + a_d_g + "\n"],
-                                     [], "status", a_d_g)
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected = [
+                  "!       A/D/G\n",
+                  "!       A/D/G/rho\n",
+                  "!       A/D/G/pi\n",
+                  "!       A/D/G/tau\n",
+               ]
+    expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
+                 for s in expected ]
+  else:
+    expected = ["!       " + a_d_g + "\n"]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+                                     "status", a_d_g)
 
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
@@ -941,7 +1084,7 @@ def status_add_plus_conflict(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'update', wc_dir)
 
-  branch_file = os.path.join(wc_dir, 'branch', 'file')
+  branch_file = sbox.ospath('branch/file')
 
   svntest.main.file_write(branch_file, "line 1\nline2\nline3\n", 'wb+')
 
@@ -963,7 +1106,7 @@ def status_add_plus_conflict(sbox):
                                      'commit',
                                      branch_file, '-m', 'rev 5')
 
-  trunk_dir = os.path.join(wc_dir, 'trunk')
+  trunk_dir = sbox.ospath('trunk')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'merge',
@@ -974,13 +1117,15 @@ def status_add_plus_conflict(sbox):
                                      branch_url, '-r', '4:5', trunk_dir)
 
   lines = [
-    "?       " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
-    "?       " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
-    "?       " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
-    "C  +    " + os.path.join(wc_dir, "trunk", "file") + "\n",
+    "?       " + sbox.ospath('trunk/file.merge-left.r4') + "\n",
+    "?       " + sbox.ospath('trunk/file.merge-right.r5') + "\n",
+    "?       " + sbox.ospath('trunk/file.working') + "\n",
+    "C  +    " + sbox.ospath('trunk/file') + "\n",
+    "Summary of conflicts:\n",
+    "  Text conflicts: 1\n",
   ]
   if svntest.main.server_has_mergeinfo():
-    lines.append(" M      " + os.path.join(wc_dir, "trunk") + "\n")
+    lines.append(" M      " + sbox.ospath('trunk') + "\n")
 
   expected_output = svntest.verify.UnorderedOutput(lines)
 
@@ -994,7 +1139,7 @@ def inconsistent_eol(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  iota_path = os.path.join(wc_dir, "iota")
+  iota_path = sbox.ospath('iota')
 
   svntest.main.file_write(iota_path, "line 1\nline 2\n", "wb")
 
@@ -1002,7 +1147,7 @@ def inconsistent_eol(sbox):
                                      "property 'svn:eol-style' set on.*iota",
                                      [],
                                      'propset', 'svn:eol-style', 'native',
-                                     os.path.join(wc_dir, 'iota'))
+                                     sbox.ospath('iota'))
 
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
@@ -1020,12 +1165,13 @@ def inconsistent_eol(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2533
+@Issue(2533)
 def status_update_with_incoming_props(sbox):
   "run 'status -u' variations w/ incoming propchanges"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
 
   # Add a property to the root folder and a subdir
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', wc_dir)
@@ -1078,7 +1224,7 @@ def status_update_with_incoming_props(sbox):
 
   expected = svntest.verify.UnorderedOutput(
          ["                 1        1 jrandom      " +
-          os.path.join(wc_dir, "iota") + "\n",
+          sbox.ospath('iota') + "\n",
           "        *        1        1 jrandom      " + A_path + "\n",
           "        *        1        1 jrandom      " + wc_dir + "\n",
           "Status against revision:      2\n" ])
@@ -1100,53 +1246,23 @@ def status_update_with_incoming_props(sbox):
   else:
     raise svntest.Failure
 
-  xout = ["<?xml version=\"1.0\"?>\n",
-          "<status>\n",
-          "<target\n",
-          "   path=\"%s\">\n" % (wc_dir),
-          "<entry\n",
-          "   path=\"%s\">\n" % (A_path),
-          "<wc-status\n",
-          "   props=\"none\"\n",
-          "   item=\"normal\"\n",
-          "   revision=\"1\">\n",
-          "<commit\n",
-          "   revision=\"1\">\n",
-          "<author>%s</author>\n" % svntest.main.wc_author,
-          time_str,
-          "</commit>\n",
-          "</wc-status>\n",
-          "<repos-status\n",
-          "   props=\"modified\"\n",
-          "   item=\"none\">\n",
-          "</repos-status>\n",
-          "</entry>\n",
-          "<entry\n",
-          "   path=\"%s\">\n" % (wc_dir),
-          "<wc-status\n",
-          "   props=\"none\"\n",
-          "   item=\"normal\"\n",
-          "   revision=\"1\">\n",
-          "<commit\n",
-          "   revision=\"1\">\n",
-          "<author>%s</author>\n" % svntest.main.wc_author,
-          time_str,
-          "</commit>\n",
-          "</wc-status>\n",
-          "<repos-status\n",
-          "   props=\"modified\"\n",
-          "   item=\"none\">\n",
-          "</repos-status>\n",
-          "</entry>\n",
-          "<against\n",
-          "   revision=\"2\"/>\n",
-          "</target>\n",
-          "</status>\n",]
+  expected_entries ={wc_dir : {'wcprops' : 'none',
+                               'wcitem' : 'normal',
+                               'wcrev' : '1',
+                               'crev' : '1',
+                               'author' : svntest.main.wc_author,
+                               'rprops' : 'modified',
+                               'ritem' : 'none'},
+                     A_path : {'wcprops' : 'none',
+                               'wcitem' : 'normal',
+                               'wcrev' : '1',
+                               'crev' : '1',
+                               'author' : svntest.main.wc_author,
+                               'rprops' : 'modified',
+                               'ritem' : 'none'},
+                     }
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, xout, [],
-                                                                'status',
-                                                                wc_dir,
-                                                                '--xml', '-uN')
+  svntest.actions.run_and_verify_status_xml(expected_entries, wc_dir, '-uN')
 
 # more incoming prop updates.
 def status_update_verbose_with_incoming_props(sbox):
@@ -1154,7 +1270,7 @@ def status_update_verbose_with_incoming_props(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   D_path = os.path.join(A_path, 'D')
   B_path = os.path.join(A_path, 'B')
   E_path = os.path.join(A_path, 'B', 'E')
@@ -1222,7 +1338,7 @@ def status_update_verbose_with_incoming_props(sbox):
           "         " + common + os.path.join(A_path, 'mu') + "\n",
           "         " + common + os.path.join(A_path, 'C') + "\n",
           "         " + common + A_path + "\n",
-          "         " + common + os.path.join(wc_dir, 'iota') + "\n",
+          "         " + common + sbox.ospath('iota') + "\n",
           "        *" + common + wc_dir  + "\n",
           "Status against revision:      2\n" ])
 
@@ -1233,12 +1349,13 @@ def status_update_verbose_with_incoming_props(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2468
+@Issue(2468)
 def status_nonrecursive_update(sbox):
   "run 'status -uN' with incoming changes"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   D_path = os.path.join(A_path, 'D')
   mu_path = os.path.join(A_path, 'mu')
   gamma_path = os.path.join(D_path, 'gamma')
@@ -1277,7 +1394,7 @@ def status_nonrecursive_update(sbox):
                                         '-r', '1', wc_dir)
 
   # Check the remote status of folder A (non-recursively)
-  xout = ["        *        1   " + os.path.join(wc_dir, "A", "mu") + "\n",
+  xout = ["        *        1   " + sbox.ospath('A/mu') + "\n",
           "Status against revision:      2\n" ]
 
   svntest.actions.run_and_verify_svn(None,
@@ -1322,7 +1439,7 @@ def status_depth_local(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   D_path = os.path.join(A_path, 'D')
 
   mu_path = os.path.join(A_path, 'mu')
@@ -1381,7 +1498,7 @@ def status_depth_update(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   D_path = os.path.join(A_path, 'D')
 
   mu_path = os.path.join(A_path, 'mu')
@@ -1450,13 +1567,90 @@ def status_depth_update(sbox):
 
 
 #----------------------------------------------------------------------
+def status_depth_update_local_modifications(sbox):
+  "run 'status --depth=X -u' with local changes"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  D_path = os.path.join(A_path, 'D')
+
+  mu_path = os.path.join(A_path, 'mu')
+  gamma_path = os.path.join(D_path, 'gamma')
+
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', A_path)
+  svntest.main.run_svn(None, 'propset', 'svn:test', 'value', D_path)
+
+  svntest.main.file_append(mu_path, 'modified')
+  svntest.main.file_append(gamma_path, 'modified')
+
+  # depth=empty
+  expected = svntest.verify.UnorderedOutput(
+                  [" M               1   %s\n" % A_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=empty", A_path)
+
+  expected = svntest.verify.UnorderedOutput(
+                  ["M                1   %s\n" % mu_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=empty", mu_path)
+
+  # depth=files
+  expected = svntest.verify.UnorderedOutput(
+                  ["M                1   %s\n" % mu_path,
+                   " M               1   %s\n" % A_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=files",
+                                     A_path)
+
+  # depth=immediates
+  expected = svntest.verify.UnorderedOutput(
+                  [" M               1   %s\n" % A_path,
+                   " M               1   %s\n" % D_path,
+                   "M                1   %s\n" % mu_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=immediates",
+                                     A_path)
+
+  # depth=infinity (the default)
+  expected = svntest.verify.UnorderedOutput(
+                  [" M               1   %s\n" % A_path,
+                   " M               1   %s\n" % D_path,
+                   "M                1   %s\n" % mu_path,
+                   "M                1   %s\n" % gamma_path,
+                   "Status against revision:      1\n"])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-u", "--depth=infinity",
+                                     A_path)
+
+#----------------------------------------------------------------------
 # Test for issue #2420
+@Issue(2420)
 def status_dash_u_deleted_directories(sbox):
   "run 'status -u' with locally deleted directories"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  A_path = os.path.join(wc_dir, 'A')
+  A_path = sbox.ospath('A')
   B_path = os.path.join(A_path, 'B')
 
   # delete the B directory
@@ -1483,6 +1677,8 @@ def status_dash_u_deleted_directories(sbox):
                                      "status", "-u", "B")
 
   # again, but now from inside B, should give the same output
+  if not os.path.exists('B'):
+    os.mkdir('B')
   os.chdir("B")
   expected = svntest.verify.UnorderedOutput(
          ["D                1   %s\n" % ".",
@@ -1516,6 +1712,7 @@ def status_dash_u_deleted_directories(sbox):
 
 # Test for issue #2737: show obstructed status for versioned directories
 # replaced by local directories.
+@Issue(2737)
 def status_dash_u_type_change(sbox):
   "status -u on versioned items whose type changed"
 
@@ -1540,7 +1737,35 @@ def status_dash_u_type_change(sbox):
   svntest.main.safe_rmtree('A')
   os.mkdir('A')
 
-  expected = svntest.verify.UnorderedOutput(
+  if svntest.main.wc_is_singledb('.'):
+    output =[
+               "!                1   A/mu\n",
+               "!                1   A/B\n",
+               "!                1   A/B/lambda\n",
+               "!                1   A/B/E\n",
+               "!                1   A/B/E/alpha\n",
+               "!                1   A/B/E/beta\n",
+               "!                1   A/B/F\n",
+               "!                1   A/C\n",
+               "!                1   A/D\n",
+               "!                1   A/D/gamma\n",
+               "!                1   A/D/G\n",
+               "!                1   A/D/G/rho\n",
+               "!                1   A/D/G/pi\n",
+               "!                1   A/D/G/tau\n",
+               "!                1   A/D/H\n",
+               "!                1   A/D/H/chi\n",
+               "!                1   A/D/H/omega\n",
+               "!                1   A/D/H/psi\n",
+               "~                1   iota\n",
+               "Status against revision:      1\n"
+            ]
+
+    expected = svntest.verify.UnorderedOutput(
+                        [s.replace('/', os.path.sep)
+                            for s in  output])
+  else:
+    expected = svntest.verify.UnorderedOutput(
          ["~                1   iota\n",
           "~               ?    A\n",
           "Status against revision:      1\n" ])
@@ -1561,19 +1786,21 @@ def status_with_tree_conflicts(sbox):
 
   svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
-  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  G = sbox.ospath('A/D/G')
   pi = os.path.join(G, 'pi')
   rho = os.path.join(G, 'rho')
   tau = os.path.join(G, 'tau')
 
   # check status of G
   expected = svntest.verify.UnorderedOutput(
-         ["D     C %s\n" % pi,
-          "      >   local delete, incoming edit upon update\n",
-          "A  +  C %s\n" % rho,
+         ["A  +  C %s\n" % rho,
           "      >   local edit, incoming delete upon update\n",
+          "D     C %s\n" % pi,
+          "      >   local delete, incoming edit upon update\n",
           "!     C %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
+          "Summary of conflicts:\n",
+          "  Tree conflicts: 3\n",
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1590,6 +1817,8 @@ def status_with_tree_conflicts(sbox):
           "      >   local edit, incoming delete upon update\n",
           "!     C                                  %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
+          "Summary of conflicts:\n",
+          "  Tree conflicts: 3\n",
           ])
 
 
@@ -1623,20 +1852,189 @@ def status_with_tree_conflicts(sbox):
       # check if the path should be a victim
       m = re.search('tree-conflicted="true"', entry)
       if (m is None) and should_be_victim[path]:
-        print("ERROR: expected '%s' to be a tree conflict victim." % path)
-        print("ACTUAL STATUS OUTPUT:")
-        print(output_str)
+        logger.warn("ERROR: expected '%s' to be a tree conflict victim.", path)
+        logger.warn("ACTUAL STATUS OUTPUT:")
+        logger.warn(output_str)
         raise svntest.Failure
       if m and not should_be_victim[path]:
-        print("ERROR: did NOT expect '%s' to be a tree conflict victim." % path)
-        print("ACTUAL STATUS OUTPUT:")
-        print(output_str)
+        logger.warn("ERROR: did NOT expect '%s' to be a tree conflict victim.",
+                    path)
+        logger.warn("ACTUAL STATUS OUTPUT:")
+        logger.warn(output_str)
         raise svntest.Failure
 
   if real_entry_count != len(should_be_victim):
-    print("ERROR: 'status --xml' output is incomplete.")
+    logger.warn("ERROR: 'status --xml' output is incomplete.")
     raise svntest.Failure
 
+
+#----------------------------------------------------------------------
+# Regression for issue #3742
+@Issue(3742)
+def status_nested_wc_old_format(sbox):
+  "status on wc with nested old-format wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  os.mkdir(sbox.ospath('subdir'))
+  os.mkdir(sbox.ospath('subdir/.svn'))
+  svntest.main.file_append(sbox.ospath('subdir/.svn/format'),
+                           '10\n') # format 10 was the Subversion 1.6 format
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [ "?       subdir\n" ], [], 'st')
+
+########################################################################
+# Run the tests
+
+
+def simple_lock(sbox, relpath):
+  path = os.path.join(sbox.wc_dir, relpath)
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock', path)
+
+#----------------------------------------------------------------------
+# Regression test for issue #3855 "status doesn't show 'K' on a locked
+# deleted node".
+@Issue(3855)
+def status_locked_deleted(sbox):
+  "status with locked deleted file"
+
+  sbox.build()
+  iota_path = sbox.ospath('iota')
+
+  sbox.simple_rm('iota')
+  simple_lock(sbox, 'iota')
+  svntest.actions.run_and_verify_svn(None, ['D    K  %s\n' % iota_path], [],
+                                     'status', iota_path)
+
+@Issue(3774)
+def wc_wc_copy_timestamp(sbox):
+  "timestamp on wc-wc copies"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  time.sleep(1.1)
+  svntest.main.file_append(sbox.ospath('A/D/H/psi'), 'modified\n')
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.ospath('A/D/H'),
+                                     sbox.ospath('A/D/H2'))
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.tweak('A/D/H/psi', status='M ')
+  expected_output.add({
+      'A/D/H2'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/D/H2/chi'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H2/psi'   : Item(status='M ', copied='+', wc_rev='-'),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
+  # Since copied chi is unmodified the text_timestamp should "match"
+  # the working file but it's not easy to confirm that directly.  We
+  # can confirm that the copied is different from the source.
+  chi_src_timestamp = get_text_timestamp(sbox.ospath('A/D/H/chi'))
+  chi_dst_timestamp1 = get_text_timestamp(sbox.ospath('A/D/H2/chi'))
+  if chi_src_timestamp == chi_dst_timestamp1:
+    raise svntest.Failure("chi timestamps should be different")
+
+  # Since copied psi is modified the text_timestamp should not "match"
+  # the working file, again difficult to confirm directly.  It happens
+  # that the current implementation leaves it equal to the source.
+  psi_src_timestamp = get_text_timestamp(sbox.ospath('A/D/H/psi'))
+  psi_dst_timestamp = get_text_timestamp(sbox.ospath('A/D/H2/psi'))
+  if psi_src_timestamp != psi_dst_timestamp:
+    raise svntest.Failure("psi timestamps should be the same")
+
+  # Cleanup repairs timestamps, so this should be a no-op.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
+  chi_dst_timestamp2 = get_text_timestamp(sbox.ospath('A/D/H2/chi'))
+  if chi_dst_timestamp2 != chi_dst_timestamp1:
+    raise svntest.Failure("chi timestamps should be the same")
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
+@Issue(3908)
+def wclock_status(sbox):
+  "verbose/non-verbose on locked working copy"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  # Recursive lock
+  svntest.actions.lock_admin_dir(sbox.ospath('A/D'), True)
+
+  # Verbose status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/H', locked='L')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Non-verbose status
+  expected_output = svntest.verify.UnorderedOutput([
+      '  L     %s\n' % sbox.ospath(path) for path in ['A/D',
+                                                      'A/D/G',
+                                                      'A/D/H']
+      ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', wc_dir)
+
+  # Second non-recursive lock
+  svntest.actions.lock_admin_dir(sbox.ospath('A/B'))
+
+  expected_status.tweak('A/B', locked='L')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_output = svntest.verify.UnorderedOutput([
+      '  L     %s\n' % sbox.ospath(path) for path in ['A/B',
+                                                      'A/D',
+                                                      'A/D/G',
+                                                      'A/D/H']
+      ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', wc_dir)
+
+
+@Issue(4072)
+@XFail()
+def modified_modulo_translation(sbox):
+  "modified before translation, unmodified after"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_propset('svn:eol-style', 'LF', 'iota')
+  sbox.simple_commit()
+
+  # CRLF it.
+  open(sbox.ospath('iota'), 'wb').write("This is the file 'iota'.\r\n")
+
+  # Run status.  Expect some output.
+  # TODO: decide how such files should show in the output; whether they
+  #       always show, or only with some --flag; and adjust this accordingly.
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'status', wc_dir)
+
+  # Expect the file to be renormalized (to LF) after a revert.
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_svn(None, [], [], 'status', wc_dir)
+
+def status_not_present(sbox):
+  "no status on not-present and excluded nodes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # iota is a shell script.
+  sbox.simple_rm('iota', 'A/C')
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude',
+                       sbox.ospath('A/mu'), sbox.ospath('A/B'))
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, [], [],'status',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/C'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('no-file'))
 
 ########################################################################
 # Run the tests
@@ -1649,8 +2047,7 @@ test_list = [ None,
               status_shows_all_in_current_dir,
               status_missing_file,
               status_type_change,
-              SkipUnless(status_type_change_to_symlink,
-                         svntest.main.is_posix_os),
+              status_type_change_to_symlink,
               status_with_new_files_pending,
               status_for_unignored_file,
               status_for_nonexistent_file,
@@ -1674,8 +2071,15 @@ test_list = [ None,
               status_dash_u_deleted_directories,
               status_depth_local,
               status_depth_update,
+              status_depth_update_local_modifications,
               status_dash_u_type_change,
               status_with_tree_conflicts,
+              status_nested_wc_old_format,
+              status_locked_deleted,
+              wc_wc_copy_timestamp,
+              wclock_status,
+              modified_modulo_translation,
+              status_not_present,
              ]
 
 if __name__ == '__main__':

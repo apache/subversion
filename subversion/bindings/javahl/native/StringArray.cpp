@@ -34,14 +34,12 @@
 
 StringArray::~StringArray()
 {
-  if (m_stringArray != NULL)
-    JNIUtil::getEnv()->DeleteLocalRef(m_stringArray);
 }
 
 const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
 {
   apr_array_header_t *strings
-    = apr_array_make(pool.pool(), m_strings.size(), sizeof(char *));
+    = apr_array_make(pool.getPool(), m_strings.size(), sizeof(char *));
 
   std::vector<std::string>::const_iterator it;
   for (it = m_strings.begin(); it < m_strings.end(); ++it)
@@ -54,28 +52,35 @@ const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
   return strings;
 }
 
-StringArray::StringArray(jobjectArray jstrings)
+const std::vector<std::string> &StringArray::vector(void) const
 {
-  m_stringArray = jstrings;
+  return m_strings;
+}
 
-  if (jstrings != NULL)
+void
+StringArray::init(void)
+{
+  const std::vector<jobject> &jobjects = Array::vector();
+
+  for (std::vector<jobject>::const_iterator it = jobjects.begin();
+        it < jobjects.end(); ++it)
     {
-      JNIEnv *env = JNIUtil::getEnv();
-      jint arraySize = env->GetArrayLength(jstrings);
+      JNIStringHolder str((jstring) *it);
       if (JNIUtil::isExceptionThrown())
         return;
 
-      for (int i = 0; i < arraySize; ++i)
-        {
-          jobject jstr = env->GetObjectArrayElement(jstrings, i);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          JNIStringHolder str((jstring)jstr);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          m_strings.push_back(std::string((const char *)str));
-        }
+      m_strings.push_back(std::string((const char *)str));
     }
+}
+
+StringArray::StringArray(jobjectArray jstrings)
+    : Array(jstrings), m_strings()
+{
+  init();
+}
+
+StringArray::StringArray(jobject jstringCollection)
+    : Array(jstringCollection), m_strings()
+{
+  init();
 }

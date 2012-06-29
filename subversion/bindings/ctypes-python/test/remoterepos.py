@@ -27,6 +27,13 @@ from csvn.core import *
 from urllib import pathname2url
 from csvn.repos import LocalRepository, RemoteRepository
 from stat import *
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 
 repos_location = os.path.join(tempfile.gettempdir(), "svn_test_repos")
 repos_url = pathname2url(repos_location)
@@ -46,17 +53,32 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
                         'test.dumpfile'))
 
-        # Just in case a preivous test instance was not properly cleaned up
-        self.tearDown()
+        # Just in case a previous test instance was not properly cleaned up
+        self.remove_from_disk()
+
         self.repos = LocalRepository(repos_location, create=True)
         self.repos.load(dumpfile)
 
         self.repos = RemoteRepository(repos_url)
 
     def tearDown(self):
+        self.repos.close()
+        self.remove_from_disk()
+        self.repos = None
+
+    def remove_from_disk(self):
+        """Remove anything left on disk"""
         if os.path.exists(repos_location):
             svn_repos_delete(repos_location, Pool())
-        self.repos = None
+
+    def svn_dirent_t_assert_equal(self, a, b):
+        """Assert that two svn_dirent_t's are equal, ignoring their 'time'
+           fields."""
+        self.assertEqual(a.kind, b.kind)
+        self.assertEqual(a.size, b.size)
+        self.assertEqual(a.has_props, b.has_props)
+        self.assertEqual(a.created_rev, b.created_rev)
+        self.assertEqual(a.last_author, b.last_author)
 
     def test_remote_latest_revnum(self):
         self.assertEqual(9, self.repos.latest_revnum())
@@ -70,6 +92,50 @@ class RemoteRepositoryTestCase(unittest.TestCase):
             self.repos.check_path("trunk/dir", 7))
         self.assertEqual(svn_node_none,
             self.repos.check_path("does_not_compute"))
+
+    def test_list(self):
+        expected = {
+            'README.txt':
+                svn_dirent_t(kind=svn_node_file, size=159, has_props=True,
+                             created_rev=9, last_author=String('bruce')),
+            'ANOTHERREADME.txt':
+                svn_dirent_t(kind=svn_node_file, size=66, has_props=False,
+                             created_rev=4, last_author=String('clark')) }
+        found = self.repos.list("trunk")
+        self.assertEqual(sorted(found.keys()), sorted(expected.keys()))
+        for path in found:
+            self.svn_dirent_t_assert_equal(found[path], expected[path])
+
+    def test_info(self):
+        e = svn_dirent_t(kind=svn_node_file, size=159, has_props=True,
+                         created_rev=9, last_author=String('bruce'))
+        f = self.repos.info("trunk/README.txt")
+        self.svn_dirent_t_assert_equal(f, e)
+
+    def test_proplist(self):
+        expected = { 'Awesome': 'Yes',
+            'svn:entry:last-author': 'bruce',
+            'svn:entry:committed-rev': '9' }
+        found = self.repos.proplist("trunk/README.txt")
+        # Check results, ignoring some entry-props
+        del found['svn:entry:committed-date']
+        del found['svn:entry:uuid']
+        self.assertEqual(sorted(found.keys()), sorted(expected.keys()))
+        for pname in found:
+            self.assertEqual(found[pname], expected[pname])
+
+    def test_propget(self):
+        found = self.repos.propget("Awesome", "trunk/README.txt")
+        self.assertEqual(found, "Yes")
+
+    def test_log(self):
+        expected = [ (8, 'clark'),
+                     (9, 'bruce') ]
+        for found in self.repos.log(7, 9, ["trunk/README.txt"]):
+            (e_rev, e_author) = expected[0]
+            self.assertEqual(found.revision, e_rev)
+            self.assertEqual(found.author, e_author)
+            expected = expected[1:]
 
     def test_revprop_list(self):
         # Test argument-free case

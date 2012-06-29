@@ -29,9 +29,14 @@
 
 #include "svn_checksum.h"
 #include "svn_error.h"
+#include "svn_ctype.h"
 
 #include "sha1.h"
 #include "md5.h"
+
+#include "private/svn_subr_private.h"
+
+#include "svn_private_config.h"
 
 
 
@@ -51,36 +56,71 @@ validate_kind(svn_checksum_kind_t kind)
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
 }
 
+/* Create a svn_checksum_t with everything but the contents of the
+   digest populated. */
+static svn_checksum_t *
+checksum_create_without_digest(svn_checksum_kind_t kind,
+                               apr_size_t digest_size,
+                               apr_pool_t *pool)
+{
+  /* Use apr_palloc() instead of apr_pcalloc() so that the digest
+   * contents are only set once by the caller. */
+  svn_checksum_t *checksum = apr_palloc(pool, sizeof(*checksum) + digest_size);
+  checksum->digest = (unsigned char *)checksum + sizeof(*checksum);
+  checksum->kind = kind;
+  return checksum;
+}
+
+static svn_checksum_t *
+checksum_create(svn_checksum_kind_t kind,
+                apr_size_t digest_size,
+                const unsigned char *digest,
+                apr_pool_t *pool)
+{
+  svn_checksum_t *checksum = checksum_create_without_digest(kind, digest_size,
+                                                            pool);
+  memcpy((unsigned char *)checksum->digest, digest, digest_size);
+  return checksum;
+}
 
 svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
+  apr_size_t digest_size;
 
   switch (kind)
     {
       case svn_checksum_md5:
+        digest_size = APR_MD5_DIGESTSIZE;
+        break;
       case svn_checksum_sha1:
-        checksum = apr_pcalloc(pool, sizeof(*checksum) + DIGESTSIZE(kind));
-        checksum->digest = (unsigned char *)checksum + sizeof(*checksum);
-        checksum->kind = kind;
-        return checksum;
-
+        digest_size = APR_SHA1_DIGESTSIZE;
+        break;
       default:
         return NULL;
     }
+
+  checksum = checksum_create_without_digest(kind, digest_size, pool);
+  memset((unsigned char *) checksum->digest, 0, digest_size);
+  return checksum;
 }
 
 svn_checksum_t *
-svn_checksum__from_digest(const unsigned char *digest,
-                          svn_checksum_kind_t kind,
-                          apr_pool_t *result_pool)
+svn_checksum__from_digest_md5(const unsigned char *digest,
+                              apr_pool_t *result_pool)
 {
-  svn_checksum_t *checksum = svn_checksum_create(kind, result_pool);
+  return checksum_create(svn_checksum_md5, APR_MD5_DIGESTSIZE, digest,
+                         result_pool);
+}
 
-  memcpy((unsigned char *)checksum->digest, digest, DIGESTSIZE(kind));
-  return checksum;
+svn_checksum_t *
+svn_checksum__from_digest_sha1(const unsigned char *digest,
+                               apr_pool_t *result_pool)
+{
+  return checksum_create(svn_checksum_sha1, APR_SHA1_DIGESTSIZE, digest,
+                         result_pool);
 }
 
 svn_error_t *
@@ -134,6 +174,9 @@ const char *
 svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool)
 {
+  if (checksum == NULL)
+    return NULL;
+
   switch (checksum->kind)
     {
       case svn_checksum_md5:
@@ -154,11 +197,13 @@ svn_checksum_serialize(const svn_checksum_t *checksum,
 {
   const char *ckind_str;
 
+  SVN_ERR_ASSERT_NO_RETURN(checksum->kind == svn_checksum_md5
+                           || checksum->kind == svn_checksum_sha1);
   ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
   return apr_pstrcat(result_pool,
                      ckind_str,
                      svn_checksum_to_cstring(checksum, scratch_pool),
-                     NULL);
+                     (char *)NULL);
 }
 
 
@@ -189,9 +234,28 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
                        const char *hex,
                        apr_pool_t *pool)
 {
-  int len;
-  int i;
-  unsigned char is_zeros = '\0';
+  int i, len;
+  char is_nonzero = '\0';
+  char *digest;
+  static const char xdigitval[256] =
+    {
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,-1,-1,-1,-1,-1,-1,   /* 0-9 */
+      -1,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,   /* A-F */
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,   /* a-f */
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    };
 
   if (hex == NULL)
     {
@@ -202,20 +266,21 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   SVN_ERR(validate_kind(kind));
 
   *checksum = svn_checksum_create(kind, pool);
+  digest = (char *)(*checksum)->digest;
   len = DIGESTSIZE(kind);
 
   for (i = 0; i < len; i++)
     {
-      if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
+      char x1 = xdigitval[(unsigned char)hex[i * 2]];
+      char x2 = xdigitval[(unsigned char)hex[i * 2 + 1]];
+      if (x1 == (char)-1 || x2 == (char)-1)
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      ((unsigned char *)(*checksum)->digest)[i] =
-        (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
-        ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
-      is_zeros |= (*checksum)->digest[i];
+      digest[i] = (char)((x1 << 4) | x2);
+      is_nonzero |= (char)((x1 << 4) | x2);
     }
 
-  if (is_zeros == '\0')
+  if (!is_nonzero)
     *checksum = NULL;
 
   return SVN_NO_ERROR;
@@ -229,7 +294,23 @@ svn_checksum_dup(const svn_checksum_t *checksum,
   if (checksum == NULL)
     return NULL;
 
-  return svn_checksum__from_digest(checksum->digest, checksum->kind, pool);
+  /* Without this check on valid checksum kind a NULL svn_checksum_t
+   * pointer is returned which could cause a core dump at an
+   * indeterminate time in the future because callers are not
+   * expecting a NULL pointer.  This commit forces an early abort() so
+   * it's easier to track down where the issue arose. */
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        return svn_checksum__from_digest_md5(checksum->digest, pool);
+        break;
+      case svn_checksum_sha1:
+        return svn_checksum__from_digest_sha1(checksum->digest, pool);
+        break;
+      default:
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+        break;
+    }
 }
 
 svn_error_t *
@@ -252,7 +333,7 @@ svn_checksum(svn_checksum_t **checksum,
 
       case svn_checksum_sha1:
         apr_sha1_init(&sha1_ctx);
-        apr_sha1_update(&sha1_ctx, data, len);
+        apr_sha1_update(&sha1_ctx, data, (unsigned int)len);
         apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
         break;
 
@@ -269,24 +350,20 @@ svn_checksum_t *
 svn_checksum_empty_checksum(svn_checksum_kind_t kind,
                             apr_pool_t *pool)
 {
-  const unsigned char *digest;
-
   switch (kind)
     {
       case svn_checksum_md5:
-        digest = svn_md5__empty_string_digest();
-        break;
+        return svn_checksum__from_digest_md5(svn_md5__empty_string_digest(),
+                                             pool);
 
       case svn_checksum_sha1:
-        digest = svn_sha1__empty_string_digest();
-        break;
+        return svn_checksum__from_digest_sha1(svn_sha1__empty_string_digest(),
+                                              pool);
 
       default:
         /* We really shouldn't get here, but if we do... */
-        return NULL;
+        SVN_ERR_MALFUNCTION_NO_RETURN();
     }
-
-  return svn_checksum__from_digest(digest, kind, pool);
 }
 
 struct svn_checksum_ctx_t
@@ -315,7 +392,7 @@ svn_checksum_ctx_create(svn_checksum_kind_t kind,
         break;
 
       default:
-        return NULL;
+        SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
   return ctx;
@@ -333,7 +410,7 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_update(ctx->apr_ctx, data, len);
+        apr_sha1_update(ctx->apr_ctx, data, (unsigned int)len);
         break;
 
       default:
@@ -373,4 +450,51 @@ apr_size_t
 svn_checksum_size(const svn_checksum_t *checksum)
 {
   return DIGESTSIZE(checksum->kind);
+}
+
+svn_error_t *
+svn_checksum_mismatch_err(const svn_checksum_t *expected,
+                          const svn_checksum_t *actual,
+                          apr_pool_t *scratch_pool,
+                          const char *fmt,
+                          ...)
+{
+  va_list ap;
+  const char *desc;
+
+  va_start(ap, fmt);
+  desc = apr_pvsprintf(scratch_pool, fmt, ap);
+  va_end(ap);
+
+  return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                           _("%s:\n"
+                             "   expected:  %s\n"
+                             "     actual:  %s\n"),
+                desc,
+                svn_checksum_to_cstring_display(expected, scratch_pool),
+                svn_checksum_to_cstring_display(actual, scratch_pool));
+}
+
+svn_boolean_t
+svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
+{
+  /* By definition, the NULL checksum matches all others, including the
+     empty one. */
+  if (!checksum)
+    return TRUE;
+
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        return svn_md5__digests_match(checksum->digest,
+                                      svn_md5__empty_string_digest());
+
+      case svn_checksum_sha1:
+        return svn_sha1__digests_match(checksum->digest,
+                                       svn_sha1__empty_string_digest());
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
 }

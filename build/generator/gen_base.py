@@ -1,4 +1,24 @@
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
 # gen_base.py -- infrastructure for generating makefiles, dependencies, etc.
 #
 
@@ -7,6 +27,7 @@ import sys
 import glob
 import re
 import fileinput
+import filecmp
 try:
   # Python >=3.0
   import configparser
@@ -96,6 +117,7 @@ class GeneratorBase:
     # Lists of pathnames of various kinds
     self.test_deps = []      # Non-BDB dependent items to build for the tests
     self.test_progs = []     # Subset of the above to actually execute
+    self.test_helpers = []   # $ {test_deps} \setminus {test_progs} $
     self.bdb_test_deps = []  # BDB-dependent items to build for the tests
     self.bdb_test_progs = [] # Subset of the above to actually execute
     self.target_dirs = []    # Directories in which files are built
@@ -195,10 +217,27 @@ class GeneratorBase:
 
     import transform_sql
     for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
-      assert len(sqlfile) == 1
-      transform_sql.main(open(sqlfile[0], 'r'),
-                         open(hdrfile, 'w'),
-                         os.path.basename(sqlfile[0]))
+      new_hdrfile = hdrfile + ".new"
+      new_file = open(new_hdrfile, 'w')
+      transform_sql.main(sqlfile[0], new_file)
+      new_file.close()
+
+      def identical(file1, file2):
+        try:
+          if filecmp.cmp(new_hdrfile, hdrfile):
+            return True
+          else:
+            return False
+        except:
+          return False
+
+      if identical(new_hdrfile, hdrfile):
+        os.remove(new_hdrfile)
+      else:
+        try:
+          os.remove(hdrfile)
+        except: pass
+        os.rename(new_hdrfile, hdrfile)
 
 
 class DependencyGraph:
@@ -432,6 +471,8 @@ class TargetExe(TargetLinked):
       self.gen_obj.test_deps.append(self.filename)
       if self.testing != 'skip':
         self.gen_obj.test_progs.append(self.filename)
+      else:
+        self.gen_obj.test_helpers.append(self.filename)
     elif self.install == 'bdb-test':
       self.gen_obj.bdb_test_deps.append(self.filename)
       if self.testing != 'skip':
@@ -461,6 +502,8 @@ class TargetLib(TargetLinked):
 
     # Is a library referencing symbols which are undefined at link time.
     self.undefined_lib_symbols = options.get('undefined-lib-symbols') == 'yes'
+
+    self.link_cmd = options.get('link-cmd', '$(LINK_LIB)')
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
@@ -692,7 +735,9 @@ class TargetJavaClasses(TargetJava):
     self.output_dir = self.classes
 
   def add_dependencies(self):
-    sources =_collect_paths(self.sources, self.path)
+    sources = []
+    for p in self.path.split():
+      sources.extend(_collect_paths(self.sources, p))
 
     for src, reldir in sources:
       if src[-5:] == '.java':
@@ -730,7 +775,7 @@ class TargetJavaClasses(TargetJava):
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.target_dirs.append(self.path)
+    self.gen_obj.target_dirs.extend(self.path.split())
     self.gen_obj.target_dirs.append(self.classes)
     for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
@@ -744,6 +789,7 @@ class TargetSQLHeader(Target):
     Target.__init__(self, name, options, gen_obj)
     self.sources = options.get('sources')
 
+  _re_sql_include = re.compile('-- *include: *([-a-z]+)')
   def add_dependencies(self):
 
     sources = _collect_paths(self.sources, self.path)
@@ -757,6 +803,13 @@ class TargetSQLHeader(Target):
 
     self.gen_obj.graph.add(DT_SQLHDR, output, source)
 
+    for line in fileinput.input(source):
+      match = self._re_sql_include.match(line)
+      if not match:
+        continue
+      file = match.group(1)
+      self.gen_obj.graph.add(DT_SQLHDR, output,
+                             os.path.join(os.path.dirname(source), file + '.sql'))
 
 _build_types = {
   'exe' : TargetExe,

@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 115
 Content-length: 115
 
-K 7
-svn:log
-V 17
-Add base folders.
 K 10
 svn:author
 V 3
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:05.279494Z
+K 7
+svn:log
+V 17
+Add base folders.
 PROPS-END
 
 Node-path: project1
@@ -70,10 +70,6 @@ Revision-number: 2
 Prop-content-length: 110
 Content-length: 110
 
-K 7
-svn:log
-V 12
-Add folders.
 K 10
 svn:author
 V 3
@@ -82,6 +78,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:06.265712Z
+K 7
+svn:log
+V 12
+Add folders.
 PROPS-END
 
 Node-path: project1/trunk/A
@@ -115,10 +115,6 @@ Revision-number: 3
 Prop-content-length: 106
 Content-length: 106
 
-K 7
-svn:log
-V 9
-Add file.
 K 10
 svn:author
 V 3
@@ -127,6 +123,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:07.283685Z
+K 7
+svn:log
+V 9
+Add file.
 PROPS-END
 
 Node-path: project1/trunk/A/B/C/file.txt
@@ -147,10 +147,6 @@ Revision-number: 4
 Prop-content-length: 117
 Content-length: 117
 
-K 7
-svn:log
-V 19
-Add file file2.txt.
 K 10
 svn:author
 V 3
@@ -159,6 +155,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:08.278330Z
+K 7
+svn:log
+V 19
+Add file file2.txt.
 PROPS-END
 
 Node-path: project1/trunk/A/B/C/file2.txt
@@ -179,10 +179,6 @@ Revision-number: 5
 Prop-content-length: 127
 Content-length: 127
 
-K 7
-svn:log
-V 29
-move project and modify file.
 K 10
 svn:author
 V 3
@@ -191,6 +187,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:12.238116Z
+K 7
+svn:log
+V 29
+move project and modify file.
 PROPS-END
 
 Node-path: branches
@@ -268,10 +268,6 @@ Revision-number: 6
 Prop-content-length: 115
 Content-length: 115
 
-K 7
-svn:log
-V 17
-removed project1.
 K 10
 svn:author
 V 3
@@ -280,6 +276,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:14.261412Z
+K 7
+svn:log
+V 17
+removed project1.
 PROPS-END
 
 Node-path: project1

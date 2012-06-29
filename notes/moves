@@ -1,0 +1,150 @@
+
+ =======================
+ Moves in Subversion 1.8
+ =======================
+
+This file purposefully talks about 'moves' rather than 'renames'.
+This isn't about true renames as requested in issue #898.
+Rather, we keep the add+delete concept while trying to make moves behave
+more in a way that one would expect if true renames were implemented,
+as requested in issue #3631. See also the umbrella issue #3630.
+
+So far the changes only cover local (client-side) moves in the working copy.
+We reuse as much existing code as possible, so new functionality is
+implemented as part of existing copy/delete code paths unless doing
+so is not feasible.
+
+One significant change from how copies work is that moves are tracked
+both ways, i.e. one can locate the add-half of a move if given the
+delete-half, and locate the delete-half if given the add-half.
+
+The goals are:
+
+  - Improve the behaviour for tree-conflicts involving a local move.
+      A "local move vs. edit" tree conflict should be automatically resolved.
+      Any tree conflict involving a local move should clearly indicate
+      so in its description, saying 'local move' instead of 'local delete'
+      or 'local add'.
+
+  - Prepare the client to be able to use the editor-v2 rename interfaces
+    when talking to the server.
+
+
+Notes regarding specific layers of Subversion follow below.
+
+
+== wc.db ==
+
+The following columns in the NODES table are used to differentiate
+moves from copies:
+
+  /* Boolean value, specifying if this node was moved here (rather than just
+     copied). This is set on all the nodes in the moved tree.  The source of
+     the move is implied by a different node with a moved_to column pointing
+     at the root node of the moved tree. */
+  moved_here  INTEGER,
+
+  /* If the underlying node was moved away (rather than just deleted), this
+     specifies the local_relpath of where the node was moved to.
+     This is set only on the root of a move, and is NULL for all children.
+
+     The op-depth of the moved-to node is not recorded. A moved_to path
+     always points at a node within the highest op-depth layer at the
+     destination. This invariant must be maintained by operations which
+     change existing move information. */
+  moved_to  TEXT,
+
+Many queries were added or changed to use these columns.
+
+== libsvn_wc ==
+
+In the internal wc_db API, the _scan_addition() and _scan_deletion()
+interfaces were extended to make use of new DB queries to differentiate
+moved nodes from copied, added, and deleted nodes.
+
+Two functions were built on top of the wc_db API and added to the
+private libsvn_wc API:
+  svn_wc__node_was_moved_away() provides, for a given local_abspath:
+    - the moved_to abspath within the working copy
+    - the abspath of the op-root of the copy operation that created
+      the node at the moved_to abspath
+  svn_wc__node_was_moved_here() provides, for a given local_abspath:
+    - the moved_from abspath within the working copy
+    - the abspath of the op-root of the delete operation that deleted
+      the node at the moved_from abspath
+
+More API changes might be needed (TBD).
+In particular, scan_deletion may need to return a list of moves
+in the multi-layer case (http://wiki.apache.org/subversion/MultiLayerMoves)
+
+We might require a working copy upgrade when going from 1.7 to 1.8,
+and only allow new move functionality to be used with 1.8 working copies.
+ 
+
+== libsvn_client ==
+
+This layer already uses 1.7 and earlier svn_wc move APIs. For callers
+of such APIs, changes will hopefully be fairly transparent apart from
+changes that enhance behaviour of move operations.
+
+Interfaces which have changed behaviour:
+
+ svn_client_commit: Commit will refuse to commit anything if only one
+   half of a move appears in the commit target list, or if only one half of
+   a move is picked up by recursion.
+
+ svn_client_revert: The behaviour of this API is not changed, but it
+   is worth noting how it behaves for moves:
+   - If both halves of a move are among the revert targets (either by
+     virtue of being listed explicitly, or by being picked up during
+     recursion), the entire move is reverted.
+   - If only one half of a move is among the revert targets, the other
+     half will be transformed into a normal copy or delete.
+     See http://svn.haxx.se/dev/archive-2011-08/0239.shtml for rationale.
+
+ - svn_client_status: Status provides the moved-to abspath for a moved-away
+     nodes, and the moved-from abspath for a moved-here node.
+     Note that, mostly due to performance reasons, only information about
+     roots of moves is provided. Children of moved nodes aren't marked as such.
+
+ - svn_client_info: Like status, except that it also provides move
+     information about children of moved nodes.
+
+ - svn_client_patch: Patch uses move information to apply changes to files
+     which have been moved locally.
+
+ - svn_client_update/svn_client_merge: Update and Merge use move
+    information to auto-resolve the "local move vs. incoming edit"
+    tree conflict scenario.
+
+Interfaces which have not changed behaviour yet but might change in 1.8.0:
+
+ - svn_client_update/svn_client_merge: Update and Merge might use move
+    information to auto-resolve some additional tree conflict scenarios.
+
+ - diff: Diff might use move information to generate 'rename from' headers
+    when the --git option is used. (A related problem is making diff use
+    correct copyfrom in repos-repos diffs, which is not trivial.)
+
+Several public APIs may still be bumped as their behaviour changes.
+
+For backwards compatibility, APIs released prior to 1.8 will continue
+to treat moves just like 1.7 and earlier releases did. (However, see
+also the note on working copy upgrades above, which might affect to
+what degree the APIs need to stay compatible.)
+
+
+== svn ==
+
+The svn client presents moves similar to but distinct from copy operations. 
+
+svn status shows move roots:
+
+$ svn status
+A  +    foo
+        > moved from 'bar'
+D       bar
+        > moved to 'foo'
+$
+
+svn info shows additional Moved-To: and Moved-From: lines for any moved node.

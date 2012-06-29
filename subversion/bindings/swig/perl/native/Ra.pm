@@ -505,7 +505,7 @@ sub new {
             # If the auth is already set to a auth_baton ignore it
             # otherwise make an auth_baton and store the callbacks
             my ($auth_baton, $auth_callbacks) =
-                                SVN::Core::auth_open_helper($self->{auth});
+                SVN::Core::auth_open_helper($self->{auth});
             $self->{auth} = $auth_baton;
             $self->{auth_provider_callbacks} = $auth_callbacks;
         }

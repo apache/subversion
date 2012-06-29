@@ -34,6 +34,7 @@
 #include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+#include "svn_sorts.h"
 #include "svn_subst.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -61,7 +62,7 @@ stream_write(svn_stream_t *out,
   SVN_ERR(svn_stream_write(out, data, &write_len));
   if (write_len != len)
     return svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                            "Error writing to stream");
+                            _("Error writing to stream"));
   return SVN_NO_ERROR;
 }
 
@@ -71,13 +72,16 @@ print_properties_xml(const char *pname,
                      apr_hash_t *props,
                      apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_props;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  sorted_props = svn_sort__hash(props, svn_sort_compare_items_as_paths, pool);
+  for (i = 0; i < sorted_props->nelts; i++)
     {
-      const char *filename = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *filename = item.key;
+      svn_string_t *propval = item.value;
       svn_stringbuf_t *sb = NULL;
 
       svn_pool_clear(iterpool);
@@ -115,13 +119,19 @@ print_properties(svn_stream_t *out,
                  svn_boolean_t like_proplist,
                  apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *sorted_props;
+  int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *path_prefix;
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", pool));
+
+  sorted_props = svn_sort__hash(props, svn_sort_compare_items_as_paths, pool);
+  for (i = 0; i < sorted_props->nelts; i++)
     {
-      const char *filename = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(sorted_props, i, svn_sort__item_t);
+      const char *filename = item.key;
+      svn_string_t *propval = item.value;
 
       svn_pool_clear(iterpool);
 
@@ -132,7 +142,8 @@ print_properties(svn_stream_t *out,
           /* Print the file name. */
 
           if (! is_url)
-            filename = svn_dirent_local_style(filename, iterpool);
+            filename = svn_cl__local_style_skip_ancestor(path_prefix, filename,
+                                                         iterpool);
 
           /* In verbose mode, print exactly same as "proplist" does;
            * otherwise, print a brief header. */
@@ -140,6 +151,12 @@ print_properties(svn_stream_t *out,
                                 ? _("Properties on '%s':\n")
                                 : "%s - ", filename);
           SVN_ERR(svn_cmdline_cstring_from_utf8(&header, header, iterpool));
+          SVN_ERR(svn_subst_translate_cstring2(header, &header,
+                                               APR_EOL_STR,  /* 'native' eol */
+                                               FALSE, /* no repair */
+                                               NULL,  /* no keywords */
+                                               FALSE, /* no expansion */
+                                               iterpool));
           SVN_ERR(stream_write(out, header, strlen(header)));
         }
 
@@ -149,7 +166,7 @@ print_properties(svn_stream_t *out,
           apr_hash_t *hash = apr_hash_make(iterpool);
 
           apr_hash_set(hash, pname_utf8, APR_HASH_KEY_STRING, propval);
-          svn_cl__print_prop_hash(hash, FALSE, iterpool);
+          SVN_ERR(svn_cl__print_prop_hash(out, hash, FALSE, iterpool));
         }
       else
         {
@@ -184,7 +201,6 @@ svn_cl__propget(apr_getopt_t *os,
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   svn_stream_t *out;
-  int i;
 
   if (opt_state->verbose && (opt_state->revprop || opt_state->strict
                              || opt_state->xml))
@@ -204,7 +220,7 @@ svn_cl__propget(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -267,6 +283,7 @@ svn_cl__propget(apr_getopt_t *os,
   else  /* operate on a normal, versioned property (not a revprop) */
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      int i;
 
       if (opt_state->xml)
         SVN_ERR(svn_cl__xml_print_header("properties", subpool));
@@ -301,11 +318,15 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
 
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
+          if (!svn_path_is_url(truepath))
+            SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       NULL, opt_state->depth,
-                                      opt_state->changelists, ctx, subpool));
+                                      opt_state->changelists, ctx, subpool,
+                                      subpool));
 
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,

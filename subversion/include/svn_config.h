@@ -97,6 +97,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"
 #define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
+/** @since New in 1.7. */
+#define SVN_CONFIG_OPTION_DIFF_EXTENSIONS           "diff-extensions"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
 #define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
@@ -110,6 +112,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
+#define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */
@@ -126,10 +129,14 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
+/** @since New in 1.7. */
+#define SVN_CONFIG_OPTION_FORCE_USERNAME_CASE       "force-username-case"
 #define SVN_CONFIG_SECTION_SASL                 "sasl"
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
+/** @since New in 1.8. */
+#define SVN_CONFIG_SECTION_HOOKS_ENV            "hooks-env"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"
@@ -142,7 +149,7 @@ typedef struct svn_config_t svn_config_t;
  * but we don't want the # character to end up in the variable.
  */
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
-  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo"
+  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
   "*.rej *~ #*# .#* .*.swp .DS_Store"
 
@@ -184,12 +191,44 @@ svn_config_get_config(apr_hash_t **cfg_hash,
                       apr_pool_t *pool);
 
 
+/** Set @a *cfgp to an empty @c svn_config_t structure,
+ * allocated in @a result_pool.
+ *
+ * Pass TRUE to @a section_names_case_sensitive if
+ * section names are to be populated case sensitively.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_config_create(svn_config_t **cfgp,
+                  svn_boolean_t section_names_case_sensitive,
+                  apr_pool_t *result_pool);
+
 /** Read configuration data from @a file (a file or registry path) into
  * @a *cfgp, allocated in @a pool.
  *
  * If @a file does not exist, then if @a must_exist, return an error,
  * otherwise return an empty @c svn_config_t.
+ *
+ * If @a section_names_case_sensitive is TRUE, populate section name hashes
+ * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ *
+ * @since New in 1.7.
  */
+
+svn_error_t *
+svn_config_read2(svn_config_t **cfgp,
+                 const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *pool);
+
+/** Similar to svn_config_read2, but always passes FALSE to
+ * section_names_case_sensitive.
+ *
+ * @deprecated Provided for backward compatibility with 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_config_read(svn_config_t **cfgp,
                 const char *file,
@@ -233,7 +272,7 @@ svn_config_get(svn_config_t *cfg,
  *
  * This function invalidates all value expansions in @a cfg.
  *
- * To remove an option, pass NULL for the @c value.
+ * To remove an option, pass NULL for the @a value.
  */
 void
 svn_config_set(svn_config_t *cfg,
@@ -263,6 +302,32 @@ svn_config_set_bool(svn_config_t *cfg,
                     const char *section,
                     const char *option,
                     svn_boolean_t value);
+
+/** Like svn_config_get(), but for 64 bit signed integers.
+ *
+ * Parses the option as an integer value. Returns an error if the option
+ * could not be converted to an integer.
+ *
+ * @since New in 1.8
+ */
+svn_error_t *
+svn_config_get_int64(svn_config_t *cfg,
+                     apr_int64_t *valuep,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t default_value);
+
+/** Like svn_config_set(), but for 64 bit signed integers.
+ *
+ * Sets the option to the signed decimal @a value.
+ *
+ * @since New in 1.8
+ */
+void
+svn_config_set_int64(svn_config_t *cfg,
+                     const char *section,
+                     const char *option,
+                     apr_int64_t value);
 
 /** Like svn_config_get(), but only for yes/no/ask values.
  *
@@ -298,7 +363,7 @@ typedef svn_boolean_t (*svn_config_section_enumerator_t)(const char *name,
                                                          void *baton);
 
 /** Similar to svn_config_enumerate_sections2(), but uses a memory pool of
- * @a cfg instead of one that is explicitely provided.
+ * @a cfg instead of one that is explicitly provided.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
@@ -345,7 +410,7 @@ typedef svn_boolean_t (*svn_config_enumerator_t)(const char *name,
                                                  void *baton);
 
 /** Similar to svn_config_enumerate2(), but uses a memory pool of
- * @a cfg instead of one that is explicitely provided.
+ * @a cfg instead of one that is explicitly provided.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */

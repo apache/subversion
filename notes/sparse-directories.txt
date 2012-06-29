@@ -410,7 +410,21 @@ Contents
 7. Work Remaining
 =================
 
-   The list of outstanding issues is shown by this issue tracker query
-   (showing Summary fields that start with "[sparse-directories]"):
+   * The list of outstanding issues is shown by this issue tracker query
+     (showing Summary fields that start with "[sparse-directories]"):
 
 <http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&short_desc=%5Bsparse-directories%5D&short_desc_type=casesubstring>
+
+   * Update this doc (sections 1 & 6) to WC-NG.
+
+   * Clarify whether an update should honour an incoming change that
+     adds a new node outside the ambient depth.  For example, if a new
+     node 'A/foo' has been added in the repository, and directory 'A' is
+     depth-empty in the WC (and an 'A/foo' is not already present),
+     should the update add 'A/foo', or should it skip it on the basis
+     that it's outside the current ambient depth?  If not, an update (or
+     merge) could delete an earlier node at the path 'A/foo' (that was
+     present in the WC despite being outside its parent's 'depth'
+     attribute) but could not then re-add a node of the same name in
+     order to perform both halves of an incoming replacement.  Wouldn't
+     that be silly?

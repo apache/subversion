@@ -1,12 +1,32 @@
 #!/usr/bin/perl -w
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
-use Test::More tests => 118;
+use Test::More tests => 121;
 use strict;
 
 # shut up about variables that are only used once.
 # these come from constants and variables used
 # by the bindings but not elsewhere in perl space.
-no warnings 'once'; 
+no warnings 'once';
 
 use_ok('SVN::Core');
 use_ok('SVN::Repos');
@@ -26,6 +46,11 @@ my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')
 my $wcpath = catdir($testpath,'wc');
 my $importpath = catdir($testpath,'import');
 
+# Use internal style paths on Windows
+$reposurl =~ s/\\/\//g;
+$wcpath =~ s/\\/\//g;
+$importpath =~ s/\\/\//g;
+
 # track current rev ourselves to test against
 my $current_rev = 0;
 
@@ -33,7 +58,12 @@ my $current_rev = 0;
 $SVN::Error::handler = undef;
 
 # Get username we are running as
-my $username = getpwuid($>);
+my $username;
+if ($^O eq 'MSWin32') {
+    $username = getlogin();
+} else {
+    $username = getpwuid($>) || getlogin();
+}
 
 # This is ugly to create the test repo with SVN::Repos, but
 # it seems to be the most reliable way.
@@ -54,7 +84,7 @@ ok(SVN::Client::uuid_from_url($reposurl,$ctx),
 ok(SVN::Client::uuid_from_url($reposurl,$ctx->{'ctx'}),
    'Valid return from uuid_from_url function form with _p_svn_client_ctx object');
 
-             
+
 my ($ci_dir1) = $ctx->mkdir(["$reposurl/dir1"]);
 isa_ok($ci_dir1,'_p_svn_client_commit_info_t');
 $current_rev++;
@@ -66,36 +96,32 @@ my ($rpgval,$rpgrev) = $ctx->revprop_get('svn:author',$reposurl,$current_rev);
 is($rpgval,$username,'svn:author set to expected username from revprop_get');
 is($rpgrev,$current_rev,'Returned revnum of current rev from revprop_get');
 
-SKIP: {
-    skip 'Difficult to test on Win32', 3 if $^O eq 'MSWin32';
-
+if ($^O eq 'MSWin32') {
+    ok(open(NEW, ">$repospath/hooks/pre-revprop-change.bat"),
+       'Open pre-revprop-change hook for writing');
+    ok(print(NEW 'exit 0'), 'Print to hook');
+    ok(close(NEW), 'Close hook');
+} else {
     ok(rename("$repospath/hooks/pre-revprop-change.tmpl",
               "$repospath/hooks/pre-revprop-change"),
        'Rename pre-revprop-change hook');
     ok(chmod(0700,"$repospath/hooks/pre-revprop-change"),
        'Change permissions on pre-revprop-change hook');
-
-    my ($rps_rev) = $ctx->revprop_set('svn:log','mkdir dir1',
-                                      $reposurl, $current_rev, 0);
-    is($rps_rev,$current_rev,
-       'Returned revnum of current rev from revprop_set');
-
+    is(1, 1, '-')
 }
+my ($rps_rev) = $ctx->revprop_set('svn:log','mkdir dir1',
+                                  $reposurl, $current_rev, 0);
+is($rps_rev,$current_rev,
+   'Returned revnum of current rev from revprop_set');
 
 my ($rph, $rplrev) = $ctx->revprop_list($reposurl,$current_rev);
 isa_ok($rph,'HASH','Returned hash reference form revprop_list');
 is($rplrev,$current_rev,'Returned current rev from revprop_list');
 is($rph->{'svn:author'},$username,
    'svn:author is expected user from revprop_list');
-if ($^O eq 'MSWin32') {
-    # we skip the log change test on win32 so we have to test
-    # for a different var here
-    is($rph->{'svn:log'},'Make dir1',
-       'svn:log is expected value from revprop_list');
-} else {
-    is($rph->{'svn:log'},'mkdir dir1',
-       'svn:log is expected value from revprop_list');
-}
+is($rph->{'svn:log'},'mkdir dir1',
+   'svn:log is expected value from revprop_list');
+
 ok($rph->{'svn:date'},'svn:date is set from revprop_list');
 
 is($ctx->checkout($reposurl,$wcpath,'HEAD',1),$current_rev,
@@ -113,8 +139,8 @@ is($ctx->add("$wcpath/dir1/new",0),undef,
    'Returned undef from add schedule operation');
 
 # test the log_msg callback
-$ctx->log_msg( 
-    sub 
+$ctx->log_msg(
+    sub
     {
         my ($log_msg,$tmp_file,$commit_items,$pool) = @_;
         isa_ok($log_msg,'SCALAR','log_msg param to callback is a SCALAR');
@@ -132,10 +158,10 @@ $ctx->log_msg(
            "kind() shows the node as a file");
         is($commit_item->url(),"$reposurl/dir1/new",
            'URL matches our repos url');
-        # revision is 0 because the commit has not happened yet
+        # revision is INVALID because the commit has not happened yet
         # and this is not a copy
-        is($commit_item->revision(),0,
-           'Revision is 0 since commit has not happened yet');
+        is($commit_item->revision(),$SVN::Core::INVALID_REVNUM,
+           'Revision is INVALID since commit has not happened yet');
         is($commit_item->copyfrom_url(),undef,
            'copyfrom_url is undef since file is not a copy');
         is($commit_item->state_flags(),$SVN::Client::COMMIT_ITEM_ADD |
@@ -182,11 +208,11 @@ is($ctx->info("$wcpath/dir1/new", undef, 'WORKING',
 my $svn_error = $ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0);
 isa_ok($svn_error, '_p_svn_error_t',
        'info should return _p_svn_error_t for a nonexistent file');
-$svn_error->clear(); #don't leak this 
+$svn_error->clear(); #don't leak this
 
 # test getting the log
 is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,
-             sub 
+             sub
              {
                  my ($changed_paths,$revision,
                      $author,$date,$message,$pool) = @_;
@@ -219,7 +245,7 @@ is($ctx->update($wcpath,'HEAD',1),$current_rev,
    'Return from update is the current rev');
 
 # no return so we should get undef as the result
-# we will get a _p_svn_error_t if there is an error. 
+# we will get a _p_svn_error_t if there is an error.
 is($ctx->propset('perl-test','test-val',"$wcpath/dir1",0),undef,
    'propset on a working copy path returns undef');
 
@@ -228,7 +254,7 @@ isa_ok($ph,'HASH','propget returns a hash');
 is($ph->{"$wcpath/dir1"},'test-val','perl-test property has the correct value');
 
 # No revnum for the working copy so we should get INVALID_REVNUM
-is($ctx->status($wcpath, undef, sub { 
+is($ctx->status($wcpath, undef, sub {
                                       my ($path,$wc_status) = @_;
                                       is($path,"$wcpath/dir1",
                                          'path param to status callback is' .
@@ -316,8 +342,14 @@ is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
                                                  'author param is expected' .
                                                  'value');
                                               ok($date,'date is defined');
-                                              is($line,'foobar',
-                                                 'line is expected value');
+                                              if ($^O eq 'MSWin32') {
+                                                #### Why two \r-s?
+                                                is($line,"foobar\r\r",
+                                                   'line is expected value');
+                                              } else {
+                                                is($line,'foobar',
+                                                   'line is expected value');
+                                              }
                                               isa_ok($pool,'_p_apr_pool_t',
                                                      'pool param is ' .
                                                      '_p_apr_pool_t');
@@ -370,21 +402,21 @@ SKIP: {
     # one command to run to test it.  If you want to use this you need
     # to change the usernames, passwords, and paths to the client cert.
     # It assumes that there is a repo running on localhost port 443 at
-    # via SSL.  The repo cert should trip a client trust issue.  The 
+    # via SSL.  The repo cert should trip a client trust issue.  The
     # client cert should be encrypted and require a pass to use it.
     # Finally uncomment the skip line below.
 
-    # Before shipping make sure the following line is uncommented. 
+    # Before shipping make sure the following line is uncommented.
     skip 'Impossible to test without external effort to setup https', 7;
- 
+
     sub simple_prompt {
         my $cred = shift;
         my $realm = shift;
         my $username_passed = shift;
-        my $may_save = shift; 
+        my $may_save = shift;
         my $pool = shift;
- 
-        ok(1,'simple_prompt called'); 
+
+        ok(1,'simple_prompt called');
         $cred->username('breser');
         $cred->password('foo');
     }
@@ -396,7 +428,7 @@ SKIP: {
         my $cert_info = shift;
         my $may_save = shift;
         my $pool = shift;
-  
+
         ok(1,'ssl_server_trust_prompt called');
         $cred->may_save(0);
         $cred->accepted_failures($failures);
@@ -416,10 +448,10 @@ SKIP: {
         my $cred = shift;
         my $may_save = shift;
         my $pool = shift;
-    
+
         ok(1,'ssl_client_cert_pw_prompt called');
         $cred->password('test');
-    } 
+    }
 
     my $oldauthbaton = $ctx->auth();
 
@@ -433,15 +465,50 @@ SKIP: {
                                 \&ssl_client_cert_pw_prompt,2)
               ),'_p_svn_auth_baton_t',
               'auth() accessor returns _p_svn_auth_baton');
-     
-    # if this doesn't work we will get an svn_error_t so by 
-    # getting a hash we know it worked. 
+
+    # if this doesn't work we will get an svn_error_t so by
+    # getting a hash we know it worked.
     my ($dirents) = $ctx->ls('https://localhost/svn/test','HEAD',1);
     isa_ok($dirents,'HASH','ls returns a HASH');
 
     # return the auth baton to its original setting
     isa_ok($ctx->auth($oldauthbaton),'_p_svn_auth_baton_t',
            'Successfully set auth_baton back to old value');
+}
+
+# Keep track of the ok-ness ourselves, since we need to know the exact
+# number of tests at the start of this file. The 'subtest' feature of
+# Test::More would be perfect for this, but it's only available in very
+# recent perl versions, it seems.
+my $ok = 1;
+# Get a list of platform specific providers, using the default
+# configuration and pool.
+my @providers = @{SVN::Core::auth_get_platform_specific_client_providers(undef, undef)};
+foreach my $p (@providers) {
+    $ok &= defined($p) && $p->isa('_p_svn_auth_provider_object_t');
+}
+ok($ok, 'svn_auth_get_platform_specific_client_providers returns _p_svn_auth_provider_object_t\'s');
+
+SKIP: {
+  skip 'Gnome-Keyring support not compiled in', 1
+      unless defined &SVN::Core::auth_set_gnome_keyring_unlock_prompt_func;
+
+  # Test setting gnome_keyring prompt function. This just sets the proper
+  # attributes in the auth baton and checks the return value (which should
+  # be a reference to the passed function reference). This does not
+  # actually try the prompt, since that would require setting up a
+  # gnome-keyring-daemon...
+  sub gnome_keyring_unlock_prompt {
+      my $keyring_name = shift;
+      my $pool = shift;
+
+      'test';
+  }
+
+  my $callback = \&gnome_keyring_unlock_prompt;
+  my $result = SVN::Core::auth_set_gnome_keyring_unlock_prompt_func(
+                   $ctx->auth(), $callback);
+  is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals paramter');
 }
 
 END {

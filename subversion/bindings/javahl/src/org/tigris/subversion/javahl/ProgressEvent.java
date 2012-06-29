@@ -65,6 +65,14 @@ public class ProgressEvent implements java.io.Serializable
     }
 
     /**
+     * A backward-compat constructor.
+     */
+    public ProgressEvent(org.apache.subversion.javahl.ProgressEvent aEvent)
+    {
+        this(aEvent.getProgress(), aEvent.getTotal());
+    }
+
+    /**
      * @return The number of bytes already transferred.
      */
     public long getProgress()

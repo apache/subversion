@@ -60,4 +60,20 @@ public final class NodeKind
     {
         return statusNames[kind];
     }
+
+    public static int fromApache(org.apache.subversion.javahl.types.NodeKind aKind)
+    {
+        switch(aKind)
+        {
+        case none:
+            return none;
+        case file:
+            return file;
+        case dir:
+            return dir;
+        case unknown:
+        default:
+            return unknown;
+        }
+    }
 }

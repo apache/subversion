@@ -27,8 +27,8 @@ from svn.core import SVN_VER_NUMBER
 
 setup (name = "svn-python",
        description = "Subversion Python Bindings",
-       maintainer = "Subversion Developers <dev@subversion.tigris.org>",
-       url = "http://subversion.tigris.org",
+       maintainer = "Subversion Developers <dev@subversion.apache.org>",
+       url = "http://subversion.apache.org",
        version = SVN_VER_NUMBER,
        packages = ["libsvn", "svn"],
        package_data = {"libsvn": ["*.dll", "*.pyd"]})

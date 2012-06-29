@@ -62,11 +62,11 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "CompanyName", "http://subversion.tigris.org/\0"
+      VALUE "CompanyName", "http://subversion.apache.org/\0"
       VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
       VALUE "FileVersion", SVN_VER_NUMBER "\0"
       VALUE "InternalName", "SVN\0"
-      VALUE "LegalCopyright", "Copyright (c) 2009 Subversion Corporation\0"
+      VALUE "LegalCopyright", "Copyright (c) 2011 The Apache Software Foundation\0"
       VALUE "OriginalFilename", APR_STRINGIFY(SVN_FILE_NAME) "\0"
       VALUE "ProductName", "Subversion\0"
       VALUE "ProductVersion", SVN_VERSION "\0"

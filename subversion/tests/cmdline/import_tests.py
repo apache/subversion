@@ -3,7 +3,7 @@
 #  import_tests.py:  import tests
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -32,10 +32,14 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 ######################################################################
 # Tests
@@ -44,6 +48,7 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 # this test should be SKIPped on systems without the executable bit
+@SkipUnless(svntest.main.is_posix_os)
 def import_executable(sbox):
   "import of executable files"
 
@@ -286,12 +291,15 @@ def import_avoid_empty_revision(sbox):
   svntest.main.safe_rmtree(empty_dir)
 
   # Verify that an empty revision has not been created
-  svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"],
+  svntest.actions.run_and_verify_svn(None,
+                                     exp_noop_up_out(1),
                                      [], "update",
                                      empty_dir)
 #----------------------------------------------------------------------
 
 # test for issue 2433: "import" does not handle eol-style correctly
+# and for normalising files with mixed line-endings upon import (r1205193)
+@Issue(2433)
 def import_eol_style(sbox):
   "import should honor the eol-style property"
 
@@ -308,6 +316,7 @@ enable-auto-props = yes
 
 [auto-props]
 *.dsp = svn:eol-style=CRLF
+*.txt = svn:eol-style=native
 '''
   tmp_dir = os.path.abspath(svntest.main.temp_dir)
   config_dir = os.path.join(tmp_dir, 'autoprops_config')
@@ -362,6 +371,41 @@ enable-auto-props = yes
                                      file_path,
                                      '--config-dir', config_dir)
 
+  # create a file with inconsistent EOLs and eol-style=native, and import it
+  file_name = "test.txt"
+  file_path = file_name
+  imp_dir_path = 'dir2'
+  imp_file_path = os.path.join(imp_dir_path, file_name)
+
+  os.mkdir(imp_dir_path, 0755)
+  svntest.main.file_append_binary(imp_file_path,
+                                  "This is file test.txt.\n" + \
+                                  "The second line.\r\n" + \
+                                  "The third line.\r")
+
+  # The import should succeed and not error out
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     imp_dir_path,
+                                     sbox.repo_url,
+                                     '--config-dir', config_dir)
+
+
+#----------------------------------------------------------------------
+@Issue(3983)
+def import_into_foreign_repo(sbox):
+  "import into a foreign repo"
+
+  sbox.build(read_only=True)
+
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.safe_rmtree(other_repo_dir, 1)
+  svntest.main.create_repos(other_repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     sbox.ospath('A/mu'), other_repo_url + '/f')
+
 #----------------------------------------------------------------------
 ########################################################################
 # Run the tests
@@ -369,11 +413,12 @@ enable-auto-props = yes
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(import_executable, svntest.main.is_posix_os),
+              import_executable,
               import_ignores,
               import_avoid_empty_revision,
               import_no_ignores,
               import_eol_style,
+              import_into_foreign_repo,
              ]
 
 if __name__ == '__main__':

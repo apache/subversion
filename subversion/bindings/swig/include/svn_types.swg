@@ -101,6 +101,8 @@
   svn_auth_provider_object_t **,
   svn_config_t **,
   svn_diff_t **,
+  svn_patch_file_t **,
+  svn_patch_t **,
   void **credentials,
   void **iter_baton,
   void **token,
@@ -157,6 +159,10 @@
   svn_wc_status_t **,
   svn_wc_status2_t **,
   svn_wc_committed_queue_t **,
+#ifdef SWIGRUBY
+  /* Only tested for Ruby */
+  svn_wc_context_t **,
+#endif
   void **set_locks_baton
 };
 
@@ -592,7 +598,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
     apr_pool_t *node_pool,
-    apr_pool_t *result_pool
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool
 };
 #endif
 
@@ -1111,6 +1118,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) const unsigned char digest[] {
     SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) const unsigned char *digest {
+    if ($input == Py_None) {
+        $1 = NULL;
+    } else {
+        $1 = (unsigned char *) PyString_AsString($input);
+        if ($1 == NULL) SWIG_fail;
+    }
 }
 #endif
 

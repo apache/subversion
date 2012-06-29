@@ -3,7 +3,7 @@
 #  autoprop_tests.py:  testing automatic properties
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,15 +25,21 @@
 ######################################################################
 
 # General modules
-import os
+import os, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -43,8 +49,8 @@ def check_proplist(path, exp_out):
 
   props = svntest.tree.get_props([path]).get(path, {})
   if props != exp_out:
-    print("Expected properties: %s" % exp_out)
-    print("Actual properties:   %s" % props)
+    logger.warn("Expected properties: %s", exp_out)
+    logger.warn("Actual properties:   %s", props)
     raise svntest.Failure
 
 
@@ -291,6 +297,7 @@ def autoprops_imp_dir(sbox):
 # Issue #2713: adding a file with an svn:eol-style property, svn should abort
 # if the file has mixed EOL style. Previously, svn aborted but had added the
 # file anyway.
+@Issue(2713)
 def fail_add_mixed_eol_style(sbox):
   "fail to add a file with mixed EOL style"
 
@@ -307,9 +314,9 @@ def fail_add_mixed_eol_style(sbox):
 
   svntest.main.file_write(filepath, 'foo\nbar\r\nbaz\r')
 
-  expected_stderr = "svn: File '.*/" + filename + \
+  expected_stderr = "svn: E200009: File '.*" + filename + \
                     "' has inconsistent newlines" + \
-                    "|" + "svn: Inconsistent line ending style\n"
+                    "|" + "svn: E135000: Inconsistent line ending style\n"
   run_and_verify_svn(None, [], expected_stderr,
                      'add', filepath, *parameters)
 

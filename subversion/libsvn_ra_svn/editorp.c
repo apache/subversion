@@ -34,8 +34,11 @@
 #include "svn_delta.h"
 #include "svn_dirent_uri.h"
 #include "svn_ra_svn.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_private_config.h"
+
+#include "private/svn_fspath.h"
 
 #include "ra_svn.h"
 
@@ -48,7 +51,7 @@
  * connection; both ends are useful for both server and client.
  */
 
-typedef struct {
+typedef struct ra_svn_edit_baton_t {
   svn_ra_svn_conn_t *conn;
   svn_ra_svn_edit_callback callback;    /* Called on successful completion. */
   void *callback_baton;
@@ -57,14 +60,14 @@ typedef struct {
 } ra_svn_edit_baton_t;
 
 /* Works for both directories and files. */
-typedef struct {
+typedef struct ra_svn_baton_t {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;
   ra_svn_edit_baton_t *eb;
   const char *token;
 } ra_svn_baton_t;
 
-typedef struct {
+typedef struct ra_svn_driver_state_t {
   const svn_delta_editor_t *editor;
   void *edit_baton;
   apr_hash_t *tokens;
@@ -85,7 +88,7 @@ typedef struct {
    field in this structure is vestigial for files, and we use it for a
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
-typedef struct {
+typedef struct ra_svn_token_entry_t {
   const char *token;
   void *baton;
   svn_boolean_t is_file;
@@ -313,10 +316,16 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   diff_stream = svn_stream_create(b, pool);
   svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
-  if (svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 1, pool);
+
+  /* If the connection does not support SVNDIFF1 or if we don't want to use
+   * compression, use the non-compressing "version 0" implementation */
+  if (   svn_ra_svn_compression_level(b->conn) > 0
+      && svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
+    svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 1,
+                            b->conn->compression_level, pool);
   else
-    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 0, pool);
+    svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 0,
+                            b->conn->compression_level, pool);
   return SVN_NO_ERROR;
 }
 
@@ -426,6 +435,11 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
   *editor = ra_svn_editor;
   *edit_baton = eb;
+
+  svn_error_clear(svn_editor__insert_shims(editor, edit_baton, *editor,
+                                           *edit_baton, NULL, NULL,
+                                           conn->shim_callbacks,
+                                           pool, pool));
 }
 
 /* --- DRIVING AN EDITOR --- */
@@ -461,7 +475,7 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds, const char *token,
 
 static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   svn_revnum_t rev;
@@ -473,7 +487,7 @@ static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            apr_array_header_t *params,
+                                            const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
   svn_revnum_t rev;
@@ -491,7 +505,7 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
-                                               apr_array_header_t *params,
+                                               const apr_array_header_t *params,
                                                ra_svn_driver_state_t *ds)
 {
   const char *path, *token;
@@ -500,14 +514,14 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, pool));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
-                                          apr_array_header_t *params,
+                                          const apr_array_header_t *params,
                                           ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *child_token, *copy_path;
@@ -520,9 +534,18 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
+
+  /* Some operations pass COPY_PATH as a full URL (commits, etc.).
+     Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
   if (copy_path)
-    copy_path = svn_uri_canonicalize(copy_path, pool);
+    {
+      if (svn_path_is_url(copy_path))
+        copy_path = svn_uri_canonicalize(copy_path, pool);
+      else
+        copy_path = svn_fspath__canonicalize(copy_path, pool);
+    }
+
   SVN_CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path,
                                         copy_rev, subpool, &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -531,7 +554,7 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,
-                                           apr_array_header_t *params,
+                                           const apr_array_header_t *params,
                                            ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *child_token;
@@ -544,7 +567,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
                                          &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -553,7 +576,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
                                                   apr_pool_t *pool,
-                                                  apr_array_header_t *params,
+                                                  const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
   const char *token, *name;
@@ -570,7 +593,7 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            apr_array_header_t *params,
+                                            const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -589,7 +612,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   const char *path;
@@ -607,7 +630,7 @@ static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,
-                                           apr_array_header_t *params,
+                                           const apr_array_header_t *params,
                                            ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *file_token, *copy_path;
@@ -618,9 +641,18 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                  &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
+
+  /* Some operations pass COPY_PATH as a full URL (commits, etc.).
+     Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
   if (copy_path)
-    copy_path = svn_uri_canonicalize(copy_path, pool);
+    {
+      if (svn_path_is_url(copy_path))
+        copy_path = svn_uri_canonicalize(copy_path, pool);
+      else
+        copy_path = svn_fspath__canonicalize(copy_path, pool);
+    }
+
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
                                    ds->file_pool, &file_entry->baton));
@@ -629,7 +661,7 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            apr_array_header_t *params,
+                                            const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *file_token;
@@ -640,7 +672,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                  &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_uri_canonicalize(path, pool);
+  path = svn_relpath_canonicalize(path, pool);
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, ds->file_pool,
                                     &file_entry->baton));
@@ -649,7 +681,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
                                                   apr_pool_t *pool,
-                                                  apr_array_header_t *params,
+                                                  const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -674,7 +706,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
                                                   apr_pool_t *pool,
-                                                  apr_array_header_t *params,
+                                                  const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -693,7 +725,7 @@ static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
                                                 apr_pool_t *pool,
-                                                apr_array_header_t *params,
+                                                const apr_array_header_t *params,
                                                 ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -713,7 +745,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
-                                                   apr_array_header_t *params,
+                                                   const apr_array_header_t *params,
                                                    ra_svn_driver_state_t *ds)
 {
   const char *token, *name;
@@ -729,7 +761,7 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -751,7 +783,7 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
                                               apr_pool_t *pool,
-                                              apr_array_header_t *params,
+                                              const apr_array_header_t *params,
                                               ra_svn_driver_state_t *ds)
 {
   const char *path;
@@ -769,7 +801,7 @@ static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   SVN_CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
@@ -781,7 +813,7 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   ds->done = TRUE;
@@ -793,7 +825,7 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
                                                 apr_pool_t *pool,
-                                                apr_array_header_t *params,
+                                                const apr_array_header_t *params,
                                                 ra_svn_driver_state_t *ds)
 {
   if (!ds->for_replay)
@@ -809,28 +841,28 @@ static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
 static const struct {
   const char *cmd;
   svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                          apr_array_header_t *params,
+                          const apr_array_header_t *params,
                           ra_svn_driver_state_t *ds);
 } ra_svn_edit_cmds[] = {
-  { "target-rev",       ra_svn_handle_target_rev },
-  { "open-root",        ra_svn_handle_open_root },
-  { "delete-entry",     ra_svn_handle_delete_entry },
-  { "add-dir",          ra_svn_handle_add_dir },
-  { "open-dir",         ra_svn_handle_open_dir },
-  { "change-dir-prop",  ra_svn_handle_change_dir_prop },
-  { "close-dir",        ra_svn_handle_close_dir },
-  { "absent-dir",       ra_svn_handle_absent_dir },
-  { "add-file",         ra_svn_handle_add_file },
+  { "change-file-prop", ra_svn_handle_change_file_prop },
   { "open-file",        ra_svn_handle_open_file },
   { "apply-textdelta",  ra_svn_handle_apply_textdelta },
   { "textdelta-chunk",  ra_svn_handle_textdelta_chunk },
-  { "textdelta-end",    ra_svn_handle_textdelta_end },
-  { "change-file-prop", ra_svn_handle_change_file_prop },
   { "close-file",       ra_svn_handle_close_file },
+  { "add-dir",          ra_svn_handle_add_dir },
+  { "open-dir",         ra_svn_handle_open_dir },
+  { "change-dir-prop",  ra_svn_handle_change_dir_prop },
+  { "delete-entry",     ra_svn_handle_delete_entry },
+  { "close-dir",        ra_svn_handle_close_dir },
+  { "absent-dir",       ra_svn_handle_absent_dir },
+  { "add-file",         ra_svn_handle_add_file },
+  { "textdelta-end",    ra_svn_handle_textdelta_end },
   { "absent-file",      ra_svn_handle_absent_file },
-  { "close-edit",       ra_svn_handle_close_edit },
   { "abort-edit",       ra_svn_handle_abort_edit },
   { "finish-replay",    ra_svn_handle_finish_replay },
+  { "target-rev",       ra_svn_handle_target_rev },
+  { "open-root",        ra_svn_handle_open_root },
+  { "close-edit",       ra_svn_handle_close_edit },
   { NULL }
 };
 
@@ -887,6 +919,17 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
         }
       if (ra_svn_edit_cmds[i].cmd)
         err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
+      else if (strcmp(cmd, "failure") == 0)
+        {
+          /* While not really an editor command this can occur when
+             reporter->finish_report() fails before the first editor command */
+          if (aborted)
+            *aborted = TRUE;
+          err = svn_ra_svn__handle_failure_status(params, pool);
+          return svn_error_compose_create(
+                            err,
+                            editor->abort_edit(edit_baton, subpool));
+        }
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
@@ -904,7 +947,9 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
               svn_error_clear(editor->abort_edit(edit_baton, subpool));
               svn_ra_svn__set_block_handler(conn, blocked_write, &state);
             }
-          write_err = svn_ra_svn_write_cmd_failure(conn, subpool, err->child);
+          write_err = svn_ra_svn_write_cmd_failure(
+                          conn, subpool,
+                          svn_ra_svn__locate_real_error_child(err));
           if (!write_err)
             write_err = svn_ra_svn_flush(conn, subpool);
           svn_ra_svn__set_block_handler(conn, NULL, NULL);

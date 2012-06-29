@@ -24,7 +24,6 @@
 
 #include <apr.h>
 #if APR_HAS_THREADS
-#include <apr_thread_mutex.h>
 #include <apr_thread_proc.h>
 #include <apr_time.h>
 #endif
@@ -36,6 +35,7 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "private/svn_atomic.h"
+#include "private/svn_mutex.h"
 
 #include "bdb-err.h"
 #include "bdb_compat.h"
@@ -76,7 +76,7 @@
    filesystems.  We /should/ be safe using this as a unique hash key,
    because the database must be on a local filesystem.  We can hope,
    anyway. */
-typedef struct
+typedef struct bdb_env_key_t
 {
   apr_dev_t device;
   apr_ino_t inode;
@@ -179,7 +179,7 @@ struct bdb_env_t
 #if APR_HAS_THREADS
 /* Get the thread-specific error info from a bdb_env_t. */
 static bdb_error_info_t *
-get_error_info(bdb_env_t *bdb)
+get_error_info(const bdb_env_t *bdb)
 {
   void *priv;
   apr_threadkey_private_get(&priv, bdb->error_info);
@@ -221,12 +221,12 @@ bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 {
   /* See the documentation at bdb_env_t's definition why the
      (bdb_env_t *) cast is safe and why it is done. */
-  bdb_error_info_t *error_info = get_error_info((bdb_env_t *) baton);
+  bdb_error_info_t *error_info = get_error_info((const bdb_env_t *) baton);
   svn_error_t *new_err;
 
   SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
 
-  new_err = svn_error_createf(SVN_NO_ERROR, NULL, "bdb: %s", msg);
+  new_err = svn_error_createf(APR_SUCCESS, NULL, "bdb: %s", msg);
   if (error_info->pending_errors)
     svn_error_compose(error_info->pending_errors, new_err);
   else
@@ -358,12 +358,11 @@ static apr_pool_t *bdb_cache_pool = NULL;
 /* The cache.  The items are bdb_env_t structures. */
 static apr_hash_t *bdb_cache = NULL;
 
-#if APR_HAS_THREADS
 /* The mutex that protects bdb_cache. */
-static apr_thread_mutex_t *bdb_cache_lock = NULL;
+static svn_mutex__t *bdb_cache_lock = NULL;
 
-/* Cleanup callback to NULL out the cache and its lock, so we don't try to
-   use them after the pool has been cleared during global shutdown. */
+/* Cleanup callback to NULL out the cache, so we don't try to use it after
+   the pool has been cleared during global shutdown. */
 static apr_status_t
 clear_cache(void *data)
 {
@@ -371,31 +370,18 @@ clear_cache(void *data)
   bdb_cache_lock = NULL;
   return APR_SUCCESS;
 }
-#endif /* APR_HAS_THREADS */
 
-static volatile svn_atomic_t bdb_cache_state;
+static volatile svn_atomic_t bdb_cache_state = 0;
 
 static svn_error_t *
-bdb_init_cb(apr_pool_t *pool)
+bdb_init_cb(void *baton, apr_pool_t *pool)
 {
-#if APR_HAS_THREADS
-  apr_status_t apr_err;
-#endif
   bdb_cache_pool = svn_pool_create(pool);
   bdb_cache = apr_hash_make(bdb_cache_pool);
-#if APR_HAS_THREADS
-  apr_err = apr_thread_mutex_create(&bdb_cache_lock,
-                                    APR_THREAD_MUTEX_DEFAULT,
-                                    bdb_cache_pool);
-  if (apr_err)
-    {
-      return svn_error_create(apr_err, NULL,
-                              "Couldn't initialize the cache of"
-                              " Berkeley DB environment descriptors");
-    }
+
+  SVN_ERR(svn_mutex__init(&bdb_cache_lock, TRUE, bdb_cache_pool));
   apr_pool_cleanup_register(bdb_cache_pool, NULL, clear_cache,
                             apr_pool_cleanup_null);
-#endif /* APR_HAS_THREADS */
 
   return SVN_NO_ERROR;
 }
@@ -403,28 +389,8 @@ bdb_init_cb(apr_pool_t *pool)
 svn_error_t *
 svn_fs_bdb__init(apr_pool_t* pool)
 {
-  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool);
+  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, NULL, pool);
 }
-
-static APR_INLINE void
-acquire_cache_mutex(void)
-{
-#if APR_HAS_THREADS
-  if (bdb_cache_lock)
-    apr_thread_mutex_lock(bdb_cache_lock);
-#endif
-}
-
-
-static APR_INLINE void
-release_cache_mutex(void)
-{
-#if APR_HAS_THREADS
-  if (bdb_cache_lock)
-    apr_thread_mutex_unlock(bdb_cache_lock);
-#endif
-}
-
 
 /* Construct a cache key for the BDB environment at PATH in *KEYP.
    if DBCONFIG_FILE is not NULL, return the opened file handle.
@@ -519,17 +485,45 @@ bdb_close(bdb_env_t *bdb)
     svn_pool_destroy(bdb->pool);
   else
     free(bdb);
-  return svn_error_return(err);
+  return svn_error_trace(err);
 }
 
+
+static svn_error_t *
+svn_fs_bdb__close_internal(bdb_env_t *bdb)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (--bdb->refcount != 0)
+    {
+      /* If the environment is panicked and automatic recovery is not
+         enabled, return an appropriate error. */
+#if !SVN_BDB_AUTO_RECOVER
+      if (svn_atomic_read(&bdb->panic))
+        err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                                db_strerror(DB_RUNRECOVERY));
+#endif
+    }
+  else
+    {
+      /* If the bdb cache has been set to NULL that means we are
+         shutting down, and the pool that holds the bdb cache has
+         already been destroyed, so accessing it here would be a Bad
+         Thing (tm) */
+      if (bdb_cache)
+        apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
+      err = bdb_close(bdb);
+    }
+  return svn_error_trace(err);
+}
 
 svn_error_t *
 svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   bdb_env_t *bdb = bdb_baton->bdb;
 
   SVN_ERR_ASSERT(bdb_baton->env == bdb_baton->bdb->env);
+  SVN_ERR_ASSERT(bdb_baton->error_info->refcount > 0);
 
   /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
      cleanup_env_baton(). */
@@ -548,31 +542,10 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 #endif
     }
 
-  acquire_cache_mutex();
-  if (--bdb->refcount != 0)
-    {
-      release_cache_mutex();
+  /* This may run during final pool cleanup when the lock is NULL. */
+  SVN_MUTEX__WITH_LOCK(bdb_cache_lock, svn_fs_bdb__close_internal(bdb));
 
-      /* If the environment is panicked and automatic recovery is not
-         enabled, return an appropriate error. */
-#if !SVN_BDB_AUTO_RECOVER
-      if (svn_atomic_read(&bdb->panic))
-        err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
-                               db_strerror(DB_RUNRECOVERY));
-#endif
-    }
-  else
-    {
-      /* If the bdb cache has been set to NULL that means we are
-         shutting down, and the pool that holds the bdb cache has
-         already been destroyed, so accessing it here would be a Bad
-         Thing (tm) */
-      if (bdb_cache)
-        apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, NULL);
-      err = bdb_close(bdb);
-      release_cache_mutex();
-    }
-  return svn_error_return(err);
+  return SVN_NO_ERROR;
 }
 
 
@@ -614,17 +587,15 @@ cleanup_env_baton(void *data)
 }
 
 
-svn_error_t *
-svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
-                 u_int32_t flags, int mode,
-                 apr_pool_t *pool)
+static svn_error_t *
+svn_fs_bdb__open_internal(bdb_env_baton_t **bdb_batonp,
+                          const char *path,
+                          u_int32_t flags, int mode,
+                          apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   bdb_env_key_t key;
   bdb_env_t *bdb;
   svn_boolean_t panic;
-
-  acquire_cache_mutex();
 
   /* We can safely discard the open DB_CONFIG file handle.  If the
      environment descriptor is in the cache, the key's immutability is
@@ -632,26 +603,16 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
      between here and the actual insertion of the newly-created
      environment into the cache, because no other thread can touch the
      cache in the meantime. */
-  err = bdb_cache_key(&key, NULL, path, pool);
-  if (err)
-    {
-      release_cache_mutex();
-      return svn_error_return(err);
-    }
+  SVN_ERR(bdb_cache_key(&key, NULL, path, pool));
 
   bdb = bdb_cache_get(&key, &panic);
   if (panic)
-    {
-      release_cache_mutex();
-      return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
-                              db_strerror(DB_RUNRECOVERY));
-    }
+    return svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
+                            db_strerror(DB_RUNRECOVERY));
 
   /* Make sure that the environment's open flags haven't changed. */
   if (bdb && bdb->flags != flags)
     {
-      release_cache_mutex();
-
       /* Handle changes to the DB_PRIVATE flag specially */
       if ((flags ^ bdb->flags) & DB_PRIVATE)
         {
@@ -673,41 +634,50 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
 
   if (!bdb)
     {
-      err = create_env(&bdb, path, svn_pool_create(bdb_cache_pool));
-      if (!err)
+      svn_error_t *err;
+
+      SVN_ERR(create_env(&bdb, path, svn_pool_create(bdb_cache_pool)));
+      err = bdb_open(bdb, flags, mode);
+      if (err)
         {
-          err = bdb_open(bdb, flags, mode);
-          if (!err)
-            {
-              apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, bdb);
-              bdb->flags = flags;
-              bdb->refcount = 1;
-            }
-          else
-            {
-              /* Clean up, and we can't do anything about returned errors. */
-              svn_error_clear(bdb_close(bdb));
-            }
+          /* Clean up, and we can't do anything about returned errors. */
+          svn_error_clear(bdb_close(bdb));
+          return svn_error_trace(err);
         }
+
+      apr_hash_set(bdb_cache, &bdb->key, sizeof bdb->key, bdb);
+      bdb->flags = flags;
+      bdb->refcount = 1;
     }
   else
     {
       ++bdb->refcount;
     }
 
-  if (!err)
-    {
-      *bdb_batonp = apr_palloc(pool, sizeof **bdb_batonp);
-      (*bdb_batonp)->env = bdb->env;
-      (*bdb_batonp)->bdb = bdb;
-      (*bdb_batonp)->error_info = get_error_info(bdb);
-      ++(*bdb_batonp)->error_info->refcount;
-      apr_pool_cleanup_register(pool, *bdb_batonp, cleanup_env_baton,
-                                apr_pool_cleanup_null);
-    }
+  *bdb_batonp = apr_palloc(pool, sizeof **bdb_batonp);
+  (*bdb_batonp)->env = bdb->env;
+  (*bdb_batonp)->bdb = bdb;
+  (*bdb_batonp)->error_info = get_error_info(bdb);
+  ++(*bdb_batonp)->error_info->refcount;
+  apr_pool_cleanup_register(pool, *bdb_batonp, cleanup_env_baton,
+                            apr_pool_cleanup_null);
 
-  release_cache_mutex();
-  return svn_error_return(err);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
+                 u_int32_t flags, int mode,
+                 apr_pool_t *pool)
+{
+  SVN_MUTEX__WITH_LOCK(bdb_cache_lock,
+                       svn_fs_bdb__open_internal(bdb_batonp,
+                                                 path,
+                                                 flags,
+                                                 mode,
+                                                 pool));
+
+  return SVN_NO_ERROR;
 }
 
 

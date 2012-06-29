@@ -40,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_version.h"
 
 #include "private/svn_wc_private.h"
 
@@ -185,13 +186,14 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 {
   int i = 0;
   svn_wc_conflict_version_t *left, *right;
-  svn_wc_conflict_description_t *c;
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_conflict_description2_t *c;
+  svn_wc_context_t *wc_ctx;
 
   /* Conflict description parameters */
-  const char *wc_path, *repos_url1, *repos_url2, *path_in_repos1, *path_in_repos2;
+  const char *wc_path, *wc_abspath;
+  const char *repos_url1, *repos_url2, *path_in_repos1, *path_in_repos2;
   int operation, action, reason;
-  int peg_rev1, peg_rev2;
+  long peg_rev1, peg_rev2;
   int kind, kind1, kind2;
 
   if (argc != 13)
@@ -199,7 +201,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
                             "Wrong number of arguments");
 
   /* Read the parameters */
-  wc_path = svn_path_internal_style(argv[i++], pool);
+  wc_path = svn_dirent_internal_style(argv[i++], pool);
   SVN_ERR(read_enum_field(&kind, node_kind_map, argv[i++], pool));
   SVN_ERR(read_enum_field(&operation, operation_map, argv[i++], pool));
   SVN_ERR(read_enum_field(&action, action_map, argv[i++], pool));
@@ -215,26 +217,19 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 
 
   /* Allocate and fill in the description data structures */
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, pool));
   left = svn_wc_conflict_version_create(repos_url1, path_in_repos1, peg_rev1,
                                         kind1, pool);
   right = svn_wc_conflict_version_create(repos_url2, path_in_repos2, peg_rev2,
                                          kind2, pool);
-  c = svn_wc_conflict_description_create_tree(wc_path, NULL, kind,
+  c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
                                               operation, left, right, pool);
   c->action = (svn_wc_conflict_action_t)action;
   c->reason = (svn_wc_conflict_reason_t)reason;
 
   /* Raise the conflict */
-  {
-    const char *parent_path;
-
-    parent_path = svn_path_dirname(wc_path, pool);
-    SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path, TRUE, 0,
-                             NULL, NULL, pool));
-  }
-
-  /* Raise the conflict */
-  SVN_ERR(svn_wc__add_tree_conflict(c, adm_access, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc__add_tree_conflict(wc_ctx, c, pool));
 
   return SVN_NO_ERROR;
 }
@@ -321,7 +316,6 @@ check_lib_versions(void)
 int
 main(int argc, const char *argv[])
 {
-  apr_allocator_t *allocator;
   apr_pool_t *pool;
   svn_error_t *err;
   apr_getopt_t *os;
@@ -341,13 +335,7 @@ main(int argc, const char *argv[])
   /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
-  if (apr_allocator_create(&allocator))
-    return EXIT_FAILURE;
-
-  apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
-
-  pool = svn_pool_create_ex(NULL, allocator);
-  apr_allocator_owner_set(allocator, pool);
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   /* Check library versions */
   err = check_lib_versions();
@@ -377,10 +365,8 @@ main(int argc, const char *argv[])
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        {
-          usage(pool);
-          return EXIT_FAILURE;
-        }
+        usage(pool);  /* this will exit() */
+
       switch (opt)
         {
         case 'h':
@@ -391,8 +377,7 @@ main(int argc, const char *argv[])
           exit(0);
           break;
         default:
-          usage(pool);
-          return EXIT_FAILURE;
+          usage(pool);  /* this will exit() */
         }
     }
 
@@ -408,10 +393,7 @@ main(int argc, const char *argv[])
     }
 
   if (remaining_argv->nelts < 1)
-    {
-      usage(pool);
-      return EXIT_FAILURE;
-    }
+    usage(pool);  /* this will exit() */
 
   /* Do the main task */
   SVNRAISETC_INT_ERR(raise_tree_conflict(remaining_argv->nelts,

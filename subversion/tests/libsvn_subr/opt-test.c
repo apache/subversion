@@ -44,14 +44,19 @@ test_parse_peg_rev(apr_pool_t *pool)
     { "foo/bar@{1999-12-31}", "foo/bar",      {svn_opt_revision_date, {0}} },
     { "http://a/b@27",        "http://a/b",   {svn_opt_revision_number, {27}} },
     { "http://a/b@COMMITTED", "http://a/b",   {svn_opt_revision_committed} },
-    { "foo/bar@1:2",          NULL,           {svn_opt_revision_unspecified} },
-    { "foo/bar@baz",          NULL,           {svn_opt_revision_unspecified} },
+    { "http://a/b@{1999-12-31}",    "http://a/b",{svn_opt_revision_date, {0}} },
+    { "http://a/b@%7B1999-12-31%7D","http://a/b",{svn_opt_revision_date, {0}} },
+    { "foo/bar@1:2",          NULL,           {-1} },
+    { "foo/bar@baz",          NULL,           {-1} },
     { "foo/bar@",             "foo/bar",      {svn_opt_revision_unspecified} },
+    { "foo/@bar@",            "foo/@bar",     {svn_opt_revision_unspecified} },
     { "foo/bar/@13",          "foo/bar/",     {svn_opt_revision_number, {13}} },
     { "foo/bar@@13",          "foo/bar@",     {svn_opt_revision_number, {13}} },
     { "foo/@bar@HEAD",        "foo/@bar",     {svn_opt_revision_head} },
     { "foo@/bar",             "foo@/bar",     {svn_opt_revision_unspecified} },
     { "foo@HEAD/bar",         "foo@HEAD/bar", {svn_opt_revision_unspecified} },
+    { "@foo/bar",             "@foo/bar",     {svn_opt_revision_unspecified} },
+    { "@foo/bar@",            "@foo/bar",     {svn_opt_revision_unspecified} },
   };
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)

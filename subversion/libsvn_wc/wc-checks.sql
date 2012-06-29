@@ -22,26 +22,56 @@
  */
 
 
+-- STMT_VERIFICATION_TRIGGERS
+
 /* ------------------------------------------------------------------------- */
 
-CREATE TRIGGER no_repository_updates BEFORE UPDATE ON REPOSITORY
+CREATE TEMPORARY TRIGGER no_repository_updates BEFORE UPDATE ON repository
 BEGIN
   SELECT RAISE(FAIL, 'Updates to REPOSITORY are not allowed.');
 END;
 
-
 /* ------------------------------------------------------------------------- */
 
-/* no triggers for WCROOT yet */
-
-
-/* ------------------------------------------------------------------------- */
-
-CREATE TRIGGER valid_repos_id_insert BEFORE INSERT ON BASE_NODE
-WHEN new.repos_id is not null
+/* Verify: on every NODES row: parent_relpath is parent of local_relpath */
+CREATE TEMPORARY TRIGGER validation_01 BEFORE INSERT ON nodes
+WHEN NOT ((new.local_relpath = '' AND new.parent_relpath IS NULL)
+          OR (relpath_depth(new.local_relpath)
+              = relpath_depth(new.parent_relpath) + 1))
 BEGIN
-  SELECT * FROM REPOSITORY WHERE id = new.repos_id;
+  SELECT RAISE(FAIL, 'WC DB validity check 01 failed');
 END;
 
+/* Verify: on every NODES row: its op-depth <= its own depth */
+CREATE TEMPORARY TRIGGER validation_02 BEFORE INSERT ON nodes
+WHEN NOT new.op_depth <= relpath_depth(new.local_relpath)
+BEGIN
+  SELECT RAISE(FAIL, 'WC DB validity check 02 failed');
+END;
 
-/* ------------------------------------------------------------------------- */
+/* Verify: on every NODES row: it is an op-root or it has a parent with the
+    sames op-depth. (Except when the node is a file external) */
+CREATE TEMPORARY TRIGGER validation_03 BEFORE INSERT ON nodes
+WHEN NOT (
+    (new.op_depth = relpath_depth(new.local_relpath))
+    OR
+    (EXISTS (SELECT 1 FROM nodes
+              WHERE wc_id = new.wc_id AND op_depth = new.op_depth
+                AND local_relpath = new.parent_relpath))
+  )
+ AND NOT (new.file_external IS NOT NULL AND new.op_depth = 0)
+BEGIN
+  SELECT RAISE(FAIL, 'WC DB validity check 03 failed');
+END;
+
+/* Verify: on every ACTUAL row (except root): a NODES row exists at its
+ * parent path. */
+CREATE TEMPORARY TRIGGER validation_04 BEFORE INSERT ON actual_node
+WHEN NOT (new.local_relpath = ''
+          OR EXISTS (SELECT 1 FROM nodes
+                       WHERE wc_id = new.wc_id
+                         AND local_relpath = new.parent_relpath))
+BEGIN
+  SELECT RAISE(FAIL, 'WC DB validity check 04 failed');
+END;
+

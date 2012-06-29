@@ -19,7 +19,7 @@
 import sys, os, re
 
 # Note: Right now, OLD_LICENSE and NEW_LICENSE are the same, because
-# r38370 updated all the license blocks.  In the future, if we update
+# r878444 updated all the license blocks.  In the future, if we update
 # the license block again, change just NEW_LICENSE and use this script.
 
 OLD_LICENSE = '''\

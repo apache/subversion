@@ -71,7 +71,7 @@ static apr_status_t wait_for_input(apr_file_t *f,
    * ourselves here.
    */
   return APR_ENOTIMPL;
-#endif  
+#endif
 }
 
 /* Set @a *result to the result of prompting the user with @a
@@ -95,7 +95,7 @@ prompt(const char **result,
   apr_file_t *fp;
   char c;
 
-  svn_stringbuf_t *strbuf = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *strbuf = svn_stringbuf_create_empty(pool);
 
   status = apr_file_open_stdin(&fp, pool);
   if (status)
@@ -147,7 +147,7 @@ prompt(const char **result,
                 SVN_ERR_MALFUNCTION();
             }
 
-          svn_stringbuf_appendbytes(strbuf, &c, 1);
+          svn_stringbuf_appendbyte(strbuf, c);
         }
     }
   else
@@ -418,12 +418,14 @@ plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
           else
             return err;
         }
-      if (apr_strnatcasecmp(answer, _("yes")) == 0)
+      if (apr_strnatcasecmp(answer, _("yes")) == 0 ||
+          apr_strnatcasecmp(answer, _("y")) == 0)
         {
           *may_save_plaintext = TRUE;
           answered = TRUE;
         }
-      else if (apr_strnatcasecmp(answer, _("no")) == 0)
+      else if (apr_strnatcasecmp(answer, _("no")) == 0 ||
+               apr_strnatcasecmp(answer, _("n")) == 0)
         {
           *may_save_plaintext = FALSE;
           answered = TRUE;

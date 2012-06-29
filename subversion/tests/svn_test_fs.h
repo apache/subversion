@@ -1,4 +1,4 @@
-/* fs-helpers.c --- tests for the filesystem
+/* svn_test_fs.h --- test helpers for the filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_TEST__FS_HELPERS_H
-#define SVN_TEST__FS_HELPERS_H
+#ifndef SVN_TEST_FS_H
+#define SVN_TEST_FS_H
 
 #include <apr_pools.h>
 #include "svn_error.h"
@@ -73,10 +73,9 @@ svn_test__create_repos(svn_repos_t **repos_p,
                        const svn_test_opts_t *opts,
                        apr_pool_t *pool);
 
-
 /* Read all data from a generic read STREAM, and return it in STRING.
-   Allocate the svn_stringbuf_t in APRPOOL.  (All data in STRING will be
-   dup'ed from STREAM using APRPOOL too.) */
+   Allocate the svn_stringbuf_t in POOL.  (All data in STRING will be
+   dup'ed from STREAM using POOL too.) */
 svn_error_t *
 svn_test__stream_to_string(svn_stringbuf_t **string,
                            svn_stream_t *stream,
@@ -103,29 +102,10 @@ svn_test__get_file_contents(svn_fs_root_t *root,
 
 /* The Helper Functions to End All Helper Functions */
 
-/* Structure used for testing integrity of the filesystem's revision
-   using validate_tree(). */
-typedef struct svn_test__tree_entry_t
-{
-  const char *path;     /* full path of this node */
-  const char *contents; /* text contents (NULL for directories) */
-}
-svn_test__tree_entry_t;
-
-
-/* Wrapper for an array of the above svn_test__tree_entry_t's.  */
-typedef struct svn_test__tree_t
-{
-  svn_test__tree_entry_t *entries;
-  int num_entries;
-}
-svn_test__tree_t;
-
-
 /* Given a transaction or revision root (ROOT), check to see if the
    tree that grows from that root has all the path entries, and only
    those entries, passed in the array ENTRIES (which is an array of
-   NUM_ENTRIES tree_test_entry_t's).  */
+   NUM_ENTRIES svn_test__tree_entry_t's).  */
 svn_error_t *
 svn_test__validate_tree(svn_fs_root_t *root,
                         svn_test__tree_entry_t *entries,
@@ -169,9 +149,25 @@ svn_error_t *
 svn_test__create_greek_tree(svn_fs_root_t *txn_root,
                             apr_pool_t *pool);
 
+/* Create the Greek Tree under TXN_ROOT at dir ROOT_DIR.
+ * ROOT_DIR should be created by the caller.
+ *
+ * Note: this function will not commit the transaction.  */
+svn_error_t *
+svn_test__create_greek_tree_at(svn_fs_root_t *txn_root,
+                               const char *root_dir,
+                               apr_pool_t *pool);
+
+/* Create a new repository with a greek tree, trunk, branch and some
+   merges between them. */
+svn_error_t *
+svn_test__create_blame_repository(svn_repos_t **out_repos,
+                                  const char *test_name,
+                                  const svn_test_opts_t *opts,
+                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* SVN_TEST__FS_HELPERS_H */
+#endif  /* SVN_TEST_FS_H */

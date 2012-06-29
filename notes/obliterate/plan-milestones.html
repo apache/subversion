@@ -66,7 +66,8 @@
       <th>November 2009</th>
       <th>Milestone 1</th>
       <th>Milestone 2</th>
-      <th>Milestone 3</th>
+      <th>Milestone 3a</th>
+      <th>Milestone 3b</th>
       <th>Not planned</th>
     </tr>
     <tr>
@@ -82,6 +83,9 @@
         Obliteration of any node-rev. Some user docs.
       </td>
       <td>
+        Support FSFS.
+      </td>
+      <td>
         Support for large-scale deployment.
       </td>
       <td>
@@ -94,18 +98,23 @@
       <td class="done">
         <p>single node (PATH@REV)</p>
       </td>
+      <td class="done">
+        <p></p>
+      </td>
       <td>
         <p></p>
       </td>
       <td>
-        <p>rev range (PATH@X:Y)</p>
+        <p></p>
       </td>
       <td>
-        <p>multiple targets</p>
+        <p>multiple paths (PATH1 PATH2 ...)</p>
+        <p>revision range (PATH@X:Y)</p>
       </td>
       <td>
         <p>GUI</p>
         <p>find all copies of the specified nodes</p>
+        <p>dry-run mode</p>
       </td>
     </tr>
     <tr>
@@ -114,8 +123,11 @@
         <p>pre-oblit hook designed</p>
         <p>pre-oblit hook template generated on repository creation</p>
       </td>
-      <td>
+      <td class="done">
         <p>call the pre-oblit hook</p>
+      </td>
+      <td>
+        <p></p>
       </td>
       <td>
         <p></p>
@@ -135,18 +147,21 @@
         <p>skeleton of txn-replacement functions created (doesn't work)</p>
       </td>
       <td>
-        <p>in FSFS: oblit the last revision of a node's history</p>
+        <p class="done">oblit the last revision of a node's history (in BDB)</p>
         <p>(to do: understand &amp; doc the DAG node-copy-ids)</p>
-        <p>(to design: refine <a href="design-repos.html"
+        <p class="done">(to design: refine <a href="design-repos.html"
           >oblit txn replacement</a>)</p>
-        <p>(to design: FSFS rev-file replacement: offset mapping)</p>
       </td>
       <td>
         <p>oblit any rev of a node's history</p>
         <p>(to design: adjusting of back-refs)</p>
         <p>(to design: forward-refs for efficient searching - see <a href=
-        "http://svn.collab.net/repos/svn/branches/fs-successor-ids/BRANCH-README"
+        "http://svn.apache.org/repos/asf/subversion/branches/fs-successor-ids/BRANCH-README"
         >fs-successor-ids</a> branch for BDB)</p>
+      </td>
+      <td>
+        <p>FSFS implementation</p>
+        <p>(to design: FSFS rev-file replacement: offset mapping)</p>
       </td>
       <td>
         <p>forward-refs for efficient searching</p>
@@ -163,14 +178,17 @@
       <td class="done">
         <p></p>
       </td>
-      <td>
+      <td class="done">
         <p></p>
       </td>
       <td>
         <p></p>
       </td>
       <td>
-        <p>space recovery</p>
+        <p></p>
+      </td>
+      <td>
+        <p>space recovery (FSFS)</p>
       </td>
       <td>
         <p></p>
@@ -182,11 +200,14 @@
         <p>post-oblit hook designed</p>
         <p>post-oblit hook template generated on repository creation</p>
       </td>
-      <td>
+      <td class="done">
         <p></p>
       </td>
       <td>
         <p>call post-oblit hook</p>
+      </td>
+      <td>
+        <p></p>
       </td>
       <td>
         <p>server log file</p>
@@ -200,11 +221,14 @@
       <td class="done">
         <p></p>
       </td>
-      <td>
+      <td class="done">
         <p></p>
       </td>
       <td>
         <p>discover &amp; doc the WC behaviour &amp; how to survive it</p>
+      </td>
+      <td>
+        <p></p>
       </td>
       <td>
         <p>design WC behaviour improvements</p>
@@ -219,11 +243,14 @@
       <td class="done">
         <p>skeleton of one automated test (doesn't work)</p>
       </td>
-      <td>
+      <td class="done">
         <p>some automated tests</p>
       </td>
       <td>
         <p>automated tests for most parts</p>
+      </td>
+      <td>
+        <p></p>
       </td>
       <td>
         <p>complete automated tests</p>
@@ -245,6 +272,9 @@
       </td>
       <td>
         <p>some user docs</p>
+      </td>
+      <td>
+        <p></p>
       </td>
       <td>
         <p>user documentation</p>

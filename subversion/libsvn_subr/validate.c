@@ -27,11 +27,11 @@
 
 /*** Includes. ***/
 
-#include <apr_lib.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
 #include "svn_error.h"
+#include "svn_ctype.h"
 #include "svn_private_config.h"
 
 
@@ -45,6 +45,7 @@ svn_mime_type_validate(const char *mime_type, apr_pool_t *pool)
      specification, e.g., "text/html; charset=UTF-8", make sure we're
      only looking at the media type here. */
   const apr_size_t len = strcspn(mime_type, "; ");
+  const apr_size_t len2 = strlen(mime_type);
   const char *const slash_pos = strchr(mime_type, '/');
   apr_size_t i;
   const char *tspecials = "()<>@,;:\\\"/[]?=";
@@ -63,13 +64,25 @@ svn_mime_type_validate(const char *mime_type, apr_pool_t *pool)
   for (i = 0; i < len; i++)
     {
       if (&mime_type[i] != slash_pos
-        && (! apr_isascii(mime_type[i])
-            || apr_iscntrl(mime_type[i])
-            || apr_isspace(mime_type[i])
+         && (! svn_ctype_isascii(mime_type[i])
+            || svn_ctype_iscntrl(mime_type[i])
+            || svn_ctype_isspace(mime_type[i])
             || (strchr(tspecials, mime_type[i]) != NULL)))
         return svn_error_createf
           (SVN_ERR_BAD_MIME_TYPE, NULL,
-           _("MIME type '%s' contains invalid character '%c'"),
+           _("MIME type '%s' contains invalid character '%c' "
+             "in media type"),
+           mime_type, mime_type[i]);
+    }
+
+  /* Check the whole string for unsafe characters. (issue #2872) */
+  for (i = 0; i < len2; i++)
+    {
+      if (svn_ctype_iscntrl(mime_type[i]) && mime_type[i] != '\t')
+        return svn_error_createf(
+           SVN_ERR_BAD_MIME_TYPE, NULL,
+           _("MIME type '%s' contains invalid character '0x%02x' "
+             "in postfix"),
            mime_type, mime_type[i]);
     }
 

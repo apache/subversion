@@ -26,7 +26,10 @@
 #include "fs.h"
 
 /* Open the fsfs filesystem pointed to by PATH and associate it with
-   filesystem object FS.  Use POOL for temporary allocations. */
+   filesystem object FS.  Use POOL for temporary allocations.
+
+   ### Some parts of *FS must have been initialized beforehand; some parts
+       (including FS->path) are initialized by this function. */
 svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
@@ -35,11 +38,25 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
-/* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
-   Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
-                                const char *dst_path,
-                                apr_pool_t *pool);
+/* Verify the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__verify(svn_fs_t *fs,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
+                               apr_pool_t *pool);
+
+/* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
+ * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
+ * exists in DST_FS. Use POOL for temporary allocations. */
+svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
+                                 svn_fs_t *dst_fs,
+                                 const char *src_path,
+                                 const char *dst_path,
+                                 svn_boolean_t incremental,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *pool);
 
 /* Recover the fsfs associated with filesystem FS.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
@@ -68,6 +85,7 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
 /* Write the node-revision NODEREV into the stream OUTFILE, compatible with
    filesystem format FORMAT.  Only write mergeinfo-related metadata if
    INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
+/* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          node_revision_t *noderev,
@@ -77,6 +95,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
 
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
    allocated in POOL. */
+/* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
@@ -89,28 +108,18 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
+/* Return an error iff REV does not exist in FS. */
+svn_error_t *
+svn_fs_fs__revision_exists(svn_revnum_t rev,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool);
+
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */
 svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      svn_fs_t *fs,
                                      svn_revnum_t rev,
                                      apr_pool_t *pool);
-
-/* Serialize a directory contents hash.
-   Implements svn_cache__serialize_func_t */
-svn_error_t *
-svn_fs_fs__dir_entries_serialize(char **data,
-                                 apr_size_t *data_len,
-                                 void *in,
-                                 apr_pool_t *pool);
-
-/* Deserialize a directory contents hash.
-   Implements svn_cache__deserialize_func_t */
-svn_error_t *
-svn_fs_fs__dir_entries_deserialize(void **out,
-                                   const char *data,
-                                   apr_size_t data_len,
-                                   apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
    directory entries of node-revision NODEREV in filesystem FS.  The
@@ -120,6 +129,18 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          svn_fs_t *fs,
                                          node_revision_t *noderev,
                                          apr_pool_t *pool);
+
+/* Set *DIRENT to the entry identified by NAME in the directory given
+   by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
+   be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
+   used for temporary allocations. */
+svn_error_t *
+svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+                                  svn_fs_t *fs,
+                                  node_revision_t *noderev,
+                                  const char *name,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation of node-revision NODEREV as seen in filesystem FS.
@@ -207,7 +228,7 @@ svn_error_t *svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
 /* Change transaction properties in transaction TXN based on PROPS.
    Perform temporary allocations from POOL. */
 svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
-                                         apr_array_header_t *props,
+                                         const apr_array_header_t *props,
                                          apr_pool_t *pool);
 
 /* Return whether or not the given FS supports mergeinfo metadata. */
@@ -319,15 +340,6 @@ svn_error_t *svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                                svn_fs_txn_t *txn,
                                apr_pool_t *pool);
 
-/* Commit the obliteration transaction TXN in filesystem FS for
-   revision number REV.  If the transaction is out of date (### meaning what?), return
-   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
-   allocations. */
-svn_error_t *svn_fs_fs__commit_obliteration(svn_revnum_t rev,
-                                            svn_fs_t *fs,
-                                            svn_fs_txn_t *txn,
-                                            apr_pool_t *pool);
-
 /* Return the next available copy_id in *COPY_ID for the transaction
    TXN_ID in filesystem FS.  Allocate space in POOL. */
 svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
@@ -336,16 +348,13 @@ svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
                                         apr_pool_t *pool);
 
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
-   temporary allocations from POOL. */
+   temporary allocations from POOL.
+
+   ### Some parts of *FS must have been initialized beforehand; some parts
+       (including FS->path) are initialized by this function. */
 svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
-
-/* Store the uuid of the repository FS in *UUID.  Allocate space in
-   POOL. */
-svn_error_t *svn_fs_fs__get_uuid(svn_fs_t *fs,
-                                 const char **uuid,
-                                 apr_pool_t *pool);
 
 /* Set the uuid of repository FS to UUID, if UUID is not NULL;
    otherwise, set the uuid of FS to a newly generated UUID.  Perform
@@ -392,23 +401,14 @@ svn_error_t *svn_fs_fs__txn_changes_fetch(apr_hash_t **changes,
                                           apr_pool_t *pool);
 
 
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL. */
-svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
-                                        const char *new_filename,
-                                        const char *perms_reference,
-                                        apr_pool_t *pool);
+/* Set *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate *PATH in POOL.
 
-/* Match the perms on FILENAME to the PERMS_REFERENCE file if we're
-   not on a win32 system.  On win32, this is a no-op. */
-svn_error_t *svn_fs_fs__dup_perms(const char *filename,
-                                  const char *perms_reference,
-                                  apr_pool_t *pool);
-
-/* Sets *PATH to the path of REV in FS, whether in a pack file or not.
-   Allocate in POOL. */
+   Note: If the caller does not have the write lock on FS, then the path is
+   not guaranteed to be correct or to remain correct after the function
+   returns, because the revision might become packed before or after this
+   call.  If a file exists at that path, then it is correct; if not, then
+   the caller should call update_min_unpacked_rev() and re-try once. */
 svn_error_t *
 svn_fs_fs__path_rev_absolute(const char **path,
                              svn_fs_t *fs,
@@ -441,9 +441,11 @@ svn_error_t *svn_fs_fs__revision_prop(svn_string_t **value_p, svn_fs_t *fs,
 /* Change, add, or delete a property on a revision REV in filesystem
    FS.  NAME gives the name of the property, and value, if non-NULL,
    gives the new contents of the property.  If value is NULL, then the
-   property will be deleted.  Do any temporary allocation in POOL.  */
+   property will be deleted.  If OLD_VALUE_P is not NULL, do nothing unless the
+   preexisting value is *OLD_VALUE_P.  Do any temporary allocation in POOL.  */
 svn_error_t *svn_fs_fs__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
                                         const char *name,
+                                        const svn_string_t *const *old_value_p,
                                         const svn_string_t *value,
                                         apr_pool_t *pool);
 
@@ -473,13 +475,6 @@ svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                   svn_revnum_t rev, apr_uint32_t flags,
                                   apr_pool_t *pool);
 
-/* Begin a new transaction in filesystem FS, to replace an existing
-   revision REV.  The new transaction is returned in *TXN_P.  Allocate
-   the new transaction structure from POOL. */
-svn_error_t *svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                                               svn_fs_t *fs, svn_revnum_t rev,
-                                               apr_pool_t *pool);
-
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
    from POOL. */
@@ -487,9 +482,9 @@ svn_error_t *svn_fs_fs__txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                                  const char *propname, apr_pool_t *pool);
 
 /* If directory PATH does not exist, create it and give it the same
-   permissions as FS->path.*/
+   permissions as FS_PATH.*/
 svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
-                                          svn_fs_t *fs,
+                                          const char *fs_path,
                                           apr_pool_t *pool);
 
 /* Update the node origin index for FS, recording the mapping from
@@ -519,11 +514,29 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            apr_pool_t *pool);
 
 
-/* Sets up the svn_cache__t structures in FS.  POOL is used for
-   temporary allocations. */
+/* Initialize all session-local caches in FS according to the global
+   cache settings. Use POOL for allocations.
+
+   Please note that it is permissible for this function to set some
+   or all of these caches to NULL, regardless of any setting. */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
+/* Initialize all transaction-local caches in FS according to the global
+   cache settings and make TXN_ID part of their key space. Use POOL for
+   allocations.
+
+   Please note that it is permissible for this function to set some or all
+   of these caches to NULL, regardless of any setting. */
+svn_error_t *
+svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
+                                 const char *txn_id,
+                                 apr_pool_t *pool);
+
+/* Resets the svn_cache__t structures local to the current transaction in FS.
+   Calling it more than once per txn or from outside any txn is allowed. */
+void
+svn_fs_fs__reset_txn_caches(svn_fs_t *fs);
 
 /* Possibly pack the repository at PATH.  This just take full shards, and
    combines all the revision files into a single one, with a manifest header.

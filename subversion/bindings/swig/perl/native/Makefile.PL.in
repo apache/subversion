@@ -1,4 +1,25 @@
 #!/usr/bin/perl
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+
 use ExtUtils::MakeMaker;
 use Config;
 use Cwd 'abs_path';
@@ -16,26 +37,21 @@ my $swig_srcdir = "${svnlib_srcdir}/bindings/swig";
 my $swig_builddir = "${svnlib_builddir}/bindings/swig";
 
 my @modules = qw/client delta fs ra repos wc/;
-my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
-               map {"$svnlib_builddir/libsvn_$_/.libs"} (@modules, qw/diff subr
-                                                                      ra_local
-                                                                      ra_svn
-                                                                      ra_neon
-                                                                      ra_serf
-                                                                      fs_base
-                                                                      fs_util
-                                                                      fs_fs/));
+my @ldpaths = (abs_path($swig_builddir) . "/perl/libsvn_swig_perl/.libs",
+               map { abs_path($svnlib_builddir) . "/libsvn_$_/.libs" }
+                   @modules, qw/diff subr ra_local ra_svn ra_neon
+                                ra_serf fs_base fs_util fs_fs/);
+
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
 my $cppflags = '@CPPFLAGS@';
 my $cflags = '@CFLAGS@';
-my $apr_cflags = '@SVN_APR_INCLUDES@';
-my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
+my $includes = '@SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@';
 
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
-my $apr_ldflags = '@SVN_APR_LIBS@' 
+my $apr_ldflags = '@SVN_APR_LIBS@'
    if $^O eq 'darwin' or $^O eq 'cygwin';
 
 chomp $apr_shlib_path_var;
@@ -43,15 +59,15 @@ chomp $apr_shlib_path_var;
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     DEFINE => $cppflags,
-    CCFLAGS => $cflags,
-    INC  => join(' ',$apr_cflags, $apu_cflags, 
+    CCFLAGS => join(' ', $cflags, $Config{ccflags}),
+    INC  => join(' ', $includes, $cppflags,
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",
                  " -I$svnlib_builddir",
                  " -I$swig_srcdir -g"),
     OBJECT => q/$(O_FILES)/,
     LIBS => [join(' ', $apr_ldflags,
-                  (map {$_ = abs_path($_); "-L$_"} @ldpaths),
+                  (map {"-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
                   `$swig -perl -ldflags`)],
     test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
@@ -87,13 +103,12 @@ for (@modules) {
 # the dependencies need to be fixed
 
 sub MY::postamble {
-   package MY ;
-   
-   my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
-   my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
+    my $module_c_files = join(' ',map { "svn_$_.c"} @modules);
+    my $module_make_commands = join('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
 
-  my $fullperlrun = "$apr_shlib_path_var=" . join(':',@ldpaths);
-  
+    my $fullperlrun = "$apr_shlib_path_var=" .
+                      join(':', "\$($apr_shlib_path_var)", @ldpaths);
+
    return <<"EOPOST";
 all :: modules
 test :: modules

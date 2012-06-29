@@ -48,36 +48,29 @@ extern "C" {
 char *
 svn_eol__find_eol_start(char *buf, apr_size_t len);
 
-/* Return the first eol marker found in [@a buf, @a endp) as a
- * NUL-terminated string, or NULL if no eol marker is found.
+/* Return the first eol marker found in buffer @a buf as a NUL-terminated
+ * string, or NULL if no eol marker is found. Do not examine more than
+ * @a len bytes in @a buf.
  *
  * If the last valid character of @a buf is the first byte of a
  * potentially two-byte eol sequence, just return that single-character
  * sequence, that is, assume @a buf represents a CR-only or LF-only file.
  * This is correct for callers that pass an entire file at once, and is
- * no more likely to be incorrect than correct for any caller that
- * doesn't.
+ * no more likely to be incorrect than correct for any caller that doesn't.
+ *
+ * The returned string is statically allocated, i.e. it is NOT a pointer
+ * to an address within @a buf.
+ *
+ * If an eol marker is found and @a eolp is not NULL, store in @a *eolp
+ * the address within @a buf of the first byte of the eol marker.
+ * This allows callers to tell whether there might be more than one eol
+ * sequence in @a buf, as well as detect two-byte eol sequences that
+ * span buffer boundaries.
  *
  * @since New in 1.7
  */
 const char *
-svn_eol__detect_eol(char *buf, char *endp);
-
-/* Detect the EOL marker used in @a file and return it in @a *eol.
- * If it cannot be detected, set @a *eol to NULL.
- *
- * The file is searched starting at the current file cursor position.
- * The first EOL marker found will be returnd. So if the file has
- * inconsistent EOL markers, this won't be detected.
- *
- * Upon return, the original file cursor position is always preserved,
- * even if an error is thrown.
- *
- * Do temporary allocations in @a pool.
- *
- * @since New in 1.7 */
-svn_error_t *
-svn_eol__detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool);
+svn_eol__detect_eol(char *buf, apr_size_t len, char **eolp);
 
 #ifdef __cplusplus
 }

@@ -65,6 +65,11 @@ def SVN_ERR(ret):
         raise SubversionException(err)
     return ret
 
+# If a error is returned from a Subversion function,
+# raise an exception
+def _svn_errcheck(result, func, args):
+    return SVN_ERR(result)
+
 # As of ctypes 1.0, ctypes does not support custom error-checking
 # functions on callbacks, nor does it support custom datatypes on
 # callbacks, so ctypesgen sets the return values for callbacks

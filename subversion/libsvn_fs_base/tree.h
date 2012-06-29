@@ -44,10 +44,6 @@ svn_error_t *svn_fs_base__commit_txn(const char **conflict_p,
                                      svn_revnum_t *new_rev, svn_fs_txn_t *txn,
                                      apr_pool_t *pool);
 
-svn_error_t *svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
-                                                  svn_fs_txn_t *txn,
-                                                  apr_pool_t *pool);
-
 svn_error_t *svn_fs_base__txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                                    apr_pool_t *pool);
 

@@ -33,9 +33,6 @@
 #include "svn_subst.h"
 #include "svn_string.h"
 
-#include "private/svn_opt_private.h"
-#include "private/svn_cmdline_private.h"
-
 #include "sync.h"
 
 #include "svn_private_config.h"
@@ -45,18 +42,27 @@
 #include <apr_uuid.h>
 
 
-/* Normalize the line ending style of *STR, so that it contains only
- * LF (\n) line endings. After return, *STR may point at a new
- * svn_string_t* allocated from POOL.
+/* Normalize the encoding and line ending style of *STR, so that it contains
+ * only LF (\n) line endings and is encoded in UTF-8. After return, *STR may
+ * point at a new svn_string_t* allocated in RESULT_POOL.
  *
- * *WAS_NORMALIZED is set to TRUE when *STR needed to be normalized,
- * and to FALSE if *STR remains unchanged.
+ * If SOURCE_PROP_ENCODING is NULL, then *STR is presumed to be encoded in
+ * UTF-8.
+ *
+ * *WAS_NORMALIZED is set to TRUE when *STR needed line ending normalization.
+ * Otherwise it is set to FALSE.
+ *
+ * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
 normalize_string(const svn_string_t **str,
                  svn_boolean_t *was_normalized,
-                 apr_pool_t *pool)
+                 const char *source_prop_encoding,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
+  svn_string_t *new_str;
+
   *was_normalized = FALSE;
 
   if (*str == NULL)
@@ -64,33 +70,33 @@ normalize_string(const svn_string_t **str,
 
   SVN_ERR_ASSERT((*str)->data != NULL);
 
-  /* Detect inconsistent line ending style simply by looking
-     for carriage return (\r) characters. */
-  if (strchr((*str)->data, '\r') != NULL)
-    {
-      /* Found some. Normalize. */
-      const char* cstring = NULL;
-      SVN_ERR(svn_subst_translate_cstring2((*str)->data, &cstring,
-                                           "\n", TRUE,
-                                           NULL, FALSE,
-                                           pool));
-      *str = svn_string_create(cstring, pool);
-      *was_normalized = TRUE;
-    }
+  if (source_prop_encoding == NULL)
+    source_prop_encoding = "UTF-8";
+
+  new_str = NULL;
+  SVN_ERR(svn_subst_translate_string2(&new_str, NULL, was_normalized,
+                                      *str, source_prop_encoding, TRUE,
+                                      result_pool, scratch_pool));
+  *str = new_str;
 
   return SVN_NO_ERROR;
 }
 
 
-/* Normalize the line ending style of the values of properties in REV_PROPS
- * that "need translation" (according to svn_prop_needs_translation(),
- * currently all svn:* props) so that they contain only LF (\n) line endings.
- * The number of properties that needed normalization is returned in
+/* Normalize the encoding and line ending style of the values of properties
+ * in REV_PROPS that "need translation" (according to
+ * svn_prop_needs_translation(), which is currently all svn:* props) so that
+ * they are encoded in UTF-8 and contain only LF (\n) line endings.
+ *
+ * The number of properties that needed line ending normalization is returned in
  * *NORMALIZED_COUNT.
+ *
+ * No re-encoding is performed if SOURCE_PROP_ENCODING is NULL.
  */
 svn_error_t *
 svnsync_normalize_revprops(apr_hash_t *rev_props,
                            int *normalized_count,
+                           const char *source_prop_encoding,
                            apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -100,20 +106,20 @@ svnsync_normalize_revprops(apr_hash_t *rev_props,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
-      const svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
+      const svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       if (svn_prop_needs_translation(propname))
         {
           svn_boolean_t was_normalized;
-          SVN_ERR(normalize_string(&propval, &was_normalized, pool));
+          SVN_ERR(normalize_string(&propval, &was_normalized,
+                  source_prop_encoding, pool, pool));
+
+          /* Replace the existing prop value. */
+          apr_hash_set(rev_props, propname, APR_HASH_KEY_STRING, propval);
+
           if (was_normalized)
-            {
-              /* Replace the existing prop value. */
-              apr_hash_set(rev_props, propname, APR_HASH_KEY_STRING, propval);
-              /* And count this. */
-              (*normalized_count)++;
-            }
+            (*normalized_count)++; /* Count it. */
         }
     }
   return SVN_NO_ERROR;
@@ -137,10 +143,11 @@ svnsync_normalize_revprops(apr_hash_t *rev_props,
 
 
 /* Edit baton */
-typedef struct {
+typedef struct edit_baton_t {
   const svn_delta_editor_t *wrapped_editor;
   void *wrapped_edit_baton;
   const char *to_url;  /* URL we're copying into, for correct copyfrom URLs */
+  const char *source_prop_encoding;
   svn_boolean_t called_open_root;
   svn_boolean_t got_textdeltas;
   svn_revnum_t base_revision;
@@ -155,7 +162,7 @@ typedef struct {
 
 
 /* A dual-purpose baton for files and directories. */
-typedef struct {
+typedef struct node_baton_t {
   void *edit_baton;
   void *wrapped_node_baton;
 } node_baton_t;
@@ -218,9 +225,7 @@ add_directory(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *b = apr_palloc(pool, sizeof(*b));
 
-  /* if copyfrom_path starts with '/' join rest of copyfrom_path leaving
-   * leading '/' with canonicalized url eb->to_url.
-   */
+  /* if copyfrom_path is an fspath create a proper uri */
   if (copyfrom_path && copyfrom_path[0] == '/')
     copyfrom_path = svn_path_url_add_component2(eb->to_url,
                                                 copyfrom_path + 1, pool);
@@ -269,9 +274,10 @@ add_file(const char *path,
   edit_baton_t *eb = pb->edit_baton;
   node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
 
-  if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                 svn_path_uri_encode(copyfrom_path, pool));
+  /* if copyfrom_path is an fspath create a proper uri */
+  if (copyfrom_path && copyfrom_path[0] == '/')
+    copyfrom_path = svn_path_url_add_component2(eb->to_url,
+                                                copyfrom_path + 1, pool);
 
   SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_node_baton,
                                        copyfrom_path, copyfrom_rev,
@@ -379,7 +385,7 @@ change_file_prop(void *file_baton,
   edit_baton_t *eb = fb->edit_baton;
 
   /* only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   /* Maybe drop svn:mergeinfo.  */
@@ -407,7 +413,8 @@ change_file_prop(void *file_baton,
   if (svn_prop_needs_translation(name))
     {
       svn_boolean_t was_normalized;
-      SVN_ERR(normalize_string(&value, &was_normalized, pool));
+      SVN_ERR(normalize_string(&value, &was_normalized,
+                               eb->source_prop_encoding, pool, pool));
       if (was_normalized)
         (*(eb->normalized_node_props_counter))++;
     }
@@ -426,7 +433,7 @@ change_dir_prop(void *dir_baton,
   edit_baton_t *eb = db->edit_baton;
 
   /* Only regular properties can pass over libsvn_ra */
-  if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
+  if (svn_property_kind2(name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
   /* Maybe drop svn:mergeinfo.  */
@@ -450,7 +457,7 @@ change_dir_prop(void *dir_baton,
              are relative URLs, whereas svn:mergeinfo uses relative
              paths (not URI-encoded). */
           svn_error_t *err;
-          svn_stringbuf_t *mergeinfo_buf = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *mergeinfo_buf = svn_stringbuf_create_empty(pool);
           svn_mergeinfo_t mergeinfo;
           int i;
           apr_array_header_t *sources =
@@ -505,7 +512,8 @@ change_dir_prop(void *dir_baton,
   if (svn_prop_needs_translation(name))
     {
       svn_boolean_t was_normalized;
-      SVN_ERR(normalize_string(&value, &was_normalized, pool));
+      SVN_ERR(normalize_string(&value, &was_normalized, eb->source_prop_encoding,
+                               pool, pool));
       if (was_normalized)
         (*(eb->normalized_node_props_counter))++;
     }
@@ -572,6 +580,7 @@ svnsync_get_sync_editor(const svn_delta_editor_t *wrapped_editor,
                         void *wrapped_edit_baton,
                         svn_revnum_t base_revision,
                         const char *to_url,
+                        const char *source_prop_encoding,
                         svn_boolean_t quiet,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
@@ -602,6 +611,7 @@ svnsync_get_sync_editor(const svn_delta_editor_t *wrapped_editor,
   eb->wrapped_edit_baton = wrapped_edit_baton;
   eb->base_revision = base_revision;
   eb->to_url = to_url;
+  eb->source_prop_encoding = source_prop_encoding;
   eb->quiet = quiet;
   eb->normalized_node_props_counter = normalized_node_props_counter;
 

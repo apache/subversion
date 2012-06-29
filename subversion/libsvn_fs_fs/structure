@@ -34,12 +34,13 @@ repository) is:
   revs/               Subdirectory containing revs
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev <revnum>
-    <shard>.pack      Pack directory, if the repo has been packed (see below)
+    <shard>.pack/     Pack directory, if the repo has been packed (see below)
       pack            Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
+    revprops.db       SQLite database of the packed revision properties
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
@@ -59,6 +60,7 @@ repository) is:
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   min-unpacked-rev    File containing the oldest revision not in a pack file
+  min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
 
 Files in the revprops directory are in the hash dump format used by
@@ -100,10 +102,10 @@ When representation sharing is enabled, the filesystem tracks
 representation checksum and location mappings using a SQLite database in
 "rep-cache.db".  The database has a single table, which stores the sha1
 hash text as the primary key, mapped to the representation revision, offset,
-size and expanded size.  A final field, reuse count, is currently used
-for distinguishing representations which are shared.  This file is not
-required, and may be removed at an abritrary time, with the subsequent
-loss of rep-sharing capabilities.
+size and expanded size.  This file is only consulted during writes and never
+during reads.  Consequently, it is not required, and may be removed at an
+abritrary time, with the subsequent loss of rep-sharing capabilities for
+revisions written thereafter.
 
 Filesystem formats
 ------------------
@@ -131,44 +133,47 @@ The formats are:
   Format 2, understood by Subversion 1.4+
   Format 3, understood by Subversion 1.5+
   Format 4, understood by Subversion 1.6+
+  Format 5, understood by Subversion 1.7-dev, never released
 
 The differences between the formats are:
 
 Delta representation in revision files
   Format 1: svndiff0 only
-  Formats 2-4: svndiff0 or svndiff1
+  Formats 2+: svndiff0 or svndiff1
 
 Format options
   Formats 1-2: none permitted
-  Format 3-4: "layout" option
+  Format 3+:   "layout" option
 
 Transaction name reuse
   Formats 1-2: transaction names may be reused
-  Format 3-4: transaction names generated using txn-current file
+  Format 3+:   transaction names generated using txn-current file
 
 Location of proto-rev file and its lock
   Formats 1-2: transactions/<txnid>/rev and
     transactions/<txnid>/rev-lock.
-  Format 3-4: txn-protorevs/<txnid>.rev and
+  Format 3+:   txn-protorevs/<txnid>.rev and
     txn-protorevs/<txnid>.rev-lock.
 
 Node-ID and copy-ID generation
   Formats 1-2: Node-IDs and copy-IDs are guaranteed to form a
     monotonically increasing base36 sequence using the "current"
     file.
-  Format 3-4: Node-IDs and copy-IDs use the new revision number to
+  Format 3+:   Node-IDs and copy-IDs use the new revision number to
     ensure uniqueness and the "current" file just contains the
     youngest revision.
 
 Mergeinfo metadata:
   Format 1-2: minfo-here and minfo-count node-revision fields are not
     stored.  svn_fs_get_mergeinfo returns an error.
-  Format 3-4: minfo-here and minfo-count node-revision fields are
+  Format 3+:  minfo-here and minfo-count node-revision fields are
     maintained.  svn_fs_get_mergeinfo works.
 
 Revision changed paths list:
   Format 1-3: Does not contain the node's kind.
-  Format 4: Contains the node's kind.
+  Format 4+:  Contains the node's kind.
+
+# Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
 
 
 Filesystem format options
@@ -204,10 +209,10 @@ The known layouts, and the parameters they require, are as follows:
   revs/0/ directory will contain revisions 0-999, revs/1/ will contain
   1000-1999, and so on.
 
-Packing
--------
+Packing revisions
+-----------------
 
-A repository can optionally be "packed" to conserve space on disk.  The
+A filesystem can optionally be "packed" to conserve space on disk.  The
 packing process concatenates all the revision files in each full shard to
 create pack files.  A manifest file is also created for each shard which
 records the indexes of the corresponding revision files in the pack file.
@@ -218,38 +223,63 @@ The manifest file consists of a list of offsets, one for each revision in the
 pack file.  The offsets are stored as ASCII decimal, and separated by a newline
 character.
 
+Packing revision properties (format 5: SQLite)
+---------------------------
+
+This was supported by 1.7-dev builds but never included in a blessed release.
+
+See r1143829 of this file:
+http://svn.apache.org/viewvc/subversion/trunk/subversion/libsvn_fs_fs/structure?view=markup&pathrev=1143829
+
+
 Node-revision IDs
 -----------------
 
+A node-rev ID consists of the following three fields:
+
+    node_revision_id ::= node_id '.' copy_id '.' txn_id
+
+At this level, the form of the ID is the same as for BDB - see the
+section called "ID's" in <../libsvn_fs_base/notes/structure>.
+
 In order to support efficient lookup of node-revisions by their IDs
 and to simplify the allocation of fresh node-IDs during a transaction,
-we treat the fields of a node-ID in new and interesting ways.
+we treat the fields of a node-rev ID in new and interesting ways.
 
-Within a revision file, node-revs have a txn-id field of the form
-"r<rev>/<offset>", to support easy lookup.  New node-revision IDs
-assigned within a transaction have the txn-id field of "t<txnid>".
+Within a new transaction:
 
-When a new node-id or copy-id is assigned in a transaction, the ID
-used is a "_" followed by a base36 number unique to the transaction.
-During the final phase of a commit, node-revision IDs are rewritten
-to have repository-wide unique node-ID and copy-ID fields, and to have
-"r<rev>/<offset>" txn-id fields.
+  New node-revision IDs assigned within a transaction have a txn-id
+  field of the form "t<txnid>".
 
-In Format 3 and above, this uniqueness is done by changing a temporary
-id of "_<base36>" to "<rev>-<base36>".  Note that this means that the
-originating revision of a line of history or a copy can be determined
-by looking at the node ID.
+  When a new node-id or copy-id is assigned in a transaction, the ID
+  used is a "_" followed by a base36 number unique to the transaction.
 
-In Format 2 and below, the "current" file contains global base36
-node-ID and copy-ID counters; during the commit, the counter value is
-added to the transaction-specific base36 ID, and the value in
-"current" is adjusted.
+Within a revision:
 
-(It is legal for Format 3 repositories to contain Format 2-style IDs;
-this just prevents I/O-less node-origin-rev lookup for those nodes.)
+  Within a revision file, node-revs have a txn-id field of the form
+  "r<rev>/<offset>", to support easy lookup. The <offset> is the (ASCII
+  decimal) number of bytes from the start of the revision file to the
+  start of the node-rev.
+
+  During the final phase of a commit, node-revision IDs are rewritten
+  to have repository-wide unique node-ID and copy-ID fields, and to have
+  "r<rev>/<offset>" txn-id fields.
+
+  In Format 3 and above, this uniqueness is done by changing a temporary
+  id of "_<base36>" to "<base36>-<rev>".  Note that this means that the
+  originating revision of a line of history or a copy can be determined
+  by looking at the node ID.
+
+  In Format 2 and below, the "current" file contains global base36
+  node-ID and copy-ID counters; during the commit, the counter value is
+  added to the transaction-specific base36 ID, and the value in
+  "current" is adjusted.
+
+  (It is legal for Format 3 repositories to contain Format 2-style IDs;
+  this just prevents I/O-less node-origin-rev lookup for those nodes.)
 
 The temporary assignment of node-ID and copy-ID fields has
-implications for svn_fs_compare_ids and svn_fs_check_related.  The IDs
+implications for svn_fs_compare_ids and svn_fs_check_related.  The ID
 _1.0.t1 is not related to the ID _1.0.t2 even though they have the
 same node-ID, because temporary node-IDs are restricted in scope to
 the transactions they belong to.
@@ -325,7 +355,7 @@ trailer).  If no base location is given for a delta, the base is the
 empty stream.  After the initial line comes raw svndiff data, followed
 by a cosmetic trailer "ENDREP\n".
 
-If the a representation is for the text contents of a directory node,
+If the representation is for the text contents of a directory node,
 the expanded contents are in hash dump format mapping entry names to
 "<type> <id>" pairs, where <type> is "file" or "dir" and <id> gives
 the ID of the child node-rev.
@@ -353,13 +383,13 @@ defined:
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
-            <uniqifier> see representation_t->uniqifier in fs.h
+            <uniquifier> see representation_t->uniquifier in fs.h
   cpath     FS pathname node was created at
   copyfrom  "<rev> <path>" of copyfrom data
   copyroot  "<rev> <created-path>" of the root of this copy
   minfo-cnt The number of nodes under (and including) this node
              which have svn:mergeinfo.
-  minfo-here Exists if if this node itself has svn:mergeinfo.
+  minfo-here Exists if this node itself has svn:mergeinfo.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
@@ -481,7 +511,8 @@ names are the first 3 characters of the digest filename.
 
 Also stored in the digest file for a given FS path are pointers to
 other digest files which contain information associated with other FS
-paths that are our path's immediate children.
+paths that are beneath our path (an immediate child thereof, or a
+grandchild, or a great-grandchild, ...).
 
 To answer the question, "Does path FOO have a lock associated with
 it?", one need only generate the MD5 digest of FOO's
@@ -496,4 +527,4 @@ To inquire about locks on children of the path FOO, you would
 reference the same path as above, but look for a list of children in
 that file (instead of lock information).  Children are listed as MD5
 digests, too, so you would simply iterate over those digests and
-consult the files they reference, and so on, recursively.
+consult the files they reference for lock information.

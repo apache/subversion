@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "my-assertions"
 require "util"
 
@@ -307,21 +326,16 @@ class SvnWcTest < Test::Unit::TestCase
         ignored_errors = []
         callbacks.ignored_errors = ignored_errors
         access.walk_entries(@wc_path, callbacks)
+        sorted_ignored_errors = ignored_errors.sort_by {|path, err| path}
+        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err| 
+          [path, err.class]
+        end
         assert_equal([
                       [@wc_path, Svn::Error::Cancelled],
                       [path1, Svn::Error::Cancelled],
                       [path2, Svn::Error::Cancelled],
                      ],
-                     ignored_errors.collect {|path, err| [path, err.class]})
-      end
-
-      Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-        assert_raises(Svn::Error::WcPathFound) do
-          access.mark_missing_deleted(path1)
-        end
-        FileUtils.rm(path1)
-        access.mark_missing_deleted(path1)
-        access.maybe_set_repos_root(path2, @repos_uri)
+                     sorted_ignored_errors)
       end
     end
   end
@@ -551,7 +565,9 @@ EOE
 
   def test_translated_file2_eol
     assert_translated_eol(:translated_file2) do |file, source|
-      file.read
+      result = file.read
+      file.close
+      result
     end
   end
 
@@ -617,7 +633,9 @@ EOE
         stream.close
         nil
       else
-        stream.read
+        result = stream.read
+        stream.close
+        result
       end
     end
   end
@@ -733,14 +751,15 @@ EOE
             :file_changed_prop_name => prop_name,
             :file_changed_prop_value => prop_value,
           }
-          expected_props, actual_result = yield(property_info, callbacks.result)
+          sorted_result = callbacks.result.sort_by {|r| r.first.to_s}
+          expected_props, actual_result = yield(property_info, sorted_result)
           dir_changed_props, file_changed_props, empty_changed_props = expected_props
           assert_equal([
                         [:dir_props_changed, @wc_path, dir_changed_props],
-                        [:file_changed, path1, file_changed_props],
                         [:file_added, path2, empty_changed_props],
+                        [:file_changed, path1, file_changed_props],
                        ],
-                       callbacks.result)
+                       sorted_result)
         end
       end
     end
@@ -1038,16 +1057,40 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       access.set_changelist(path, "456", nil, notify_collector)
     end
-    assert_equal([[File.expand_path(path), Svn::Error::WcChangelistMove],
-                  [File.expand_path(path), NilClass]],
-                 notifies.collect {|notify| [notify.path, notify.err.class]})
+    assert_equal([[File.expand_path(path), Svn::Wc::NOTIFY_CHANGELIST_CLEAR],
+                  [File.expand_path(path), Svn::Wc::NOTIFY_CHANGELIST_SET]],
+                 notifies.collect {|notify| [notify.path, notify.action]})
 
     notifies = []
 
-    assert_raises(Svn::Error::ClientIsDirectory) do
-      Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-        access.set_changelist(@wc_path, "789", nil, notify_collector)
-      end
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      access.set_changelist(@wc_path, "789", nil, notify_collector)
     end
   end
+
+
+  def test_context_new_default_config
+    assert_not_nil context = Svn::Wc::Context.new
+  ensure
+    context.destroy
+  end
+
+  def test_context_new_specified_config
+    config_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_CONFIG)
+    config = Svn::Core::Config.read(config_file)
+    assert_not_nil context = Svn::Wc::Context.new(:config=>config)
+  ensure
+    context.destroy
+  end
+
+  def test_context_create
+    assert_nothing_raised do
+      result = Svn::Wc::Context.create do |context|
+        assert_not_nil context
+        assert_kind_of Svn::Wc::Context, context
+      end
+      assert_nil result;
+    end
+  end
+
 end

@@ -52,7 +52,7 @@ static svn_atomic_t com_initialized = 0;
 /* Initializes COM and keeps COM available until process exit.
    Implements svn_atomic__init_once init_func */
 static svn_error_t *
-initialize_com(apr_pool_t* pool)
+initialize_com(void *baton, apr_pool_t* pool)
 {
   /* Try to initialize for apartment-threaded object concurrency. */
   HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -114,7 +114,7 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
       return APR_SUCCESS;
     }
 
-  err = svn_atomic__init_once(&com_initialized, initialize_com, pool);
+  err = svn_atomic__init_once(&com_initialized, initialize_com, NULL, pool);
 
   if (err)
     {
@@ -185,7 +185,7 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
 
   if (src_length == 0)
   {
-    *dest = svn_stringbuf_create("", pool);
+    *dest = svn_stringbuf_create_empty(pool);
     return APR_SUCCESS;
   }
 

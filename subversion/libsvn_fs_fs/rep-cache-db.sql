@@ -21,22 +21,39 @@
  * ====================================================================
  */
 
-pragma auto_vacuum = 1;
+-- STMT_CREATE_SCHEMA
+PRAGMA AUTO_VACUUM = 1;
 
 /* A table mapping representation hashes to locations in a rev file. */
-create table rep_cache (hash text not null primary key,
-                        revision integer not null,
-                        offset integer not null,
-                        size integer not null,
-                        expanded_size integer not null);
+CREATE TABLE rep_cache (
+  hash TEXT NOT NULL PRIMARY KEY,
+  revision INTEGER NOT NULL,
+  offset INTEGER NOT NULL,
+  size INTEGER NOT NULL,
+  expanded_size INTEGER NOT NULL
+  );
+
+PRAGMA USER_VERSION = 1;
 
 
 -- STMT_GET_REP
-select revision, offset, size, expanded_size
-from rep_cache
-where hash = ?1;
-
+SELECT revision, offset, size, expanded_size
+FROM rep_cache
+WHERE hash = ?1
 
 -- STMT_SET_REP
-insert into rep_cache (hash, revision, offset, size, expanded_size)
-values (?1, ?2, ?3, ?4, ?5);
+INSERT OR FAIL INTO rep_cache (hash, revision, offset, size, expanded_size)
+VALUES (?1, ?2, ?3, ?4, ?5)
+
+-- STMT_GET_REPS_FOR_RANGE
+SELECT hash, revision, offset, size, expanded_size
+FROM rep_cache
+WHERE revision >= ?1 AND revision <= ?2
+
+-- STMT_GET_MAX_REV
+SELECT MAX(revision)
+FROM rep_cache
+
+-- STMT_DEL_REPS_YOUNGER_THAN_REV
+DELETE FROM rep_cache
+WHERE revision > ?1

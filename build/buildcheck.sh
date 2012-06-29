@@ -1,5 +1,24 @@
 #! /bin/sh
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 # buildcheck.sh: Inspects the build setup to make detection and
 # correction of problems an easier process.
 
@@ -55,6 +74,61 @@ if test "$1" = "2" -a "$2" -lt "59" || test "$1" -lt "2"; then
 fi
 
 echo "buildcheck: autoheader version $ah_version (ok)"
+
+#--------------------------------------------------------------------------
+# libtool 1.4 or newer
+#
+LIBTOOL_WANTED_MAJOR=1
+LIBTOOL_WANTED_MINOR=4
+LIBTOOL_WANTED_PATCH=
+LIBTOOL_WANTED_VERSION=1.4
+
+# The minimum version for source releases is 1.4.3,
+# because it's required by (at least) Solaris.
+if test "$VERSION_CHECK" = "--release"; then
+  LIBTOOL_WANTED_PATCH=3
+  LIBTOOL_WANTED_VERSION=1.4.3
+else
+  case `uname -sr` in
+    SunOS\ 5.*)
+      LIBTOOL_WANTED_PATCH=3
+      LIBTOOL_WANTED_VERSION=1.4.3
+      ;;
+  esac
+fi
+
+libtool=${LIBTOOL:-`./build/PrintPath glibtool libtool libtool15`}
+# Extract the libtool version number: everything from the first number in
+# the version text until a hyphen or space.
+lt_pversion=`$libtool --version 2>/dev/null |
+  sed -e 's/^[^0-9]*//' -e 's/[- ].*//' -e '/^$/d' |
+  sed -e 1q`
+if test -z "$lt_pversion"; then
+  echo "buildcheck: libtool not found."
+  echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
+  exit 1
+fi
+lt_version=`echo $lt_pversion|sed -e 's/\([a-z]*\)$/.\1/'`
+IFS=.; set $lt_version; IFS=' '
+lt_status="good"
+if test "$1" = "$LIBTOOL_WANTED_MAJOR"; then
+   if test "$2" -gt "$LIBTOOL_WANTED_MINOR"; then
+      lt_status="good"
+   elif test "$2" -lt "$LIBTOOL_WANTED_MINOR"; then
+      lt_status="bad"
+   elif test ! -z "$LIBTOOL_WANTED_PATCH"; then
+       if test "$3" -lt "$LIBTOOL_WANTED_PATCH"; then
+           lt_status="bad"
+       fi
+   fi
+fi
+if test $lt_status != "good"; then
+  echo "buildcheck: libtool version $lt_pversion found."
+  echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"
+  exit 1
+fi
+
+echo "buildcheck: libtool version $lt_pversion (ok)"
 
 #--------------------------------------------------------------------------
 # check that our local copies of files match up with those in APR(UTIL)

@@ -76,8 +76,6 @@ extern "C" {
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
 #define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
 #define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
-#define SVN_REPOS__HOOK_PRE_OBLITERATE  "pre-obliterate"
-#define SVN_REPOS__HOOK_POST_OBLITERATE "post-obliterate"
 #define SVN_REPOS__HOOK_PRE_LOCK        "pre-lock"
 #define SVN_REPOS__HOOK_POST_LOCK       "post-lock"
 #define SVN_REPOS__HOOK_PRE_UNLOCK      "pre-unlock"
@@ -97,7 +95,7 @@ extern "C" {
 #define SVN_REPOS__CONF_PASSWD "passwd"
 #define SVN_REPOS__CONF_AUTHZ "authz"
 
-/* The Repository object, created by svn_repos_open() and
+/* The Repository object, created by svn_repos_open2() and
    svn_repos_create(). */
 struct svn_repos_t
 {
@@ -134,7 +132,7 @@ struct svn_repos_t
      object.  You'd think the capabilities here would represent the
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
-  apr_array_header_t *client_capabilities;
+  const apr_array_header_t *client_capabilities;
 
   /* Maps SVN_REPOS_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
@@ -142,6 +140,10 @@ struct svn_repos_t
      sufficiently well-informed internal code may just compare against
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
+
+  /* The environment inherited to hook scripts. If NULL, hooks run
+   * in an empty environment. */
+  apr_hash_t *hooks_env;
 };
 
 
@@ -177,6 +179,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
 svn_error_t *
 svn_repos__hooks_post_commit(svn_repos_t *repos,
                              svn_revnum_t rev,
+                             const char *txn_name,
                              apr_pool_t *pool);
 
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
@@ -223,43 +226,6 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
                                      const svn_string_t *old_value,
                                      char action,
                                      apr_pool_t *pool);
-
-/* Run the pre-obliterate hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.
-
-   REV is the revision whose property is being changed.
-   AUTHOR is the authenticated name of the user changing the prop.
-   OBLITERATION_SET is a string listing all the PATH@REV pairs, with
-   a newline after each.
-
-   The pre-revprop-change hook will have the new property value
-   written to its stdin.  If the property is being deleted, no data
-   will be written. */
-svn_error_t *
-svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
-                                svn_revnum_t rev,
-                                const char *author,
-                                const svn_string_t *obliteration_set,
-                                apr_pool_t *pool);
-
-/* Run the pre-obliterate hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.
-
-   REV is the revision whose property was changed.
-   AUTHOR is the authenticated name of the user who changed the prop.
-   OBLITERATION_SET is a string listing all the PATH@REV pairs, with
-   a newline after each.
-
-   The old value will be passed to the post-revprop hook on stdin.  If
-   the property is being created, no data will be written. */
-svn_error_t *
-svn_repos__hooks_post_obliterate(svn_repos_t *repos,
-                                 svn_revnum_t rev,
-                                 const char *author,
-                                const svn_string_t *obliteration_set,
-                                 apr_pool_t *pool);
 
 /* Run the pre-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
@@ -354,41 +320,6 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
                          svn_revnum_t revision,
                          const char *path,
                          apr_pool_t *pool);
-
-
-/*** Compatibility Wrappers ***/
-
-typedef struct svn_repos__upgrade_authz_baton_t 
-{
-  svn_repos_authz_func_t authz_func;
-  void *authz_func_baton;
-
-  svn_repos_authz_callback_t authz_callback;
-  void *authz_callback_baton;
-
-} svn_repos__upgrade_authz_baton_t;
-
-
-/* Set *access_func and **access_baton to a function/baton pair which
-   wrap the functionality of authz_read_func/authz_baton with the new
-   svn_repos_access_func_t behavior. */
-svn_error_t *
-svn_repos__upgrade_authz_func(svn_repos_access_func_t *access_func,
-                              void **access_baton,
-                              svn_repos_authz_func_t authz_read_func,
-                              void *authz_baton,
-                              apr_pool_t *pool);
-
-
-/* Set *access_func and **access_baton to a function/baton pair which
-   wrap the functionality of authz_callback/authz_baton with the new
-   svn_repos_access_func_t behavior. */
-svn_error_t *
-svn_repos__upgrade_authz_callback(svn_repos_access_func_t *access_func,
-                                  void **access_baton,
-                                  svn_repos_authz_callback_t authz_callback,
-                                  void *authz_baton,
-                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

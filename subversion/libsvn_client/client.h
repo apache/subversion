@@ -35,59 +35,12 @@
 #include "svn_ra.h"
 #include "svn_client.h"
 
+#include "private/svn_magic.h"
+#include "private/svn_client_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-struct svn_cl__externals_store
-{
-  apr_pool_t *pool;
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-  apr_hash_t *depths;
-};
-
-/* svn_wc_external_update_t handler, storing the received data in a
- * svn_cl__externals_store instance, which must be passed as baton.
- * When one of the hashes is NULL, these values are not stored */
-svn_error_t *
-svn_cl__store_externals(void *baton,
-                        const char *local_abspath,
-                        const svn_string_t *old_value,
-                        const svn_string_t *new_value,
-                        svn_depth_t depth,
-                        apr_pool_t *scratch_pool);
-
-
-
-/* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
-   ignored if NULL) to the repository URL of ABSPATH_OR_URL.  If
-   ABSPATH_OR_URL is an absolute WC path and PEG_REVISION->kind is
-   svn_opt_revision_working, use the corresponding entry's copyfrom info.
-   RA_SESSION may be NULL regardless of whether ABSPATH_OR_URL is a URL.
-   Use CTX for cancellation (ignored if NULL), and SCRATCH_POOL for all
-   temporary allocations. */
-svn_error_t *
-svn_client__derive_location(const char **url,
-                            svn_revnum_t *peg_revnum,
-                            const char *abspath_or_url,
-                            const svn_opt_revision_t *peg_revision,
-                            svn_ra_session_t *ra_session,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-/* Get the repository URL and revision number for LOCAL_ABSPATH,
-   which is sometimes the path's copyfrom info rather than its actual
-   URL and revision. */
-svn_error_t *
-svn_client__entry_location(const char **url,
-                           svn_revnum_t *revnum,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           enum svn_opt_revision_kind peg_rev_kind,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
 
 /* Set *REVNUM to the revision number identified by REVISION.
 
@@ -153,9 +106,13 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
-   END may be of kind svn_opt_revision_unspecified (in which case
+   START_REVISION and/or END_REVISION may be NULL if not wanted.
+   END may be NULL or of kind svn_opt_revision_unspecified (in either case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
+
+   If PATH is a WC path and REVISION is of kind svn_opt_revision_working,
+   then look at the PATH's copy-from URL instead of its base URL.
 
    RA_SESSION should be an open RA session pointing at the URL of PATH,
    or NULL, in which case this function will open its own temporary session.
@@ -176,9 +133,9 @@ svn_error_t *svn_client__get_copy_source(const char *path_or_url,
    Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_locations(const char **start_url,
-                            svn_opt_revision_t **start_revision,
+                            svn_revnum_t *start_revision,
                             const char **end_url,
-                            svn_opt_revision_t **end_revision,
+                            svn_revnum_t *end_revision,
                             svn_ra_session_t *ra_session,
                             const char *path,
                             const svn_opt_revision_t *revision,
@@ -187,10 +144,27 @@ svn_client__repos_locations(const char **start_url,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
+/* Trace a line of history of a particular versioned resource back to a
+ * specific revision.
+ *
+ * Set *OP_LOC_P to the location that the object PEG_LOC had in
+ * revision OP_REVNUM.
+ *
+ * RA_SESSION is an open RA session to the correct repository; it may be
+ * temporarily reparented inside this function. */
+svn_error_t *
+svn_client__repos_location(svn_client__pathrev_t **op_loc_p,
+                           svn_ra_session_t *ra_session,
+                           const svn_client__pathrev_t *peg_loc,
+                           svn_revnum_t op_revnum,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
-   representing a reposition location segment for the history of PATH
-   (which is relative to RA_SESSION's session URL) in PEG_REVISION
+   representing a reposition location segment for the history of URL
+   in PEG_REVISION
    between END_REVISION and START_REVISION, ordered from oldest
    segment to youngest.  *SEGMENTS may be empty but it will never
    be NULL.
@@ -199,13 +173,16 @@ svn_client__repos_locations(const char **start_url,
    svn_ra_get_location_segments() interface, which see for the rules
    governing PEG_REVISION, START_REVISION, and END_REVISION.
 
+   RA_SESSION is an RA session open to the repository of URL; it may be
+   temporarily reparented within this function.
+
    CTX is the client context baton.
 
    Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_location_segments(apr_array_header_t **segments,
                                     svn_ra_session_t *ra_session,
-                                    const char *path,
+                                    const char *url,
                                     svn_revnum_t peg_revision,
                                     svn_revnum_t start_revision,
                                     svn_revnum_t end_revision,
@@ -213,22 +190,30 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                     apr_pool_t *pool);
 
 
-/* Set *ANCESTOR_PATH and *ANCESTOR_REVISION to the youngest common
-   ancestor path (a path relative to the root of the repository) and
-   revision, respectively, of the two locations identified as
-   PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1.  Use the authentication
-   baton cached in CTX to authenticate against the repository.
-   This function assumes that PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1
-   both refer to the same repository.  Use POOL for all allocations. */
+/* Find the common ancestor of two locations in a repository.
+   Ancestry is determined by the 'copy-from' relationship and the normal
+   successor relationship.
+
+   Set *ANCESTOR_P to the location of the youngest common ancestor of
+   LOC1 and LOC2.  If the locations have no common ancestor (including if
+   they don't have the same repository root URL), set *ANCESTOR_P to NULL.
+
+   If SESSION is not NULL, use it for retrieving the common ancestor instead
+   of creating a new session.
+
+   Use the authentication baton cached in CTX to authenticate against
+   the repository.  Use POOL for all allocations.
+
+   See also svn_client__youngest_common_ancestor().
+*/
 svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_path,
-                                         svn_revnum_t *ancestor_revision,
-                                         const char *path_or_url1,
-                                         svn_revnum_t rev1,
-                                         const char *path_or_url2,
-                                         svn_revnum_t rev2,
+svn_client__get_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
+                                         const svn_client__pathrev_t *loc1,
+                                         const svn_client__pathrev_t *loc2,
+                                         svn_ra_session_t *session,
                                          svn_client_ctx_t *ctx,
-                                         apr_pool_t *pool);
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute URL, a peg revision PEG_REVISION, and a desired revision
@@ -238,106 +223,58 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_DIR is the working copy path the ra_session corresponds to, should
-   only be used if PATH_OR_URL is a url.
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
+   and should only be used if PATH_OR_URL is a url
+     ### else NULL? what's it for?
 
-   If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
-   interpreted as "head" for a URL or "working" for a working-copy path.
+   If PEG_REVISION->kind is 'unspecified', the peg revision is 'head'
+   for a URL or 'working' for a WC path.  If REVISION->kind is
+   'unspecified', the operative revision is the peg revision.
 
-   Store the resulting ra_session in *RA_SESSION_P.  Store the actual
-   revision number of the object in *REV_P, and the final resulting
-   URL in *URL_P.
+   Store the resulting ra_session in *RA_SESSION_P.  Store the final
+   resolved location of the object in *RESOLVED_LOC_P.  RESOLVED_LOC_P
+   may be NULL if not wanted.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
    Use POOL for all allocations. */
 svn_error_t *
-svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
-                                 svn_revnum_t *rev_p,
-                                 const char **url_p,
+svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
+                                 svn_client__pathrev_t **resolved_loc_p,
                                  const char *path_or_url,
-                                 const char *base_dir,
+                                 const char *base_dir_abspath,
                                  const svn_opt_revision_t *peg_revision,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
-   reparenting that session if necessary.  If reparenting occurs,
-   store the previous session URL in *OLD_SESSION_URL (so that if the
+   reparenting that session if necessary.
+   Store the previous session URL in *OLD_SESSION_URL (so that if the
    reparenting is meant to be temporary, the caller can reparent the
-   session back to where it was); otherwise set *OLD_SESSION_URL to
-   NULL.
+   session back to where it was).
 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
-   the RA session to the root of the repository".  */
+   the RA session to the root of the repository".
+
+   NOTE: The typical usage pattern for this functions is:
+
+       const char *old_session_url;
+       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                 ra_session,
+                                                 new_session_url,
+                                                 pool);
+
+       [...]
+
+       SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
+*/
 svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
                                   svn_ra_session_t *ra_session,
                                   const char *session_url,
                                   apr_pool_t *pool);
-
-/* Set REPOS_ROOT, allocated in RESULT_POOL to the URL which represents
-   the root of the repository in with ABSPATH_OR_URL (at PEG_REVISION) is
-   versioned.  Use the authentication baton and working copy context
-   cached in CTX as necessary.
-
-   Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_client__get_repos_root(const char **repos_root,
-                           const char *abspath_or_url,
-                           const svn_opt_revision_t *peg_revision,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-/* Return the path of ABSPATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded), both allocated in RESULT_POOL.
-   If INCLUDE_LEADING_SLASH is set, the returned result will have a leading
-   slash; otherwise, it will not.
-
-   The remaining parameters are used to procure the repository root.
-   Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
-   REPOS_ROOT should be passed when available as an optimization (in
-   that order of preference).
-
-   CAUTION:  While having a leading slash on a so-called relative path
-   might work out well for functionality that interacts with
-   mergeinfo, it results in a relative path that cannot be naively
-   svn_path_join()'d with a repository root URL to provide a full URL.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_client__path_relative_to_root(const char **rel_path,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *abspath_or_url,
-                                  const char *repos_root,
-                                  svn_boolean_t include_leading_slash,
-                                  svn_ra_session_t *ra_session,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/* Retrieve the oldest revision of the node at REL_PATH at REV since
-   it was last copied (if applicable), and store it in OLDEST_REV.  If
-   REL_PATH does not exist in that REV, set *OLDEST_REV to
-   SVN_INVALID_REVNUM.  Use POOL for temporary allocations. */
-svn_error_t *
-svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
-                               svn_ra_session_t *ra_session,
-                               const char *rel_path,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool);
-
-/* A default error handler for use with svn_wc_walk_entries3().  Returns
-   ERR in all cases. */
-svn_error_t *
-svn_client__default_walker_error_handler(const char *path,
-                                         svn_error_t *err,
-                                         void *walk_baton,
-                                         apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------- */
 
@@ -348,9 +285,11 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* Open an RA session, returning it in *RA_SESSION.
+/* Open an RA session, returning it in *RA_SESSION or a corrected URL
+   in *CORRECTED_URL.  (This function mirrors svn_ra_open4(), which
+   see, regarding the interpretation and handling of these two parameters.)
 
-   The root of the session is specified by BASE_URL and BASE_DIR.
+   The root of the session is specified by BASE_URL and BASE_DIR_ABSPATH.
 
    Additional control parameters:
 
@@ -364,7 +303,7 @@ svn_client__default_walker_error_handler(const char *path,
       - READ_ONLY_WC indicates that the RA layer should not attempt to
         modify the WC props directly.
 
-   BASE_DIR may be NULL if the RA operation does not correspond to a
+   BASE_DIR_ABSPATH may be NULL if the RA operation does not correspond to a
    working copy (in which case, USE_ADMIN should be FALSE).
 
    The calling application's authentication baton is provided in CTX,
@@ -374,46 +313,46 @@ svn_client__default_walker_error_handler(const char *path,
    avoid confusion with the public API svn_client_open_ra_session(). */
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
+                                     const char **corrected_url,
                                      const char *base_url,
-                                     const char *base_dir,
-                                     apr_array_header_t *commit_items,
+                                     const char *base_dir_abspath,
+                                     const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
 
+svn_error_t *
+svn_client__ra_provide_base(svn_stream_t **contents,
+                            svn_revnum_t *revision,
+                            void *baton,
+                            const char *repos_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
-/* ---------------------------------------------------------------- */
-
-/*** Commit ***/
 
-/* Get the commit_baton to be used in couple with commit_callback. */
-svn_error_t *svn_client__commit_get_baton(void **baton,
-                                          svn_commit_info_t **info,
-                                          apr_pool_t *pool);
+svn_error_t *
+svn_client__ra_provide_props(apr_hash_t **props,
+                             svn_revnum_t *revision,
+                             void *baton,
+                             const char *repos_relpath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
-/* The commit_callback function for storing svn_client_commit_info_t
-   pointed by commit_baton. If the commit_info supplied by get_baton
-   points to NULL after close_edit, it means the commit is a no-op.
-*/
-svn_error_t *svn_client__commit_callback(const svn_commit_info_t *commit_info,
-                                         void *baton,
-                                         apr_pool_t *pool);
 
-/* ---------------------------------------------------------------- */
-
-/*** Status ***/
+svn_error_t *
+svn_client__ra_get_copysrc_kind(svn_kind_t *kind,
+                                void *baton,
+                                const char *repos_relpath,
+                                svn_revnum_t src_revision,
+                                apr_pool_t *scratch_pool);
 
-/* Verify that the path can be deleted without losing stuff,
-   i.e. ensure that there are no modified or unversioned resources
-   under PATH.  This is similar to checking the output of the status
-   command.  CTX is used for the client's config options.  POOL is
-   used for all temporary allocations. */
-svn_error_t * svn_client__can_delete(const char *path,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool);
 
+void *
+svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
+                             apr_hash_t *relpath_map,
+                             apr_pool_t *result_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -424,10 +363,13 @@ svn_error_t * svn_client__can_delete(const char *path,
    (const char * keys mapping to svn_string_t * values), or if
    auto-props are disabled, set *PROPERTIES to NULL.
    Set *MIMETYPE to the mimetype, if any, or to NULL.
+   If MAGIC_COOKIE is not NULL and no mime-type can be determined
+   via CTX->config try to detect the mime-type with libmagic.
    Allocate the hash table, keys, values, and mimetype in POOL. */
 svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
                                         const char **mimetype,
                                         const char *path,
+                                        svn_magic__cookie_t *magic_cookie,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
 
@@ -452,12 +394,18 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
 
-/* Return the set of WC paths to entries which would have been deleted
-   by an update/merge if not in "dry run" mode, or NULL if not in "dry
-   run" mode.  MERGE_CMD_BATON is expected to be of type "struct
-   merge_cmd_baton" (from merge.c).  It contains the list, which is
-   intended for direct modification. */
-apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
+
+/* Like svn_client__wc_delete(), but deletes mulitple TARGETS efficiently. */
+svn_error_t *
+svn_client__wc_delete_many(const apr_array_header_t *targets,
+                           svn_boolean_t force,
+                           svn_boolean_t dry_run,
+                           svn_boolean_t keep_local,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
 
 /* Make PATH and add it to the working copy, optionally making all the
    intermediate parent directories if MAKE_PARENTS is TRUE. */
@@ -471,23 +419,24 @@ svn_client__make_local_parents(const char *path,
 
 /*** Checkout, update and switch ***/
 
-/* Update a working copy PATH to REVISION, and (if not NULL) set
+/* Update a working copy LOCAL_ABSPATH to REVISION, and (if not NULL) set
    RESULT_REV to the update revision.
 
    If DEPTH is svn_depth_unknown, then use whatever depth is already
-   set for PATH, or @c svn_depth_infinity if PATH does not exist.
+   set for LOCAL_ABSPATH, or @c svn_depth_infinity if LOCAL_ABSPATH does
+   not exist.
 
    Else if DEPTH is svn_depth_infinity, then update fully recursively
    (resetting the existing depth of the working copy if necessary).
-   Else if DEPTH is svn_depth_files, update all files under PATH (if
+   Else if DEPTH is svn_depth_files, update all files under LOCAL_ABSPATH (if
    any), but exclude any subdirectories.  Else if DEPTH is
    svn_depth_immediates, update all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just update PATH; if PATH is a directory, that
-   means touching only its properties not its entries.
+   svn_depth_empty, just update LOCAL_ABSPATH; if LOCAL_ABSPATH is a
+   directory, that means touching only its properties not its entries.
 
    If DEPTH_IS_STICKY is set and DEPTH is not svn_depth_unknown, then
-   in addition to updating PATH, also set its sticky ambient depth
+   in addition to updating LOCAL_ABSPATH, also set its sticky ambient depth
    value to DEPTH.
 
    If IGNORE_EXTERNALS is true, do no externals processing.
@@ -498,74 +447,51 @@ svn_client__make_local_parents(const char *path,
    to TRUE if a sleep is required, and will not change
    *TIMESTAMP_SLEEP if no sleep is required.
 
-   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of LOCAL_ABSPATH
    that obstruct items added from the repos are tolerated; if FALSE,
    these obstructions cause the update to fail.
 
-   If SEND_COPYFROM_ARGS is true, then request that the server not
-   send file contents when adding files that have been created by
-   explicit copying; instead, just send copyfrom-args to add_file(),
-   and possibly follow up with an apply_textdelta() against the copied
-   file.
+   If ADDS_AS_MODIFICATION is TRUE, local additions are handled as
+   modifications on added nodes.
 
    If INNERUPDATE is true, no anchor check is performed on the update target.
+
+   If MAKE_PARENTS is true, allow the update to calculate and checkout
+   (with depth=empty) any parent directories of the requested update
+   target which are missing from the working copy.
+
+   NOTE:  You may not specify both INNERUPDATE and MAKE_PARENTS as true.
+
+   Use CONFLICT_FUNC2 and CONFLICT_BATON2 instead of CTX->CONFLICT_FUNC2
+   and CTX->CONFLICT_BATON2. If CONFLICT_FUNC2 is NULL, postpone all conflicts
+   allowing the caller to perform post-update conflict resolution.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
-                            const char *path,
+                            const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
-                            svn_boolean_t *timestamp_sleep,
-                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t adds_as_modification,
+                            svn_boolean_t make_parents,
                             svn_boolean_t innerupdate,
+                            svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
+                            svn_wc_conflict_resolver_func2_t conflict_func2,
+                            void *conflict_baton2,
                             apr_pool_t *pool);
 
-/* Structure holding the results of svn_client__ra_session_from_path()
-   plus the repository root URL and UUID and the node kind for the
-   input URL, REVISION and PEG_REVISION .  See
-   svn_client__ra_session_from_path() for the meaning of these fields.
-   This structure is used by svn_client__checkout_internal() to save
-   one or more round-trips if the client already gathered some of this
-   information.  Not all the fields need to be filled in.  */
-typedef struct
-{
-  /* The repository root URL.  A NULL value means the root URL is
-     unknown.*/
-  const char *repos_root_url;
-
-  /* The repository UUID.  A NULL value means the UUID is unknown.  */
-  const char *repos_uuid;
-
-  /* The actual final resulting URL for the input URL.  This may be
-     different because of copy history.  A NULL value means the
-     resulting URL is unknown.  */
-  const char *ra_session_url;
-
-  /* The actual final resulting revision for the input URL.  An
-     invalid revnum as determined by SVN_IS_VALID_REVNUM() means the
-     revnum is unknown.  */
-  svn_revnum_t ra_revnum;
-
-  /* An optional node kind for the URL.  Since there is no enum value
-     for an unknown node kind, it is represented as a pointer to a
-     svn_node_kind_t with a NULL pointer indicating an unknown
-     value. */
-  svn_node_kind_t *kind_p;
-} svn_client__ra_session_from_path_results;
-
-/* Checkout into PATH a working copy of URL at REVISION, and (if not
+/* Checkout into LOCAL_ABSPATH a working copy of URL at REVISION, and (if not
    NULL) set RESULT_REV to the checked out revision.
 
    If DEPTH is svn_depth_infinity, then check out fully recursively.
-   Else if DEPTH is svn_depth_files, checkout all files under PATH (if
+   Else if DEPTH is svn_depth_files, checkout all files under LOCAL_ABSPATH (if
    any), but not subdirectories.  Else if DEPTH is
    svn_depth_immediates, check out all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just check out PATH, with none of its entries.
+   svn_depth_empty, just check out LOCAL_ABSPATH, with none of its entries.
 
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
 
@@ -579,59 +505,62 @@ typedef struct
    If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
-   to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required.  If
-   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
-   obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the checkout to fail.
+   to TRUE if a sleep is required, and will not change *TIMESTAMP_SLEEP
+   if no sleep is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE,
+   unversioned children of LOCAL_ABSPATH that obstruct items added from
+   the repos are tolerated; if FALSE, these obstructions cause the checkout
+   to fail.
 
    If INNERCHECKOUT is true, no anchor check is performed on the target.
    */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
-                              const char *path,
+                              const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
-                              const svn_client__ra_session_from_path_results *ra_cache,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
-                              svn_boolean_t innercheckout,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
 /* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not
-   NULL) set RESULT_REV to the switch revision.  ADM_ACCESS may be NULL, but
-   if is not, it is a write locked working copy administrative access baton
-   that has an associated baton for PATH.  Only switch as deeply as DEPTH
-   indicates.  If TIMESTAMP_SLEEP is NULL this function will sleep before
+   NULL) set RESULT_REV to the switch revision. A write lock will be
+   acquired and released if not held. Only switch as deeply as DEPTH
+   indicates.
+
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
    to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required.  If IGNORE_EXTERNALS is true,
-   don't process externals.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned
-   children of PATH that obstruct items added from the repos are tolerated;
-   if FALSE, these obstructions cause the switch to fail.
+   *TIMESTAMP_SLEEP if no sleep is required.
+
+   If IGNORE_EXTERNALS is true, don't process externals.
+
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   that obstruct items added from the repos are tolerated; if FALSE,
+   these obstructions cause the switch to fail.
 
    DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal().
 
-   If INNERSWITCH is true, no anchor check is performed on the target.
-   */
+   If IGNORE_ANCESTRY is true, don't perform a common ancestry check
+   between the PATH and URL; otherwise, do, and return
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES if they aren't related.
+*/
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const char *url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
-                            svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
-                            svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
-                            svn_boolean_t innerswitch,
+                            svn_boolean_t ignore_ancestry,
+                            svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -642,72 +571,70 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
 
-   TARGET is a working-copy path, the base of the hierarchy to be
-   compared.  It corresponds to the URL opened in RA_SESSION below.
-
-   WC_CTX is a context for the working copy.
-
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
 
    DEPTH is the depth to recurse.
 
-   DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
-
-   RA_SESSION defines the additional RA session for requesting file
-   contents.
+   RA_SESSION is an RA session through which this editor may fetch
+   properties, file contents and directory listings of the 'old' side of the
+   diff. It is a separate RA session from the one through which this editor
+   is being driven.
 
    REVISION is the start revision in the comparison.
+
+   For each deleted directory, if WALK_DELETED_DIRS is true then just call
+   the 'dir_deleted' callback once, otherwise call the 'file_deleted' or
+   'dir_deleted' callback for each individual node in that subtree.
+
+   If TEXT_DELTAS is FALSE, then do not expect text deltas from the edit
+   drive, nor send the 'before' and 'after' texts to the diff callbacks;
+   instead, send empty files to the diff callbacks if there was a change.
+   This must be FALSE if the edit producer is not sending text deltas,
+   otherwise the file content checksum comparisons will fail.
 
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
 
    EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
-svn_client__get_diff_editor(const char *target,
-                            svn_wc_context_t *wc_ctx,
-                            const svn_wc_diff_callbacks4_t *diff_cmd,
-                            void *diff_cmd_baton,
+svn_client__get_diff_editor(const svn_delta_editor_t **editor,
+                            void **edit_baton,
                             svn_depth_t depth,
-                            svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
+                            svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t text_deltas,
+                            const svn_wc_diff_callbacks4_t *diff_callbacks,
+                            void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            apr_pool_t *pool);
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *result_pool);
 
 
 /* ---------------------------------------------------------------- */
 
 /*** Editor for diff summary ***/
 
-/* Create an editor for a repository diff summary, i.e. comparing one
-   repository version against the other and only providing information
-   about the changed items without the text deltas.
+/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
+   report a diff summary, i.e. only providing information about the changed
+   items without the text deltas.
 
-   TARGET is the target of the diff, relative to the root of the edit.
+   TARGET is the target path, relative to the anchor, of the diff.
 
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
-   created svn_delta_editor_t for each changed item.
-
-   See svn_client__get_diff_editor() for a description of the other
-   parameters.  */
+   created callbacks for each changed item.
+*/
 svn_error_t *
-svn_client__get_diff_summarize_editor(const char *target,
-                                      svn_client_diff_summarize_func_t
-                                      summarize_func,
-                                      void *summarize_baton,
-                                      svn_ra_session_t *ra_session,
-                                      svn_revnum_t revision,
-                                      svn_cancel_func_t cancel_func,
-                                      void *cancel_baton,
-                                      const svn_delta_editor_t **editor,
-                                      void **edit_baton,
-                                      apr_pool_t *pool);
+svn_client__get_diff_summarize_callbacks(
+                        svn_wc_diff_callbacks4_t **callbacks,
+                        void **callback_baton,
+                        const char *target,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -718,13 +645,10 @@ svn_client__get_diff_summarize_editor(const char *target,
    various helper functions may need.  Not every copy function uses every
    field.
 */
-typedef struct
+typedef struct svn_client__copy_pair_t
 {
-    /* The source path or url. */
-    const char *src;
-
-    /* The absolute path of the source. */
-    const char *src_abs;
+    /* The absolute source path or url. */
+    const char *src_abspath_or_url;
 
     /* The base name of the object.  It should be the same for both src
        and dst. */
@@ -746,11 +670,11 @@ typedef struct
     /* The source revision number. */
     svn_revnum_t src_revnum;
 
-    /* The destination path or url */
-    const char *dst;
+    /* The absolute destination path or url */
+    const char *dst_abspath_or_url;
 
-    /* The destination's parent path */
-    const char *dst_parent;
+    /* The absolute source path or url of the destination's parent. */
+    const char *dst_parent_abspath;
 } svn_client__copy_pair_t;
 
 /* ---------------------------------------------------------------- */
@@ -800,32 +724,49 @@ typedef struct
 
 */
 
+/* Structure that contains an apr_hash_t * hash of apr_array_header_t *
+   arrays of svn_client_commit_item3_t * structures; keyed by the
+   canonical repository URLs. For faster lookup, it also provides
+   an hash index keyed by the local absolute path. */
+typedef struct svn_client__committables_t
+{
+  /* apr_array_header_t array of svn_client_commit_item3_t structures
+     keyed by canonical repository URL */
+  apr_hash_t *by_repository;
 
+  /* svn_client_commit_item3_t structures keyed by local absolute path
+     (path member in the respective structures).
 
-/* ### This is TEMPORARY! Until we can find out the canonical
-   repository URL of a given entry, we'll just use this bogus value in
-   for our single committables hash key.  By the time we support
-   multiple repositories we will have to be storing the canonical
-   repository URLs anyway, so this will go away and the real URLs will
-   be the keys of the committables hash. */
-#define SVN_CLIENT__SINGLE_REPOS_NAME "svn:single-repos"
+     This member is for fast lookup only, i.e. whether there is an
+     entry for the given path or not, but it will only allow for one
+     entry per absolute path (in case of duplicate entries in the
+     above arrays). The "canonical" data storage containing all item
+     is by_repository. */
+  apr_hash_t *by_path;
 
+} svn_client__committables_t;
 
-/* Recursively crawl a set of working copy paths (PARENT_DIR + each
+/* Callback for the commit harvester to check if a node exists at the specified
+   url */
+typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
+                                                     svn_node_kind_t *kind,
+                                                     const char *url,
+                                                     svn_revnum_t revision,
+                                                     apr_pool_t *scratch_pool);
+
+/* Recursively crawl a set of working copy paths (BASE_DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each
    candidate found:
 
-     - create svn_client_commit_item_t for the candidate.
+     - create svn_client_commit_item3_t for the candidate.
 
      - add the structure to an apr_array_header_t array of commit
        items that are in the same repository, creating a new array if
        necessary.
 
-     - add (or update) a reference to this array to the COMMITTABLES
-       hash, keyed on the canonical repository name.  ### todo, until
-       multi-repository support actually exists, the single key here
-       will actually be some arbitrary thing to be ignored.
+     - add (or update) a reference to this array to the by_repository
+       hash within COMMITTABLES and update the by_path member as well-
 
      - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
 
@@ -833,15 +774,9 @@ typedef struct
        the directories children recursively for any lock tokens and
        add them to the LOCK_TOKENS array.
 
-   At the successful return of this function, COMMITTABLES will be an
-   apr_hash_t * hash of apr_array_header_t * arrays (of
-   svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  LOCK_TOKENS will point to a hash table
-   with const char * lock tokens, keyed on const char * URLs.  Also,
-   LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
-   keyed on const char * working copy path directory names which were
-   locked in the process of this crawl.  These will need to be
-   unlocked again post-commit.
+   At the successful return of this function, COMMITTABLES will point
+   a new svn_client__committables_t*.  LOCK_TOKENS will point to a hash
+   table with const char * lock tokens, keyed on const char * URLs.
 
    If DEPTH is specified, descend (or not) into each target in TARGETS
    as specified by DEPTH; the behavior is the same as that described
@@ -859,42 +794,47 @@ typedef struct
    CTX->CANCEL_BATON while harvesting to determine if the client has
    cancelled the operation. */
 svn_error_t *
-svn_client__harvest_committables(apr_hash_t **committables,
+svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 svn_wc_adm_access_t *parent_dir,
-                                 apr_array_header_t *targets,
+                                 const char *base_dir_abspath,
+                                 const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
+                                 svn_client__check_url_kind_t check_url_func,
+                                 void *check_url_baton,
                                  svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
-/* Recursively crawl each working copy path SRC in COPY_PAIRS, harvesting
-   commit_items into a COMMITABLES hash (see the docstring for
-   svn_client__harvest_committables for what that really means, and
-   for the relevance of LOCKED_DIRS) as if every entry at or below
-   the SRC was to be committed as a set of adds (mostly with history)
-   to a new repository URL (DST in COPY_PAIRS).
+/* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
+   harvesting commit_items into a COMMITABLES structure as if every entry
+   at or below the SRC was to be committed as a set of adds (mostly with
+   history) to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
    cancelled the operation.  */
 svn_error_t *
-svn_client__get_copy_committables(apr_hash_t **committables,
+svn_client__get_copy_committables(svn_client__committables_t **committables,
                                   const apr_array_header_t *copy_pairs,
+                                  svn_client__check_url_kind_t check_url_func,
+                                  void *check_url_baton,
                                   svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
-
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* A qsort()-compatible sort routine for sorting an array of
-   svn_client_commit_item_t's by their URL member. */
+   svn_client_commit_item_t *'s by their URL member. */
 int svn_client__sort_commit_item_urls(const void *a, const void *b);
 
 
 /* Rewrite the COMMIT_ITEMS array to be sorted by URL.  Also, discover
    a common *BASE_URL for the items in the array, and rewrite those
    items' URLs to be relative to that *BASE_URL.
+
+   COMMIT_ITEMS is an array of (svn_client_commit_item3_t *) items.
 
    Afterwards, some of the items in COMMIT_ITEMS may contain data
    allocated in POOL. */
@@ -907,7 +847,9 @@ svn_client__condense_commit_items(const char **base_url,
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
-   by) svn_client__condense_commit_items.
+   by) svn_client__condense_commit_items().
+
+   COMMIT_ITEMS is an array of (svn_client_commit_item3_t *) items.
 
    CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as
    a way of describing actions to the application layer (if non NULL).
@@ -915,40 +857,40 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If the caller wants to keep track of any outstanding temporary
-   files left after the transmission of text and property mods,
-   *TEMPFILES is the place to look.
+   If SHA1_CHECKSUMS is not NULL, set *SHA1_CHECKSUMS to a hash containing,
+   for each file transmitted, a mapping from the commit-item's (const
+   char *) path to the (const svn_checksum_t *) SHA1 checksum of its new text
+   base.
 
-   MD5 checksums, if available,  for the new text bases of committed
-   files are stored in *CHECKSUMS, which maps const char* paths (from the
-   items' paths) to const svn_checksum_t * digests.  CHECKSUMS may be
-   null.  */
+   Use RESULT_POOL for all allocating the resulting hashes and SCRATCH_POOL
+   for temporary allocations.
+   */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
-                      apr_array_header_t *commit_items,
+                      const apr_array_header_t *commit_items,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **tempfiles,
-                      apr_hash_t **checksums,
+                      apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
-                      apr_pool_t *pool);
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 
 
 /*** Externals (Modules) ***/
 
-/* Handle changes to the svn:externals property described by EXTERNALS_OLD,
-   EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level
-   directory is at TO_PATH and should have a write lock in ADM_ACCESS
-   and corresponds to FROM_URL URL in the repository, which has a root
-   URL of REPOS_ROOT_URL.
+/* Handle changes to the svn:externals property described by EXTERNALS_NEW,
+   and AMBIENT_DEPTHS.  The tree's top level directory
+   is at TARGET_ABSPATH which has a root URL of REPOS_ROOT_URL.
+   A write lock should be held.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
    subdir, or call svn_wc_remove_from_revision_control() on an
    existing one, or both.
 
+   TARGET_ABSPATH is the root of the driving operation and
    REQUESTED_DEPTH is the requested depth of the driving operation
    (e.g., update, switch, etc).  If it is neither svn_depth_infinity
    nor svn_depth_unknown, then changes to svn:externals will have no
@@ -962,41 +904,36 @@ svn_client__do_commit(const char *base_url,
 
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
 
-   ### todo: AUTH_BATON may not be so useful.  It's almost like we
-       need access to the original auth-obtaining callbacks that
-       produced auth baton in the first place.  Hmmm. ###
-
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             apr_hash_t *externals_old,
-                             apr_hash_t *externals_new,
+svn_client__handle_externals(apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
-                             const char *from_url,
-                             const char *to_path,
                              const char *repos_root_url,
+                             const char *target_abspath,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 
-/* Fetch externals definitions described by EXTERNALS, a hash of the
-   form returned by svn_wc_edited_externals() (which see).  If
-   IS_EXPORT is set, the external items will be exported instead of
-   checked out -- they will have no administrative subdirectories.
+/* Export externals definitions described by EXTERNALS, a hash of the
+   form returned by svn_wc_edited_externals() (which see). The external
+   items will be exported instead of checked out -- they will have no
+   administrative subdirectories.
 
    The checked out or exported tree's top level directory is at
-   TO_PATH and corresponds to FROM_URL URL in the repository, which
+   TO_ABSPATH and corresponds to FROM_URL URL in the repository, which
    has a root URL of REPOS_ROOT_URL.
 
    REQUESTED_DEPTH is the requested_depth of the driving operation; it
    behaves as for svn_client__handle_externals(), except that ambient
    depths are presumed to be svn_depth_infinity.
+
+   NATIVE_EOL is the value passed as NATIVE_EOL when exporting.
 
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
@@ -1004,31 +941,75 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_client__fetch_externals(apr_hash_t *externals,
-                            const char *from_url,
-                            const char *to_path,
-                            const char *repos_root_url,
-                            svn_depth_t requested_depth,
-                            svn_boolean_t is_export,
-                            svn_boolean_t *timestamp_sleep,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+svn_client__export_externals(apr_hash_t *externals,
+                             const char *from_url,
+                             const char *to_abspath,
+                             const char *repos_root_url,
+                             svn_depth_t requested_depth,
+                             const char *native_eol,
+                             svn_boolean_t ignore_keywords,
+                             svn_boolean_t *timestamp_sleep,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
 
 
-/* Perform status operations on each external in TRAVERSAL_INFO.  All
-   other options are the same as those passed to svn_client_status(). */
+/* Perform status operations on each external in EXTERNAL_MAP, a const char *
+   local_abspath of all externals mapping to the const char* defining_abspath.
+   All other options are the same as those passed to svn_client_status(). */
 svn_error_t *
-svn_client__do_external_status(apr_hash_t *external_defs,
-                               svn_wc_status_func4_t status_func,
-                               void *status_baton,
+svn_client__do_external_status(svn_client_ctx_t *ctx,
+                               apr_hash_t *external_map,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
-                               svn_client_ctx_t *ctx,
+                               svn_client_status_func_t status_func,
+                               void *status_baton,
                                apr_pool_t *pool);
 
-
+/* Baton type for svn_wc__external_info_gatherer(). */
+typedef struct svn_client__external_func_baton_t
+{
+  apr_hash_t *externals_old;  /* Hash of old externals property values,
+                                 or NULL if the caller doesn't care. */
+  apr_hash_t *externals_new;  /* Hash of new externals property values,
+                                 or NULL if the caller doesn't care. */
+  apr_hash_t *ambient_depths; /* Hash of ambient depth values, or NULL
+                                 if the caller doesn't care. */
+  apr_pool_t *result_pool;    /* Pool to use for all stored values. */
+
+} svn_client__external_func_baton_t;
+
+
+/* This function gets invoked whenever external changes are encountered.
+   This implements the `svn_wc_external_update_t' interface, and can
+   be used with an svn_client__external_func_baton_t BATON to gather
+   information about changes to externals definitions. */
+svn_error_t *
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool);
+
+/* Baton for svn_client__dirent_fetcher */
+struct svn_client__dirent_fetcher_baton_t
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t target_revision;
+  const char *anchor_url;
+};
+
+/* Implements svn_wc_dirents_func_t for update and switch handling. Assumes
+   a struct svn_client__dirent_fetcher_baton_t * baton */
+svn_error_t *
+svn_client__dirent_fetcher(void *baton,
+                           apr_hash_t **dirents,
+                           const char *repos_root_url,
+                           const char *repos_relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Retrieve log messages using the first provided (non-NULL) callback
    in the set of *CTX->log_msg_func3, CTX->log_msg_func2, or
@@ -1054,6 +1035,33 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Return a potentially translated version of local file LOCAL_ABSPATH
+   in NORMAL_STREAM.  REVISION must be one of the following: BASE, COMMITTED,
+   WORKING.
+
+   EXPAND_KEYWORDS operates as per the EXPAND argument to
+   svn_subst_stream_translated, which see.  If NORMALIZE_EOLS is TRUE and
+   LOCAL_ABSPATH requires translation, then normalize the line endings in
+   *NORMAL_STREAM.
+
+   Uses SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_client__get_normalized_stream(svn_stream_t **normal_stream,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  const svn_opt_revision_t *revision,
+                                  svn_boolean_t expand_keywords,
+                                  svn_boolean_t normalize_eols,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/* Return a set of callbacks to use with the Ev2 shims. */
+svn_delta_shim_callbacks_t *
+svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
+                               apr_hash_t *relpath_map,
+                               apr_pool_t *result_pool);
 
 /* Return true if KIND is a revision kind that is dependent on the working
  * copy. Otherwise, return false. */
@@ -1089,32 +1097,6 @@ svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
 const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
-
-
-/* Some external traversal helpers.
- */
-/* This function gets invoked whenever external changes are encountered.
-   This implements svn_wc_external_update_t */
-svn_error_t *
-svn_client__external_info_gatherer(void *baton,
-                                   const char *local_abspath,
-                                   const svn_string_t *old_val,
-                                   const svn_string_t *new_val,
-                                   svn_depth_t depth,
-                                   apr_pool_t *scratch_pool);
-
-/* Baton type for svn_wc__external_info_gatherer().  All fields must be
-   populated before use. */
-typedef struct svn_client__external_func_baton_t
-{
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-  apr_hash_t *ambient_depths;
-
-  apr_pool_t *result_pool;
-} svn_client__external_func_baton_t;
-
-
 
 
 #ifdef __cplusplus

@@ -24,24 +24,18 @@
 
 
 #include <apr_uri.h>
-
-#include <expat.h>
-
 #include <serf.h>
 
 #include "svn_pools.h"
 #include "svn_ra.h"
-#include "svn_dav.h"
-#include "svn_xml.h"
-#include "../libsvn_ra/ra_loader.h"
-#include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
-#include "svn_path.h"
 #include "svn_time.h"
+#include "svn_xml.h"
 
 #include "private/svn_dav_protocol.h"
+
 #include "svn_private_config.h"
+
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_serf.h"
 
@@ -49,123 +43,59 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
-  NONE = 0,
-  VERSION_NAME,
-} date_state_e;
+enum date_state_e {
+  INITIAL = 0,
+  REPORT,
+  VERSION_NAME
+};
 
-typedef struct {
-  /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
-} date_info_t;
 
-typedef struct {
-  apr_pool_t *pool;
-
+typedef struct date_context_t {
   /* The time asked about. */
   apr_time_t time;
 
   /* What was the youngest revision at that time? */
   svn_revnum_t *revision;
 
-  /* are we done? */
-  svn_boolean_t done;
-
 } date_context_t;
 
-
-static date_info_t *
-push_state(svn_ra_serf__xml_parser_t *parser,
-           date_context_t *date_ctx,
-           date_state_e state)
-{
-  svn_ra_serf__xml_push_state(parser, state);
+#define D_ "DAV:"
+#define S_ SVN_XML_NAMESPACE
+static const svn_ra_serf__xml_transition_t date_ttable[] = {
+  { INITIAL, S_, "dated-rev-report", REPORT,
+    FALSE, { NULL }, FALSE },
 
-  if (state == VERSION_NAME)
-    {
-      date_info_t *info;
+  { REPORT, D_, SVN_DAV__VERSION_NAME, VERSION_NAME,
+    TRUE, { NULL }, TRUE },
 
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
+  { 0 }
+};
 
-      parser->state->private = info;
-    }
 
-  return parser->state->private;
-}
-
+/* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
-start_getdate(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
-              svn_ra_serf__dav_props_t name,
-              const char **attrs)
+date_closed(svn_ra_serf__xml_estate_t *xes,
+            void *baton,
+            int leaving_state,
+            const svn_string_t *cdata,
+            apr_hash_t *attrs,
+            apr_pool_t *scratch_pool)
 {
-  date_context_t *date_ctx = userData;
-  date_state_e state;
+  date_context_t *date_ctx = baton;
 
-  state = parser->state->current_state;
+  SVN_ERR_ASSERT(leaving_state == VERSION_NAME);
+  SVN_ERR_ASSERT(cdata != NULL);
 
-  if (state == NONE &&
-      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
-    {
-      push_state(parser, date_ctx, VERSION_NAME);
-    }
+  *date_ctx->revision = SVN_STR_TO_REV(cdata->data);
 
   return SVN_NO_ERROR;
 }
 
+
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
-end_getdate(svn_ra_serf__xml_parser_t *parser,
-            void *userData,
-            svn_ra_serf__dav_props_t name)
-{
-  date_context_t *date_ctx = userData;
-  date_state_e state;
-  date_info_t *info;
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  if (state == VERSION_NAME &&
-      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
-    {
-      *date_ctx->revision = SVN_STR_TO_REV(info->tmp);
-      svn_ra_serf__xml_pop_state(parser);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cdata_getdate(svn_ra_serf__xml_parser_t *parser,
-              void *userData,
-              const char *data,
-              apr_size_t len)
-{
-  date_context_t *date_ctx = userData;
-  date_state_e state;
-  date_info_t *info;
-
-  UNUSED_CTX(date_ctx);
-
-  state = parser->state->current_state;
-  info = parser->state->private;
-
-  switch (state)
-    {
-    case VERSION_NAME:
-        svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
-                                   data, len, parser->state->pool);
-        break;
-    default:
-        break;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static serf_bucket_t*
-create_getdate_body(void *baton,
+create_getdate_body(serf_bucket_t **body_bkt,
+                    void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
@@ -186,7 +116,8 @@ create_getdate_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:dated-rev-report");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -198,19 +129,20 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   date_context_t *date_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_ra_serf__xml_context_t *xmlctx;
   const char *report_target;
-  int status_code;
 
-  date_ctx = apr_pcalloc(pool, sizeof(*date_ctx));
-  date_ctx->pool = pool;
+  date_ctx = apr_palloc(pool, sizeof(*date_ctx));
   date_ctx->time = tm;
   date_ctx->revision = revision;
-  date_ctx->done = FALSE;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  xmlctx = svn_ra_serf__xml_context_create(date_ttable,
+                                           NULL, date_closed, NULL,
+                                           date_ctx,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 
   handler->method = "REPORT";
   handler->path = report_target;
@@ -218,25 +150,12 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-
-  parser_ctx->pool = pool;
-  parser_ctx->user_data = date_ctx;
-  parser_ctx->start = start_getdate;
-  parser_ctx->end = end_getdate;
-  parser_ctx->cdata = cdata_getdate;
-  parser_ctx->done = &date_ctx->done;
-  parser_ctx->status_code = &status_code;
-
   handler->body_delegate = create_getdate_body;
   handler->body_delegate_baton = date_ctx;
 
-  handler->response_handler = svn_ra_serf__handle_xml_parser;
-  handler->response_baton = parser_ctx;
-
-  svn_ra_serf__request_create(handler);
-
   *date_ctx->revision = SVN_INVALID_REVNUM;
 
-  return svn_ra_serf__context_run_wait(&date_ctx->done, session, pool);
+  /* ### use svn_ra_serf__error_on_status() ?  */
+
+  return svn_error_trace(svn_ra_serf__context_run_one(handler, pool));
 }

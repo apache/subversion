@@ -25,7 +25,6 @@
 #include <apr_strings.h>
 
 #include "svn_pools.h"
-#include "svn_string.h"
 #include "svn_error.h"
 #include "svn_types.h"
 #include "svn_opt.h"
@@ -34,43 +33,111 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_fspath.h"
 
 #include "client.h"
 
 #include "svn_private_config.h"
 
-/* Duplicate a HASH containing (char * -> svn_string_t *) key/value
-   pairs using POOL. */
-static apr_hash_t *
-string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
+svn_client__pathrev_t *
+svn_client__pathrev_create(const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t rev,
+                           const char *url,
+                           apr_pool_t *result_pool)
 {
-  apr_hash_index_t *hi;
-  apr_hash_t *new_hash = apr_hash_make(pool);
+  svn_client__pathrev_t *loc = apr_palloc(result_pool, sizeof(*loc));
 
-  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
-    {
-      const char *key = apr_pstrdup(pool, svn_apr_hash_index_key(hi));
-      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
-      svn_string_t *val = svn_string_dup(svn_apr_hash_index_val(hi), pool);
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(repos_root_url));
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(url));
 
-      apr_hash_set(new_hash, key, klen, val);
-    }
-  return new_hash;
+  loc->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
+  loc->repos_uuid = apr_pstrdup(result_pool, repos_uuid);
+  loc->rev = rev;
+  loc->url = apr_pstrdup(result_pool, url);
+  return loc;
 }
+
+svn_client__pathrev_t *
+svn_client__pathrev_create_with_relpath(const char *repos_root_url,
+                                        const char *repos_uuid,
+                                        svn_revnum_t rev,
+                                        const char *relpath,
+                                        apr_pool_t *result_pool)
+{
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath));
+
+  return svn_client__pathrev_create(
+           repos_root_url, repos_uuid, rev,
+           svn_path_url_add_component2(repos_root_url, relpath, result_pool),
+           result_pool);
+}
+
+svn_error_t *
+svn_client__pathrev_create_with_session(svn_client__pathrev_t **pathrev_p,
+                                        svn_ra_session_t *ra_session,
+                                        svn_revnum_t rev,
+                                        const char *url,
+                                        apr_pool_t *result_pool)
+{
+  svn_client__pathrev_t *pathrev = apr_palloc(result_pool, sizeof(*pathrev));
+
+  SVN_ERR_ASSERT(svn_path_is_url(url));
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &pathrev->repos_root_url,
+                                 result_pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &pathrev->repos_uuid, result_pool));
+  pathrev->rev = rev;
+  pathrev->url = apr_pstrdup(result_pool, url);
+  *pathrev_p = pathrev;
+  return SVN_NO_ERROR;
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_dup(const svn_client__pathrev_t *pathrev,
+                        apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(
+           pathrev->repos_root_url, pathrev->repos_uuid,
+           pathrev->rev, pathrev->url, result_pool);
+}
+
+svn_client__pathrev_t *
+svn_client__pathrev_join_relpath(const svn_client__pathrev_t *pathrev,
+                                 const char *relpath,
+                                 apr_pool_t *result_pool)
+{
+  return svn_client__pathrev_create(
+           pathrev->repos_root_url, pathrev->repos_uuid, pathrev->rev,
+           svn_path_url_add_component2(pathrev->url, relpath, result_pool),
+           result_pool);
+}
+
+const char *
+svn_client__pathrev_relpath(const svn_client__pathrev_t *pathrev,
+                            apr_pool_t *result_pool)
+{
+  return svn_uri_skip_ancestor(pathrev->repos_root_url, pathrev->url,
+                               result_pool);
+}
+
+const char *
+svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
+                           apr_pool_t *result_pool)
+{
+  return svn_fspath__canonicalize(svn_uri_skip_ancestor(
+                                    pathrev->repos_root_url, pathrev->url,
+                                    result_pool),
+                                  result_pool);
+}
+
 
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
 {
   return apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
-}
-
-svn_error_t *
-svn_client_commit_item_create(const svn_client_commit_item3_t **item,
-                              apr_pool_t *pool)
-{
-  *item = svn_client_commit_item3_create(pool);
-  return SVN_NO_ERROR;
 }
 
 svn_client_commit_item3_t *
@@ -101,193 +168,99 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
   return new_item;
 }
 
-svn_client_commit_item2_t *
-svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
-                            apr_pool_t *pool)
-{
-  svn_client_commit_item2_t *new_item = apr_palloc(pool, sizeof(*new_item));
-
-  *new_item = *item;
-
-  if (new_item->path)
-    new_item->path = apr_pstrdup(pool, new_item->path);
-
-  if (new_item->url)
-    new_item->url = apr_pstrdup(pool, new_item->url);
-
-  if (new_item->copyfrom_url)
-    new_item->copyfrom_url = apr_pstrdup(pool, new_item->copyfrom_url);
-
-  if (new_item->wcprop_changes)
-    new_item->wcprop_changes = svn_prop_array_dup(new_item->wcprop_changes,
-                                                  pool);
-
-  return new_item;
-}
-
-svn_client_proplist_item_t *
-svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
-                             apr_pool_t * pool)
-{
-  svn_client_proplist_item_t *new_item = apr_pcalloc(pool, sizeof(*new_item));
-
-  if (item->node_name)
-    new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
-
-  if (item->prop_hash)
-    new_item->prop_hash = string_hash_dup(item->prop_hash, pool);
-
-  return new_item;
-}
-
-/* Return LOCAL_ABSPATH's URL and repository root in *URL and REPOS_ROOT,
-   respectively.  */
-static svn_error_t *
-wc_path_to_repos_urls(const char **url,
-                      const char **repos_root,
-                      svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_client__entry_location(url, NULL, wc_ctx, local_abspath,
-                                     svn_opt_revision_unspecified,
-                                     result_pool, scratch_pool));
-
-  /* If we weren't provided a REPOS_ROOT, we'll try to read one from
-     the entry.  The entry might not hold a URL -- in that case, we'll
-     need a fallback plan. */
-  if (*repos_root == NULL)
-    *repos_root = apr_pstrdup(result_pool, entry->repos);
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
-svn_client__path_relative_to_root(const char **rel_path,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *abspath_or_url,
-                                  const char *repos_root,
-                                  svn_boolean_t include_leading_slash,
-                                  svn_ra_session_t *ra_session,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
+                             const char *wc_abspath,
+                             svn_wc_context_t *wc_ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
-  /* ### TODO: Rework this to use svn_ra_get_path_relative_to_root(). */
+  const char *relpath;
 
-  SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
+  *base_p = apr_palloc(result_pool, sizeof(**base_p));
 
-  /* If we have a WC path... */
-  if (! svn_path_is_url(abspath_or_url))
+  SVN_ERR(svn_wc__node_get_base(&(*base_p)->rev,
+                                &relpath,
+                                &(*base_p)->repos_root_url,
+                                &(*base_p)->repos_uuid,
+                                wc_ctx, wc_abspath,
+                                result_pool, scratch_pool));
+  if ((*base_p)->repos_root_url && relpath)
     {
-      /* ...fetch its entry, and attempt to get both its full URL and
-         repository root URL.  If we can't get REPOS_ROOT from the WC
-         entry, we'll get it from the RA layer.*/
-      SVN_ERR(wc_path_to_repos_urls(&abspath_or_url, &repos_root, wc_ctx,
-                                    abspath_or_url, scratch_pool,
-                                    scratch_pool));
-    }
-
-  /* If we weren't provided a REPOS_ROOT, or couldn't find one in the
-     WC entry, we'll ask the RA layer.  */
-  if (repos_root == NULL)
-    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, scratch_pool));
-
-  /* Check if ABSPATH_OR_URL *is* the repository root URL.  */
-  if (strcmp(repos_root, abspath_or_url) == 0)
-    {
-      *rel_path = include_leading_slash ? "/" : "";
+      (*base_p)->url = svn_path_url_add_component2(
+                           (*base_p)->repos_root_url, relpath, result_pool);
     }
   else
     {
-      /* See if PATH_OR_URL is a child of REPOS_ROOT.  If we get NULL
-         back from this, the two URLs have no commonality (which
-         should only happen if our caller provided us a REPOS_ROOT and
-         a PATH_OR_URL of something not in that repository).  */
-      const char *rel_url = svn_uri_is_child(repos_root, abspath_or_url,
-                                             scratch_pool);
-      if (! rel_url)
-        {
-          return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                   _("URL '%s' is not a child of repository "
-                                     "root URL '%s'"),
-                                   abspath_or_url, repos_root);
-        }
-      rel_url = svn_path_uri_decode(rel_url, result_pool);
-      *rel_path = include_leading_slash
-                    ? apr_pstrcat(result_pool, "/", rel_url, NULL) : rel_url;
+      *base_p = NULL;
     }
-
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root,
-                           const char *abspath_or_url,
-                           const svn_opt_revision_t *peg_revision,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
+                               const char *wc_abspath,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
-  svn_revnum_t rev;
-  const char *target_url;
+  const char *relpath;
 
-  /* If PATH_OR_URL is a local path and PEG_REVISION keeps us looking
-     locally, we'll first check PATH_OR_URL's entry for a repository
-     root URL. */
-  if (!svn_path_is_url(abspath_or_url)
-      && (peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_base))
+  *origin_p = apr_palloc(result_pool, sizeof(**origin_p));
+
+  SVN_ERR(svn_wc__node_get_origin(NULL /* is_copy */,
+                                  &(*origin_p)->rev,
+                                  &relpath,
+                                  &(*origin_p)->repos_root_url,
+                                  &(*origin_p)->repos_uuid,
+                                  NULL, ctx->wc_ctx, wc_abspath,
+                                  FALSE /* scan_deleted */,
+                                  result_pool, scratch_pool));
+  if ((*origin_p)->repos_root_url && relpath)
     {
-      *repos_root = NULL;
-      SVN_ERR(wc_path_to_repos_urls(&abspath_or_url, repos_root, ctx->wc_ctx,
-                                    abspath_or_url, result_pool, scratch_pool));
+      (*origin_p)->url = svn_path_url_add_component2(
+                           (*origin_p)->repos_root_url, relpath, result_pool);
     }
   else
     {
-      *repos_root = NULL;
+      *origin_p = NULL;
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_get_repos_root(const char **repos_root,
+                          const char **repos_uuid,
+                          const char *abspath_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *ra_session;
+
+  /* If PATH_OR_URL is a local path we can fetch the repos root locally. */
+  if (!svn_path_is_url(abspath_or_url))
+    {
+      SVN_ERR(svn_wc__node_get_repos_info(repos_root, repos_uuid,
+                                          ctx->wc_ctx, abspath_or_url,
+                                          result_pool, scratch_pool));
+
+      return SVN_NO_ERROR;
     }
 
-  /* If PATH_OR_URL was a URL, or PEG_REVISION wasn't a client-side
-     revision, or we weren't otherwise able to find the repository
-     root URL in PATH_OR_URL's WC entry, we use the RA layer to look
-     it up. */
-  if (*repos_root == NULL)
-    {
-      svn_ra_session_t *ra_session;
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                               &rev,
-                                               &target_url,
+  /* If PATH_OR_URL was a URL, we use the RA layer to look it up. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                abspath_or_url,
-                                               NULL,
-                                               peg_revision,
-                                               peg_revision,
-                                               ctx,
-                                               scratch_pool));
+                                               NULL, NULL, FALSE, TRUE,
+                                               ctx, scratch_pool));
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
-    }
+  if (repos_root)
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
+  if (repos_uuid)
+    SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_client__default_walker_error_handler(const char *path,
-                                         svn_error_t *err,
-                                         void *walk_baton,
-                                         apr_pool_t *pool)
-{
-  return svn_error_return(err);
-}
-
 
 const svn_opt_revision_t *
 svn_cl__rev_default_to_head_or_base(const svn_opt_revision_t *revision,
@@ -320,4 +293,149 @@ svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
   if (revision->kind == svn_opt_revision_unspecified)
     return peg_revision;
   return revision;
+}
+
+svn_error_t *
+svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_boolean_t wc_present = FALSE, url_present = FALSE;
+  int i;
+
+  for (i = 0; i < targets->nelts; ++i)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      if (! svn_path_is_url(target))
+        wc_present = TRUE;
+      else
+        url_present = TRUE;
+      if (url_present && wc_present)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot mix repository and working copy "
+                                   "targets"));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+struct shim_callbacks_baton
+{
+  svn_wc_context_t *wc_ctx;
+  apr_hash_t *relpath_map;
+};
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct shim_callbacks_baton *scb = baton;
+  const char *local_abspath;
+
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc_get_pristine_props(props, scb->wc_ctx, local_abspath,
+                                    result_pool, scratch_pool));
+
+  if (!*props)
+    *props = apr_hash_make(result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct shim_callbacks_baton *scb = baton;
+  svn_node_kind_t node_kind;
+  const char *local_abspath;
+
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *kind = svn_kind_unknown;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc_read_kind(&node_kind, scb->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct shim_callbacks_baton *scb = baton;
+  const char *local_abspath;
+  svn_stream_t *pristine_stream;
+  svn_stream_t *temp_stream;
+  svn_error_t *err;
+
+  local_abspath = apr_hash_get(scb->relpath_map, path, APR_HASH_KEY_STRING);
+  if (!local_abspath)
+    {
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
+                                      local_abspath, scratch_pool,
+                                      scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_stream_open_unique(&temp_stream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(pristine_stream, temp_stream, NULL, NULL,
+                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_delta_shim_callbacks_t *
+svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
+                               apr_hash_t *relpath_map,
+                               apr_pool_t *result_pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                            svn_delta_shim_callbacks_default(result_pool);
+  struct shim_callbacks_baton *scb = apr_pcalloc(result_pool, sizeof(*scb));
+
+  scb->wc_ctx = wc_ctx;
+  if (relpath_map)
+    scb->relpath_map = relpath_map;
+  else
+    scb->relpath_map = apr_hash_make(result_pool);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_baton = scb;
+
+  return callbacks;
 }

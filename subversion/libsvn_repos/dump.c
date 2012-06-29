@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_iter.h"
 #include "svn_repos.h"
 #include "svn_string.h"
@@ -33,97 +34,15 @@
 #include "svn_time.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
+#include "private/svn_mergeinfo_private.h"
+#include "private/svn_fs_private.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
 /*----------------------------------------------------------------------*/
 
-/** A variant of our hash-writing routine in libsvn_subr;  this one
-    writes to a stringbuf instead of a file, and outputs PROPS-END
-    instead of END.  If OLDHASH is not NULL, then only properties
-    which vary from OLDHASH will be written, and properties which
-    exist only in OLDHASH will be written out with "D" entries
-    (like "K" entries but with no corresponding value). **/
-
-static void
-write_hash_to_stringbuf(apr_hash_t *hash,
-                        apr_hash_t *oldhash,
-                        svn_stringbuf_t **strbuf,
-                        apr_pool_t *pool)
-{
-  apr_hash_index_t *this;      /* current hash entry */
-
-  *strbuf = svn_stringbuf_create("", pool);
-
-  for (this = apr_hash_first(pool, hash); this; this = apr_hash_next(this))
-    {
-      const void *key;
-      void *val;
-      apr_ssize_t keylen;
-      svn_string_t *value;
-
-      /* Get this key and val. */
-      apr_hash_this(this, &key, &keylen, &val);
-      value = val;
-
-      /* Don't output properties equal to the ones in oldhash, if present. */
-      if (oldhash)
-        {
-          svn_string_t *oldvalue = apr_hash_get(oldhash, key, keylen);
-
-          if (oldvalue && svn_string_compare(value, oldvalue))
-            continue;
-        }
-
-      /* Output name length, then name. */
-
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "K %" APR_SSIZE_T_FMT "\n",
-                                            keylen));
-
-      svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-
-      /* Output value length, then value. */
-
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "V %" APR_SIZE_T_FMT "\n",
-                                            value->len));
-
-      svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-    }
-
-  if (oldhash)
-    {
-      /* Output a "D " entry for each property in oldhash but not hash. */
-      for (this = apr_hash_first(pool, oldhash); this;
-           this = apr_hash_next(this))
-        {
-          const void *key;
-          apr_ssize_t keylen;
-
-          /* Get this key. */
-          apr_hash_this(this, &key, &keylen, NULL);
-
-          /* Only output values deleted in hash. */
-          if (apr_hash_get(hash, key, keylen))
-            continue;
-
-          /* Output name length, then name. */
-
-          svn_stringbuf_appendcstr(*strbuf,
-                                   apr_psprintf(pool,
-                                                "D %" APR_SSIZE_T_FMT "\n",
-                                                keylen));
-
-          svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-          svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-        }
-    }
-  svn_stringbuf_appendbytes(*strbuf, "PROPS-END\n", 10);
-}
 
 
 /* Compute the delta between OLDROOT/OLDPATH and NEWROOT/NEWPATH and
@@ -172,19 +91,23 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
 
 struct edit_baton
 {
-  /* The path which implicitly prepends all full paths coming into
-     this editor.  This will almost always be "" or "/".  */
+  /* The relpath which implicitly prepends all full paths coming into
+     this editor.  This will almost always be "".  */
   const char *path;
 
   /* The stream to dump to. */
   svn_stream_t *stream;
 
   /* Send feedback here, if non-NULL */
-  svn_stream_t *feedback_stream;
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
 
   /* The fs revision root, so we can read the contents of paths. */
   svn_fs_root_t *fs_root;
   svn_revnum_t current_rev;
+
+  /* The fs, so we can grab historic information if needed. */
+  svn_fs_t *fs;
 
   /* True if dumped nodes should output deltas instead of full text. */
   svn_boolean_t use_deltas;
@@ -194,6 +117,14 @@ struct edit_baton
 
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
+
+  /* If not NULL, set to true if any references to revisions older than
+     OLDEST_DUMPED_REV were found in the dumpstream. */
+  svn_boolean_t *found_old_reference;
+
+  /* If not NULL, set to true if any mergeinfo was dumped which contains
+     revisions older than OLDEST_DUMPED_REV. */
+  svn_boolean_t *found_old_mergeinfo;
 
   /* reusable buffer for writing file contents */
   char buffer[SVN__STREAM_CHUNK_SIZE];
@@ -211,13 +142,13 @@ struct dir_baton
   /* has this directory been written to the output stream? */
   svn_boolean_t written_out;
 
-  /* the absolute path to this directory */
+  /* the repository relpath associated with this directory */
   const char *path;
 
-  /* the comparison path and revision of this directory.  if both of
-     these are valid, use them as a source against which to compare
-     the directory instead of the default comparison source of PATH in
-     the previous revision. */
+  /* The comparison repository relpath and revision of this directory.
+     If both of these are valid, use them as a source against which to
+     compare the directory instead of the default comparison source of
+     PATH in the previous revision. */
   const char *cmp_path;
   svn_revnum_t cmp_rev;
 
@@ -263,18 +194,18 @@ make_dir_baton(const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    full_path = svn_path_join(eb->path, path, pool);
+    full_path = svn_relpath_join(eb->path, path, pool);
   else
     full_path = apr_pstrdup(pool, eb->path);
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
-    cmp_path = ((*cmp_path == '/') ? cmp_path + 1 : cmp_path);
+    cmp_path = svn_relpath_canonicalize(cmp_path, pool);
 
   new_db->edit_baton = eb;
   new_db->parent_dir_baton = pb;
   new_db->path = full_path;
-  new_db->cmp_path = cmp_path ? apr_pstrdup(pool, cmp_path) : NULL;
+  new_db->cmp_path = cmp_path;
   new_db->cmp_rev = cmp_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
@@ -299,7 +230,7 @@ make_dir_baton(const char *path,
   */
 static svn_error_t *
 dump_node(struct edit_baton *eb,
-          const char *path,    /* an absolute path. */
+          const char *path,
           svn_node_kind_t kind,
           enum svn_node_action action,
           svn_boolean_t is_copy,
@@ -316,20 +247,51 @@ dump_node(struct edit_baton *eb,
   svn_fs_root_t *compare_root = NULL;
   apr_file_t *delta_file = NULL;
 
+  /* Maybe validate the path. */
+  if (eb->verify || eb->notify_func)
+    {
+      svn_error_t *err = svn_fs__path_valid(path, pool);
+
+      if (err)
+        {
+          if (eb->notify_func)
+            {
+              char errbuf[512]; /* ### svn_strerror() magic number  */
+              svn_repos_notify_t *notify;
+              notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
+
+              notify->warning = svn_repos_notify_warning_invalid_fspath;
+              notify->warning_str = apr_psprintf(
+                     pool,
+                     _("E%06d: While validating fspath '%s': %s"),
+                     err->apr_err, path,
+                     svn_err_best_message(err, errbuf, sizeof(errbuf)));
+
+              eb->notify_func(eb->notify_baton, notify, pool);
+            }
+
+          /* Return the error in addition to notifying about it. */
+          if (eb->verify)
+            return svn_error_trace(err);
+          else
+            svn_error_clear(err);
+        }
+    }
+
   /* Write out metadata headers for this file node. */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
                             SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
-                            (*path == '/') ? path + 1 : path));
+                            path));
   if (kind == svn_node_file)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
+    SVN_ERR(svn_stream_puts(eb->stream,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
   else if (kind == svn_node_dir)
-    SVN_ERR(svn_stream_printf(eb->stream, pool,
-                              SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
+    SVN_ERR(svn_stream_puts(eb->stream,
+                            SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
-    cmp_path = ((*cmp_path == '/') ? cmp_path + 1 : cmp_path);
+    cmp_path = svn_relpath_canonicalize(cmp_path, pool);
 
   /* Validate the comparison path/rev. */
   if (ARE_VALID_COPY_ARGS(cmp_path, cmp_rev))
@@ -340,9 +302,8 @@ dump_node(struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": change\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
 
       /* either the text or props changed, or possibly both. */
       SVN_ERR(svn_fs_revision_root(&compare_root,
@@ -362,9 +323,9 @@ dump_node(struct edit_baton *eb,
       if (! is_copy)
         {
           /* a simple delete+add, implied by a single 'replace' action. */
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": replace\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": replace\n"));
 
           /* definitely need to dump all content for a replace. */
           if (kind == svn_node_file)
@@ -377,9 +338,9 @@ dump_node(struct edit_baton *eb,
 
           /* the path & kind headers have already been printed;  just
              add a delete action, and end the current record.*/
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": delete\n\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": delete\n\n"));
 
           /* recurse:  print an additional add-with-history record. */
           SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
@@ -393,9 +354,8 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_delete)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION
-                                ": delete\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
       /* we can leave this routine quietly now, don't need to dump
          any content. */
@@ -404,8 +364,8 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_add)
     {
-      SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+      SVN_ERR(svn_stream_puts(eb->stream,
+                              SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (! is_copy)
         {
@@ -416,15 +376,25 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
-          if (!eb->verify && cmp_rev < eb->oldest_dumped_rev)
-            SVN_ERR(svn_stream_printf
-                    (eb->feedback_stream, pool,
-                     _("WARNING: Referencing data in revision %ld,"
-                       " which is older than the oldest\n"
-                       "WARNING: dumped revision (%ld).  Loading this dump"
-                       " into an empty repository\n"
-                       "WARNING: will fail.\n"),
-                     cmp_rev, eb->oldest_dumped_rev));
+          if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
+              && eb->notify_func)
+            {
+              svn_repos_notify_t *notify =
+                    svn_repos_notify_create(svn_repos_notify_warning, pool);
+
+              notify->warning = svn_repos_notify_warning_found_old_reference;
+              notify->warning_str = apr_psprintf(
+                     pool,
+                     _("Referencing data in revision %ld,"
+                       " which is older than the oldest"
+                       " dumped revision (r%ld).  Loading this dump"
+                       " into an empty repository"
+                       " will fail."),
+                     cmp_rev, eb->oldest_dumped_rev);
+              if (eb->found_old_reference)
+                *eb->found_old_reference = TRUE;
+              eb->notify_func(eb->notify_baton, notify, pool);
+            }
 
           SVN_ERR(svn_stream_printf(eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV
@@ -452,7 +422,7 @@ dump_node(struct edit_baton *eb,
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -461,7 +431,7 @@ dump_node(struct edit_baton *eb,
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -491,19 +461,65 @@ dump_node(struct edit_baton *eb,
     {
       apr_hash_t *prophash, *oldhash = NULL;
       apr_size_t proplen;
+      svn_stream_t *propstream;
 
       SVN_ERR(svn_fs_node_proplist(&prophash, eb->fs_root, path, pool));
+
+      /* If this is a partial dump, then issue a warning if we dump mergeinfo
+         properties that refer to revisions older than the first revision
+         dumped. */
+      if (!eb->verify && eb->notify_func && eb->oldest_dumped_rev > 1)
+        {
+          svn_string_t *mergeinfo_str = apr_hash_get(prophash,
+                                                     SVN_PROP_MERGEINFO,
+                                                     APR_HASH_KEY_STRING);
+          if (mergeinfo_str)
+            {
+              svn_mergeinfo_t mergeinfo, old_mergeinfo;
+
+              SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str->data,
+                                          pool));
+              SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
+                &old_mergeinfo, mergeinfo,
+                eb->oldest_dumped_rev - 1, 0,
+                TRUE, pool, pool));
+              if (apr_hash_count(old_mergeinfo))
+                {
+                  svn_repos_notify_t *notify =
+                    svn_repos_notify_create(svn_repos_notify_warning, pool);
+
+                  notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
+                  notify->warning_str = apr_psprintf(
+                    pool,
+                    _("Mergeinfo referencing revision(s) prior "
+                      "to the oldest dumped revision (r%ld). "
+                      "Loading this dump may result in invalid "
+                      "mergeinfo."),
+                    eb->oldest_dumped_rev);
+
+                  if (eb->found_old_mergeinfo)
+                    *eb->found_old_mergeinfo = TRUE;
+                  eb->notify_func(eb->notify_baton, notify, pool);
+                }
+            }
+        }
+
       if (eb->use_deltas && compare_root)
         {
           /* Fetch the old property hash to diff against and output a header
              saying that our property contents are a delta. */
           SVN_ERR(svn_fs_node_proplist(&oldhash, compare_root, compare_path,
                                        pool));
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_PROP_DELTA
-                                    ": true\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_PROP_DELTA ": true\n"));
         }
-      write_hash_to_stringbuf(prophash, oldhash, &propstring, pool);
+      else
+        oldhash = apr_hash_make(pool);
+      propstring = svn_stringbuf_create_ensure(0, pool);
+      propstream = svn_stream_from_stringbuf(propstring, pool);
+      SVN_ERR(svn_hash_write_incremental(prophash, oldhash, propstream,
+                                         "PROPS-END", pool));
+      SVN_ERR(svn_stream_close(propstream));
       proplen = propstring->len;
       content_length += proplen;
       SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -526,15 +542,14 @@ dump_node(struct edit_baton *eb,
              saying our text contents are a delta. */
           SVN_ERR(store_delta(&delta_file, &textlen, compare_root,
                               compare_path, eb->fs_root, path, pool));
-          SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_TEXT_DELTA
-                                    ": true\n"));
+          SVN_ERR(svn_stream_puts(eb->stream,
+                                  SVN_REPOS_DUMPFILE_TEXT_DELTA ": true\n"));
 
           if (compare_root)
             {
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -543,7 +558,7 @@ dump_node(struct edit_baton *eb,
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -563,7 +578,7 @@ dump_node(struct edit_baton *eb,
                                 ": %" SVN_FILESIZE_T_FMT "\n", textlen));
 
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
-                                   eb->fs_root, path, TRUE, pool));
+                                   eb->fs_root, path, FALSE, pool));
       hex_digest = svn_checksum_to_cstring(checksum, pool);
       if (hex_digest)
         SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -571,7 +586,7 @@ dump_node(struct edit_baton *eb,
                                   ": %s\n", hex_digest));
 
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
-                                   eb->fs_root, path, TRUE, pool));
+                                   eb->fs_root, path, FALSE, pool));
       hex_digest = svn_checksum_to_cstring(checksum, pool);
       if (hex_digest)
         SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -701,10 +716,10 @@ open_directory(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
+  if (ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
-      cmp_path = svn_path_join(pb->cmp_path,
-                               svn_dirent_basename(path, pool), pool);
+      cmp_path = svn_relpath_join(pb->cmp_path,
+                                  svn_relpath_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 
@@ -720,17 +735,20 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+  apr_array_header_t *sorted_entries;
 
-  for (hi = apr_hash_first(pool, db->deleted_entries);
-       hi;
-       hi = apr_hash_next(hi))
+  /* Sort entries lexically instead of as paths. Even though the entries
+   * are full paths they're all in the same directory (see comment in struct
+   * dir_baton definition). So we really want to sort by basename, in which
+   * case the lexical sort function is more efficient. */
+  sorted_entries = svn_sort__hash(db->deleted_entries,
+                                  svn_sort_compare_items_lexically, pool);
+  for (i = 0; i < sorted_entries->nelts; i++)
     {
-      const void *key;
-      const char *path;
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = key;
+      const char *path = APR_ARRAY_IDX(sorted_entries, i,
+                                       svn_sort__item_t).key;
 
       svn_pool_clear(subpool);
 
@@ -798,10 +816,10 @@ open_file(const char *path,
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
-  if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
+  if (ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
-      cmp_path = svn_path_join(pb->cmp_path,
-                               svn_dirent_basename(path, pool), pool);
+      cmp_path = svn_relpath_join(pb->cmp_path,
+                                  svn_relpath_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 
@@ -836,6 +854,96 @@ change_dir_prop(void *parent_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_error_t *err;
+  svn_fs_root_t *fs_root;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_rev - 1;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  err = svn_fs_node_proplist(props, fs_root, path, result_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_node_kind_t node_kind;
+  svn_fs_root_t *fs_root;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_rev - 1;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
+  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct edit_baton *eb = baton;
+  svn_stream_t *contents;
+  svn_stream_t *file_stream;
+  const char *tmp_filename;
+  svn_error_t *err;
+  svn_fs_root_t *fs_root;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = eb->current_rev - 1;
+
+  SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
+
+  err = svn_fs_file_contents(&contents, fs_root, path, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+  SVN_ERR(svn_stream_open_unique(&file_stream, &tmp_filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(contents, file_stream, NULL, NULL, scratch_pool));
+
+  *filename = apr_pstrdup(result_pool, tmp_filename);
+
+  return SVN_NO_ERROR;
+}
 
 
 static svn_error_t *
@@ -845,7 +953,12 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t to_rev,
                 const char *root_path,
                 svn_stream_t *stream,
-                svn_stream_t *feedback_stream,
+                svn_boolean_t *found_old_reference,
+                svn_boolean_t *found_old_mergeinfo,
+                svn_error_t *(*custom_close_directory)(void *dir_baton,
+                                  apr_pool_t *scratch_pool),
+                svn_repos_notify_func_t notify_func,
+                void *notify_baton,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
@@ -856,30 +969,47 @@ get_dump_editor(const svn_delta_editor_t **editor,
      root baton. */
   struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
   svn_delta_editor_t *dump_editor = svn_delta_default_editor(pool);
+  svn_delta_shim_callbacks_t *shim_callbacks =
+                                svn_delta_shim_callbacks_default(pool);
 
   /* Set up the edit baton. */
   eb->stream = stream;
-  eb->feedback_stream = feedback_stream;
+  eb->notify_func = notify_func;
+  eb->notify_baton = notify_baton;
   eb->oldest_dumped_rev = oldest_dumped_rev;
   eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup(pool, root_path);
   SVN_ERR(svn_fs_revision_root(&(eb->fs_root), fs, to_rev, pool));
+  eb->fs = fs;
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
   eb->verify = verify;
+  eb->found_old_reference = found_old_reference;
+  eb->found_old_mergeinfo = found_old_mergeinfo;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
   dump_editor->delete_entry = delete_entry;
   dump_editor->add_directory = add_directory;
   dump_editor->open_directory = open_directory;
-  dump_editor->close_directory = close_directory;
+  if (custom_close_directory)
+    dump_editor->close_directory = custom_close_directory;
+  else
+    dump_editor->close_directory = close_directory;
   dump_editor->change_dir_prop = change_dir_prop;
   dump_editor->add_file = add_file;
   dump_editor->open_file = open_file;
 
   *edit_baton = eb;
   *editor = dump_editor;
+
+  shim_callbacks->fetch_kind_func = fetch_kind_func;
+  shim_callbacks->fetch_props_func = fetch_props_func;
+  shim_callbacks->fetch_base_func = fetch_base_func;
+  shim_callbacks->fetch_baton = eb;
+
+  SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                   NULL, NULL, shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -904,6 +1034,7 @@ write_revision_record(svn_stream_t *stream,
   svn_stringbuf_t *encoded_prophash;
   apr_time_t timetemp;
   svn_string_t *datevalue;
+  svn_stream_t *propstream;
 
   /* Read the revision props even if we're aren't going to dump
      them for verification purposes */
@@ -923,7 +1054,10 @@ write_revision_record(svn_stream_t *stream,
                    datevalue);
     }
 
-  write_hash_to_stringbuf(props, NULL, &encoded_prophash, pool);
+  encoded_prophash = svn_stringbuf_create_ensure(0, pool);
+  propstream = svn_stream_from_stringbuf(encoded_prophash, pool);
+  SVN_ERR(svn_hash_write2(props, propstream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(propstream));
 
   /* ### someday write a revision-content-checksum */
 
@@ -953,26 +1087,29 @@ write_revision_record(svn_stream_t *stream,
 
 /* The main dumper. */
 svn_error_t *
-svn_repos_dump_fs2(svn_repos_t *repos,
+svn_repos_dump_fs3(svn_repos_t *repos,
                    svn_stream_t *stream,
-                   svn_stream_t *feedback_stream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
                    svn_boolean_t incremental,
                    svn_boolean_t use_deltas,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
-  void *dump_edit_baton;
+  void *dump_edit_baton = NULL;
   svn_revnum_t i;
   svn_fs_t *fs = svn_repos_fs(repos);
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_revnum_t youngest;
   const char *uuid;
   int version;
-  svn_boolean_t dumping = (stream != NULL);
+  svn_boolean_t found_old_reference = FALSE;
+  svn_boolean_t found_old_mergeinfo = FALSE;
+  svn_repos_notify_t *notify;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -984,8 +1121,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
     end_rev = youngest;
   if (! stream)
     stream = svn_stream_empty(pool);
-  if (! feedback_stream)
-    feedback_stream = svn_stream_empty(pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
@@ -1019,6 +1154,11 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                             version));
   SVN_ERR(svn_stream_printf(stream, pool, SVN_REPOS_DUMPFILE_UUID
                             ": %s\n\n", uuid));
+
+  /* Create a notify object that we can reuse in the loop. */
+  if (notify_func)
+    notify = svn_repos_notify_create(svn_repos_notify_dump_rev_end,
+                                     pool);
 
   /* Main loop:  we're going to dump revision i.  */
   for (i = start_rev; i <= end_rev; i++)
@@ -1068,8 +1208,10 @@ svn_repos_dump_fs2(svn_repos_t *repos,
          non-incremental dump. */
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
-                              "/", stream, feedback_stream, start_rev,
-                              use_deltas_for_rev, FALSE, subpool));
+                              "", stream, &found_old_reference,
+                              &found_old_mergeinfo, NULL,
+                              notify_func, notify_baton,
+                              start_rev, use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
@@ -1081,8 +1223,8 @@ svn_repos_dump_fs2(svn_repos_t *repos,
         {
           svn_fs_root_t *from_root;
           SVN_ERR(svn_fs_revision_root(&from_root, fs, from_rev, subpool));
-          SVN_ERR(svn_repos_dir_delta2(from_root, "/", "",
-                                       to_root, "/",
+          SVN_ERR(svn_repos_dir_delta2(from_root, "", "",
+                                       to_root, "",
                                        dump_editor, dump_edit_baton,
                                        NULL,
                                        NULL,
@@ -1097,14 +1239,55 @@ svn_repos_dump_fs2(svn_repos_t *repos,
           SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                     dump_editor, dump_edit_baton,
                                     NULL, NULL, subpool));
+
+          /* While our editor close_edit implementation is a no-op, we still
+             do this for completeness. */
+          SVN_ERR(dump_editor->close_edit(dump_edit_baton, subpool));
         }
 
     loop_end:
-      SVN_ERR(svn_stream_printf(feedback_stream, pool,
-                                dumping
-                                ? _("* Dumped revision %ld.\n")
-                                : _("* Verified revision %ld.\n"),
-                                to_rev));
+      if (notify_func)
+        {
+          notify->revision = to_rev;
+          notify_func(notify_baton, notify, subpool);
+        }
+    }
+
+  if (notify_func)
+    {
+      /* Did we issue any warnings about references to revisions older than
+         the oldest dumped revision?  If so, then issue a final generic
+         warning, since the inline warnings already issued might easily be
+         missed. */
+
+      notify = svn_repos_notify_create(svn_repos_notify_dump_end, subpool);
+      notify_func(notify_baton, notify, subpool);
+
+      if (found_old_reference)
+        {
+          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
+          notify->warning = svn_repos_notify_warning_found_old_reference;
+          notify->warning_str = _("The range of revisions dumped "
+                                  "contained references to "
+                                  "copy sources outside that "
+                                  "range.");
+          notify_func(notify_baton, notify, subpool);
+        }
+
+      /* Ditto if we issued any warnings about old revisions referenced
+         in dumped mergeinfo. */
+      if (found_old_mergeinfo)
+        {
+          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
+          notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
+          notify->warning_str = _("The range of revisions dumped "
+                                  "contained mergeinfo "
+                                  "which reference revisions outside "
+                                  "that range.");
+          notify_func(notify_baton, notify, subpool);
+        }
     }
 
   svn_pool_destroy(subpool);
@@ -1137,7 +1320,7 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
                        void *val, apr_pool_t *pool)
 {
   struct dir_baton *db = baton;
-  char *path = svn_path_join(db->path, (const char *)key, pool);
+  char *path = svn_relpath_join(db->path, (const char *)key, pool);
   svn_node_kind_t kind;
   apr_hash_t *dirents;
   svn_filesize_t len;
@@ -1176,18 +1359,20 @@ verify_close_directory(void *dir_baton,
 }
 
 svn_error_t *
-svn_repos_verify_fs(svn_repos_t *repos,
-                    svn_stream_t *feedback_stream,
-                    svn_revnum_t start_rev,
-                    svn_revnum_t end_rev,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *pool)
+svn_repos_verify_fs2(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_repos_fs(repos);
   svn_revnum_t youngest;
   svn_revnum_t rev;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_repos_notify_t *notify;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1197,8 +1382,6 @@ svn_repos_verify_fs(svn_repos_t *repos,
     start_rev = 0;
   if (! SVN_IS_VALID_REVNUM(end_rev))
     end_rev = youngest;
-  if (! feedback_stream)
-    feedback_stream = svn_stream_empty(pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
@@ -1212,24 +1395,36 @@ svn_repos_verify_fs(svn_repos_t *repos,
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
 
+  /* Verify global/auxiliary data and backend-specific data first. */
+  SVN_ERR(svn_fs_verify(svn_fs_path(fs, pool), cancel_func, cancel_baton,
+                        start_rev, end_rev, pool));
+
+  /* Create a notify object that we can reuse within the loop. */
+  if (notify_func)
+    notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
+                                     pool);
+
   for (rev = start_rev; rev <= end_rev; rev++)
     {
-      svn_delta_editor_t *dump_editor;
+      const svn_delta_editor_t *dump_editor;
       void *dump_edit_baton;
       const svn_delta_editor_t *cancel_editor;
       void *cancel_edit_baton;
       svn_fs_root_t *to_root;
+      apr_hash_t *props;
 
       svn_pool_clear(iterpool);
 
       /* Get cancellable dump editor, but with our close_directory handler. */
-      SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
-                              &dump_edit_baton, fs, rev, "",
-                              svn_stream_empty(pool), feedback_stream,
+      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton,
+                              fs, rev, "",
+                              svn_stream_empty(iterpool),
+                              NULL, NULL,
+                              verify_close_directory,
+                              notify_func, notify_baton,
                               start_rev,
                               FALSE, TRUE, /* use_deltas, verify */
                               iterpool));
-      dump_editor->close_directory = verify_close_directory;
       SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                                 dump_editor, dump_edit_baton,
                                                 &cancel_editor,
@@ -1240,11 +1435,27 @@ svn_repos_verify_fs(svn_repos_t *repos,
       SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                 cancel_editor, cancel_edit_baton,
                                 NULL, NULL, iterpool));
-      SVN_ERR(svn_stream_printf(feedback_stream, iterpool,
-                                _("* Verified revision %ld.\n"),
-                                rev));
+      /* While our editor close_edit implementation is a no-op, we still
+         do this for completeness. */
+      SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, iterpool));
+
+      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
+
+      if (notify_func)
+        {
+          notify->revision = rev;
+          notify_func(notify_baton, notify, iterpool);
+        }
     }
 
+  /* We're done. */
+  if (notify_func)
+    {
+      notify = svn_repos_notify_create(svn_repos_notify_verify_end, iterpool);
+      notify_func(notify_baton, notify, iterpool);
+    }
+
+  /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

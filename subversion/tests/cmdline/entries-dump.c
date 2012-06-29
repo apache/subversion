@@ -1,5 +1,5 @@
 /*
- * db-test.c :  test the wc_db subsystem
+ * entries-dump.c :  dump pre-1.6 svn_wc_* output for python
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -27,11 +27,17 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_types.h"
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_wc_private.h"
+
+#include "../../libsvn_wc/wc.h"
 
 static void
 str_value(const char *name, const char *value)
@@ -66,11 +72,33 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t locked;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dir_path, FALSE, 0,
-                           NULL, NULL, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+  err = svn_wc_adm_open3(&adm_access, NULL, dir_path, FALSE, 0,
+                         NULL, NULL, pool);
+  if (!err)
+    {
+      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+    }
+  else
+    {
+      const char *dir_abspath, *lockfile_path;
+      svn_node_kind_t kind;
+
+      /* ### Should svn_wc_adm_open3 be returning UPGRADE_REQUIRED? */
+      if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        return err;
+      svn_error_clear(err);
+      adm_access = NULL;
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
+      SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath, pool, pool));
+      lockfile_path = svn_dirent_join_many(pool, dir_path,
+                                           svn_wc_get_adm_dir(pool),
+                                           "lock", NULL);
+      SVN_ERR(svn_io_check_path(lockfile_path, &kind, pool));
+      locked = (kind == svn_node_file);
+    }
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -127,9 +155,102 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
       printf("entries['%s'] = e\n", (const char *)key);
     }
 
-  return svn_wc_adm_close2(adm_access, pool);
+  if (adm_access)
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+  return SVN_NO_ERROR;
 }
 
+
+/* baton for print_dir */
+struct directory_walk_baton
+{
+  svn_wc_context_t *wc_ctx;
+  const char *root_abspath;
+  const char *prefix_path;
+};
+
+/* svn_wc__node_found_func_t implementation for directory_dump */
+static svn_error_t *
+print_dir(const char *local_abspath,
+          svn_node_kind_t kind,
+          void *walk_baton,
+          apr_pool_t *scratch_pool)
+{
+  struct directory_walk_baton *bt = walk_baton;
+  const char *path;
+
+  if (kind != svn_node_dir)
+    return SVN_NO_ERROR;
+
+  /* If LOCAL_ABSPATH a child of or equal to ROOT_ABSPATH, then display
+     a relative path starting with PREFIX_PATH. */
+  path = svn_dirent_skip_ancestor(bt->root_abspath, local_abspath);
+  if (path)
+    path = svn_dirent_join(bt->prefix_path, path, scratch_pool);
+  else
+    path = local_abspath;
+  printf("%s\n", svn_dirent_local_style(path, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+directory_dump_old(struct directory_walk_baton *bt,
+                   const char *dir_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                   scratch_pool, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const char *local_abspath;
+
+      if (entry->deleted || entry->absent || entry->kind != svn_node_dir)
+        continue;
+
+      local_abspath = svn_dirent_join(dir_abspath, entry->name, scratch_pool);
+      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+        SVN_ERR(directory_dump_old(bt, local_abspath, scratch_pool));
+      else
+        SVN_ERR(print_dir(local_abspath, entry->kind, bt, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Print all not-hidden subdirectories in the working copy, starting by path */
+static svn_error_t *
+directory_dump(const char *path,
+               apr_pool_t *scratch_pool)
+{
+  struct directory_walk_baton bt;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc_context_create(&bt.wc_ctx, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&bt.root_abspath, path, scratch_pool));
+
+  bt.prefix_path = path;
+
+  err = svn_wc__internal_walk_children(bt.wc_ctx->db, bt.root_abspath, FALSE,
+                                       NULL, print_dir, &bt, svn_depth_infinity,
+                                       NULL, NULL, scratch_pool);
+  if (err)
+    {
+      const char *dir_abspath;
+
+      if (err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+        return err;
+      svn_error_clear(err);
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, path, scratch_pool));
+      SVN_ERR(directory_dump_old(&bt, dir_abspath, scratch_pool));
+    }
+
+  return svn_error_trace(svn_wc_context_destroy(bt.wc_ctx));
+}
 
 int
 main(int argc, const char *argv[])
@@ -138,24 +259,39 @@ main(int argc, const char *argv[])
   int exit_code = EXIT_SUCCESS;
   svn_error_t *err;
   const char *path;
+  const char *cmd;
 
-  if (argc != 2)
+  if (argc < 2 || argc > 4)
     {
-      printf("USAGE: entries-dump DIR_PATH\n");
+      fprintf(stderr, "USAGE: entries-dump [--entries|--subdirs] DIR_PATH\n");
       exit(1);
     }
 
-  if (apr_initialize() != APR_SUCCESS)
+  if (svn_cmdline_init("entries-dump", stderr) != EXIT_SUCCESS)
     {
-      printf("apr_initialize() failed.\n");
-      exit(1);
+      return EXIT_FAILURE;
     }
 
-  /* set up the global pool */
-  pool = svn_pool_create(NULL);
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
-  path = svn_dirent_internal_style(argv[1], pool);
-  err = entries_dump(path, pool);
+  path = svn_dirent_internal_style(argv[argc-1], pool);
+
+  if (argc > 2)
+    cmd = argv[1];
+  else
+    cmd = NULL;
+
+  if (!cmd || !strcmp(cmd, "--entries"))
+    err = entries_dump(path, pool);
+  else if (!strcmp(cmd, "--subdirs"))
+    err = directory_dump(path, pool);
+  else
+    err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            "Invalid command '%s'",
+                            cmd);
   if (err)
     {
       svn_handle_error2(err, stderr, FALSE, "entries-dump: ");
@@ -167,6 +303,5 @@ main(int argc, const char *argv[])
   svn_pool_destroy(pool);
   apr_terminate();
 
-  exit(exit_code);
   return exit_code;
 }

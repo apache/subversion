@@ -20,7 +20,7 @@ remove-zombie-locks.py - remove zombie locks on deleted files
 
 Usage: remove-zombie-locks.py REPOS-PATH <REVISION|all>
 
-  When REVISION (an interger) is specified this script scans a commited
+  When REVISION (an interger) is specified this script scans a committed
   revision for deleted files and checks if a lock exists for any of these
   files. If any locks exist they are forcibly removed.
 
@@ -123,24 +123,34 @@ class RepositoryZombieLockRemover:
     print "Removing all zombie locks from repository at %s\n" \
           "This may take several minutes..." % self.repos_path
 
-    # Subversion's Berkeley DB implementation doesn't allow reentry of
-    # its BDB-transaction-using APIs from within BDB-transaction-using
-    # APIs (such as svn_fs_get_locks()).  So we have do this in two
-    # steps, first harvest the locks, then checking/removing them.
-    if self.fs_type == svn.fs.SVN_FS_TYPE_BDB:
-      self.locks = []
-      def bdb_lock_callback(lock, callback_pool):
-        self.locks.append(lock)
-      svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
-                              bdb_lock_callback, self.pool)
-      subpool = svn.core.svn_pool_create(self.pool)
-      for lock in self.locks:
-        svn.core.svn_pool_clear(subpool)
-        self.unlock_nonexistant_files(lock, subpool)
-      svn.core.svn_pool_destroy(subpool)
+    # Try to use svn_fs_get_locks2() if it's present, as it's believed
+    # to be problem-free.
+    #
+    # If not, use svn_fs_get_locks().  But note that Subversion's
+    # Berkeley DB implementation of svn_fs_get_locks() in 1.6 and
+    # prior doesn't allow reentry of its BDB-transaction-using APIs
+    # from within BDB-transaction-using APIs (such as
+    # svn_fs_get_locks()).  So we have do this in two steps, first
+    # harvest the locks, then checking/removing them.
+    if hasattr(svn.fs, 'svn_fs_get_locks2'):
+      svn.fs.svn_fs_get_locks2(self.fs_ptr, self.repos_subpath,
+                               svn.core.svn_depth_infinity,
+                               self.unlock_nonexistant_files, self.pool)
     else:
-      svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
-                              self.unlock_nonexistant_files, self.pool)
+      if self.fs_type == svn.fs.SVN_FS_TYPE_BDB:
+        self.locks = []
+        def bdb_lock_callback(lock, callback_pool):
+          self.locks.append(lock)
+        svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
+                                bdb_lock_callback, self.pool)
+        subpool = svn.core.svn_pool_create(self.pool)
+        for lock in self.locks:
+          svn.core.svn_pool_clear(subpool)
+          self.unlock_nonexistant_files(lock, subpool)
+        svn.core.svn_pool_destroy(subpool)
+      else:
+        svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
+                                self.unlock_nonexistant_files, self.pool)
     print "Done."
 
 

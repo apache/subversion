@@ -36,6 +36,7 @@ Available subcommands:
    propget (pget, pg)
    proplist (plist, pl)
    propset (pset, ps)
+   relocate
    resolve
    resolved
    revert
@@ -46,4 +47,4 @@ Available subcommands:
    upgrade
 
 Subversion is a tool for version control.
-For additional information, see http://subversion.tigris.org/
+For additional information, see http://subversion.apache.org/

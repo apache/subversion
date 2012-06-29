@@ -1,5 +1,5 @@
 /*
- * mergeinfo.c :  routines for getting mergeinfo
+ * mergeinfo.c: mod_dav_svn REPORT handler for querying mergeinfo
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -34,6 +34,8 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+
+#include "private/svn_fspath.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
@@ -56,7 +58,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   int ns;
   apr_bucket_brigade *bb;
   apr_hash_index_t *hi;
-  svn_boolean_t sent_anything = FALSE;
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -96,8 +97,14 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path,
-                                 resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          target = svn_fspath__join(resource->info->repos_path, rel_path,
+                                    resource->pool);
           (*((const char **)(apr_array_push(paths)))) = target;
         }
       else if (strcmp(child->name, SVN_DAV__INCLUDE_DESCENDANTS) == 0)
@@ -145,7 +152,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
      we are condemned to live in another universe, so we must keep
      track ourselves of whether we've sent anything or not.  See the
      long comment after the 'cleanup' label for more details. */
-  sent_anything = TRUE;
   serr = dav_svn__brigade_puts(bb, output,
                                DAV_XML_HEADER DEBUG_CR
                                "<S:" SVN_DAV__MERGEINFO_REPORT " "

@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_compat.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "ra_loader.h"
 
@@ -148,6 +149,18 @@ static svn_ra_reporter2_t reporter_3in2_wrapper = {
   abort_report
 };
 
+svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const char *uuid,
+                          const svn_ra_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  return svn_ra_open4(session_p, NULL, repos_URL, uuid,
+                      callbacks, callback_baton, config, pool);
+}
+
 svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
                           const char *repos_URL,
                           const svn_ra_callbacks2_t *callbacks,
@@ -181,6 +194,15 @@ svn_error_t *svn_ra_open(svn_ra_session_t **session_p,
   return svn_ra_open2(session_p, repos_URL,
                       callbacks2, callback_baton,
                       config, pool);
+}
+
+svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
+                                    svn_revnum_t rev,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool)
+{
+  return svn_ra_change_rev_prop2(session, rev, name, NULL, value, pool);
 }
 
 svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
@@ -395,4 +417,3 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                                     SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                                     status_editor, status_baton, pool);
 }
-

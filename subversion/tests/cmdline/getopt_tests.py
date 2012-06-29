@@ -3,7 +3,7 @@
 #  getopt_tests.py:  testing the svn command line processing
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,7 +25,9 @@
 ######################################################################
 
 # General modules
-import sys, re, os.path
+import sys, re, os.path, logging
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
@@ -73,13 +75,14 @@ del_lines_res = [
 # This is a list of lines to search and replace text on.
 rep_lines_res = [
                  # In 'svn --version', this line varies, for example:
-                 # "Subversion Client, version 0.10.2 (dev build)"
+                 # "Subversion Client, version 0.10.2-dev (under development)"
                  # "Subversion Client, version 0.10.2 (r1729)"
-                 (re.compile(r'version \d+\.\d+\.\d+ \(.*\)'),
+                 (re.compile(r'version \d+\.\d+\.\d+(-[^ ]*)? \(.*\)'),
                   'version X.Y.Z '),
                  # The copyright end date keeps changing; fix forever.
-                 (re.compile(r'Copyright \(C\) 2000-\d+ CollabNet\.'),
-                  'Copyright (C) YYYY-YYYY CollabNet'),
+                 (re.compile(r'Copyright \(C\) 20\d\d The Apache '
+                              'Software Foundation\.'),
+                  'Copyright (C) YYYY The Apache Software Foundation'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
@@ -137,31 +140,31 @@ def run_one_test(sbox, basename, *varargs):
   actual_stderr = process_lines(actual_stderr)
 
   if exp_stdout != actual_stdout:
-    print("Standard output does not match.")
-    print("Expected standard output:")
-    print("=====")
+    logger.warn("Standard output does not match.")
+    logger.warn("Expected standard output:")
+    logger.warn("=====")
     for x in exp_stdout:
-      sys.stdout.write(x)
-    print("=====")
-    print("Actual standard output:")
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
+    logger.warn("Actual standard output:")
+    logger.warn("=====")
     for x in actual_stdout:
-      sys.stdout.write(x)
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
     raise svntest.Failure
 
   if exp_stderr != actual_stderr:
-    print("Standard error does not match.")
-    print("Expected standard error:")
-    print("=====")
+    logger.warn("Standard error does not match.")
+    logger.warn("Expected standard error:")
+    logger.warn("=====")
     for x in exp_stderr:
-      sys.stdout.write(x)
-    print("=====")
-    print("Actual standard error:")
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
+    logger.warn("Actual standard error:")
+    logger.warn("=====")
     for x in actual_stderr:
-      sys.stdout.write(x)
-    print("=====")
+      logger.warn(x)
+    logger.warn("=====")
     raise svntest.Failure
 
 def getopt_no_args(sbox):
@@ -204,7 +207,7 @@ test_list = [ None,
               getopt__help,
               getopt_help,
               getopt_help_bogus_cmd,
-              getopt_help_log_switch
+              getopt_help_log_switch,
             ]
 
 if __name__ == '__main__':

@@ -146,6 +146,25 @@ public class NotifyInformation extends EventObject
     }
 
     /**
+     * A backward-compat callback.
+     */
+    public NotifyInformation(
+                        org.apache.subversion.javahl.ClientNotifyInformation aInfo)
+    {
+        this(aInfo.getPath(),
+             fromAAction(aInfo.getAction()),
+             NodeKind.fromApache(aInfo.getKind()), aInfo.getMimeType(),
+             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
+             aInfo.getErrMsg(), fromAStatus(aInfo.getContentState()),
+             fromAStatus(aInfo.getPropState()),
+             aInfo.getLockState().ordinal(), aInfo.getRevision(),
+             aInfo.getChangelistName(),
+             aInfo.getMergeRange() == null ? null
+                : new RevisionRange(aInfo.getMergeRange()),
+             aInfo.getPathPrefix());
+    }
+
+    /**
      * @return The path of the item, which is the source of the event.
      */
     public String getPath()
@@ -250,5 +269,46 @@ public class NotifyInformation extends EventObject
     public String getPathPrefix()
     {
         return pathPrefix;
+    }
+
+    private static int
+    fromAStatus(org.apache.subversion.javahl.ClientNotifyInformation.Status aStatus)
+    {
+        switch(aStatus)
+        {
+        default:
+        case inapplicable:
+            return NotifyStatus.inapplicable;
+        case unknown:
+            return NotifyStatus.unknown;
+        case unchanged:
+            return NotifyStatus.unchanged;
+        case missing:
+            return NotifyStatus.missing;
+        case obstructed:
+            return NotifyStatus.obstructed;
+        case changed:
+            return NotifyStatus.changed;
+        case merged:
+            return NotifyStatus.merged;
+        case conflicted:
+            return NotifyStatus.conflicted;
+        }
+    }
+
+    private static int
+    fromAAction(org.apache.subversion.javahl.ClientNotifyInformation.Action aAction)
+    {
+        if (aAction == null)
+            return -1;
+
+        int order = aAction.ordinal();
+
+        /* The new class adds an item after changelist_clear, so adjust
+           accordingly. */
+        if (order < NotifyAction.changelist_clear)
+            return order;
+        else
+            return order - 1;
     }
 }

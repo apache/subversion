@@ -62,6 +62,9 @@ static const svn_token_map_t map_conflict_reason_human[] =
   { N_("add"),          svn_wc_conflict_reason_added },
   { N_("replace"),      svn_wc_conflict_reason_replaced },
   { N_("unversioned"),  svn_wc_conflict_reason_unversioned },
+  { N_("moved away"),   svn_wc_conflict_reason_moved_away },
+  { N_("moved away and edited"), svn_wc_conflict_reason_moved_away_and_edited },
+  { N_("moved here"),   svn_wc_conflict_reason_moved_here },
   { NULL,               0 }
 };
 
@@ -75,19 +78,22 @@ static const svn_token_map_t map_conflict_reason_xml[] =
   { "add",              svn_wc_conflict_reason_added },
   { "replace",          svn_wc_conflict_reason_replaced },
   { "unversioned",      svn_wc_conflict_reason_unversioned },
+  { "moved-away",       svn_wc_conflict_reason_moved_away },
+  { "moved-away-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
+  { "moved-here",       svn_wc_conflict_reason_moved_here },
   { NULL,               0 }
 };
 
 /* Return a localized string representation of CONFLICT->action. */
 static const char *
-action_str(const svn_wc_conflict_description_t *conflict)
+action_str(const svn_wc_conflict_description2_t *conflict)
 {
   return _(svn_token__to_word(map_conflict_action_human, conflict->action));
 }
 
 /* Return a localized string representation of CONFLICT->reason. */
 static const char *
-reason_str(const svn_wc_conflict_description_t *conflict)
+reason_str(const svn_wc_conflict_description2_t *conflict)
 {
   return _(svn_token__to_word(map_conflict_reason_human, conflict->reason));
 }
@@ -96,11 +102,10 @@ reason_str(const svn_wc_conflict_description_t *conflict)
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
   const char **desc,
-  const svn_wc_conflict_description_t *conflict,
+  const svn_wc_conflict_description2_t *conflict,
   apr_pool_t *pool)
 {
-  const char *victim_name, *action, *reason, *operation;
-  victim_name = svn_dirent_basename(conflict->path, pool);
+  const char *action, *reason, *operation;
   reason = reason_str(conflict);
   action = action_str(conflict);
   operation = svn_cl__operation_str_human_readable(conflict->operation, pool);
@@ -118,7 +123,7 @@ svn_cl__get_human_readable_tree_conflict_description(
 static svn_error_t *
 add_conflict_version_xml(svn_stringbuf_t **pstr,
                          const char *side,
-                         svn_wc_conflict_version_t *version,
+                         const svn_wc_conflict_version_t *version,
                          apr_pool_t *pool)
 {
   apr_hash_t *att_hash = apr_hash_make(pool);
@@ -136,7 +141,7 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
 
   if (SVN_IS_VALID_REVNUM(version->peg_rev))
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
-                 apr_itoa(pool, version->peg_rev));
+                 apr_ltoa(pool, version->peg_rev));
 
   if (version->node_kind != svn_node_unknown)
     apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
@@ -151,14 +156,14 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
 svn_error_t *
 svn_cl__append_tree_conflict_info_xml(
   svn_stringbuf_t *str,
-  const svn_wc_conflict_description_t *conflict,
+  const svn_wc_conflict_description2_t *conflict,
   apr_pool_t *pool)
 {
   apr_hash_t *att_hash = apr_hash_make(pool);
   const char *tmp;
 
   apr_hash_set(att_hash, "victim", APR_HASH_KEY_STRING,
-               svn_dirent_basename(conflict->path, pool));
+               svn_dirent_basename(conflict->local_abspath, pool));
 
   apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
                svn_cl__node_kind_str_xml(conflict->node_kind));

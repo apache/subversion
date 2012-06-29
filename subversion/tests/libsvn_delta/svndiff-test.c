@@ -75,10 +75,11 @@ main(int argc, char **argv)
   if (argc == 4)
     version = atoi(argv[3]);
 
-  svn_txdelta(&txdelta_stream,
-              svn_stream_from_aprfile(source_file, pool),
-              svn_stream_from_aprfile(target_file, pool),
-              pool);
+  svn_txdelta2(&txdelta_stream,
+               svn_stream_from_aprfile(source_file, pool),
+               svn_stream_from_aprfile(target_file, pool),
+               FALSE,
+               pool);
 
   err = svn_stream_for_stdout(&stdout_stream, pool);
   if (err)
@@ -89,8 +90,9 @@ main(int argc, char **argv)
 #else
   encoder = svn_base64_encode(stdout_stream, pool);
 #endif
-  svn_txdelta_to_svndiff2(&svndiff_handler, &svndiff_baton,
-                          encoder, version, pool);
+  /* use maximum compression level */
+  svn_txdelta_to_svndiff3(&svndiff_handler, &svndiff_baton,
+                          encoder, version, 9, pool);
   err = svn_txdelta_send_txstream(txdelta_stream,
                                   svndiff_handler,
                                   svndiff_baton,

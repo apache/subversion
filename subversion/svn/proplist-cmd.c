@@ -39,7 +39,7 @@
 
 #include "svn_private_config.h"
 
-typedef struct
+typedef struct proplist_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_boolean_t is_url;
@@ -98,7 +98,8 @@ proplist_receiver(void *baton,
 
   if (!opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
-  return svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose), pool);
+  return svn_cl__print_prop_hash(NULL, prop_hash, (! opt_state->verbose),
+                                 pool);
 }
 
 
@@ -111,11 +112,13 @@ svn_cl__proplist(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  int i;
+  apr_array_header_t *errors = apr_array_make(scratch_pool, 0,
+                                              sizeof(apr_status_t));
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, FALSE,
+                                                      scratch_pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
@@ -159,11 +162,12 @@ svn_cl__proplist(apr_getopt_t *os,
                                 rev));
 
           SVN_ERR(svn_cl__print_prop_hash
-                  (proplist, (! opt_state->verbose), scratch_pool));
+                  (NULL, proplist, (! opt_state->verbose), scratch_pool));
         }
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
+      int i;
       apr_pool_t *iterpool;
       svn_proplist_receiver_t pl_receiver;
 
@@ -198,14 +202,14 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      iterpool));
 
-          SVN_ERR(svn_cl__try
-                  (svn_client_proplist3(truepath, &peg_revision,
+          SVN_ERR(svn_cl__try(
+                   svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
                                         opt_state->depth,
                                         opt_state->changelists,
                                         pl_receiver, &pl_baton,
                                         ctx, iterpool),
-                   NULL, opt_state->quiet,
+                   errors, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,
                    SVN_NO_ERROR));
@@ -214,6 +218,31 @@ svn_cl__proplist(apr_getopt_t *os,
 
       if (opt_state->xml)
         SVN_ERR(svn_cl__xml_print_footer("properties", scratch_pool));
+
+      /* Error out *after* we closed the XML element */
+      if (errors->nelts > 0)
+        {
+          svn_error_t *err;
+
+          err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
+          for (i = 0; i < errors->nelts; i++)
+            {
+              apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
+
+              if (status == SVN_ERR_ENTRY_NOT_FOUND)
+                err = svn_error_quick_wrap(err,
+                                           _("Could not display properties "
+                                             "of all targets because some "
+                                             "targets don't exist"));
+              else if (status == SVN_ERR_UNVERSIONED_RESOURCE)
+                err = svn_error_quick_wrap(err,
+                                           _("Could not display properties "
+                                             "of all targets because some "
+                                             "targets are not versioned"));
+            }
+
+          return svn_error_trace(err);
+        }
     }
 
   return SVN_NO_ERROR;

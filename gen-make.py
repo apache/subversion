@@ -1,5 +1,25 @@
 #!/usr/bin/env python
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
 # gen-make.py -- generate makefiles for building Subversion
 #
 
@@ -73,8 +93,10 @@ def _objinfo(o):
     return "%s: %s %s" % (t,n,f)
 
 
-def _usage_exit():
-  "print usage, exit the script"
+def _usage_exit(err=None):
+  "print ERR (if any), print usage, then exit the script"
+  if err:
+    print("ERROR: %s\n" % (err))
   print("USAGE:  gen-make.py [options...] [conf-file]")
   print("  -s        skip dependency generation")
   print("  --debug   print lots of stuff only developers care about")
@@ -120,12 +142,6 @@ def _usage_exit():
   print("           look for Berkeley DB headers and libs in")
   print("           DIR")
   print("")
-  print("  --with-neon=DIR")
-  print("           the Neon sources are in DIR")
-  print("")
-  print("  --without-neon")
-  print("           Don't build Neon sources (if present)")
-  print("")
   print("  --with-serf=DIR")
   print("           the Serf sources are in DIR")
   print("")
@@ -140,12 +156,15 @@ def _usage_exit():
   print("           implies --enable-nls")
   print("")
   print("  --with-openssl=DIR")
-  print("           tell neon to look for OpenSSL headers")
+  print("           tell serf to look for OpenSSL headers")
   print("           and libs in DIR")
   print("")
   print("  --with-zlib=DIR")
-  print("           tell neon to look for ZLib headers and")
+  print("           tell Subversion to look for ZLib headers and")
   print("           libs in DIR")
+  print("")
+  print("  --with-jdk=DIR")
+  print("           look for the java development kit here")
   print("")
   print("  --with-junit=DIR")
   print("           look for the junit jar here")
@@ -182,8 +201,11 @@ def _usage_exit():
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
+  print("  --with-static-apr")
+  print("           Use static apr and apr-util")
+  print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005 or 2008)")
+  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008, 2010 or 2012)")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")
@@ -214,18 +236,18 @@ if __name__ == '__main__':
                             'with-apr-util=',
                             'with-apr-iconv=',
                             'with-berkeley-db=',
-                            'with-neon=',
-                            'without-neon',
                             'with-serf=',
                             'with-httpd=',
                             'with-libintl=',
                             'with-openssl=',
                             'with-zlib=',
+                            'with-jdk=',
                             'with-junit=',
                             'with-swig=',
                             'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
+                            'with-static-apr',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',
@@ -235,11 +257,18 @@ if __name__ == '__main__':
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
+
+                            # Keep distributions that help by adding a path
+                            # working. On unix this would be filtered by
+                            # configure, but on Windows gen-make.py is used
+                            # directly.
+                            'with-neon=',
+                            'without-neon',
                             ])
     if len(args) > 1:
-      _usage_exit()
-  except getopt.GetoptError:
-    _usage_exit()
+      _usage_exit("Too many arguments")
+  except getopt.GetoptError, e:
+    _usage_exit(str(e))
 
   conf = 'build.conf'
   skip = 0
@@ -259,6 +288,9 @@ if __name__ == '__main__':
         if opt != '--debug':
           rest.add(opt, val)
       del prev_conf
+    elif opt == '--with-neon' or opt == '--without-neon':
+      # Provide a warning that we ignored these arguments
+      print("Ignoring no longer supported argument '%s'" % opt)
     else:
       rest.add(opt, val)
 
@@ -282,7 +314,7 @@ if __name__ == '__main__':
   opt_conf.close()
 
   if gentype not in gen_modules.keys():
-    _usage_exit()
+    _usage_exit("Unknown module type '%s'" % (gentype))
 
   main(conf, gentype, skip_depends=skip, other_options=rest.list)
 

@@ -90,6 +90,25 @@ svn_fs_id_t *svn_fs_fs__id_parse(const char *data,
                                  apr_size_t len,
                                  apr_pool_t *pool);
 
+
+/* (de-)serialization support*/
+
+struct svn_temp_serializer__context_t;
+
+/**
+ * Serialize an @a id within the serialization @a context.
+ */
+void
+svn_fs_fs__id_serialize(struct svn_temp_serializer__context_t *context,
+                        const svn_fs_id_t * const *id);
+
+/**
+ * Deserialize an @a id within the @a buffer.
+ */
+void
+svn_fs_fs__id_deserialize(void *buffer,
+                          svn_fs_id_t **id);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

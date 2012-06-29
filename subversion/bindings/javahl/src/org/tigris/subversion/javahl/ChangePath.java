@@ -23,7 +23,7 @@
 
 package org.tigris.subversion.javahl;
 
-public class ChangePath implements java.io.Serializable
+public class ChangePath implements java.io.Serializable, Comparable
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -52,7 +52,27 @@ public class ChangePath implements java.io.Serializable
         this.nodeKind = nodeKind;
     }
 
-    /** Path of commited item */
+    /**
+     * A backward-compat constructor.
+     */
+    public ChangePath(org.apache.subversion.javahl.types.ChangePath aChangePath)
+    {
+        this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
+             aChangePath.getCopySrcPath(),
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.add) ? 'A' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.delete) ? 'D' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.replace) ? 'R' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.modify) ? 'M' :
+                ' ')))),
+             NodeKind.fromApache(aChangePath.getNodeKind()));
+    }
+
+    public int compareTo(Object other)
+    {
+        return path.compareTo(((ChangePath)other).path);
+    }
+
+    /** Path of committed item */
     private String path;
 
     /** Source revision of copy (if any). */
@@ -68,8 +88,8 @@ public class ChangePath implements java.io.Serializable
     private int nodeKind;
 
     /**
-     * Retrieve the path to the commited item
-     * @return  the path to the commited item
+     * Retrieve the path to the committed item
+     * @return  the path to the committed item
      */
     public String getPath()
     {

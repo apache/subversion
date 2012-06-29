@@ -28,9 +28,9 @@
 #define JNIUTIL_H
 
 #include <list>
+#include <vector>
 #include "Pool.h"
 struct apr_pool_t;
-struct svn_error;
 class JNIMutex;
 class SVNBase;
 #include <jni.h>
@@ -39,7 +39,7 @@ class SVNBase;
 #include <string>
 struct svn_error_t;
 
-#define JAVA_PACKAGE "org/tigris/subversion/javahl"
+#define JAVA_PACKAGE "org/apache/subversion/javahl"
 
 /**
  * Class to hold a number of JNI related utility methods.  No Objects
@@ -63,8 +63,6 @@ class JNIUtil
 
   static void throwNullPointerException(const char *message);
   static jbyteArray makeJByteArray(const signed char *data, int length);
-  static void setRequestPool(SVN::Pool *pool);
-  static SVN::Pool *getRequestPool();
   static jobject createDate(apr_time_t time);
   static void logMessage(const char *message);
   static int getLogLevel();
@@ -103,7 +101,7 @@ class JNIUtil
    * occurred. Useful for converting Java @c Exceptions into @c
    * svn_error_t's.
    */
-  static const char *thrownExceptionToCString();
+  static const char *thrownExceptionToCString(SVN::Pool &in_pool);
 
   /**
    * Throw a Java exception corresponding to err, and run
@@ -135,7 +133,7 @@ class JNIUtil
   static apr_pool_t *getPool();
   static bool JNIGlobalInit(JNIEnv *env);
   static bool JNIInit(JNIEnv *env);
-  static JNIMutex *getGlobalPoolMutex();
+  static bool initializeJNIRuntime();
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
@@ -143,6 +141,8 @@ class JNIUtil
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
                                    std::string &buffer);
+  static void putErrorsInTrace(svn_error_t *err,
+                               std::vector<jobject> &stackTrace);
   /**
    * Set the appropriate global or thread-local flag that an exception
    * has been thrown to @a flag.
@@ -176,7 +176,7 @@ class JNIUtil
   static JNIMutex *g_logMutex;
 
   /**
-   * Flag, that an exception occured during our initialization.
+   * Flag, that an exception occurred during our initialization.
    */
   static bool g_initException;
 
@@ -200,11 +200,6 @@ class JNIUtil
    * The stream to write log messages to.
    */
   static std::ofstream g_logStream;
-
-  /**
-   * Flag to secure our global pool.
-   */
-  static JNIMutex *g_globalPoolMutext;
 };
 
 /**
@@ -219,9 +214,9 @@ class JNIUtil
  */
 
 #define SVN_JNI_NULL_PTR_EX(expr, str, ret_val) \
-  if (expr == NULL) {                           \
+  if ((expr) == NULL) {                         \
     JNIUtil::throwNullPointerException(str);    \
-    return ret_val ;                            \
+    return ret_val;                             \
   }
 
 /**
@@ -240,7 +235,48 @@ class JNIUtil
     svn_error_t *svn_jni_err__temp = (expr);            \
     if (svn_jni_err__temp != SVN_NO_ERROR) {            \
       JNIUtil::handleSVNError(svn_jni_err__temp);       \
-      return ret_val ;                                  \
+      return ret_val;                                   \
+    }                                                   \
+  } while (0)
+
+/**
+ * The initial capacity of a create local reference frame.
+ */
+#define LOCAL_FRAME_SIZE            16
+
+/**
+ * A statement macro use to pop the reference frame and return NULL
+ */
+#define POP_AND_RETURN(ret_val)         \
+  do                                    \
+    {                                   \
+      env->PopLocalFrame(NULL);         \
+      return ret_val;                   \
+    }                                   \
+  while (0)
+
+/**
+ * A statement macro use to pop the reference frame and return
+ */
+#define POP_AND_RETURN_NOTHING()        \
+  do                                    \
+    {                                   \
+      env->PopLocalFrame(NULL);         \
+      return;                           \
+    }                                   \
+  while (0)
+
+
+/**
+ * A useful macro.
+ */
+#define POP_AND_RETURN_NULL             POP_AND_RETURN(NULL)
+
+#define CPPADDR_NULL_PTR(expr, ret_val)                 \
+  do {                                                  \
+    if ((expr) == NULL) {                               \
+      JNIUtil::throwError(_("bad C++ this"));           \
+      return ret_val;                                   \
     }                                                   \
   } while (0)
 

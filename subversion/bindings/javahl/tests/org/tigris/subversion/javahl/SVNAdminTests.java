@@ -102,10 +102,9 @@ public class SVNAdminTests extends SVNTests
                 0L, infoHolder[0].getLastChangedRev());
 
         // locate dump file in test environment
-        String testRoot = System.getProperty("test.rootdir",
-                "subversion/bindings/javahl/test-work");
-        File javahlRoot = new File(testRoot).getParentFile();
-        File dump = new File(javahlRoot, "tests/data/issue2979.dump");
+        String testSrcdir = System.getProperty("test.srcdir",
+                "subversion/bindings/javahl");
+        File dump = new File(testSrcdir, "tests/data/issue2979.dump");
         InputInterface input = new FileInputer(dump);
         OutputInterface loadLog = new IgnoreOutputer();
         admin.load(thisTest.getRepositoryPath(),

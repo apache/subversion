@@ -41,6 +41,106 @@
 
 
 /*** Code. ***/
+struct fns_wrapper_baton
+{
+  /* We put the old baton in front of this one, so that we can still use
+     this baton in place of the old.  This prevents us from having to
+     implement simple wrappers around each member of diff_fns_t. */
+  void *old_baton;
+  const svn_diff_fns_t *vtable;
+};
+
+static svn_error_t *
+datasources_open(void *baton,
+                 apr_off_t *prefix_lines,
+                 apr_off_t *suffix_lines,
+                 const svn_diff_datasource_e *datasources,
+                 apr_size_t datasource_len)
+{
+  struct fns_wrapper_baton *fwb = baton;
+  apr_size_t i;
+
+  /* Just iterate over the datasources, using the old singular version. */
+  for (i = 0; i < datasource_len; i++)
+    {
+      SVN_ERR(fwb->vtable->datasource_open(fwb->old_baton, datasources[i]));
+    }
+
+  /* Don't claim any prefix or suffix matches. */
+  *prefix_lines = 0;
+  *suffix_lines = 0;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+datasource_close(void *baton,
+                 svn_diff_datasource_e datasource)
+{
+  struct fns_wrapper_baton *fwb = baton;
+  return fwb->vtable->datasource_close(fwb->old_baton, datasource);
+}
+
+static svn_error_t *
+datasource_get_next_token(apr_uint32_t *hash,
+                          void **token,
+                          void *baton,
+                          svn_diff_datasource_e datasource)
+{
+  struct fns_wrapper_baton *fwb = baton;
+  return fwb->vtable->datasource_get_next_token(hash, token, fwb->old_baton,
+                                                datasource);
+}
+
+static svn_error_t *
+token_compare(void *baton,
+              void *ltoken,
+              void *rtoken,
+              int *compare)
+{
+  struct fns_wrapper_baton *fwb = baton;
+  return fwb->vtable->token_compare(fwb->old_baton, ltoken, rtoken, compare);
+}
+
+static void
+token_discard(void *baton,
+              void *token)
+{
+  struct fns_wrapper_baton *fwb = baton;
+  fwb->vtable->token_discard(fwb->old_baton, token);
+}
+
+static void
+token_discard_all(void *baton)
+{
+  struct fns_wrapper_baton *fwb = baton;
+  fwb->vtable->token_discard_all(fwb->old_baton);
+}
+
+
+static void
+wrap_diff_fns(svn_diff_fns2_t **diff_fns2,
+              struct fns_wrapper_baton **baton2,
+              const svn_diff_fns_t *diff_fns,
+              void *baton,
+              apr_pool_t *result_pool)
+{
+  /* Initialize the return vtable. */
+  *diff_fns2 = apr_palloc(result_pool, sizeof(**diff_fns2));
+
+  (*diff_fns2)->datasources_open = datasources_open;
+  (*diff_fns2)->datasource_close = datasource_close;
+  (*diff_fns2)->datasource_get_next_token = datasource_get_next_token;
+  (*diff_fns2)->token_compare = token_compare;
+  (*diff_fns2)->token_discard = token_discard;
+  (*diff_fns2)->token_discard_all = token_discard_all;
+
+  /* Initialize the wrapper baton. */
+  *baton2 = apr_palloc(result_pool, sizeof (**baton2));
+  (*baton2)->old_baton = baton;
+  (*baton2)->vtable = diff_fns;
+}
+
 
 /*** From diff_file.c ***/
 svn_error_t *
@@ -141,4 +241,49 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                                      conflict_separator,
                                      style,
                                      pool);
+}
+
+
+/*** From diff.c ***/
+svn_error_t *
+svn_diff_diff(svn_diff_t **diff,
+              void *diff_baton,
+              const svn_diff_fns_t *vtable,
+              apr_pool_t *pool)
+{
+  svn_diff_fns2_t *diff_fns2;
+  struct fns_wrapper_baton *fwb;
+
+  wrap_diff_fns(&diff_fns2, &fwb, vtable, diff_baton, pool);
+  return svn_diff_diff_2(diff, fwb, diff_fns2, pool);
+}
+
+
+/*** From diff3.c ***/
+svn_error_t *
+svn_diff_diff3(svn_diff_t **diff,
+               void *diff_baton,
+               const svn_diff_fns_t *vtable,
+               apr_pool_t *pool)
+{
+  svn_diff_fns2_t *diff_fns2;
+  struct fns_wrapper_baton *fwb;
+
+  wrap_diff_fns(&diff_fns2, &fwb, vtable, diff_baton, pool);
+  return svn_diff_diff3_2(diff, fwb, diff_fns2, pool);
+}
+
+
+/*** From diff4.c ***/
+svn_error_t *
+svn_diff_diff4(svn_diff_t **diff,
+               void *diff_baton,
+               const svn_diff_fns_t *vtable,
+               apr_pool_t *pool)
+{
+  svn_diff_fns2_t *diff_fns2;
+  struct fns_wrapper_baton *fwb;
+
+  wrap_diff_fns(&diff_fns2, &fwb, vtable, diff_baton, pool);
+  return svn_diff_diff4_2(diff, fwb, diff_fns2, pool);
 }

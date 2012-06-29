@@ -46,7 +46,7 @@ struct notify_baton
   svn_boolean_t received_some_change;
   svn_boolean_t is_checkout;
   svn_boolean_t is_export;
-  svn_boolean_t suppress_final_line;
+  svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t sent_first_txdelta;
   svn_boolean_t in_external;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
@@ -58,12 +58,6 @@ struct notify_baton
   unsigned int tree_conflicts;
   unsigned int skipped_paths;
 
-  /* Conflict stats for update and merge (for externals). */
-  unsigned int ext_text_conflicts;
-  unsigned int ext_prop_conflicts;
-  unsigned int ext_tree_conflicts;
-  unsigned int ext_skipped_paths;
-
   /* The cwd, for use in decomposing absolute paths. */
   const char *path_prefix;
 };
@@ -73,32 +67,19 @@ svn_error_t *
 svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool)
 {
   struct notify_baton *nb = notify_baton;
-  const char *header;
   unsigned int text_conflicts;
   unsigned int prop_conflicts;
   unsigned int tree_conflicts;
   unsigned int skipped_paths;
 
-  if (nb->in_external)
-    {
-      header = _("Summary of conflicts in external item:\n");
-      text_conflicts = nb->ext_text_conflicts;
-      prop_conflicts = nb->ext_prop_conflicts;
-      tree_conflicts = nb->ext_tree_conflicts;
-      skipped_paths = nb->ext_skipped_paths;
-    }
-  else
-    {
-      header = _("Summary of conflicts:\n");
-      text_conflicts = nb->text_conflicts;
-      prop_conflicts = nb->prop_conflicts;
-      tree_conflicts = nb->tree_conflicts;
-      skipped_paths = nb->skipped_paths;
-    }
+  text_conflicts = nb->text_conflicts;
+  prop_conflicts = nb->prop_conflicts;
+  tree_conflicts = nb->tree_conflicts;
+  skipped_paths = nb->skipped_paths;
 
   if (text_conflicts > 0 || prop_conflicts > 0
     || tree_conflicts > 0 || skipped_paths > 0)
-      SVN_ERR(svn_cmdline_printf(pool, "%s", header));
+      SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
 
   if (text_conflicts > 0)
     SVN_ERR(svn_cmdline_printf
@@ -134,20 +115,17 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   else
     {
       if (n->path_prefix)
-        path_local = svn_dirent_skip_ancestor(n->path_prefix, n->path);
-      else if (nb->path_prefix)
-        path_local = svn_dirent_skip_ancestor(nb->path_prefix, n->path);
-      else
-        path_local = n->path;
-
-      path_local = svn_dirent_local_style(path_local, pool);
+        path_local = svn_cl__local_style_skip_ancestor(n->path_prefix, n->path,
+                                                       pool);
+      else /* skip nb->path_prefix, if it's non-null */
+        path_local = svn_cl__local_style_skip_ancestor(nb->path_prefix, n->path,
+                                                       pool);
     }
 
   switch (n->action)
     {
     case svn_wc_notify_skip:
-      nb->in_external ? nb->ext_skipped_paths++
-                      : nb->skipped_paths++;
+      nb->skipped_paths++;
       if (n->content_state == svn_wc_notify_state_missing)
         {
           if ((err = svn_cmdline_printf
@@ -169,19 +147,59 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             goto print_error;
         }
       break;
-
-    case svn_wc_notify_update_add_deleted:
-    case svn_wc_notify_update_update_deleted:
-      /* ### Before 1.7.0 these notifications where suppressed in the wc
-         ### library.. how should we notify these?
-
-         ### Fall through in deleted notification. */
-
+    case svn_wc_notify_update_skip_obstruction:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- An obstructing working copy was found\n"),
+            path_local)))
+        goto print_error;
+      break;
+    case svn_wc_notify_update_skip_working_only:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Has no versioned parent\n"),
+            path_local)))
+        goto print_error;
+      break;
+    case svn_wc_notify_update_skip_access_denied:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Access denied\n"),
+            path_local)))
+        goto print_error;
+      break;
+    case svn_wc_notify_skip_conflicted:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Node remains in conflict\n"),
+            path_local)))
+        goto print_error;
+      break;
     case svn_wc_notify_update_delete:
-    case svn_wc_notify_update_external_removed:
+    case svn_wc_notify_exclude:
       nb->received_some_change = TRUE;
       if ((err = svn_cmdline_printf(pool, "D    %s\n", path_local)))
         goto print_error;
+      break;
+    case svn_wc_notify_update_broken_lock:
+      if ((err = svn_cmdline_printf(pool, "B    %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_external_removed:
+      nb->received_some_change = TRUE;
+      if (n->err && n->err->message)
+        {
+          if ((err = svn_cmdline_printf(pool, "Removed external '%s': %s\n",
+              path_local, n->err->message)))
+            goto print_error;
+        }
+      else
+        {
+          if ((err = svn_cmdline_printf(pool, "Removed external '%s'\n",
+                                        path_local)))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_update_replace:
@@ -194,8 +212,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          nb->in_external ? nb->ext_text_conflicts++
-                          : nb->text_conflicts++;
+          nb->text_conflicts++;
           if ((err = svn_cmdline_printf(pool, "C    %s\n", path_local)))
             goto print_error;
         }
@@ -210,8 +227,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          nb->in_external ? nb->ext_text_conflicts++
-                          : nb->text_conflicts++;
+          nb->text_conflicts++;
           statchar_buf[0] = 'C';
         }
       else
@@ -219,8 +235,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
       if (n->prop_state == svn_wc_notify_state_conflicted)
         {
-          nb->in_external ? nb->ext_prop_conflicts++
-                          : nb->prop_conflicts++;
+          nb->prop_conflicts++;
           statchar_buf[1] = 'C';
         }
       else if (n->prop_state == svn_wc_notify_state_merged)
@@ -281,12 +296,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
-    case svn_wc_notify_update_update:
+    case svn_wc_notify_patch:
       {
+        nb->received_some_change = TRUE;
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
-            nb->in_external ? nb->ext_text_conflicts++
-                            : nb->text_conflicts++;
+            nb->text_conflicts++;
             statchar_buf[0] = 'C';
           }
         else if (n->kind == svn_node_file)
@@ -299,8 +314,213 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
         if (n->prop_state == svn_wc_notify_state_conflicted)
           {
-            nb->in_external ? nb->ext_prop_conflicts++
-                            : nb->prop_conflicts++;
+            nb->prop_conflicts++;
+            statchar_buf[1] = 'C';
+          }
+        else if (n->prop_state == svn_wc_notify_state_changed)
+              statchar_buf[1] = 'U';
+
+        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
+          {
+            if ((err = svn_cmdline_printf(pool, "%s      %s\n",
+                                          statchar_buf, path_local)))
+              goto print_error;
+          }
+      }
+      break;
+
+    case svn_wc_notify_patch_applied_hunk:
+      nb->received_some_change = TRUE;
+      if (n->hunk_original_start != n->hunk_matched_line)
+        {
+          apr_uint64_t off;
+          const char *s;
+          const char *minus;
+
+          if (n->hunk_matched_line > n->hunk_original_start)
+            {
+              off = n->hunk_matched_line - n->hunk_original_start;
+              minus = "";
+            }
+          else
+            {
+              off = n->hunk_original_start - n->hunk_matched_line;
+              minus = "-";
+            }
+
+          /* ### We're creating the localized strings without
+           * ### APR_INT64_T_FMT since it isn't translator-friendly */
+          if (n->hunk_fuzz)
+            {
+
+              if (n->prop_name)
+                {
+                  s = _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
+                        "with offset %s");
+
+                  err = svn_cmdline_printf(pool,
+                                           apr_pstrcat(pool, s,
+                                                       "%"APR_UINT64_T_FMT
+                                                       " and fuzz %lu (%s)\n",
+                                                       (char *)NULL),
+                                           n->hunk_original_start,
+                                           n->hunk_original_length,
+                                           n->hunk_modified_start,
+                                           n->hunk_modified_length,
+                                           minus, off, n->hunk_fuzz,
+                                           n->prop_name);
+                }
+              else
+                {
+                  s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
+                        "with offset %s");
+
+                  err = svn_cmdline_printf(pool,
+                                           apr_pstrcat(pool, s,
+                                                       "%"APR_UINT64_T_FMT
+                                                       " and fuzz %lu\n",
+                                                       (char *)NULL),
+                                           n->hunk_original_start,
+                                           n->hunk_original_length,
+                                           n->hunk_modified_start,
+                                           n->hunk_modified_length,
+                                           minus, off, n->hunk_fuzz);
+                }
+
+              if (err)
+                goto print_error;
+            }
+          else
+            {
+
+              if (n->prop_name)
+                {
+                  s = _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
+                        "with offset %s");
+                  err = svn_cmdline_printf(pool,
+                                            apr_pstrcat(pool, s,
+                                                        "%"APR_UINT64_T_FMT" (%s)\n",
+                                                        (char *)NULL),
+                                            n->hunk_original_start,
+                                            n->hunk_original_length,
+                                            n->hunk_modified_start,
+                                            n->hunk_modified_length,
+                                            minus, off, n->prop_name);
+                }
+              else
+                {
+                  s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
+                        "with offset %s");
+                  err = svn_cmdline_printf(pool,
+                                           apr_pstrcat(pool, s,
+                                                       "%"APR_UINT64_T_FMT"\n",
+                                                       (char *)NULL),
+                                           n->hunk_original_start,
+                                           n->hunk_original_length,
+                                           n->hunk_modified_start,
+                                           n->hunk_modified_length,
+                                           minus, off);
+                }
+
+              if (err)
+                goto print_error;
+            }
+        }
+      else if (n->hunk_fuzz)
+        {
+          if (n->prop_name)
+            err = svn_cmdline_printf(pool,
+                          _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
+                                        "with fuzz %lu (%s)\n"),
+                                        n->hunk_original_start,
+                                        n->hunk_original_length,
+                                        n->hunk_modified_start,
+                                        n->hunk_modified_length,
+                                        n->hunk_fuzz,
+                                        n->prop_name);
+          else
+            err = svn_cmdline_printf(pool,
+                          _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
+                                        "with fuzz %lu\n"),
+                                        n->hunk_original_start,
+                                        n->hunk_original_length,
+                                        n->hunk_modified_start,
+                                        n->hunk_modified_length,
+                                        n->hunk_fuzz);
+          if (err)
+            goto print_error;
+
+        }
+      break;
+
+    case svn_wc_notify_patch_rejected_hunk:
+      nb->received_some_change = TRUE;
+
+      if (n->prop_name)
+        err = svn_cmdline_printf(pool,
+                                 _(">         rejected hunk "
+                                   "## -%lu,%lu +%lu,%lu ## (%s)\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length,
+                                 n->prop_name);
+      else
+        err = svn_cmdline_printf(pool,
+                                 _(">         rejected hunk "
+                                   "@@ -%lu,%lu +%lu,%lu @@\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length);
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_patch_hunk_already_applied:
+      nb->received_some_change = TRUE;
+      if (n->prop_name)
+        err = svn_cmdline_printf(pool,
+                                 _(">         hunk "
+                                   "## -%lu,%lu +%lu,%lu ## "
+                                   "already applied (%s)\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length,
+                                 n->prop_name);
+      else
+        err = svn_cmdline_printf(pool,
+                                 _(">         hunk "
+                                   "@@ -%lu,%lu +%lu,%lu @@ "
+                                   "already applied\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length);
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_update:
+    case svn_wc_notify_merge_record_info:
+      {
+        if (n->content_state == svn_wc_notify_state_conflicted)
+          {
+            nb->text_conflicts++;
+            statchar_buf[0] = 'C';
+          }
+        else if (n->kind == svn_node_file)
+          {
+            if (n->content_state == svn_wc_notify_state_merged)
+              statchar_buf[0] = 'G';
+            else if (n->content_state == svn_wc_notify_state_changed)
+              statchar_buf[0] = 'U';
+          }
+
+        if (n->prop_state == svn_wc_notify_state_conflicted)
+          {
+            nb->prop_conflicts++;
             statchar_buf[1] = 'C';
           }
         else if (n->prop_state == svn_wc_notify_state_merged)
@@ -331,7 +551,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
       if ((err = svn_cmdline_printf(pool,
-                                    _("\nFetching external item into '%s'\n"),
+                                    _("\nFetching external item into '%s':\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -345,8 +565,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         {
           svn_handle_warning2(stderr, n->err, "svn: ");
           nb->in_external = FALSE;
-          nb->ext_text_conflicts = nb->ext_prop_conflicts
-            = nb->ext_tree_conflicts = nb->ext_skipped_paths = 0;
           if ((err = svn_cmdline_printf(pool, "\n")))
             goto print_error;
         }
@@ -367,78 +585,87 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       break;
 
+    case svn_wc_notify_update_started:
+      if (! (nb->in_external ||
+             nb->is_checkout ||
+             nb->is_export))
+        {
+          if ((err = svn_cmdline_printf(pool, _("Updating '%s':\n"),
+                                        path_local)))
+            goto print_error;
+        }
+      break;
+
     case svn_wc_notify_update_completed:
       {
-        if (! nb->suppress_final_line)
+        if (SVN_IS_VALID_REVNUM(n->revision))
           {
-            if (SVN_IS_VALID_REVNUM(n->revision))
+            if (nb->is_export)
               {
-                if (nb->is_export)
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("Exported external at revision %ld.\n")
+                      : _("Exported revision %ld.\n"),
+                      n->revision)))
+                  goto print_error;
+              }
+            else if (nb->is_checkout)
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("Checked out external at revision %ld.\n")
+                      : _("Checked out revision %ld.\n"),
+                      n->revision)))
+                  goto print_error;
+              }
+            else
+              {
+                if (nb->received_some_change)
                   {
+                    nb->received_some_change = FALSE;
                     if ((err = svn_cmdline_printf
                          (pool, nb->in_external
-                          ? _("Exported external at revision %ld.\n")
-                          : _("Exported revision %ld.\n"),
-                          n->revision)))
-                      goto print_error;
-                  }
-                else if (nb->is_checkout)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("Checked out external at revision %ld.\n")
-                          : _("Checked out revision %ld.\n"),
+                          ? _("Updated external to revision %ld.\n")
+                          : _("Updated to revision %ld.\n"),
                           n->revision)))
                       goto print_error;
                   }
                 else
                   {
-                    if (nb->received_some_change)
-                      {
-                        if ((err = svn_cmdline_printf
-                             (pool, nb->in_external
-                              ? _("Updated external to revision %ld.\n")
-                              : _("Updated to revision %ld.\n"),
-                              n->revision)))
-                          goto print_error;
-                      }
-                    else
-                      {
-                        if ((err = svn_cmdline_printf
-                             (pool, nb->in_external
-                              ? _("External at revision %ld.\n")
-                              : _("At revision %ld.\n"),
-                              n->revision)))
-                          goto print_error;
-                      }
+                    if ((err = svn_cmdline_printf
+                         (pool, nb->in_external
+                          ? _("External at revision %ld.\n")
+                          : _("At revision %ld.\n"),
+                          n->revision)))
+                      goto print_error;
                   }
               }
-            else  /* no revision */
+          }
+        else  /* no revision */
+          {
+            if (nb->is_export)
               {
-                if (nb->is_export)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External export complete.\n")
-                          : _("Export complete.\n"))))
-                      goto print_error;
-                  }
-                else if (nb->is_checkout)
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External checkout complete.\n")
-                          : _("Checkout complete.\n"))))
-                      goto print_error;
-                  }
-                else
-                  {
-                    if ((err = svn_cmdline_printf
-                         (pool, nb->in_external
-                          ? _("External update complete.\n")
-                          : _("Update complete.\n"))))
-                      goto print_error;
-                  }
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External export complete.\n")
+                      : _("Export complete.\n"))))
+                  goto print_error;
+              }
+            else if (nb->is_checkout)
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External checkout complete.\n")
+                      : _("Checkout complete.\n"))))
+                  goto print_error;
+              }
+            else
+              {
+                if ((err = svn_cmdline_printf
+                     (pool, nb->in_external
+                      ? _("External update complete.\n")
+                      : _("Update complete.\n"))))
+                  goto print_error;
               }
           }
       }
@@ -453,7 +680,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_status_external:
       if ((err = svn_cmdline_printf
-           (pool, _("\nPerforming status on external item at '%s'\n"),
+           (pool, _("\nPerforming status on external item at '%s':\n"),
             path_local)))
         goto print_error;
       break;
@@ -469,37 +696,50 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_modified:
       /* xgettext: Align the %s's on this and the following 4 messages */
       if ((err = svn_cmdline_printf(pool,
-                                    _("Sending        %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("Sending copy of       %s\n")
+                                      : _("Sending        %s\n"),
                                     path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_commit_added:
+    case svn_wc_notify_commit_copied:
       if (n->mime_type && svn_mime_type_is_binary(n->mime_type))
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding  (bin)  %s\n"),
+                                        nb->is_wc_to_repos_copy
+                                          ? _("Adding copy of (bin)  %s\n")
+                                          : _("Adding  (bin)  %s\n"),
                                         path_local)))
           goto print_error;
         }
       else
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding         %s\n"),
+                                        nb->is_wc_to_repos_copy
+                                          ? _("Adding copy of        %s\n")
+                                          : _("Adding         %s\n"),
                                         path_local)))
             goto print_error;
         }
       break;
 
     case svn_wc_notify_commit_deleted:
-      if ((err = svn_cmdline_printf(pool, _("Deleting       %s\n"),
+      if ((err = svn_cmdline_printf(pool,
+                                    nb->is_wc_to_repos_copy
+                                      ? _("Deleting copy of      %s\n")
+                                      : _("Deleting       %s\n"),
                                     path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_commit_replaced:
+    case svn_wc_notify_commit_copied_replaced:
       if ((err = svn_cmdline_printf(pool,
-                                    _("Replacing      %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("Replacing copy of     %s\n")
+                                      : _("Replacing      %s\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -535,22 +775,17 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_changelist_set:
-      if ((err = svn_cmdline_printf(pool, _("Path '%s' is now a member of "
-                                            "changelist '%s'.\n"),
-                                    path_local, n->changelist_name)))
+      if ((err = svn_cmdline_printf(pool, "A [%s] %s\n",
+                                    n->changelist_name, path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_changelist_clear:
-      if ((err = svn_cmdline_printf(pool,
-                                    _("Path '%s' is no longer a member of "
-                                      "a changelist.\n"),
-                                    path_local)))
-        goto print_error;
-      break;
-
     case svn_wc_notify_changelist_moved:
-      svn_handle_warning2(stderr, n->err, "svn: ");
+      if ((err = svn_cmdline_printf(pool,
+                                    "D [%s] %s\n",
+                                    n->changelist_name, path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_merge_begin:
@@ -580,6 +815,50 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                  n->merge_range->start,
                                  n->merge_range->end + 1, path_local);
       if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_merge_record_info_begin:
+      if (!n->merge_range)
+        {
+          err = svn_cmdline_printf(pool,
+                                   _("--- Recording mergeinfo for merge "
+                                     "between repository URLs into '%s':\n"),
+                                   path_local);
+        }
+      else
+        {
+          if (n->merge_range->start == n->merge_range->end - 1
+              || n->merge_range->start == n->merge_range->end)
+            err = svn_cmdline_printf(
+              pool,
+              _("--- Recording mergeinfo for merge of r%ld into '%s':\n"),
+              n->merge_range->end, path_local);
+          else if (n->merge_range->start - 1 == n->merge_range->end)
+            err = svn_cmdline_printf(
+              pool,
+              _("--- Recording mergeinfo for reverse merge of r%ld into '%s':\n"),
+              n->merge_range->start, path_local);
+           else if (n->merge_range->start < n->merge_range->end)
+             err = svn_cmdline_printf(
+               pool,
+               _("--- Recording mergeinfo for merge of r%ld through r%ld into '%s':\n"),
+               n->merge_range->start + 1, n->merge_range->end, path_local);
+           else /* n->merge_range->start > n->merge_range->end - 1 */
+             err = svn_cmdline_printf(
+               pool,
+               _("--- Recording mergeinfo for reverse merge of r%ld through r%ld into '%s':\n"),
+               n->merge_range->start, n->merge_range->end + 1, path_local);
+        }
+
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_merge_elide_info:
+      if ((err = svn_cmdline_printf(pool,
+                                    _("--- Eliding mergeinfo from '%s':\n"),
+                                    path_local)))
         goto print_error;
       break;
 
@@ -618,9 +897,26 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_tree_conflict:
-      nb->in_external ? nb->ext_tree_conflicts++
-                      : nb->tree_conflicts++;
+      nb->tree_conflicts++;
       if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_add:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   A %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_update:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   U %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_delete:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   D %s\n", path_local)))
         goto print_error;
       break;
 
@@ -637,6 +933,15 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         err = svn_cmdline_printf(pool,
                                  _("property '%s' deleted from '%s'.\n"),
                                  n->prop_name, path_local);
+        if (err)
+          goto print_error;
+      break;
+
+    case svn_wc_notify_property_deleted_nonexistent:
+        err = svn_cmdline_printf(pool,
+                                 _("Attempting to delete nonexistent "
+                                   "property '%s' on '%s'\n"), n->prop_name,
+                                   path_local);
         if (err)
           goto print_error;
       break;
@@ -658,9 +963,31 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_upgraded_path:
-        err = svn_cmdline_printf(pool, _("Upgraded '%s'.\n"), path_local);
+        err = svn_cmdline_printf(pool, _("Upgraded '%s'\n"), path_local);
         if (err)
           goto print_error;
+      break;
+
+    case svn_wc_notify_url_redirect:
+      err = svn_cmdline_printf(pool, _("Redirecting to URL '%s':\n"),
+                               n->url);
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_path_nonexistent:
+      err = svn_cmdline_printf(pool, _("'%s' is not under version control"),
+                               path_local);
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_conflict_resolver_starting:
+      /* Once all operations invoke the interactive conflict resolution after
+       * they've completed, we can run svn_cl__print_conflict_stats() here. */
+      break;
+
+    case svn_wc_notify_conflict_resolver_done:
       break;
 
     default:
@@ -679,7 +1006,15 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   if (!nb->had_print_error)
     {
       nb->had_print_error = TRUE;
-      svn_handle_error2(err, stderr, FALSE, "svn: ");
+      /* Issue #3014:
+       * Don't print anything on broken pipes. The pipe was likely
+       * closed by the process at the other end. We expect that
+       * process to perform error reporting as necessary.
+       *
+       * ### This assumes that there is only one error in a chain for
+       * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+      if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+        svn_handle_error2(err, stderr, FALSE, "svn: ");
     }
   svn_error_clear(err);
 }
@@ -688,31 +1023,66 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t is_checkout,
-                     svn_boolean_t is_export,
-                     svn_boolean_t suppress_final_line,
                      apr_pool_t *pool)
 {
-  struct notify_baton *nb = apr_palloc(pool, sizeof(*nb));
+  struct notify_baton *nb = apr_pcalloc(pool, sizeof(*nb));
 
   nb->received_some_change = FALSE;
   nb->sent_first_txdelta = FALSE;
-  nb->is_checkout = is_checkout;
-  nb->is_export = is_export;
-  nb->suppress_final_line = suppress_final_line;
+  nb->is_checkout = FALSE;
+  nb->is_export = FALSE;
+  nb->is_wc_to_repos_copy = FALSE;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
   nb->text_conflicts = 0;
   nb->prop_conflicts = 0;
   nb->tree_conflicts = 0;
   nb->skipped_paths = 0;
-  nb->ext_text_conflicts = 0;
-  nb->ext_prop_conflicts = 0;
-  nb->ext_tree_conflicts = 0;
-  nb->ext_skipped_paths = 0;
   SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));
 
   *notify_func_p = notify;
   *notify_baton_p = nb;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__notifier_mark_checkout(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_checkout = TRUE;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_mark_export(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_export = TRUE;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_mark_wc_to_repos_copy(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_wc_to_repos_copy = TRUE;
+  return SVN_NO_ERROR;
+}
+
+void
+svn_cl__check_externals_failed_notify_wrapper(void *baton,
+                                              const svn_wc_notify_t *n,
+                                              apr_pool_t *pool)
+{
+  struct svn_cl__check_externals_failed_notify_baton *nwb = baton;
+
+  if (n->action == svn_wc_notify_failed_external)
+    nwb->had_externals_error = TRUE;
+
+  if (nwb->wrapped_func)
+    nwb->wrapped_func(nwb->wrapped_baton, n, pool);
+}
+

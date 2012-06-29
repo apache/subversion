@@ -28,6 +28,7 @@
 #include "JNIUtil.h"
 
 SVNBase::SVNBase()
+    : pool(JNIUtil::getPool())
 {
 }
 
@@ -35,7 +36,7 @@ SVNBase::~SVNBase()
 {
 }
 
-jlong SVNBase::getCppAddr()
+jlong SVNBase::getCppAddr() const
 {
   return reinterpret_cast<jlong>(this);
 }
@@ -44,6 +45,7 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
                                      const char *className)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
   findCppAddrFieldID(fid, className, env);
   if (*fid == 0)
     {
@@ -52,7 +54,10 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
   else
     {
       jlong cppAddr = env->GetLongField(jthis, *fid);
-      return (JNIUtil::isJavaExceptionThrown() ? 0 : cppAddr);
+      if (JNIUtil::isJavaExceptionThrown())
+        return 0;
+
+      return cppAddr;
     }
 }
 

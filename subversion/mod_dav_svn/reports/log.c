@@ -1,5 +1,5 @@
 /*
- * log.c: handle the log-report request and response
+ * log.c: mod_dav_svn REPORT handler for querying revision log info
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -30,6 +30,7 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_types.h"
+#include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
@@ -37,6 +38,7 @@
 #include "svn_props.h"
 
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -60,6 +62,9 @@ struct log_receiver_baton
 
   /* whether the client requested any custom revprops */
   svn_boolean_t requested_custom_revprops;
+
+  /* whether the client can handle encoded binary property values */
+  svn_boolean_t encode_binary_props;
 };
 
 
@@ -118,35 +123,50 @@ log_receiver(void *baton,
            hi = apr_hash_next(hi))
         {
           char *name;
-          svn_string_t *value;
+          void *val;
+          const svn_string_t *value;
+          const char *encoding_str = "";
 
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, (void *)&name, NULL, (void *)&value);
+          apr_hash_this(hi, (void *)&name, NULL, &val);
+          value = val;
+
+          /* If the client is okay with us encoding binary (or really,
+             any non-XML-safe) property values, do so as necessary. */
+          if (lrb->encode_binary_props)
+            {
+              if (! svn_xml_is_xml_safe(value->data, value->len))
+                {
+                  value = svn_base64_encode_string2(value, TRUE, iterpool);
+                  encoding_str = " encoding=\"base64\"";
+                }
+            }
+
           if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<D:creator-displayname>%s</D:creator-displayname>"
-                     DEBUG_CR,
+                     "<D:creator-displayname%s>%s</D:creator-displayname>"
+                     DEBUG_CR, encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
           else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
             /* ### this should be DAV:creation-date, but we need to format
                ### that date a bit differently */
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<S:date>%s</S:date>" DEBUG_CR,
+                     "<S:date%s>%s</S:date>" DEBUG_CR, encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
           else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<D:comment>%s</D:comment>" DEBUG_CR,
+                     "<D:comment%s>%s</D:comment>" DEBUG_CR, encoding_str,
                      apr_xml_quote_string(pool,
                                           svn_xml_fuzzy_escape(value->data,
                                                                iterpool), 0)));
           else
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
-                     "<S:revprop name=\"%s\">%s</S:revprop>" DEBUG_CR,
-                     apr_xml_quote_string(iterpool, name, 0),
+                     "<S:revprop name=\"%s\"%s>%s</S:revprop>" DEBUG_CR,
+                     apr_xml_quote_string(iterpool, name, 0), encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
         }
     }
@@ -156,6 +176,10 @@ log_receiver(void *baton,
       SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output, "<S:has-children/>"));
       lrb->stack_depth++;
     }
+
+  if (log_entry->subtractive_merge)
+    SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                  "<S:subtractive-merge/>"));
 
   if (log_entry->changed_paths2)
     {
@@ -239,8 +263,8 @@ log_receiver(void *baton,
                      " text-mods=\"%s\""
                      " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
                      svn_node_kind_to_word(log_item->node_kind),
-                     svn_tristate_to_word(log_item->text_modified),
-                     svn_tristate_to_word(log_item->props_modified),
+                     svn_tristate__to_word(log_item->text_modified),
+                     svn_tristate__to_word(log_item->props_modified),
                      apr_xml_quote_string(iterpool, path, 0),
                      close_element));
         }
@@ -300,6 +324,7 @@ dav_svn__log_report(const dav_resource *resource,
   seen_revprop_element = FALSE;
 
   lrb.requested_custom_revprops = FALSE;
+  lrb.encode_binary_props = FALSE;
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
       /* if this element isn't one of ours, then skip it */
@@ -311,13 +336,25 @@ dav_svn__log_report(const dav_resource *resource,
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "limit") == 0)
-        limit = atoi(dav_xml_get_cdata(child, resource->pool, 1));
+        {
+          serr = svn_cstring_atoi(&limit,
+                                  dav_xml_get_cdata(child, resource->pool, 1));
+          if (serr)
+            {
+              derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                          "Malformed CDATA in element "
+                                          "\"limit\"", resource->pool);
+              goto cleanup;
+            }
+        }
       else if (strcmp(child->name, "discover-changed-paths") == 0)
         discover_changed_paths = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)
         strict_node_history = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "include-merged-revisions") == 0)
         include_merged_revisions = TRUE; /* presence indicates positivity */
+      else if (strcmp(child->name, "encode-binary-props") == 0)
+        lrb.encode_binary_props = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "all-revprops") == 0)
         {
           revprops = NULL; /* presence indicates fetch all revprops */
@@ -349,8 +386,14 @@ dav_svn__log_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path,
-                                 resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          target = svn_fspath__join(resource->info->repos_path, rel_path,
+                                    resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
       /* else unknown element; skip it */

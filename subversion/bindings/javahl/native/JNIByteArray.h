@@ -52,8 +52,8 @@ class JNIByteArray
    */
   bool m_deleteByteArray;
  public:
-  bool isNull();
-  const signed char *getBytes();
+  bool isNull() const;
+  const signed char *getBytes() const;
   int getLength();
   JNIByteArray(jbyteArray jba, bool deleteByteArray = false);
   ~JNIByteArray();

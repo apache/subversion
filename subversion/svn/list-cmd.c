@@ -30,6 +30,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_opt.h"
 
 #include "cl.h"
 
@@ -55,6 +56,13 @@ print_dirent(void *baton,
 {
   struct print_baton *pb = baton;
   const char *entryname;
+  static const char *time_format_long = NULL;
+  static const char *time_format_short = NULL;
+
+  if (time_format_long == NULL)
+    time_format_long = _("%b %d %H:%M");
+  if (time_format_short == NULL)
+    time_format_short = _("%b %d  %Y");
 
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
@@ -89,12 +97,12 @@ print_dirent(void *baton,
           && apr_time_sec(dirent->time - now) < (365 * 86400 / 2))
         {
           apr_err = apr_strftime(timestr, &size, sizeof(timestr),
-                                 _("%b %d %H:%M"), &exp_time);
+                                 time_format_long, &exp_time);
         }
       else
         {
           apr_err = apr_strftime(timestr, &size, sizeof(timestr),
-                                 _("%b %d  %Y"), &exp_time);
+                                 time_format_short, &exp_time);
         }
 
       /* if that failed, just zero out the string and print nothing */
@@ -155,7 +163,7 @@ print_dirent_xml(void *baton,
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
 
-  sb = svn_stringbuf_create("", pool);
+  sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "kind", svn_cl__node_kind_str_xml(dirent->kind),
@@ -215,10 +223,12 @@ svn_cl__list(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_uint32_t dirent_fields;
   struct print_baton pb;
+  svn_boolean_t seen_nonexistent_target = FALSE;
+  svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -273,24 +283,39 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "list",
                                 "path", truepath[0] == '\0' ? "." : truepath,
                                 NULL);
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
 
-      SVN_ERR(svn_client_list2(truepath, &peg_revision,
-                               &(opt_state->start_revision),
-                               opt_state->depth,
-                               dirent_fields,
-                               (opt_state->xml || opt_state->verbose),
-                               opt_state->xml ? print_dirent_xml : print_dirent,
-                               &pb, ctx, subpool));
+      err = svn_client_list2(truepath, &peg_revision,
+                             &(opt_state->start_revision),
+                             opt_state->depth,
+                             dirent_fields,
+                             (opt_state->xml || opt_state->verbose),
+                             opt_state->xml ? print_dirent_xml : print_dirent,
+                             &pb, ctx, subpool);
+
+      if (err)
+        {
+          /* If one of the targets is a non-existent URL or wc-entry,
+             don't bail out.  Just warn and move on to the next target. */
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+              err->apr_err == SVN_ERR_FS_NOT_FOUND)
+              svn_handle_warning2(stderr, err, "svn: ");
+          else
+              return svn_error_trace(err);
+
+          svn_error_clear(err);
+          err = NULL;
+          seen_nonexistent_target = TRUE;
+        }
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_close_tag(&sb, pool, "list");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
@@ -301,5 +326,10 @@ svn_cl__list(apr_getopt_t *os,
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
-  return SVN_NO_ERROR;
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not list all targets because some targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

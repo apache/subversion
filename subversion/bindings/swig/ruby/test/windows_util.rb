@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require 'etc'
 require 'fileutils'
 
@@ -79,7 +98,7 @@ module SvnTestUtil
                        libaprutil#{apr_major_version}.dll
                        libapr#{apr_major_version}.dll
                        libapriconv#{apr_major_version}.dll
-                       sqlite3.dll libdb44.dll libdb44d.dll)
+                       libdb44.dll libdb44d.dll)
           ENV["PATH"].split(";").each do |path|
             found_targets = []
             targets.each do |target|
@@ -94,7 +113,7 @@ module SvnTestUtil
           end
           # Remove optional targets instead of raising below.  If they are really
           # needed, svnserve won't start anyway.
-          targets -= %W[libapriconv#{apr_major_version}.dll sqlite3.dll]
+          targets -= %W[libapriconv#{apr_major_version}.dll]
           unless targets.empty?
             raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end
@@ -219,7 +238,8 @@ EOC
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
-         ["sqlite", "bin"],
+         ["libintl", "bin"],
+         ["sasl", "lib"],
         ].each do |lib, sub_dir|
           lib_dir = Pathname.new(gen_make_opts["--with-#{lib}"])
           dll_dir = lib_dir + sub_dir

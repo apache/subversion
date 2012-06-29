@@ -7,7 +7,7 @@
 #                 Berkeley DB.
 #
 #  Subversion is a tool for revision control. 
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #    
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -53,7 +53,8 @@ num_backups = int(os.environ.get("SVN_HOTBACKUP_BACKUPS_NUMBER", 64))
 archive_map = {
   'gz'  : ".tar.gz",
   'bz2' : ".tar.bz2",
-  'zip' : ".zip"
+  'zip' : ".zip",
+  'zip64' : ".zip"
   }
 
 # Chmod recursively on a whole subtree
@@ -100,10 +101,12 @@ the BACKUP_PATH location, named after the youngest revision.
 
 Options:
   --archive-type=FMT Create an archive of the backup. FMT can be one of:
-                       bz2 : Creates a bzip2 compressed tar file.
-                       gz  : Creates a gzip compressed tar file.
-                       zip : Creates a compressed zip file.
+                       bz2  : Creates a bzip2 compressed tar file.
+                       gz   : Creates a gzip compressed tar file.
+                       zip  : Creates a compressed zip file.
+                       zip64: Creates a zip64 file (can be > 2GB).
   --num-backups=N    Number of prior backups to keep around (0 to keep all).
+  --verify           Verify the backup.
   --help      -h     Print this help message and exit.
 
 """ % (scriptname,))
@@ -112,6 +115,7 @@ Options:
 try:
   opts, args = getopt.gnu_getopt(sys.argv[1:], "h?", ["archive-type=",
                                                       "num-backups=",
+                                                      "verify",
                                                       "help"])
 except getopt.GetoptError, e:
   sys.stderr.write("ERROR: %s\n\n" % e)
@@ -120,12 +124,15 @@ except getopt.GetoptError, e:
   sys.exit(2)
 
 archive_type = None
+verify_copy = False
 
 for o, a in opts:
   if o == "--archive-type":
     archive_type = a
   elif o == "--num-backups":
     num_backups = int(a)
+  elif o == "--verify":
+    verify_copy = True
   elif o in ("-h", "--help", "-?"):
     usage()
     sys.exit()
@@ -264,8 +271,18 @@ if err_code != 0:
 else:
   print("Done.")
 
+### Step 4: Verify the hotcopy
+if verify_copy:
+  print("Verifying backup...")
+  err_code = subprocess.call([svnadmin, "verify", "--quiet", backup_subdir])
+  if err_code != 0:
+    sys.stderr.write("Backup verification failed.\n")
+    sys.stderr.flush()
+    sys.exit(err_code)
+  else:
+    print("Done.")
 
-### Step 4: Make an archive of the backup if required.
+### Step 5: Make an archive of the backup if required.
 if archive_type:
   archive_path = backup_subdir + archive_map[archive_type]
   err_msg = ""
@@ -284,7 +301,7 @@ if archive_type:
       err_msg = "Tar failed: " + str(e)
       err_code = -3
 
-  elif archive_type == 'zip':
+  elif archive_type == 'zip' or archive_type == 'zip64':
     try:
       import zipfile
       
@@ -299,7 +316,7 @@ if archive_type:
             for dirpath, dirs, files in os.walk(path):
               add_to_zip(zp, path, dirpath, dirs + files)
             
-      zp = zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED)
+      zp = zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED, archive_type == 'zip64')
       for dirpath, dirs, files in os.walk(backup_subdir):
         add_to_zip(zp, backup_dir, dirpath, dirs + files)
       zp.close()
@@ -319,7 +336,7 @@ if archive_type:
     print("Archive created, removing backup '" + backup_subdir + "'...")
     safe_rmtree(backup_subdir, 1)
 
-### Step 5: finally, remove all repository backups other than the last
+### Step 6: finally, remove all repository backups other than the last
 ###         NUM_BACKUPS.
 
 if num_backups > 0:

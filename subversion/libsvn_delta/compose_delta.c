@@ -160,36 +160,51 @@ create_offset_index(const svn_txdelta_window_t *window, apr_pool_t *pool)
 }
 
 /* Find the index of the delta op thet defines that data at OFFSET in
-   NDX. */
+   NDX. HINT is an arbitrary positin within NDX and doesn't even need
+   to be valid. To effectively speed up the search, use the last result
+   as hint because most lookups come as a sequence of decreasing values
+   for OFFSET and they concentrate on the lower end of the array. */
 
-static int
-search_offset_index(const offset_index_t *ndx, apr_size_t offset)
+static apr_size_t
+search_offset_index(const offset_index_t *ndx,
+                    apr_size_t offset,
+                    apr_size_t hint)
 {
-  int lo, hi, op;
+  apr_size_t lo, hi, op;
 
   assert(offset < ndx->offs[ndx->length]);
 
-  for (lo = 0, hi = ndx->length, op = (lo + hi)/2;
-       lo < hi;
-       op = (lo + hi)/2)
+  lo = 0;
+  hi = ndx->length;
+
+  /* If we got a valid hint, use it to reduce the range to cover.
+     Note that this will only be useful if either the hint is a
+     hit (i.e. equals the desired result) or narrows the range
+     length by a factor larger than 2. */
+
+  if (hint < hi)
     {
-      const apr_size_t this_offset = ndx->offs[op];
-      const apr_size_t next_offset = ndx->offs[op + 1];
-      if (offset < this_offset)
-        hi = op;
-      else if (offset > next_offset)
-        lo = op;
+      if (offset < ndx->offs[hint])
+        hi = hint;
+      else if (offset < ndx->offs[hint+1])
+        return hint;
       else
-        {
-          /* this_offset <= offset <= next_offset */
-          if (offset == next_offset)
-            ++op;
-          break;
-        }
+        lo = hint+1;
     }
 
-  assert(ndx->offs[op] <= offset && offset < ndx->offs[op + 1]);
-  return op;
+  /* ordinary binary search */
+
+  for (op = (lo + hi)/2; lo != hi; op = (lo + hi)/2)
+    {
+      if (offset < ndx->offs[op])
+        hi = op;
+      else
+        lo = ++op;
+    }
+
+  --lo;
+  assert(ndx->offs[lo] <= offset && offset < ndx->offs[lo + 1]);
+  return lo;
 }
 
 
@@ -614,28 +629,33 @@ build_range_list(apr_size_t offset, apr_size_t limit, range_index_t *ndx)
 
 /* Copy the instructions from WINDOW that define the range [OFFSET,
    LIMIT) in WINDOW's target stream to TARGET_OFFSET in the window
-   represented by BUILD_BATON. Use NDX to find the instructions in
-   WINDOW. Allocate space in BUILD_BATON from POOL. */
+   represented by BUILD_BATON. HINT is a position in the instructions
+   array that helps finding the position for OFFSET. A safe default
+   is 0. Use NDX to find the instructions in WINDOW. Allocate space
+   in BUILD_BATON from POOL. */
 
 static void
 copy_source_ops(apr_size_t offset, apr_size_t limit,
                 apr_size_t target_offset,
+                apr_size_t hint,
                 svn_txdelta__ops_baton_t *build_baton,
                 const svn_txdelta_window_t *window,
                 const offset_index_t *ndx,
                 apr_pool_t *pool)
 {
-  const int first_op = search_offset_index(ndx, offset);
-  const int last_op = search_offset_index(ndx, limit - 1);
-  int op_ndx;
-
-  for (op_ndx = first_op; op_ndx <= last_op; ++op_ndx)
+  apr_size_t op_ndx = search_offset_index(ndx, offset, hint);
+  for (;; ++op_ndx)
     {
       const svn_txdelta_op_t *const op = &window->ops[op_ndx];
       const apr_size_t *const off = &ndx->offs[op_ndx];
+      apr_size_t fix_offset;
+      apr_size_t fix_limit;
 
-      const apr_size_t fix_offset = (offset > off[0] ? offset - off[0] : 0);
-      const apr_size_t fix_limit = (off[1] > limit ? off[1] - limit : 0);
+      if (off[0] >= limit)
+          break;
+
+      fix_offset = (offset > off[0] ? offset - off[0] : 0);
+      fix_limit = (off[1] > limit ? off[1] - limit : 0);
 
       /* It would be extremely weird if the fixed-up op had zero length. */
       assert(fix_offset + fix_limit < op->length);
@@ -667,6 +687,7 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
               copy_source_ops(op->offset + fix_offset,
                               op->offset + op->length - fix_limit,
                               target_offset,
+                              op_ndx,
                               build_baton, window, ndx, pool);
             }
           else
@@ -682,7 +703,7 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
 
               /* ### FIXME: ptn_overlap is unsigned, so the if() condition
                  below is always true!  Either it should be '> 0', or the
-                 code block should be unconditional.  See also r2288. */
+                 code block should be unconditional.  See also r842362. */
               if (ptn_overlap >= 0)
                 {
                   /* Issue second subrange in the pattern. */
@@ -692,6 +713,7 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
                   copy_source_ops(op->offset + ptn_overlap,
                                   op->offset + ptn_overlap + length,
                                   tgt_off,
+                                  op_ndx,
                                   build_baton, window, ndx, pool);
                   fix_off += length;
                   tgt_off += length;
@@ -707,6 +729,7 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
                   copy_source_ops(op->offset,
                                   op->offset + length,
                                   tgt_off,
+                                  op_ndx,
                                   build_baton, window, ndx, pool);
                   fix_off += length;
                   tgt_off += length;
@@ -751,7 +774,7 @@ svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
   /* Read the description of the delta composition algorithm in
      notes/fs-improvements.txt before going any further.
      You have been warned. */
-  build_baton.new_data = svn_stringbuf_create("", pool);
+  build_baton.new_data = svn_stringbuf_create_empty(pool);
   for (i = 0; i < window_B->num_ops; ++i)
     {
       const svn_txdelta_op_t *const op = &window_B->ops[i];
@@ -788,7 +811,7 @@ svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
                                        range->limit - range->offset,
                                        NULL, pool);
               else
-                copy_source_ops(range->offset, range->limit, tgt_off,
+                copy_source_ops(range->offset, range->limit, tgt_off, 0,
                                 &build_baton, window_A, offset_index,
                                 pool);
 
