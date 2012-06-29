@@ -134,7 +134,7 @@ svn_wc__conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
    The DB, WRI_ABSPATH pair specifies in which working copy the conflict
    will be recorded. (Needed for making the paths relative).
 
-   ORIGINAL_ABSPATH, MINE_ABSPATH and THEIR_ABSPATH specify the marker
+   MINE_ABSPATH, THEIR_OLD_ABSPATH and THEIR_ABSPATH specify the marker
    files for this text conflict. Each of these values can be NULL to specify
    that the node doesn't exist in this case.
 
@@ -151,9 +151,8 @@ svn_error_t *
 svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
-                                        const char *original_abspath,
                                         const char *mine_abspath,
-                                        const char *their_original_abspath,
+                                        const char *their_old_abspath,
                                         const char *their_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
@@ -165,7 +164,7 @@ svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
    The DB, WRI_ABSPATH pair specifies in which working copy the conflict
    will be recorded. (Needed for making the paths relative).
 
-   The ORIGINAL_PROPS, MINE_PROPS and THEIR_PROPS are hashes mapping a
+   The MINE_PROPS, THEIR_OLD_PROPS and THEIR_PROPS are hashes mapping a
    const char * property name to a const svn_string_t* value.
 
    The CONFLICTED_PROP_NAMES is a const char * property name value mapping
@@ -186,9 +185,8 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
                                         const char *marker_abspath,
-                                        apr_hash_t *original_props,
                                         apr_hash_t *mine_props,
-                                        apr_hash_t *their_original_props,
+                                        apr_hash_t *their_old_props,
                                         apr_hash_t *their_props,
                                         apr_hash_t *conflicted_prop_names,
                                         apr_pool_t *result_pool,
@@ -222,6 +220,23 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
  * -----------------------------------------------------------
  */
 
+/* Read common information from CONFLICT_SKEL to determine the operation
+ * and merge origins.
+ *
+ * Output arguments can be NULL if the value is not necessary.
+ *
+ * Allocate the result in RESULT_POOL. Perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__conflict_read_info(svn_wc_operation_t *operation,
+                           const apr_array_header_t **locations,
+                           svn_wc__db_t *db,
+                           const char *wri_abspath,
+                           svn_skel_t *conflict_skel,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 /* Reads back the original data stored by svn_wc__conflict_add_text_conflict()
  * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
  *
@@ -233,9 +248,8 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
  * SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__conflict_read_text_conflict(const char **original_abspath,
-                                    const char **mine_abspath,
-                                    const char **their_original_abspath,
+svn_wc__conflict_read_text_conflict(const char **mine_abspath,
+                                    const char **their_old_abspath,
                                     const char **their_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
@@ -254,9 +268,8 @@ svn_wc__conflict_read_text_conflict(const char **original_abspath,
  */
 svn_error_t *
 svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
-                                    apr_hash_t **original_props,
                                     apr_hash_t **mine_props,
-                                    apr_hash_t **their_original_props,
+                                    apr_hash_t **their_old_props,
                                     apr_hash_t **their_props,
                                     apr_hash_t **conflicted_prop_names,
                                     svn_wc__db_t *db,
