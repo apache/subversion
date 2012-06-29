@@ -1226,18 +1226,18 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
                                         svn_wc__has_magic_property(prop_diff),
                                         conflict_skel, work_items,
                                         scratch_pool));
-      else
-        {
-          if (conflict_skel)
-            SVN_ERR(svn_wc__db_op_mark_conflict(wc_ctx->db, target_abspath,
-                                                conflict_skel, scratch_pool));
+      else if (conflict_skel)
+        SVN_ERR(svn_wc__db_op_mark_conflict(wc_ctx->db, target_abspath,
+                                            conflict_skel, work_items,
+                                            scratch_pool));
+      else if (work_items)
+        SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
+                                  scratch_pool));
 
-          SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
-                                    scratch_pool));
-        }
-      SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
-                             cancel_func, cancel_baton,
-                             scratch_pool));
+      if (work_items)
+        SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
       if (conflict_skel && conflict_func)
         SVN_ERR(svn_wc__conflict_invoke_resolver(wc_ctx->db, target_abspath,

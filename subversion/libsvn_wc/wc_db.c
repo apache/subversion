@@ -5272,6 +5272,7 @@ svn_error_t *
 svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             const char *local_abspath,
                             const svn_skel_t *conflict_skel,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -5283,8 +5284,14 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_trace(mark_conflict(wcroot, local_relpath, conflict_skel,
-                                       scratch_pool));
+  SVN_ERR(mark_conflict(wcroot, local_relpath, conflict_skel, scratch_pool));
+
+  /* ### Should be handled in the same transaction as setting the conflict */
+  if (work_items)
+    SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
+
+  return SVN_NO_ERROR;
+
 }
 
 /* Baton for db_op_mark_resolved */
