@@ -1,0 +1,48 @@
+This branch exists for the resolution of issue #3380, which tracks a
+much-needed overhaul of the Subversion server-side authorization
+subsystem.  It is managed as a reintegrate-able branch, with regular
+catch-up merges from the trunk.
+
+THE PLAN
+========
+
+The original and current Subversion server-side authorization
+subsystem allows the libsvn_repos logic to ask the server simple
+questions about read access for items in the repository, basically of
+the form "Can the user read path FOO?"  But read access to a given
+path carries more meaning than is often necessary, combining "can read
+the contents of FOO if it's a file", "can read the properties of FOO",
+and "can know that FOO even exists" all into one permission check.
+
+The aforementioned behavior is over-protective, and ultimately
+detrimental to Subversion's ability to operate correctly.  Because
+Subversion uses the svn_delta_editor_t interfaces all over the place
+to transmit tree changes, and because that interface is tree-like in
+nature, Subversion clients are forced to "anchor their edit" at the
+lowest common ancestor directory of the various repository paths on
+which they wish to operate.  This can cause operations on two paths
+with are readable but which live in different parts of the repository
+to require anchoring at a path that by the current definition is
+unreadable.
+
+Consider a repository whose root directory is full of individual
+projects.  Users are granted read (and maybe write) access to the
+projects they are permitted to see, but not to the root directory.  It
+would be great for a given user to be able to checkout the root of the
+repository and get a working copy containing only the bits he or she
+is allowed to see.  But Subversion would disallow this today on the
+basis that the user doesn't have "read access" to the root directory.
+
+The work on this branch aims to bifurcate the "Can the user read path
+FOO?" question into two: "Can the user know that path FOO exists?" and
+"Can the user read FOO's content/properties?"  The answer to the
+latter question is calculated exactly as it is today.  But the answer
+to the former question differs, taking into consideration not just the
+paths the user has read access to, but also the parents of those
+paths.  After all, it stands to reason that if a user is allowed to
+know that /project/subproject/trunk exists, no rocket science is
+required to determine that /project and /project/subproject also
+exist.
+
+
+

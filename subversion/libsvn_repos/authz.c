@@ -34,6 +34,7 @@
 #include "svn_config.h"
 #include "svn_ctype.h"
 #include "private/svn_fspath.h"
+#include "repos.h"
 
 
 /*** Structures. ***/
@@ -751,6 +752,96 @@ static svn_boolean_t authz_validate_section(const char *name,
 
 
 
+/*** Wrappers around old-style authz callbacks. ***/
+
+static svn_error_t *
+upgrade_authz_func_wrapper(svn_boolean_t *allowed,
+                           svn_fs_root_t *root,
+                           const char *path,
+                           svn_repos_access_t required,
+                           svn_depth_t depth,
+                           void *baton,
+                           apr_pool_t *scratch_pool)
+{
+  svn_repos__upgrade_authz_baton_t *b = baton;
+
+  /* Callers shouldn't be asking about write permission via this
+     interface. */
+  SVN_ERR_ASSERT(required && (required < svn_repos_access_readwrite));
+  SVN_ERR_ASSERT(b->authz_callback);
+
+  return svn_error_trace(b->authz_func(allowed, root, path,
+                                       b->authz_func_baton, scratch_pool));
+}
+
+
+svn_error_t *
+svn_repos__upgrade_authz_func(svn_repos_access_func_t *access_func,
+                              void **access_baton,
+                              svn_repos_authz_func_t authz_read_func,
+                              void *authz_baton,
+                              apr_pool_t *pool)
+{
+  svn_repos__upgrade_authz_baton_t *new_baton =
+    apr_pcalloc(pool, sizeof(*new_baton));
+
+  new_baton->authz_func = authz_read_func;
+  new_baton->authz_func_baton = authz_baton;
+  *access_func = upgrade_authz_func_wrapper;
+  *access_baton = new_baton;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+upgrade_authz_callback_wrapper(svn_boolean_t *allowed,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               svn_repos_access_t required,
+                               svn_depth_t depth,
+                               void *baton,
+                               apr_pool_t *scratch_pool)
+{
+  svn_repos__upgrade_authz_baton_t *b = baton;
+  svn_repos_authz_access_t authz_required;
+
+  SVN_ERR_ASSERT(required);
+  SVN_ERR_ASSERT((depth == svn_depth_empty) || (depth == svn_depth_infinity));
+  SVN_ERR_ASSERT(b->authz_callback);
+
+  if (required == svn_repos_access_readwrite)
+    authz_required = svn_authz_write;
+  else if (required <= svn_repos_access_read)
+    authz_required = svn_authz_read;
+
+  if (depth == svn_depth_infinity)
+    authz_required |= svn_authz_recursive;
+
+  return svn_error_trace(b->authz_callback(authz_required, allowed, root,
+                                           path, b->authz_callback_baton,
+                                           scratch_pool));
+}
+
+
+svn_error_t *
+svn_repos__upgrade_authz_callback(svn_repos_access_func_t *access_func,
+                                  void **access_baton,
+                                  svn_repos_authz_callback_t authz_callback,
+                                  void *authz_baton,
+                                  apr_pool_t *pool)
+{
+  svn_repos__upgrade_authz_baton_t *new_baton =
+    apr_pcalloc(pool, sizeof(*new_baton));
+
+  new_baton->authz_callback = authz_callback;
+  new_baton->authz_callback_baton = authz_baton;
+  *access_func = upgrade_authz_callback_wrapper;
+  *access_baton = new_baton;
+  return SVN_NO_ERROR;
+}
+
+
+
 /*** Public functions. ***/
 
 svn_error_t *
@@ -777,13 +868,32 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
 
 
 svn_error_t *
-svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
-                             const char *path, const char *user,
-                             svn_repos_authz_access_t required_access,
-                             svn_boolean_t *access_granted,
-                             apr_pool_t *pool)
+svn_repos_authz_check_access2(svn_authz_t *authz, const char *repos_name,
+                              const char *path, const char *user,
+                              svn_repos_access_t required_access,
+                              svn_depth_t depth, svn_boolean_t *access_granted,
+                              apr_pool_t *pool)
 {
   const char *current_path;
+  svn_repos_authz_access_t required = svn_authz_none;
+
+  SVN_ERR_ASSERT((depth == svn_depth_empty) || (depth == svn_depth_infinity));
+  SVN_ERR_ASSERT((required_access >= svn_repos_access_none) &&
+                 (required_access <= svn_repos_access_readwrite));
+
+  if (required_access == svn_repos_access_readwrite)
+    {
+      required = svn_authz_read | svn_authz_write;
+    }
+  else if (required_access == svn_repos_access_read)
+    {
+      required = svn_authz_read;
+    }
+  else if (required_access == svn_repos_access_list)
+    {
+      SVN_ERR_ASSERT(depth == svn_depth_empty);
+      required = svn_authz_read;
+    }
 
   if (!repos_name)
     repos_name = "";
@@ -792,7 +902,7 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   if (!path)
     {
       *access_granted = authz_get_any_access(authz->cfg, repos_name,
-                                             user, required_access, pool);
+                                             user, required, pool);
       return SVN_NO_ERROR;
     }
 
@@ -803,11 +913,8 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   path = svn_fspath__canonicalize(path, pool);
   current_path = path;
 
-  while (!authz_get_path_access(authz->cfg, repos_name,
-                                current_path, user,
-                                required_access,
-                                access_granted,
-                                pool))
+  while (!authz_get_path_access(authz->cfg, repos_name, current_path, user,
+                                required, access_granted, pool))
     {
       /* Stop if the loop hits the repository root with no
          results. */
@@ -822,12 +929,21 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
       current_path = svn_fspath__dirname(current_path, pool);
     }
 
+  /* If we haven't yet granted access, and the access requested is
+     "list", then we know that neither PATH nor any of its parents is
+     readable.  So we need to see if any children of PATH is
+     readable.  If so, access can be granted.  If not, WHAM!  Denied. */
+  if ((! *access_granted) && (required_access == svn_repos_access_list))
+    {
+      abort();
+    }
+
   /* If the caller requested recursive access, we need to walk through
      the entire authz config to see whether any child paths are denied
      to the requested user. */
-  if (*access_granted && (required_access & svn_authz_recursive))
+  if (*access_granted && (depth == svn_depth_infinity))
     *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
-                                            user, required_access, pool);
+                                            user, required, pool);
 
   return SVN_NO_ERROR;
 }
