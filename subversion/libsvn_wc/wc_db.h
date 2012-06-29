@@ -1499,12 +1499,17 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
+/* Record CONFLICT on LOCAL_ABSPATH, potentially replacing other conflicts
+   recorded on LOCAL_ABSPATH.
 
-/* ### caller maintains ACTUAL. we're just recording state. */
-/* ### we probably need to record details of the conflict. how? */
+   Users should in most cases pass CONFLICT to another WC_DB call instead of
+   calling svn_wc__db_op_mark_conflict() directly outside a transaction, to
+   allow recording atomically with the operation involved.
+ */
 svn_error_t *
 svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const svn_skel_t *conflict,
                             apr_pool_t *scratch_pool);
 
 
@@ -2942,25 +2947,6 @@ svn_error_t *
 svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
-
-
-/* Set the conflict marker information on LOCAL_ABSPATH to the specified
-   values */
-svn_error_t *
-svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
-                                                  const char *local_abspath,
-                                                  const char *old_abspath,
-                                                  const char *new_abspath,
-                                                  const char *wrk_abspath,
-                                                  apr_pool_t *scratch_pool);
-
-/* Set the conflict marker information on LOCAL_ABSPATH to the specified
-   values */
-svn_error_t *
-svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
-                                                     const char *local_abspath,
-                                                     const char *prej_abspath,
-                                                     apr_pool_t *scratch_pool);
 
 /* Add a new directory in BASE, whether WORKING nodes exist or not. Mark it
    as incomplete and with revision REVISION. If REPOS_RELPATH is not NULL,
