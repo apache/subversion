@@ -233,7 +233,7 @@ svn_wc__conflict_read_info(svn_wc_operation_t *operation,
                            const apr_array_header_t **locations,
                            svn_wc__db_t *db,
                            const char *wri_abspath,
-                           svn_skel_t *conflict_skel,
+                           const svn_skel_t *conflict_skel,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -253,7 +253,7 @@ svn_wc__conflict_read_text_conflict(const char **mine_abspath,
                                     const char **their_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
-                                    svn_skel_t *conflict_skel,
+                                    const svn_skel_t *conflict_skel,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -274,7 +274,7 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_hash_t **conflicted_prop_names,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
-                                    svn_skel_t *conflict_skel,
+                                    const svn_skel_t *conflict_skel,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -307,7 +307,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_item,
 svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const char *local_abspath,
-                                 svn_skel_t *conflict_skel,
+                                 const svn_skel_t *conflict_skel,
                                  const apr_array_header_t *merge_options,
                                  svn_wc_conflict_resolver_func2_t resolver_func,
                                  void *resolver_baton,
