@@ -448,6 +448,73 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
   return SVN_NO_ERROR;
 }
 
+/* A map for svn_wc_conflict_reason_t values. */
+static const svn_token_map_t local_change_map[] =
+{
+  { "edited",           svn_wc_conflict_reason_edited },
+  { "obstructed",       svn_wc_conflict_reason_obstructed },
+  { "deleted",          svn_wc_conflict_reason_deleted },
+  { "missing",          svn_wc_conflict_reason_missing },
+  { "unversioned",      svn_wc_conflict_reason_unversioned },
+  { "added",            svn_wc_conflict_reason_added },
+  { "replaced",         svn_wc_conflict_reason_replaced },
+  { "moved-away",       svn_wc_conflict_reason_moved_away },
+  { "moved-here",       svn_wc_conflict_reason_moved_here },
+  /* ### Do we really need this. The edit state is on a different node,
+         which might just change while the tree conflict exists? */
+  { "moved-and-edited", svn_wc_conflict_reason_moved_away_and_edited },
+  { NULL }
+};
+
+static const svn_token_map_t incoming_change_map[] =
+{
+  { "edited",           svn_wc_conflict_action_edit },
+  { "added",            svn_wc_conflict_action_add },
+  { "deleted",          svn_wc_conflict_action_delete },
+  { "replaced",         svn_wc_conflict_action_replace },
+  { NULL }
+};
+
+svn_error_t *
+svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
+                                        svn_wc__db_t *db,
+                                        const char *wri_abspath,
+                                        svn_wc_conflict_reason_t local_change,
+                                        svn_wc_conflict_action_t incoming_change,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_skel_t *tree_conflict;
+  svn_skel_t *markers;
+
+  SVN_ERR(conflict__get_conflict(&tree_conflict, conflict_skel,
+                                 SVN_WC__CONFLICT_KIND_TREE));
+
+  SVN_ERR_ASSERT(!tree_conflict); /* ### Use proper error? */
+
+  tree_conflict = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_str(
+                svn_token__to_word(incoming_change_map, incoming_change),
+                tree_conflict, result_pool);
+
+  svn_skel__prepend_str(
+                svn_token__to_word(local_change_map, local_change),
+                tree_conflict, result_pool);
+
+  /* Tree conflicts have no marker files */
+  markers = svn_skel__make_empty_list(result_pool);
+  svn_skel__prepend(markers, tree_conflict);
+
+  svn_skel__prepend_str(SVN_WC__CONFLICT_KIND_TREE, tree_conflict,
+                        result_pool);
+
+  /* And add it to the conflict skel */
+  svn_skel__prepend(tree_conflict, conflict_skel->children->next);
+
+  return SVN_NO_ERROR;
+}
+
 /* A map for svn_wc_operation_t values. */
 static const svn_token_map_t operation_map[] =
 {
@@ -652,7 +719,54 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
       else
         SVN_ERR(svn_skel__parse_proplist(their_props, c, result_pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
+                                    svn_wc_conflict_action_t *incoming_change,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    const svn_skel_t *conflict_skel,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *tree_conflict;
+  svn_skel_t *c;
+
+  SVN_ERR(conflict__get_conflict(&tree_conflict, conflict_skel,
+                                 SVN_WC__CONFLICT_KIND_TREE));
+
+  if (!tree_conflict)
+    return svn_error_create(SVN_ERR_WC_MISSING, NULL, _("Conflict not set"));
+
+  c = tree_conflict->children;
+
+  c = c->next; /* Skip "tree" */
+
+  c = c->next; /* Skip markers */
+
+  if (local_change)
+    {
+      int value = svn_token__from_mem(local_change_map, c->data, c->len);
+
+      if (value != SVN_TOKEN_UNKNOWN)
+        *local_change = value;
+      else
+        *local_change = svn_wc_conflict_reason_edited;
+    }
   c = c->next;
+
+  if (incoming_change)
+    {
+      int value = svn_token__from_mem(incoming_change_map, c->data, c->len);
+
+      if (value != SVN_TOKEN_UNKNOWN)
+        *incoming_change = value;
+      else
+        *incoming_change = svn_wc_conflict_action_edit;
+    }
 
   return SVN_NO_ERROR;
 }

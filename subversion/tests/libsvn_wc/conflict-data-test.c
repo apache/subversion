@@ -156,7 +156,7 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_serialize_tree_conflict(apr_pool_t *pool)
+test_serialize_tree_conflict_data(apr_pool_t *pool)
 {
   svn_wc_conflict_description2_t *conflict;
   const char *tree_conflict_data;
@@ -451,6 +451,53 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_serialize_tree_conflict(const svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  svn_test__sandbox_t sbox;
+  svn_skel_t *conflict_skel;
+  svn_boolean_t complete;
+
+  SVN_ERR(svn_test__sandbox_create(&sbox, "test_serialize_tree_conflict", opts, pool));
+
+  conflict_skel = svn_wc__conflict_skel_create(pool);
+
+  SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+                              conflict_skel,
+                              sbox.wc_ctx->db, sbox.wc_abspath,
+                              svn_wc_conflict_reason_moved_away,
+                              svn_wc_conflict_action_delete,
+                              pool, pool));
+
+  SVN_ERR(svn_wc__conflict_skel_set_op_switch(
+                        conflict_skel,
+                        svn_wc_conflict_version_create2("http://my-repos/svn",
+                                                        "uuid", "trunk", 12,
+                                                        svn_node_dir, pool),
+                        pool, pool));
+
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
+  SVN_TEST_ASSERT(complete); /* Everything available */
+
+  {
+    svn_wc_conflict_reason_t local_change;
+    svn_wc_conflict_action_t incoming_change;
+
+    SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
+                                                &incoming_change,
+                                                sbox.wc_ctx->db,
+                                                sbox.wc_abspath,
+                                                conflict_skel,
+                                                pool, pool));
+
+    SVN_TEST_ASSERT(local_change == svn_wc_conflict_reason_moved_away);
+    SVN_TEST_ASSERT(incoming_change == svn_wc_conflict_action_delete);
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -458,14 +505,16 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_deserialize_tree_conflict,
                    "deserialize tree conflict"),
-    SVN_TEST_PASS2(test_serialize_tree_conflict,
-                   "serialize tree conflict"),
+    SVN_TEST_PASS2(test_serialize_tree_conflict_data,
+                   "serialize tree conflict data"),
     SVN_TEST_OPTS_PASS(test_read_write_tree_conflicts,
-                       "read and write tree conflicts"),
+                       "read and write tree conflict data"),
     SVN_TEST_OPTS_PASS(test_serialize_prop_conflict,
                        "read and write a property conflict"),
     SVN_TEST_OPTS_PASS(test_serialize_text_conflict,
                        "read and write a text conflict"),
+    SVN_TEST_OPTS_PASS(test_serialize_tree_conflict,
+                       "read and write a tree conflict"),
     SVN_TEST_NULL
   };
 

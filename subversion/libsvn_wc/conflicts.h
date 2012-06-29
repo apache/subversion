@@ -205,6 +205,8 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
 */
 svn_error_t *
 svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
+                                        svn_wc__db_t *db,
+                                        const char *wri_abspath,
                                         svn_wc_conflict_reason_t local_change,
                                         svn_wc_conflict_action_t incoming_change,
                                         apr_pool_t *result_pool,
@@ -275,6 +277,23 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
+/* Reads back the original data stored by svn_wc__conflict_add_tree_conflict()
+ * in CONFLICT_SKEL for a node in DB, WRI_ABSPATH.
+ *
+ * Values as documented for svn_wc__conflict_add_tree_conflict().
+ *
+ * Output arguments can be NULL if the value is not necessary
+ * Allocate the result in RESULT_POOL. Perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
+                                    svn_wc_conflict_action_t *incoming_change,
+                                    svn_wc__db_t *db,
+                                    const char *wri_abspath,
+                                    const svn_skel_t *conflict_skel,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 /* Create the necessary marker files for the conflicts stored in
  * CONFLICT_SKEL and return the work items to fill the markers from
