@@ -287,9 +287,8 @@ svn_error_t *
 svn_wc__conflict_skel_add_text_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
-                                        const char *original_abspath,
                                         const char *mine_abspath,
-                                        const char *their_original_abspath,
+                                        const char *their_old_abspath,
                                         const char *their_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
@@ -321,18 +320,6 @@ if (their_abspath)
   else
     svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
 
-if (their_original_abspath)
-    {
-      const char *their_original_relpath;
-
-      SVN_ERR(svn_wc__db_to_relpath(&their_original_relpath,
-                                    db, wri_abspath, their_original_abspath,
-                                    result_pool, scratch_pool));
-      svn_skel__prepend_str(their_original_relpath, markers, result_pool);
-    }
-  else
-    svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
-
   if (mine_abspath)
     {
       const char *mine_relpath;
@@ -345,12 +332,12 @@ if (their_original_abspath)
   else
     svn_skel__prepend(svn_skel__make_empty_list(result_pool), markers);
 
-  if (original_abspath)
+  if (their_old_abspath)
     {
       const char *original_relpath;
 
       SVN_ERR(svn_wc__db_to_relpath(&original_relpath,
-                                    db, wri_abspath, original_abspath,
+                                    db, wri_abspath, their_old_abspath,
                                     result_pool, scratch_pool));
       svn_skel__prepend_str(original_relpath, markers, result_pool);
     }
@@ -372,9 +359,8 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
                                         svn_wc__db_t *db,
                                         const char *wri_abspath,
                                         const char *marker_abspath,
-                                        apr_hash_t *original_props,
                                         apr_hash_t *mine_props,
-                                        apr_hash_t *their_original_props,
+                                        apr_hash_t *their_old_props,
                                         apr_hash_t *their_props,
                                         apr_hash_t *conflicted_prop_names,
                                         apr_pool_t *result_pool,
@@ -395,9 +381,8 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
   /* ("prop"
       ("marker_relpath")
       prop-conflicted_prop_names
-      original-props
+      old-props
       mine-props
-      original-their-props
       their-props)
      NULL lists are recorded as "" */
 
@@ -411,15 +396,6 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
   else
     svn_skel__prepend_str("", prop_conflict, result_pool); /* No their_props */
 
-  if (their_original_props)
-    {
-      SVN_ERR(svn_skel__unparse_proplist(&props, their_original_props,
-                                         result_pool));
-      svn_skel__prepend(props, prop_conflict);
-    }
-  else
-    svn_skel__prepend_str("", prop_conflict, result_pool); /* No their_original */
-
   if (mine_props)
     {
       SVN_ERR(svn_skel__unparse_proplist(&props, mine_props, result_pool));
@@ -428,9 +404,10 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
   else
     svn_skel__prepend_str("", prop_conflict, result_pool); /* No mine_props */
 
-  if (original_props)
+  if (their_old_props)
     {
-      SVN_ERR(svn_skel__unparse_proplist(&props, original_props, result_pool));
+      SVN_ERR(svn_skel__unparse_proplist(&props, their_old_props,
+                                         result_pool));
       svn_skel__prepend(props, prop_conflict);
     }
   else
@@ -472,10 +449,54 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
   return SVN_NO_ERROR;
 }
 
+/* A map for svn_wc_operation_t values. */
+static const svn_token_map_t operation_map[] =
+{
+  { "",   svn_wc_operation_none },
+  { SVN_WC__CONFLICT_OP_UPDATE, svn_wc_operation_update },
+  { SVN_WC__CONFLICT_OP_SWITCH, svn_wc_operation_switch },
+  { SVN_WC__CONFLICT_OP_MERGE,  svn_wc_operation_merge },
+  { NULL }
+};
+
 svn_error_t *
-svn_wc__conflict_read_text_conflict(const char **original_abspath,
-                                    const char **mine_abspath,
-                                    const char **their_original_abspath,
+svn_wc__conflict_read_info(svn_wc_operation_t *operation,
+                           const apr_array_header_t **locations,
+                           svn_wc__db_t *db,
+                           const char *wri_abspath,
+                           svn_skel_t *conflict_skel,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_skel_t *op;
+
+  SVN_ERR(conflict__get_operation(&op, conflict_skel));
+
+  if (!op)
+    return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                            _("Not a completed conflict skel"));
+
+  if (operation)
+    {
+      svn_skel_t *what = op->children;
+
+      int value = svn_token__from_mem(operation_map, what->data, what->len);
+
+      if (value != SVN_TOKEN_UNKNOWN)
+        *operation = value;
+      else
+        *operation = svn_wc_operation_none;
+    }
+  if (locations)
+    *locations = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__conflict_read_text_conflict(const char **mine_abspath,
+                                    const char **their_old_abspath,
                                     const char **their_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
@@ -494,19 +515,19 @@ svn_wc__conflict_read_text_conflict(const char **original_abspath,
 
   m = text_conflict->children->next->children;
 
-  if (original_abspath)
+  if (their_old_abspath)
     {
       if (m->is_atom)
         {
           const char *original_relpath;
 
           original_relpath = apr_pstrndup(scratch_pool, m->data, m->len);
-          SVN_ERR(svn_wc__db_from_relpath(original_abspath,
+          SVN_ERR(svn_wc__db_from_relpath(their_old_abspath,
                                           db, wri_abspath, original_relpath,
                                           result_pool, scratch_pool));
         }
       else
-        *original_abspath = NULL;
+        *their_old_abspath = NULL;
     }
   m = m->next;
 
@@ -523,23 +544,6 @@ svn_wc__conflict_read_text_conflict(const char **original_abspath,
         }
       else
         *mine_abspath = NULL;
-    }
-  m = m->next;
-
-  if (their_original_abspath)
-    {
-      if (m->is_atom)
-        {
-          const char *their_original_relpath;
-
-          their_original_relpath = apr_pstrndup(scratch_pool, m->data, m->len);
-          SVN_ERR(svn_wc__db_from_relpath(their_original_abspath,
-                                          db, wri_abspath,
-                                          their_original_relpath,
-                                          result_pool, scratch_pool));
-        }
-      else
-        *their_original_abspath = NULL;
     }
   m = m->next;
 
@@ -563,9 +567,8 @@ svn_wc__conflict_read_text_conflict(const char **original_abspath,
 
 svn_error_t *
 svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
-                                    apr_hash_t **original_props,
                                     apr_hash_t **mine_props,
-                                    apr_hash_t **their_original_props,
+                                    apr_hash_t **their_old_props,
                                     apr_hash_t **their_props,
                                     apr_hash_t **conflicted_prop_names,
                                     svn_wc__db_t *db,
@@ -623,12 +626,12 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
   c = c->next;
 
   /* Get original properties */
-  if (original_props)
+  if (their_old_props)
     {
       if (c->is_atom)
-        *original_props = apr_hash_make(result_pool);
+        *their_old_props = apr_hash_make(result_pool);
       else
-        SVN_ERR(svn_skel__parse_proplist(original_props, c, result_pool));
+        SVN_ERR(svn_skel__parse_proplist(their_old_props, c, result_pool));
     }
   c = c->next;
 
@@ -639,17 +642,6 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
         *mine_props = apr_hash_make(result_pool);
       else
         SVN_ERR(svn_skel__parse_proplist(mine_props, c, result_pool));
-    }
-  c = c->next;
-
-  /* Get their properties */
-  if (their_original_props)
-    {
-      if (c->is_atom)
-        *their_original_props = apr_hash_make(result_pool);
-      else
-        SVN_ERR(svn_skel__parse_proplist(their_original_props, c,
-                                         result_pool));
     }
   c = c->next;
 
@@ -817,8 +809,9 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
         apr_hash_t *their_original_props;
         apr_hash_t *their_props;
         apr_hash_t *conflicted_props;
+        svn_wc_operation_t operation;
 
-        SVN_ERR(svn_wc__conflict_read_prop_conflict(NULL, &old_props,
+        SVN_ERR(svn_wc__conflict_read_prop_conflict(NULL,
                                                     &mine_props,
                                                     &their_original_props,
                                                     &their_props,
@@ -827,6 +820,17 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                                                     conflict_skel,
                                                     scratch_pool,
                                                     scratch_pool));
+
+        SVN_ERR(svn_wc__conflict_read_info(&operation, NULL,
+                                           db, local_abspath,
+                                           conflict_skel,
+                                           scratch_pool, scratch_pool));
+
+        if (operation == svn_wc_operation_merge)
+          SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
+        else
+          old_props = their_props;
 
         prop_data = prop_conflict_skel_new(result_pool);
 
@@ -871,22 +875,17 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
   if (text_conflict)
     {
-      const char *original_abspath;
       const char *mine_abspath;
       const char *their_original_abspath;
       const char *their_abspath;
       svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__conflict_read_text_conflict(&original_abspath,
-                                                  &mine_abspath,
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
                                                   &their_original_abspath,
                                                   &their_abspath,
                                                   db, local_abspath,
                                                   conflict_skel,
                                                   scratch_pool, scratch_pool));
-
-      if (!their_original_abspath)
-        their_original_abspath = original_abspath;
 
       SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
                             &work_item, db, local_abspath,
@@ -1513,9 +1512,9 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
       apr_pool_t *iterpool;
       apr_hash_index_t *hi;
       svn_boolean_t mark_resolved = TRUE;
+      svn_wc_operation_t operation;
 
       SVN_ERR(svn_wc__conflict_read_prop_conflict(NULL,
-                                                  &old_props,
                                                   &mine_props,
                                                   &old_their_props,
                                                   &their_props,
@@ -1523,6 +1522,17 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                                   db, local_abspath,
                                                   conflict_skel,
                                                   scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_read_info(&operation, NULL,
+                                         db, local_abspath,
+                                         conflict_skel,
+                                         scratch_pool, scratch_pool));
+
+      if (operation == svn_wc_operation_merge)
+        SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
+                                               scratch_pool, scratch_pool));
+      else
+        old_props = their_props;
 
       iterpool = svn_pool_create(scratch_pool);
 
@@ -1571,16 +1581,14 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
 
   if (text_conflict)
     {
-      const char *original_abspath;
       const char *mine_abspath;
       const char *their_original_abspath;
       const char *their_abspath;
       svn_skel_t *work_item = NULL;
       svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_conflict;
 
-      SVN_ERR(svn_wc__conflict_read_text_conflict(&original_abspath,
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&their_original_abspath,
                                                   &mine_abspath,
-                                                  &their_original_abspath,
                                                   &their_abspath,
                                                   db, local_abspath,
                                                   conflict_skel,

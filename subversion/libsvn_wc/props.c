@@ -1201,7 +1201,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
   apr_pool_t *iterpool;
   int i;
   apr_hash_t *conflict_props = NULL;
-  apr_hash_t *old_pristine_props;
   apr_hash_t *old_actual_props;
   apr_hash_t *their_props;
 
@@ -1210,7 +1209,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
   /* Just copy the pointers as we copy the data in the skel if
      necessary */
-  old_pristine_props = apr_hash_copy(scratch_pool, pristine_props);
   old_actual_props = apr_hash_copy(scratch_pool, actual_props);
 
   *new_pristine_props = NULL;
@@ -1329,7 +1327,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(*conflict_skel,
                                                       db, local_abspath,
                                                       NULL /* reject_path */,
-                                                      old_pristine_props,
                                                       old_actual_props,
                                                       server_baseprops,
                                                       their_props,

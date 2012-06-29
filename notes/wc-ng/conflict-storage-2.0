@@ -129,9 +129,9 @@ while resolving we can start using the WHY information.
 svn info can provide additional information about the conflict and all the
 svn resolve options apply in both interactive an non-interactive situations.
 
-The MARKERS list always has at least 3 items, where the first 3 map to OLD,
-NEW and WORKING in the old WC-1.0 behavior. () markers are needed to keep
-this code compatible with svn_wc_entry_t mapping.
+The MARKERS list always has 4 items, mapping to ORIGINAL, MINE, ORIGINAL-THEIRS
+and THEIRS. () markers are needed to keep this code compatible with
+svn_wc_entry_t mapping.
 
 Using the PRISTINE store as additional backing store for text conflicts
 is left out of this proposal and can be implemented independently.
@@ -141,7 +141,7 @@ Property Conflicts
   
 Property conflicts are initially described as
   ("prop" MARKERS PROP-NAMES
-   ORIGINAL-PROPS MINE-PROPS ORIGINAL-THEIRS THEIRS ...)
+   OLD-PROPS MINE-PROPS THEIR-PROPS ...)
 
 PROP-NAMES is a list of conflicted/not-resolved properties.
 *-PROPS are (key value) property mapping lists.
@@ -150,6 +150,12 @@ This simple model extends the wc-1.0 model to allow the same conflict
 resolving as for text conflicts. All the options 'base', 'working',
 'mine-conflict', 'theirs-conflict', 'mine-full' and 'theirs-full' are
 relatively easy to implement once we have the values stored.
+
+Conceptually we need 4 list of property hashes as we merge the difference
+between two lists into a potentially already modified working copy. But in
+case of update and merge the old and theirs-old list is the same and in case
+of a merge we still have the mine-old as the pristine version. So by
+retrieving the operation from the WHY skel we can reconstruct the 4 lists.
 
 svn info can provide additional information about the conflict and all the
 svn resolve options apply in both interactive an non-interactive situations.

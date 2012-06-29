@@ -318,9 +318,6 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
     apr_hash_t *conflicts = apr_hash_make(pool);
     const char *marker_abspath;
 
-    apr_hash_set(old, "prop", APR_HASH_KEY_STRING,
-                 svn_string_create("Old", pool));
-
     apr_hash_set(mine, "prop", APR_HASH_KEY_STRING,
                  svn_string_create("Mine", pool));
 
@@ -340,7 +337,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
                                                     sbox.wc_ctx->db,
                                                     sbox.wc_abspath,
                                                     marker_abspath,
-                                                    old, mine, their_old,
+                                                    mine, their_old,
                                                     theirs, conflicts,
                                                     pool, pool));
   }
@@ -359,7 +356,6 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(complete); /* Everything available */
 
   {
-    apr_hash_t *old;
     apr_hash_t *mine;
     apr_hash_t *their_old;
     apr_hash_t *theirs;
@@ -368,7 +364,6 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
     svn_string_t *v;
 
     SVN_ERR(svn_wc__conflict_read_prop_conflict(&marker_abspath,
-                                                &old,
                                                 &mine,
                                                 &their_old,
                                                 &theirs,
@@ -379,9 +374,6 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
                                                 pool, pool));
 
     SVN_TEST_ASSERT(svn_dirent_is_ancestor(sbox.wc_abspath, marker_abspath));
-
-    v = apr_hash_get(old, "prop", APR_HASH_KEY_STRING);
-    SVN_TEST_STRING_ASSERT(v->data, "Old");
 
     v = apr_hash_get(mine, "prop", APR_HASH_KEY_STRING);
     SVN_TEST_STRING_ASSERT(v->data, "Mine");
@@ -413,7 +405,6 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
   SVN_ERR(svn_wc__conflict_skel_add_text_conflict(
                   conflict_skel,
                   sbox.wc_ctx->db, sbox.wc_abspath,
-                  svn_dirent_join(sbox.wc_abspath, "old", pool),
                   svn_dirent_join(sbox.wc_abspath, "mine", pool),
                   svn_dirent_join(sbox.wc_abspath, "old-theirs", pool),
                   svn_dirent_join(sbox.wc_abspath, "theirs", pool),
@@ -433,23 +424,17 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(complete); /* Everything available */
 
   {
-    const char *old_abspath;
     const char *mine_abspath;
     const char *old_their_abspath;
     const char *their_abspath;
 
-    SVN_ERR(svn_wc__conflict_read_text_conflict(&old_abspath,
-                                                &mine_abspath,
+    SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
                                                 &old_their_abspath,
                                                 &their_abspath,
                                                 sbox.wc_ctx->db,
                                                 sbox.wc_abspath,
                                                 conflict_skel,
                                                 pool, pool));
-
-    SVN_TEST_STRING_ASSERT(
-        svn_dirent_skip_ancestor(sbox.wc_abspath, old_abspath),
-        "old");
 
     SVN_TEST_STRING_ASSERT(
         svn_dirent_skip_ancestor(sbox.wc_abspath, mine_abspath),
