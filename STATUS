@@ -59,8 +59,7 @@ Candidate changes:
      r1338810 taught the code to send properties for demoted copies.
      r1339164 fixed a theoretical use of uninitialized memory.
    Votes:
-     +1: cmpilato
-     +1: rhuijben (r1338810 only)
+     +1: cmpilato, rhuijben
 
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
@@ -76,10 +75,10 @@ Candidate changes:
      Please read the branch and related trunk log messages for detailed notes
      about these changes.
    Branch:
-     ^/subversion/branches/1.7.x-issue4153  
+     ^/subversion/branches/1.7.x-issue4153
    Votes:
      +1: stsp
-   
+
  * ^/subversion/branches/1.7.x-performance
    Use the working copy status walker as a first filter to find committable
    nodes.
@@ -91,54 +90,11 @@ Candidate changes:
    Votes:
      +0: rhuijben (I would like to see some test results before backporting)
 
- * r1341012, r1341076
-   Sort 'svn status' output to avoid randomness in output with APR-1.4.6.
-   Justification:
-     Sorted output is nicer for users. Some users even perceive random output
-     order with APR-1.4.6 as a regression.
-   Branch:
-     ^/subversion/branches/1.7.x-r1341012
-   Votes:
-     +1: stsp, gstein
-
- * 1341031
-   Sort output of 'svn proplist' to avoid randomness with APR-1.4.6
-   Justification:
-     Sorted output is nicer for users. Some users even perceive random output
-     order with APR-1.4.6 as a regression.
-   Votes:
-     +1: stsp, gstein
-
- * r1341034
-   Sort output of 'svn propget -R' to avoid randomness with APR-1.4.6
-   Justification:
-     Sorted output is nicer for users. Some users even perceive random output
-     order with APR-1.4.6 as a regression.
-   Votes:
-     +1: stsp, gstein
-
  * r1341060
    Sort output of 'svn import'
    Notes: Needs a backport branch, noted here for completeness.
    Votes:
      +0: stsp (pending a proper conflict-free backport)
-   
- * r1348822, r1349215
-   Fix "svn status -u --depth empty FILE"
-   Justification:
-     Modified file not shown as modified by above command.
-     Simple fix, test included.
-   Branch: https://svn.apache.org/repos/asf/subversion/branches/1.7.x-r1348822
-   Votes:
-     +1: stsp, gstein
-
- * r1349778
-   For issue #3962, fix example output of 'svn status' shown in 'svn
-   help status'.
-   Justification:
-     OCD.
-   Votes:
-     +1: cmpilato, gstein
 
  * r1352068
    Do not use non-constant initializers in struct variables, since this
@@ -150,7 +106,7 @@ Candidate changes:
    Notes:
      r1352080 is an optional white-space follow-up.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1353572
    Fix a bug in propset which could prevent updating cached values related
@@ -158,7 +114,7 @@ Candidate changes:
    Justification:
      Incorrect behaviour, subtle working copy corruption.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -166,16 +122,59 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1351772
-  Add missing new-in-1.7 notification API enum values to JavaHL.
-  Justification:
-    Incomplete API in JavaHL bindings. Requested by SVNKit developers.
-  Votes:
-    +1: stsp, philip, markphip
+ * r1351772
+   Add missing new-in-1.7 notification API enum values to JavaHL.
+   Justification:
+     Incomplete API in JavaHL bindings. Requested by SVNKit developers.
+   Votes:
+     +1: stsp, philip, markphip, rhuijben
 
-* r1354626, r1354652
-  Fix JavaHL so as not to assert on non-canonical input
-  Justification
-    Regression from 1.6.
-  Votes:
-    +1: philip, markphip
+ * r1354626, r1354652
+   Fix JavaHL so as not to assert on non-canonical input
+   Justification
+     Regression from 1.6.
+   Votes:
+     +1: philip, markphip, rhuijben
+
+ * r1341012, r1341076
+   Sort 'svn status' output to avoid randomness in output with APR-1.4.6.
+   Justification:
+     Sorted output is nicer for users. Some users even perceive random output
+     order with APR-1.4.6 as a regression.
+   Branch:
+     ^/subversion/branches/1.7.x-r1341012
+   Votes:
+     +1: stsp, gstein, rhuijben
+
+ * 1341031
+   Sort output of 'svn proplist' to avoid randomness with APR-1.4.6
+   Justification:
+     Sorted output is nicer for users. Some users even perceive random output
+     order with APR-1.4.6 as a regression.
+   Votes:
+     +1: stsp, gstein, rhuijben
+
+ * r1341034
+   Sort output of 'svn propget -R' to avoid randomness with APR-1.4.6
+   Justification:
+     Sorted output is nicer for users. Some users even perceive random output
+     order with APR-1.4.6 as a regression.
+   Votes:
+     +1: stsp, gstein, rhuijben
+
+ * r1349778
+   For issue #3962, fix example output of 'svn status' shown in 'svn
+   help status'.
+   Justification:
+     OCD.
+   Votes:
+     +1: cmpilato, gstein, rhuijben
+
+ * r1348822, r1349215
+   Fix "svn status -u --depth empty FILE"
+   Justification:
+     Modified file not shown as modified by above command.
+     Simple fix, test included.
+   Branch: https://svn.apache.org/repos/asf/subversion/branches/1.7.x-r1348822
+   Votes:
+     +1: stsp, gstein, rhuijben
