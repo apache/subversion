@@ -2975,7 +2975,7 @@ close_directory(void *dir_baton,
                 (dav_prop_changes->nelts > 0)
                     ? svn_prop_array_to_hash(dav_prop_changes, pool)
                     : NULL,
-                NULL /* conflict */,
+                conflict_skel,
                 (! db->shadowed) && new_base_props != NULL,
                 new_actual_props,
                 all_work_items,
@@ -4579,7 +4579,7 @@ close_file(void *file_baton,
                                                       dav_prop_changes,
                                                       scratch_pool)
                                      : NULL,
-                                   NULL /* conflict */,
+                                   conflict_skel,
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
                                    keep_recorded_info,

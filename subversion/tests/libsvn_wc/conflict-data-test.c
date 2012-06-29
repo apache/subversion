@@ -311,7 +311,6 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(!complete); /* Nothing set */
 
   {
-    apr_hash_t *old = apr_hash_make(pool);
     apr_hash_t *mine = apr_hash_make(pool);
     apr_hash_t *their_old = apr_hash_make(pool);
     apr_hash_t *theirs = apr_hash_make(pool);
