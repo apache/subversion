@@ -108,14 +108,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, rhuijben
 
- * r1353572
-   Fix a bug in propset which could prevent updating cached values related
-   to EOL expansion in wc.db.
-   Justification:
-     Incorrect behaviour, subtle working copy corruption.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1354876, r1354907, r1355340
    Allow non-existing but valid canonical absolute paths to pass through
    svn_dirent_get_absolute().
@@ -189,3 +181,11 @@ Approved changes:
    Branch: https://svn.apache.org/repos/asf/subversion/branches/1.7.x-r1348822
    Votes:
      +1: stsp, gstein, rhuijben
+
+ * r1353572
+   Fix a bug in propset which could prevent updating cached values related
+   to EOL expansion in wc.db.
+   Justification:
+     Incorrect behaviour, subtle working copy corruption.
+   Votes:
+     +1: stsp, rhuijben, philip
