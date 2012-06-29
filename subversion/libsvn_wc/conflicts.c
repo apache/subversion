@@ -133,6 +133,59 @@ conflict__prepend_location(svn_skel_t *skel,
   return SVN_NO_ERROR;
 }
 
+/* Deserialize a svn_wc_conflict_version_t from the skel.
+   Set *LOCATION to NULL when the data is not a svn_wc_conflict_version_t. */
+static svn_error_t *
+conflict__read_location(const svn_wc_conflict_version_t **location,
+                        const svn_skel_t *skel,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url;
+  const char *repos_uuid;
+  const char *repos_relpath;
+  svn_revnum_t revision;
+  apr_int64_t v;
+  svn_node_kind_t node_kind;  /* note that 'none' is a legitimate value */
+  const char *kind_str;
+
+  svn_skel_t *c = skel->children;
+
+  if (!svn_skel__matches_atom(c, SVN_WC__CONFLICT_SRC_SUBVERSION))
+    {
+      *location = NULL;
+      return SVN_NO_ERROR;
+    }
+  c = c->next;
+
+  repos_root_url = apr_pstrndup(scratch_pool, c->data, c->len);
+  c = c->next;
+
+  if (c->is_atom)
+    repos_uuid = apr_pstrndup(scratch_pool, c->data, c->len);
+  else
+    repos_uuid = NULL;
+  c = c->next;
+
+  repos_relpath = apr_pstrndup(scratch_pool, c->data, c->len);
+  c = c->next;
+
+  SVN_ERR(svn_skel__parse_int(&v, c, scratch_pool));
+  revision = (svn_revnum_t)v;
+  c = c->next;
+
+  kind_str = apr_pstrndup(scratch_pool, c->data, c->len);
+  node_kind = svn_node_kind_from_word(kind_str);
+
+  *location = svn_wc_conflict_version_create2(repos_root_url,
+                                              repos_uuid,
+                                              repos_relpath,
+                                              revision,
+                                              node_kind,
+                                              result_pool);
+  return SVN_NO_ERROR;
+}
+
 /* Get the operation part of CONFLICT_SKELL or NULL if no operation is set
    at this time */
 static svn_error_t *
@@ -535,6 +588,7 @@ svn_wc__conflict_read_info(svn_wc_operation_t *operation,
                            apr_pool_t *scratch_pool)
 {
   svn_skel_t *op;
+  svn_skel_t *c;
 
   SVN_ERR(conflict__get_operation(&op, conflict_skel));
 
@@ -542,18 +596,35 @@ svn_wc__conflict_read_info(svn_wc_operation_t *operation,
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
                             _("Not a completed conflict skel"));
 
+  c = op->children;
   if (operation)
     {
-      svn_skel_t *what = op->children;
-
-      int value = svn_token__from_mem(operation_map, what->data, what->len);
+      int value = svn_token__from_mem(operation_map, c->data, c->len);
 
       if (value != SVN_TOKEN_UNKNOWN)
         *operation = value;
       else
         *operation = svn_wc_operation_none;
     }
-  if (locations)
+  c = c->next;
+
+  if (locations && c->children)
+    {
+      svn_skel_t *loc_skel;
+      svn_wc_conflict_version_t *loc;
+      apr_array_header_t *locs = apr_array_make(result_pool, 2, sizeof(loc));
+
+      for (loc_skel = c->children; loc_skel; loc_skel = loc_skel->next)
+        {
+          SVN_ERR(conflict__read_location(&loc, loc_skel, result_pool,
+                                          scratch_pool));
+
+          APR_ARRAY_PUSH(locs, svn_wc_conflict_version_t *) = loc;
+        }
+
+      *locations = locs;
+    }
+  else if (locations)
     *locations = NULL;
 
   return SVN_NO_ERROR;
