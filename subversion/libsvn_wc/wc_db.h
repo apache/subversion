@@ -1506,11 +1506,15 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
    Users should in most cases pass CONFLICT to another WC_DB call instead of
    calling svn_wc__db_op_mark_conflict() directly outside a transaction, to
    allow recording atomically with the operation involved.
+
+   Any work items that are necessary as part of marking this node conflicted
+   can be passed in WORK_ITEMS.
  */
 svn_error_t *
 svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             const char *local_abspath,
                             const svn_skel_t *conflict,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 

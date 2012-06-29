@@ -1379,7 +1379,7 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
                                                 scratch_pool));
 
     SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
-                                        scratch_pool));
+                                        NULL, scratch_pool));
   }
   return SVN_NO_ERROR;
 }
@@ -1465,7 +1465,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
                                                 scratch_pool));
 
     SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
-                                        scratch_pool));
+                                        NULL, scratch_pool));
   }
   return SVN_NO_ERROR;
 }
