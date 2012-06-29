@@ -137,8 +137,8 @@ conflict__prepend_location(svn_skel_t *skel,
 /* Get the operation part of CONFLICT_SKELL or NULL if no operation is set
    at this time */
 static svn_error_t *
-conflict__get_operation(svn_skel_t **why,
-                        svn_skel_t *conflict_skel)
+conflict__get_operation(const svn_skel_t **why,
+                        const svn_skel_t *conflict_skel)
 {
   SVN_ERR_ASSERT(conflict_skel
                  && conflict_skel->children
@@ -254,8 +254,8 @@ svn_wc__conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
 /* Gets the conflict data of the specified type CONFLICT_TYPE from
    CONFLICT_SKEL, or NULL if no such conflict is recorded */
 static svn_error_t *
-conflict__get_conflict(svn_skel_t **conflict,
-                       svn_skel_t *conflict_skel,
+conflict__get_conflict(const svn_skel_t **conflict,
+                       const svn_skel_t *conflict_skel,
                        const char *conflict_type)
 {
   svn_skel_t *c;
@@ -464,7 +464,7 @@ svn_wc__conflict_read_info(svn_wc_operation_t *operation,
                            const apr_array_header_t **locations,
                            svn_wc__db_t *db,
                            const char *wri_abspath,
-                           svn_skel_t *conflict_skel,
+                           const svn_skel_t *conflict_skel,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
@@ -500,11 +500,11 @@ svn_wc__conflict_read_text_conflict(const char **mine_abspath,
                                     const char **their_abspath,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
-                                    svn_skel_t *conflict_skel,
+                                    const svn_skel_t *conflict_skel,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
-  svn_skel_t *text_conflict;
+  const svn_skel_t *text_conflict;
   svn_skel_t *m;
 
   SVN_ERR(conflict__get_conflict(&text_conflict, conflict_skel,
@@ -573,11 +573,11 @@ svn_wc__conflict_read_prop_conflict(const char **marker_abspath,
                                     apr_hash_t **conflicted_prop_names,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
-                                    svn_skel_t *conflict_skel,
+                                    const svn_skel_t *conflict_skel,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
-  svn_skel_t *prop_conflict;
+  const svn_skel_t *prop_conflict;
   svn_skel_t *c;
 
   SVN_ERR(conflict__get_conflict(&prop_conflict, conflict_skel,
@@ -1483,7 +1483,7 @@ resolve_text_conflicts(svn_skel_t **work_items,
 svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const char *local_abspath,
-                                 svn_skel_t *conflict_skel,
+                                 const svn_skel_t *conflict_skel,
                                  const apr_array_header_t *merge_options,
                                  svn_wc_conflict_resolver_func2_t resolver_func,
                                  void *resolver_baton,
