@@ -215,6 +215,9 @@ typedef struct insert_working_baton_t {
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
 
+  /* may have conflict to install in this transaction */
+  const svn_skel_t *conflict;
+
   /* If the value is > 0 and < op_depth, also insert a not-present
      at op-depth NOT_PRESENT_OP_DEPTH, based on this same information */
   int not_present_op_depth;
@@ -319,6 +322,12 @@ temp_op_set_prop_conflict_marker_file(svn_wc__db_wcroot_t *wcroot,
                                        const char *local_relpath,
                                        const char *prej_abspath,
                                        apr_pool_t *scratch_pool);
+
+static svn_error_t *
+mark_conflict(svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              const svn_skel_t *conflict_skel,
+              apr_pool_t *scratch_pool);
 
 static svn_error_t *
 insert_incomplete_children(svn_sqlite__db_t *sdb,
@@ -749,9 +758,6 @@ insert_base_node(void *baton,
   SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
   SVN_ERR_ASSERT(pibb->repos_relpath != NULL);
 
-  /* ### we can't handle this right now  */
-  SVN_ERR_ASSERT(pibb->conflict == NULL);
-
   if (pibb->keep_recorded_info)
     {
       svn_boolean_t have_row;
@@ -767,6 +773,8 @@ insert_base_node(void *baton,
         }
       SVN_ERR(svn_sqlite__reset(stmt));
     }
+  if (pibb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, pibb->conflict, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsisr"
@@ -1069,6 +1077,9 @@ insert_working_node(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
+  if (piwb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, piwb->conflict,
+                          scratch_pool));
   SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
 
   if (piwb->not_present_op_depth > 0
@@ -2753,6 +2764,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              apr_hash_t *new_actual_props,
 
                              svn_boolean_t keep_recorded_info,
+                             const svn_skel_t *conflict,
                              const svn_skel_t *work_items,
                              apr_pool_t *scratch_pool)
 {
@@ -2809,6 +2821,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
 
   ieb.keep_recorded_info = keep_recorded_info;
 
+  ieb.conflict = conflict;
   ieb.work_items = work_items;
 
   return svn_error_trace(
@@ -4324,7 +4337,6 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 #if 0
   SVN_ERR_ASSERT(children != NULL);
 #endif
-  SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
@@ -4360,6 +4372,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.depth = depth;
 
   iwb.work_items = work_items;
+  iwb.conflict = conflict;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
                               scratch_pool));
@@ -4399,7 +4412,6 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                  || (original_repos_relpath && original_root_url
                      && original_uuid && checksum
                      && original_revision != SVN_INVALID_REVNUM));
-  SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
@@ -4434,6 +4446,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   iwb.checksum = checksum;
 
   iwb.work_items = work_items;
+  iwb.conflict = conflict;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
                               scratch_pool));
@@ -4468,7 +4481,6 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   /* ### any assertions for CHANGED_* ?  */
   /* ### any assertions for ORIGINAL_* ?  */
   SVN_ERR_ASSERT(target != NULL);
-  SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
@@ -4503,6 +4515,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   iwb.target = target;
 
   iwb.work_items = work_items;
+  iwb.conflict = conflict;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
                               scratch_pool));
@@ -4729,11 +4742,11 @@ set_props_txn(void *baton,
   struct set_props_baton_t *spb = baton;
   apr_hash_t *pristine_props;
 
-  /* ### we dunno what to do with CONFLICT yet.  */
-  SVN_ERR_ASSERT(spb->conflict == NULL);
-
   /* First order of business: insert all the work items.  */
   SVN_ERR(add_work_items(wcroot->sdb, spb->work_items, scratch_pool));
+
+  if (spb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, spb->conflict, scratch_pool));
 
   /* Check if the props are modified. If no changes, then wipe out the
      ACTUAL props.  PRISTINE_PROPS==NULL means that any

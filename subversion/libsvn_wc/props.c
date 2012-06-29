@@ -362,7 +362,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
     SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
                                     svn_wc__has_magic_property(propchanges),
-                                    NULL /* conflict */,
+                                    conflict_skel,
                                     work_items,
                                     scratch_pool));
 

@@ -73,7 +73,7 @@ svn_wc__conflict_skel_create(apr_pool_t *result_pool)
 
 svn_error_t *
 svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
-                                  svn_skel_t *conflict_skel)
+                                  const svn_skel_t *conflict_skel)
 {
   *complete = FALSE;
 
@@ -739,8 +739,6 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
   if (prop_conflict)
     {
-      svn_skel_t *work_item;
-
       /* Ok, currently we have to do a few things for property conflicts:
          - Create a marker file
          - Create a WQ item that sets the marker name
@@ -749,9 +747,13 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
          This can be simplified once we really store conflict_skel in wc.db */
 
       const char *marker_abspath;
+      const char *marker_relpath;
 
       /* ### as the legacy code, check if we already have a prejfile.
-             Probably never returns anything useful. */
+
+         ### Triggered by merge_tests.py 90 on a double property merge.
+         ### Needs further review as we will probably loose the original
+         ### conflict by overwriting. (Legacy issue)  */
       SVN_ERR(svn_wc__get_prejfile_abspath(&marker_abspath, db, local_abspath,
                                            scratch_pool, scratch_pool));
 
@@ -760,7 +762,6 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
           svn_node_kind_t kind;
           const char *marker_dir;
           const char *marker_name;
-          const char *marker_relpath;
 
           SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
@@ -779,23 +780,14 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                                              SVN_WC__PROP_REJ_EXT,
                                              svn_io_file_del_none,
                                              scratch_pool, scratch_pool));
+        }
 
+      SVN_ERR(svn_wc__db_to_relpath(&marker_relpath, db, local_abspath,
+                                    marker_abspath, result_pool, result_pool));
 
-          SVN_ERR(svn_wc__wq_tmp_build_set_property_conflict_marker(
-                                                        work_items,
-                                                        db, local_abspath,
-                                                        marker_abspath,
-                                                        scratch_pool,
-                                                        scratch_pool));
-
-          SVN_ERR(svn_wc__db_to_relpath(&marker_relpath, db, local_abspath,
-                                        local_abspath,
-                                        result_pool, result_pool));
-
-          /* And store the marker in the skel */
-          svn_skel__prepend_str(marker_relpath, prop_conflict->children->next,
-                                result_pool);
-      }
+      /* And store the marker in the skel */
+      svn_skel__prepend_str(marker_relpath, prop_conflict->children->next,
+                            result_pool);
 
       /* Store the data in the WQ item in the same format used as 1.7.
          Once we store the data in DB it is easier to just read it back
@@ -860,12 +852,10 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                             result_pool, scratch_pool);
           }
 
-        SVN_ERR(svn_wc__wq_build_prej_install(&work_item,
+        SVN_ERR(svn_wc__wq_build_prej_install(work_items,
                                               db, local_abspath,
                                               prop_data,
                                               scratch_pool, scratch_pool));
-
-        *work_items = svn_wc__wq_merge(*work_items, work_item, scratch_pool);
       }
     }
 
@@ -877,7 +867,6 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
       const char *mine_abspath;
       const char *their_original_abspath;
       const char *their_abspath;
-      svn_skel_t *work_item;
 
       SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
                                                   &their_original_abspath,
@@ -885,12 +874,6 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
                                                   db, local_abspath,
                                                   conflict_skel,
                                                   scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
-                            &work_item, db, local_abspath,
-                            their_original_abspath, their_abspath, mine_abspath,
-                            result_pool, scratch_pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 
   return SVN_NO_ERROR;
