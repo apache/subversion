@@ -1017,6 +1017,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              apr_hash_t *new_actual_props,
 
                              svn_boolean_t keep_recorded_info,
+                             const svn_skel_t *conflict,
                              const svn_skel_t *work_items,
                              apr_pool_t *scratch_pool);
 

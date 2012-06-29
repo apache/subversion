@@ -821,6 +821,7 @@ close_file(void *file_baton,
                         eb->recorded_revision,
                         TRUE, new_actual_props,
                         FALSE /* keep_recorded_info */,
+                        conflict_skel,
                         all_work_items,
                         pool));
 

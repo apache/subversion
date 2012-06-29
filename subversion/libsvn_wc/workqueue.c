@@ -1384,51 +1384,6 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
-                                               svn_wc__db_t *db,
-                                               const char *local_abspath,
-                                               const char *old_abspath,
-                                               const char *new_abspath,
-                                               const char *wrk_abspath,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool)
-{
-  const char *local_relpath;
-  *work_item = svn_skel__make_empty_list(result_pool);
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* Abspaths in the workqueue won't work if the WC is moved. */
-  if (wrk_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  wrk_abspath, result_pool, scratch_pool));
-
-  svn_skel__prepend_str(wrk_abspath ? local_relpath : "",
-                        *work_item, result_pool);
-
-  if (new_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  new_abspath, result_pool, scratch_pool));
-  svn_skel__prepend_str(new_abspath ? local_relpath : "",
-                        *work_item, result_pool);
-
-  if (old_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  old_abspath, result_pool, scratch_pool));
-  svn_skel__prepend_str(old_abspath ? local_relpath : "",
-                        *work_item, result_pool);
-
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                local_abspath, result_pool, scratch_pool));
-
-  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_TMP_SET_TEXT_CONFLICT_MARKERS, *work_item,
-                        result_pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* ------------------------------------------------------------------------ */
 
 /* OP_TMP_SET_PROPERTY_CONFLICT_MARKER  */
@@ -1512,36 +1467,6 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
     SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
                                         scratch_pool));
   }
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
-                                                  svn_wc__db_t *db,
-                                                  const char *local_abspath,
-                                                  const char *prej_abspath,
-                                                  apr_pool_t *result_pool,
-                                                  apr_pool_t *scratch_pool)
-{
-  const char *local_relpath;
-  *work_item = svn_skel__make_empty_list(result_pool);
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  if (prej_abspath)
-    SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                  prej_abspath, result_pool, scratch_pool));
-
-  svn_skel__prepend_str(prej_abspath ? local_relpath : "",
-                        *work_item, result_pool);
-
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                local_abspath, result_pool, scratch_pool));
-
-  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_TMP_SET_PROPERTY_CONFLICT_MARKER, *work_item,
-                        result_pool);
-
   return SVN_NO_ERROR;
 }
 

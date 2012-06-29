@@ -1224,10 +1224,17 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
         SVN_ERR(svn_wc__db_op_set_props(wc_ctx->db, target_abspath,
                                         new_actual_props,
                                         svn_wc__has_magic_property(prop_diff),
-                                        NULL, work_items, scratch_pool));
+                                        conflict_skel, work_items,
+                                        scratch_pool));
       else
-        SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
-                                  scratch_pool));
+        {
+          if (conflict_skel)
+            SVN_ERR(svn_wc__db_op_mark_conflict(wc_ctx->db, target_abspath,
+                                                conflict_skel, scratch_pool));
+
+          SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
+                                    scratch_pool));
+        }
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
                              cancel_func, cancel_baton,
                              scratch_pool));
