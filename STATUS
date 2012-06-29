@@ -116,6 +116,17 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1354876, r1354907, r1355340
+   Allow non-existing but valid canonical absolute paths to pass through
+   svn_dirent_get_absolute().
+   Justification:
+     Resolves a few user reported problems.
+   Notes:
+     r1354907 undoes r1354876, and r1355340 fixes a return problem, so
+     it is easiest to review them as a single patch.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
