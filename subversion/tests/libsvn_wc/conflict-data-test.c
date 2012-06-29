@@ -448,6 +448,21 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
         "theirs");
   }
 
+  {
+    svn_wc_operation_t operation;
+    const apr_array_header_t *locs;
+    SVN_ERR(svn_wc__conflict_read_info(&operation,
+                                       &locs,
+                                       sbox.wc_ctx->db, sbox.wc_abspath,
+                                       conflict_skel, pool, pool));
+
+    SVN_TEST_ASSERT(operation == svn_wc_operation_merge);
+
+    SVN_TEST_ASSERT(locs != NULL && locs->nelts == 2);
+    SVN_TEST_ASSERT(APR_ARRAY_IDX(locs, 0, svn_wc_conflict_version_t*) != NULL);
+    SVN_TEST_ASSERT(APR_ARRAY_IDX(locs, 1, svn_wc_conflict_version_t*) != NULL);
+  }
+
   return SVN_NO_ERROR;
 }
 
