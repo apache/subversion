@@ -1580,6 +1580,7 @@ svn_dirent_get_absolute(const char **pabsolute,
           && !svn_path_is_backpath_present(relative))
         {
           *pabsolute = apr_pstrdup(pool, relative);
+          return SVN_NO_ERROR;
         }
 
       return svn_error_createf(SVN_ERR_BAD_FILENAME,
