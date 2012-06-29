@@ -710,81 +710,6 @@ static svn_boolean_t authz_validate_section(const char *name,
 
 
 
-/*** Public functions. ***/
-
-svn_error_t *
-svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
-                     svn_boolean_t must_exist, apr_pool_t *pool)
-{
-  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
-  struct authz_validate_baton baton = { 0 };
-
-  baton.err = SVN_NO_ERROR;
-
-  /* Load the rule file. */
-  SVN_ERR(svn_config_read(&authz->cfg, file, must_exist, pool));
-  baton.config = authz->cfg;
-
-  /* Step through the entire rule file, stopping on error. */
-  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
-                                 &baton, pool);
-  SVN_ERR(baton.err);
-
-  *authz_p = authz;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
-                             const char *path, const char *user,
-                             svn_repos_authz_access_t required_access,
-                             svn_boolean_t *access_granted,
-                             apr_pool_t *pool)
-{
-  const char *current_path = path;
-
-  /* If PATH is NULL, do a global access lookup. */
-  if (!path)
-    {
-      *access_granted = authz_get_global_access(authz->cfg, repos_name,
-                                                user, required_access,
-                                                pool);
-      return SVN_NO_ERROR;
-    }
-
-  /* Determine the granted access for the requested path. */
-  while (!authz_get_path_access(authz->cfg, repos_name,
-                                current_path, user,
-                                required_access,
-                                access_granted,
-                                pool))
-    {
-      /* Stop if the loop hits the repository root with no
-         results. */
-      if (current_path[0] == '/' && current_path[1] == '\0')
-        {
-          /* Deny access by default. */
-          *access_granted = FALSE;
-          return SVN_NO_ERROR;
-        }
-
-      /* Work back to the parent path. */
-      current_path = svn_dirent_dirname(current_path, pool);
-    }
-
-  /* If the caller requested recursive access, we need to walk through
-     the entire authz config to see whether any child paths are denied
-     to the requested user. */
-  if (*access_granted && (required_access & svn_authz_recursive))
-    *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
-                                            user, required_access, pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** Wrappers around old-style authz callbacks. ***/
 
 static svn_error_t *
@@ -873,3 +798,77 @@ svn_repos__upgrade_authz_callback(svn_repos_access_func_t *access_func,
   return SVN_NO_ERROR;
 }
 
+
+
+/*** Public functions. ***/
+
+svn_error_t *
+svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
+                     svn_boolean_t must_exist, apr_pool_t *pool)
+{
+  svn_authz_t *authz = apr_palloc(pool, sizeof(*authz));
+  struct authz_validate_baton baton = { 0 };
+
+  baton.err = SVN_NO_ERROR;
+
+  /* Load the rule file. */
+  SVN_ERR(svn_config_read(&authz->cfg, file, must_exist, pool));
+  baton.config = authz->cfg;
+
+  /* Step through the entire rule file, stopping on error. */
+  svn_config_enumerate_sections2(authz->cfg, authz_validate_section,
+                                 &baton, pool);
+  SVN_ERR(baton.err);
+
+  *authz_p = authz;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
+                             const char *path, const char *user,
+                             svn_repos_authz_access_t required_access,
+                             svn_boolean_t *access_granted,
+                             apr_pool_t *pool)
+{
+  const char *current_path = path;
+
+  /* If PATH is NULL, do a global access lookup. */
+  if (!path)
+    {
+      *access_granted = authz_get_global_access(authz->cfg, repos_name,
+                                                user, required_access,
+                                                pool);
+      return SVN_NO_ERROR;
+    }
+
+  /* Determine the granted access for the requested path. */
+  while (!authz_get_path_access(authz->cfg, repos_name,
+                                current_path, user,
+                                required_access,
+                                access_granted,
+                                pool))
+    {
+      /* Stop if the loop hits the repository root with no
+         results. */
+      if (current_path[0] == '/' && current_path[1] == '\0')
+        {
+          /* Deny access by default. */
+          *access_granted = FALSE;
+          return SVN_NO_ERROR;
+        }
+
+      /* Work back to the parent path. */
+      current_path = svn_dirent_dirname(current_path, pool);
+    }
+
+  /* If the caller requested recursive access, we need to walk through
+     the entire authz config to see whether any child paths are denied
+     to the requested user. */
+  if (*access_granted && (required_access & svn_authz_recursive))
+    *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
+                                            user, required_access, pool);
+
+  return SVN_NO_ERROR;
+}
