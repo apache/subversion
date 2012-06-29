@@ -73,8 +73,7 @@ svn_wc__conflict_skel_create(apr_pool_t *result_pool)
 
 svn_error_t *
 svn_wc__conflict_skel_is_complete(svn_boolean_t *complete,
-                                  svn_skel_t *conflict_skel,
-                                  apr_pool_t *scratch_pool)
+                                  svn_skel_t *conflict_skel)
 {
   *complete = FALSE;
 

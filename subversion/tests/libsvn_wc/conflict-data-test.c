@@ -307,7 +307,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(conflict_skel != NULL);
   SVN_TEST_ASSERT(svn_skel__list_length(conflict_skel) == 2);
 
-  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
   SVN_TEST_ASSERT(!complete); /* Nothing set */
 
   {
@@ -342,7 +342,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
                                                     pool, pool));
   }
 
-  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
   SVN_TEST_ASSERT(!complete); /* Misses operation */
 
   SVN_ERR(svn_wc__conflict_skel_set_op_update(
@@ -352,7 +352,7 @@ test_serialize_prop_conflict(const svn_test_opts_t *opts,
                                                         svn_node_dir, pool),
                         pool, pool));
 
-  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
   SVN_TEST_ASSERT(complete); /* Everything available */
 
   {
@@ -420,7 +420,7 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
                                                         svn_node_dir, pool),
                         pool, pool));
 
-  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel, pool));
+  SVN_ERR(svn_wc__conflict_skel_is_complete(&complete, conflict_skel));
   SVN_TEST_ASSERT(complete); /* Everything available */
 
   {
