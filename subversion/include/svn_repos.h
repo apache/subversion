@@ -2845,9 +2845,8 @@ svn_repos_authz_read(svn_authz_t **authz_p,
 
 
 /**
- * Check whether @a user can access @a path in the repository @a
- * repos_name with the @a required_access (which is a collection of
- * bitflags of the @c SVN_REPOS_AUTHZ_ACCESS_* variety).  @a authz
+ * Check whether @a user can access @a path (to @a depth) in the
+ * repository @a repos_name with the @a required_access.  @a authz
  * lists the ACLs to check against.  Set @a *access_granted to
  * indicate if the requested access is granted.
  *
@@ -2856,6 +2855,10 @@ svn_repos_authz_read(svn_authz_t **authz_p,
  * to TRUE if at least one path is accessible with the @a
  * required_access.
  *
+ * @a depth may be only #svn_depth_empty or #svn_depth_infinity.  And
+ * when @a required_access is #svn_repos_access_list, @a depth must be
+ * #svn_depth_empty.
+ *
  * @since New in 1.Y.
  */
 svn_error_t *
@@ -2863,14 +2866,16 @@ svn_repos_authz_check_access2(svn_authz_t *authz,
                               const char *repos_name,
                               const char *path,
                               const char *user,
-                              apr_uint64_t required_access,
+                              svn_repos_access_t required_access,
+                              svn_depth_t depth,
                               svn_boolean_t *access_granted,
                               apr_pool_t *pool);
 
 /**
  * Similar to svn_repos_authz_check_access2(), but with @a
- * required_access as an #svn_repos_authz_access_t instead of a
- * bitfield of access requests.
+ * required_access as an #svn_repos_authz_access_t instead of an
+ * #svn_repos_access_t, and without @a depth.  This interface does not
+ * support queries for "list" access.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.X API.

@@ -826,29 +826,44 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
 
 
 svn_error_t *
-svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
-                             const char *path, const char *user,
-                             svn_repos_authz_access_t required_access,
-                             svn_boolean_t *access_granted,
-                             apr_pool_t *pool)
+svn_repos_authz_check_access2(svn_authz_t *authz, const char *repos_name,
+                              const char *path, const char *user,
+                              svn_repos_access_t required_access,
+                              svn_depth_t depth, svn_boolean_t *access_granted,
+                              apr_pool_t *pool)
 {
   const char *current_path = path;
+  svn_repos_authz_access_t required = svn_authz_none;
 
+  SVN_ERR_ASSERT((depth == svn_depth_empty) || (depth == svn_depth_infinity));
+  SVN_ERR_ASSERT((required_access >= svn_repos_access_none) &&
+                 (required_access <= svn_repos_access_readwrite));
+
+  if (required_access == svn_repos_access_readwrite)
+    {
+      required = svn_authz_read | svn_authz_write;
+    }
+  else if (required_access == svn_repos_access_read)
+    {
+      required = svn_authz_read;
+    }
+  else if (required_access == svn_repos_access_list)
+    {
+      SVN_ERR_ASSERT(depth == svn_depth_empty);
+      required = svn_authz_read;
+    }
+    
   /* If PATH is NULL, do a global access lookup. */
   if (!path)
     {
       *access_granted = authz_get_global_access(authz->cfg, repos_name,
-                                                user, required_access,
-                                                pool);
+                                                user, required, pool);
       return SVN_NO_ERROR;
     }
 
   /* Determine the granted access for the requested path. */
-  while (!authz_get_path_access(authz->cfg, repos_name,
-                                current_path, user,
-                                required_access,
-                                access_granted,
-                                pool))
+  while (!authz_get_path_access(authz->cfg, repos_name, current_path, user,
+                                required_access, access_granted, pool))
     {
       /* Stop if the loop hits the repository root with no
          results. */
@@ -863,12 +878,21 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
       current_path = svn_dirent_dirname(current_path, pool);
     }
 
+  /* If we haven't yet granted access, and the access requested is
+     "list", then we know that neither PATH nor any of its parents is
+     readable.  So we need to see if any children of PATH is
+     readable.  If so, access can be granted.  If not, WHAM!  Denied. */
+  if ((! *access_granted) && (required_access == svn_repos_access_list))
+    {
+      abort();
+    }
+
   /* If the caller requested recursive access, we need to walk through
      the entire authz config to see whether any child paths are denied
      to the requested user. */
-  if (*access_granted && (required_access & svn_authz_recursive))
+  if (*access_granted && (depth == svn_depth_infinity))
     *access_granted = authz_get_tree_access(authz->cfg, repos_name, path,
-                                            user, required_access, pool);
+                                            user, required, pool);
 
   return SVN_NO_ERROR;
 }

@@ -548,3 +548,31 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser_callbacks,
   *parser_callbacks = fns_from_fns2(fns2, pool);
   return SVN_NO_ERROR;
 }
+
+
+/*** from authz.c ***/
+
+svn_error_t *
+svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
+                             const char *path, const char *user,
+                             svn_repos_authz_access_t required_access,
+                             svn_boolean_t *access_granted,
+                             apr_pool_t *pool)
+{
+  svn_repos_access_t access = svn_authz_none;
+  svn_depth_t depth = svn_depth_empty;
+
+  SVN_ERR_ASSERT(! ((required_access & svn_authz_read) &&
+                    (required_access & svn_authz_write)));
+
+  if (required_access & svn_authz_read)
+    access = svn_repos_access_read;
+  else if (required_access & svn_authz_write)
+    access = svn_repos_access_readwrite;
+  
+  if (required_access & svn_authz_recursive)
+    depth = svn_depth_infinity;
+
+  return svn_repos_authz_check_access2(authz, repos_name, path, user,
+                                       access, depth, access_granted, pool);
+}
