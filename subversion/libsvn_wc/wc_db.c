@@ -11670,7 +11670,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
 
   /* First look for text and property conflicts in ACTUAL */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_CONFLICT_DETAILS));
+                                    STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   cflcts = apr_array_make(result_pool, 4,
@@ -11703,9 +11703,9 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
           APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
         }
 
-      conflict_old = svn_sqlite__column_text(stmt, 1, NULL);
-      conflict_new = svn_sqlite__column_text(stmt, 2, NULL);
-      conflict_working = svn_sqlite__column_text(stmt, 3, NULL);
+      conflict_old = svn_sqlite__column_text(stmt, 2, NULL);
+      conflict_new = svn_sqlite__column_text(stmt, 3, NULL);
+      conflict_working = svn_sqlite__column_text(stmt, 4, NULL);
 
       if (conflict_old || conflict_new || conflict_working)
         {
@@ -11727,7 +11727,7 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
           APR_ARRAY_PUSH(cflcts, svn_wc_conflict_description2_t*) = desc;
         }
 
-      conflict_data = svn_sqlite__column_text(stmt, 4, scratch_pool);
+      conflict_data = svn_sqlite__column_text(stmt, 5, scratch_pool);
       if (conflict_data)
         {
           const svn_wc_conflict_description2_t *desc;
