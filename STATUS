@@ -125,14 +125,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1349778
-   For issue #3962, fix example output of 'svn status' shown in 'svn
-   help status'.
-   Justification:
-     OCD.
-   Votes:
-     +1: cmpilato, gstein, rhuijben
-
  * r1348822, r1349215
    Fix "svn status -u --depth empty FILE"
    Justification:
