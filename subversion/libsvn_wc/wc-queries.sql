@@ -746,11 +746,10 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND
 SELECT prop_reject
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
-  AND ((prop_reject IS NOT NULL) OR (conflict_old IS NOT NULL)
-       OR (conflict_new IS NOT NULL) OR (conflict_working IS NOT NULL))
+  AND (prop_reject IS NOT NULL)
 
 -- STMT_SELECT_CONFLICT_MARKER_FILES2
-SELECT prop_reject
+SELECT prop_reject, conflict_old, conflict_new, conflict_working
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2
   AND ((prop_reject IS NOT NULL) OR (conflict_old IS NOT NULL)
