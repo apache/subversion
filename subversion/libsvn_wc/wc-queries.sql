@@ -554,12 +554,13 @@ FROM targets_list
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND properties IS NULL
+  AND conflict_data IS NULL
   AND conflict_old IS NULL
   AND conflict_new IS NULL
   AND prop_reject IS NULL
+  AND tree_conflict_data IS NULL
   AND changelist IS NULL
   AND text_mod IS NULL
-  AND tree_conflict_data IS NULL
   AND older_checksum IS NULL
   AND right_checksum IS NULL
   AND left_checksum IS NULL
@@ -569,12 +570,13 @@ DELETE FROM actual_node
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND properties IS NULL
+  AND conflict_data IS NULL
   AND conflict_old IS NULL
   AND conflict_new IS NULL
   AND prop_reject IS NULL
+  AND tree_conflict_data IS NULL
   AND changelist IS NULL
   AND text_mod IS NULL
-  AND tree_conflict_data IS NULL
   AND older_checksum IS NULL
   AND right_checksum IS NULL
   AND left_checksum IS NULL
@@ -647,11 +649,12 @@ WHERE wc_id = ?1
 UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
-    tree_conflict_data = NULL,
+    conflict_data = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
     conflict_working = NULL,
     prop_reject = NULL,
+    tree_conflict_data = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
     right_checksum = NULL
@@ -661,11 +664,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
-    tree_conflict_data = NULL,
+    conflict_data = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
     conflict_working = NULL,
     prop_reject = NULL,
+    tree_conflict_data = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
     right_checksum = NULL
