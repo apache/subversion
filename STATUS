@@ -154,7 +154,8 @@ Approved changes:
    Justification:
      Modified file not shown as modified by above command.
      Simple fix, test included.
-   Branch: https://svn.apache.org/repos/asf/subversion/branches/1.7.x-r1348822
+   Branch:
+     ^/subversion/branches/1.7.x-r1348822
    Votes:
      +1: stsp, gstein, rhuijben
 
