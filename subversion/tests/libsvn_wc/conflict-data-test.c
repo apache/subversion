@@ -450,12 +450,14 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
 
   {
     svn_wc_operation_t operation;
+    svn_boolean_t text_conflicted;
     const apr_array_header_t *locs;
-    SVN_ERR(svn_wc__conflict_read_info(&operation,
-                                       &locs,
+    SVN_ERR(svn_wc__conflict_read_info(&operation, &locs,
+                                       &text_conflicted, NULL, NULL,
                                        sbox.wc_ctx->db, sbox.wc_abspath,
                                        conflict_skel, pool, pool));
 
+    SVN_TEST_ASSERT(text_conflicted);
     SVN_TEST_ASSERT(operation == svn_wc_operation_merge);
 
     SVN_TEST_ASSERT(locs != NULL && locs->nelts == 2);

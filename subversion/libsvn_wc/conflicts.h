@@ -224,12 +224,19 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
  *
  * Output arguments can be NULL if the value is not necessary.
  *
+ * TEXT_, PROP_ and TREE_CONFLICTED (when not NULL) will be set to TRUE
+ * when the conflict contains the specified kind of conflict, otherwise
+ * to false.
+ *
  * Allocate the result in RESULT_POOL. Perform temporary allocations in
  * SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__conflict_read_info(svn_wc_operation_t *operation,
                            const apr_array_header_t **locations,
+                           svn_boolean_t *text_conflicted,
+                           svn_boolean_t *prop_conflicted,
+                           svn_boolean_t *tree_conflicted,
                            svn_wc__db_t *db,
                            const char *wri_abspath,
                            const svn_skel_t *conflict_skel,

@@ -324,6 +324,13 @@ temp_op_set_prop_conflict_marker_file(svn_wc__db_wcroot_t *wcroot,
                                        apr_pool_t *scratch_pool);
 
 static svn_error_t *
+temp_op_set_tree_conflict(void *baton,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          apr_pool_t *scratch_pool);
+
+
+static svn_error_t *
 mark_conflict(svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               const svn_skel_t *conflict_skel,
@@ -5214,10 +5221,15 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
   if (conflict_skel)
     {
       /* Store conflict data in the old locations */
-      svn_error_t *err;
-      const char *mine_abspath;
-      const char *their_old_abspath;
-      const char *their_abspath;
+      svn_boolean_t text_conflict;
+      svn_boolean_t prop_conflict;
+      svn_boolean_t tree_conflict;
+
+      svn_wc_conflict_reason_t local_change;
+      svn_wc_conflict_action_t incoming_change;
+      const apr_array_header_t *locations;
+      svn_wc_operation_t operation;
+
       svn_wc__db_t *db;
       const char *local_abspath;
 
@@ -5229,36 +5241,80 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
 
       local_abspath = svn_dirent_join(wcroot->abspath, local_relpath,
                                       scratch_pool);
-    
-      err = svn_wc__conflict_read_text_conflict(&mine_abspath,
-                                                &their_old_abspath,
-                                                &their_abspath,
-                                                db, local_abspath,
-                                                conflict_skel,
-                                                scratch_pool, scratch_pool);
 
-      if (err)
-        svn_error_clear(err);
-      else
-        SVN_ERR(temp_op_set_text_conflict_marker_files(wcroot, local_relpath,
-                                                       their_old_abspath,
-                                                       their_abspath,
-                                                       mine_abspath,
-                                                       scratch_pool));
+      SVN_ERR(svn_wc__conflict_read_info(&operation, &locations,
+                                         &text_conflict, &prop_conflict,
+                                         &tree_conflict,
+                                         db, local_abspath, conflict_skel,
+                                         scratch_pool, scratch_pool));
 
-      err = svn_wc__conflict_read_prop_conflict(&mine_abspath, NULL, NULL,
-                                                NULL, NULL,
-                                                db, local_abspath,
-                                                conflict_skel,
-                                                scratch_pool, scratch_pool);
+      if (text_conflict)
+        {
+          const char *mine_abspath;
+          const char *their_old_abspath;
+          const char *their_abspath;
 
-      if (err)
-        svn_error_clear(err);
-      else
-        SVN_ERR(temp_op_set_prop_conflict_marker_file(wcroot, local_relpath,
-                                                      mine_abspath,
+          SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
+                                                      &their_old_abspath,
+                                                      &their_abspath,
+                                                      db, local_abspath,
+                                                      conflict_skel,
+                                                      scratch_pool,
                                                       scratch_pool));
 
+          SVN_ERR(temp_op_set_text_conflict_marker_files(wcroot, local_relpath,
+                                                         their_old_abspath,
+                                                         their_abspath,
+                                                         mine_abspath,
+                                                         scratch_pool));
+        }
+
+      if (prop_conflict)
+        {
+          const char *prej_abspath;
+
+          SVN_ERR(svn_wc__conflict_read_prop_conflict(&prej_abspath, NULL,
+                                                      NULL, NULL, NULL,
+                                                      db, local_abspath,
+                                                      conflict_skel,
+                                                      scratch_pool, scratch_pool));
+
+          SVN_ERR(temp_op_set_prop_conflict_marker_file(wcroot, local_relpath,
+                                                        prej_abspath,
+                                                        scratch_pool));
+        }
+
+      /*if (tree_conflict)
+        {
+          svn_wc_conflict_description2_t *desc;
+          svn_wc_conflict_version_t *v1;
+          svn_wc_conflict_version_t *v2;
+
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
+                                                      &incoming_change,
+                                                      db, local_abspath,
+                                                      conflict_skel,
+                                                      scratch_pool, scratch_pool));
+
+
+          v1 = (locations && locations->nelts > 0)
+                    ? APR_ARRAY_IDX(locations, 0, svn_wc_conflict_version_t *)
+                    : NULL;
+
+          v2 = (locations && locations->nelts > 1)
+                    ? APR_ARRAY_IDX(locations, 1, svn_wc_conflict_version_t *)
+                    : NULL;
+
+          desc = svn_wc_conflict_description_create_tree2(
+                                local_abspath,
+                                svn_node_unknown,
+                                operation,
+                                v1, v2,
+                                scratch_pool);
+
+          SVN_ERR(temp_op_set_tree_conflict(desc, wcroot, local_relpath,
+                                            scratch_pool));
+        }*/
       SVN_ERR(svn_wc__db_close(db));
     }
 #else
@@ -5289,6 +5345,8 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
   /* ### Should be handled in the same transaction as setting the conflict */
   if (work_items)
     SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
+
+  SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
 
   return SVN_NO_ERROR;
 
@@ -5388,10 +5446,10 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 
 /* */
 static svn_error_t *
-set_tc_txn(void *baton,
-           svn_wc__db_wcroot_t *wcroot,
-           const char *local_relpath,
-           apr_pool_t *scratch_pool)
+temp_op_set_tree_conflict(void *baton,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          apr_pool_t *scratch_pool)
 {
   const svn_wc_conflict_description2_t *tree_conflict = baton;
   const char *parent_relpath;
@@ -5469,7 +5527,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_tc_txn,
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, temp_op_set_tree_conflict,
                               (void *) tree_conflict, scratch_pool));
 
   /* There may be some entries, and the conflict info is now out of date.  */
