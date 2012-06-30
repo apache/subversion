@@ -1310,7 +1310,6 @@ create_tree_conflict(svn_skel_t **pconflict,
   const char *left_repos_relpath;
   svn_revnum_t left_revision;
   svn_node_kind_t left_kind;
-  const char *added_repos_relpath = NULL;
   svn_wc_conflict_version_t *src_left_version;
 
   *pconflict = NULL;
@@ -1323,8 +1322,6 @@ create_tree_conflict(svn_skel_t **pconflict,
   if (reason == svn_wc_conflict_reason_added ||
       reason == svn_wc_conflict_reason_moved_here)
     {
-      svn_wc__db_status_t added_status;
-
       /* ###TODO: It would be nice to tell the user at which URL and
        * ### revision source-left was empty, which could be quite difficult
        * ### to code, and is a slight theoretical leap of the svn mind.
@@ -1342,20 +1339,6 @@ create_tree_conflict(svn_skel_t **pconflict,
       left_kind = svn_node_none;
       left_revision = SVN_INVALID_REVNUM;
       left_repos_relpath = NULL;
-
-      /* Still get the repository root needed by both 'update' and 'switch',
-       * and the would-be repos_relpath needed to construct the source-right
-       * in case of an 'update'. Check sanity while we're at it. */
-      SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
-                                       &added_repos_relpath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, eb->db, local_abspath,
-                                       result_pool, scratch_pool));
-
-      /* This better really be an added status. */
-      SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
-                     || added_status == svn_wc__db_status_copied
-                     || added_status == svn_wc__db_status_moved_here);
     }
   else if (reason == svn_wc_conflict_reason_unversioned)
     {
