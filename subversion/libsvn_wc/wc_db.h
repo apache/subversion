@@ -1645,21 +1645,6 @@ svn_wc__db_op_read_tree_conflict(
                      apr_pool_t *scratch_pool);
 
 
-/* Set the tree conflict on LOCAL_ABSPATH in DB to TREE_CONFLICT.  Use
-   NULL to remove a tree conflict.
-
-   Use SCRATCH_POOL for any temporary allocations.
-*/
-/* ### can this also record text/prop conflicts? drop "tree"? */
-/* ### dunno if it can, but it definitely should be able to. */
-/* ### gjs: also ref: db_op_mark_conflict()  */
-svn_error_t *
-svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const svn_wc_conflict_description2_t *tree_conflict,
-                                apr_pool_t *scratch_pool);
-
-
 /* ### status */
 
 

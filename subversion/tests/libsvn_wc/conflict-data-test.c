@@ -205,7 +205,7 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
 
   conflict1 = tree_conflict_create(child1_abspath, svn_node_file,
-                                   svn_wc_operation_update,
+                                   svn_wc_operation_merge,
                                    svn_wc_conflict_action_delete,
                                    svn_wc_conflict_reason_edited,
                                    "dummy://localhost", "path/to/foo",
@@ -224,9 +224,9 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
                                    52, svn_node_file,
                                    pool);
 
-  /* Write (conflict1 through WC-DB API, conflict2 through WC API) */
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(sbox.wc_ctx->db, child1_abspath,
-                                          conflict1, pool));
+  /* Write */
+  SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child1_abspath,*/
+                                    conflict1, pool));
   SVN_ERR(svn_wc__add_tree_conflict(sbox.wc_ctx, /*child2_abspath,*/
                                     conflict2, pool));
 

@@ -5363,10 +5363,10 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
             }
           else
             {
-              if (v2)
-                tc_kind = v2->node_kind;
-              else if (v1)
+              if (v1)
                 tc_kind = v1->node_kind;
+              else if (v2)
+                tc_kind = v2->node_kind;
               else
                 tc_kind = svn_node_file; /* Avoid assertion */
             }
@@ -5577,32 +5577,6 @@ temp_op_set_tree_conflict(void *baton,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const svn_wc_conflict_description2_t *tree_conflict,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, temp_op_set_tree_conflict,
-                              (void *) tree_conflict, scratch_pool));
-
-  /* There may be some entries, and the conflict info is now out of date.  */
-  SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Clear moved-to information at the delete-half of the move which
  * moved LOCAL_RELPATH here. This transforms the move into a simple delete. */
