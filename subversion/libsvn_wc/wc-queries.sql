@@ -755,11 +755,6 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
   AND ((prop_reject IS NOT NULL) OR (conflict_old IS NOT NULL)
        OR (conflict_new IS NOT NULL) OR (conflict_working IS NOT NULL))
 
--- STMT_SELECT_ACTUAL_CHILDREN_TREE_CONFLICT
-SELECT local_relpath, tree_conflict_data
-FROM actual_node
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND tree_conflict_data IS NOT NULL
-
 -- STMT_CLEAR_TEXT_CONFLICT
 UPDATE actual_node SET
   conflict_old = NULL,
