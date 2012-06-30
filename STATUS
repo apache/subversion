@@ -125,16 +125,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1348822, r1349215
-   Fix "svn status -u --depth empty FILE"
-   Justification:
-     Modified file not shown as modified by above command.
-     Simple fix, test included.
-   Branch:
-     ^/subversion/branches/1.7.x-r1348822
-   Votes:
-     +1: stsp, gstein, rhuijben
-
  * r1353572
    Fix a bug in propset which could prevent updating cached values related
    to EOL expansion in wc.db.
