@@ -1430,15 +1430,6 @@ create_tree_conflict(svn_skel_t **pconflict,
  * tree conflict info is returned in *PCONFLICT. PCONFLICT must be non-NULL,
  * while *PCONFLICT is always overwritten.
  *
- * THEIR_NODE_KIND should be the node kind reflected by the incoming edit
- * function. E.g. dir_opened() should pass svn_node_dir, etc.
- * In some cases of delete, svn_node_none may be used here.
- *
- * THEIR_RELPATH should be the involved node's repository-relative path on the
- * source-right side, the side that the target should become after the update.
- * Simply put, that's the URL obtained from the node's dir_baton->new_relpath
- * or file_baton->new_relpath (but it's more complex for a delete).
- *
  * The tree conflict is allocated in RESULT_POOL. Temporary allocations use
  * SCRACTH_POOl.
  */
@@ -1450,8 +1441,6 @@ check_tree_conflict(svn_skel_t **pconflict,
                     svn_kind_t working_kind,
                     svn_boolean_t exists_in_repos,
                     svn_wc_conflict_action_t action,
-                    svn_node_kind_t their_node_kind,
-                    const char *their_relpath,
                     const char *moved_to_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -1460,8 +1449,6 @@ check_tree_conflict(svn_skel_t **pconflict,
   svn_boolean_t locally_replaced = FALSE;
   svn_boolean_t modified = FALSE;
   svn_boolean_t all_mods_are_deletes = FALSE;
-
-  SVN_ERR_ASSERT(their_relpath != NULL);
 
   *pconflict = NULL;
 
@@ -1839,9 +1826,8 @@ delete_entry(const char *path,
     {
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, kind, TRUE,
-                                  svn_wc_conflict_action_delete, svn_node_none,
-                                  repos_relpath, moved_to_abspath,
-                                  pb->pool, scratch_pool));
+                                  svn_wc_conflict_action_delete,
+                                  moved_to_abspath, pb->pool, scratch_pool));
     }
 
   if (tree_conflict != NULL)
@@ -2247,7 +2233,6 @@ add_directory(const char *path,
                                       db->local_abspath,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
-                                      svn_node_dir, db->new_relpath,
                                       NULL, pool, pool));
         }
 
@@ -2473,9 +2458,8 @@ open_directory(const char *path,
   if (!db->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 status, wc_kind, TRUE,
-                                svn_wc_conflict_action_edit, svn_node_dir,
-                                db->new_relpath, db->moved_to_abspath,
-                                db->pool, pool));
+                                svn_wc_conflict_action_edit,
+                                db->moved_to_abspath, db->pool, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
@@ -3422,8 +3406,7 @@ add_file(const char *path,
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
                                       status, wc_kind, FALSE,
-                                      svn_wc_conflict_action_add,
-                                      svn_node_file, fb->new_relpath, NULL,
+                                      svn_wc_conflict_action_add, NULL,
                                       scratch_pool, scratch_pool));
         }
 
@@ -3597,9 +3580,8 @@ open_file(const char *path,
   if (!fb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
-                                svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, fb->moved_to_abspath,
-                                fb->pool, scratch_pool));
+                                svn_wc_conflict_action_edit,
+                                fb->moved_to_abspath, fb->pool, scratch_pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict != NULL)
