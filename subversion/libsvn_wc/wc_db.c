@@ -780,8 +780,6 @@ insert_base_node(void *baton,
         }
       SVN_ERR(svn_sqlite__reset(stmt));
     }
-  if (pibb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, pibb->conflict, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsisr"
@@ -897,6 +895,8 @@ insert_base_node(void *baton,
     }
 
   SVN_ERR(add_work_items(wcroot->sdb, pibb->work_items, scratch_pool));
+  if (pibb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, pibb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1084,11 +1084,6 @@ insert_working_node(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  if (piwb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, piwb->conflict,
-                          scratch_pool));
-  SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
-
   if (piwb->not_present_op_depth > 0
       && piwb->not_present_op_depth < piwb->op_depth)
     {
@@ -1109,6 +1104,11 @@ insert_working_node(void *baton,
 
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
+
+  SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
+  if (piwb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, piwb->conflict,
+                          scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4749,12 +4749,6 @@ set_props_txn(void *baton,
   struct set_props_baton_t *spb = baton;
   apr_hash_t *pristine_props;
 
-  /* First order of business: insert all the work items.  */
-  SVN_ERR(add_work_items(wcroot->sdb, spb->work_items, scratch_pool));
-
-  if (spb->conflict)
-    SVN_ERR(mark_conflict(wcroot, local_relpath, spb->conflict, scratch_pool));
-
   /* Check if the props are modified. If no changes, then wipe out the
      ACTUAL props.  PRISTINE_PROPS==NULL means that any
      ACTUAL props are okay as provided, so go ahead and set them.  */
@@ -4780,6 +4774,11 @@ set_props_txn(void *baton,
       rb.last_mod_time = 0;
       SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
     }
+
+  /* And finally.  */
+  SVN_ERR(add_work_items(wcroot->sdb, spb->work_items, scratch_pool));
+  if (spb->conflict)
+    SVN_ERR(mark_conflict(wcroot, local_relpath, spb->conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -5284,11 +5283,12 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
                                                         scratch_pool));
         }
 
-      /*if (tree_conflict)
+      if (tree_conflict)
         {
           svn_wc_conflict_description2_t *desc;
           svn_wc_conflict_version_t *v1;
           svn_wc_conflict_version_t *v2;
+          svn_node_kind_t tc_kind;
 
           SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
                                                       &incoming_change,
@@ -5305,16 +5305,83 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
                     ? APR_ARRAY_IDX(locations, 1, svn_wc_conflict_version_t *)
                     : NULL;
 
-          desc = svn_wc_conflict_description_create_tree2(
-                                local_abspath,
-                                svn_node_unknown,
-                                operation,
-                                v1, v2,
-                                scratch_pool);
+          if (incoming_change != svn_wc_conflict_action_delete
+              && (operation == svn_wc_operation_update
+                  || operation == svn_wc_operation_switch))
+            {
+              svn_wc__db_status_t status;
+              svn_revnum_t revision;
+              const char *repos_relpath;
+              apr_int64_t repos_id;
+              svn_kind_t kind;
+              svn_error_t *err;
+
+              /* ### Theoretically we should just fetch the BASE information
+                     here. This code might need tweaks until all tree conflicts
+                     are installed in the proper state */
+
+              SVN_ERR_ASSERT(v2 == NULL); /* Not set for update and switch */
+
+              /* With an update or switch we have to fetch the second location
+                 for a tree conflict from WORKING. (For text or prop from BASE)
+               */
+              err = base_get_info(&status, &kind, &revision,
+                                  &repos_relpath, &repos_id, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  wcroot, local_relpath,
+                                  scratch_pool, scratch_pool);
+
+              if (err)
+                {
+                  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                    return svn_error_trace(err);
+
+                  svn_error_clear(err);
+                  /* Ignore BASE */
+
+                  tc_kind = svn_node_file; /* Avoid assertion */
+                }
+              else if (repos_relpath)
+                {
+                  const char *repos_root_url;
+                  const char *repos_uuid;
+
+                  SVN_ERR(fetch_repos_info(&repos_root_url, &repos_uuid,
+                                           wcroot->sdb, repos_id,
+                                           scratch_pool));
+
+                  v2 = svn_wc_conflict_version_create2(repos_root_url,
+                                                       repos_uuid,
+                                                       repos_relpath,
+                                                       revision,
+                                                svn__node_kind_from_kind(kind),
+                                                       scratch_pool);
+                  tc_kind = svn__node_kind_from_kind(kind);
+                }
+              else
+                tc_kind = svn_node_file; /* Avoid assertion */
+            }
+          else
+            {
+              if (v2)
+                tc_kind = v2->node_kind;
+              else if (v1)
+                tc_kind = v1->node_kind;
+              else
+                tc_kind = svn_node_file; /* Avoid assertion */
+            }
+
+          desc = svn_wc_conflict_description_create_tree2(local_abspath,
+                                                          tc_kind,
+                                                          operation,
+                                                          v1, v2,
+                                                          scratch_pool);
+          desc->reason = local_change;
+          desc->action = incoming_change;
 
           SVN_ERR(temp_op_set_tree_conflict(desc, wcroot, local_relpath,
                                             scratch_pool));
-        }*/
+        }
       SVN_ERR(svn_wc__db_close(db));
     }
 #else
