@@ -1636,30 +1636,17 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   while (TRUE)
     {
-      svn_boolean_t is_wc_root, has_conflict;
+      svn_boolean_t is_wc_root, tree_conflicted;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   &has_conflict, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   db, ancestor_abspath, iterpool, iterpool));
+      SVN_ERR(svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflicted,
+                                            db, ancestor_abspath, iterpool));
 
-      if (has_conflict)
+      if (tree_conflicted)
         {
-          const svn_wc_conflict_description2_t *conflict;
-
-          SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db,
-                                                   ancestor_abspath,
-                                                   iterpool, iterpool));
-
-          if (conflict != NULL)
-            {
-              *conflicted = TRUE;
-              break;
-            }
+          *conflicted = TRUE;
+          break;
         }
 
       SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,

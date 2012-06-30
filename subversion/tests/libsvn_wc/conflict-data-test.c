@@ -245,12 +245,12 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(! text_c && ! prop_c);
   }
 
-  /* Read one (conflict1 through WC-DB API, conflict2 through WC API) */
+  /* Read conflicts back */
   {
     const svn_wc_conflict_description2_t *read_conflict;
 
-    SVN_ERR(svn_wc__db_op_read_tree_conflict(&read_conflict, sbox.wc_ctx->db,
-                                             child1_abspath, pool, pool));
+    SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
+                                      child1_abspath, pool, pool));
     SVN_ERR(compare_conflict(conflict1, read_conflict));
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
@@ -258,32 +258,17 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
     SVN_ERR(compare_conflict(conflict2, read_conflict));
   }
 
-  /* Read many (both through WC-DB API, both through WC API) */
+  /* Read many */
   {
-    apr_hash_t *all_conflicts;
-    const svn_wc_conflict_description2_t *read_conflict;
+    const apr_array_header_t *victims;
 
-    SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(
-              &all_conflicts, sbox.wc_ctx->db, parent_abspath, pool, pool));
-    SVN_TEST_ASSERT(apr_hash_count(all_conflicts) == 2);
-    read_conflict = apr_hash_get(all_conflicts, "foo", APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict1, read_conflict));
-    read_conflict = apr_hash_get(all_conflicts, "bar", APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict2, read_conflict));
-
-    SVN_ERR(svn_wc__get_all_tree_conflicts(
-              &all_conflicts, sbox.wc_ctx, parent_abspath, pool, pool));
-    SVN_TEST_ASSERT(apr_hash_count(all_conflicts) == 2);
-    read_conflict = apr_hash_get(all_conflicts, child1_abspath,
-                                 APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict1, read_conflict));
-    read_conflict = apr_hash_get(all_conflicts, child2_abspath,
-                                 APR_HASH_KEY_STRING);
-    SVN_ERR(compare_conflict(conflict2, read_conflict));
+    SVN_ERR(svn_wc__db_read_conflict_victims(&victims,
+                                             sbox.wc_ctx->db, parent_abspath,
+                                             pool, pool));
+    SVN_TEST_ASSERT(victims->nelts == 2);
   }
 
   /* ### TODO: to test...
-   * svn_wc__db_read_conflict_victims
    * svn_wc__db_read_conflicts
    * svn_wc__node_get_conflict_info
    * svn_wc__del_tree_conflict
