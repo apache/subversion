@@ -7824,11 +7824,7 @@ read_children_info(void *baton,
                           !svn_sqlite__column_is_null(stmt, 7) ||  /* prop */
                           !svn_sqlite__column_is_null(stmt, 8);  /* tree */
 #else
-      child->conflicted = !svn_sqlite__column_is_null(stmt, 3) ||  /* old */
-                          !svn_sqlite__column_is_null(stmt, 3) ||  /* new */
-                          !svn_sqlite__column_is_null(stmt, 4) ||  /* work */
-                          !svn_sqlite__column_is_null(stmt, 0) ||  /* prop */
-                          !svn_sqlite__column_is_null(stmt, 5);  /* tree */
+      child->conflicted = !svn_sqlite__column_is_null(stmt, 3); /* conflict */
 #endif
 
       if (child->conflicted)
