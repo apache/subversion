@@ -2311,7 +2311,7 @@ do_propset(svn_wc__db_t *db,
     }
   else if (kind == svn_node_file && strcmp(name, SVN_PROP_EOL_STYLE) == 0)
     {
-      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_KEYWORDS,
+      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_EOL_STYLE,
                                              APR_HASH_KEY_STRING);
 
       if (((value == NULL) != (old_value == NULL))

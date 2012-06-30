@@ -124,11 +124,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1353572
-   Fix a bug in propset which could prevent updating cached values related
-   to EOL expansion in wc.db.
-   Justification:
-     Incorrect behaviour, subtle working copy corruption.
-   Votes:
-     +1: stsp, rhuijben, philip
