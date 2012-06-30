@@ -125,13 +125,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1354626, r1354652
-   Fix JavaHL so as not to assert on non-canonical input
-   Justification
-     Regression from 1.6.
-   Votes:
-     +1: philip, markphip, rhuijben
-
  * r1341012, r1341076
    Sort 'svn status' output to avoid randomness in output with APR-1.4.6.
    Justification:
