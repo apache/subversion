@@ -385,21 +385,21 @@ info_found_node_callback(const char *local_abspath,
    * are not visited will remain in the list. */
   if (fe_baton->actual_only && kind == svn_node_dir)
     {
-      apr_hash_t *conflicts;
-      apr_hash_index_t *hi;
+      const apr_array_header_t *victims;
+      int i;
 
-      SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(
-                &conflicts, fe_baton->db, local_abspath,
-                fe_baton->pool, scratch_pool));
-      for (hi = apr_hash_first(scratch_pool, conflicts); hi;
-           hi = apr_hash_next(hi))
+      SVN_ERR(svn_wc__db_read_conflict_victims(&victims,
+                                               fe_baton->db, local_abspath,
+                                               scratch_pool, scratch_pool));
+
+      for (i = 0; i < victims->nelts; i++)
         {
-          const char *this_basename = svn__apr_hash_index_key(hi);
+          const char *this_basename = APR_ARRAY_IDX(victims, i, const char *);
 
           apr_hash_set(fe_baton->tree_conflicts,
                        svn_dirent_join(local_abspath, this_basename,
                                        fe_baton->pool),
-                       APR_HASH_KEY_STRING, svn__apr_hash_index_val(hi));
+                       APR_HASH_KEY_STRING, "");
         }
     }
 
@@ -449,6 +449,8 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
+  const char *repos_root_url = NULL;
+  const char *repos_uuid = NULL;
 
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
@@ -476,9 +478,9 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       const svn_wc_conflict_description2_t *root_tree_conflict;
       svn_error_t *err2;
 
-      err2 = svn_wc__db_op_read_tree_conflict(&root_tree_conflict,
-                                              wc_ctx->db, local_abspath,
-                                              scratch_pool, iterpool);
+      err2 = svn_wc__get_tree_conflict(&root_tree_conflict,
+                                       wc_ctx, local_abspath,
+                                       scratch_pool, iterpool);
 
       if ((err2 && err2->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
         {
@@ -502,30 +504,41 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
        hi = apr_hash_next(hi))
     {
       const char *this_abspath = svn__apr_hash_index_key(hi);
-      const svn_wc_conflict_description2_t *tree_conflict
-        = svn__apr_hash_index_val(hi);
+      const svn_wc_conflict_description2_t *tree_conflict;
+      svn_wc__info2_t *info;
 
       svn_pool_clear(iterpool);
 
-      if (depth_includes(local_abspath, depth, tree_conflict->local_abspath,
-                         tree_conflict->node_kind, iterpool))
+      SVN_ERR(build_info_for_unversioned(&info, iterpool));
+
+      if (!repos_root_url)
         {
-          apr_array_header_t *conflicts = apr_array_make(iterpool,
-            1, sizeof(const svn_wc_conflict_description2_t *));
-          svn_wc__info2_t *info;
-
-          SVN_ERR(build_info_for_unversioned(&info, iterpool));
-          SVN_ERR(svn_wc__internal_get_repos_info(&info->repos_root_URL,
-                                                  &info->repos_UUID,
-                                                  fe_baton.db,
+          SVN_ERR(svn_wc__internal_get_repos_info(&repos_root_url,
+                                                  &repos_uuid,
+                                                  wc_ctx->db,
                                                   local_abspath,
-                                                  iterpool, iterpool));
-          APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
-            = tree_conflict;
-          info->wc_info->conflicts = conflicts;
-
-          SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
+                                                  scratch_pool,
+                                                  iterpool));
         }
+
+      info->repos_root_URL = repos_root_url;
+      info->repos_UUID = repos_uuid;
+
+      SVN_ERR(svn_wc__db_read_conflicts(&info->wc_info->conflicts,
+                                        wc_ctx->db, this_abspath,
+                                        iterpool, iterpool));
+
+      if (! info->wc_info->conflicts || ! info->wc_info->conflicts->nelts)
+        continue;
+
+      tree_conflict = APR_ARRAY_IDX(info->wc_info->conflicts, 0,
+                                    svn_wc_conflict_description2_t *);
+
+      if (!depth_includes(local_abspath, depth, tree_conflict->local_abspath,
+                          tree_conflict->node_kind, iterpool))
+        continue;
+
+      SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);
 
