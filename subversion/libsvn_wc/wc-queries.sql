@@ -102,8 +102,8 @@ ORDER BY op_depth
 LIMIT 1
 
 -- STMT_SELECT_ACTUAL_NODE
-SELECT prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data, properties
+SELECT changelist, properties, conflict_data,
+conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
 
@@ -137,9 +137,8 @@ FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
-SELECT prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data, properties, local_relpath,
-conflict_data
+SELECT local_relpath, changelist, properties, conflict_data,
+conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
