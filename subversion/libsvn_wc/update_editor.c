@@ -1293,7 +1293,7 @@ node_has_local_mods(svn_boolean_t *modified,
  *
  * The REASON is stored directly in the tree conflict info.
  *
- * All temporary allocactions are be made in SCRATCH_POOL, while allocations
+ * All temporary allocations are be made in SCRATCH_POOL, while allocations
  * needed for the returned conflict struct are made in RESULT_POOL.
  *
  * All other parameters are identical to and described by
@@ -1305,25 +1305,17 @@ create_tree_conflict(svn_skel_t **pconflict,
                      const char *local_abspath,
                      svn_wc_conflict_reason_t reason,
                      svn_wc_conflict_action_t action,
-                     svn_node_kind_t their_node_kind,
-                     const char *their_relpath,
                      apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  const char *repos_root_url = NULL;
-  const char *repos_uuid = NULL;
   const char *left_repos_relpath;
   svn_revnum_t left_revision;
   svn_node_kind_t left_kind;
-  const char *right_repos_relpath;
   const char *added_repos_relpath = NULL;
-  svn_node_kind_t conflict_node_kind;
   svn_wc_conflict_version_t *src_left_version;
-  svn_wc_conflict_version_t *src_right_version;
 
   *pconflict = NULL;
 
   SVN_ERR_ASSERT(reason != SVN_WC_CONFLICT_REASON_NONE);
-  SVN_ERR_ASSERT(their_relpath != NULL);
 
   /* Get the source-left information, i.e. the local state of the node
    * before any changes were made to the working copy, i.e. the state the
@@ -1355,9 +1347,7 @@ create_tree_conflict(svn_skel_t **pconflict,
        * and the would-be repos_relpath needed to construct the source-right
        * in case of an 'update'. Check sanity while we're at it. */
       SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
-                                       &added_repos_relpath,
-                                       &repos_root_url,
-                                       &repos_uuid,
+                                       &added_repos_relpath, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        NULL, eb->db, local_abspath,
                                        result_pool, scratch_pool));
@@ -1374,8 +1364,6 @@ create_tree_conflict(svn_skel_t **pconflict,
       left_kind = svn_node_none;
       left_revision = SVN_INVALID_REVNUM;
       left_repos_relpath = NULL;
-      repos_root_url = eb->repos_root;
-      repos_uuid = eb->repos_uuid;
     }
   else
     {
@@ -1394,8 +1382,7 @@ create_tree_conflict(svn_skel_t **pconflict,
       SVN_ERR(svn_wc__db_base_get_info(NULL, &base_kind,
                                        &left_revision,
                                        &left_repos_relpath,
-                                       &repos_root_url,
-                                       &repos_uuid,
+                                       NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
                                        eb->db, local_abspath,
@@ -1410,40 +1397,6 @@ create_tree_conflict(svn_skel_t **pconflict,
         SVN_ERR_MALFUNCTION();
     }
 
-  SVN_ERR_ASSERT(strcmp(repos_root_url, eb->repos_root) == 0);
-
-  /* Find the source-right information, i.e. the state in the repository
-   * to which we would like to update. */
-  if (eb->switch_relpath)
-    {
-      /* This is a 'switch' operation. */
-      right_repos_relpath = their_relpath;
-    }
-  else
-    {
-      /* This is an 'update', so REPOS_RELPATH would be the same as for
-       * source-left. However, we don't have a source-left for locally
-       * added files. */
-      right_repos_relpath = ((reason == svn_wc_conflict_reason_added ||
-                              reason == svn_wc_conflict_reason_moved_here) ?
-                             added_repos_relpath : left_repos_relpath);
-      if (! right_repos_relpath)
-        right_repos_relpath = their_relpath;
-    }
-
-  SVN_ERR_ASSERT(right_repos_relpath != NULL);
-
-  /* Determine PCONFLICT's overall node kind, which is not allowed to be
-   * svn_node_none. We give it the source-right revision (THEIR_NODE_KIND)
-   * -- unless source-right is deleted and hence == svn_node_none, in which
-   * case we take it from source-left, which has to be the node kind that
-   * was deleted. */
-  conflict_node_kind = (action == svn_wc_conflict_action_delete ?
-                        left_kind : their_node_kind);
-  SVN_ERR_ASSERT(conflict_node_kind == svn_node_file
-                 || conflict_node_kind == svn_node_dir);
-
-
   /* Construct the tree conflict info structs. */
 
   if (left_repos_relpath == NULL)
@@ -1451,19 +1404,12 @@ create_tree_conflict(svn_skel_t **pconflict,
      * Send an 'empty' left revision. */
     src_left_version = NULL;
   else
-    src_left_version = svn_wc_conflict_version_create2(repos_root_url,
-                                                       repos_uuid,
+    src_left_version = svn_wc_conflict_version_create2(eb->repos_root,
+                                                       eb->repos_uuid,
                                                        left_repos_relpath,
                                                        left_revision,
                                                        left_kind,
                                                        result_pool);
-
-  src_right_version = svn_wc_conflict_version_create2(repos_root_url,
-                                                      repos_uuid,
-                                                      right_repos_relpath,
-                                                      *eb->target_revision,
-                                                      their_node_kind,
-                                                      result_pool);
 
   *pconflict = svn_wc__conflict_skel_create(result_pool);
 
@@ -1696,8 +1642,7 @@ check_tree_conflict(svn_skel_t **pconflict,
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
   return svn_error_trace(create_tree_conflict(pconflict, eb, local_abspath,
-                                              reason, action, their_node_kind,
-                                              their_relpath,
+                                              reason, action,
                                               result_pool, scratch_pool));
 }
 
@@ -2345,8 +2290,7 @@ add_directory(const char *path,
                                        db->local_abspath,
                                        svn_wc_conflict_reason_unversioned,
                                        svn_wc_conflict_action_add,
-                                       svn_node_dir,
-                                       db->new_relpath, pool, pool));
+                                       pool, pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
         }
     }
@@ -3523,8 +3467,6 @@ add_file(const char *path,
                                        fb->local_abspath,
                                        svn_wc_conflict_reason_unversioned,
                                        svn_wc_conflict_action_add,
-                                       svn_node_file,
-                                       fb->new_relpath,
                                        scratch_pool, scratch_pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
         }
@@ -4415,7 +4357,6 @@ close_file(void *file_baton,
                                        fb->local_abspath,
                                        svn_wc_conflict_reason_added,
                                        svn_wc_conflict_action_add,
-                                       svn_node_file, fb->new_relpath,
                                        scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
                                               fb->local_abspath,
