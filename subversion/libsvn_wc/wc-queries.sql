@@ -546,11 +546,8 @@ SELECT local_relpath, parent_relpath from targets_list*/
 
 -- STMT_INSERT_ACTUAL_EMPTIES
 INSERT OR IGNORE INTO actual_node (
-     wc_id, local_relpath, parent_relpath, properties,
-     conflict_old, conflict_new, conflict_working,
-     prop_reject, changelist, text_mod, tree_conflict_data )
-SELECT wc_id, local_relpath, parent_relpath, NULL, NULL, NULL, NULL,
-       NULL, NULL, NULL, NULL
+     wc_id, local_relpath, parent_relpath)
+SELECT wc_id, local_relpath, parent_relpath
 FROM targets_list
 
 -- STMT_DELETE_ACTUAL_EMPTY
@@ -932,17 +929,6 @@ SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
                          AND dst.op_depth = ?4)
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?8
-
--- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
-INSERT OR REPLACE INTO actual_node (
-     wc_id, local_relpath, parent_relpath, properties,
-     conflict_old, conflict_new, conflict_working,
-     prop_reject, changelist, text_mod, tree_conflict_data )
-SELECT wc_id, ?3 /*local_relpath*/, ?4 /*parent_relpath*/, properties,
-     conflict_old, conflict_new, conflict_working,
-     prop_reject, changelist, text_mod, tree_conflict_data
-FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_UPDATE_BASE_REVISION
 UPDATE nodes SET revision = ?3
