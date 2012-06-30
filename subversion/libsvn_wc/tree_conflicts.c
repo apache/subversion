@@ -27,6 +27,7 @@
 #include "svn_pools.h"
 
 #include "tree_conflicts.h"
+#include "conflicts.h"
 #include "wc.h"
 
 #include "private/svn_skel.h"
@@ -389,8 +390,9 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(victim_abspath));
 
-  SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
-                                          NULL, scratch_pool));
+  SVN_ERR(svn_wc__db_op_mark_resolved(wc_ctx->db, victim_abspath,
+                                      FALSE, FALSE, TRUE, NULL,
+                                      scratch_pool));
 
    return SVN_NO_ERROR;
  }
@@ -401,6 +403,7 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                           apr_pool_t *scratch_pool)
 {
   const svn_wc_conflict_description2_t *existing_conflict;
+  svn_skel_t *conflict_skel;
 
   /* Re-adding an existing tree conflict victim is an error. */
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&existing_conflict, wc_ctx->db,
@@ -412,10 +415,41 @@ svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
                                "exists at '%s'"),
                              svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
+  else if (!conflict)
+    return SVN_NO_ERROR;
+
+  conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
+
+  SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(conflict_skel, wc_ctx->db,
+                                                  conflict->local_abspath,
+                                                  conflict->reason,
+                                                  conflict->action,
+                                                  scratch_pool, scratch_pool));
+
+  switch(conflict->operation)
+    {
+      case svn_wc_operation_update:
+      default:
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel,
+                                                    conflict->src_left_version,
+                                                    scratch_pool, scratch_pool));
+        break;
+      case svn_wc_operation_switch:
+        SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict_skel,
+                                                    conflict->src_left_version,
+                                                    scratch_pool, scratch_pool));
+        break;
+      case svn_wc_operation_merge:
+        SVN_ERR(svn_wc__conflict_skel_set_op_merge(conflict_skel,
+                                                   conflict->src_left_version,
+                                                   conflict->src_right_version,
+                                                   scratch_pool, scratch_pool));
+        break;
+    }
 
   return svn_error_trace(
-    svn_wc__db_op_set_tree_conflict(wc_ctx->db, conflict->local_abspath,
-                                          conflict, scratch_pool));
+                svn_wc__db_op_mark_conflict(wc_ctx->db, conflict->local_abspath,
+                                            conflict_skel, NULL, scratch_pool));
 }
 
 
