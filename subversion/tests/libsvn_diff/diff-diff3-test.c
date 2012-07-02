@@ -2405,7 +2405,7 @@ test_wrap(apr_pool_t *pool)
   char rdata[(1<<17) + 4+3+3+1];
   svn_string_t left, right;
   svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
-  diff_opts->ignore_space = TRUE;
+  diff_opts->ignore_space = svn_diff_file_ignore_space_change;
 
   /* Two long lines. */
   memset(ldata, '@', 1<<17);
