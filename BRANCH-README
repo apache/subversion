@@ -45,4 +45,60 @@ required to determine that /project and /project/subproject also
 exist.
 
 
+BRANCH STATUS
+=============
 
+A new authz-related svn-repos API has been introduced
+(svn_repos_access_func_t) which attempts to unify the two existing
+ones (svn_repos_authz_func_t and svn_repos_authz_callback_t) while
+also adding support for the "list" (or "exist", or "directory
+traversal", or ...) access type.
+
+svn_repos.h API functions have been revved (well, in prototypes only)
+to accept the new callback type.
+
+Code has been added for wrapping old-style callbacks with the new
+approach for the sake of compatibility.  So, for deprecated APIs, the
+convention will be something like:
+
+   access_func = NULL;
+   access_baton = NULL;
+   if (auth_read_func)
+     svn_repos__upgrade_authz_func(&access_func, &access_baton,
+                                   authz_read_func, authz_baton, pool);
+   SVN_ERR(newer_api_func(..., access_func, access_baton, ...)
+
+One thing cmpilato isn't happy about is that the new API permits only
+a single boolean "has-access" type of answer.  This means that in
+places where Subversion could gracefully degrade functionality when a
+user has "list" access but not "read" access, multiple queries will
+have to occur:
+
+   for entry in dirents:
+     # see if the user has read access.  if not, that's okay.  we can get
+     # by with list access, but just can't show dirprops.
+     if (check_access(dirpath, svn_repos_access_read, ...))
+       # send the directory and its props
+       send_dir(dirpath, props, ...)
+     elif (check_access(dirpath, svn_repos_access_list, ...))
+       # send the directory, but strip the props
+       send_dir(dirpath, None, ...)
+
+It'd be nicer if we could ask the access question once: "What level of
+access does the user have to resource X (perhaps, up to and including
+level Y)?"
+
+
+SCARY THOUGHT
+=============
+
+If the Subversion project would simply decide that directory
+properties -- or node properties in general -- where not a protectable
+resource, we could dispense with much of the complication and return
+to a simple read/write access question.  A directory would be readable
+iff it is either explicitly readable or implicitly so by virtue of
+having readable (grand?)children.  Files stick with the same policies
+as have existed forever.  As it turns out, we already stretch toward
+this policy in our handling of svn:mergeinfo, which we often fetch
+with blatant and intentional disregard for directory accessibility
+(for the stability of the whole system).
