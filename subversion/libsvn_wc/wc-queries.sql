@@ -355,34 +355,18 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?5
 
--- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
-UPDATE actual_node SET tree_conflict_data = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_INSERT_ACTUAL_TREE_CONFLICTS
+-- STMT_INSERT_ACTUAL_CONFLICT
 INSERT INTO actual_node (
-  wc_id, local_relpath, tree_conflict_data, parent_relpath)
-VALUES (?1, ?2, ?3, ?4)
+  wc_id, local_relpath, conflict_data,
+  conflict_old, conflict_new, conflict_working, prop_reject,
+  tree_conflict_data, parent_relpath)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
 
--- STMT_UPDATE_ACTUAL_TEXT_CONFLICTS
-UPDATE actual_node SET conflict_old = ?3, conflict_new = ?4,
-  conflict_working = ?5
+-- STMT_UPDATE_ACTUAL_CONFLICT
+UPDATE actual_node SET conflict_data = ?3,
+  conflict_old = ?4, conflict_new = ?5, conflict_working = ?6,
+  prop_reject = ?7, tree_conflict_data = ?8
 WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_INSERT_ACTUAL_TEXT_CONFLICTS
-INSERT INTO actual_node (
-  wc_id, local_relpath, conflict_old, conflict_new, conflict_working,
-  parent_relpath)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-
--- STMT_UPDATE_ACTUAL_PROPERTY_CONFLICTS
-UPDATE actual_node SET prop_reject = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS
-INSERT INTO actual_node (
-  wc_id, local_relpath, prop_reject, parent_relpath)
-VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_UPDATE_ACTUAL_CHANGELISTS
 UPDATE actual_node SET changelist = ?3
@@ -764,6 +748,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 -- STMT_CLEAR_PROPS_CONFLICT
 UPDATE actual_node SET
   prop_reject = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2
+
+-- STMT_UPDATE_CLEAR_TREE_CONFLICT
+UPDATE actual_node SET tree_conflict_data = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_INSERT_WC_LOCK
