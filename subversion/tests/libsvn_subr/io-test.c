@@ -140,8 +140,7 @@ create_test_file(struct test_file_definition_t* definition,
   
   SVN_ERR(svn_io_file_open(&file_h, 
                            definition->created_path,
-                           (APR_FOPEN_WRITE | APR_FOPEN_CREATE
-                            | APR_FOPEN_EXCL | APR_FOPEN_BUFFERED),
+                           (APR_WRITE | APR_CREATE | APR_EXCL | APR_BUFFERED),
                            APR_OS_DEFAULT,
                            scratch_pool));  
 
