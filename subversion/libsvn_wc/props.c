@@ -641,7 +641,7 @@ prop_conflict_from_skel(const svn_string_t **conflict_desc,
   if (!(original_is_binary || mine_is_binary || incoming_is_binary))
     {
       diff_opts = svn_diff_file_options_create(scratch_pool);
-      diff_opts->ignore_space = FALSE;
+      diff_opts->ignore_space = svn_diff_file_ignore_space_none;
       diff_opts->ignore_eol_style = FALSE;
       diff_opts->show_c_function = FALSE;
       SVN_ERR(svn_diff_mem_string_diff3(&diff, original, mine, incoming,
