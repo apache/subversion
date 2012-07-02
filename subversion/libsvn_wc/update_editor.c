@@ -2131,6 +2131,8 @@ add_directory(const char *path,
           tree_conflict = NULL; /* No direct notification */
           db->shadowed = TRUE; /* Just continue */
           conflicted = FALSE; /* No skip */
+
+          db->edit_conflict = tree_conflict; /* Cache for close_directory */
         }
       else
         SVN_ERR(node_already_conflicted(&conflicted, eb->db,
@@ -3309,6 +3311,8 @@ add_file(const char *path,
           tree_conflict = NULL; /* No direct notification */
           fb->shadowed = TRUE; /* Just continue */
           conflicted = FALSE; /* No skip */
+
+          fb->edit_conflict = tree_conflict; /* Cache for close_file */
         }
       else
         SVN_ERR(node_already_conflicted(&conflicted, eb->db,
