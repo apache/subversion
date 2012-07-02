@@ -2396,6 +2396,10 @@ merge_dir_added(svn_wc_notify_state_t *state,
                                            reason));
               if (tree_conflicted)
                 *tree_conflicted = TRUE;
+              if (skip)
+                *skip = TRUE;
+              if (skip_children)
+                *skip_children = TRUE;
               if (state)
                 *state = svn_wc_notify_state_obstructed;
             }
