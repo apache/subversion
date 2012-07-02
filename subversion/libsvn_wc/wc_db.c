@@ -6160,54 +6160,6 @@ svn_wc__db_revert_list_done(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Get any tree conflict associated with LOCAL_RELPATH in WCROOT, and put it
-   in *TREE_CONFLICT, allocated in RESULT_POOL.
-
-   Use SCRATCH_POOL for any temporary allocations.
- */
-static svn_error_t *
-read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
-                   svn_wc__db_wcroot_t *wcroot,
-                   const char *local_relpath,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  const char *conflict_data;
-  const svn_skel_t *skel;
-  svn_error_t *err;
-
-  *tree_conflict = NULL;
-
-  if (!local_relpath[0])
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_TREE_CONFLICT));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (!have_row)
-    return svn_error_trace(svn_sqlite__reset(stmt));
-
-  conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
-  skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
-
-  {
-    const char *local_abspath
-      = svn_dirent_join(wcroot->abspath, local_relpath, scratch_pool);
-    const char *dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-    err = svn_wc__deserialize_conflict(tree_conflict, skel,
-                                       dir_abspath, result_pool,
-                                       scratch_pool);
-  }
-
-  return svn_error_compose_create(err,
-                                  svn_sqlite__reset(stmt));
-}
-
 /* Baton for remove_node_txn */
 struct remove_node_baton
 {
