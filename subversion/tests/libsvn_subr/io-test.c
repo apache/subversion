@@ -64,7 +64,7 @@ struct test_file_definition_t
     char* created_path;
   };
 
-struct test_file_definition_t test_file_definitions[] = 
+struct test_file_definition_t test_file_definitions[] =
   {
     {"empty",                 "",      0},
     {"single_a",              "a",     1},
@@ -118,8 +118,8 @@ struct test_file_definition_t test_file_definitions[] =
 /* Function to prepare a single test file */
 
 static svn_error_t *
-create_test_file(struct test_file_definition_t* definition, 
-                 apr_pool_t *pool, 
+create_test_file(struct test_file_definition_t* definition,
+                 apr_pool_t *pool,
                  apr_pool_t *scratch_pool)
 {
   apr_status_t status = 0;
@@ -134,17 +134,17 @@ create_test_file(struct test_file_definition_t* definition,
     SVN_ERR_ASSERT(strlen(definition->data) >= 5);
 
 
-  definition->created_path = svn_dirent_join(TEST_DIR, 
-                                  definition->name, 
+  definition->created_path = svn_dirent_join(TEST_DIR,
+                                  definition->name,
                                   pool);
-  
-  SVN_ERR(svn_io_file_open(&file_h, 
+
+  SVN_ERR(svn_io_file_open(&file_h,
                            definition->created_path,
                            (APR_WRITE | APR_CREATE | APR_EXCL | APR_BUFFERED),
                            APR_OS_DEFAULT,
-                           scratch_pool));  
+                           scratch_pool));
 
-  for (i=1; i <= definition->size; i += 1) 
+  for (i=1; i <= definition->size; i += 1)
     {
       char c;
       if (i == 1)
@@ -163,12 +163,12 @@ create_test_file(struct test_file_definition_t* definition,
       if (status)
         break;
     }
-  
+
   if (status)
     err = svn_error_wrap_apr(status, "Can't write to file '%s'",
                               definition->name);
 
-  return svn_error_compose_create(err, 
+  return svn_error_compose_create(err,
                         svn_io_file_close(file_h, scratch_pool));
 }
 
@@ -192,15 +192,15 @@ create_comparison_candidates(apr_pool_t *scratch_pool)
     SVN_ERR(svn_io_remove_dir2(TEST_DIR, TRUE, NULL, NULL, scratch_pool));
   else if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "There is already a file named '%s'", 
+                             "There is already a file named '%s'",
                              TEST_DIR);
 
   SVN_ERR(svn_io_dir_make(TEST_DIR, APR_OS_DEFAULT, scratch_pool));
 
   svn_test_add_dir_cleanup(TEST_DIR);
 
-  for (candidate = test_file_definitions; 
-       candidate->name != NULL; 
+  for (candidate = test_file_definitions;
+       candidate->name != NULL;
        candidate += 1)
     {
       svn_pool_clear(iterpool);
@@ -289,12 +289,12 @@ test_two_file_content_comparison(apr_pool_t *scratch_pool)
                                                  inner->created_path,
                                                  outer->created_path,
                                                  iterpool);
-          
+
           if (cmp_err)
             {
               err = svn_error_compose_create(err, cmp_err);
             }
-          else 
+          else
             {
               if (expected != actual)
                   err = svn_error_compose_create(err,
@@ -325,7 +325,7 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
   SVN_ERR(create_comparison_candidates(scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
-    {    
+    {
       for (middle = outer; middle->name != NULL; middle += 1)
         {
           for (inner = middle; inner->name != NULL; inner += 1)
@@ -340,7 +340,7 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
                                 &actual23,
                                 &actual13,
                                 inner->created_path,
-                                middle->created_path,                                
+                                middle->created_path,
                                 outer->created_path,
                                 iterpool);
 
@@ -348,7 +348,7 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
                 {
                   err = svn_error_compose_create(err, cmp_err);
                 }
-              else 
+              else
                 {
                   if (expected12 != actual12)
                       err = svn_error_compose_create(err,
@@ -356,7 +356,7 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
                                      "size comparison problem: '%s' and '%s'",
                                      inner->created_path,
                                      middle->created_path));
-                  
+
                   if (expected23 != actual23)
                       err = svn_error_compose_create(err,
                           svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -395,7 +395,7 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
   SVN_ERR(create_comparison_candidates(scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
-    {    
+    {
       for (middle = outer; middle->name != NULL; middle += 1)
         {
           for (inner = middle; inner->name != NULL; inner += 1)
@@ -421,7 +421,7 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
                 {
                   err = svn_error_compose_create(err, cmp_err);
                 }
-              else 
+              else
                 {
                   if (expected12 != actual12)
                       err = svn_error_compose_create(err,
@@ -429,7 +429,7 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
                                      "size comparison problem: '%s' and '%s'",
                                      inner->created_path,
                                      middle->created_path));
-                  
+
                   if (expected23 != actual23)
                       err = svn_error_compose_create(err,
                           svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -461,7 +461,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_two_file_size_comparison,
                    "two file size comparison"),
     SVN_TEST_PASS2(test_two_file_content_comparison,
-                   "two file content comparison"),                   
+                   "two file content comparison"),
     SVN_TEST_PASS2(test_three_file_size_comparison,
                    "three file size comparison"),
     SVN_TEST_PASS2(test_three_file_content_comparison,
