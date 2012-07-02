@@ -4504,7 +4504,6 @@ close_file(void *file_baton,
 
   if (conflict_skel)
     {
-      svn_skel_t *work_item;
       svn_boolean_t completed;
 
       SVN_ERR(svn_wc__conflict_skel_is_complete(&completed,
