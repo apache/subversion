@@ -310,27 +310,6 @@ set_actual_props(apr_int64_t wc_id,
                  apr_pool_t *scratch_pool);
 
 static svn_error_t *
-temp_op_set_text_conflict_marker_files(svn_wc__db_wcroot_t *wcroot,
-                                       const char *local_relpath,
-                                       const char *old_abspath,
-                                       const char *new_abspath,
-                                       const char *wrk_abspath,
-                                       apr_pool_t *scratch_pool);
-
-static svn_error_t *
-temp_op_set_prop_conflict_marker_file(svn_wc__db_wcroot_t *wcroot,
-                                       const char *local_relpath,
-                                       const char *prej_abspath,
-                                       apr_pool_t *scratch_pool);
-
-static svn_error_t *
-temp_op_set_tree_conflict(void *baton,
-                          svn_wc__db_wcroot_t *wcroot,
-                          const char *local_relpath,
-                          apr_pool_t *scratch_pool);
-
-
-static svn_error_t *
 mark_conflict(svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               const svn_skel_t *conflict_skel,
@@ -5210,26 +5189,64 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
               const svn_skel_t *conflict_skel,
               apr_pool_t *scratch_pool)
 {
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
   svn_boolean_t is_complete;
+#if defined(SVN_DEBUG) && (SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS)
+  svn_boolean_t had_text_conflict;
+  svn_boolean_t had_prop_conflict;
+  svn_boolean_t had_tree_conflict;
+#endif
 
   SVN_ERR(svn_wc__conflict_skel_is_complete(&is_complete, conflict_skel));
-
   SVN_ERR_ASSERT(is_complete);
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+#if defined(SVN_DEBUG) && (SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS)
+  if (got_row)
+    {
+      had_text_conflict = (!svn_sqlite__column_is_null(stmt, 3)
+                           || !svn_sqlite__column_is_null(stmt, 4)
+                           || !svn_sqlite__column_is_null(stmt, 5));
+      had_prop_conflict = !svn_sqlite__column_is_null(stmt, 6);
+      had_tree_conflict = !svn_sqlite__column_is_null(stmt, 7);
+    }
+  else
+    {
+      had_text_conflict = FALSE;
+      had_prop_conflict = FALSE;
+      had_tree_conflict = FALSE;
+    }
+#endif
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (got_row)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_ACTUAL_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      if (*local_relpath != '\0')
+        SVN_ERR(svn_sqlite__bind_text(stmt, 9,
+                                      svn_relpath_dirname(local_relpath,
+                                                          scratch_pool)));
+    }
+
 #if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
-  if (conflict_skel)
     {
       /* Store conflict data in the old locations */
       svn_boolean_t text_conflict;
       svn_boolean_t prop_conflict;
       svn_boolean_t tree_conflict;
-#ifdef SVN_DEBUG
-      svn_boolean_t had_text_conflict;
-      svn_boolean_t had_prop_conflict;
-      svn_boolean_t had_tree_conflict;
-      svn_sqlite__stmt_t *stmt;
-      svn_boolean_t got_row;
-#endif
       svn_wc_conflict_reason_t local_change;
       svn_wc_conflict_action_t incoming_change;
       const apr_array_header_t *locations;
@@ -5254,27 +5271,6 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
                                          scratch_pool, scratch_pool));
 
 #ifdef SVN_DEBUG
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step(&got_row, stmt));
-
-      if (got_row)
-        {
-          had_text_conflict = (!svn_sqlite__column_is_null(stmt, 3)
-                               || !svn_sqlite__column_is_null(stmt, 4)
-                               || !svn_sqlite__column_is_null(stmt, 5));
-          had_prop_conflict = !svn_sqlite__column_is_null(stmt, 6);
-          had_tree_conflict = !svn_sqlite__column_is_null(stmt, 7);
-        }
-      else
-        {
-          had_text_conflict = FALSE;
-          had_prop_conflict = FALSE;
-          had_tree_conflict = FALSE;
-        }
-      SVN_ERR(svn_sqlite__reset(stmt));
-
       /* This function should only ADD conflicts */
       SVN_ERR_ASSERT(text_conflict || !had_text_conflict);
       SVN_ERR_ASSERT(prop_conflict || !had_prop_conflict);
@@ -5283,38 +5279,54 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
 
       if (text_conflict)
         {
-          const char *mine_abspath;
-          const char *their_old_abspath;
-          const char *their_abspath;
+          const char *mine_path;
+          const char *their_old_path;
+          const char *their_path;
 
-          SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
-                                                      &their_old_abspath,
-                                                      &their_abspath,
+          SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_path,
+                                                      &their_old_path,
+                                                      &their_path,
                                                       db, local_abspath,
                                                       conflict_skel,
                                                       scratch_pool,
                                                       scratch_pool));
 
-          SVN_ERR(temp_op_set_text_conflict_marker_files(wcroot, local_relpath,
-                                                         their_old_abspath,
-                                                         their_abspath,
-                                                         mine_abspath,
-                                                         scratch_pool));
+          if (their_old_path)
+            {
+              their_old_path = svn_dirent_skip_ancestor(wcroot->abspath,
+                                                        their_old_path);
+              SVN_ERR(svn_sqlite__bind_text(stmt, 4, their_old_path));
+            }
+
+          if (their_path)
+            {
+              their_path = svn_dirent_skip_ancestor(wcroot->abspath,
+                                                    their_path);
+              SVN_ERR(svn_sqlite__bind_text(stmt, 5, their_path));
+            }
+
+          if (mine_path)
+            {
+              mine_path = svn_dirent_skip_ancestor(wcroot->abspath, mine_path);
+              SVN_ERR(svn_sqlite__bind_text(stmt, 6, mine_path));
+            }
         }
 
       if (prop_conflict)
         {
-          const char *prej_abspath;
+          const char *prej_path;
 
-          SVN_ERR(svn_wc__conflict_read_prop_conflict(&prej_abspath, NULL,
+          SVN_ERR(svn_wc__conflict_read_prop_conflict(&prej_path, NULL,
                                                       NULL, NULL, NULL,
                                                       db, local_abspath,
                                                       conflict_skel,
                                                       scratch_pool, scratch_pool));
 
-          SVN_ERR(temp_op_set_prop_conflict_marker_file(wcroot, local_relpath,
-                                                        prej_abspath,
-                                                        scratch_pool));
+          if (prej_path)
+            {
+              prej_path = svn_dirent_skip_ancestor(wcroot->abspath, prej_path);
+              SVN_ERR(svn_sqlite__bind_text(stmt, 7, prej_path));
+            }
         }
 
       if (tree_conflict)
@@ -5323,6 +5335,7 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
           svn_wc_conflict_version_t *v1;
           svn_wc_conflict_version_t *v2;
           svn_node_kind_t tc_kind;
+          svn_skel_t *skel;
 
           SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change,
                                                       &incoming_change,
@@ -5413,14 +5426,23 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
           desc->reason = local_change;
           desc->action = incoming_change;
 
-          SVN_ERR(temp_op_set_tree_conflict(desc, wcroot, local_relpath,
-                                            scratch_pool));
+          SVN_ERR(svn_wc__serialize_conflict(&skel, desc,
+                                             scratch_pool, scratch_pool));
+
+          SVN_ERR(svn_sqlite__bind_text(stmt, 8,
+                        svn_skel__unparse(skel, scratch_pool)->data));
         }
       SVN_ERR(svn_wc__db_close(db));
     }
 #else
   /* And in the new location */
+  {
+    svn_stringbuf_t *sb = svn_skel__unparse(conflict_skel, scratch_pool);
+
+    SVN_ERR(svn_sqlite__bind_blob(stmt, 3, sb->data, sb->len));
+  }
 #endif
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
 
   return SVN_NO_ERROR;
 }
@@ -5493,7 +5515,7 @@ db_op_mark_resolved(void *baton,
   if (rb->resolved_tree)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
+                                        STMT_UPDATE_CLEAR_TREE_CONFLICT));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
       total_affected_rows += affected_rows;
@@ -5542,73 +5564,6 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                               &rb, scratch_pool));
 
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* */
-static svn_error_t *
-temp_op_set_tree_conflict(void *baton,
-                          svn_wc__db_wcroot_t *wcroot,
-                          const char *local_relpath,
-                          apr_pool_t *scratch_pool)
-{
-  const svn_wc_conflict_description2_t *tree_conflict = baton;
-  const char *parent_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  const char *tree_conflict_data;
-
-  /* ### does this work correctly? */
-  parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
-
-  /* Get existing conflict information for LOCAL_RELPATH. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (tree_conflict)
-    {
-      svn_skel_t *skel;
-
-      SVN_ERR(svn_wc__serialize_conflict(&skel, tree_conflict,
-                                         scratch_pool, scratch_pool));
-      tree_conflict_data = svn_skel__unparse(skel, scratch_pool)->data;
-    }
-  else
-    tree_conflict_data = NULL;
-
-  if (have_row)
-    {
-      /* There is an existing ACTUAL row, so just update it. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
-    }
-  else
-    {
-      /* We need to insert an ACTUAL row with the tree conflict data. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_ACTUAL_TREE_CONFLICTS));
-    }
-
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            tree_conflict_data));
-  if (!have_row)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, parent_relpath));
-
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Now, remove the actual node if it doesn't have any more useful
-     information.  We only need to do this if we've remove data ourselves. */
-  if (!tree_conflict_data)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ACTUAL_EMPTY));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -12678,140 +12633,6 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                               scratch_pool));
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-temp_op_set_text_conflict_marker_files(svn_wc__db_wcroot_t *wcroot,
-                                       const char *local_relpath,
-                                       const char *old_abspath,
-                                       const char *new_abspath,
-                                       const char *wrk_abspath,
-                                       apr_pool_t *scratch_pool)
-{
-  const char *old_relpath, *new_relpath, *wrk_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t got_row;
-
-  /* This should be handled in a transaction, but we can assume a db lock
-     and this code won't survive until 1.7 */
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-
-  SVN_ERR(svn_sqlite__step(&got_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (got_row)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_TEXT_CONFLICTS));
-    }
-  else if (old_abspath == NULL
-           && new_abspath == NULL
-           && wrk_abspath == NULL)
-    {
-      return SVN_NO_ERROR; /* We don't have to add anything */
-    }
-  else
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_ACTUAL_TEXT_CONFLICTS));
-
-      SVN_ERR(svn_sqlite__bind_text(stmt, 6,
-                                    svn_relpath_dirname(local_relpath,
-                                                        scratch_pool)));
-    }
-
-  old_relpath = svn_dirent_skip_ancestor(wcroot->abspath, old_abspath);
-  if (old_relpath == old_abspath)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, svn_sqlite__reset(stmt),
-                             _("Invalid conflict file '%s' for '%s'"),
-                             svn_dirent_local_style(old_abspath, scratch_pool),
-                             path_for_error_message(wcroot, local_relpath,
-                                                    scratch_pool));
-  new_relpath = svn_dirent_skip_ancestor(wcroot->abspath, new_abspath);
-  if (new_relpath == new_abspath)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, svn_sqlite__reset(stmt),
-                             _("Invalid conflict file '%s' for '%s'"),
-                             svn_dirent_local_style(new_abspath, scratch_pool),
-                             path_for_error_message(wcroot, local_relpath,
-                                                    scratch_pool));
-
-  if (wrk_abspath)
-    {
-      wrk_relpath = svn_dirent_skip_ancestor(wcroot->abspath, wrk_abspath);
-      if (wrk_relpath == wrk_abspath)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, svn_sqlite__reset(stmt),
-                                 _("Invalid conflict file '%s' for '%s'"),
-                                 svn_dirent_local_style(wrk_abspath,
-                                                        scratch_pool),
-                                 path_for_error_message(wcroot, local_relpath,
-                                                        scratch_pool));
-    }
-  else
-    wrk_relpath = NULL;
-
-  SVN_ERR(svn_sqlite__bindf(stmt, "issss", wcroot->wc_id,
-                                           local_relpath,
-                                           old_relpath,
-                                           new_relpath,
-                                           wrk_relpath));
-
-  return svn_error_trace(svn_sqlite__step_done(stmt));
-}
-
-static svn_error_t *
-temp_op_set_prop_conflict_marker_file(svn_wc__db_wcroot_t *wcroot,
-                                       const char *local_relpath,
-                                       const char *prej_abspath,
-                                       apr_pool_t *scratch_pool)
-{
-  const char *prej_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t got_row;
-
-  /* This should be handled in a transaction, but we can assume a db locl\
-     and this code won't survive until 1.7 */
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-
-  SVN_ERR(svn_sqlite__step(&got_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (got_row)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_PROPERTY_CONFLICTS));
-    }
-  else if (!prej_abspath)
-    return SVN_NO_ERROR;
-  else
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS));
-
-      if (*local_relpath != '\0')
-        SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                      svn_relpath_dirname(local_relpath,
-                                                          scratch_pool)));
-    }
-
-  prej_relpath = svn_dirent_skip_ancestor(wcroot->abspath, prej_abspath);
-  if (prej_relpath == prej_abspath)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, svn_sqlite__reset(stmt),
-                             _("Invalid property reject file '%s' for '%s'"),
-                             svn_dirent_local_style(prej_abspath, scratch_pool),
-                             path_for_error_message(wcroot, local_relpath,
-                                                    scratch_pool));
-
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                                         local_relpath,
-                                         prej_relpath));
-
-  return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
 svn_error_t *
