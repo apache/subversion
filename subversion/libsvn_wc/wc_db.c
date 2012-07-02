@@ -5223,7 +5223,13 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
       svn_boolean_t text_conflict;
       svn_boolean_t prop_conflict;
       svn_boolean_t tree_conflict;
-
+#ifdef SVN_DEBUG
+      svn_boolean_t had_text_conflict;
+      svn_boolean_t had_prop_conflict;
+      svn_boolean_t had_tree_conflict;
+      svn_sqlite__stmt_t *stmt;
+      svn_boolean_t got_row;
+#endif
       svn_wc_conflict_reason_t local_change;
       svn_wc_conflict_action_t incoming_change;
       const apr_array_header_t *locations;
@@ -5246,6 +5252,34 @@ mark_conflict(svn_wc__db_wcroot_t *wcroot,
                                          &tree_conflict,
                                          db, local_abspath, conflict_skel,
                                          scratch_pool, scratch_pool));
+
+#ifdef SVN_DEBUG
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+      if (got_row)
+        {
+          had_text_conflict = (!svn_sqlite__column_is_null(stmt, 3)
+                               || !svn_sqlite__column_is_null(stmt, 4)
+                               || !svn_sqlite__column_is_null(stmt, 5));
+          had_prop_conflict = !svn_sqlite__column_is_null(stmt, 6);
+          had_tree_conflict = !svn_sqlite__column_is_null(stmt, 7);
+        }
+      else
+        {
+          had_text_conflict = FALSE;
+          had_prop_conflict = FALSE;
+          had_tree_conflict = FALSE;
+        }
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      /* This function should only ADD conflicts */
+      SVN_ERR_ASSERT(text_conflict || !had_text_conflict);
+      SVN_ERR_ASSERT(prop_conflict || !had_prop_conflict);
+      SVN_ERR_ASSERT(tree_conflict || !had_tree_conflict);
+#endif
 
       if (text_conflict)
         {
