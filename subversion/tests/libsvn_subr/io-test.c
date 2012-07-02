@@ -326,9 +326,9 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {    
-      for (middle = test_file_definitions; middle->name != NULL; middle += 1)
+      for (middle = outer; middle->name != NULL; middle += 1)
         {
-          for (inner = test_file_definitions; inner->name != NULL; inner += 1)
+          for (inner = middle; inner->name != NULL; inner += 1)
             {
               svn_pool_clear(iterpool);
 
@@ -396,9 +396,9 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {    
-      for (middle = test_file_definitions; middle->name != NULL; middle += 1)
+      for (middle = outer; middle->name != NULL; middle += 1)
         {
-          for (inner = test_file_definitions; inner->name != NULL; inner += 1)
+          for (inner = middle; inner->name != NULL; inner += 1)
             {
               svn_pool_clear(iterpool);
 
