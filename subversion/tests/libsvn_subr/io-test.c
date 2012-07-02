@@ -232,7 +232,12 @@ test_two_file_size_comparison(apr_pool_t *scratch_pool)
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
-      for (inner = test_file_definitions; inner->name != NULL; inner += 1)
+#ifdef SVN_IO_TEST_ALL_PERMUTATIONS
+      inner = test_file_definitions;
+#else
+      inner = outer;
+#endif
+      for (; inner->name != NULL; inner += 1)
         {
           svn_pool_clear(iterpool);
 
@@ -278,7 +283,12 @@ test_two_file_content_comparison(apr_pool_t *scratch_pool)
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
-      for (inner = test_file_definitions; inner->name != NULL; inner += 1)
+#ifdef SVN_IO_TEST_ALL_PERMUTATIONS
+      inner = test_file_definitions;
+#else
+      inner = outer;
+#endif
+      for (; inner->name != NULL; inner += 1)
         {
           svn_pool_clear(iterpool);
 
@@ -326,9 +336,19 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
-      for (middle = outer; middle->name != NULL; middle += 1)
+#ifdef SVN_IO_TEST_ALL_PERMUTATIONS
+      middle = test_file_definitions;
+#else
+      middle = outer;
+#endif
+      for (; middle->name != NULL; middle += 1)
         {
-          for (inner = middle; inner->name != NULL; inner += 1)
+#ifdef SVN_IO_TEST_ALL_PERMUTATIONS
+          inner = test_file_definitions;
+#else
+          inner = middle;
+#endif
+          for (; inner->name != NULL; inner += 1)
             {
               svn_pool_clear(iterpool);
 
@@ -396,9 +416,19 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
-      for (middle = outer; middle->name != NULL; middle += 1)
+#ifdef SVN_IO_TEST_ALL_PERMUTATIONS
+      middle = test_file_definitions;
+#else
+      middle = outer;
+#endif
+      for (; middle->name != NULL; middle += 1)
         {
-          for (inner = middle; inner->name != NULL; inner += 1)
+#ifdef SVN_IO_TEST_ALL_PERMUTATIONS
+          inner = test_file_definitions;
+#else
+          inner = middle;
+#endif
+          for (; inner->name != NULL; inner += 1)
             {
               svn_pool_clear(iterpool);
 
