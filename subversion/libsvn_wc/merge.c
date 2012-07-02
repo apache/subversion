@@ -630,7 +630,9 @@ merge_file_trivial(svn_skel_t **work_items,
                    apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
-  svn_boolean_t same_contents = FALSE;
+  svn_boolean_t same_left_right;
+  svn_boolean_t same_right_target;
+  svn_boolean_t same_left_target;
   svn_node_kind_t kind;
   svn_boolean_t is_special;
 
@@ -643,19 +645,23 @@ merge_file_trivial(svn_skel_t **work_items,
       return SVN_NO_ERROR;
     }
 
+  /* Check the files */
+  SVN_ERR(svn_io_files_contents_three_same_p(&same_left_right,
+                                             &same_right_target,
+                                             &same_left_target,
+                                             left_abspath,
+                                             right_abspath,
+                                             detranslated_target_abspath,
+                                             scratch_pool));
+
   /* If the LEFT side of the merge is equal to WORKING, then we can
    * copy RIGHT directly. */
-  SVN_ERR(svn_io_files_contents_same_p(&same_contents, left_abspath,
-                                       detranslated_target_abspath,
-                                       scratch_pool));
-  if (same_contents)
+  if (same_left_target)
     {
       /* Check whether the left side equals the right side.
        * If it does, there is no change to merge so we leave the target
        * unchanged. */
-      SVN_ERR(svn_io_files_contents_same_p(&same_contents, left_abspath,
-                                           right_abspath, scratch_pool));
-      if (same_contents)
+      if (same_left_right)
         {
           *merge_outcome = svn_wc_merge_unchanged;
         }
@@ -684,10 +690,7 @@ merge_file_trivial(svn_skel_t **work_items,
        * conflicted them needlessly, while merge_text_file figured it out 
        * eventually and returned svn_wc_merge_unchanged for them, which
        * is what we do here. */
-      SVN_ERR(svn_io_files_contents_same_p(&same_contents,
-                                           detranslated_target_abspath,
-                                           right_abspath, scratch_pool));
-      if (same_contents)
+      if (same_right_target)
         {
           *merge_outcome = svn_wc_merge_unchanged;
           return SVN_NO_ERROR;
