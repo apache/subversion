@@ -136,7 +136,7 @@ conflict__prepend_location(svn_skel_t *skel,
 /* Deserialize a svn_wc_conflict_version_t from the skel.
    Set *LOCATION to NULL when the data is not a svn_wc_conflict_version_t. */
 static svn_error_t *
-conflict__read_location(const svn_wc_conflict_version_t **location,
+conflict__read_location(svn_wc_conflict_version_t **location,
                         const svn_skel_t *skel,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -311,13 +311,11 @@ conflict__get_conflict(svn_skel_t **conflict,
                        const char *conflict_type)
 {
   svn_skel_t *c;
-  apr_size_t len;
+
   SVN_ERR_ASSERT(conflict_skel
                  && conflict_skel->children
                  && conflict_skel->children->next
                  && !conflict_skel->children->next->is_atom);
-
-  len = strlen(conflict_type);
 
   for(c = conflict_skel->children->next->children;
       c;
