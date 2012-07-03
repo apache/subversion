@@ -693,10 +693,18 @@ path_driver_cb_func(void **dir_baton,
         }
     }
 
-  /* Handle property modifications. */
   if (! do_delete || do_add)
     {
-      if (change->prop_mod)
+      /* Is this a copy that was downgraded to a raw add?  (If so,
+         we'll need to transmit properties and file contents and such
+         for it regardless of what the CHANGE structure's text_mod
+         and prop_mod flags say.)  */
+      svn_boolean_t downgraded_copy = (change->copyfrom_known
+                                       && change->copyfrom_path
+                                       && (! copyfrom_path));
+
+      /* Handle property modifications. */
+      if (change->prop_mod || downgraded_copy)
         {
           if (cb->compare_root)
             {
@@ -740,14 +748,9 @@ path_driver_cb_func(void **dir_baton,
             }
         }
 
-      /* Handle textual modifications.
-
-         Note that this needs to happen in the "copy from a file we
-         aren't allowed to see" case since otherwise the caller will
-         have no way to actually get the new file's contents, which
-         they are apparently allowed to see. */
+      /* Handle textual modifications. */
       if (change->node_kind == svn_node_file
-          && (change->text_mod || (change->copyfrom_path && ! copyfrom_path)))
+          && (change->text_mod || downgraded_copy))
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
