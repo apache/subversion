@@ -1153,28 +1153,33 @@ run_prej_install(svn_wc__db_t *db,
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_relpath;
   const char *local_abspath;
-  const svn_skel_t *conflict_skel;
+  svn_skel_t *conflicts;
+  const svn_skel_t *prop_conflict_skel;
   const char *tmp_prejfile_abspath;
   const char *prejfile_abspath;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__conflict_read_prop_conflict(&prejfile_abspath,
+                                              NULL, NULL, NULL, NULL,
+                                              db, local_abspath, conflicts,
+                                              scratch_pool, scratch_pool));
+
   if (arg1->next != NULL)
-    conflict_skel = arg1->next;
+    prop_conflict_skel = arg1->next;
   else
     SVN_ERR_MALFUNCTION();  /* ### wc_db can't provide it ... yet.  */
 
   /* Construct a property reject file in the temporary area.  */
   SVN_ERR(svn_wc__create_prejfile(&tmp_prejfile_abspath,
                                   db, local_abspath,
-                                  conflict_skel,
+                                  prop_conflict_skel,
                                   scratch_pool, scratch_pool));
-
-  /* Get the (stored) name of where it should go.  */
-  SVN_ERR(svn_wc__get_prejfile_abspath(&prejfile_abspath, db, local_abspath,
-                                       scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(prejfile_abspath != NULL);
 
   /* ... and atomically move it into place.  */
   SVN_ERR(svn_io_file_rename(tmp_prejfile_abspath,
