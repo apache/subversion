@@ -1331,41 +1331,24 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
      ### to set the right fields. */
 
   {
-    /* Check if we also have a property conflict... */
-    const apr_array_header_t *conflicts;
-    svn_skel_t *conflict_skel;
-    int i;
+    /* Check if we should combine with a property conflict... */
+    svn_skel_t *conflicts;
 
-    conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
+    SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
-    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                   scratch_pool, scratch_pool));
+    if (! conflicts)
+      {
+        /* No conflict exists, create a basic skel */
+        conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-    if (conflicts)
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          svn_wc_conflict_description2_t *desc =
-                APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
-          apr_hash_t *prop_names;
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+                                                    scratch_pool,
+                                                    scratch_pool));
+      }
 
-          if (desc->kind != svn_wc_conflict_kind_property)
-            continue;
-
-          prop_names = apr_hash_make(scratch_pool);
-
-          /* Add the absolute minimal property conflict */
-          SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel, db,
-                                                          local_abspath,
-                                                          desc->their_abspath,
-                                                          NULL, NULL, NULL,
-                                                          prop_names,
-                                                          scratch_pool,
-                                                          scratch_pool));
-
-          break;
-        }
-
-    SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflict_skel, db,
+    /* Add the text conflict to the existing onflict */
+    SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflicts, db,
                                                     local_abspath,
                                                     wrk_abspath,
                                                     old_abspath,
@@ -1373,12 +1356,7 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
                                                     scratch_pool,
                                                     scratch_pool));
 
-    /* ### Set some 'none' operation? */
-    SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
-                                                scratch_pool,
-                                                scratch_pool));
-
-    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
+    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflicts,
                                         NULL, scratch_pool));
   }
   return SVN_NO_ERROR;
@@ -1409,7 +1387,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
 
   arg = arg->next;
   local_relpath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
-                          : NULL;
+                           : NULL;
 
   if (local_relpath)
     SVN_ERR(svn_wc__db_from_relpath(&prej_abspath, db, wri_abspath,
@@ -1417,41 +1395,25 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
                                     scratch_pool, scratch_pool));
 
   {
-    /* Check if we also have a property conflict... */
-    const apr_array_header_t *conflicts;
-    svn_skel_t *conflict_skel;
-    int i;
+    /* Check if we should combine with a text conflict... */
+    svn_skel_t *conflicts;
     apr_hash_t *prop_names;
 
-    conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
+    SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
-    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                   scratch_pool, scratch_pool));
+    if (! conflicts)
+      {
+        /* No conflict exists, create a basic skel */
+        conflicts = svn_wc__conflict_skel_create(scratch_pool);
 
-    if (conflicts)
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          svn_wc_conflict_description2_t *desc =
-                APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
-
-          if (desc->kind != svn_wc_conflict_kind_text)
-            continue;
-
-          /* Add the existing text conflict */
-          SVN_ERR(svn_wc__conflict_skel_add_text_conflict(
-                                                conflict_skel, db,
-                                                local_abspath,
-                                                desc->my_abspath,
-                                                desc->base_abspath,
-                                                desc->their_abspath,
-                                                scratch_pool,
-                                                scratch_pool));
-
-          break;
-        }
+        SVN_ERR(svn_wc__conflict_skel_set_op_update(conflicts, NULL,
+                                                    scratch_pool,
+                                                    scratch_pool));
+      }
 
     prop_names = apr_hash_make(scratch_pool);
-    SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel, db,
+    SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflicts, db,
                                                     local_abspath,
                                                     prej_abspath,
                                                     NULL, NULL, NULL,
@@ -1459,12 +1421,7 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
                                                     scratch_pool,
                                                     scratch_pool));
 
-    /* ### Set some 'none' operation? */
-    SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_skel, NULL,
-                                                scratch_pool,
-                                                scratch_pool));
-
-    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflict_skel,
+    SVN_ERR(svn_wc__db_op_mark_conflict(db, local_abspath, conflicts,
                                         NULL, scratch_pool));
   }
   return SVN_NO_ERROR;
