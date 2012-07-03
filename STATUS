@@ -30,17 +30,6 @@ Candidate changes:
    Votes:
      +1: gstein, rhuijben
 
- * r1338810, r1339164
-   Fix issue #4184 ("partial svnsync drops properties when converting
-   copies to adds").
-   Justification:
-     Syncs that don't aren't synced at all.
-   Notes:
-     r1338810 taught the code to send properties for demoted copies.
-     r1339164 fixed a theoretical use of uninitialized memory.
-   Votes:
-     +1: cmpilato, rhuijben
-
  * r1306275, and too many other revisions to list here
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
@@ -104,3 +93,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1338810, r1339164
+   Fix issue #4184 ("partial svnsync drops properties when converting
+   copies to adds").
+   Justification:
+     Syncs that don't aren't synced at all.
+   Notes:
+     r1338810 taught the code to send properties for demoted copies.
+     r1339164 fixed a theoretical use of uninitialized memory.
+   Votes:
+     +1: cmpilato, rhuijben, philip
