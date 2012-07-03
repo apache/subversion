@@ -661,13 +661,24 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               svn_wc_conflict_reason_t reason)
 {
   const svn_wc_conflict_description2_t *existing_conflict;
+  svn_error_t *err;
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
-                                    victim_abspath, merge_b->pool,
-                                    merge_b->pool));
+  err = svn_wc__get_tree_conflict(&existing_conflict, merge_b->ctx->wc_ctx,
+                                  victim_abspath, merge_b->pool,
+                                  merge_b->pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+      existing_conflict = FALSE;
+    }
+
   if (existing_conflict == NULL)
     {
       svn_wc_conflict_description2_t *conflict;
@@ -1869,6 +1880,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
             svn_stream_t *new_contents, *new_base_contents;
             apr_hash_t *new_base_props, *new_props;
             const svn_wc_conflict_description2_t *existing_conflict;
+            svn_error_t *err;
 
             /* If this is a merge from the same repository as our
                working copy, we handle adds as add-with-history.
@@ -1904,10 +1916,20 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                                                  scratch_pool, scratch_pool));
               }
 
-            SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict,
-                                              merge_b->ctx->wc_ctx,
-                                              mine_abspath, merge_b->pool,
-                                              merge_b->pool));
+            err = svn_wc__get_tree_conflict(&existing_conflict,
+                                            merge_b->ctx->wc_ctx,
+                                            mine_abspath, merge_b->pool,
+                                            merge_b->pool);
+
+            if (err)
+              {
+                if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                  return svn_error_trace(err);
+
+                svn_error_clear(err);
+                existing_conflict = FALSE;
+              }
+
             if (existing_conflict)
               {
                 svn_boolean_t moved_here;
