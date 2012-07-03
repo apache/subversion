@@ -4574,6 +4574,14 @@ close_file(void *file_baton,
                                    all_work_items,
                                    scratch_pool));
 
+  if (conflict_skel && eb->conflict_func)
+    SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
+                                             conflict_skel,
+                                             NULL /* merge_options */,
+                                             eb->conflict_func,
+                                             eb->conflict_baton,
+                                             scratch_pool));
+
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
 
   if (fb->moved_to_abspath)
