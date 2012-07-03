@@ -1791,6 +1791,19 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__read_conflicts(const apr_array_header_t **conflicts,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_wc__db_read_conflicts(conflicts,
+                                      db, local_abspath,
+                                      result_pool, scratch_pool));
+}
+
 
 /*** Resolving a conflict automatically ***/
 
@@ -1831,8 +1844,8 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
 
   *did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    pool, pool));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                 pool, pool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {
@@ -2073,8 +2086,8 @@ conflict_status_walker(void *baton,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    scratch_pool, iterpool));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                 scratch_pool, iterpool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {

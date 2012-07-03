@@ -392,7 +392,6 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  svn_kind_t node_kind;
   const apr_array_header_t *conflicts;
   int i;
   svn_boolean_t conflicted;
@@ -406,7 +405,7 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   if (tree_conflicted_p)
     *tree_conflicted_p = FALSE;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, &conflicted,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -416,9 +415,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   if (!conflicted)
     return SVN_NO_ERROR;
 
-
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                 scratch_pool, scratch_pool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {

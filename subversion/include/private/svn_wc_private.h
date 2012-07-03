@@ -728,27 +728,6 @@ svn_wc__node_get_lock_info(const char **lock_token,
                            apr_pool_t *scratch_pool);
 
 /**
- * A hack to remove the last entry from libsvn_client.  This simply fetches an
- * some values from WC-NG, and puts the needed bits into the output parameters,
- * allocated in @a result_pool.
- *
- * All output arguments can be NULL to indicate that the
- * caller is not interested in the specific result.
- *
- * @a local_abspath and @a wc_ctx are what you think they are.
- */
-svn_error_t *
-svn_wc__node_get_conflict_info(const char **conflict_old,
-                               const char **conflict_new,
-                               const char **conflict_wrk,
-                               const char **prejfile,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-
-/**
  * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor
  * is true, determine if @a local_abspath has an anchor that should be locked
  * instead; otherwise, @a local_abspath must be a versioned directory.

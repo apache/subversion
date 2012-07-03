@@ -218,8 +218,8 @@ copy_versioned_file(svn_wc__db_t *db,
           const char *conflict_working = NULL;
 
           /* Is there a text conflict at the source path? */
-          SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, src_abspath,
-                                            scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__read_conflicts(&conflicts, db, src_abspath,
+                                         scratch_pool, scratch_pool));
 
           for (i = 0; i < conflicts->nelts; i++)
             {
@@ -793,8 +793,8 @@ remove_node_conflict_markers(svn_wc__db_t *db,
 {
   const apr_array_header_t *conflicts;
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, src_abspath,
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, src_abspath,
+                                 scratch_pool, scratch_pool));
 
   /* Do we have conflict markers that should be removed? */
   if (conflicts != NULL)

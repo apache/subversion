@@ -1338,8 +1338,8 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
 
     conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
 
-    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                      scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
     if (conflicts)
       for (i = 0; i < conflicts->nelts; i++)
@@ -1425,8 +1425,8 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
 
     conflict_skel = svn_wc__conflict_skel_create(scratch_pool);
 
-    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                      scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
     if (conflicts)
       for (i = 0; i < conflicts->nelts; i++)
