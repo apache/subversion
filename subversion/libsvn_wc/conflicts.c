@@ -1805,7 +1805,6 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
   svn_boolean_t tree_conflicted;
   svn_wc_operation_t operation;
   const apr_array_header_t *locations;
-  svn_error_t *err;
 
   SVN_ERR(svn_wc__db_read_conflict(&conflict_skel, db, local_abspath,
                                    scratch_pool, scratch_pool));
@@ -1986,42 +1985,42 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                          svn_wc_conflict_choice_t conflict_choice,
                          svn_cancel_func_t cancel_func_t,
                          void *cancel_baton,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  const char *conflict_old = NULL;
-  const char *conflict_new = NULL;
-  const char *conflict_working = NULL;
-  const char *prop_reject_file = NULL;
-  int i;
-  const apr_array_header_t *conflicts;
+  svn_skel_t *conflicts;
+  svn_boolean_t text_conflicted;
+  svn_boolean_t prop_conflicted;
+  svn_boolean_t tree_conflicted;
   svn_skel_t *work_items = NULL;
   svn_skel_t *work_item;
+  apr_pool_t *pool = scratch_pool;
 
   *did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                 pool, pool));
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
-  for (i = 0; i < conflicts->nelts; i++)
+  if (!conflicts)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted,
+                                     &prop_conflicted, &tree_conflicted,
+                                     db, local_abspath, conflicts,
+                                     scratch_pool, scratch_pool));
+
+  if (resolve_text && text_conflicted)
     {
-      const svn_wc_conflict_description2_t *desc;
-
-      desc = APR_ARRAY_IDX(conflicts, i,
-                           const svn_wc_conflict_description2_t*);
-
-      if (desc->kind == svn_wc_conflict_kind_text)
-        {
-          conflict_old = desc->base_abspath;
-          conflict_new = desc->their_abspath;
-          conflict_working = desc->my_abspath;
-        }
-      else if (desc->kind == svn_wc_conflict_kind_property)
-        prop_reject_file = desc->their_abspath;
-    }
-
-  if (resolve_text)
-    {
+      const char *conflict_old = NULL;
+      const char *conflict_new = NULL;
+      const char *conflict_working = NULL;
       const char *auto_resolve_src;
+      svn_node_kind_t node_kind;
+
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&conflict_working,
+                                                  &conflict_old,
+                                                  &conflict_new,
+                                                  db, local_abspath, conflicts,
+                                                  scratch_pool, scratch_pool));
 
       /* Handle automatic conflict resolution before the temporary files are
        * deleted, if necessary. */
@@ -2093,11 +2092,6 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
                     auto_resolve_src, local_abspath, pool, pool));
           work_items = svn_wc__wq_merge(work_items, work_item, pool);
         }
-    }
-
-  if (resolve_text)
-    {
-      svn_node_kind_t node_kind;
 
       /* Legacy behavior: Only report text conflicts as resolved when at least
          one conflict marker file exists.
@@ -2144,9 +2138,16 @@ resolve_conflict_on_node(svn_boolean_t *did_resolve,
             }
         }
     }
-  if (resolve_props)
+
+  if (resolve_props && prop_conflicted)
     {
       svn_node_kind_t node_kind;
+      const char *prop_reject_file;
+
+      SVN_ERR(svn_wc__conflict_read_prop_conflict(&prop_reject_file,
+                                                  NULL, NULL, NULL, NULL,
+                                                  db, local_abspath, conflicts,
+                                                  scratch_pool, scratch_pool));
 
       /* Legacy behavior: Only report property conflicts as resolved when the
          property reject file exists
