@@ -87,39 +87,6 @@ append_prop_conflict(svn_stream_t *stream,
   return svn_stream_puts(stream, native_text);
 }
 
-
-/* Get the property reject file for LOCAL_ABSPATH in DB.  Set
-   *PREJFILE_ABSPATH to the name of that file, or to NULL if no such
-   file is named.  The file may, or may not, exist on disk. */
-svn_error_t *
-svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *conflicts;
-  int i;
-
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                 scratch_pool, scratch_pool));
-
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      const svn_wc_conflict_description2_t *cd;
-      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
-
-      if (cd->kind == svn_wc_conflict_kind_property)
-        {
-          *prejfile_abspath = apr_pstrdup(result_pool, cd->their_abspath);
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *prejfile_abspath = NULL;
-  return SVN_NO_ERROR;
-}
-
 /*---------------------------------------------------------------------*/
 
 /*** Merging propchanges into the working copy ***/
