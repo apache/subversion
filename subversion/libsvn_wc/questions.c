@@ -40,8 +40,7 @@
 #include "svn_props.h"
 
 #include "wc.h"
-#include "adm_files.h"
-#include "props.h"
+#include "conflicts.h"
 #include "translate.h"
 #include "wc_db.h"
 
@@ -392,114 +391,105 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                               apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  const apr_array_header_t *conflicts;
-  int i;
-  svn_boolean_t conflicted;
+  svn_skel_t *conflicts;
   svn_boolean_t resolved_text = FALSE;
   svn_boolean_t resolved_props = FALSE;
 
-  if (text_conflicted_p)
-    *text_conflicted_p = FALSE;
-  if (prop_conflicted_p)
-    *prop_conflicted_p = FALSE;
-  if (tree_conflicted_p)
-    *tree_conflicted_p = FALSE;
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &conflicted,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath, scratch_pool,
-                               scratch_pool));
-
-  if (!conflicted)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
-                                 scratch_pool, scratch_pool));
-
-  for (i = 0; i < conflicts->nelts; i++)
+  if (!conflicts)
     {
-      const svn_wc_conflict_description2_t *cd;
-      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
+      if (text_conflicted_p)
+        *text_conflicted_p = FALSE;
+      if (prop_conflicted_p)
+        *prop_conflicted_p = FALSE;
+      if (tree_conflicted_p)
+        *tree_conflicted_p = FALSE;
 
-      switch (cd->kind)
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, text_conflicted_p,
+                                     prop_conflicted_p, tree_conflicted_p,
+                                     db, local_abspath, conflicts,
+                                     scratch_pool, scratch_pool));
+
+  if (text_conflicted_p && *text_conflicted_p)
+    {
+      const char *mine_abspath;
+      const char *their_old_abspath;
+      const char *their_abspath;
+      svn_boolean_t done = FALSE;
+
+      /* Look for any text conflict, exercising only as much effort as
+         necessary to obtain a definitive answer.  This only applies to
+         files, but we don't have to explicitly check that entry is a
+         file, since these attributes would never be set on a directory
+         anyway.  A conflict file entry notation only counts if the
+         conflict file still exists on disk.  */
+
+      SVN_ERR(svn_wc__conflict_read_text_conflict(&mine_abspath,
+                                                  &their_old_abspath,
+                                                  &their_abspath,
+                                                  db, local_abspath, conflicts,
+                                                  scratch_pool, scratch_pool));
+
+      if (mine_abspath)
         {
-          case svn_wc_conflict_kind_text:
-            /* Look for any text conflict, exercising only as much effort as
-               necessary to obtain a definitive answer.  This only applies to
-               files, but we don't have to explicitly check that entry is a
-               file, since these attributes would never be set on a directory
-               anyway.  A conflict file entry notation only counts if the
-               conflict file still exists on disk.  */
+          SVN_ERR(svn_io_check_path(mine_abspath, &kind, scratch_pool));
 
-            if (!text_conflicted_p || *text_conflicted_p)
-              break;
+          *text_conflicted_p = (kind == svn_node_file);
 
-            if (cd->base_abspath)
-              {
-                SVN_ERR(svn_io_check_path(cd->base_abspath, &kind,
-                                          scratch_pool));
+          if (*text_conflicted_p)
+            done = TRUE;
+        }
 
-                *text_conflicted_p = (kind == svn_node_file);
+      if (!done && their_abspath)
+        {
+          SVN_ERR(svn_io_check_path(their_abspath, &kind, scratch_pool));
 
-                if (*text_conflicted_p)
-                  break;
-              }
+          *text_conflicted_p = (kind == svn_node_file);
 
-            if (cd->their_abspath)
-              {
-                SVN_ERR(svn_io_check_path(cd->their_abspath, &kind,
-                                          scratch_pool));
+          if (*text_conflicted_p)
+            done = TRUE;
+        }
 
-                *text_conflicted_p = (kind == svn_node_file);
+        if (!done && their_old_abspath)
+        {
+          SVN_ERR(svn_io_check_path(their_old_abspath, &kind, scratch_pool));
 
-                if (*text_conflicted_p)
-                  break;
-              }
+          *text_conflicted_p = (kind == svn_node_file);
 
-            if (cd->my_abspath)
-              {
-                SVN_ERR(svn_io_check_path(cd->my_abspath, &kind,
-                                          scratch_pool));
+          if (*text_conflicted_p)
+            done = TRUE;
+        }
 
-                *text_conflicted_p = (kind == svn_node_file);
+        if (!done && (mine_abspath || their_abspath || their_old_abspath))
+          resolved_text = TRUE; /* Remove in-db conflict marker */
+    }
 
-                if (*text_conflicted_p)
-                  break;
-              }
+  if (prop_conflicted_p && *prop_conflicted_p)
+    {
+      const char *prej_abspath;
 
-            resolved_text = TRUE; /* Remove in-db conflict marker */
-            break;
+      SVN_ERR(svn_wc__conflict_read_prop_conflict(&prej_abspath,
+                                                  NULL, NULL, NULL, NULL,
+                                                  db, local_abspath, conflicts,
+                                                  scratch_pool, scratch_pool));
 
-          case svn_wc_conflict_kind_property:
-            if (!prop_conflicted_p || *prop_conflicted_p)
-              break;
+      if (prej_abspath)
+        {
+          SVN_ERR(svn_io_check_path(prej_abspath, &kind, scratch_pool));
 
-            if (cd->their_abspath)
-              {
-                SVN_ERR(svn_io_check_path(cd->their_abspath, &kind,
-                                          scratch_pool));
+          *prop_conflicted_p = (kind == svn_node_file);
 
-                *prop_conflicted_p = (kind == svn_node_file);
-
-                if (*prop_conflicted_p)
-                  break;
-              }
+          if (! *prop_conflicted_p)
             resolved_props = TRUE; /* Remove in-db conflict marker */
-            break;
-
-          case svn_wc_conflict_kind_tree:
-            if (tree_conflicted_p)
-              *tree_conflicted_p = TRUE;
-
-            break;
-
-          default:
-            /* Ignore other conflict types */
-            break;
         }
     }
+
+  /* tree_conflicts don't have markers, so don't need checking */
 
   if (resolved_text || resolved_props)
     {
