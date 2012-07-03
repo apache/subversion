@@ -2119,22 +2119,20 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Read into CONFLICTS svn_wc_conflict_description2_t* structs
-   for all conflicts that have LOCAL_ABSPATH as victim.
+/* Read the conflict information recorded on LOCAL_ABSPATH in *CONFLICT,
+   an editable conflict skel.
 
-   Victim must be versioned or be part of a tree conflict.
+   If the node exists, but does not have a conflict set *CONFLICT to NULL,
+   otherwise return a SVN_ERR_WC_PATH_NOT_FOUND error.
 
    Allocate *CONFLICTS in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL */
-/* ### Currently there can be just one property conflict recorded
-       per victim */
-/*  ### This function will probably be removed. */
 svn_error_t *
-svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_read_conflict(svn_skel_t **conflict,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 /* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
