@@ -691,8 +691,8 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
 
       /* Read conflicts, to allow deleting the markers after updating the DB */
       if (!keep_local && conflicted)
-        SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                          scratch_pool, iterpool));
+        SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                       scratch_pool, iterpool));
 
     }
 
@@ -836,8 +836,8 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
 
   /* Read conflicts, to allow deleting the markers after updating the DB */
   if (!keep_local && conflicted)
-    SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                      scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath, moved_to_abspath,
                                notify_func, notify_baton,

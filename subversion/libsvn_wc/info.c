@@ -279,9 +279,9 @@ build_info_for_node(svn_wc__info2_t **info,
                                 local_abspath, result_pool, scratch_pool));
 
   if (conflicted)
-    SVN_ERR(svn_wc__db_read_conflicts(&wc_info->conflicts, db,
-                                      local_abspath,
-                                      result_pool, scratch_pool));
+    SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, db,
+                                   local_abspath,
+                                   result_pool, scratch_pool));
   else
     wc_info->conflicts = NULL;
 
@@ -524,9 +524,9 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       info->repos_root_URL = repos_root_url;
       info->repos_UUID = repos_uuid;
 
-      SVN_ERR(svn_wc__db_read_conflicts(&info->wc_info->conflicts,
-                                        wc_ctx->db, this_abspath,
-                                        iterpool, iterpool));
+      SVN_ERR(svn_wc__read_conflicts(&info->wc_info->conflicts,
+                                     wc_ctx->db, this_abspath,
+                                     iterpool, iterpool));
 
       if (! info->wc_info->conflicts || ! info->wc_info->conflicts->nelts)
         continue;

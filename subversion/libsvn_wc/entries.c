@@ -452,9 +452,9 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           child_abspath = svn_dirent_join(dir_abspath, child_name,
                                           scratch_pool);
 
-          SVN_ERR(svn_wc__db_read_conflicts(&child_conflicts,
-                                            db, child_abspath,
-                                            scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__read_conflicts(&child_conflicts,
+                                         db, child_abspath,
+                                         scratch_pool, scratch_pool));
 
           for (j = 0; j < child_conflicts->nelts; j++)
             {
@@ -875,8 +875,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
     {
       const apr_array_header_t *conflicts;
       int j;
-      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, entry_abspath,
-                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__read_conflicts(&conflicts, db, entry_abspath,
+                                     scratch_pool, scratch_pool));
 
       for (j = 0; j < conflicts->nelts; j++)
         {

@@ -101,8 +101,8 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
   const apr_array_header_t *conflicts;
   int i;
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath,
+                                 scratch_pool, scratch_pool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {
