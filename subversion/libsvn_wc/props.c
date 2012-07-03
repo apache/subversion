@@ -1236,7 +1236,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
       svn_boolean_t conflict_remains;
       const svn_prop_t *incoming_change;
       const svn_string_t *from_val, *to_val, *base_val;
-      const svn_string_t *mine_val;
 
       svn_pool_clear(iterpool);
 
@@ -1255,9 +1254,6 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       if (base_merge)
         apr_hash_set(pristine_props, propname, APR_HASH_KEY_STRING, to_val);
-
-      /* Save MINE for later message generation.  */
-      mine_val = apr_hash_get(actual_props, propname, APR_HASH_KEY_STRING);
 
       apr_hash_set(their_props, propname, APR_HASH_KEY_STRING, to_val);
 
