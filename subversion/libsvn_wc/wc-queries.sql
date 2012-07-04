@@ -750,7 +750,7 @@ UPDATE actual_node SET
   prop_reject = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2
 
--- STMT_UPDATE_CLEAR_TREE_CONFLICT
+-- STMT_CLEAR_TREE_CONFLICT
 UPDATE actual_node SET tree_conflict_data = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2
 
@@ -1031,11 +1031,9 @@ WHERE (wc_id = ?1 AND local_relpath = ?2)
 
 -- STMT_INSERT_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (
-  wc_id, local_relpath, parent_relpath, properties, conflict_old,
-  conflict_new,
-  conflict_working, prop_reject, changelist, text_mod,
-  tree_conflict_data)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)
+  wc_id, local_relpath, parent_relpath, properties, changelist, conflict_data,
+  conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
 
 /* ------------------------------------------------------------------------- */
 
