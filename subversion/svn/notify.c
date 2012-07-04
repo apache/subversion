@@ -1119,8 +1119,23 @@ apr_array_header_t *
 svn_cl__notifier_get_conflicted_paths(void *baton, apr_pool_t *result_pool)
 {
   struct notify_baton *nb = baton;
+  apr_array_header_t *sorted_array;
+  apr_array_header_t *result_array;
+  int i;
 
-  return svn_sort__hash(nb->conflicted_paths,
-                        svn_sort_compare_items_as_paths,
-                        result_pool);
+  sorted_array = svn_sort__hash(nb->conflicted_paths,
+                                svn_sort_compare_items_as_paths,
+                                apr_hash_pool_get(nb->conflicted_paths));
+  result_array = apr_array_make(result_pool, sorted_array->nelts,
+                                sizeof(const char *));
+  for (i = 0; i < sorted_array->nelts; i++)
+    {
+      svn_sort__item_t item;
+      
+      item = APR_ARRAY_IDX(sorted_array, i, svn_sort__item_t);
+      APR_ARRAY_PUSH(result_array, const char *) = apr_pstrdup(result_pool,
+                                                               item.key);
+    }
+
+  return result_array;
 }
