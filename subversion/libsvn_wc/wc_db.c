@@ -5955,6 +5955,9 @@ struct revert_list_read_baton {
   svn_boolean_t *copied_here;
   svn_kind_t *kind;
   apr_pool_t *result_pool;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  svn_wc__db_t *db;
+#endif
 };
 
 static svn_error_t *
@@ -6004,10 +6007,12 @@ revert_list_read(void *baton,
           apr_size_t conflict_len;
           const void *conflict_data;
 
-          conflict_data = svn_sqlite__column_blob(stmt, 5, &conflict_len);
+          conflict_data = svn_sqlite__column_blob(stmt, 5, &conflict_len,
+                                                  scratch_pool);
           if (conflict_data)
             {
               svn_boolean_t tree_conflicted;
+
               svn_skel_t *conflicts = svn_skel__parse(conflict_data,
                                                       conflict_len,
                                                       scratch_pool);
@@ -6015,14 +6020,15 @@ revert_list_read(void *baton,
               SVN_ERR(svn_wc__conflict_read_markers(&b->marker_paths,
                                                     b->db, wcroot->abspath,
                                                     conflicts,
-                                                    result_pool,
+                                                    b->result_pool,
                                                     scratch_pool));
 
               SVN_ERR(svn_wc__conflict_read_info(NULL, NULL,
                                                  NULL, NULL, &tree_conflicted,
                                                  b->db, wcroot->abspath,
                                                  conflicts,
-                                                 result_pool, scratch_pool));
+                                                 b->result_pool,
+                                                 scratch_pool));
 
               if (tree_conflicted)
                 *(b->reverted) = TRUE;
@@ -6078,6 +6084,9 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
   b.copied_here = copied_here;
   b.kind = kind;
   b.result_pool = result_pool;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  b.db = db;
+#endif
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, scratch_pool, scratch_pool));

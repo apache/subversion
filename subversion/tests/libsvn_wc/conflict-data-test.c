@@ -452,6 +452,9 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
 
   {
     const apr_array_header_t *markers;
+    const char *old_their_abspath;
+    const char *their_abspath;
+    const char *mine_abspath;
 
     SVN_ERR(svn_wc__conflict_read_markers(&markers,
                                           sbox.wc_ctx->db, sbox.wc_abspath,
@@ -459,6 +462,22 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
 
     SVN_TEST_ASSERT(markers != NULL);
     SVN_TEST_ASSERT(markers->nelts == 3);
+
+    old_their_abspath = APR_ARRAY_IDX(markers, 0, const char *);
+    mine_abspath = APR_ARRAY_IDX(markers, 1, const char *);
+    their_abspath = APR_ARRAY_IDX(markers, 2, const char *);
+
+    SVN_TEST_STRING_ASSERT(
+        svn_dirent_skip_ancestor(sbox.wc_abspath, mine_abspath),
+        "mine");
+
+    SVN_TEST_STRING_ASSERT(
+        svn_dirent_skip_ancestor(sbox.wc_abspath, old_their_abspath),
+        "old-theirs");
+
+    SVN_TEST_STRING_ASSERT(
+        svn_dirent_skip_ancestor(sbox.wc_abspath, their_abspath),
+        "theirs");
   }
 
   return SVN_NO_ERROR;
