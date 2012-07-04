@@ -1192,7 +1192,7 @@ WHERE (local_relpath = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?1))
 
 -- STMT_DROP_REVERT_LIST
-DROP TABLE revert_list
+DROP TABLE IF EXISTS revert_list
 
 -- STMT_CREATE_DELETE_LIST
 DROP TABLE IF EXISTS delete_list;
