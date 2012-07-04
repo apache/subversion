@@ -152,7 +152,8 @@ svn_cl__merge(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
   svn_boolean_t two_sources_specified = TRUE;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *merge_err = SVN_NO_ERROR;
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
@@ -416,16 +417,16 @@ svn_cl__merge(apr_getopt_t *os,
                   ctx, pool),
                 _("Source and target must be different but related branches"));
 
-      err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
-                            opt_state->depth,
-                            opt_state->ignore_ancestry,
-                            opt_state->force,
-                            opt_state->record_only,
-                            opt_state->dry_run,
-                            opt_state->allow_mixed_rev,
-                            allow_local_mods,
-                            allow_switched_subtrees,
-                            options, ctx, pool);
+      merge_err = symmetric_merge(sourcepath1, &peg_revision1, targetpath,
+                                  opt_state->depth,
+                                  opt_state->ignore_ancestry,
+                                  opt_state->force,
+                                  opt_state->record_only,
+                                  opt_state->dry_run,
+                                  opt_state->allow_mixed_rev,
+                                  allow_local_mods,
+                                  allow_switched_subtrees,
+                                  options, ctx, pool);
     }
   else
 #endif
@@ -436,8 +437,8 @@ svn_cl__merge(apr_getopt_t *os,
                   ctx, pool),
                 _("Source and target must be different but related branches"));
 
-      err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
-                              opt_state->dry_run, options, ctx, pool);
+      merge_err = merge_reintegrate(sourcepath1, &peg_revision1, targetpath,
+                                    opt_state->dry_run, options, ctx, pool);
     }
   else if (! two_sources_specified)
     {
@@ -461,19 +462,19 @@ svn_cl__merge(apr_getopt_t *os,
                 _("Source and target must be different but related branches"));
         }
 
-      err = svn_client_merge_peg4(sourcepath1,
-                                  ranges_to_merge,
-                                  &peg_revision1,
-                                  targetpath,
-                                  opt_state->depth,
-                                  opt_state->ignore_ancestry,
-                                  opt_state->force,
-                                  opt_state->record_only,
-                                  opt_state->dry_run,
-                                  opt_state->allow_mixed_rev,
-                                  options,
-                                  ctx,
-                                  pool);
+      merge_err = svn_client_merge_peg4(sourcepath1,
+                                        ranges_to_merge,
+                                        &peg_revision1,
+                                        targetpath,
+                                        opt_state->depth,
+                                        opt_state->ignore_ancestry,
+                                        opt_state->force,
+                                        opt_state->record_only,
+                                        opt_state->dry_run,
+                                        opt_state->allow_mixed_rev,
+                                        options,
+                                        ctx,
+                                        pool);
     }
   else
     {
@@ -481,45 +482,48 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Merge sources must both be "
                                   "either paths or URLs"));
-      err = svn_client_merge4(sourcepath1,
-                              &first_range_start,
-                              sourcepath2,
-                              &first_range_end,
-                              targetpath,
-                              opt_state->depth,
-                              opt_state->ignore_ancestry,
-                              opt_state->force,
-                              opt_state->record_only,
-                              opt_state->dry_run,
-                              opt_state->allow_mixed_rev,
-                              options,
-                              ctx,
-                              pool);
+      merge_err = svn_client_merge4(sourcepath1,
+                                    &first_range_start,
+                                    sourcepath2,
+                                    &first_range_end,
+                                    targetpath,
+                                    opt_state->depth,
+                                    opt_state->ignore_ancestry,
+                                    opt_state->force,
+                                    opt_state->record_only,
+                                    opt_state->dry_run,
+                                    opt_state->allow_mixed_rev,
+                                    options,
+                                    ctx,
+                                    pool);
     }
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
+    err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (conflict_func2 && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
+  if (!err &&
+      conflict_func2 && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
     {
       ctx->conflict_func2 = conflict_func2;
       ctx->conflict_baton2 = conflict_baton2;
-      SVN_ERR(svn_cl__resolve_conflicts(
-                svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
-                opt_state->depth, ctx, pool));
+      err = svn_cl__resolve_conflicts(
+              svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
+              opt_state->depth, ctx, pool);
     }
 
-  if (err)
+  if (merge_err)
     {
-      if(err->apr_err == SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
+      if (merge_err->apr_err ==
+          SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
         {
           err = svn_error_quick_wrap(
-            err,
+            merge_err,
             _("Merge tracking not possible, use --ignore-ancestry or\n"
               "fix invalid mergeinfo in target with 'svn propset'"));
         }
       else if (! opt_state->reintegrate)
         {
+          err = svn_error_compose_create(merge_err, err);
           return svn_cl__may_need_force(err);
         }
     }
