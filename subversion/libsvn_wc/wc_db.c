@@ -5483,6 +5483,9 @@ struct op_mark_resolved_baton
   svn_boolean_t resolved_props;
   svn_boolean_t resolved_tree;
   const svn_skel_t *work_items;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  svn_wc__db_t *db;
+#endif
 };
 
 /* Helper for svn_wc__db_op_mark_resolved */
@@ -5494,9 +5497,48 @@ db_op_mark_resolved(void *baton,
 {
   struct op_mark_resolved_baton *rb = baton;
   svn_sqlite__stmt_t *stmt;
-  int affected_rows;
+  svn_boolean_t have_row;
   int total_affected_rows = 0;
+#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
+  int affected_rows;
+#else
+  svn_boolean_t have_conflict;
+  apr_size_t conflict_len;
+  const void *conflict_data;
+  svn_skel_t *conflicts;
+#endif
 
+  /* Check if we have a conflict in ACTUAL */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (! have_row)
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_NODE_INFO));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      if (have_row)
+        return SVN_NO_ERROR;
+
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                                   path_for_error_message(wcroot,
+                                                          local_relpath,
+                                                          scratch_pool));
+    }
+
+#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
+  SVN_ERR(svn_sqlite__reset(stmt));
   if (rb->resolved_text)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -5521,6 +5563,32 @@ db_op_mark_resolved(void *baton,
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
       total_affected_rows += affected_rows;
     }
+#else
+  conflict_data = svn_sqlite__column_blob(stmt, 2, &conflict_len,
+                                          scratch_pool);
+  conflicts = svn_skel__parse(conflict_data, conflict_len, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_wc__conflict_skel_resolve(&have_conflict, conflicts,
+                                        rb->db, wcroot->abspath,
+                                        rb->resolved_text,
+                                        rb->resolved_props ? "" : NULL,
+                                        rb->resolved_tree,
+                                        scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_ACTUAL_CONFLICT));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  if (have_conflict)
+    {
+      svn_stringbuf_t *sb = svn_skel__unparse(conflicts, scratch_pool);
+
+      SVN_ERR(svn_sqlite__bind_blob(stmt, 3, sb->data, sb->len));
+    }
+
+  SVN_ERR(svn_sqlite__update(&total_affected_rows, stmt));
+#endif
 
   /* Now, remove the actual node if it doesn't have any more useful
      information.  We only need to do this if we've remove data ourselves. */
@@ -5560,6 +5628,9 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
   rb.resolved_text = resolved_text;
   rb.resolved_tree = resolved_tree;
   rb.work_items = work_items;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  rb.db = db;
+#endif
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_op_mark_resolved,
                               &rb, scratch_pool));
@@ -11624,22 +11695,25 @@ get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
     {
       apr_size_t len;
       const void *data = svn_sqlite__column_blob(stmt, 2, &len, scratch_pool);
-      svn_skel_t *conflicts;
+      
       const apr_array_header_t *markers;
       int i;
 
-      conflicts = svn_skel__parse(data, len, scratch_pool);
-
-      /* ### ADD markers to *marker_files */
-      SVN_ERR(svn_wc__conflict_read_markers(&markers, mfb->db, wcroot->abspath,
-                                            conflicts,
-                                            result_pool, scratch_pool));
-
-      for (i = 0; markers && (i < markers->nelts); i++)
+      if (data)
         {
-          const char *marker_abspath = APR_ARRAY_IDX(markers, i, const char*);
+          svn_skel_t *conflicts;
+          conflicts = svn_skel__parse(data, len, scratch_pool);
 
-          apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING, "");
+          SVN_ERR(svn_wc__conflict_read_markers(&markers, mfb->db, wcroot->abspath,
+                                                conflicts,
+                                                result_pool, scratch_pool));
+
+          for (i = 0; markers && (i < markers->nelts); i++)
+            {
+              const char *marker_abspath = APR_ARRAY_IDX(markers, i, const char*);
+
+              apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING, "");
+            }
         }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
