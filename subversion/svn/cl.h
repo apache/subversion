@@ -607,6 +607,10 @@ svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
 svn_boolean_t
 svn_cl__notifier_check_conflicts(void *baton);
 
+/* Return a sorted array of conflicted paths detected during notification. */
+apr_array_header_t *
+svn_cl__notifier_get_conflicted_paths(void *baton, apr_pool_t *result_pool);
+
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {
