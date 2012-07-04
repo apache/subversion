@@ -302,6 +302,19 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
+/* Reads in *MARKERS a list of const char * absolute paths of the marker files
+   referenced from CONFLICT_SKEL.
+ * Allocate the result in RESULT_POOL. Perform temporary allocations in
+ * SCRATCH_POOL.
+ */
+svn_error_t *
+svn_wc__conflict_read_markers(const apr_array_header_t **markers,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
 /* Create the necessary marker files for the conflicts stored in
  * CONFLICT_SKEL and return the work items to fill the markers from
  * the work queue.

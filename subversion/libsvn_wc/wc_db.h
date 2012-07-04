@@ -2106,9 +2106,9 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
-/* Read into *MARKER_FILES the basenames of the immediate children of
-   LOCAL_ABSPATH in DB that are unversioned marker files for text or
-   property conflicts.  The files may have been deleted by the user.
+/* Read into *MARKER_FILES the absolute paths of the marker files
+   of conflicts stored on LOCAL_ABSPATH and its immediate children in DB.
+   The on-disk files may have been deleted by the user.
 
    Allocate *MARKER_FILES in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL */

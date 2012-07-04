@@ -484,16 +484,17 @@ copy_versioned_dir(svn_wc__db_t *db,
           if (svn_wc_is_adm_dir(name, iterpool))
             continue;
 
-          if (marker_files &&
-              apr_hash_get(marker_files, name, APR_HASH_KEY_STRING))
-            continue;
-
           if (cancel_func)
             SVN_ERR(cancel_func(cancel_baton));
 
           svn_pool_clear(iterpool);
           unver_src_abspath = svn_dirent_join(src_abspath, name, iterpool);
           unver_dst_abspath = svn_dirent_join(dst_abspath, name, iterpool);
+
+          if (marker_files &&
+              apr_hash_get(marker_files, unver_src_abspath,
+                           APR_HASH_KEY_STRING))
+            continue;
 
           SVN_ERR(copy_to_tmpdir(&work_item, NULL, db, unver_src_abspath,
                                  unver_dst_abspath, tmpdir_abspath,

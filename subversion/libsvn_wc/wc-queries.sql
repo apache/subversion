@@ -717,13 +717,13 @@ WHERE refcount = 0
 DELETE FROM pristine
 WHERE checksum = ?1 AND refcount = 0
 
--- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
-SELECT local_relpath
+-- STMT_SELECT_CONFLICT_VICTIMS
+SELECT local_relpath, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND
-  NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
+  NOT ((conflict_data IS NULL) AND (conflict_old IS NULL)
        AND (conflict_new IS NULL) AND (conflict_working IS NULL)
-       AND (tree_conflict_data IS NULL))
+       AND (prop_reject IS NULL) AND (tree_conflict_data IS NULL))
 
 -- STMT_SELECT_CONFLICT_MARKER_FILES1
 SELECT prop_reject

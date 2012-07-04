@@ -870,6 +870,47 @@ svn_wc__conflict_read_tree_conflict(svn_wc_conflict_reason_t *local_change,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__conflict_read_markers(const apr_array_header_t **markers,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *conflict;
+  apr_array_header_t *list = NULL;
+
+  SVN_ERR_ASSERT(conflict_skel != NULL);
+
+  for (conflict = conflict_skel->children->next->children;
+       conflict;
+       conflict = conflict->next)
+    {
+      const svn_skel_t *marker;
+
+      for (marker = conflict->next->children;
+           marker;
+           marker = marker->next)
+        {
+          if (! marker->is_atom)
+            continue;
+
+          if (! list)
+            list = apr_array_make(result_pool, 4, sizeof(const char *));
+
+          SVN_ERR(svn_wc__db_from_relpath(
+                        &APR_ARRAY_PUSH(list, const char*),
+                        db, wri_abspath,
+                        apr_pmemdup(scratch_pool, marker->data, marker->len),
+                        result_pool, scratch_pool));
+        }
+    }
+  *markers = list;
+
+  return SVN_NO_ERROR;
+}
+
 /* --------------------------------------------------------------------
  */
 /* Helper for svn_wc__conflict_create_markers */

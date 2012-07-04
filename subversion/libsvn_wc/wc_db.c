@@ -11483,7 +11483,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
   /* Look for text, tree and property conflicts in ACTUAL */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_CONFLICT_VICTIMS));
+                                    STMT_SELECT_CONFLICT_VICTIMS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   new_victims = apr_array_make(result_pool, 0, sizeof(const char *));
@@ -11505,6 +11505,16 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   return SVN_NO_ERROR;
 }
 
+/* Baton for get_conflict_marker_files */
+struct marker_files_baton
+{
+  apr_pool_t *result_pool;
+  apr_hash_t *marker_files;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  svn_wc__db_t *db;
+#endif
+};
+
 /* Locked implementation for svn_wc__db_get_conflict_marker_files */
 static svn_error_t *
 get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
@@ -11512,9 +11522,11 @@ get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_hash_t *marker_files = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(marker_files);
+  struct marker_files_baton *mfb = baton;
+  apr_hash_t *marker_files = mfb->marker_files;
+  apr_pool_t *result_pool = mfb->result_pool;
 
+#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
   /* Look for property conflicts on the directory in ACTUAL.
      (A directory can't have text conflicts) */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -11525,18 +11537,18 @@ get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
   if (have_row)
     {
       const char *marker_relpath;
-      const char *base_name;
 
       marker_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
-      base_name = svn_relpath_skip_ancestor(local_relpath, marker_relpath);
-
-      /* Verify if the marker file is directly within LOCAL_ABSPATH */
-      if (base_name && svn_path_is_single_path_component(base_name))
+      if (marker_relpath)
         {
-          base_name = apr_pstrdup(result_pool, base_name);
-          apr_hash_set(marker_files, base_name, APR_HASH_KEY_STRING,
-                       base_name);
+          const char *marker_abspath;
+
+          marker_abspath = svn_dirent_join(wcroot->abspath, marker_relpath,
+                                           result_pool);
+
+          apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING,
+                       "");
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -11556,26 +11568,83 @@ get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
       for (i = 0; i < 4; i++)
         {
           const char *marker_relpath;
-          const char *base_name;
 
           marker_relpath = svn_sqlite__column_text(stmt, i, NULL);
 
-          if (!marker_relpath)
-            continue;
-
-          base_name = svn_relpath_skip_ancestor(local_relpath, marker_relpath);
-
-          /* Verify if the marker file is directly within LOCAL_ABSPATH */
-          if (base_name && svn_path_is_single_path_component(base_name))
+          if (marker_relpath)
             {
-              base_name = apr_pstrdup(result_pool, base_name);
-              apr_hash_set(marker_files, base_name, APR_HASH_KEY_STRING,
-                           base_name);
+              const char *marker_abspath;
+
+              marker_abspath = svn_dirent_join(wcroot->abspath, marker_relpath,
+                                               result_pool);
+
+              apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING,
+                           "");
             }
         }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
+#else
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row && !svn_sqlite__column_is_null(stmt, 2))
+    {
+      apr_size_t len;
+      const void *data = svn_sqlite__column_blob(stmt, 2, &len, scratch_pool);
+      svn_skel_t *conflicts;
+      const apr_array_header_t *markers;
+      int i;
+
+      conflicts = svn_skel__parse(data, len, scratch_pool);
+
+      /* ### ADD markers to *marker_files */
+      SVN_ERR(svn_wc__conflict_read_markers(&markers, mfb->db, wcroot->abspath,
+                                            conflicts,
+                                            result_pool, scratch_pool));
+
+      for (i = 0; markers && (i < markers->nelts); i++)
+        {
+          const char *marker_abspath = APR_ARRAY_IDX(markers, i, const char*);
+
+          apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING, "");
+        }
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_CONFLICT_VICTIMS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      apr_size_t len;
+      const void *data = svn_sqlite__column_blob(stmt, 2, &len, scratch_pool);
+      svn_skel_t *conflicts;
+      const apr_array_header_t *markers;
+      int i;
+
+      conflicts = svn_skel__parse(data, len, scratch_pool);
+
+      /* ### ADD markers to *marker_files */
+      SVN_ERR(svn_wc__conflict_read_markers(&markers, mfb->db, wcroot->abspath,
+                                            conflicts,
+                                            result_pool, scratch_pool));
+
+      for (i = 0; markers && (i < markers->nelts); i++)
+        {
+          const char *marker_abspath = APR_ARRAY_IDX(markers, i, const char*);
+
+          apr_hash_set(marker_files, marker_abspath, APR_HASH_KEY_STRING, "");
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+#endif
 
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
@@ -11589,20 +11658,24 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  apr_hash_t *markers;
+  struct marker_files_baton mfb;
 
   /* The parent should be a working copy directory. */
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  markers = apr_hash_make(result_pool);
+  mfb.result_pool = result_pool;
+  mfb.marker_files = apr_hash_make(result_pool);
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  mfb.db = db;
+#endif
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, get_conflict_marker_files,
-                              markers, scratch_pool));
+                              &mfb, scratch_pool));
 
-  if (apr_hash_count(markers))
-    *marker_files = markers;
+  if (apr_hash_count(mfb.marker_files))
+    *marker_files = mfb.marker_files;
   else
     *marker_files = NULL;
 
