@@ -1381,7 +1381,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       SVN_ERR(svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
                                   NULL, NULL, original_props, props,
                                   merge_b->dry_run,
-                                  NULL, NULL, /* postpone conflicts */
+                                  ctx->conflict_func2, ctx->conflict_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
     }
@@ -1695,7 +1695,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                                   left, right,
                                   original_props, prop_changes,
                                   merge_b->dry_run,
-                                  NULL, NULL, /* postpone conflicts */
+                                  ctx->conflict_func2, ctx->conflict_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool));
     }
@@ -9720,22 +9720,6 @@ merge_locked(const char *source1,
   if (err)
     return svn_error_trace(err);
 
-  if (ctx->conflict_func2)
-    {
-      /* Resolve conflicts within the merge target. */
-      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
-                                        depth,
-                                        TRUE /* resolve_text */,
-                                        "" /* resolve_prop (ALL props) */,
-                                        TRUE /* resolve_tree */,
-                                        svn_wc_conflict_choose_unspecified,
-                                        ctx->conflict_func2,
-                                        ctx->conflict_baton2,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        ctx->notify_func2, ctx->notify_baton2,
-                                        scratch_pool));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -11033,22 +11017,6 @@ merge_peg_locked(const char *source_path_or_url,
   /* We're done with our RA session. */
   svn_pool_destroy(sesspool);
 
-  if (ctx->conflict_func2)
-    {
-      /* Resolve conflicts within the merge target. */
-      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
-                                        depth,
-                                        TRUE /* resolve_text */,
-                                        "" /* resolve_prop (ALL props) */,
-                                        TRUE /* resolve_tree */,
-                                        svn_wc_conflict_choose_unspecified,
-                                        ctx->conflict_func2,
-                                        ctx->conflict_baton2,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        ctx->notify_func2, ctx->notify_baton2,
-                                        scratch_pool));
-    }
-
   return svn_error_trace(err);
 }
 
@@ -11701,22 +11669,6 @@ do_symmetric_merge_locked(const svn_client__symmetric_merge_t *merge,
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
   SVN_ERR(err);
-
-  if (ctx->conflict_func2)
-    {
-      /* Resolve conflicts within the merge target. */
-      SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, target_abspath,
-                                        depth,
-                                        TRUE /* resolve_text */,
-                                        "" /* resolve_prop (ALL props) */,
-                                        TRUE /* resolve_tree */,
-                                        svn_wc_conflict_choose_unspecified,
-                                        ctx->conflict_func2,
-                                        ctx->conflict_baton2,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        ctx->notify_func2, ctx->notify_baton2,
-                                        scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
