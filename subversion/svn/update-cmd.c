@@ -183,7 +183,10 @@ svn_cl__update(apr_getopt_t *os,
     {
       ctx->conflict_func2 = conflict_func2;
       ctx->conflict_baton2 = conflict_baton2;
-      SVN_ERR(svn_cl__resolve_conflicts(targets, depth, ctx, scratch_pool));
+      SVN_ERR(svn_cl__resolve_conflicts(
+                svn_cl__notifier_get_conflicted_paths(nwb.wrapped_baton,
+                                                      scratch_pool),
+                depth, ctx, scratch_pool));
     }
 
   if (nwb.had_externals_error)
