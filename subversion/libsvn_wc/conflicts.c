@@ -968,16 +968,19 @@ svn_wc__conflict_read_markers(const apr_array_header_t **markers,
 
   SVN_ERR_ASSERT(conflict_skel != NULL);
 
+  /* Walk the conflicts */
   for (conflict = conflict_skel->children->next->children;
        conflict;
        conflict = conflict->next)
     {
       const svn_skel_t *marker;
 
-      for (marker = conflict->next->children;
+      /* Get the list of markers stored per conflict */
+      for (marker = conflict->children->next->children;
            marker;
            marker = marker->next)
         {
+          /* Skip placeholders */
           if (! marker->is_atom)
             continue;
 
