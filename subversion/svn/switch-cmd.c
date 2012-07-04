@@ -102,6 +102,8 @@ svn_cl__switch(apr_getopt_t *os,
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
+  svn_wc_conflict_resolver_func2_t conflict_func2 = ctx->conflict_func2;
+  void *conflict_baton2 = ctx->conflict_baton2;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -156,6 +158,11 @@ svn_cl__switch(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
+  /* Postpone conflict resolution during the switch operation.
+   * If any conflicts occur we'll run the conflict resolver later. */
+  ctx->conflict_func2 = NULL;
+  ctx->conflict_baton2 = NULL;
+
   /* Do the 'switch' update. */
   err = svn_client_switch3(NULL, target, switch_url, &peg_revision,
                            &(opt_state->start_revision), depth,
@@ -177,6 +184,16 @@ svn_cl__switch(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
+
+  if (conflict_func2 && svn_cl__notifier_check_conflicts(nwb.wrapped_baton))
+    {
+      ctx->conflict_func2 = conflict_func2;
+      ctx->conflict_baton2 = conflict_baton2;
+      SVN_ERR(svn_cl__resolve_conflicts(
+                svn_cl__notifier_get_conflicted_paths(nwb.wrapped_baton,
+                                                      scratch_pool),
+                depth, ctx, scratch_pool));
+    }
 
   if (nwb.had_externals_error)
     return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
