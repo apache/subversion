@@ -432,11 +432,9 @@ INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
 VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_FINALIZE_CHANGELIST
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_insert;
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_set;
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear;
-DROP TABLE IF EXISTS changelist_list;
-DROP TABLE IF EXISTS targets_list
+DROP TRIGGER trigger_changelist_list_change;
+DROP TABLE changelist_list;
+DROP TABLE targets_list
 
 -- STMT_SELECT_CHANGELIST_LIST
 SELECT wc_id, local_relpath, notify, changelist
@@ -455,7 +453,7 @@ CREATE TEMPORARY TABLE targets_list (
 /* need more indicies? */
 
 -- STMT_DROP_TARGETS_LIST
-DROP TABLE IF EXISTS targets_list
+DROP TABLE targets_list
 
 -- STMT_INSERT_TARGET
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
@@ -1114,8 +1112,7 @@ SELECT local_relpath, properties FROM target_prop_cache
 ORDER BY local_relpath
 
 -- STMT_DROP_TARGET_PROP_CACHE
-DROP TABLE IF EXISTS target_prop_cache;
-
+DROP TABLE target_prop_cache;
 
 -- STMT_CREATE_REVERT_LIST
 DROP TABLE IF EXISTS revert_list;
@@ -1174,9 +1171,9 @@ BEGIN
 END
 
 -- STMT_DROP_REVERT_LIST_TRIGGERS
-DROP TRIGGER IF EXISTS trigger_revert_list_nodes;
-DROP TRIGGER IF EXISTS trigger_revert_list_actual_delete;
-DROP TRIGGER IF EXISTS trigger_revert_list_actual_update
+DROP TRIGGER trigger_revert_list_nodes;
+DROP TRIGGER trigger_revert_list_actual_delete;
+DROP TRIGGER trigger_revert_list_actual_update
 
 -- STMT_SELECT_REVERT_LIST
 SELECT actual, notify, kind, op_depth, repos_id, conflict_data,
@@ -1210,7 +1207,7 @@ WHERE (local_relpath = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?1))
 
 -- STMT_DROP_REVERT_LIST
-DROP TABLE IF EXISTS revert_list
+DROP TABLE revert_list
 
 -- STMT_CREATE_DELETE_LIST
 DROP TABLE IF EXISTS delete_list;
@@ -1239,7 +1236,7 @@ SELECT local_relpath FROM delete_list
 ORDER BY local_relpath
 
 -- STMT_FINALIZE_DELETE
-DROP TABLE IF EXISTS delete_list
+DROP TABLE delete_list
 
 
 /* ------------------------------------------------------------------------- */
