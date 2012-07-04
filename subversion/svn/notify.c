@@ -1086,3 +1086,10 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
     nwb->wrapped_func(nwb->wrapped_baton, n, pool);
 }
 
+svn_boolean_t
+svn_cl__notifier_check_conflicts(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  return (nb->text_conflicts || nb->prop_conflicts || nb->tree_conflicts);
+}

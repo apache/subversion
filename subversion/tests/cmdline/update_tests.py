@@ -3916,10 +3916,10 @@ def update_accept_conflicts(sbox):
                                      ["Updating '%s':\n" % (mu_path_backup),
                                       'C    %s\n' % (mu_path_backup,),
                                       'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (mu_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (mu_path_backup)],
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3930,10 +3930,10 @@ def update_accept_conflicts(sbox):
                                      ["Updating '%s':\n" % (alpha_path_backup),
                                       'C    %s\n' % (alpha_path_backup,),
                                       'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (alpha_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (alpha_path_backup)],
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3944,10 +3944,10 @@ def update_accept_conflicts(sbox):
                                      ["Updating '%s':\n" % (beta_path_backup),
                                       'C    %s\n' % (beta_path_backup,),
                                       'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (beta_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (beta_path_backup)],
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3960,10 +3960,10 @@ def update_accept_conflicts(sbox):
                                       ["Updating '%s':\n" % (pi_path_backup),
                                        'C    %s\n' % (pi_path_backup,),
                                        'Updated to revision 2.\n',
-                                      "Resolved conflicted state of '%s'\n"
-                                        % (pi_path_backup),
                                       'Summary of conflicts:\n',
-                                      '  Text conflicts: 1\n'],
+                                      '  Text conflicts: 1\n',
+                                      "Resolved conflicted state of '%s'\n"
+                                        % (pi_path_backup)],
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       pi_path_backup)

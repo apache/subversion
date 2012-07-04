@@ -814,3 +814,39 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__resolve_conflicts(apr_array_header_t *targets,
+                          svn_depth_t depth,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      svn_error_t *err = SVN_NO_ERROR;
+      const char *local_abspath;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+      err = svn_client_resolve(local_abspath, depth,
+                               svn_wc_conflict_choose_unspecified,
+                               ctx, iterpool);
+      if (err)
+        {
+          if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+              && (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
+            return svn_error_trace(err);
+
+          svn_error_clear(err);
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
