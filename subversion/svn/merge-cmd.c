@@ -517,7 +517,7 @@ svn_cl__merge(apr_getopt_t *os,
           SVN_ERR_CLIENT_INVALID_MERGEINFO_NO_MERGETRACKING)
         {
           err = svn_error_quick_wrap(
-            merge_err,
+            svn_error_compose_create(merge_err, err),
             _("Merge tracking not possible, use --ignore-ancestry or\n"
               "fix invalid mergeinfo in target with 'svn propset'"));
         }
