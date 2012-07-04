@@ -603,6 +603,10 @@ svn_cl__notifier_mark_export(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
 
+/* Return TRUE if any conflicts were detected during notification. */
+svn_boolean_t
+svn_cl__notifier_check_conflicts(void *baton);
+
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {
@@ -849,6 +853,14 @@ svn_cl__check_related_source_and_target(const char *path_or_url1,
                                         const svn_opt_revision_t *revision2,
                                         svn_client_ctx_t *ctx,
                                         apr_pool_t *pool);
+
+/* Run the conflict resolver for all targets in the TARGETS list with
+ * the specified DEPTH. */
+svn_error_t *
+svn_cl__resolve_conflicts(apr_array_header_t *targets,
+                          svn_depth_t depth,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

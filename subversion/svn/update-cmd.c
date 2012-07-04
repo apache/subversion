@@ -110,6 +110,8 @@ svn_cl__update(apr_getopt_t *os,
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
   apr_array_header_t *result_revs;
+  svn_wc_conflict_resolver_func2_t conflict_func2 = ctx->conflict_func2;
+  void *conflict_baton2 = ctx->conflict_baton2;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -154,6 +156,11 @@ svn_cl__update(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
+  /* Postpone conflict resolution during the update operation.
+   * If any conflicts occur we'll run the conflict resolver later. */
+  ctx->conflict_func2 = NULL;
+  ctx->conflict_baton2 = NULL;
+
   SVN_ERR(svn_client_update4(&result_revs, targets,
                              &(opt_state->start_revision),
                              depth, depth_is_sticky,
@@ -170,6 +177,13 @@ svn_cl__update(apr_getopt_t *os,
        * passing is the one that was originally provided by
        * svn_cl__get_notifier(), but that isn't promised. */
       SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
+    }
+
+  if (conflict_func2 && svn_cl__notifier_check_conflicts(nwb.wrapped_baton))
+    {
+      ctx->conflict_func2 = conflict_func2;
+      ctx->conflict_baton2 = conflict_baton2;
+      SVN_ERR(svn_cl__resolve_conflicts(targets, depth, ctx, scratch_pool));
     }
 
   if (nwb.had_externals_error)
