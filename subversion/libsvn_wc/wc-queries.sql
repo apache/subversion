@@ -107,16 +107,6 @@ conflict_old, conflict_new, conflict_working, prop_reject, tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
 
--- STMT_SELECT_ACTUAL_TREE_CONFLICT
-SELECT tree_conflict_data
-FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2 AND tree_conflict_data IS NOT NULL
-
--- STMT_SELECT_ACTUAL_CHANGELIST
-SELECT changelist
-FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2 AND changelist IS NOT NULL
-
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
      ORDER BY local_relpath, op_depth DESC
@@ -605,6 +595,7 @@ WHERE wc_id = ?1
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND tree_conflict_data IS NULL
+      AND conflict_data IS NULL
 
 -- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST
 DELETE FROM actual_node
