@@ -11747,7 +11747,7 @@ get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
   if (have_row && !svn_sqlite__column_is_null(stmt, 2))
     {
       apr_size_t len;
-      const void *data = svn_sqlite__column_blob(stmt, 2, &len, scratch_pool);
+      const void *data = svn_sqlite__column_blob(stmt, 2, &len, NULL);
       svn_skel_t *conflicts;
       const apr_array_header_t *markers;
       int i;
@@ -11776,8 +11776,8 @@ get_conflict_marker_files(void *baton, svn_wc__db_wcroot_t *wcroot,
   while (have_row)
     {
       apr_size_t len;
-      const void *data = svn_sqlite__column_blob(stmt, 2, &len, scratch_pool);
-      
+      const void *data = svn_sqlite__column_blob(stmt, 1, &len, NULL);
+
       const apr_array_header_t *markers;
       int i;
 
