@@ -87,16 +87,18 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                 const svn_opt_revision_t *revision,
                                 apr_pool_t *scratch_pool);
 
-/* Set *COPYFROM_PATH and *COPYFROM_REV to the path (without initial '/')
-   and revision that served as the source of the copy from which PATH_OR_URL
-   at REVISION was created, or NULL and SVN_INVALID_REVNUM (respectively) if
-   PATH_OR_URL at REVISION was not the result of a copy operation. */
-svn_error_t *svn_client__get_copy_source(const char *path_or_url,
-                                         const svn_opt_revision_t *revision,
-                                         const char **copyfrom_path,
-                                         svn_revnum_t *copyfrom_rev,
-                                         svn_client_ctx_t *ctx,
-                                         apr_pool_t *pool);
+/* Set *ORIGINAL_REPOS_RELPATH and *ORIGINAL_REVISION to the original location
+   that served as the source of the copy from which PATH_OR_URL at REVISION was
+   created, or NULL and SVN_INVALID_REVNUM (respectively) if PATH_OR_URL at
+   REVISION was not the result of a copy operation. */
+svn_error_t *
+svn_client__get_copy_source(const char **original_repos_relpath,
+                            svn_revnum_t *original_revision,
+                            const char *path_or_url,
+                            const svn_opt_revision_t *revision,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *START_URL and *START_REVISION (and maybe *END_URL
    and *END_REVISION) to the revisions and repository URLs of one

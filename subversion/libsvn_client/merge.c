@@ -597,13 +597,15 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
   right_relpath = svn_client__pathrev_relpath(merge_source->loc2,
                                               pool);
 
-  *left = svn_wc_conflict_version_create(
+  *left = svn_wc_conflict_version_create2(
             merge_source->loc1->repos_root_url,
+            merge_source->loc1->repos_uuid,
             svn_relpath_join(left_relpath, child, pool),
             merge_source->loc1->rev, node_kind, pool);
 
-  *right = svn_wc_conflict_version_create(
+  *right = svn_wc_conflict_version_create2(
              merge_source->loc2->repos_root_url,
+             merge_source->loc2->repos_uuid,
              svn_relpath_join(right_relpath, child, pool),
              merge_source->loc2->rev, node_kind, pool);
 
@@ -6574,8 +6576,9 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
             {
               svn_location_segment_t *segment2 =
                 APR_ARRAY_IDX(segments, 1, svn_location_segment_t *);
-              const char *copyfrom_path, *segment_url;
-              svn_revnum_t copyfrom_rev;
+              const char *segment_url;
+              const char *original_repos_relpath;
+              svn_revnum_t original_revision;
               svn_opt_revision_t range_start_rev;
               range_start_rev.kind = svn_opt_revision_number;
               range_start_rev.value.number = segment2->range_start;
@@ -6583,24 +6586,23 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
               segment_url = svn_path_url_add_component2(
                               source_loc->repos_root_url, segment2->path,
                               scratch_pool);
-              SVN_ERR(svn_client__get_copy_source(segment_url,
-                                                  &range_start_rev,
-                                                  &copyfrom_path,
-                                                  &copyfrom_rev,
-                                                  ctx, result_pool));
+              SVN_ERR(svn_client__get_copy_source(&original_repos_relpath,
+                                                  &original_revision,
+                                                  segment_url,
+                                                  &range_start_rev, ctx,
+                                                  result_pool, scratch_pool));
               /* Got copyfrom data?  Fix up the first segment to cover
                  back to COPYFROM_REV + 1, and then prepend a new
                  segment covering just COPYFROM_REV. */
-              if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+              if (original_repos_relpath)
                 {
                   svn_location_segment_t *new_segment =
                     apr_pcalloc(result_pool, sizeof(*new_segment));
                   /* Skip the leading '/'. */
-                  new_segment->path = (*copyfrom_path == '/')
-                    ? copyfrom_path + 1 : copyfrom_path;
-                  new_segment->range_start = copyfrom_rev;
-                  new_segment->range_end = copyfrom_rev;
-                  segment->range_start = copyfrom_rev + 1;
+                  new_segment->path = original_repos_relpath;
+                  new_segment->range_start = original_revision;
+                  new_segment->range_end = original_revision;
+                  segment->range_start = original_revision + 1;
                   svn_sort__array_insert(&new_segment, segments, 0);
                 }
             }
