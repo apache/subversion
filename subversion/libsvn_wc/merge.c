@@ -1114,12 +1114,13 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
     svn_kind_t kind;
     svn_boolean_t had_props;
     svn_boolean_t props_mod;
+    svn_boolean_t conflicted;
 
     SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, &had_props, &props_mod, NULL, NULL,
-                                 NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 &conflicted, NULL, &had_props, &props_mod,
+                                 NULL, NULL, NULL,
                                  wc_ctx->db, target_abspath,
                                  scratch_pool, scratch_pool));
 
@@ -1130,6 +1131,31 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
         if (merge_props_outcome)
           *merge_props_outcome = svn_wc_notify_state_unchanged;
         return SVN_NO_ERROR;
+      }
+
+    if (conflicted)
+      {
+        svn_boolean_t text_conflicted;
+        svn_boolean_t prop_conflicted;
+        svn_boolean_t tree_conflicted;
+
+        SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
+                                              &prop_conflicted,
+                                              &tree_conflicted,
+                                              wc_ctx->db, target_abspath,
+                                              scratch_pool));
+
+        /* We can't install two prop conflicts on a single node, so
+           avoid even checking that we have to merge it */
+        if (text_conflicted || prop_conflicted || tree_conflicted)
+          {
+            return svn_error_createf(
+                            SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                            _("Can't merge into conflicted node '%s'"),
+                            svn_dirent_local_style(target_abspath,
+                                                   scratch_pool));
+          }
+        /* else: Conflict was resolved by removing markers */
       }
 
     if (merge_props_outcome && had_props)

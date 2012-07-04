@@ -204,6 +204,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
   apr_hash_t *new_actual_props;
   svn_boolean_t had_props, props_mod;
   svn_boolean_t have_base;
+  svn_boolean_t conflicted;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict_skel = NULL;
 
@@ -212,7 +213,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &conflicted, NULL,
                                &had_props, &props_mod, &have_base, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
@@ -236,6 +237,30 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                     _("The node '%s' does not have properties in this state."),
                     svn_dirent_local_style(local_abspath, scratch_pool));
     }
+  else if (conflicted)
+      {
+        svn_boolean_t text_conflicted;
+        svn_boolean_t prop_conflicted;
+        svn_boolean_t tree_conflicted;
+
+        SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
+                                              &prop_conflicted,
+                                              &tree_conflicted,
+                                              db, local_abspath,
+                                              scratch_pool));
+
+        /* We can't install two text/prop conflicts on a single node, so
+           avoid even checking that we have to merge it */
+        if (text_conflicted || prop_conflicted || tree_conflicted)
+          {
+            return svn_error_createf(
+                            SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                            _("Can't merge into conflicted node '%s'"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+          }
+        /* else: Conflict was resolved by removing markers */
+      }
 
   /* The PROPCHANGES may not have non-"normal" properties in it. If entry
      or wc props were allowed, then the following code would install them

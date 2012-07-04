@@ -955,6 +955,12 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
   if (prop_conflicted)
     {
+      const char *marker_abspath = NULL;
+      svn_node_kind_t kind;
+      const char *marker_dir;
+      const char *marker_name;
+      const char *marker_relpath;
+
       /* Ok, currently we have to do a few things for property conflicts:
          - Create a marker file
          - Create a WQ item that sets the marker name
@@ -962,52 +968,23 @@ svn_wc__conflict_create_markers(svn_skel_t **work_items,
 
          This can be simplified once we really store conflict_skel in wc.db */
 
-      const char *marker_abspath = NULL;
-      const char *marker_relpath;
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
-      /* ### as the legacy code, check if we already have a prejfile.
-
-         ### Triggered by merge_tests.py 90 on a double property merge.
-         ### Needs further review as we will probably loose the original
-         ### conflict by overwriting. (Legacy issue)  */
-      {
-        svn_skel_t *old_conflict;
-        SVN_ERR(svn_wc__db_read_conflict(&old_conflict, db, local_abspath,
-                                         scratch_pool, scratch_pool));
-
-        if (old_conflict)
-          SVN_ERR(svn_wc__conflict_read_prop_conflict(&marker_abspath,
-                                                      NULL, NULL, NULL, NULL,
-                                                      db, local_abspath,
-                                                      old_conflict,
-                                                      scratch_pool,
-                                                      scratch_pool));
-      }
-
-      if (! marker_abspath)
+      if (kind == svn_node_dir)
         {
-          svn_node_kind_t kind;
-          const char *marker_dir;
-          const char *marker_name;
-
-          SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
-
-          if (kind == svn_node_dir)
-            {
-              marker_dir = local_abspath;
-              marker_name = SVN_WC__THIS_DIR_PREJ;
-            }
-          else
-            svn_dirent_split(&marker_dir, &marker_name, local_abspath,
-                             scratch_pool);
-
-          SVN_ERR(svn_io_open_uniquely_named(NULL, &marker_abspath,
-                                             marker_dir,
-                                             marker_name,
-                                             SVN_WC__PROP_REJ_EXT,
-                                             svn_io_file_del_none,
-                                             scratch_pool, scratch_pool));
+          marker_dir = local_abspath;
+          marker_name = SVN_WC__THIS_DIR_PREJ;
         }
+      else
+        svn_dirent_split(&marker_dir, &marker_name, local_abspath,
+                         scratch_pool);
+
+      SVN_ERR(svn_io_open_uniquely_named(NULL, &marker_abspath,
+                                         marker_dir,
+                                         marker_name,
+                                         SVN_WC__PROP_REJ_EXT,
+                                         svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_to_relpath(&marker_relpath, db, local_abspath,
                                     marker_abspath, result_pool, result_pool));
