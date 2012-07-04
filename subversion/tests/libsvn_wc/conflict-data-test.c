@@ -450,6 +450,17 @@ test_serialize_text_conflict(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(APR_ARRAY_IDX(locs, 1, svn_wc_conflict_version_t*) != NULL);
   }
 
+  {
+    const apr_array_header_t *markers;
+
+    SVN_ERR(svn_wc__conflict_read_markers(&markers,
+                                          sbox.wc_ctx->db, sbox.wc_abspath,
+                                          conflict_skel, pool, pool));
+
+    SVN_TEST_ASSERT(markers != NULL);
+    SVN_TEST_ASSERT(markers->nelts == 3);
+  }
+
   return SVN_NO_ERROR;
 }
 
