@@ -990,7 +990,8 @@ svn_wc__conflict_read_markers(const apr_array_header_t **markers,
           SVN_ERR(svn_wc__db_from_relpath(
                         &APR_ARRAY_PUSH(list, const char*),
                         db, wri_abspath,
-                        apr_pmemdup(scratch_pool, marker->data, marker->len),
+                        apr_pstrmemdup(scratch_pool, marker->data,
+                                       marker->len),
                         result_pool, scratch_pool));
         }
     }
