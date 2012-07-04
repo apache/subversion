@@ -1516,21 +1516,26 @@ insert_actual_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_properties(stmt, 4, actual_node->properties,
                                         scratch_pool));
 
+  if (actual_node->changelist)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, actual_node->changelist));
+
+#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
   if (actual_node->conflict_old)
     {
-      SVN_ERR(svn_sqlite__bind_text(stmt, 5, actual_node->conflict_old));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 6, actual_node->conflict_new));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->conflict_working));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->conflict_old));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 8, actual_node->conflict_new));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 9, actual_node->conflict_working));
     }
 
   if (actual_node->prop_reject)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, actual_node->prop_reject));
-
-  if (actual_node->changelist)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 9, actual_node->changelist));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 10, actual_node->prop_reject));
 
   if (actual_node->tree_conflict_data)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 10, actual_node->tree_conflict_data));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 11, actual_node->tree_conflict_data));
+#else
+  SVN_ERR_MALFUNCTION();
+  /* ### TODO; Bind conflict skel in column 6 */
+#endif
 
   /* Execute and reset the insert clause. */
   return svn_error_trace(svn_sqlite__insert(NULL, stmt));

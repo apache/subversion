@@ -3316,11 +3316,10 @@ copy_actual(svn_wc__db_wcroot_t *src_wcroot,
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
                                             STMT_INSERT_ACTUAL_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "issbssssss",
+          SVN_ERR(svn_sqlite__bindf(stmt, "issbs",
                                     dst_wcroot->wc_id, dst_relpath,
                                 svn_relpath_dirname(dst_relpath, scratch_pool),
-                                    properties, props_size, NULL, NULL, NULL,
-                                    NULL, changelist, NULL));
+                                    properties, props_size, changelist));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
         }
     }
@@ -5517,7 +5516,7 @@ db_op_mark_resolved(void *baton,
   if (rb->resolved_tree)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_CLEAR_TREE_CONFLICT));
+                                        STMT_CLEAR_TREE_CONFLICT));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
       total_affected_rows += affected_rows;
