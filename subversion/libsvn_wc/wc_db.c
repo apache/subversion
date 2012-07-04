@@ -5951,10 +5951,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 
 struct revert_list_read_baton {
   svn_boolean_t *reverted;
-  const char **conflict_old;
-  const char **conflict_new;
-  const char **conflict_working;
-  const char **prop_reject;
+  apr_array_header_t *marker_paths;
   svn_boolean_t *copied_here;
   svn_kind_t *kind;
   apr_pool_t *result_pool;
@@ -5971,8 +5968,7 @@ revert_list_read(void *baton,
   svn_boolean_t have_row;
 
   *(b->reverted) = FALSE;
-  *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
-  *(b->prop_reject) = NULL;
+  b->marker_paths = NULL;
   *(b->copied_here) = FALSE;
   *(b->kind) = svn_kind_unknown;
 
@@ -5982,37 +5978,59 @@ revert_list_read(void *baton,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      svn_boolean_t is_actual = svn_sqlite__column_boolean(stmt, 5);
+      svn_boolean_t is_actual = svn_sqlite__column_boolean(stmt, 0);
       svn_boolean_t another_row = FALSE;
 
       if (is_actual)
         {
-          if (!svn_sqlite__column_is_null(stmt, 4))
+#if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
+          int i;
+
+          for (i = 6; i <= 9; i++)
+            {
+              const char *relpath = svn_sqlite__column_text(stmt, i, NULL);
+
+              if (! relpath)
+                continue;
+
+              if (!b->marker_paths)
+                b->marker_paths = apr_array_make(b->result_pool, 4,
+                                                 sizeof(const char*));
+
+              APR_ARRAY_PUSH(b->marker_paths, const char *)
+                  = svn_dirent_join(wcroot->abspath, relpath, b->result_pool);
+            }
+#else
+          apr_size_t conflict_len;
+          const void *conflict_data;
+
+          conflict_data = svn_sqlite__column_blob(stmt, 5, &conflict_len);
+          if (conflict_data)
+            {
+              svn_boolean_t tree_conflicted;
+              svn_skel_t *conflicts = svn_skel__parse(conflict_data,
+                                                      conflict_len,
+                                                      scratch_pool);
+
+              SVN_ERR(svn_wc__conflict_read_markers(&b->marker_paths,
+                                                    b->db, wcroot->abspath,
+                                                    conflicts,
+                                                    result_pool,
+                                                    scratch_pool));
+
+              SVN_ERR(svn_wc__conflict_read_info(NULL, NULL,
+                                                 NULL, NULL, &tree_conflicted,
+                                                 b->db, wcroot->abspath,
+                                                 conflicts,
+                                                 result_pool, scratch_pool));
+
+              if (tree_conflicted)
+                *(b->reverted) = TRUE;
+            }
+#endif
+
+          if (!svn_sqlite__column_is_null(stmt, 1)) /* notify */
             *(b->reverted) = TRUE;
-
-          if (!svn_sqlite__column_is_null(stmt, 0))
-            *(b->conflict_new)
-              = svn_dirent_join(wcroot->abspath,
-                                svn_sqlite__column_text(stmt, 0, NULL),
-                                b->result_pool);
-
-          if (!svn_sqlite__column_is_null(stmt, 1))
-            *(b->conflict_old)
-              = svn_dirent_join(wcroot->abspath,
-                                svn_sqlite__column_text(stmt, 1, NULL),
-                                b->result_pool);
-
-          if (!svn_sqlite__column_is_null(stmt, 2))
-            *(b->conflict_working)
-              = svn_dirent_join(wcroot->abspath,
-                                svn_sqlite__column_text(stmt, 2, NULL),
-                                b->result_pool);
-
-          if (!svn_sqlite__column_is_null(stmt, 3))
-            *(b->prop_reject)
-              = svn_dirent_join(wcroot->abspath,
-                                svn_sqlite__column_text(stmt, 3, NULL),
-                                b->result_pool);
 
           SVN_ERR(svn_sqlite__step(&another_row, stmt));
         }
@@ -6020,12 +6038,12 @@ revert_list_read(void *baton,
       if (!is_actual || another_row)
         {
           *(b->reverted) = TRUE;
-          if (!svn_sqlite__column_is_null(stmt, 7))
+          if (!svn_sqlite__column_is_null(stmt, 4)) /* repos_id */
             {
-              int op_depth = svn_sqlite__column_int(stmt, 6);
+              int op_depth = svn_sqlite__column_int(stmt, 3);
               *(b->copied_here) = (op_depth == relpath_depth(local_relpath));
             }
-          *(b->kind) = svn_sqlite__column_token(stmt, 8, kind_map);
+          *(b->kind) = svn_sqlite__column_token(stmt, 2, kind_map);
         }
 
     }
@@ -6044,10 +6062,7 @@ revert_list_read(void *baton,
 
 svn_error_t *
 svn_wc__db_revert_list_read(svn_boolean_t *reverted,
-                            const char **conflict_old,
-                            const char **conflict_new,
-                            const char **conflict_working,
-                            const char **prop_reject,
+                            const apr_array_header_t **marker_files,
                             svn_boolean_t *copied_here,
                             svn_kind_t *kind,
                             svn_wc__db_t *db,
@@ -6060,10 +6075,6 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
   struct revert_list_read_baton b;
 
   b.reverted = reverted;
-  b.conflict_old = conflict_old;
-  b.conflict_new = conflict_new;
-  b.conflict_working = conflict_working;
-  b.prop_reject = prop_reject;
   b.copied_here = copied_here;
   b.kind = kind;
   b.result_pool = result_pool;
@@ -6074,6 +6085,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, revert_list_read, &b,
                               scratch_pool));
+  *marker_files = b.marker_paths;
   return SVN_NO_ERROR;
 }
 

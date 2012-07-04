@@ -1609,10 +1609,7 @@ revert_restore(svn_wc__db_t *db,
   svn_kind_t kind;
   svn_node_kind_t on_disk;
   svn_boolean_t notify_required;
-  const char *conflict_old;
-  const char *conflict_new;
-  const char *conflict_working;
-  const char *prop_reject;
+  const apr_array_header_t *conflict_files;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
   apr_finfo_t finfo;
@@ -1626,8 +1623,7 @@ revert_restore(svn_wc__db_t *db,
     SVN_ERR(cancel_func(cancel_baton));
 
   SVN_ERR(svn_wc__db_revert_list_read(&notify_required,
-                                      &conflict_old, &conflict_new,
-                                      &conflict_working, &prop_reject,
+                                      &conflict_files,
                                       &copied_here, &reverted_kind,
                                       db, local_abspath,
                                       scratch_pool, scratch_pool));
@@ -1894,14 +1890,17 @@ revert_restore(svn_wc__db_t *db,
       notify_required = TRUE;
     }
 
-  SVN_ERR(remove_conflict_file(&notify_required, conflict_old,
-                               local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(&notify_required, conflict_new,
-                               local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(&notify_required, conflict_working,
-                               local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(&notify_required, prop_reject,
-                               local_abspath, scratch_pool));
+  if (conflict_files)
+    {
+      int i;
+      for (i = 0; i < conflict_files->nelts; i++)
+        {
+          SVN_ERR(remove_conflict_file(&notify_required,
+                                       APR_ARRAY_IDX(conflict_files, i,
+                                                     const char *),
+                                       local_abspath, scratch_pool));
+        }
+    }
 
   if (notify_func && notify_required)
     notify_func(notify_baton,

@@ -1553,9 +1553,8 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 /* Query the revert list for LOCAL_ABSPATH and set *REVERTED if the
- * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
- * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
- * files, or NULL if the names are not stored.
+ * path was reverted.  Set *MARKER_FILES to a const char *list of
+ * marker files if any were recorded on LOCAL_ABSPATH.
  *
  * Set *COPIED_HERE if the reverted node was copied here and is the
  * operation root of the copy.
@@ -1565,10 +1564,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__db_revert_list_read(svn_boolean_t *reverted,
-                            const char **conflict_old,
-                            const char **conflict_new,
-                            const char **conflict_working,
-                            const char **prop_reject,
+                            const apr_array_header_t **marker_files,
                             svn_boolean_t *copied_here,
                             svn_kind_t *kind,
                             svn_wc__db_t *db,

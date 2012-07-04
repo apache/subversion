@@ -1123,6 +1123,7 @@ CREATE TEMPORARY TABLE revert_list (
    /* need wc_id if/when revert spans multiple working copies */
    local_relpath TEXT NOT NULL,
    actual INTEGER NOT NULL,         /* 1 if an actual row, 0 if a nodes row */
+   conflict_data BLOB,
    conflict_old TEXT,
    conflict_new TEXT,
    conflict_working TEXT,
@@ -1145,28 +1146,30 @@ DROP TRIGGER IF EXISTS   trigger_revert_list_actual_delete;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_delete
 BEFORE DELETE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_old,
-                                       conflict_new, conflict_working,
-                                       prop_reject, notify)
-   SELECT OLD.local_relpath, 1,
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_data,
+                                      conflict_old, conflict_new,
+                                      conflict_working, prop_reject, notify)
+   SELECT OLD.local_relpath, 1, OLD.conflict_data,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
           CASE
-          WHEN OLD.properties IS NOT NULL OR OLD.tree_conflict_data IS NOT NULL
+          WHEN OLD.properties IS NOT NULL
+            OR OLD.tree_conflict_data IS NOT NULL
           THEN 1 ELSE NULL END;
 END;
 DROP TRIGGER IF EXISTS   trigger_revert_list_actual_update;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
 BEFORE UPDATE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_old,
-                                       conflict_new, conflict_working,
-                                       prop_reject, notify)
-   SELECT OLD.local_relpath, 1,
+   INSERT OR REPLACE INTO revert_list(local_relpath, actual, conflict_data,
+                                      conflict_old, conflict_new,
+                                      conflict_working, prop_reject, notify)
+   SELECT OLD.local_relpath, 1, OLD.conflict_data,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
           CASE
-          WHEN OLD.properties IS NOT NULL OR OLD.tree_conflict_data IS NOT NULL
+          WHEN OLD.properties IS NOT NULL
+            OR OLD.tree_conflict_data IS NOT NULL
           THEN 1 ELSE NULL END;
 END
 
@@ -1176,8 +1179,8 @@ DROP TRIGGER IF EXISTS trigger_revert_list_actual_delete;
 DROP TRIGGER IF EXISTS trigger_revert_list_actual_update
 
 -- STMT_SELECT_REVERT_LIST
-SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify,
-       actual, op_depth, repos_id, kind
+SELECT actual, notify, kind, op_depth, repos_id, conflict_data,
+       conflict_old, conflict_new, conflict_working, prop_reject
 FROM revert_list
 WHERE local_relpath = ?1
 ORDER BY actual DESC
