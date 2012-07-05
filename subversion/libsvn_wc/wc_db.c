@@ -7253,7 +7253,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                                     scratch_pool));
       VERIFY_USABLE_WCROOT(moved_to_wcroot);
 
-      if (wcroot->wc_id != moved_to_wcroot->wc_id)
+      if (strcmp(wcroot->abspath, moved_to_wcroot->abspath) != 0)
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Cannot move '%s' to '%s' because they "
                                    "are not in the same working copy"),
