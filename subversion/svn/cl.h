@@ -576,6 +576,16 @@ svn_cl__merge_file_externally(const char *base_path,
                               svn_boolean_t *remains_in_conflict,
                               apr_pool_t *pool);
 
+/* Like svn_cl__merge_file_externally, but using a built-in merge tool. */
+svn_error_t *
+svn_cl__merge_file(const char *base_path,
+                   const char *their_path,
+                   const char *my_path,
+                   const char *merged_path,
+                   const char *wc_path,
+                   apr_hash_t *config,
+                   svn_boolean_t *remains_in_conflict,
+                   apr_pool_t *scratch_pool);
 
 
 /*** Notification functions to display results on the terminal. */
