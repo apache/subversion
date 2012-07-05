@@ -2238,6 +2238,9 @@ add_directory(const char *path,
                                      eb->repos_uuid,
                                      *eb->target_revision,
                                      db->ambient_depth,
+                                     (db->shadowed && db->obstruction_found),
+                                     (! db->shadowed
+                                      && status == svn_wc__db_status_added),
                                      tree_conflict, NULL,
                                      pool));
 
@@ -2245,22 +2248,6 @@ add_directory(const char *path,
      updating the DB or the parent was moved away. */
   if (!db->shadowed && !pb->moved_to_abspath)
     SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
-
-  if (!db->shadowed && status == svn_wc__db_status_added)
-    /* If there is no conflict we take over any added directory */
-    SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
-
-  /* ### We can't record an unversioned obstruction yet, so
-     ### we record a delete instead, which will allow resolving the conflict
-     ### to theirs with 'svn revert'. */
-  if (db->shadowed && db->obstruction_found)
-    {
-      SVN_ERR(svn_wc__db_op_delete(eb->db, db->local_abspath, NULL,
-                                   tree_conflict, NULL,
-                                   eb->cancel_func, eb->cancel_baton,
-                                   NULL, NULL /* notification */,
-                                   pool));
-    }
 
   if (tree_conflict != NULL)
     {
@@ -4532,11 +4519,12 @@ close_file(void *file_baton,
                                                       dav_prop_changes,
                                                       scratch_pool)
                                      : NULL,
-                                   conflict_skel,
+                                   (fb->add_existed && fb->adding_file),
                                    (! fb->shadowed) && new_base_props,
                                    new_actual_props,
                                    keep_recorded_info,
                                    (fb->shadowed && fb->obstruction_found),
+                                   conflict_skel,
                                    all_work_items,
                                    scratch_pool));
 
@@ -4568,15 +4556,6 @@ close_file(void *file_baton,
                                       NULL /* conflict */,
                                       NULL, /* no work, just modify DB */
                                       scratch_pool));
-    }
-
-  /* If this file was locally-added and is now being added by the update, we
-     can toss the local-add, turning this into a local-edit.
-     If the local file is replaced, we don't want to touch ACTUAL. */
-  if (fb->add_existed && fb->adding_file)
-    {
-      SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, fb->local_abspath,
-                                                scratch_pool));
     }
 
   apr_hash_set(fb->dir_baton->not_present_files, fb->name,

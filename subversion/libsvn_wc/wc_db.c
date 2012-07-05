@@ -182,6 +182,9 @@ typedef struct insert_base_baton_t {
   /* insert a base-deleted working node as well as a base node */
   svn_boolean_t insert_base_deleted;
 
+  /* delete the current working nodes above BASE */
+  svn_boolean_t delete_working;
+
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
 
@@ -885,6 +888,13 @@ insert_base_node(void *baton,
         }
     }
 
+  if (pibb->delete_working)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
   if (pibb->insert_base_deleted)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -1720,11 +1730,12 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          apr_hash_t *dav_cache,
-                         const svn_skel_t *conflict,
+                         svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
+                         const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
@@ -1765,8 +1776,6 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.checksum = checksum;
 
   ibb.dav_cache = dav_cache;
-  ibb.conflict = conflict;
-  ibb.work_items = work_items;
 
   if (update_actual_props)
     {
@@ -1776,6 +1785,10 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 
   ibb.keep_recorded_info = keep_recorded_info;
   ibb.insert_base_deleted = insert_base_deleted;
+  ibb.delete_working = delete_working;
+
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
                               scratch_pool));
@@ -1802,9 +1815,12 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             const char *changed_author,
                             const char *target,
                             apr_hash_t *dav_cache,
-                            const svn_skel_t *conflict,
+                            svn_boolean_t delete_working,
                             svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
+                            svn_boolean_t keep_recorded_info,
+                            svn_boolean_t insert_base_deleted,
+                            const svn_skel_t *conflict,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
@@ -1844,14 +1860,19 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.target = target;
 
   ibb.dav_cache = dav_cache;
-  ibb.conflict = conflict;
-  ibb.work_items = work_items;
 
   if (update_actual_props)
     {
       ibb.update_actual_props = TRUE;
       ibb.new_actual_props = new_actual_props;
     }
+
+  ibb.keep_recorded_info = keep_recorded_info;
+  ibb.insert_base_deleted = insert_base_deleted;
+  ibb.delete_working = delete_working;
+
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
                               scratch_pool));
@@ -6529,33 +6550,6 @@ svn_wc__db_op_remove_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  svn_sqlite__stmt_t *stmt;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  /* ### Use depth value other than empty? */
-  SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty,
-                        scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  return SVN_NO_ERROR;
-}
 
 /* Baton for db_op_set_base_depth */
 struct set_base_depth_baton_t
@@ -13046,6 +13040,8 @@ svn_wc__db_op_begin_update(svn_wc__db_t *db,
                            const char *repos_uuid,
                            svn_revnum_t revision,
                            svn_depth_t depth,
+                           svn_boolean_t insert_base_deleted,
+                           svn_boolean_t delete_working,
                            svn_skel_t *conflict,
                            svn_skel_t *work_items,
                            apr_pool_t *scratch_pool)
@@ -13075,6 +13071,9 @@ svn_wc__db_op_begin_update(svn_wc__db_t *db,
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
   ibb.depth = depth;
+  ibb.insert_base_deleted = insert_base_deleted;
+  ibb.delete_working = delete_working;
+
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
