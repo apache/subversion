@@ -13008,14 +13008,16 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
-                                             const char *local_abspath,
-                                             const char *repos_relpath,
-                                             const char *repos_root_url,
-                                             const char *repos_uuid,
-                                             svn_revnum_t revision,
-                                             svn_depth_t depth,
-                                             apr_pool_t *scratch_pool)
+svn_wc__db_op_begin_update(svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *repos_relpath,
+                           const char *repos_root_url,
+                           const char *repos_uuid,
+                           svn_revnum_t revision,
+                           svn_depth_t depth,
+                           svn_skel_t *conflict,
+                           svn_skel_t *work_items,
+                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
@@ -13042,6 +13044,8 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
   ibb.depth = depth;
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
                               insert_base_node,
