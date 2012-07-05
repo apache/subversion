@@ -653,6 +653,20 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool);
 
+/* Create a conflict skel from the old separated data */
+svn_error_t *
+svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
+                                       svn_wc__db_t *db,
+                                       const char *wri_abspath,
+                                       const char *local_relpath,
+                                       const char *conflict_old,
+                                       const char *conflict_wrk,
+                                       const char *conflict_new,
+                                       const char *prej_file,
+                                       const char *tree_conflict_data,
+                                       apr_size_t tree_conflict_len,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__wipe_postupgrade(const char *dir_abspath,
