@@ -158,8 +158,6 @@ svn_cl__merge(apr_getopt_t *os,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
   svn_opt_revision_t unspecified = { svn_opt_revision_unspecified, { 0 } };
-  svn_wc_conflict_resolver_func2_t conflict_func2 = ctx->conflict_func2;
-  void *conflict_baton2 = ctx->conflict_baton2;
 
   /* Merge doesn't support specifying a revision or revision range
      when using --reintegrate. */
@@ -395,8 +393,6 @@ svn_cl__merge(apr_getopt_t *os,
 
   /* Postpone conflict resolution during the merge operation.
    * If any conflicts occur we'll run the conflict resolver later. */
-  ctx->conflict_func2 = NULL;
-  ctx->conflict_baton2 = NULL;
 
 #ifdef SVN_WITH_SYMMETRIC_MERGE
   if (opt_state->symmetric_merge)
@@ -501,14 +497,13 @@ svn_cl__merge(apr_getopt_t *os,
   if (! opt_state->quiet)
     err = svn_cl__print_conflict_stats(ctx->notify_baton2, pool);
 
-  if (!err &&
-      conflict_func2 && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
+  if (!err
+      && opt_state->conflict_func
+      && svn_cl__notifier_check_conflicts(ctx->notify_baton2))
     {
-      ctx->conflict_func2 = conflict_func2;
-      ctx->conflict_baton2 = conflict_baton2;
       err = svn_cl__resolve_conflicts(
               svn_cl__notifier_get_conflicted_paths(ctx->notify_baton2, pool),
-              opt_state->depth, ctx, pool);
+              opt_state->depth, opt_state, ctx, pool);
     }
 
   if (merge_err)

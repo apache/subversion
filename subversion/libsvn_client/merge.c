@@ -1376,10 +1376,17 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
      definition, 'svn merge' shouldn't touch any pristine data  */
   if (props->nelts)
     {
+      svn_wc_conflict_version_t *left;
+      svn_wc_conflict_version_t *right;
       svn_client_ctx_t *ctx = merge_b->ctx;
 
+      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                     svn_node_dir, &merge_b->merge_source,
+                                     merge_b->target, merge_b->pool));
+
       SVN_ERR(svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath,
-                                  NULL, NULL, original_props, props,
+                                  left, right,
+                                  original_props, props,
                                   merge_b->dry_run,
                                   ctx->conflict_func2, ctx->conflict_baton2,
                                   ctx->cancel_func, ctx->cancel_baton,
@@ -1729,8 +1736,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                                       local_abspath, FALSE, scratch_pool));
 
       /* Postpone all conflicts. */
-      conflict_baton.wrapped_func = NULL;
-      conflict_baton.wrapped_baton = NULL;
+      conflict_baton.wrapped_func = ctx->conflict_func2;
+      conflict_baton.wrapped_baton = ctx->conflict_baton2;
 
       conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
       conflict_baton.pool = merge_b->pool;

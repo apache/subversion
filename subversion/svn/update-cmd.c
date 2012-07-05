@@ -160,8 +160,6 @@ svn_cl__update(apr_getopt_t *os,
 
   /* Postpone conflict resolution during the update operation.
    * If any conflicts occur we'll run the conflict resolver later. */
-  ctx->conflict_func2 = NULL;
-  ctx->conflict_baton2 = NULL;
 
   SVN_ERR(svn_client_update4(&result_revs, targets,
                              &(opt_state->start_revision),
@@ -191,14 +189,15 @@ svn_cl__update(apr_getopt_t *os,
         return svn_error_compose_create(externals_err, err);
     }
 
-  if (conflict_func2 && svn_cl__notifier_check_conflicts(nwb.wrapped_baton))
+  if (opt_state->conflict_func
+      && svn_cl__notifier_check_conflicts(nwb.wrapped_baton))
     {
       ctx->conflict_func2 = conflict_func2;
       ctx->conflict_baton2 = conflict_baton2;
       err = svn_cl__resolve_conflicts(
               svn_cl__notifier_get_conflicted_paths(nwb.wrapped_baton,
                                                     scratch_pool),
-              depth, ctx, scratch_pool);
+              depth, opt_state, ctx, scratch_pool);
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
