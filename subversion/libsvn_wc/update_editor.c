@@ -4271,25 +4271,26 @@ close_file(void *file_baton,
 
       if (local_is_link != incoming_is_link)
         {
-          svn_skel_t *tree_conflict = NULL;
-
           fb->shadowed = TRUE;
           fb->obstruction_found = TRUE;
           fb->add_existed = FALSE;
 
-          SVN_ERR(create_tree_conflict(&tree_conflict, eb,
-                                       fb->local_abspath,
+          if (!conflict_skel)
+            conflict_skel = svn_wc__conflict_skel_create(fb->pool);
+
+          SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(
+                                       conflict_skel,
+                                       eb->db, fb->local_abspath,
                                        svn_wc_conflict_reason_added,
                                        svn_wc_conflict_action_add,
                                        scratch_pool, scratch_pool));
-          SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
-                                              fb->local_abspath,
-                                              tree_conflict, NULL,
-                                              scratch_pool));
 
           fb->already_notified = TRUE;
           do_notification(eb, fb->local_abspath, svn_node_unknown,
                           svn_wc_notify_tree_conflict, scratch_pool);
+
+          /* The update will be applied to PRISTINE, but not to
+             the in-working copy node */
         }
     }
 
