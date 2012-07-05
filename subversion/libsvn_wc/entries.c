@@ -37,6 +37,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "conflicts.h"
 #include "entries.h"
 #include "lock.h"
 #include "tree_conflicts.h"
@@ -1501,10 +1502,15 @@ insert_node(svn_sqlite__db_t *sdb,
 /* */
 static svn_error_t *
 insert_actual_node(svn_sqlite__db_t *sdb,
+                   svn_wc__db_t *db,
+                   const char *wri_abspath,
                    const db_actual_node_t *actual_node,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+#if SVN_WC__VERSION >= SVN_WC__USES_CONFLICT_SKELS
+  svn_skel_t *conflict_data = NULL;
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL_NODE));
 
@@ -1520,7 +1526,9 @@ insert_actual_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, actual_node->changelist));
 
 #if SVN_WC__VERSION < SVN_WC__USES_CONFLICT_SKELS
-  if (actual_node->conflict_old)
+  if (actual_node->conflict_old
+      || actual_node->conflict_new
+      || actual_node->conflict_working)
     {
       SVN_ERR(svn_sqlite__bind_text(stmt, 7, actual_node->conflict_old));
       SVN_ERR(svn_sqlite__bind_text(stmt, 8, actual_node->conflict_new));
@@ -1533,8 +1541,128 @@ insert_actual_node(svn_sqlite__db_t *sdb,
   if (actual_node->tree_conflict_data)
     SVN_ERR(svn_sqlite__bind_text(stmt, 11, actual_node->tree_conflict_data));
 #else
-  SVN_ERR_MALFUNCTION();
   /* ### TODO; Bind conflict skel in column 6 */
+  if (actual_node->conflict_old
+      || actual_node->conflict_new
+      || actual_node->conflict_working)
+    {
+      const char *old_abspath = NULL;
+      const char *new_abspath = NULL;
+      const char *wrk_abspath = NULL;
+
+      if (!conflict_data)
+        conflict_data = svn_wc__conflict_skel_create(scratch_pool);
+
+      if (actual_node->conflict_old)
+        SVN_ERR(svn_wc__db_from_relpath(&old_abspath, db, wri_abspath,
+                                        actual_node->conflict_old,
+                                        scratch_pool, scratch_pool));
+
+      if (actual_node->conflict_new)
+        SVN_ERR(svn_wc__db_from_relpath(&new_abspath, db, wri_abspath,
+                                        actual_node->conflict_new,
+                                        scratch_pool, scratch_pool));
+
+      if (actual_node->conflict_working)
+        SVN_ERR(svn_wc__db_from_relpath(&wrk_abspath, db, wri_abspath,
+                                        actual_node->conflict_working,
+                                        scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_skel_add_text_conflict(conflict_data,
+                                                      db, wri_abspath,
+                                                      wrk_abspath,
+                                                      old_abspath,
+                                                      new_abspath,
+                                                      scratch_pool,
+                                                      scratch_pool));
+    }
+
+  if (actual_node->prop_reject)
+    {
+      const char *prej_abspath;
+
+      if (!conflict_data)
+        conflict_data = svn_wc__conflict_skel_create(scratch_pool);
+
+      SVN_ERR(svn_wc__db_from_relpath(&prej_abspath, db, wri_abspath,
+                                      actual_node->prop_reject,
+                                      scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_data,
+                                                      db, wri_abspath,
+                                                      prej_abspath,
+                                                      NULL, NULL, NULL,
+                                                apr_hash_make(scratch_pool),
+                                                      scratch_pool,
+                                                      scratch_pool));
+    }
+
+  if (actual_node->tree_conflict_data)
+    {
+      svn_skel_t *tc_skel;
+      const svn_wc_conflict_description2_t *tc;
+      const char *local_abspath;
+
+      if (!conflict_data)
+        conflict_data = svn_wc__conflict_skel_create(scratch_pool);
+
+      tc_skel = svn_skel__parse(actual_node->tree_conflict_data,
+                                strlen(actual_node->tree_conflict_data),
+                                 scratch_pool);
+
+      SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                      actual_node->local_relpath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__deserialize_conflict(&tc, tc_skel,
+                                           svn_dirent_dirname(local_abspath,
+                                                              scratch_pool),
+                                           scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__conflict_skel_add_tree_conflict(conflict_data,
+                                                      db, wri_abspath,
+                                                      tc->reason,
+                                                      tc->action,
+                                                      scratch_pool,
+                                                      scratch_pool));
+
+      switch (tc->operation)
+        {
+          case svn_wc_operation_update:
+          default:
+            SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data,
+                                                       tc->src_left_version,
+                                                       scratch_pool,
+                                                       scratch_pool));
+            break;
+          case svn_wc_operation_switch:
+            SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict_data,
+                                                        tc->src_left_version,
+                                                        scratch_pool,
+                                                        scratch_pool));
+            break;
+          case svn_wc_operation_merge:
+            SVN_ERR(svn_wc__conflict_skel_set_op_merge(conflict_data,
+                                                       tc->src_left_version,
+                                                       tc->src_right_version,
+                                                       scratch_pool,
+                                                       scratch_pool));
+            break;
+        }
+    }
+  else if (conflict_data)
+    {
+      SVN_ERR(svn_wc__conflict_skel_set_op_update(conflict_data, NULL,
+                                                  scratch_pool,
+                                                  scratch_pool));
+    }
+
+  if (conflict_data)
+    {
+      svn_stringbuf_t *data =svn_skel__unparse(conflict_data, scratch_pool);
+
+      SVN_ERR(svn_sqlite__bind_blob(stmt, 6, data->data, data->len));
+    }
 #endif
 
   /* Execute and reset the insert clause. */
@@ -2194,7 +2322,8 @@ write_entry(struct write_baton **entry_node,
       actual_node->local_relpath = local_relpath;
       actual_node->parent_relpath = parent_relpath;
 
-      SVN_ERR(insert_actual_node(sdb, actual_node, scratch_pool));
+      SVN_ERR(insert_actual_node(sdb, db, tmp_entry_abspath,
+                                 actual_node, scratch_pool));
     }
 
   if (entry_node)
@@ -2222,6 +2351,8 @@ write_entry(struct write_baton **entry_node,
 static svn_error_t *
 write_actual_only_entries(apr_hash_t *tree_conflicts,
                           svn_sqlite__db_t *sdb,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
                           apr_int64_t wc_id,
                           const char *parent_relpath,
                           apr_pool_t *scratch_pool)
@@ -2240,7 +2371,8 @@ write_actual_only_entries(apr_hash_t *tree_conflicts,
       actual_node->parent_relpath = parent_relpath;
       actual_node->tree_conflict_data = svn__apr_hash_index_val(hi);
 
-      SVN_ERR(insert_actual_node(sdb, actual_node, scratch_pool));
+      SVN_ERR(insert_actual_node(sdb, db, wri_abspath, actual_node,
+                                 scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2322,8 +2454,9 @@ svn_wc__write_upgraded_entries(void **dir_baton,
     }
 
   if (dir_node->tree_conflicts)
-    SVN_ERR(write_actual_only_entries(dir_node->tree_conflicts, sdb,
-                                      wc_id, dir_relpath, iterpool));
+    SVN_ERR(write_actual_only_entries(dir_node->tree_conflicts, sdb, db,
+                                      new_root_abspath, wc_id, dir_relpath,
+                                      iterpool));
 
   *dir_baton = dir_node;
   svn_pool_destroy(iterpool);
