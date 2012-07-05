@@ -1834,7 +1834,7 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 29;
         /* FALLTHROUGH  */
 
-#ifdef NOT_YET
+#if SVN_WC__VERSION >= 30
       case 29:
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_30, &bb,
                                              scratch_pool));

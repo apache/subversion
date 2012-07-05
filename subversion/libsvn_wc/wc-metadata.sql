@@ -785,6 +785,8 @@ CREATE INDEX IF NOT EXISTS I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
    working copies that were never updated by 1.7.0+ style clients */
 UPDATE nodes SET file_external=1 WHERE file_external IS NOT NULL;
 
+PRAGMA user_version = 30;
+
 -- STMT_UPGRADE_30_SELECT_CONFLICT_SEPARATE
 SELECT wc_id, local_relpath,
   conflict_old, conflict_working, conflict_new, prop_reject, tree_conflict_data
@@ -797,10 +799,10 @@ WHERE conflict_old IS NOT NULL
 ORDER by wc_id, local_relpath
 
 -- STMT_UPGRADE_30_SET_CONFLICT
-UPDATE actual_node SET conflict_data = ?2, conflict_old = NULL,
+UPDATE actual_node SET conflict_data = ?3, conflict_old = NULL,
   conflict_working = NULL, conflict_new = NULL, prop_reject = NULL,
   tree_conflict_data = NULL
-WHERE wc_id = ?0 and local_relpath = ?1
+WHERE wc_id = ?1 and local_relpath = ?2
 
 /* ------------------------------------------------------------------------- */
 
