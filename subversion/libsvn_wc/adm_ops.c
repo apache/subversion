@@ -840,8 +840,9 @@ svn_wc__delete_internal(svn_wc_context_t *wc_ctx,
                                    scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath, moved_to_abspath,
-                               notify_func, notify_baton,
+                               NULL, NULL,
                                cancel_func, cancel_baton,
+                               notify_func, notify_baton,
                                pool));
 
   if (!keep_local && conflicted && conflicts != NULL)
