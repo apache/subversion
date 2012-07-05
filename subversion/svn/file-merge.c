@@ -29,10 +29,12 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_utf.h"
 
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_utf_private.h"
 #include "private/svn_dep_compat.h"
 
 /* Baton for functions in this file which implement svn_diff_output_fns_t. */
@@ -365,12 +367,14 @@ read_diff_chunk(apr_array_header_t **lines,
 #define MAX_LINE_DISPLAY_LEN ((80 / 2) - 4)
 
 /* Prepare LINE for display, pruning or extending it to MAX_LINE_DISPLAY_LEN
- * characters, and stripping the EOL marker, if any. */
+ * characters, and stripping the EOL marker, if any.
+ * This function assumes that the data in LINE is encoded in UTF-8. */
 static const char *
 prepare_line_for_display(const char *line, apr_pool_t *result_pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create(line, result_pool);
   int max_len = MAX_LINE_DISPLAY_LEN;
+  apr_size_t width;
 
   /* Trim EOL. */
   if (buf->len > 2 &&
@@ -384,15 +388,30 @@ prepare_line_for_display(const char *line, apr_pool_t *result_pool)
 
   /* Trim further in case line is still too long, or add padding in case
    * it is too short. */
-  if (buf->len > 0 && ((buf->len - 1) > max_len))
-    svn_stringbuf_chop(buf, (buf->len - 1) - max_len);
+  width = buf->len; /* ### assumes width == 1 for all characters */
+  if (width > max_len)
+    {
+      const char *last_valid;
+
+      svn_stringbuf_chop(buf, width - max_len);
+      width = max_len;
+
+      /* Be careful not to invalidate the UTF-8 string by trimming
+       * just part of a character. */
+      last_valid = svn_utf__last_valid(buf->data, buf->len);
+      if (last_valid < buf->data + buf->len)
+        svn_stringbuf_chop(buf, (buf->data + buf->len) - last_valid);
+    }
   else
     {
-      while (buf->len == 0 || ((buf->len - 1) < max_len))
-        svn_stringbuf_appendbyte(buf, ' ');
+      while (width == 0 || width < max_len)
+        {
+          svn_stringbuf_appendbyte(buf, ' ');
+          width++;
+        }
     }
 
-  SVN_ERR_ASSERT_NO_RETURN((buf->len - 1) ==  MAX_LINE_DISPLAY_LEN);
+  SVN_ERR_ASSERT_NO_RETURN(width == MAX_LINE_DISPLAY_LEN);
   return buf->data;
 }
 
@@ -448,16 +467,28 @@ merge_chunks(apr_array_header_t **merged_chunk,
       svn_pool_clear(iterpool);
 
       if (i < chunk1->nelts)
-        line1 = prepare_line_for_display(
-                  APR_ARRAY_IDX(chunk1, i, svn_stringbuf_t*)->data,
-                  iterpool);
+        {
+          svn_stringbuf_t *line_utf8;
+
+          SVN_ERR(svn_utf_stringbuf_to_utf8(&line_utf8,
+                                            APR_ARRAY_IDX(chunk1, i,
+                                                          svn_stringbuf_t*),
+                                            iterpool));
+          line1 = prepare_line_for_display(line_utf8->data, iterpool);
+        }
       else
         line1 = prepare_line_for_display("", iterpool);
 
       if (i < chunk2->nelts)
-        line2 = prepare_line_for_display(
-                  APR_ARRAY_IDX(chunk2, i, svn_stringbuf_t*)->data,
-                  iterpool);
+        {
+          svn_stringbuf_t *line_utf8;
+
+          SVN_ERR(svn_utf_stringbuf_to_utf8(&line_utf8,
+                                            APR_ARRAY_IDX(chunk2, i,
+                                                          svn_stringbuf_t*),
+                                            iterpool));
+          line2 = prepare_line_for_display(line_utf8->data, iterpool);
+        }
       else
         line2 = prepare_line_for_display("", iterpool);
         
