@@ -1715,6 +1715,60 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         const char *repos_relpath,
+                                         const char *repos_root_url,
+                                         const char *repos_uuid,
+                                         svn_revnum_t revision,
+                                         svn_depth_t depth,
+                                         svn_boolean_t insert_base_deleted,
+                                         svn_boolean_t delete_working,
+                                         svn_skel_t *conflict,
+                                         svn_skel_t *work_items,
+                                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct insert_base_baton_t ibb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(repos_relpath && repos_root_url && repos_uuid);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  blank_ibb(&ibb);
+
+  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
+  ibb.repos_root_url = repos_root_url;
+  ibb.repos_uuid = repos_uuid;
+
+  ibb.status = svn_wc__db_status_incomplete;
+  ibb.kind = svn_kind_dir;
+  ibb.repos_relpath = repos_relpath;
+  ibb.revision = revision;
+  ibb.depth = depth;
+  ibb.insert_base_deleted = insert_base_deleted;
+  ibb.delete_working = delete_working;
+
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                              insert_base_node,
+                              &ibb, scratch_pool));
+
+  SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
@@ -13031,61 +13085,6 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_wc__db_op_begin_update(svn_wc__db_t *db,
-                           const char *local_abspath,
-                           const char *repos_relpath,
-                           const char *repos_root_url,
-                           const char *repos_uuid,
-                           svn_revnum_t revision,
-                           svn_depth_t depth,
-                           svn_boolean_t insert_base_deleted,
-                           svn_boolean_t delete_working,
-                           svn_skel_t *conflict,
-                           svn_skel_t *work_items,
-                           apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  struct insert_base_baton_t ibb;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  SVN_ERR_ASSERT(repos_relpath && repos_root_url && repos_uuid);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                scratch_pool, scratch_pool));
-
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  blank_ibb(&ibb);
-
-  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
-  ibb.repos_root_url = repos_root_url;
-  ibb.repos_uuid = repos_uuid;
-
-  ibb.status = svn_wc__db_status_incomplete;
-  ibb.kind = svn_kind_dir;
-  ibb.repos_relpath = repos_relpath;
-  ibb.revision = revision;
-  ibb.depth = depth;
-  ibb.insert_base_deleted = insert_base_deleted;
-  ibb.delete_working = delete_working;
-
-  ibb.conflict = conflict;
-  ibb.work_items = work_items;
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
-                              insert_base_node,
-                              &ibb, scratch_pool));
-
-  SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc__db_info_below_working(svn_boolean_t *have_base,

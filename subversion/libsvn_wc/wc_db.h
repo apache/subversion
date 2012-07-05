@@ -435,6 +435,25 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 
+/* Add a new directory in BASE, whether WORKING nodes exist or not. Mark it
+   as incomplete and with revision REVISION. If REPOS_RELPATH is not NULL,
+   apply REPOS_RELPATH, REPOS_ROOT_URL and REPOS_UUID.
+   Perform all temporary allocations in SCRATCH_POOL.
+   */
+svn_error_t *
+svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         const char *repos_relpath,
+                                         const char *repos_root_url,
+                                         const char *repos_uuid,
+                                         svn_revnum_t revision,
+                                         svn_depth_t depth,
+                                         svn_boolean_t insert_base_deleted,
+                                         svn_boolean_t delete_working,
+                                         svn_skel_t *conflict,
+                                         svn_skel_t *work_items,
+                                         apr_pool_t *scratch_pool);
+
 
 /* Add or replace a file in the BASE tree.
 
@@ -2915,25 +2934,6 @@ svn_error_t *
 svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *scratch_pool);
-
-/* Add a new directory in BASE, whether WORKING nodes exist or not. Mark it
-   as incomplete and with revision REVISION. If REPOS_RELPATH is not NULL,
-   apply REPOS_RELPATH, REPOS_ROOT_URL and REPOS_UUID.
-   Perform all temporary allocations in SCRATCH_POOL.
-   */
-svn_error_t *
-svn_wc__db_op_begin_update(svn_wc__db_t *db,
-                           const char *local_abspath,
-                           const char *repos_relpath,
-                           const char *repos_root_url,
-                           const char *repos_uuid,
-                           svn_revnum_t revision,
-                           svn_depth_t depth,
-                           svn_boolean_t insert_base_deleted,
-                           svn_boolean_t delete_working,
-                           svn_skel_t *conflict,
-                           svn_skel_t *work_items,
-                           apr_pool_t *scratch_pool);
 
 /* Close the wc root LOCAL_ABSPATH and remove any per-directory
    handles associated with it. */
