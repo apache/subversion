@@ -443,26 +443,19 @@ ssl_trust_unknown_server_cert
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t trust_server_cert,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+static svn_error_t *
+get_old_auth_providers(apr_array_header_t **providers_p,
+                       svn_boolean_t non_interactive,
+                       const char *config_dir,
+                       svn_boolean_t trust_server_cert,
+                       svn_config_t *cfg,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *pool)
 {
-  svn_boolean_t store_password_val = TRUE;
-  svn_boolean_t store_auth_creds_val = TRUE;
+  apr_array_header_t *providers;
   svn_auth_provider_object_t *provider;
   svn_cmdline_prompt_baton2_t *pb = NULL;
-
-  /* The whole list of registered providers */
-  apr_array_header_t *providers;
 
   /* Populate the registered providers with the platform-specific providers */
   SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
@@ -559,6 +552,47 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
       svn_auth_get_ssl_server_trust_prompt_provider
         (&provider, ssl_trust_unknown_server_cert, NULL, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    }
+
+  *providers_p = providers;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  svn_boolean_t store_password_val = TRUE;
+  svn_boolean_t store_auth_creds_val = TRUE;
+  svn_boolean_t use_master_password;
+
+  /* The whole list of registered providers */
+  apr_array_header_t *providers;
+
+  SVN_ERR(svn_config_get_bool(cfg, &use_master_password,
+                              SVN_CONFIG_SECTION_AUTH,
+                              SVN_CONFIG_OPTION_USE_MASTER_PASSWORD,
+                              FALSE));
+
+  if (use_master_password)
+    {
+      providers = apr_array_make(pool, 1,
+                                 sizeof(svn_auth_provider_object_t *));
+    }
+  else
+    {
+      SVN_ERR(get_old_auth_providers(&providers, non_interactive,
+                                     config_dir, trust_server_cert, cfg,
+                                     cancel_func, cancel_baton, pool));
     }
 
   /* Build an authentication baton to give to libsvn_client. */

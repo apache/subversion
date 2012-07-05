@@ -89,6 +89,7 @@ typedef struct svn_config_t svn_config_t;
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
+#define SVN_CONFIG_OPTION_USE_MASTER_PASSWORD       "use-master-password"
 #define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
 #define SVN_CONFIG_OPTION_KWALLET_WALLET            "kwallet-wallet"
 #define SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID "kwallet-svn-application-name-with-pid"

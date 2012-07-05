@@ -1006,6 +1006,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
+        "### Enable encrypted storage of authentication credentials."        NL
+        "# use-master-password = no"                                         NL
+        "###"                                                                NL
         "### Set password stores used by Subversion. They should be"         NL
         "### delimited by spaces or commas. The order of values determines"  NL
         "### the order in which password stores are used."                   NL
